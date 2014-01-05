@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="https://www.google.com/jsapi"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script type="text/javascript">
+
+    //Load the chart API
+    google.load('visualization', '1.1', {'packages':['corechart']});
+
+    var IMEDSMarkers = [];
+    var IMEDSInfoWindow = [];
+
+    function clearMarkers()
+    {
+        while(IMEDSMarkers[0])
+        {
+            IMEDSMarkers.pop().setMap(null);
+        }
+    }
+
+    function fitMarkers()
+    {
+        var extent = new google.maps.LatLngBounds();
+        var nMarker = IMEDSMarkers.length;
+        for(i=0;i<nMarker;i++)
+        {
+            extent.extend(IMEDSMarkers[i].getPosition());
+        }
+        map.fitBounds(extent);
+    }
+
+    function addIMEDSStation(x,y,ID,name,DateMin,DateMax,Range,RawData,Source){
+          var myLatlng = new google.maps.LatLng(y,x);
+          IMEDSMarkers[ID] = new google.maps.Marker({
+              position: myLatlng,
+              map: map,
+              title: String(ID)
+            });
+          var contentString = Source+" Data Station: "+name;
+          IMEDSInfoWindow[ID] = new google.maps.InfoWindow({content: contentString});
+          google.maps.event.addListener(IMEDSMarkers[ID], 'click', function() {
+            //Set the Marker ID
+            window.markerID = ID;
+            if(window.LastInfo!=-1)
+            {
+                window.LastInfo.close();
+            }
+            window.LastInfo = IMEDSInfoWindow[ID];
+            IMEDSInfoWindow[ID].open(map,IMEDSMarkers[ID]);
+            PlotIMEDSData(name,RawData,Source,Range,DateMin,DateMax);
+          });
+
+      }
+
+    function addValidationStation(x,y,ID,name,DateMin,DateMax,Range,RawDataADC,RawDataOBS){
+          var myLatlng = new google.maps.LatLng(y,x);
+          IMEDSMarkers[ID] = new google.maps.Marker({
+              position: myLatlng,
+              map: map,
+              title: String(ID)
+          });
+          var contentString = "Validation Station: "+name;
+          IMEDSInfoWindow[ID] = new google.maps.InfoWindow({content: contentString});
+          google.maps.event.addListener(IMEDSMarkers[ID], 'click', function() {
+            //Set the Marker ID
+            window.markerID = ID;
+            if(window.LastInfo!=-1)
+            {
+                window.LastInfo.close();
+            }
+            window.LastInfo = IMEDSInfoWindow[ID];
+            IMEDSInfoWindow[ID].open(map,IMEDSMarkers[ID]);
+            PlotValidationData(name,RawDataADC,RawDataOBS,Range,DateMin,DateMax);
+          });
+
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   PAN TO FUNCTION                                      //
+      //                                                        //
+      //  Function to pan to a different x,y,zoom on the map    //
+      ////////////////////////////////////////////////////////////
+      function panToIMEDS(x,y,z){
+        var center = new google.maps.LatLng(y,x);
+        map.setCenter(center);
+        map.setZoom(z);
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   INITIALIZE FUNCTION                                  //
+      //                                                        //
+      //  Function to initialize the google maps area on load   //
+      ////////////////////////////////////////////////////////////
+      function initializeIMEDS() {
+        //Initialize the map
+
+        window.LastInfo = -1;
+        var myOptions = {
+          center: new google.maps.LatLng(29.5, -91.5),
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true,
+          streetViewControl: false
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+        window.chart = new google.visualization.LineChart(document.getElementById('plot_area'));
+       }
+
+
+      function PlotIMEDSData(StationName,RawData,Source,Range,DateMin,DateMax) {
+
+        //Set the ymin/ymax values
+        if(Range=="auto")
+        {
+            var autorange = 1;
+        }
+        else
+        {
+            var autorange = 0;
+            TempRange = Range.split(":");
+            var ymin = Number(TempRange[0]);
+            var ymax = Number(TempRange[1]);
+        }
+
+        //Set min and max date values
+        Temp1 = DateMin.split(":");
+        Temp2 = DateMax.split(":");
+        MinDate = new Date(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),Number(Temp1[3]));
+        MaxDate = new Date(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),Number(Temp2[3]));
+
+        //Split by rows
+        RawData2 = RawData.split(";");
+
+        IMEDSData = new Array();
+
+        //Split the rows into their pieces
+        var TempData = new Array();
+        var numNull = 0;
+        for(var i=0;i<RawData2.length;i++)
+        {
+            TempData = RawData2[i].split(":");
+            IMEDSData[i] = new Array();
+            for(var j=0;j<TempData.length;j++)
+            {
+                IMEDSData[i][j] = TempData[j];
+            }
+            if(IMEDSData[i][5] < -400)
+            {
+                IMEDSData[i][5] = -9999;
+            }
+        }
+
+        // Create the data table.
+        var data = new google.visualization.DataTable();
+        data.addColumn('datetime', 'Date');
+        data.addColumn('number', Source);
+        data.addRows(IMEDSData.length);
+
+        for( var idx=0;idx<IMEDSData.length;idx++)
+        {
+                data.setCell(idx, 0, new Date(Number(IMEDSData[idx][0]),
+                    Number(IMEDSData[idx][1])-1,Number(IMEDSData[idx][2]),
+                    Number(IMEDSData[idx][3]),Number(IMEDSData[idx][4],0,0)));
+                if(Number(IMEDSData[idx][5])<-9998)
+                {
+                    data.setCell(idx, 1, null);
+                }
+                else
+                {
+                    data.setCell(idx, 1, Number(IMEDSData[idx][5]));
+                }
+        }
+
+        // Set chart options
+        var title = StationName;
+        if(autorange==1)
+        {
+            var options = { title: title,
+                           legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                           hAxis: {
+                              title: "Date (GMT)",
+                              minValue: MinDate,
+                              maxvalue: MaxDate
+                                  },
+                           vAxis: {
+                              title: "WSE (m,NAVD88)",
+                              viewWindowMode: "pretty"
+                                  },
+                           animation:
+                                  {
+                              duration: 1000,
+                              easing: 'out'
+                                  }
+                          };
+         }
+         else
+         {
+             var options = { title: title,
+                            legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                            hAxis: {
+                               title: "Date (GMT)",
+                               minValue: MinDate,
+                               maxvalue: MaxDate
+                                   },
+                            vAxis: {
+                               title: "WSE (m,NAVD88)",
+                               minValue: ymin,
+                               maxValue: ymax
+                                   },
+                            animation:
+                                   {
+                               duration: 1000,
+                               easing: 'out'
+                                   }
+                           };
+         }
+        // Instantiate and draw our chart, passing in some options
+        window.chart.draw(data, options);
+
+        return;
+      }
+
+      function PlotValidationData(StationName,RawDataADC,RawDataOBS,Range,DateMin,DateMax) {
+
+        //Set the ymin/ymax values
+        if(Range=="auto")
+        {
+            var autorange = 1;
+        }
+        else
+        {
+            var autorange = 0;
+            TempRange = Range.split(":");
+            var ymin = Number(TempRange[0]);
+            var ymax = Number(TempRange[1]);
+        }
+
+        //Set min and max date values
+        Temp1 = DateMin.split(":");
+        Temp2 = DateMax.split(":");
+        MinDate = new Date(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),Number(Temp1[3]));
+        MaxDate = new Date(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),Number(Temp2[3]));
+
+        //Split by rows
+        RawDataOBS2 = RawDataOBS.split(";");
+        RawDataADC2 = RawDataADC.split(";");
+
+        IMEDSData = new Array();
+        ADCData = new Array();
+
+        //Split the rows into their pieces
+        var TempDataOBS = new Array();
+        var TempDataADC = new Array();
+        for(var i=0;i<RawDataOBS2.length;i++)
+        {
+            TempDataOBS = RawDataOBS2[i].split(":");
+            IMEDSData[i] = new Array();
+            for(var j=0;j<TempDataOBS.length;j++)
+            {
+                IMEDSData[i][j] = TempDataOBS[j];
+            }
+            if(Number(IMEDSData[i][5]) < -400)
+            {
+                IMEDSData[i][5] = -9999;
+            }
+        }
+
+        for(i=0;i<RawDataADC2.length;i++)
+        {
+            TempDataADC = RawDataADC2[i].split(":");
+            ADCData[i] = new Array();
+            for(var j=0;j<TempDataADC.length;j++)
+            {
+                ADCData[i][j] = TempDataADC[j];
+            }
+            if(Number(ADCData[i][5]) < -400)
+            {
+                ADCData[i][5] = -9999;
+            }
+        }
+
+        // Create the data table.
+        var dataOBS = new google.visualization.DataTable();
+        dataOBS.addColumn('datetime', 'Date');
+        dataOBS.addColumn('number', 'Observation');
+        dataOBS.addRows(IMEDSData.length);
+
+
+        for( var idx=0;idx<IMEDSData.length;idx++)
+        {
+            dataOBS.setCell(idx, 0, new Date(Number(IMEDSData[idx][0]),
+                Number(IMEDSData[idx][1])-1,Number(IMEDSData[idx][2]),
+                Number(IMEDSData[idx][3]),Number(IMEDSData[idx][4],0,0)));
+            if(Number(IMEDSData[idx][5])<-100)
+            {
+                dataOBS.setCell(idx, 1, null);
+            }
+            else
+            {
+                dataOBS.setCell(idx, 1, Number(IMEDSData[idx][5]));
+            }
+        }
+
+        var dataADC = new google.visualization.DataTable();
+        dataADC.addColumn('datetime', 'Date');
+        dataADC.addColumn('number','ADCIRC');
+        dataADC.addRows(ADCData.length);
+
+        for( idx=0;idx<ADCData.length;idx++)
+        {
+            dataADC.setCell(idx, 0, new Date(Number(ADCData[idx][0]),
+                Number(ADCData[idx][1])-1,Number(ADCData[idx][2]),
+                Number(ADCData[idx][3]),Number(ADCData[idx][4],0,0)));
+            if(Number(ADCData[idx][5])<-100)
+            {
+                dataADC.setCell(idx, 1, null);
+            }
+            else
+            {
+                dataADC.setCell(idx, 1, Number(ADCData[idx][5]));
+            }
+        }
+
+        var dataJoin = new google.visualization.data.join(dataOBS, dataADC, 'full', [[0, 0]], [1], [1]);
+
+        // Set chart options
+        var title = StationName;
+        if(autorange==1)
+        {
+            var options = { title: title,
+                           interpolateNulls: true,
+                           legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                           hAxis: {
+                              title: "Date (GMT)",
+                              minValue: MinDate,
+                              maxvalue: MaxDate
+                                  },
+                           vAxis: {
+                              title: "WSE (m,NAVD88)",
+                              viewWindowMode: "pretty"
+                                  },
+                           animation:
+                                  {
+                              duration: 1000,
+                              easing: 'out'
+                                  }
+                          };
+         }
+         else
+         {
+             var options = { title: title,
+                            interpolateNulls: true,
+                            legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                            hAxis: {
+                               title: "Date (GMT)",
+                               minValue: MinDate,
+                               maxvalue: MaxDate
+                                   },
+                            vAxis: {
+                               title: "WSE (m,NAVD88)",
+                               minValue: ymin,
+                               maxValue: ymax
+                                   },
+                            animation:
+                                   {
+                               duration: 1000,
+                               easing: 'out'
+                                   }
+                           };
+         }
+
+        // Instantiate and draw our chart, passing in some options
+        window.chart.draw(dataJoin, options);
+
+        return;
+      }
+
+
+    </script>
+  </head>
+  <body onload="initializeIMEDS()">
+      <div style="height:100%; width: 100%; display: table">
+          <div style="display: table-row">
+            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
+            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
+          </div>
+      </div>
+  </body>
+</html>
+
