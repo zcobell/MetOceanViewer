@@ -1,3 +1,13 @@
+/* imeds.cpp
+ *
+ * $Author$
+ * $Date$
+ * $Rev$
+ * $HeadURL$
+ * $Id$
+ *
+*/
+        
 #include "imeds.h"
 
 QString ADCIMEDSFile=QString(), OBSIMEDSFile=QString();

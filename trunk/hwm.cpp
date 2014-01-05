@@ -1,3 +1,13 @@
+/* hwm.cpp
+ *
+ * $Author$
+ * $Date$
+ * $Rev$
+ * $HeadURL$
+ * $Id$
+ *
+*/
+        
 #include "hwm.h"
 
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)

@@ -1,3 +1,13 @@
+/* hwm.h
+ *
+ * $Author$
+ * $Date$
+ * $Rev$
+ * $HeadURL$
+ * $Id$
+ *
+*/
+        
 #ifndef HWM_H
 #define HWM_H
 

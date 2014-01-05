@@ -1,3 +1,13 @@
+/* main.cpp
+ *
+ * $Author$
+ * $Date$
+ * $Rev$
+ * $HeadURL$
+ * $Id$
+ *
+*/
+        
 #include "ADCvalidator.h"
 #include <QApplication>
 
