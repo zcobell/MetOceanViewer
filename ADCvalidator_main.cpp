@@ -1,3 +1,13 @@
+/* ADCvalidator_main.cpp
+ *
+ * $Author$
+ * $Date$
+ * $Rev$
+ * $HeadURL$
+ * $Id$
+ *
+*/
+        
 #include "ADCvalidator.h"
 #include "ui_ADCvalidator_main.h"
 #include "hwm.h"

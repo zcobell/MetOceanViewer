@@ -1,3 +1,13 @@
+/* imeds.h
+ *
+ * $Author$
+ * $Date$
+ * $Rev$
+ * $HeadURL$
+ * $Id$
+ *
+*/
+        
 #ifndef IMEDS_H
 #define IMEDS_H
 

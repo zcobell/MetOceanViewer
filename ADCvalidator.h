@@ -1,13 +1,13 @@
-/* ADCValidator.h
+/* ADCvalidator.h
  *
  * $Author$
  * $Date$
  * $Rev$
  * $HeadURL$
- * $ID$
+ * $Id$
  *
- */
-
+*/
+        
 #ifndef ADCVALIDATOR_H
 #define ADCVALIDATOR_H
 
