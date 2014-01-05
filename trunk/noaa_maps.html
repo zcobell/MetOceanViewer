@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="https://www.google.com/jsapi"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script type="text/javascript">
+
+    //Load the chart API
+    google.load('visualization', '1.1', {'packages':['corechart']});
+    var map;
+    var markers = [];
+
+    function addNOAAStation(x,y,ID,MarkerNumber){
+          var buffer = 0.5;
+          var bounds = map.getBounds();
+          var ne = bounds.getNorthEast();
+          var sw = bounds.getSouthWest();
+          var nex = ne.lng() + buffer;
+          var ney = ne.lat() + buffer;
+          var swx = sw.lng() - buffer;
+          var swy = sw.lat() - buffer;
+
+          var myLatlng = new google.maps.LatLng(y,x);
+          if(x>swx && x<nex && y<ney && y>swy)
+          {
+              var marker = new google.maps.Marker({
+                  position: myLatlng,
+                  map: map,
+                  animation: google.maps.Animation.DROP,
+                  title: String(ID)
+              });
+          }
+          else
+          {
+              var marker = new google.maps.Marker({
+                  position: myLatlng,
+                  map: map,
+                  title: String(ID)
+          });
+          }
+          var contentString = "NOAA Station: "+String(ID);
+          var infowindow = new google.maps.InfoWindow({content: contentString});
+          google.maps.event.addListener(marker, 'click', function() {
+            //Set the Marker ID
+            window.markerID = ID;
+            if(window.LastInfo!=-1)
+            {
+                window.LastInfo.close();
+            }
+            window.LastInfo = infowindow;
+            infowindow.open(map,marker);
+          });
+          markers.push(marker);
+      }
+
+      function returnStationID(){
+        return window.markerID;
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   PAN TO FUNCTION                                      //
+      //                                                        //
+      //  Function to pan to a different x,y,zoom on the map    //
+      ////////////////////////////////////////////////////////////
+      function panTo(x,y,z){
+        var center = new google.maps.LatLng(y,x);
+        map.setCenter(center);
+        map.setZoom(z);
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   INITIALIZE FUNCTION                                  //
+      //                                                        //
+      //  Function to initialize the google maps area on load   //
+      ////////////////////////////////////////////////////////////
+      function initialize() {
+        //Initialize the map
+
+        window.LastInfo = -1;
+        var myOptions = {
+          center: new google.maps.LatLng(29.5, -91.5),
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true,
+          streetViewControl: false
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+        window.chart = new google.visualization.LineChart(document.getElementById('plot_area'));
+        window.markerID = -1;
+        // Instantiate and draw our chart, passing in some options
+        var data = new google.visualization.DataTable();
+        data.addColumn('datetime', 'Date (GMT)');
+        data.addColumn('number', 'NOAA Observation');
+        var title = 'Select a NOAA gauge';
+        var options = { title: title,
+                       legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                       hAxis: {
+                          title: "Date (GMT)",
+                          viewWindowMode: "pretty"
+                              },
+                       vAxis: {
+                          title: "WSE",
+                          viewWindowMode: "pretty"
+                              },
+                       animation:
+                              {
+                          duration: 1000,
+                          easing: 'out'
+                              }
+                      };
+        //window.chart.draw(data, options);
+       }
+
+
+      ////////////////////////////////////////////////////////////
+      //   DRAWNOAADATA                                         //
+      //                                                        //
+      //  Plot the NOAA data on the google chart api            //
+      ////////////////////////////////////////////////////////////
+      function drawNOAAData(RawData,Datum,Units) {
+
+        //Split by rows
+        RawData2 = RawData.split(";");
+
+        NOAAData = new Array();
+
+        //Split the rows into their pieces
+        if(RawData2.length<2)
+        {
+            //alert('WARNING: No data at this location!');
+            var data = new google.visualization.DataTable();
+            data.addColumn('datetime', 'Date');
+            data.addColumn('number', 'NOAA Observation');
+            var title = 'Select a NOAA gauge';
+            var options = { title: "NO DATA",
+                           legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                           hAxis: {
+                              title: "NO DATA",
+                              viewWindowMode: "pretty"
+                                  },
+                           vAxis: {
+                              title: "NO DATA",
+                              viewWindowMode: "pretty"
+                                  },
+                           animation:
+                                  {
+                              duration: 1000,
+                              easing: 'out'
+                                  }
+                          };
+            window.chart.draw(data, options);
+            return;
+        }
+
+        var TempData = new Array();
+        for(var i=0;i<RawData2.length;i++)
+        {
+            TempData = RawData2[i].split(":");
+            NOAAData[i] = new Array();
+            for(var j=0;j<TempData.length;j++)
+                NOAAData[i][j] = TempData[j];
+        }
+
+        // Create the data table.
+        var data = new google.visualization.DataTable();
+        data.addColumn('datetime', 'Date');
+        data.addColumn('number', 'NOAA Observation');
+        data.addRows(NOAAData.length);
+
+        for( var idx=0;idx<NOAAData.length;idx++)
+        {
+            data.setCell(idx, 0, new Date(Number(NOAAData[idx][0]),Number(NOAAData[idx][1])-1,Number(NOAAData[idx][2]),Number(NOAAData[idx][3]),Number(NOAAData[idx][4],0,0)));
+            data.setCell(idx, 1, Number(NOAAData[idx][5]));
+        }
+
+        // Set chart options
+        var title = 'NOAA Station '+window.markerID;
+        var vlabel = "WSE ("+Units+","+Datum+")";
+        var options = { title: title,
+                       legend: {position: 'bottom', textStyle: {fontSize: 14}},
+                       hAxis: {
+                          title: "Date (GMT)",
+                          viewWindowMode: "pretty"
+                              },
+                       vAxis: {
+                          title: vlabel,
+                          viewWindowMode: "pretty"
+                              },
+                       animation:
+                              {
+                          duration: 1000,
+                          easing: 'out'
+                              }
+                      };
+
+        // Instantiate and draw our chart, passing in some options
+        window.chart.draw(data, options);
+
+        return;
+      }
+
+    </script>
+  </head>
+  <body onload="initialize()">
+      <div style="height:100%; width: 100%; display: table">
+          <div style="display: table-row">
+            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
+            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
+          </div>
+      </div>
+  </body>
+</html>
+

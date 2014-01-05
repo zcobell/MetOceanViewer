@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/html">
+        <file>noaa_maps.html</file>
+        <file>imeds_maps.html</file>
+        <file>hwm_map.html</file>
+        <file>reg_plot.html</file>
+    </qresource>
+    <qresource prefix="/data">
+        <file>NOAA_StationList.txt</file>
+    </qresource>
+    <qresource prefix="/img">
+        <file>mm_20_darkblue.png</file>
+        <file>mm_20_darkgreen.png</file>
+        <file>mm_20_darkorange.png</file>
+        <file>mm_20_lightblue.png</file>
+        <file>mm_20_lightgreen.png</file>
+        <file>mm_20_purple.png</file>
+        <file>mm_20_red.png</file>
+        <file>mm_20_yellow.png</file>
+        <file>arcadis_logo.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+
+    //Load the chart API
+    google.load('visualization', '1.1', {'packages':['corechart']});
+
+    function plotRegression(model,measure,unit)
+    {
+        //Split the data into parts
+        var modelList = model.split(":");
+        var measureList = measure.split(":");
+
+        var ScatterData = new google.visualization.DataTable();
+        ScatterData.addColumn('number', 'Modeled');
+        ScatterData.addColumn('number','Measured');
+        ScatterData.addRows(modelList.length);
+
+        for(var idx=0;idx<modelList.length;idx++)
+        {
+            ScatterData.setCell(idx, 0, modelList[idx]);
+            ScatterData.setCell(idx, 1, measureList[idx]);
+        }
+
+        var options = { title: "Regression",
+           hAxis: {
+              title: "Modeled ("+unit+")",
+              viewWindowMode: "pretty"
+                  },
+           vAxis: {
+              title: "Measured ("+unit+")",
+              viewWindowMode: "pretty"
+                  },
+           trendlines: { 0: {},
+                         color: 'red' },
+           legend: 'none',
+           tooltip: { trigger: 'none' }
+          };
+
+        var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+        chart.draw(ScatterData, options);
+
+    }
+
+    function initializePlot()
+    {
+
+    }
+
+    </script>
+  </head>
+  <body>
+    <div id="chart_div" style="width: 100%; height: 100%;"></div>
+  </body>
+</html>
+

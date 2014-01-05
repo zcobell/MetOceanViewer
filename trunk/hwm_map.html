@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script type="text/javascript">
+
+        var HWMMarkers = [];
+        var HWMInfoWindow = [];
+
+        function clearMarkers()
+        {
+            while(HWMMarkers[0])
+            {
+                HWMMarkers.pop().setMap(null);
+            }
+        }
+
+        function fitMarkers()
+        {
+            var extent = new google.maps.LatLngBounds();
+            var nMarker = HWMMarkers.length;
+            for(i=0;i<nMarker;i++)
+            {
+                extent.extend(HWMMarkers[i].getPosition());
+            }
+            map.fitBounds(extent);
+        }
+
+        function addHWM(x,y,ID,modeled,measured,diff,color,unit)
+        {
+            var myLatlng = new google.maps.LatLng(y,x);
+
+            //Set the marker image
+            var image;
+            if(color==1)
+                image = "qrc:/img/mm_20_purple.png";
+            else if(color==2)
+                image = "qrc:/img/mm_20_darkblue.png";
+            else if(color==3)
+                image = "qrc:/img/mm_20_lightblue.png";
+            else if(color==4)
+                image = "qrc:/img/mm_20_darkgreen.png";
+            else if(color==5)
+                image = "qrc:/img/mm_20_lightgreen.png";
+            else if(color==6)
+                image = "qrc:/img/mm_20_yellow.png";
+            else if(color==7)
+                image = "qrc:/img/mm_20_orange.png";
+            else if(color==8)
+                image = "qrc:/img/mm_20_red.png";
+
+            HWMMarkers[ID] = new google.maps.Marker({
+              position: myLatlng,
+              map: map,
+              title: String(ID),
+              icon: image
+            });
+
+            var contentString =
+                "<table>"+
+                    "<tr>"+
+                        "<td align=\"right\"> <b>Location:</b> </td>"+
+                        "<td> "+x+", "+y+
+                    "</tr>"+
+                    "<tr>"+
+                        "<td align=\"right\"> <b>Measured High Water Mark:</b> </td>"+
+                        "<td> "+measured+" "+unit+"</td>"+
+                    "<tr>"+
+                        "<td align=\"right\"> <b>Modeled High Water Mark:</b> </td>"+
+                        "<td> "+modeled+" "+unit+"</td>"+
+                    "</tr>"+
+                        "<td align=\"right\"> <b>Difference:</b> </td>"+
+                        "<td> "+diff+" "+unit+"</td>"+
+                    "</tr>"+
+                "</table>";
+            HWMInfoWindow[ID] = new google.maps.InfoWindow({content: contentString});
+            google.maps.event.addListener(HWMMarkers[ID], 'click', function() {
+            //Set the Marker ID
+            window.markerID = ID;
+            if(window.LastInfo!=-1)
+            {
+                window.LastInfo.close();
+            }
+            window.LastInfo = HWMInfoWindow[ID];
+            HWMInfoWindow[ID].open(map,HWMMarkers[ID]);
+            });
+        }
+
+        function ArcadisLogo(controlDiv) {
+            controlDiv.style.padding = '5px';
+            var logo = document.createElement('IMG');
+            logo.src = 'qrc:/img/arcadis_logo.png';
+            logo.style.cursor = 'pointer';
+            controlDiv.appendChild(logo);
+
+            google.maps.event.addDomListener(logo, 'click', function() {
+                window.location = 'http://www.arcadis-us.com';
+            });
+        }
+
+      ////////////////////////////////////////////////////////////
+      //   PAN TO FUNCTION                                      //
+      //                                                        //
+      //  Function to pan to a different x,y,zoom on the map    //
+      ////////////////////////////////////////////////////////////
+      function panToData(x,y,z){
+        var center = new google.maps.LatLng(y,x);
+        map.setCenter(center);
+        map.setZoom(z);
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   INITIALIZE FUNCTION                                  //
+      //                                                        //
+      //  Function to initialize the google maps area on load   //
+      ////////////////////////////////////////////////////////////
+      function initializeHWM()
+      {
+        //Initialize the map
+
+        window.LastInfo = -1;
+        var myOptions = {
+          center: new google.maps.LatLng(29.5, -91.5),
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true,
+          streetViewControl: false,
+          panControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+          zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+        var logoControlDiv = document.createElement('DIV');
+        var logoControl = new ArcadisLogo(logoControlDiv);
+        logoControlDiv.index = 0; // used for ordering
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+      }
+
+    </script>
+  </head>
+  <body onload="initializeHWM()">
+    <div id="map_canvas" style="width: 100%"></div>
+  </body>
+</html>
+
