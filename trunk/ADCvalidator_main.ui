@@ -39,7 +39,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
@@ -1960,7 +1960,6 @@
             </item>
            </layout>
            <zorder>map_regression</zorder>
-           <zorder>horizontalSpacer_19</zorder>
            <zorder>groupBox_3</zorder>
           </widget>
          </widget>
