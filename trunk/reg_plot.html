@@ -46,46 +46,88 @@
     </style>
 
     <!-- Load the google maps api and the google visualization api -->
-    <script src="https://www.google.com/jsapi"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script src="/js/highcharts.js"></script>
+    <script src="/js/modules/exporting.js"></script>
     <script type="text/javascript">
 
-    //Load the chart API
-    google.load('visualization', '1.1', {'packages':['corechart']});
-
-    function plotRegression(model,measure,unit)
+    function plotRegression(model,measure,unit,maximum,slope)
     {
         //Split the data into parts
         var modelList = model.split(":");
         var measureList = measure.split(":");
 
-        var ScatterData = new google.visualization.DataTable();
-        ScatterData.addColumn('number', 'Modeled');
-        ScatterData.addColumn('number','Measured');
-        ScatterData.addRows(modelList.length);
-
+        var ScatterData = new Array();
         for(var idx=0;idx<modelList.length;idx++)
         {
-            ScatterData.setCell(idx, 0, modelList[idx]);
-            ScatterData.setCell(idx, 1, measureList[idx]);
+            ScatterData[idx] = [ Number(measureList[idx]), Number(modelList[idx]) ];
         }
 
-        var options = { title: "Regression",
-           hAxis: {
-              title: "Modeled ("+unit+")",
-              viewWindowMode: "pretty"
-                  },
-           vAxis: {
-              title: "Measured ("+unit+")",
-              viewWindowMode: "pretty"
-                  },
-           trendlines: { 0: {},
-                         color: 'red' },
-           legend: 'none',
-           tooltip: { trigger: 'none' }
-          };
+        MX = Number(maximum);
+        M  = Number(slope);
 
-        var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-        chart.draw(ScatterData, options);
+        $('#chart_div').highcharts({
+            chart: {
+            },
+            exporting: {
+                     enabled: false
+            },
+            title: {
+                text: 'High Water Mark Comparison'
+            },
+            xAxis: {
+                title: { text: 'Measured ('+unit+')' },
+                min: 0,
+                max: MX
+            },
+            yAxis: {
+                title: { text: 'Modeled ('+unit+')'  },
+                min: 0,
+                max: MX
+            },
+            series: [{
+                    type: 'scatter',
+                    name: 'Comparison',
+                    color: '#0000aa',
+                    data: ScatterData
+                },{
+                    type: 'line',
+                    name: 'Regression Line',
+                    data: [[0,0],[MX,MX*M]],
+                    color: '#558cff',
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: '1:1 Line',
+                    data: [[0,0],[MX,MX]],
+                    color: '#bb0000',
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: 'Upper Bound',
+                    data: [[0,2],[MX,MX+2]],
+                    color: '#029c00',
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: 'Lower Bound',
+                    data: [[0,-2],[MX,MX-2]],
+                    color: '#029c00',
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                }]
+        });
 
     }
 

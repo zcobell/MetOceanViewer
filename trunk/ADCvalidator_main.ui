@@ -39,7 +39,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
@@ -702,7 +702,7 @@
         <item>
          <widget class="QTabWidget" name="subtab_IMEDS">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_selectIMEDS">
            <attribute name="title">
@@ -1315,7 +1315,7 @@
         <item>
          <widget class="QTabWidget" name="subtab_hwm">
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="tab_hwmData">
            <attribute name="title">
@@ -1969,6 +1969,18 @@
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
              <widget class="QGroupBox" name="groupBox_3">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>65</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>65</height>
+               </size>
+              </property>
               <property name="title">
                <string>Statistics</string>
               </property>
@@ -2013,13 +2025,13 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>50</width>
+                     <width>100</width>
                      <height>16</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>50</width>
+                     <width>100</width>
                      <height>16</height>
                     </size>
                    </property>
@@ -2066,13 +2078,13 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>50</width>
+                     <width>100</width>
                      <height>16</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>50</width>
+                     <width>100</width>
                      <height>16</height>
                     </size>
                    </property>
