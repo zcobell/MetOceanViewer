@@ -104,10 +104,12 @@ private slots:
 
     void on_button_saveregression_clicked();
 
+    void on_Button_RefreshNOAAStations_clicked();
+
 private:
     Ui::MainWindow *ui;
 
-    void drawMarkers();
+    void drawMarkers(bool DelayDraw);
 
     void delay(int delayTime);
 
@@ -130,6 +132,8 @@ private:
     int ClassifyHWM(double diff);
 
     void initializePanToLocations(int size);
+
+    QString retrieveProduct(int type);
 
 };
 

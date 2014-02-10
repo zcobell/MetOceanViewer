@@ -170,7 +170,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="comboBox">
+              <widget class="QComboBox" name="combo_NOAAProduct">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -226,7 +226,7 @@
                </item>
                <item>
                 <property name="text">
-                 <string>Salinity</string>
+                 <string>Air Pressure</string>
                 </property>
                </item>
               </widget>
@@ -382,7 +382,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton">
+              <widget class="QPushButton" name="Button_RefreshNOAAStations">
                <property name="minimumSize">
                 <size>
                  <width>0</width>
@@ -390,7 +390,7 @@
                 </size>
                </property>
                <property name="text">
-                <string>Refresh Stations</string>
+                <string>Refresh Station Locations</string>
                </property>
               </widget>
              </item>
@@ -953,7 +953,7 @@
                  <x>10</x>
                  <y>23</y>
                  <width>610</width>
-                 <height>22</height>
+                 <height>25</height>
                 </rect>
                </property>
                <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -2091,7 +2091,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
   </widget>

@@ -19,4 +19,10 @@
         <file>mm_20_yellow.png</file>
         <file>arcadis_logo.png</file>
     </qresource>
+    <qresource prefix="/js">
+        <file>highcharts.js</file>
+    </qresource>
+    <qresource prefix="/js/modules">
+        <file>exporting.js</file>
+    </qresource>
 </RCC>
