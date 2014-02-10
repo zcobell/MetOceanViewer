@@ -941,7 +941,7 @@ void MainWindow::on_browse_hwm_clicked()
 void MainWindow::on_button_processHWM_clicked()
 {
     QString Marker, unitString, Regression, MeasuredString, ModeledString;
-    double x,y,measurement,modeled,error,M,R;
+    double x,y,measurement,modeled,error,M,R,MaximumValue;
     double c0,c1,c2,c3,c4,c5,c6;
     int classification, unit;
 
@@ -1002,6 +1002,7 @@ void MainWindow::on_button_processHWM_clicked()
     //Plot the high water mark map
     MeasuredString = "";
     ModeledString = "";
+    MaximumValue = 0;
     for(int i=0;i<HighWaterMarks.size();i++)
     {
         x = HighWaterMarks[i].lon;
@@ -1009,8 +1010,12 @@ void MainWindow::on_button_processHWM_clicked()
         measurement = HighWaterMarks[i].measured;
         modeled = HighWaterMarks[i].modeled;
         error = HighWaterMarks[i].error;
-
         classification = ClassifyHWM(error);
+
+        if(measurement > MaximumValue)
+            MaximumValue = measurement + 1;
+        else if(modeled > MaximumValue)
+            MaximumValue = modeled + 1;
 
         Marker = "addHWM("+QString::number(x)+","+QString::number(y)+
                 ","+QString::number(i)+","+QString::number(modeled)+","+QString::number(measurement)+
@@ -1039,7 +1044,7 @@ void MainWindow::on_button_processHWM_clicked()
 
     ui->subtab_hwm->setCurrentIndex(2);
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
-            unitString+")";
+            unitString+","+QString::number(MaximumValue)+","+QString::number(M)+")";
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(Regression);
     ui->label_slope->setText(QString::number(M));
     ui->label_r2->setText(QString::number(R));

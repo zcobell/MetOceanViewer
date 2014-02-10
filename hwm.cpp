@@ -98,11 +98,11 @@ int ComputeLinearRegression(QVector<hwm_data> HWM, double &M, double &R2)
     {
         for(int i = 0; i<N; i++)
         {
-            SumX  = SumX  + (HWM[i].modeled);
-            SumY  = SumY  + (HWM[i].measured);
-            SumXY = SumXY + (HWM[i].modeled*HWM[i].measured);
-            SumX2 = SumX2 + (HWM[i].modeled*HWM[i].modeled);
-            SumY2 = SumY2 + (HWM[i].measured*HWM[i].measured);
+            SumX  = SumX  + (HWM[i].measured);
+            SumY  = SumY  + (HWM[i].modeled);
+            SumXY = SumXY + (HWM[i].measured*HWM[i].modeled);
+            SumX2 = SumX2 + (HWM[i].measured*HWM[i].measured);
+            SumY2 = SumY2 + (HWM[i].modeled*HWM[i].modeled);
         }
 
         //Calculate the slope (M) and Correllation (R2)
