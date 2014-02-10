@@ -46,16 +46,25 @@
     </style>
 
     <!-- Load the google maps api and the google visualization api -->
-    <script src="https://www.google.com/jsapi"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script src="/js/highcharts.js"></script>
+    <script src="/js/modules/exporting.js"></script>
+
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
     <script type="text/javascript">
 
-    //Load the chart API
-    google.load('visualization', '1.1', {'packages':['corechart']});
     var map;
     var markers = [];
 
-    function addNOAAStation(x,y,ID,MarkerNumber){
+    function clearMarkers()
+    {
+        while(markers[0])
+        {
+            markers.pop().setMap(null);
+        }
+    }
+
+    function addNOAAStation(x,y,ID,MarkerNumber,StationName){
           var buffer = 0.5;
           var bounds = map.getBounds();
           var ne = bounds.getNorthEast();
@@ -72,7 +81,7 @@
                   position: myLatlng,
                   map: map,
                   animation: google.maps.Animation.DROP,
-                  title: String(ID)
+                  title: StationName
               });
           }
           else
@@ -80,14 +89,16 @@
               var marker = new google.maps.Marker({
                   position: myLatlng,
                   map: map,
-                  title: String(ID)
+                  title: StationName
           });
           }
-          var contentString = "NOAA Station: "+String(ID);
+          var contentString = "<b>NOAA Station Number:</b> "+String(ID)+"<br>"+
+                              "<b>NOAA Station Name:</b> "+StationName;
           var infowindow = new google.maps.InfoWindow({content: contentString});
           google.maps.event.addListener(marker, 'click', function() {
             //Set the Marker ID
             window.markerID = ID;
+            window.markerName = StationName;
             if(window.LastInfo!=-1)
             {
                 window.LastInfo.close();
@@ -130,30 +141,7 @@
           streetViewControl: false
         };
         map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-        window.chart = new google.visualization.LineChart(document.getElementById('plot_area'));
         window.markerID = -1;
-        // Instantiate and draw our chart, passing in some options
-        var data = new google.visualization.DataTable();
-        data.addColumn('datetime', 'Date (GMT)');
-        data.addColumn('number', 'NOAA Observation');
-        var title = 'Select a NOAA gauge';
-        var options = { title: title,
-                       legend: {position: 'bottom', textStyle: {fontSize: 14}},
-                       hAxis: {
-                          title: "Date (GMT)",
-                          viewWindowMode: "pretty"
-                              },
-                       vAxis: {
-                          title: "WSE",
-                          viewWindowMode: "pretty"
-                              },
-                       animation:
-                              {
-                          duration: 1000,
-                          easing: 'out'
-                              }
-                      };
-        //window.chart.draw(data, options);
        }
 
 
@@ -162,38 +150,17 @@
       //                                                        //
       //  Plot the NOAA data on the google chart api            //
       ////////////////////////////////////////////////////////////
-      function drawNOAAData(RawData,Datum,Units) {
+      function drawNOAAData(RawData,Datum,Units,Product) {
 
         //Split by rows
+        RawData2 = new Array();
         RawData2 = RawData.split(";");
-
         NOAAData = new Array();
 
         //Split the rows into their pieces
-        if(RawData2.length<2)
+        if(RawData2.length<5)
         {
-            //alert('WARNING: No data at this location!');
-            var data = new google.visualization.DataTable();
-            data.addColumn('datetime', 'Date');
-            data.addColumn('number', 'NOAA Observation');
-            var title = 'Select a NOAA gauge';
-            var options = { title: "NO DATA",
-                           legend: {position: 'bottom', textStyle: {fontSize: 14}},
-                           hAxis: {
-                              title: "NO DATA",
-                              viewWindowMode: "pretty"
-                                  },
-                           vAxis: {
-                              title: "NO DATA",
-                              viewWindowMode: "pretty"
-                                  },
-                           animation:
-                                  {
-                              duration: 1000,
-                              easing: 'out'
-                                  }
-                          };
-            window.chart.draw(data, options);
+            alert('WARNING: No data at this location!');
             return;
         }
 
@@ -206,40 +173,77 @@
                 NOAAData[i][j] = TempData[j];
         }
 
-        // Create the data table.
-        var data = new google.visualization.DataTable();
-        data.addColumn('datetime', 'Date');
-        data.addColumn('number', 'NOAA Observation');
-        data.addRows(NOAAData.length);
-
+        var PlottingData = new Array();
+        idx2=-1;
+        var ThisDate;
+        var ThisData;
         for( var idx=0;idx<NOAAData.length;idx++)
         {
-            data.setCell(idx, 0, new Date(Number(NOAAData[idx][0]),Number(NOAAData[idx][1])-1,Number(NOAAData[idx][2]),Number(NOAAData[idx][3]),Number(NOAAData[idx][4],0,0)));
-            data.setCell(idx, 1, Number(NOAAData[idx][5]));
+            ThisDate = Date.UTC(Number(NOAAData[idx][0]),Number(NOAAData[idx][1])-1,
+                                Number(NOAAData[idx][2]),Number(NOAAData[idx][3]),
+                                Number(NOAAData[idx][4]),0,0);
+            ThisData = Number(NOAAData[idx][5]);
+            if(!isNaN(ThisDate) && !isNaN(ThisData) && (ThisData!=0))
+            {
+                idx2 = idx2 + 1;
+                PlottingData[idx2]     = new Array();
+                PlottingData[idx2][0]  = ThisDate;
+                PlottingData[idx2][1]  = ThisData;
+            }
         }
 
-        // Set chart options
-        var title = 'NOAA Station '+window.markerID;
-        var vlabel = "WSE ("+Units+","+Datum+")";
-        var options = { title: title,
-                       legend: {position: 'bottom', textStyle: {fontSize: 14}},
-                       hAxis: {
-                          title: "Date (GMT)",
-                          viewWindowMode: "pretty"
-                              },
-                       vAxis: {
-                          title: vlabel,
-                          viewWindowMode: "pretty"
-                              },
-                       animation:
-                              {
-                          duration: 1000,
-                          easing: 'out'
-                              }
-                      };
+        // Create the HighChart
+        $('#plot_area').highcharts({
+            chart: {
+                type: 'line'
+            },
+            exporting: {
+                     enabled: false
+            },
+            title: {
+                text: 'NOAA Gauge Data'
+            },
+            subtitle: {
+                text: 'Station '+window.markerID+' - '+window.markerName
+            },
+            xAxis: {
+                type: 'datetime',
+                title: 'Date (GMT)',
+                dateTimeLabelFormats: { // don't display the dummy year
+                    month: '%e. %b',
+                    year: '%b'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: Product+" ("+Units+", "+Datum+")"
+                },
+            },
+            plotOptions: {
+                series: {
+                    marker: {
+                        enabled: false
+                    },
+                    animation: {
+                       enabled: true,
+                       duration: 1500,
+                       easing: 'linear'
+                    },
 
-        // Instantiate and draw our chart, passing in some options
-        window.chart.draw(data, options);
+                }
+            },
+            tooltip: {
+                formatter: function() {
+                        return '<b>'+ this.series.name +'</b><br/>'+
+                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' '+Units;
+                }
+            },
+            series: [{
+                name: Product,
+                data: PlottingData
+            }]
+        });
+
 
         return;
       }

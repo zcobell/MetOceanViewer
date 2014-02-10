@@ -38,6 +38,7 @@
 #include "hwm.h"
 
 QVector<QVector<double> > NOAAStations;
+QVector<QString> NOAAStationNames;
 QVector<QString> panToLocations;
 QVector<NOAAStationData> CurrentStation;
 QVariant MarkerID = -1;
@@ -132,14 +133,48 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 {
     QByteArray NOAAWebData;
     QString NOAAData,javastring;
-    QString Datum,Units;
+    QString Datum,Units,Product;
+    int ProductIndex;
 
-    Datum = ui->combo_noaadatum->currentText();
     Units = ui->combo_noaaunits->currentText();
-    if(Units=="metric")
-        Units="m";
-    else
-        Units="ft";
+    ProductIndex = ui->combo_NOAAProduct->currentIndex();
+    Product = retrieveProduct(1);
+
+    if(ProductIndex == 0 || ProductIndex == 1)
+    {
+        if(Units=="metric")
+            Units="m";
+        else
+            Units="ft";
+        Datum = ui->combo_noaadatum->currentText();
+    }
+    else if(ProductIndex == 2 || ProductIndex == 5)
+    {
+        if(Units=="metric")
+            Units="m/s";
+        else
+            Units="ft/s";
+        Datum = "Stnd";
+    }
+    else if(ProductIndex == 3 || ProductIndex == 4)
+    {
+        if(Units=="metric")
+            Units="Celcius";
+        else
+            Units="Fahrenheit";
+        Datum = "Stnd";
+    }
+    else if(ProductIndex == 6)
+    {
+        Units = "%";
+        Datum = "Stnd";
+    }
+    else if(ProductIndex == 7)
+    {
+        Units = "mb";
+        Datum = "Stnd";
+    }
+
 
     if(reply->error()!=0)
     {
@@ -148,31 +183,35 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
     }
     NOAAWebData=reply->readAll();
     NOAAData = FormatNOAAResponse(NOAAWebData);
-    javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"')";
+
+    javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"','"+Product+"')";
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
 
 }
 
 //Routine that draws the markers on the NOAA map
-void MainWindow::drawMarkers()
+void MainWindow::drawMarkers(bool DelayDraw)
 {
     int i,ID;
     double X,Y;
     QVariant MyVar;
-    QString javastring;
+    QString javastring,StationName;
 
     //Make the requests for the all the stations
+    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
 
-    delay(5); //Give the map a chance to set up
+    if(DelayDraw)
+        delay(2); //Give the map a chance to set up
 
     for(i=0;i<NOAAStations[0].size();i++)
     {
         X  = NOAAStations[1][i];
         Y  = NOAAStations[2][i];
         ID = static_cast<int>(NOAAStations[0][i]);
+        StationName = NOAAStationNames[i];
         //Plot a station
         javastring = "addNOAAStation("+QString::number(X)+","+QString::number(Y)+","+QString::number(ID)
-                +","+QString::number(i)+")";
+                +","+QString::number(i)+",'"+StationName+"')";
         MyVar = ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
     }
     return;
@@ -198,19 +237,21 @@ void MainWindow::BeginGatherStations()
     {
         i = i + 1;
         MyLine = StationFile.readLine().simplified();
-        MyList = MyLine.split(",");
+        MyList = MyLine.split(";");
         NOAAStations[0].resize(i+1);
         NOAAStations[1].resize(i+1);
         NOAAStations[2].resize(i+1);
+        NOAAStationNames.resize(i+1);
         TempString = MyList.value(0);
         NOAAStations[0][i] = TempString.toDouble();
         TempString = MyList.value(1);
         NOAAStations[1][i] = TempString.toDouble();
         TempString = MyList.value(2);
         NOAAStations[2][i] = TempString.toDouble();
+        NOAAStationNames[i] = MyList.value(3);
     }
     StationFile.close();
-    drawMarkers();
+    drawMarkers(true);
     return;
 }
 
@@ -608,6 +649,42 @@ void MainWindow::initializePanToLocations(int size)
     return;
 }
 
+QString MainWindow::retrieveProduct(int type)
+{
+    QString Product;
+    int index = ui->combo_NOAAProduct->currentIndex();
+    qDebug() << index;
+    if(type==1)
+    {
+        switch(index)
+        {
+            case(0):Product = "Observed Water Level"; break;
+            case(1):Product = "Predicted Water Level"; break;
+            case(2):Product = "Current Speed"; break;
+            case(3):Product = "Air Temperature"; break;
+            case(4):Product = "Water Temperature"; break;
+            case(5):Product = "Wind Speed"; break;
+            case(6):Product = "Relative Humidity"; break;
+            case(7):Product = "Air Pressure"; break;
+        }
+    }
+    else if(type==2)
+    {
+        switch(index)
+        {
+            case(0):Product = "water_level"; break;
+            case(1):Product = "predictions"; break;
+            case(2):Product = "currents"; break;
+            case(3):Product = "air_temperature"; break;
+            case(4):Product = "water_temperature"; break;
+            case(5):Product = "wind"; break;
+            case(6):Product = "humidity"; break;
+            case(7):Product = "air_pressure"; break;
+        }
+    }
+    return Product;
+}
+
 //Classifies high water marks into classes for coloring
 int MainWindow::ClassifyHWM(double diff)
 {
@@ -855,7 +932,7 @@ void MainWindow::on_check_imedyauto_toggled(bool checked)
 //Called when the browse for HWM file button is clicked
 void MainWindow::on_browse_hwm_clicked()
 {
-    HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",                                                "","Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
+    HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File","","Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
     if(HighWaterMarkFile==NULL)
         return;
 
@@ -1190,8 +1267,9 @@ void MainWindow::on_check_ADCIMEDS_toggled(bool checked)
 void MainWindow::on_Button_FetchData_clicked()
 {
     qint64 Duration;
-    QString RequestURL,StartString,EndString,Datum,Units;
+    QString RequestURL,StartString,EndString,Datum,Units,Product;
     QDateTime StartDate,EndDate;
+    int ProductIndex;
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     MarkerID = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
 
@@ -1212,24 +1290,40 @@ void MainWindow::on_Button_FetchData_clicked()
         return;
     }
 
+    //Get options
+    Units = ui->combo_noaaunits->currentText();
+    Product = retrieveProduct(2);
+    ProductIndex = ui->combo_NOAAProduct->currentIndex();
+    if(ProductIndex == 0 || ProductIndex == 1)
+        Datum = ui->combo_noaadatum->currentText();
+    else if(ProductIndex == 2 || ProductIndex == 5)
+        Datum = "Stnd";
+    else if(ProductIndex == 3 || ProductIndex == 4)
+        Datum = "Stnd";
+    else if(ProductIndex == 6)
+        Datum = "Stnd";
+    else if(ProductIndex == 7)
+        Datum = "Stnd";
+
     //Make the date string
     StartString = StartDate.toString("yyyyMMdd");
     EndString = EndDate.toString("yyyyMMdd");
     StartString = StartString+" 00:00";
     EndString = EndString+" 23:59";
 
-    //Get options
-    Datum = ui->combo_noaadatum->currentText();
-    Units = ui->combo_noaaunits->currentText();
-
     //Connect the finished downloading signal to the routine that plots the markers
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAADataFinished(QNetworkReply*)));
     RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
-                 QString("product=water_level&application=adcvalidator")+
-                 QString("&begin_date=")+StartString+QString("&end_date=")+
-                 EndString+QString("&datum=")+Datum+
+                 QString("product="+Product+"&application=adcvalidator")+
+                 QString("&begin_date=")+StartString+QString("&end_date=")+EndString+
                  QString("&station=")+MarkerID.toString()+
                  QString("&time_zone=GMT&units=")+Units+
                  QString("&interval=&format=csv");
+    if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
     manager->get(QNetworkRequest(QUrl(RequestURL)));
+}
+
+void MainWindow::on_Button_RefreshNOAAStations_clicked()
+{
+    drawMarkers(false);
 }
