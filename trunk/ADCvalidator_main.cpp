@@ -351,10 +351,10 @@ void MainWindow::addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC)
                     EndData.toString("yyyy:MM:dd::hh:mm:ss")+"'";
         }
 
-        MarkerCalls[i]="addValidationStation("+QString::number(ADCIRC.station[i].longitude)+","
+        MarkerCalls[i]="addValidationStation(1,1,"+QString::number(ADCIRC.station[i].longitude)+","
                 +QString::number(ADCIRC.station[i].latitude)+","
                 +QString::number(ADCIRC.station[i].StationIndex)+",'"
-                +ADCIRC.station[i].StationName+"',"+DateString+","
+                +ADCIRC.station[i].StationName+"',"
                 +RangeString+",'";
         TempString = QString();
         hasData=false;
@@ -446,11 +446,10 @@ void MainWindow::addADCIRCMarker(IMEDS ADCIRC)
                     EndData.toString("yyyy:MM:dd::hh:mm:ss")+"'";
         }
 
-        MarkerCalls[i]="addIMEDSStation("+QString::number(ADCIRC.station[i].longitude)+","
+        MarkerCalls[i]="addValidationStation(1,0,"+QString::number(ADCIRC.station[i].longitude)+","
                 +QString::number(ADCIRC.station[i].latitude)+","
                 +QString::number(ADCIRC.station[i].StationIndex)+",'"
-                +ADCIRC.station[i].StationName+"',"+DateString+","
-                +RangeString+",'";
+                +ADCIRC.station[i].StationName+"',"+RangeString+",'";
         TempString = QString();
         hasData=false;
         for(j=0;j<ADCIRC.station[i].NumSnaps;j++)
@@ -465,7 +464,7 @@ void MainWindow::addADCIRCMarker(IMEDS ADCIRC)
                 MarkerCalls[i]=MarkerCalls[i]+TempString+";";
             }
         }
-        MarkerCalls[i]=MarkerCalls[i]+"','ADCIRC')";
+        MarkerCalls[i]=MarkerCalls[i]+"','DmyData')";
 
         if(ui->check_ignoreNodata->isChecked() && hasData==false)
         {
@@ -525,11 +524,10 @@ void MainWindow::addIMEDSMarker(IMEDS Observation)
             DateString = "'"+StartData.toString("yyyy:MM:dd::hh:mm:ss")+"','"+
                     EndData.toString("yyyy:MM:dd::hh:mm:ss")+"'";
         }
-        MarkerCalls[i]="addIMEDSStation("+QString::number(Observation.station[i].longitude)+","
+        MarkerCalls[i]="addValidationStation(0,1,"+QString::number(Observation.station[i].longitude)+","
                 +QString::number(Observation.station[i].latitude)+","
                 +QString::number(Observation.station[i].StationIndex)+",'"
-                +Observation.station[i].StationName+"',"+DateString+","
-                +RangeString+",'";
+                +Observation.station[i].StationName+"',"+RangeString+",'DmyData','";
         TempString = QString();
         hasData = false;
         for(j=0;j<Observation.station[i].NumSnaps;j++)
@@ -544,7 +542,7 @@ void MainWindow::addIMEDSMarker(IMEDS Observation)
                 MarkerCalls[i]=MarkerCalls[i]+TempString+";";
             }
         }
-        MarkerCalls[i]=MarkerCalls[i]+"','Observation')";
+        MarkerCalls[i]=MarkerCalls[i]+"')";
 
         if(ui->check_ignoreNodata->isChecked() && hasData==false)
         {
