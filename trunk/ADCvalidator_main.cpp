@@ -653,7 +653,6 @@ QString MainWindow::retrieveProduct(int type)
 {
     QString Product;
     int index = ui->combo_NOAAProduct->currentIndex();
-    qDebug() << index;
     if(type==1)
     {
         switch(index)
