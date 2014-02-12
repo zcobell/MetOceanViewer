@@ -45,11 +45,17 @@ QVariant MarkerID = -1;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
 QVector<hwm_data> HighWaterMarks;
 QString HighWaterMarkFile;
+
+//Colors
+QColor ADCIRCIMEDSColor, OBSIMEDSColor;
+
 int ierr;
 
 //Main routine which will intialize all the tabs
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
+    QString ButtonStyle;
+
 
     //Setup UI
     ui->setupUi(this);
@@ -91,7 +97,22 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->text_ADCIMEDS->setReadOnly(true);
     ui->text_OBSIMEDS->setReadOnly(true);
     ui->button_processIMEDS->setEnabled(false);
-    ui->textbox_IMEDSstatus->setReadOnly(true);
+    ADCIRCIMEDSColor.setRgb(0,255,0);
+    OBSIMEDSColor.setRgb(255,0,0);
+    ButtonStyle = MakeColorString(ADCIRCIMEDSColor);
+    ui->button_adcselectcolor->setStyleSheet(ButtonStyle);
+    ui->button_adcselectcolor->update();
+    ui->button_adcselectcolor->setEnabled(false);
+    ui->label_adcirclabel->setEnabled(false);
+    ui->text_adcirclabel->setEnabled(false);
+    ui->label_adcselectcolor->setEnabled(false);
+    ButtonStyle = MakeColorString(OBSIMEDSColor);
+    ui->button_imedsselectcolor->setStyleSheet(ButtonStyle);
+    ui->button_imedsselectcolor->update();
+    ui->button_imedsselectcolor->setEnabled(false);
+    ui->label_imedslabel->setEnabled(false);
+    ui->text_imedslabel->setEnabled(false);
+    ui->label_imedsselectcolor->setEnabled(false);
 
     //Initialize Variables
     IMEDSMinDate.setDate(QDate(2900,1,1));
@@ -754,6 +775,15 @@ int MainWindow::ClassifyHWM(double diff)
     return color;
 }
 
+QString MainWindow::MakeColorString(QColor InputColor)
+{
+    QString S("background-color: #"
+                + QString(InputColor.red() < 16? "0" : "") + QString::number(InputColor.red(),16)
+                + QString(InputColor.green() < 16? "0" : "") + QString::number(InputColor.green(),16)
+                + QString(InputColor.blue() < 16? "0" : "") + QString::number(InputColor.blue(),16) + ";");
+    return S;
+}
+
 //----------------------------------------------------//
 // ACTIONS                                            //
 //                                                    //
@@ -1118,33 +1148,60 @@ void MainWindow::on_button_processIMEDS_clicked()
     bool ReadData1 = false;
     bool ReadData2 = false;
     int i;
+    double ymin,ymax;
+    QString ADCLabel,OBSLabel,PlotTitle,xlabel,ylabel,AutoY,GlobalData;
+    QString OBSColorCode,ADCColorCode;
 
     this->setCursor(Qt::WaitCursor);
-    ui->textbox_IMEDSstatus->clear();
+
+    //Set up the global data on the page
+    ADCLabel = ui->text_adcirclabel->text();
+    OBSLabel = ui->text_imedslabel->text();
+    ADCColorCode = ADCIRCIMEDSColor.name();
+    OBSColorCode = OBSIMEDSColor.name();
+    PlotTitle = ui->text_imedsplottitle->text();
+    xlabel = ui->text_xaxislabel->text();
+    ylabel = ui->text_yaxislabel->text();
+    ymin = ui->spin_imedsymin->value();
+    ymax = ui->spin_imedsymax->value();
+
+    if(ADCLabel.length()==0)ADCLabel = "Series 1";
+    if(OBSLabel.length()==0)OBSLabel = "Series 2";
+    if(PlotTitle.length()==0)PlotTitle = "IMEDS Station Data";
+    if(xlabel.length()==0)xlabel = "Elevation";
+    if(ylabel.length()==0)ylabel = "Date";
+
+    if(ui->check_imedyauto->isChecked())
+        AutoY="auto";
+    else
+        AutoY="set";
+
+    GlobalData = "SetGlobalValues('"+PlotTitle+"','"+AutoY+"',"+
+            QString::number(ymin)+","+QString::number(ymax)+
+            ",'"+xlabel+"','"+ylabel+"','"+ADCLabel+"','"+OBSLabel+"','"+ADCColorCode+"','"+
+            OBSColorCode+"')";
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript(GlobalData);
+
     if(ADCIMEDSFile!=NULL && ui->check_ADCIMEDS->checkState()==2)
     {
-        ui->textbox_IMEDSstatus->appendPlainText("Processing ADCIRC IMEDS Data...");
         if(ADCIMEDS.success)
         {
-            ui->textbox_IMEDSstatus->appendPlainText("Successfully processed ADCIRC IMEDS Data!\n\n");
             ReadData1 = true;
         }
         else
         {
-            ui->textbox_IMEDSstatus->appendPlainText("ERROR processing ADCIRC IMEDS Data!");
+            //ui->textbox_IMEDSstatus->appendPlainText("ERROR processing IMEDS Data File 1!");
         }
     }
     if(OBSIMEDSFile!=NULL && ui->check_OBSIMEDS->checkState()==2)
     {
-        ui->textbox_IMEDSstatus->appendPlainText("Processing Observation IMEDS Data...");
         if(OBSIMEDS.success)
         {
-            ui->textbox_IMEDSstatus->appendPlainText("Successfully processed Observation IMEDS Data!\n\n");
             ReadData2 = true;
         }
         else
         {
-            ui->textbox_IMEDSstatus->appendPlainText("ERROR processing Observation IMEDS Data!\n\n");
+            //ui->textbox_IMEDSstatus->appendPlainText("ERROR processing IMEDS Data File 2!");
         }
     }
 
@@ -1152,16 +1209,18 @@ void MainWindow::on_button_processIMEDS_clicked()
     {
         if(OBSIMEDS.nstations!=ADCIMEDS.nstations)
         {
-            ui->textbox_IMEDSstatus->appendPlainText("ERROR: Datasets are not equivelent!\n\n");
+            //ui->textbox_IMEDSstatus->appendPlainText("ERROR: Datasets are not equivelent!\n\n");
+            return;
         }
         for(i=0;i<OBSIMEDS.nstations;i++)
         {
             if(OBSIMEDS.station[i].latitude!=ADCIMEDS.station[i].latitude &&
                     OBSIMEDS.station[i].longitude!=ADCIMEDS.station[i].longitude)
             {
-                ui->textbox_IMEDSstatus->appendPlainText(
-                            "ERROR: Station Index "+QString::number(i+1)+
-                            " not at same location in both files!");
+                //ui->textbox_IMEDSstatus->appendPlainText(
+                //            "ERROR: Station Index "+QString::number(i+1)+
+                //            " not at same location in both files!");
+                return;
             }
         }
         addIMEDSandADCIRCMarker(OBSIMEDS,ADCIMEDS);
@@ -1240,6 +1299,10 @@ void MainWindow::on_check_OBSIMEDS_toggled(bool checked)
 {
     ui->browse_OBSIMEDS->setEnabled(checked);
     ui->text_OBSIMEDS->setEnabled(checked);
+    ui->button_imedsselectcolor->setEnabled(checked);
+    ui->label_imedslabel->setEnabled(checked);
+    ui->text_imedslabel->setEnabled(checked);
+    ui->label_imedsselectcolor->setEnabled(checked);
     if(!checked && !(ui->check_ADCIMEDS->checkState()==2))
     {
         ui->button_processIMEDS->setEnabled(false);
@@ -1255,6 +1318,10 @@ void MainWindow::on_check_ADCIMEDS_toggled(bool checked)
 {
     ui->browse_ADCIMEDS->setEnabled(checked);
     ui->text_ADCIMEDS->setEnabled(checked);
+    ui->button_adcselectcolor->setEnabled(checked);
+    ui->label_adcirclabel->setEnabled(checked);
+    ui->text_adcirclabel->setEnabled(checked);
+    ui->label_adcselectcolor->setEnabled(checked);
     if(!checked && !(ui->check_OBSIMEDS->checkState()==2))
     {
         ui->button_processIMEDS->setEnabled(false);
@@ -1328,4 +1395,24 @@ void MainWindow::on_Button_FetchData_clicked()
 void MainWindow::on_Button_RefreshNOAAStations_clicked()
 {
     drawMarkers(false);
+}
+
+void MainWindow::on_button_adcselectcolor_clicked()
+{
+    QString ButtonStyle;
+    ADCIRCIMEDSColor = QColorDialog::getColor(ADCIRCIMEDSColor);
+    ButtonStyle = MakeColorString(ADCIRCIMEDSColor);
+    ui->button_adcselectcolor->setStyleSheet(ButtonStyle);
+    ui->button_adcselectcolor->update();
+    return;
+}
+
+void MainWindow::on_button_imedsselectcolor_clicked()
+{
+    QString ButtonStyle;
+    OBSIMEDSColor = QColorDialog::getColor(OBSIMEDSColor);
+    ButtonStyle = MakeColorString(OBSIMEDSColor);
+    ui->button_imedsselectcolor->setStyleSheet(ButtonStyle);
+    ui->button_imedsselectcolor->update();
+    return;
 }

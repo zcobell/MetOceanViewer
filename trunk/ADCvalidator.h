@@ -42,6 +42,7 @@
 #include <QtNetwork>
 #include <QVector>
 #include <QFileDialog>
+#include <QColorDialog>
 #include "imeds.h"
 
 struct NOAAStationData
@@ -106,6 +107,10 @@ private slots:
 
     void on_Button_RefreshNOAAStations_clicked();
 
+    void on_button_adcselectcolor_clicked();
+
+    void on_button_imedsselectcolor_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -134,6 +139,8 @@ private:
     void initializePanToLocations(int size);
 
     QString retrieveProduct(int type);
+
+    QString MakeColorString(QColor InputColor);
 
 };
 

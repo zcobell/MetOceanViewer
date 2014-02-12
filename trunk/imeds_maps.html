@@ -55,6 +55,12 @@
 
     var IMEDSMarkers = [];
     var IMEDSInfoWindow = [];
+    var YMin,YMax;
+    var PlotTitle;
+    var XLabel,YLabel;
+    var ADCLabel,OBSLabel;
+    var ADCColorCode,OBSColorCode;
+    var AutoY;
 
     function clearMarkers()
     {
@@ -73,6 +79,22 @@
             extent.extend(IMEDSMarkers[i].getPosition());
         }
         map.fitBounds(extent);
+    }
+
+    function SetGlobalValues(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InADCLabel,InOBSLabel,InADCColorCode,InOBSColorCode)
+    {
+        PlotTitle = InPlotTitle;
+        YMin = InYMin;
+        YMax = InYMax;
+        XLabel = InXLabel;
+        YLabel = InYLabel;
+        ADCLabel = InADCLabel;
+        OBSLabel = InOBSLabel;
+        ADCColorCode = InADCColorCode;
+        OBSColorCode = InOBSColorCode;
+        AutoY = InAutoY;
+
+        return;
     }
 
     function addValidationStation(DoADC,DoOBS,x,y,ID,name,Range,RawDataADC,RawDataOBS){
@@ -232,121 +254,51 @@
             }
         }
 
+        if(AutoY == "auto")
+            var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel } };
+        else
+            var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel } };
 
-        // Create the HighChart
+        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' } };
+        var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
+        var plotToolTip = {
+                formatter: function() {
+                    return '<b>'+ this.series.name +'</b><br/>'+
+                    Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
+                    }
+                };
+        var seriesData;
+
         if(DoOBS == 1 && DoADC == 1)
         {
-            $('#plot_area').highcharts({
-                chart: {
-                    type: 'line',
-                    zoomType: 'xy'
-                },
-                exporting: {
-                         enabled: false
-                },
-                title: {
-                    text: 'Timeseries Station Data'
-                },
-                subtitle: {
-                    text: 'Station '+StationName
-                },
-                xAxis: {
-                    type: 'datetime',
-                    title: { text: 'Date (GMT)' },
-                    dateTimeLabelFormats: { // don't display the dummy year
-                        month: '%e. %b',
-                        year: '%b'
-                    }
-                },
-                yAxis: {
-                    labels: {format: '{value:.2f}'},
-                    title: {
-                        text: 'Water Surface Elevation (m,NAVD88)'
-                    },
-                },
-                plotOptions: {
-                    series: {
-                        marker: {
-                            enabled: false
-                            },
-                        animation: {
-                           enabled: true,
-                           duration: 1000,
-                           easing: 'linear'
-                        },
-                    }
-                },
-                tooltip: {
-                    formatter: function() {
-                            return '<b>'+ this.series.name +'</b><br/>'+
-                            Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
-                    }
-                },
-                series: [{
-                    name: 'ADCIRC',
-                    data: ADCPlottingData
-                        },{
-                    name: 'Observation',
-                    data: OBSPlottingData
-                    }]
-            });
+            seriesData = [{
+                name: ADCLabel,
+                data: ADCPlottingData,
+                color: ADCColorCode
+                    },{
+                name: OBSLabel,
+                data: OBSPlottingData,
+                color: OBSColorCode
+                }];
         }
-        if(DoOBS == 1 && DoADC == 0)
+        else if(DoOBS == 1 && DoADC == 0)
         {
-            $('#plot_area').highcharts({
-                chart: {
-                    type: 'line',
-                    zoomType: 'xy'
-                },
-                exporting: {
-                         enabled: false
-                },
-                title: {
-                    text: 'Timeseries Station Data'
-                },
-                subtitle: {
-                    text: 'Station '+StationName
-                },
-                xAxis: {
-                    type: 'datetime',
-                    title: { text: 'Date (GMT)' },
-                    dateTimeLabelFormats: { // don't display the dummy year
-                        month: '%e. %b',
-                        year: '%b'
-                    }
-                },
-                yAxis: {
-                    labels: {format: '{value:.2f}'},
-                    title: {
-                        text: 'Water Surface Elevation (m,NAVD88)'
-                    },
-                },
-                plotOptions: {
-                    series: {
-                        marker: {
-                            enabled: false
-                            },
-                        animation: {
-                           enabled: true,
-                           duration: 1500,
-                           easing: 'linear'
-                        },
-                    }
-                },
-                tooltip: {
-                    formatter: function() {
-                            return '<b>'+ this.series.name +'</b><br/>'+
-                            Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
-                    }
-                },
-                series: [{
-                    name: 'Observation',
-                    data: OBSPlottingData
-                    }]
-            });
+            seriesData = [{
+                name: OBSLabel,
+                data: OBSPlottingData,
+                color: OBSColorCode
+                }];
         }
         else if(DoOBS == 0 && DoADC == 1)
         {
+            seriesData = [{
+                name: ADCLabel,
+                data: ADCPlottingData,
+                color: ADCColorCode
+                }];
+        }
+
+        // Create the HighChart
             $('#plot_area').highcharts({
                 chart: {
                     type: 'line',
@@ -356,50 +308,17 @@
                          enabled: false
                 },
                 title: {
-                    text: 'Timeseries Station Data'
+                    text: PlotTitle
                 },
                 subtitle: {
                     text: 'Station '+StationName
                 },
-                xAxis: {
-                    type: 'datetime',
-                    title: { text: 'Date (GMT)' },
-                    dateTimeLabelFormats: { // don't display the dummy year
-                        month: '%e. %b',
-                        year: '%b'
-                    }
-                },
-                yAxis: {
-                    labels: {format: '{value:.2f}'},
-                    title: {
-                        text: 'Water Surface Elevation (m,NAVD88)'
-                    },
-                },
-                plotOptions: {
-                    series: {
-                        marker: {
-                            enabled: false
-                            },
-                        animation: {
-                           enabled: true,
-                           duration: 1500,
-                           easing: 'linear'
-                        },
-                    }
-                },
-                tooltip: {
-                    formatter: function() {
-                            return '<b>'+ this.series.name +'</b><br/>'+
-                            Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
-                    }
-                },
-                series: [{
-                    name: 'ADCIRC',
-                    data: ADCPlottingData
-                    }]
+                xAxis: xData,
+                yAxis: yData,
+                plotOptions: plotOption,
+                tooltip: plotToolTip,
+                series: seriesData
             });
-        }
-
 
         return;
       }
