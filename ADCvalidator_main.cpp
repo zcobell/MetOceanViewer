@@ -1365,14 +1365,10 @@ void MainWindow::on_Button_FetchData_clicked()
     ProductIndex = ui->combo_NOAAProduct->currentIndex();
     if(ProductIndex == 0 || ProductIndex == 1)
         Datum = ui->combo_noaadatum->currentText();
-    else if(ProductIndex == 2 || ProductIndex == 5)
+    else if(ProductIndex == 2 || ProductIndex == 5 || ProductIndex == 3
+         || ProductIndex == 4 || ProductIndex == 6 || ProductIndex == 7)
         Datum = "Stnd";
-    else if(ProductIndex == 3 || ProductIndex == 4)
-        Datum = "Stnd";
-    else if(ProductIndex == 6)
-        Datum = "Stnd";
-    else if(ProductIndex == 7)
-        Datum = "Stnd";
+
 
     //Make the date string
     StartString = StartDate.toString("yyyyMMdd");
@@ -1400,7 +1396,13 @@ void MainWindow::on_Button_RefreshNOAAStations_clicked()
 void MainWindow::on_button_adcselectcolor_clicked()
 {
     QString ButtonStyle;
-    ADCIRCIMEDSColor = QColorDialog::getColor(ADCIRCIMEDSColor);
+    QColor TempColor;
+    TempColor = QColorDialog::getColor(ADCIRCIMEDSColor);
+    if(TempColor.isValid())
+        ADCIRCIMEDSColor = TempColor;
+    else
+        return;
+
     ButtonStyle = MakeColorString(ADCIRCIMEDSColor);
     ui->button_adcselectcolor->setStyleSheet(ButtonStyle);
     ui->button_adcselectcolor->update();
@@ -1410,7 +1412,14 @@ void MainWindow::on_button_adcselectcolor_clicked()
 void MainWindow::on_button_imedsselectcolor_clicked()
 {
     QString ButtonStyle;
-    OBSIMEDSColor = QColorDialog::getColor(OBSIMEDSColor);
+    QColor TempColor;
+
+    TempColor = QColorDialog::getColor(OBSIMEDSColor);
+    if(TempColor.isValid())
+        OBSIMEDSColor = TempColor;
+    else
+        return;
+
     ButtonStyle = MakeColorString(OBSIMEDSColor);
     ui->button_imedsselectcolor->setStyleSheet(ButtonStyle);
     ui->button_imedsselectcolor->update();
