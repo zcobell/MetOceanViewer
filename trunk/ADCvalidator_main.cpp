@@ -917,20 +917,6 @@ void MainWindow::on_button_savedata_clicked()
 
 }
 
-//Called when the user tries to save the imeds data
-void MainWindow::on_button_saveIMEDSData_clicked()
-{
-    return;
-
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...","","CSV (*.csv)");
-    if(Filename==NULL)
-        return;
-
-    QFile OutputFile(Filename);
-    OutputFile.open(QIODevice::WriteOnly);
-
-}
-
 //Called when the user tries to save the IMEDS image
 void MainWindow::on_button_saveIMEDSImage_clicked()
 {
