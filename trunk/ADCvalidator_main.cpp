@@ -354,8 +354,6 @@ void MainWindow::GetLeadingPath(QString Input)
 
     }
     PreviousDirectory = Directory;
-    qDebug() << PreviousDirectory;
-    qDebug() << Input;
     return;
 }
 
@@ -1001,6 +999,8 @@ void MainWindow::on_browse_hwm_clicked()
 void MainWindow::on_button_processHWM_clicked()
 {
     QString Marker, unitString, Regression, MeasuredString, ModeledString;
+    QString HWMColor,One21Color,RegColor,BoundColor,RegressionTitle,XLabel,YLabel;
+    QString RegressionGlobal;
     double x,y,measurement,modeled,error,M,B,R,MaximumValue;
     double c0,c1,c2,c3,c4,c5,c6;
     int classification, unit;
@@ -1105,6 +1105,19 @@ void MainWindow::on_button_processHWM_clicked()
     ui->label_class8->setText(QString::number(ui->spin_class6->value()));
 
     ui->subtab_hwm->setCurrentIndex(2);
+
+    RegressionTitle = ui->text_hwmplottitle->text();
+    XLabel = ui->text_adchwmaxislabel->text();
+    YLabel = ui->text_measuredhwmaxislabel->text();
+    HWMColor = DotColorHWM.name();
+    One21Color = LineColor121Line.name();
+    BoundColor = LineColorBounds.name();
+    RegColor = LineColorRegression.name();
+
+    RegressionGlobal = "setGlobal('"+RegressionTitle+"','"+XLabel+"','"+YLabel+"','"+
+            HWMColor+"','"+RegColor+"','"+One21Color+"','"+BoundColor+"')";
+    ui->map_regression->page()->mainFrame()->evaluateJavaScript(RegressionGlobal);
+
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
             unitString+","+QString::number(MaximumValue)+","+QString::number(M)+
             ","+QString::number(B)+")";

@@ -51,6 +51,22 @@
     <script src="/js/modules/exporting.js"></script>
     <script type="text/javascript">
 
+    var PlotTitle;
+    var XLabel,YLabel;
+    var DotColor,RegColor,One21Color,BoundColor;
+
+    function setGlobal(InPlotTitle,InXLabel,InYLabel,InDotColor,InRegColor,In121Color,InBoundColor)
+    {
+        PlotTitle = InPlotTitle;
+        XLabel = InXLabel;
+        YLabel = InYLabel;
+        DotColor = InDotColor;
+        RegColor = InRegColor;
+        One21Color = In121Color;
+        BoundColor = InBoundColor;
+        return;
+    }
+
     function plotRegression(model,measure,unit,maximum,slope,intercept)
     {
         //Split the data into parts
@@ -73,35 +89,36 @@
             exporting: {
                      enabled: false
             },
-            title: {
+            title: { text: PlotTitle },
+            subtitle: {
                 text: 'High Water Mark Comparison'
             },
             xAxis: {
                 labels: {format: '{value:.0f}'},
-                title: { text: 'Measured ('+unit+')' },
+                title: { text: XLabel },
                 min: 0,
                 max: MX
             },
             yAxis: {
                 labels: {format: '{value:.0f}'},
-                title: { text: 'Modeled ('+unit+')'  },
+                title: { text: YLabel },
                 min: 0,
                 max: MX
             },
             series: [{
-                type: 'line',
-                name: 'Lower Bound',
-                data: [[0,-2],[MX,MX-2]],
-                color: '#029c00',
-                enableMouseTracking: false,
-                marker: {
-                    enabled: false
-                    }
+                    type: 'line',
+                    name: 'Lower Bound',
+                    data: [[0,-2],[MX,MX-2]],
+                    color: BoundColor,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
                 },{
                     type: 'line',
                     name: 'Upper Bound',
                     data: [[0,2],[MX,MX+2]],
-                    color: '#029c00',
+                    color: BoundColor,
                     enableMouseTracking: false,
                     marker: {
                         enabled: false
@@ -110,7 +127,7 @@
                     type: 'line',
                     name: '1:1 Line',
                     data: [[0,0],[MX,MX]],
-                    color: '#bb0000',
+                    color: One21Color,
                     enableMouseTracking: false,
                     marker: {
                         enabled: false
@@ -118,13 +135,14 @@
                 },{
                     type: 'scatter',
                     name: 'Comparison',
-                    color: '#0000aa',
-                    data: ScatterData
+                    color: DotColor,
+                    data: ScatterData,
+                    marker: { symbol: "circle" }
                 },{
                     type: 'line',
                     name: 'Regression Line',
                     data: [[0,B],[MX,MX*M+B]],
-                    color: '#558cff',
+                    color: RegColor,
                     enableMouseTracking: false,
                     marker: {
                         enabled: false

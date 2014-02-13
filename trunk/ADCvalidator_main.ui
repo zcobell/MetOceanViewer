@@ -39,7 +39,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
@@ -1924,7 +1924,7 @@
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_24">
                       <item>
-                       <widget class="QLabel" name="label_observedhwmlabel">
+                       <widget class="QLabel" name="label_modeledhwmlabel">
                         <property name="minimumSize">
                          <size>
                           <width>120</width>
@@ -1938,7 +1938,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>Observed Axis Label:</string>
+                         <string>Modeled Axis Label:</string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1946,7 +1946,7 @@
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="text_obshwmaxislabel">
+                       <widget class="QLineEdit" name="text_adchwmaxislabel">
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
@@ -1960,7 +1960,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>Observed</string>
+                         <string>Modeled</string>
                         </property>
                        </widget>
                       </item>
@@ -1996,7 +1996,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>Measured Axis Label:</string>
+                         <string>Observed Axis Label:</string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2018,7 +2018,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>Measured</string>
+                         <string>Observed</string>
                         </property>
                        </widget>
                       </item>
