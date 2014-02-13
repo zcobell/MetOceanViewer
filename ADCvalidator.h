@@ -89,8 +89,6 @@ private slots:
 
     void on_button_savedata_clicked();
 
-    void on_button_saveIMEDSData_clicked();
-
     void on_button_saveIMEDSImage_clicked();
 
     void on_check_imedyauto_toggled(bool checked);
