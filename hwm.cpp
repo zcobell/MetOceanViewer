@@ -81,7 +81,7 @@ int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 
 }
 
-int ComputeLinearRegression(QVector<hwm_data> HWM, double &M, double &R2)
+int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double &M, double &B, double &R2)
 {
     double SumXY, SumX2, SumX, SumY, SumY2, N;
 
@@ -92,6 +92,8 @@ int ComputeLinearRegression(QVector<hwm_data> HWM, double &M, double &R2)
     SumY2 = 0;
     SumY  = 0;
     SumX  = 0;
+    M     = 0;
+    B     = 0;
     N     = static_cast<double>(HWM.size());
 
     try
@@ -106,9 +108,18 @@ int ComputeLinearRegression(QVector<hwm_data> HWM, double &M, double &R2)
         }
 
         //Calculate the slope (M) and Correllation (R2)
-        M  = SumXY / SumX2;
+        if(ForceThroughZero)
+        {
+            M  = SumXY / SumX2;
+            B  = 0;
+        }
+        else
+        {
+            M = (N*SumXY - SumX*SumY) / (N*SumX2-(SumX*SumX));
+            B = ((SumY*SumX2)-(SumX*SumXY))/(N*SumX2-(SumX*SumX));
+        }
         R2 = qPow(((N*SumXY - (SumX*SumY)) /
-                sqrt( (N*SumX2 - (SumX*SumX))*(N*SumY2-(SumY*SumY)) )),2.0);
+            sqrt( (N*SumX2 - (SumX*SumX))*(N*SumY2-(SumY*SumY)) )),2.0);
     }
     catch(...)
     {

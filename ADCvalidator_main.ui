@@ -39,7 +39,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
@@ -702,7 +702,7 @@
         <item>
          <widget class="QTabWidget" name="subtab_IMEDS">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_selectIMEDS">
            <attribute name="title">
@@ -1370,7 +1370,7 @@
         <item>
          <widget class="QTabWidget" name="subtab_hwm">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_hwmData">
            <attribute name="title">
@@ -2118,6 +2118,9 @@
                         <property name="text">
                          <string>Force Regression Line Through Zero</string>
                         </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
                        </widget>
                       </item>
                       <item>
@@ -2138,11 +2141,6 @@
                    </layout>
                   </item>
                  </layout>
-                 <zorder>label_boundlinecolor</zorder>
-                 <zorder>button_121linecolor</zorder>
-                 <zorder>label_121linecolor</zorder>
-                 <zorder>check_forceregthroughzero</zorder>
-                 <zorder>horizontalSpacer_7</zorder>
                 </widget>
                </item>
               </layout>
@@ -2401,18 +2399,18 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>50</width>
+                     <width>120</width>
                      <height>16</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>50</width>
+                     <width>120</width>
                      <height>16</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>slope = </string>
+                    <string>Regression Line: </string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2454,18 +2452,18 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>50</width>
+                     <width>90</width>
                      <height>16</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>50</width>
+                     <width>90</width>
                      <height>16</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;R&lt;span style=&quot; vertical-align:super;&quot;&gt;2&lt;/span&gt; = &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Correlation:    R&lt;span style=&quot; vertical-align:super;&quot;&gt;2&lt;/span&gt; = &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

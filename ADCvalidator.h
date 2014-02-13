@@ -109,6 +109,14 @@ private slots:
 
     void on_button_imedsselectcolor_clicked();
 
+    void on_button_hwmcolor_clicked();
+
+    void on_button_121linecolor_clicked();
+
+    void on_button_reglinecolor_clicked();
+
+    void on_button_boundlinecolor_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -139,6 +147,8 @@ private:
     QString retrieveProduct(int type);
 
     QString MakeColorString(QColor InputColor);
+
+    void GetLeadingPath(QString Input);
 
 };
 

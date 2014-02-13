@@ -51,7 +51,7 @@
     <script src="/js/modules/exporting.js"></script>
     <script type="text/javascript">
 
-    function plotRegression(model,measure,unit,maximum,slope)
+    function plotRegression(model,measure,unit,maximum,slope,intercept)
     {
         //Split the data into parts
         var modelList = model.split(":");
@@ -65,6 +65,7 @@
 
         MX = Number(maximum);
         M  = Number(slope);
+        B  = Number(intercept);
 
         $('#chart_div').highcharts({
             chart: {
@@ -88,15 +89,19 @@
                 max: MX
             },
             series: [{
-                    type: 'scatter',
-                    name: 'Comparison',
-                    color: '#0000aa',
-                    data: ScatterData
+                type: 'line',
+                name: 'Lower Bound',
+                data: [[0,-2],[MX,MX-2]],
+                color: '#029c00',
+                enableMouseTracking: false,
+                marker: {
+                    enabled: false
+                    }
                 },{
                     type: 'line',
-                    name: 'Regression Line',
-                    data: [[0,0],[MX,MX*M]],
-                    color: '#558cff',
+                    name: 'Upper Bound',
+                    data: [[0,2],[MX,MX+2]],
+                    color: '#029c00',
                     enableMouseTracking: false,
                     marker: {
                         enabled: false
@@ -111,19 +116,15 @@
                         enabled: false
                         }
                 },{
-                    type: 'line',
-                    name: 'Upper Bound',
-                    data: [[0,2],[MX,MX+2]],
-                    color: '#029c00',
-                    enableMouseTracking: false,
-                    marker: {
-                        enabled: false
-                        }
+                    type: 'scatter',
+                    name: 'Comparison',
+                    color: '#0000aa',
+                    data: ScatterData
                 },{
                     type: 'line',
-                    name: 'Lower Bound',
-                    data: [[0,-2],[MX,MX-2]],
-                    color: '#029c00',
+                    name: 'Regression Line',
+                    data: [[0,B],[MX,MX*M+B]],
+                    color: '#558cff',
                     enableMouseTracking: false,
                     marker: {
                         enabled: false
