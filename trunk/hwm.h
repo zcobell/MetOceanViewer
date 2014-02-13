@@ -53,6 +53,6 @@ struct hwm_data
 };
 
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM);
-int ComputeLinearRegression(QVector<hwm_data> HWM, double &M, double &Y);
+int ComputeLinearRegression(bool ForceThroughZero, QVector<hwm_data> HWM, double &M, double &B, double &Y);
 
 #endif // HWM_H

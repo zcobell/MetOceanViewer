@@ -45,9 +45,12 @@ QVariant MarkerID = -1;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
 QVector<hwm_data> HighWaterMarks;
 QString HighWaterMarkFile;
+QString PreviousDirectory;
 
 //Colors
-QColor ADCIRCIMEDSColor, OBSIMEDSColor;
+QColor ADCIRCIMEDSColor,OBSIMEDSColor;
+QColor LineColor121Line,LineColorBounds;
+QColor DotColorHWM,LineColorRegression;
 
 int ierr;
 
@@ -125,6 +128,22 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->map_regression->load(QUrl("qrc:/html/reg_plot.html"));
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+    DotColorHWM.setRgb(11,84,255);
+    LineColorRegression.setRgb(7,145,0);
+    LineColor121Line.setRgb(255,0,0);
+    LineColorBounds.setRgb(0,0,0);
+    ButtonStyle = MakeColorString(DotColorHWM);
+    ui->button_hwmcolor->setStyleSheet(ButtonStyle);
+    ui->button_hwmcolor->update();
+    ButtonStyle = MakeColorString(LineColor121Line);
+    ui->button_121linecolor->setStyleSheet(ButtonStyle);
+    ui->button_121linecolor->update();
+    ButtonStyle = MakeColorString(LineColorRegression);
+    ui->button_reglinecolor->setStyleSheet(ButtonStyle);
+    ui->button_reglinecolor->update();
+    ButtonStyle = MakeColorString(LineColorBounds);
+    ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
+    ui->button_boundlinecolor->update();
 
 }
 
@@ -319,6 +338,25 @@ QString MainWindow::RemoveLeadingPath(QString Input)
     QStringList parts = Input.split(rx);
     QString Output = parts.value(parts.length()-1);
     return Output;
+}
+
+void MainWindow::GetLeadingPath(QString Input)
+{
+    QRegExp rx("[/\\\\]");
+    QStringList parts = Input.split(rx);
+    QString Directory = "";
+    for(int i=0; i<parts.length()-1; i++)
+    {
+        if(i>0)
+            Directory = Directory+"/"+parts.value(i);
+        else
+            Directory = parts.value(i);
+
+    }
+    PreviousDirectory = Directory;
+    qDebug() << PreviousDirectory;
+    qDebug() << Input;
+    return;
 }
 
 //Adds the dual plot data for a time series validation station to the map
@@ -815,11 +853,12 @@ void MainWindow::on_button_savechart_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                "","JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
 
     if(Filename==NULL)
         return;
 
+    GetLeadingPath(Filename);
     QFile NOAAOutput(Filename);
     QPixmap NOAAImage(ui->noaa_map->size());
     ui->noaa_map->render(&NOAAImage);
@@ -845,13 +884,14 @@ void MainWindow::on_button_savedata_clicked()
     }
 
     QString filter;
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...","","CSV (*.csv);;IMEDS (*.imeds)",&filter);
+    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory,"CSV (*.csv);;IMEDS (*.imeds)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
 
     if(Filename == NULL)
         return;
 
+    GetLeadingPath(Filename);
     QFile NOAAOutput(Filename);
     QTextStream Output(&NOAAOutput);
     NOAAOutput.open(QIODevice::WriteOnly);
@@ -922,11 +962,12 @@ void MainWindow::on_button_saveIMEDSImage_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                "","JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
 
     if(Filename==NULL)
         return;
 
+    GetLeadingPath(Filename);
     QFile IMEDSOutput(Filename);
     QPixmap IMEDSImage(ui->imeds_map->size());
     ui->imeds_map->render(&IMEDSImage);
@@ -945,11 +986,14 @@ void MainWindow::on_check_imedyauto_toggled(bool checked)
 //Called when the browse for HWM file button is clicked
 void MainWindow::on_browse_hwm_clicked()
 {
-    HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File","","Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
+    HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",
+                                    PreviousDirectory,
+                                    "Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
     if(HighWaterMarkFile==NULL)
         return;
 
     QString TempString = RemoveLeadingPath(HighWaterMarkFile);
+    GetLeadingPath(HighWaterMarkFile);
     ui->Text_HWMFile->setText(TempString);
 }
 
@@ -957,13 +1001,15 @@ void MainWindow::on_browse_hwm_clicked()
 void MainWindow::on_button_processHWM_clicked()
 {
     QString Marker, unitString, Regression, MeasuredString, ModeledString;
-    double x,y,measurement,modeled,error,M,R,MaximumValue;
+    double x,y,measurement,modeled,error,M,B,R,MaximumValue;
     double c0,c1,c2,c3,c4,c5,c6;
     int classification, unit;
+    bool ThroughZero;
 
+    ThroughZero = ui->check_forceregthroughzero->isChecked();
 
     ierr = ReadHWMData(HighWaterMarkFile, HighWaterMarks);
-    ierr = ComputeLinearRegression(HighWaterMarks, M, R);
+    ierr = ComputeLinearRegression(ThroughZero, HighWaterMarks, M, B, R);
     unit = ui->combo_hwmunits->currentIndex();
     if(unit==0)
         unitString = "'ft'";
@@ -1060,10 +1106,16 @@ void MainWindow::on_button_processHWM_clicked()
 
     ui->subtab_hwm->setCurrentIndex(2);
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
-            unitString+","+QString::number(MaximumValue)+","+QString::number(M)+")";
+            unitString+","+QString::number(MaximumValue)+","+QString::number(M)+
+            ","+QString::number(B)+")";
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(Regression);
-    ui->label_slope->setText(QString::number(M));
-    ui->label_r2->setText(QString::number(R));
+
+    if(ThroughZero)
+        ui->label_slope->setText("y = "+QString::number(M,'f',2)+"x");
+    else
+        ui->label_slope->setText("y = "+QString::number(M,'f',2)+"x"+" + "+QString::number(B,'f',2));
+
+    ui->label_r2->setText(QString::number(R,'f',2));
 
     ui->subtab_hwm->setCurrentIndex(1);
     delay(1);
@@ -1091,11 +1143,12 @@ void MainWindow::on_button_saveHWMMap_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                "","JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
 
     if(Filename==NULL)
         return;
 
+    GetLeadingPath(Filename);
     QFile HWMOutput(Filename);
     QPixmap HWMImage(ui->map_hwm->size());
     ui->map_hwm->render(&HWMImage);
@@ -1109,10 +1162,12 @@ void MainWindow::on_button_saveregression_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                "","JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
 
     if(Filename==NULL)
         return;
+
+    GetLeadingPath(Filename);
 
     QFile HWMOutput(Filename);
     QPixmap HWMImage(ui->map_regression->size());
@@ -1177,6 +1232,7 @@ void MainWindow::on_button_processIMEDS_clicked()
         else
         {
             //ui->textbox_IMEDSstatus->appendPlainText("ERROR processing IMEDS Data File 1!");
+            return;
         }
     }
     if(OBSIMEDSFile!=NULL && ui->check_OBSIMEDS->checkState()==2)
@@ -1188,6 +1244,7 @@ void MainWindow::on_button_processIMEDS_clicked()
         else
         {
             //ui->textbox_IMEDSstatus->appendPlainText("ERROR processing IMEDS Data File 2!");
+            return;
         }
     }
 
@@ -1228,9 +1285,10 @@ void MainWindow::on_browse_OBSIMEDS_clicked()
 {
     QDateTime TempStartDate,TempEndDate;
     OBSIMEDSFile = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
-                                                "","IMEDS File (*.imeds *.IMEDS) ;; All Files (*.*)");
+                                                PreviousDirectory,"IMEDS File (*.imeds *.IMEDS) ;; All Files (*.*)");
     if(OBSIMEDSFile!=NULL)
     {
+        GetLeadingPath(OBSIMEDSFile);
         this->setCursor(Qt::WaitCursor);
         ui->text_OBSIMEDS->setText(RemoveLeadingPath(OBSIMEDSFile));
         ui->text_OBSIMEDS->setToolTip(OBSIMEDSFile);
@@ -1256,9 +1314,11 @@ void MainWindow::on_browse_ADCIMEDS_clicked()
 {
     QDateTime TempStartDate,TempEndDate;
     ADCIMEDSFile = QFileDialog::getOpenFileName(this,"Select ADCIRC IMEDS File",
-                                                "","IMEDS File (*.imeds *.IMEDS) ;; All Files (*.*)");
+                                                PreviousDirectory,
+                                                "IMEDS File (*.imeds *.IMEDS) ;; All Files (*.*)");
     if(ADCIMEDSFile!=NULL)
     {
+        GetLeadingPath(ADCIMEDSFile);
         this->setCursor(Qt::WaitCursor);
         ui->text_ADCIMEDS->setText(RemoveLeadingPath(ADCIMEDSFile));
         ui->text_ADCIMEDS->setToolTip(ADCIMEDSFile);
@@ -1409,5 +1469,73 @@ void MainWindow::on_button_imedsselectcolor_clicked()
     ButtonStyle = MakeColorString(OBSIMEDSColor);
     ui->button_imedsselectcolor->setStyleSheet(ButtonStyle);
     ui->button_imedsselectcolor->update();
+    return;
+}
+
+void MainWindow::on_button_hwmcolor_clicked()
+{
+    QString ButtonStyle;
+    QColor TempColor;
+
+    TempColor = QColorDialog::getColor(DotColorHWM);
+    if(TempColor.isValid())
+        DotColorHWM = TempColor;
+    else
+        return;
+
+    ButtonStyle = MakeColorString(DotColorHWM);
+    ui->button_hwmcolor->setStyleSheet(ButtonStyle);
+    ui->button_hwmcolor->update();
+    return;
+}
+
+void MainWindow::on_button_121linecolor_clicked()
+{
+    QString ButtonStyle;
+    QColor TempColor;
+
+    TempColor = QColorDialog::getColor(LineColor121Line);
+    if(TempColor.isValid())
+        LineColor121Line = TempColor;
+    else
+        return;
+
+    ButtonStyle = MakeColorString(LineColor121Line);
+    ui->button_121linecolor->setStyleSheet(ButtonStyle);
+    ui->button_121linecolor->update();
+    return;
+}
+
+void MainWindow::on_button_reglinecolor_clicked()
+{
+    QString ButtonStyle;
+    QColor TempColor;
+
+    TempColor = QColorDialog::getColor(LineColorRegression);
+    if(TempColor.isValid())
+        LineColorRegression = TempColor;
+    else
+        return;
+
+    ButtonStyle = MakeColorString(LineColorRegression);
+    ui->button_reglinecolor->setStyleSheet(ButtonStyle);
+    ui->button_reglinecolor->update();
+    return;
+}
+
+void MainWindow::on_button_boundlinecolor_clicked()
+{
+    QString ButtonStyle;
+    QColor TempColor;
+
+    TempColor = QColorDialog::getColor(LineColorBounds);
+    if(TempColor.isValid())
+        LineColorBounds = TempColor;
+    else
+        return;
+
+    ButtonStyle = MakeColorString(LineColorBounds);
+    ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
+    ui->button_boundlinecolor->update();
     return;
 }
