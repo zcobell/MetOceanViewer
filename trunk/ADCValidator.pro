@@ -14,8 +14,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         ADCvalidator_main.cpp \
-    imeds.cpp \
-    hwm.cpp
+    ui_hwm_tab.cpp \
+    ui_imeds_tab.cpp \
+    ui_noaa_tab.cpp \
+    imeds_data.cpp \
+    hwm_data.cpp \
+    imeds_functions.cpp \
+    hwm_functions.cpp \
+    noaa_functions.cpp \
+    general_functions.cpp
 
 HEADERS  += ADCvalidator.h \
     imeds.h \
