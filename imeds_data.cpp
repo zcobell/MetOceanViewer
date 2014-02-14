@@ -29,12 +29,10 @@
 // $Id$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: imeds.cpp
+//  File: imeds_data.cpp
 //
 //------------------------------------------------------------------------------
 
-
-        
 #include "imeds.h"
 
 QString ADCIMEDSFile=QString(), OBSIMEDSFile=QString();

@@ -45,12 +45,23 @@
 #include <QColorDialog>
 #include "imeds.h"
 
+extern QString PreviousDirectory;
+extern QColor ADCIRCIMEDSColor,OBSIMEDSColor;
+extern QColor LineColor121Line,LineColorBounds;
+extern QColor DotColorHWM,LineColorRegression;
+extern QDateTime IMEDSMinDate,IMEDSMaxDate;
+extern QVector<QVector<double> > NOAAStations;
+extern QVector<QString> NOAAStationNames;
+extern QVector<QString> panToLocations;
+extern QVariant MarkerID;
+
 struct NOAAStationData
 {
     QDate Date;
     QTime Time;
     double value;
 };
+extern QVector<NOAAStationData> CurrentStation;
 
 namespace Ui {
 class MainWindow;
