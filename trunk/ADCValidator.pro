@@ -22,13 +22,16 @@ SOURCES += main.cpp\
     imeds_functions.cpp \
     hwm_functions.cpp \
     noaa_functions.cpp \
-    general_functions.cpp
+    general_functions.cpp \
+    add_imeds_data.cpp
 
 HEADERS  += ADCvalidator.h \
     imeds.h \
-    hwm.h
+    hwm.h \
+    add_imeds_data.h
 
-FORMS    += ADCvalidator_main.ui
+FORMS    += ADCvalidator_main.ui \
+    add_imeds_data.ui
 
 OTHER_FILES +=
 

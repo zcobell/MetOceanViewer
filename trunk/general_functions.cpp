@@ -44,8 +44,6 @@ void MainWindow::delay(int delayTime)
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 }
 
-
-
 //Routine to remove the leading path of a filename for a simpler
 // display in a text box
 QString MainWindow::RemoveLeadingPath(QString Input)
@@ -56,6 +54,8 @@ QString MainWindow::RemoveLeadingPath(QString Input)
     return Output;
 }
 
+//Gets the leading path from the directory that is worked in, used for staying
+//in the same directory for subsequent selections
 void MainWindow::GetLeadingPath(QString Input)
 {
     QRegExp rx("[/\\\\]");
@@ -73,6 +73,7 @@ void MainWindow::GetLeadingPath(QString Input)
     return;
 }
 
+//Makes a string that sets the CSS style according to the input color
 QString MainWindow::MakeColorString(QColor InputColor)
 {
     QString S("background-color: #"
@@ -82,3 +83,41 @@ QString MainWindow::MakeColorString(QColor InputColor)
     return S;
 }
 
+//Terminates the application when quit button clicked
+void MainWindow::on_actionQuit_triggered()
+{
+    close();
+}
+
+//Generates a random color and mixes in white to make it
+//more aestetically pleasing
+QColor MainWindow::GenerateRandomColor()
+{
+    QColor MyColor, Mix;
+    QTime SeedTime;
+    bool DoMix;
+
+    DoMix = false;
+
+    SeedTime = QTime::currentTime();
+    qsrand((uint)SeedTime.msec());
+
+    if(DoMix)
+    {
+        Mix.setRed(255);
+        Mix.setGreen(255);
+        Mix.setBlue(255);
+
+        MyColor.setRed((qrand()%255 + Mix.red()) / 2);
+        MyColor.setGreen((qrand()%255 + Mix.green()) / 2);
+        MyColor.setBlue((qrand()%255 + Mix.blue()) / 2);
+    }
+    else
+    {
+        MyColor.setRed(qrand()%255);
+        MyColor.setGreen(qrand()%255);
+        MyColor.setBlue(qrand()%255);
+    }
+
+    return MyColor;
+}

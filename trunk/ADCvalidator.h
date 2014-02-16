@@ -73,7 +73,16 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = 0);
+
     ~MainWindow();
+
+    static QString MakeColorString(QColor InputColor);
+
+    static void GetLeadingPath(QString Input);
+
+    static QColor GenerateRandomColor();
+
+    static QString RemoveLeadingPath(QString Input);
 
 private slots:
     void BeginGatherStations();
@@ -128,6 +137,12 @@ private slots:
 
     void on_button_boundlinecolor_clicked();
 
+    void on_actionQuit_triggered();
+
+    void on_button_deleterow_clicked();
+
+    void on_button_addrow_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -138,8 +153,6 @@ private:
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
     QString FormatNOAAResponse(QByteArray InputString);
-
-    QString RemoveLeadingPath(QString Input);
 
     void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
 
@@ -157,10 +170,9 @@ private:
 
     QString retrieveProduct(int type);
 
-    QString MakeColorString(QColor InputColor);
-
-    void GetLeadingPath(QString Input);
+    void SetupIMEDSTable();
 
 };
+
 
 #endif // ADCVALIDATOR_H

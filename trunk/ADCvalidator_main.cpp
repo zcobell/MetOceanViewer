@@ -138,6 +138,9 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
     ui->button_boundlinecolor->update();
 
+    //Setup the IMEDS Table
+    SetupIMEDSTable();
+
 }
 
 //Main destructor routine

@@ -36,6 +36,8 @@
 #include "ADCvalidator.h"
 #include "ui_ADCvalidator_main.h"
 #include "imeds.h"
+#include "add_imeds_data.h"
+#include <QVariant>
 
 //Called when the user tries to save the IMEDS image
 void MainWindow::on_button_saveIMEDSImage_clicked()
@@ -299,3 +301,73 @@ void MainWindow::on_button_imedsselectcolor_clicked()
     ui->button_imedsselectcolor->update();
     return;
 }
+
+void MainWindow::on_button_addrow_clicked()
+{
+    add_imeds_data AddWindow;
+    QAbstractItemModel *TableModel = ui->table_IMEDSData->model();
+    QColor CellColor;
+    int NumberOfRows = TableModel->rowCount();
+    AddWindow.setModal(true);
+    AddWindow.set_dialog_box_elements(NumberOfRows);
+
+    int WindowStatus = AddWindow.exec();
+
+    if(WindowStatus == 1)
+    {
+        //Verify the input is valid
+        if(InputFileName==NULL)
+        {
+            QMessageBox::information(this,"ERROR","Please select an input file.");
+            return;
+        }
+        if(InputSeriesName==NULL)
+        {
+            QMessageBox::information(this,"ERROR","Please input a series name.");
+            return;
+        }
+        if(InputColorString==NULL)
+        {
+            QMessageBox::information(this,"ERROR","Please select a valid color for this series.");
+            return;
+        }
+
+        //Ok, what we have is good, so populate
+        NumberOfRows = NumberOfRows+1;
+        ui->table_IMEDSData->setRowCount(NumberOfRows);
+        ui->table_IMEDSData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,1,new QTableWidgetItem(InputSeriesName));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,2,new QTableWidgetItem(InputColorString));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,3,new QTableWidgetItem(InputFilePath));
+        CellColor.setNamedColor(InputColorString);
+        ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
+
+    }
+    AddWindow.close();
+    return;
+}
+
+void MainWindow::on_button_deleterow_clicked()
+{
+    ui->table_IMEDSData->removeRow(ui->table_IMEDSData->currentRow());
+    return;
+}
+
+void MainWindow::SetupIMEDSTable()
+{
+    QString HeaderString = "Filename;Series Name;Color;FullPathToFile";
+    QStringList Header = HeaderString.split(";");
+
+    ui->table_IMEDSData->setRowCount(0);
+    ui->table_IMEDSData->setColumnCount(4);
+    ui->table_IMEDSData->setColumnHidden(3,true);
+    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
+    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(1,QHeaderView::Stretch);
+    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
+    ui->table_IMEDSData->setHorizontalHeaderLabels(Header);
+    ui->table_IMEDSData->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    return;
+}
+
+
