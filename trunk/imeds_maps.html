@@ -53,8 +53,8 @@
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
     <script type="text/javascript">
 
-    var IMEDSMarkers = [];
-    var IMEDSInfoWindow = [];
+    var IMEDSMarkers = new Array();
+    var IMEDSInfoWindow = null;
     var YMin,YMax;
     var PlotTitle;
     var XLabel,YLabel;
@@ -62,9 +62,11 @@
     var ADCColorCode,OBSColorCode;
     var AutoY;
 
-    var Locations = [];
-    var DataSeries = [];
-    var SeriesOptions = [];
+    var Locations = new Array();
+    var DataSeries = new Array();
+    var SeriesOptions = new Array();
+    var StationName = new Array();
+    var map;
 
 
     //Functions for the new version of the IMEDS map
@@ -72,24 +74,25 @@
     //Build the data series
     function allocateData(NumSeries)
     {
-        Locations[1] = [];
-        Locations[2] = [];
+        Locations[1] = new Array();
+        Locations[2] = new Array();
 
-        SeriesOptions[1] = [];
-        SeriesOptions[2] = [];
+        SeriesOptions[1] = new Array();
+        SeriesOptions[2] = new Array();
 
         for(var i=0;i<NumSeries;i++)
         {
-            DataSeries[i] = [];
+            DataSeries[i] = new Array();
         }
         return;
     }
 
     //Set the locations array
-    function SetMarkerLocations(index,x,y)
+    function SetMarkerLocations(index,x,y,name)
     {
         Locations[1][index] = x;
         Locations[2][index] = y;
+        StationName[index]  = name;
         return;
     }
 
@@ -97,12 +100,12 @@
     function AddDataSeries(StationIndex,SeriesIndex,ThisData)
     {
         var ThisDataSplit = ThisData.split(";");
-        DataSeries[SeriesIndex][StationIndex] = [];
-        for(var i=0;i<ThisDataSplit.length();i++)
+        DataSeries[SeriesIndex][StationIndex] = new Array();
+        for(var i=0;i<ThisDataSplit.length;i++)
         {
-            DataSeries[SeriesIndex][StationIndex][i] = [];
+            DataSeries[SeriesIndex][StationIndex][i] = new Array();
             ThisDataSplit2 = ThisDataSplit2.split(":");
-            for(var j=0;j<ThisDataSplit2.length();j++)
+            for(var j=0;j<ThisDataSplit2.length;j++)
             {
                 DataSeries[SeriesIndex][StationIndex][i][j] = ThisDataSplit2[j];
             }
@@ -124,9 +127,10 @@
     {
         var i,x,y,NLocations,Latlng,contentString;
 
-        NLocations = Locations[1].length();
+        NLocations = Locations[1].length;
 
-        for(i=0;NLocations;i++)
+
+        for(i=0;i<NLocations;i++)
         {
             x = Locations[1][i];
             y = Locations[2][i];
@@ -134,23 +138,39 @@
             IMEDSMarkers[i] = new google.maps.Marker({
                 position: Latlng,
                 map: map,
-                title: SeriesOptions[1][i]
+                title: StationName[i],
+                LocalID: i
             });
-            contentString = "<b>Station:</b> "+SeriesOptions[1][i];
-
+            contentString = "<b>Station:</b> "+StationName[i];
+            IMEDSInfoWindow = new google.maps.InfoWindow({content: contentString});
             google.maps.event.addListener(IMEDSMarkers[i], 'click', function() {
-                //Set the Marker ID
-                window.markerID = i;
-                if(window.LastInfo!=-1)
-                {
-                    window.LastInfo.close();
-                }
-                window.LastInfo = IMEDSInfoWindow[i];
-                IMEDSInfoWindow[i].open(map,IMEDSMarkers[i]);
-                //INSERT PLOTTING HERE
+              IMEDSInfoWindow.open(map,this);
+              PlotIMEDSSeries(this);
             });
-
         }
+        return;
+    }
+
+    function PlotIMEDSSeries(marker)
+    {
+        var i,j,index;
+        var seriesList = new Array();
+        var Data = new Array();
+
+        index = marker.LocalID;
+
+        //Create the data tables
+
+
+        //Create the series
+        for(i=0;i<DataSeries.length;i++)
+        {
+            seriesList[i] = { name: SeriesOptions[i][1],
+                              color: SeriesOptions[i][2],
+                              data: Data[i]
+                            };
+        }
+
         return;
     }
 
@@ -234,6 +254,9 @@
         //Initialize the map
 
         window.LastInfo = -1;
+
+        IMEDSInfoWindow = new google.maps.InfoWindow({content: "holding..."});
+
         var myOptions = {
           center: new google.maps.LatLng(29.5, -91.5),
           zoom: 8,

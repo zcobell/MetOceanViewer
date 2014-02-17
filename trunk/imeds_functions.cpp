@@ -389,10 +389,28 @@ QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index)
         if(MyStation.station[index].date[j].operator >(StartData) &&
              MyStation.station[index].date[j].operator <(EndData))
         {
+            TempString = "";
             TempString = MyStation.station[index].date[j].toString("yyyy:MM:dd:hh:mm");
             TempString = TempString+":"+QString::number(MyStation.station[index].data[j]);
             Response=Response+TempString+";";
         }
     }
     return Response;
+}
+
+//Check if two IMEDS files have the same station locations inside
+int MainWindow::CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test)
+{
+    if(Control.nstations!=Test.nstations)
+    {
+        return 1;
+    }
+    for(int i=0;i<Control.nstations;i++)
+    {
+        if(Control.station[i].latitude!=Test.station[i].latitude)
+            return 1;
+        if(Control.station[i].longitude!=Test.station[i].longitude)
+            return 1;
+    }
+    return 0;
 }

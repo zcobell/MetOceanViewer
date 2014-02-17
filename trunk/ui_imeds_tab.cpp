@@ -307,9 +307,9 @@ void MainWindow::on_button_imedsselectcolor_clicked()
 void MainWindow::on_button_addrow_clicked()
 {
     add_imeds_data AddWindow;
-    QAbstractItemModel *TableModel = ui->table_IMEDSData->model();
     QColor CellColor;
-    int NumberOfRows = TableModel->rowCount();
+
+    int NumberOfRows = ui->table_IMEDSData->rowCount();
     AddWindow.setModal(true);
     AddWindow.set_default_dialog_box_elements(NumberOfRows);
 
@@ -349,7 +349,6 @@ void MainWindow::on_button_addrow_clicked()
 
         if(!IMEDSData[NumberOfRows-1].success)
         {
-            qDebug() << IMEDSData[NumberOfRows-1].success;
             IMEDSData.remove(NumberOfRows-1);
             ui->table_IMEDSData->removeRow(NumberOfRows-1);
             QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
@@ -461,4 +460,69 @@ void MainWindow::on_button_editrow_clicked()
     }
     AddWindow.close();
     return;
+}
+
+
+//Send the data to the HTML side of the code for plotting
+void MainWindow::on_button_processIMEDSData_clicked()
+{
+    int i,j,ierr;
+    double x,y;
+    QString javascript,DataString,name,color;
+    QVariant jsResponse;
+
+    //Verify that the stations are the same in all files
+    if(IMEDSData.length()>1)
+    {
+        for(i=1;i<IMEDSData.length();i++)
+        {
+            ierr = CheckStationLocationsIMEDS(IMEDSData[0],IMEDSData[i]);
+            if(ierr==1)
+            {
+                QMessageBox::information(this,"ERROR","The station locations in the IMEDS files do not match.");
+                return;
+            }
+        }
+    }
+
+    //Inform HTML on the number of data series
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("allocateData("+
+                                                           QString::number(IMEDSData.length())+")");
+
+    //Send locations to HTML side
+    for(i=0;i<IMEDSData[0].nstations;i++)
+    {
+        x = IMEDSData[0].station[i].longitude;
+        y = IMEDSData[0].station[i].latitude;
+        javascript = "SetMarkerLocations("+QString::number(i)+
+                ","+QString::number(x)+","+
+                QString::number(y)+",'"+
+                IMEDSData[0].station[i].StationName+"')";
+        jsResponse = ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+
+        javascript = "";
+        //Send the data series to the back end as well
+        for(j=0;j<IMEDSData.length();j++)
+        {
+            DataString = FormatIMEDSString(IMEDSData[j],i);
+            javascript = "";
+            javascript = "AddDataSeries("+QString::number(i)+","+QString::number(j)+",'"+DataString+"')";
+            ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        }
+    }
+
+    //Set the names and colors of the data series
+    for(i=0;i<IMEDSData.length();i++)
+    {
+        name = ui->table_IMEDSData->item(i,1)->text();
+        color = ui->table_IMEDSData->item(i,2)->text();
+        ui->imeds_map->page()->mainFrame()->evaluateJavaScript("SetSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"')");
+    }
+
+    //Now, all data should be on the backend for plotting. Bombs away...
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("AddToMap()");
+    ui->MainTabs->setCurrentIndex(1);
+    ui->subtab_IMEDS->setCurrentIndex(1);
+    delay(1);
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
 }
