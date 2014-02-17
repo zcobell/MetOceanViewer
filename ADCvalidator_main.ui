@@ -2938,7 +2938,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="button_processIMEDS_2">
+         <widget class="QPushButton" name="button_processIMEDSData">
           <property name="text">
            <string>Process Data</string>
           </property>

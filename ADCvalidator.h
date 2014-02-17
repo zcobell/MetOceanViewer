@@ -145,6 +145,8 @@ private slots:
 
     void on_button_editrow_clicked();
 
+    void on_button_processIMEDSData_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -177,6 +179,8 @@ private:
     void UpdateIMEDSDateRange(IMEDS MyIMEDS);
 
     QString FormatIMEDSString(IMEDS MyStation,int index);
+
+    int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
 
 };
 
