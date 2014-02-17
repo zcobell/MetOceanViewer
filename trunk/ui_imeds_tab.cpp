@@ -37,7 +37,8 @@
 #include "ui_ADCvalidator_main.h"
 #include "imeds.h"
 #include "add_imeds_data.h"
-#include <QVariant>
+
+QVector<IMEDS> IMEDSData;
 
 //Called when the user tries to save the IMEDS image
 void MainWindow::on_button_saveIMEDSImage_clicked()
@@ -302,6 +303,7 @@ void MainWindow::on_button_imedsselectcolor_clicked()
     return;
 }
 
+//Adds a row to the table and reads the new data into the IMEDS variable
 void MainWindow::on_button_addrow_clicked()
 {
     add_imeds_data AddWindow;
@@ -309,7 +311,7 @@ void MainWindow::on_button_addrow_clicked()
     QColor CellColor;
     int NumberOfRows = TableModel->rowCount();
     AddWindow.setModal(true);
-    AddWindow.set_dialog_box_elements(NumberOfRows);
+    AddWindow.set_default_dialog_box_elements(NumberOfRows);
 
     int WindowStatus = AddWindow.exec();
 
@@ -334,6 +336,9 @@ void MainWindow::on_button_addrow_clicked()
 
         //Ok, what we have is good, so populate
         NumberOfRows = NumberOfRows+1;
+        IMEDSData.resize(NumberOfRows);
+        IMEDSData[NumberOfRows-1] = readIMEDS(InputFilePath);
+        UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
         ui->table_IMEDSData->setRowCount(NumberOfRows);
         ui->table_IMEDSData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
         ui->table_IMEDSData->setItem(NumberOfRows-1,1,new QTableWidgetItem(InputSeriesName));
@@ -347,8 +352,11 @@ void MainWindow::on_button_addrow_clicked()
     return;
 }
 
+//Called when the delete row button is clicked. Removes from the
+//table as well as the data vector
 void MainWindow::on_button_deleterow_clicked()
 {
+    IMEDSData.remove(ui->table_IMEDSData->currentRow());
     ui->table_IMEDSData->removeRow(ui->table_IMEDSData->currentRow());
     return;
 }
@@ -370,4 +378,60 @@ void MainWindow::SetupIMEDSTable()
     return;
 }
 
+//Called when the edit row button is clicked. Updates the IMEDS data vector
+void MainWindow::on_button_editrow_clicked()
+{
+    add_imeds_data AddWindow;
+    QColor CellColor;
+    QString Filename,Filepath,SeriesName;
+    int CurrentRow;
 
+    AddWindow.setModal(true);
+    CurrentRow = ui->table_IMEDSData->currentRow();
+    Filename = ui->table_IMEDSData->item(CurrentRow,0)->text();
+    Filepath = ui->table_IMEDSData->item(CurrentRow,3)->text();
+    SeriesName = ui->table_IMEDSData->item(CurrentRow,1)->text();
+    CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
+
+    AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,CellColor);
+
+    int WindowStatus = AddWindow.exec();
+
+    if(WindowStatus == 1)
+    {
+        //Verify the input is valid
+        if(InputFileName==NULL)
+        {
+            QMessageBox::information(this,"ERROR","Please select an input file.");
+            return;
+        }
+        if(InputSeriesName==NULL)
+        {
+            QMessageBox::information(this,"ERROR","Please input a series name.");
+            return;
+        }
+        if(InputColorString==NULL)
+        {
+            QMessageBox::information(this,"ERROR","Please select a valid color for this series.");
+            return;
+        }
+
+        ui->table_IMEDSData->setItem(CurrentRow,0,new QTableWidgetItem(InputFileName));
+        ui->table_IMEDSData->setItem(CurrentRow,1,new QTableWidgetItem(InputSeriesName));
+        ui->table_IMEDSData->setItem(CurrentRow,2,new QTableWidgetItem(InputColorString));
+        ui->table_IMEDSData->setItem(CurrentRow,3,new QTableWidgetItem(InputFilePath));
+        CellColor.setNamedColor(InputColorString);
+        ui->table_IMEDSData->item(CurrentRow,2)->setBackgroundColor(CellColor);
+
+        //If we need to, read the new IMEDS file into the appropriate slot
+        if(InputFilePath!=Filepath)
+        {
+            IMEDSData.remove(CurrentRow);
+            IMEDSData.insert(CurrentRow,readIMEDS(InputFilePath));
+            UpdateIMEDSDateRange(IMEDSData[CurrentRow]);
+        }
+
+    }
+    AddWindow.close();
+    return;
+}
