@@ -43,7 +43,6 @@ IMEDS readIMEDS(QString filename)
 
     //Variables
     IMEDS Output;
-    QString TempString;
     QString year;
     QString month;
     QString day;
@@ -53,8 +52,6 @@ IMEDS readIMEDS(QString filename)
     QString DateString;
     QStringList TempList;
     QVector<QString> FileData;
-    QDate TempDate;
-    QTime TempTime;
     int nLine;
     int nStation;
     int i;
@@ -154,6 +151,7 @@ IMEDS readIMEDS(QString filename)
                         QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
                                   QTime(hour.toInt(),minute.toInt(),second.toInt()));
                 Output.station[j].data[k] = value;
+                Output.success = true;
             }
             else if(TempList.length()==7)
             {
@@ -169,6 +167,7 @@ IMEDS readIMEDS(QString filename)
                         QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
                                   QTime(hour.toInt(),minute.toInt(),second.toInt()));
                 Output.station[j].data[k] = value;
+                Output.success = true;
             }
             else
             {
@@ -178,7 +177,6 @@ IMEDS readIMEDS(QString filename)
             }
 
         }
-        Output.success = true;
         return Output;
     }
     catch(...)

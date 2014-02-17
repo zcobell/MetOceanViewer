@@ -347,6 +347,15 @@ void MainWindow::on_button_addrow_clicked()
         CellColor.setNamedColor(InputColorString);
         ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
 
+        if(!IMEDSData[NumberOfRows-1].success)
+        {
+            qDebug() << IMEDSData[NumberOfRows-1].success;
+            IMEDSData.remove(NumberOfRows-1);
+            ui->table_IMEDSData->removeRow(NumberOfRows-1);
+            QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
+            return;
+        }
+
     }
     AddWindow.close();
     return;
@@ -356,6 +365,11 @@ void MainWindow::on_button_addrow_clicked()
 //table as well as the data vector
 void MainWindow::on_button_deleterow_clicked()
 {
+    if(ui->table_IMEDSData->rowCount()==0)
+    {
+        QMessageBox::information(this,"ERROR","There are no rows in the table.");
+        return;
+    }
     IMEDSData.remove(ui->table_IMEDSData->currentRow());
     ui->table_IMEDSData->removeRow(ui->table_IMEDSData->currentRow());
     return;
@@ -385,6 +399,12 @@ void MainWindow::on_button_editrow_clicked()
     QColor CellColor;
     QString Filename,Filepath,SeriesName;
     int CurrentRow;
+
+    if(ui->table_IMEDSData->rowCount() == 0)
+    {
+        QMessageBox::information(this,"ERROR","Insert a row first.");
+        return;
+    }
 
     AddWindow.setModal(true);
     CurrentRow = ui->table_IMEDSData->currentRow();
@@ -428,6 +448,13 @@ void MainWindow::on_button_editrow_clicked()
         {
             IMEDSData.remove(CurrentRow);
             IMEDSData.insert(CurrentRow,readIMEDS(InputFilePath));
+            if(!IMEDSData[CurrentRow].success)
+            {
+                IMEDSData.remove(CurrentRow);
+                ui->table_IMEDSData->removeRow(CurrentRow);
+                QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
+                return;
+            }
             UpdateIMEDSDateRange(IMEDSData[CurrentRow]);
         }
 

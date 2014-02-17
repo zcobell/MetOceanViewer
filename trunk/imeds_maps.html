@@ -62,6 +62,100 @@
     var ADCColorCode,OBSColorCode;
     var AutoY;
 
+    var Locations = [];
+    var DataSeries = [];
+    var SeriesOptions = [];
+
+
+    //Functions for the new version of the IMEDS map
+
+    //Build the data series
+    function allocateData(NumSeries)
+    {
+        Locations[1] = [];
+        Locations[2] = [];
+
+        SeriesOptions[1] = [];
+        SeriesOptions[2] = [];
+
+        for(var i=0;i<NumSeries;i++)
+        {
+            DataSeries[i] = [];
+        }
+        return;
+    }
+
+    //Set the locations array
+    function SetMarkerLocations(index,x,y)
+    {
+        Locations[1][index] = x;
+        Locations[2][index] = y;
+        return;
+    }
+
+    //Save the time series data into a single 4 dimensional array
+    function AddDataSeries(StationIndex,SeriesIndex,ThisData)
+    {
+        var ThisDataSplit = ThisData.split(";");
+        DataSeries[SeriesIndex][StationIndex] = [];
+        for(var i=0;i<ThisDataSplit.length();i++)
+        {
+            DataSeries[SeriesIndex][StationIndex][i] = [];
+            ThisDataSplit2 = ThisDataSplit2.split(":");
+            for(var j=0;j<ThisDataSplit2.length();j++)
+            {
+                DataSeries[SeriesIndex][StationIndex][i][j] = ThisDataSplit2[j];
+            }
+            if(Number(DataSeries[SeriesIndex][StationIndex][i][j])<-400)
+                DataSeries[SeriesIndex][StationIndex][i][j] = -9999;
+        }
+        return;
+    }
+
+    //Save the options for each data series
+    function SetSeriesOptions(index,name,color)
+    {
+        SeriesOptions[1][index] = name;
+        SeriesOptions[2][index] = color;
+        return;
+    }
+
+    function AddToMap()
+    {
+        var i,x,y,NLocations,Latlng,contentString;
+
+        NLocations = Locations[1].length();
+
+        for(i=0;NLocations;i++)
+        {
+            x = Locations[1][i];
+            y = Locations[2][i];
+            Latlng = new google.maps.LatLng(y,x);
+            IMEDSMarkers[i] = new google.maps.Marker({
+                position: Latlng,
+                map: map,
+                title: SeriesOptions[1][i]
+            });
+            contentString = "<b>Station:</b> "+SeriesOptions[1][i];
+
+            google.maps.event.addListener(IMEDSMarkers[i], 'click', function() {
+                //Set the Marker ID
+                window.markerID = i;
+                if(window.LastInfo!=-1)
+                {
+                    window.LastInfo.close();
+                }
+                window.LastInfo = IMEDSInfoWindow[i];
+                IMEDSInfoWindow[i].open(map,IMEDSMarkers[i]);
+                //INSERT PLOTTING HERE
+            });
+
+        }
+        return;
+    }
+
+
+    //Old IMEDS map Functions
     function clearMarkers()
     {
         while(IMEDSMarkers[0])
