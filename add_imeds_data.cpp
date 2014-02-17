@@ -54,8 +54,9 @@ add_imeds_data::~add_imeds_data()
     delete ui;
 }
 
-
-void add_imeds_data::set_dialog_box_elements(int NumRowsInTable)
+//Set the default elements with a series name, a blank filename, and
+//a randomly generated color
+void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 {
     QString ButtonStyle;
     ui->text_seriesname->setText("Series "+QString::number(NumRowsInTable+1));
@@ -66,7 +67,22 @@ void add_imeds_data::set_dialog_box_elements(int NumRowsInTable)
     return;
 }
 
+//When editing an existing row, set the dialog box elements that we're bringing
+//up for the user
+void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
+                                             QString SeriesName, QColor Color)
+{
+    QString ButtonStyle;
+    ui->text_seriesname->setText(SeriesName);
+    ui->text_filename->setText(Filename);
+    InputFilePath = Filepath;
+    ButtonStyle = MainWindow::MakeColorString(Color);
+    ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
+    ui->button_IMEDSColor->update();
+    return;
+}
 
+//Bring up the browse for file dialog
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
@@ -83,16 +99,25 @@ void add_imeds_data::on_browse_filebrowse_clicked()
     return;
 }
 
+//Bring up a color palette and change the button color
+//in the dialog when return comes
 void add_imeds_data::on_button_IMEDSColor_clicked()
 {
     QColor TempColor = QColorDialog::getColor(RandomButtonColor);
+    QString ButtonStyle;
 
     if(TempColor.isValid())
+    {
         RandomButtonColor = TempColor;
+        ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
+        ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
+        ui->button_IMEDSColor->update();
+    }
     else
         return;
 }
 
+//Set the data values when "ok" is selected
 void add_imeds_data::on_buttonBox_accepted()
 {
     InputFileName = ui->text_filename->text();

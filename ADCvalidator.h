@@ -143,6 +143,8 @@ private slots:
 
     void on_button_addrow_clicked();
 
+    void on_button_editrow_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -171,6 +173,10 @@ private:
     QString retrieveProduct(int type);
 
     void SetupIMEDSTable();
+
+    void UpdateIMEDSDateRange(IMEDS MyIMEDS);
+
+    QString FormatIMEDSString(IMEDS MyStation,int index);
 
 };
 

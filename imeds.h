@@ -70,5 +70,6 @@ extern QString ADCIMEDSFile;
 extern QString OBSIMEDSFile;
 extern IMEDS ADCIMEDS;
 extern IMEDS OBSIMEDS;
+extern QVector<IMEDS> IMEDSData;
 
 #endif // IMEDS_H

@@ -346,3 +346,53 @@ void MainWindow::getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime 
     }
     return;
 }
+
+//Reset the IMEDS data range shown the selection boxes
+void MainWindow::UpdateIMEDSDateRange(IMEDS MyIMEDS)
+{
+    QDateTime CurrentMin,CurrentMax;
+    QDateTime MyMin,MyMax;
+
+    CurrentMin = IMEDSMinDate;
+    CurrentMax = IMEDSMaxDate;
+
+    getGlobalStartEndTime(MyIMEDS, MyMin, MyMax);
+
+    if(MyMin.operator <(CurrentMin))
+        CurrentMin = MyMin;
+
+    if(MyMax.operator >(CurrentMax))
+        CurrentMax = MyMax;
+
+    ui->date_imedsstart->setDateTime(CurrentMin);
+    ui->date_imedsend->setDateTime(CurrentMax);
+    ui->date_imedsstart->setMinimumDateTime(CurrentMin);
+    ui->date_imedsstart->setMaximumDateTime(CurrentMax);
+    ui->date_imedsend->setMinimumDateTime(CurrentMin);
+    ui->date_imedsend->setMaximumDateTime(CurrentMax);
+
+    return;
+}
+
+//Format the IMEDS data string into something we can use in Javascript
+QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index)
+{
+    QString Response,TempString;
+    QDateTime StartData,EndData;
+
+    StartData = ui->date_imedsstart->dateTime();
+    EndData = ui->date_imedsend->dateTime();
+
+    Response = "";
+    for(int j=0;j<MyStation.station[index].NumSnaps;j++)
+    {
+        if(MyStation.station[index].date[j].operator >(StartData) &&
+             MyStation.station[index].date[j].operator <(EndData))
+        {
+            TempString = MyStation.station[index].date[j].toString("yyyy:MM:dd:hh:mm");
+            TempString = TempString+":"+QString::number(MyStation.station[index].data[j]);
+            Response=Response+TempString+";";
+        }
+    }
+    return Response;
+}

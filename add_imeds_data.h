@@ -63,7 +63,9 @@ public:
 
     ~add_imeds_data();
 
-    void set_dialog_box_elements(int NumberOfRows);
+    void set_default_dialog_box_elements(int NumberOfRows);
+
+    void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName, QColor Color);
 
 private slots:
 
