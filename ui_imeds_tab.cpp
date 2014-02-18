@@ -397,6 +397,7 @@ void MainWindow::on_button_editrow_clicked()
     add_imeds_data AddWindow;
     QColor CellColor;
     QString Filename,Filepath,SeriesName;
+
     int CurrentRow;
 
     if(ui->table_IMEDSData->rowCount() == 0)
@@ -437,10 +438,14 @@ void MainWindow::on_button_editrow_clicked()
 
         ui->table_IMEDSData->setItem(CurrentRow,0,new QTableWidgetItem(InputFileName));
         ui->table_IMEDSData->setItem(CurrentRow,1,new QTableWidgetItem(InputSeriesName));
-        ui->table_IMEDSData->setItem(CurrentRow,2,new QTableWidgetItem(InputColorString));
         ui->table_IMEDSData->setItem(CurrentRow,3,new QTableWidgetItem(InputFilePath));
-        CellColor.setNamedColor(InputColorString);
-        ui->table_IMEDSData->item(CurrentRow,2)->setBackgroundColor(CellColor);
+
+        if(ColorUpdated)
+        {
+            ui->table_IMEDSData->setItem(CurrentRow,2,new QTableWidgetItem(InputColorString));
+            CellColor.setNamedColor(InputColorString);
+            ui->table_IMEDSData->item(CurrentRow,2)->setBackgroundColor(CellColor);
+        }
 
         //If we need to, read the new IMEDS file into the appropriate slot
         if(InputFilePath!=Filepath)
@@ -467,16 +472,47 @@ void MainWindow::on_button_editrow_clicked()
 void MainWindow::on_button_processIMEDSData_clicked()
 {
     int i,j,ierr;
-    double x,y;
+    double x,y,YMin,YMax;
+    bool Checked;
     QString javascript,DataString,name,color;
+    QString PlotTitle,XLabel,YLabel,AutoY;
     QVariant jsResponse;
+
+    if(ui->table_IMEDSData->rowCount()==0)
+    {
+        QMessageBox::information(this,"ERROR","There are no rows in the table.");
+        return;
+    }
+
+    //Set up our axis labels and plot titles
+    PlotTitle = ui->text_imedsplottitle->text();
+    XLabel  = ui->text_xaxislabel->text();
+    YLabel  = ui->text_yaxislabel->text();
+    YMin    = ui->spin_imedsymin->value();
+    YMax    = ui->spin_imedsymax->value();
+    Checked = ui->check_imedyauto->isChecked();
+    if(Checked)
+        AutoY = "auto";
+    else
+        AutoY = "none";
+
+    javascript = "setGlobal('"+PlotTitle+"','"+AutoY+"',"+YMin+","+YMax+",'"+XLabel+"','"+YLabel+"')";
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+
 
     //Verify that the stations are the same in all files
     if(IMEDSData.length()>1)
-    {
+    {        
         for(i=1;i<IMEDSData.length();i++)
         {
             ierr = CheckStationLocationsIMEDS(IMEDSData[0],IMEDSData[i]);
+
+            name  = ui->table_IMEDSData->item(0,1)->text();
+            color = ui->table_IMEDSData->item(0,2)->text();
+            javascript = "setSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"')";
+            qDebug() << javascript;
+            ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+
             if(ierr==1)
             {
                 QMessageBox::information(this,"ERROR","The station locations in the IMEDS files do not match.");

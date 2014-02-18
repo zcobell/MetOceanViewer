@@ -51,7 +51,7 @@ QVariant MarkerID = -1;
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
     QString ButtonStyle;
-
+    QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 
     //Setup UI
     ui->setupUi(this);
