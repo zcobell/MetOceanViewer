@@ -40,6 +40,8 @@
 int NumIMEDSFiles = 0;
 int CurrentRowsInTable = 0;
 bool ColorUpdated;
+double UnitConversion, xadjust, yadjust;
+
 QColor RandomButtonColor;
 QString InputFileName,InputColorString,InputSeriesName,InputFilePath;
 
@@ -48,6 +50,9 @@ add_imeds_data::add_imeds_data(QWidget *parent) :
     ui(new Ui::add_imeds_data)
 {
     ui->setupUi(this);
+    ui->text_unitconvert->setValidator(new QDoubleValidator(this));
+    ui->text_xadjust->setValidator(new QDoubleValidator(this));
+    ui->text_yadjust->setValidator(new QDoubleValidator(this));
 }
 
 add_imeds_data::~add_imeds_data()
@@ -61,6 +66,9 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 {
     QString ButtonStyle;
     ui->text_seriesname->setText("Series "+QString::number(NumRowsInTable+1));
+    ui->text_unitconvert->setText("1.0");
+    ui->text_xadjust->setText("0.0");
+    ui->text_yadjust->setText("0.0");
     RandomButtonColor = MainWindow::GenerateRandomColor();
     ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
@@ -71,11 +79,15 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 //When editing an existing row, set the dialog box elements that we're bringing
 //up for the user
 void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
-                                             QString SeriesName, QColor Color)
+                                             QString SeriesName, double UnitConvert,
+                                             double xmove, double ymove, QColor Color)
 {
     QString ButtonStyle;
     ui->text_seriesname->setText(SeriesName);
     ui->text_filename->setText(Filename);
+    ui->text_unitconvert->setText(QString::number(UnitConvert));
+    ui->text_xadjust->setText(QString::number(xmove));
+    ui->text_yadjust->setText(QString::number(ymove));
     InputFilePath = Filepath;
     ButtonStyle = MainWindow::MakeColorString(Color);
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
@@ -124,8 +136,28 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
 //Set the data values when "ok" is selected
 void add_imeds_data::on_buttonBox_accepted()
 {
+    QString TempString;
+
     InputFileName = ui->text_filename->text();
     InputColorString = RandomButtonColor.name();
     InputSeriesName = ui->text_seriesname->text();
+    TempString = ui->text_unitconvert->text();
+    if(TempString==NULL)
+        UnitConversion = 1.0;
+    else
+        UnitConversion = TempString.toDouble();
+
+    TempString = ui->text_xadjust->text();
+    if(TempString==NULL)
+        xadjust = 0.0;
+    else
+        xadjust = TempString.toDouble();
+
+    TempString = ui->text_yadjust->text();
+    if(TempString==NULL)
+        yadjust = 0.0;
+    else
+        yadjust = TempString.toDouble();
+
     return;
 }
