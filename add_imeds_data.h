@@ -49,6 +49,7 @@ struct IMEDSList
 extern int NumIMEDSFiles;
 extern int CurrentRowsIntTable;
 extern QString InputFileName,InputColorString,InputSeriesName,InputFilePath;
+extern double UnitConversion,xadjust,yadjust;
 
 namespace Ui {
 class add_imeds_data;
@@ -65,7 +66,8 @@ public:
 
     void set_default_dialog_box_elements(int NumberOfRows);
 
-    void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName, QColor Color);
+    void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
+                                 double UnitConvert, double xmove, double ymove, QColor Color);
 
 private slots:
 

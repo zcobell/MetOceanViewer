@@ -78,9 +78,6 @@
         Locations[0] = new Array();
         Locations[1] = new Array();
 
-        SeriesOptions[0] = new Array();
-        SeriesOptions[1] = new Array();
-
         for(var i=0;i<NumSeries;i++)
         {
             DataSeries[i] = new Array();
@@ -121,10 +118,9 @@
     }
 
     //Save the options for each data series
-    function SetSeriesOptions(index,name,color)
+    function SetSeriesOptions(index,MyName,MyColor,MyUnit,MyXadjust,MyYadjust)
     {
-        SeriesOptions[0][index] = name;
-        SeriesOptions[1][index] = color;
+        SeriesOptions[index] = { name: MyName, color: MyColor, unit: MyUnit, xadjust: MyXadjust, yadjust: MyYadjust };
         return;
     }
 
@@ -159,6 +155,7 @@
         var Data = new Array();
         var contentString;
         var ThisData;
+        var multiplier,plusX,plusY;
 
         index = marker.LocalID;
 
@@ -172,20 +169,23 @@
         IMEDSInfoWindow.open(map,marker);
         LastInfoWindow = IMEDSInfoWindow;
 
-
         //Create the data tables
         for(i=0;i<DataSeries.length;i++)
         {
-            Data[i] = new Array();
+            Data[i]    = new Array();
+            multiplier = SeriesOptions[i].unit;
+            plusX      = SeriesOptions[i].xadjust;
+            plusY      = SeriesOptions[i].yadjust;
+
             for(j=0;j<DataSeries[i][index].length-1;j++)
             {
 
                 Data[i][j] = new Array();
                 ThisDate = Date.UTC(Number(DataSeries[i][index][j][0]),Number(DataSeries[i][index][j][1])-1,
-                                    Number(DataSeries[i][index][j][2]),Number(DataSeries[i][index][j][3]),
+                                    Number(DataSeries[i][index][j][2]),Number(DataSeries[i][index][j][3])+plusX,
                                     Number(DataSeries[i][index][j][4]),0,0);
                 Data[i][j][0] = ThisDate;
-                Data[i][j][1] = Number(DataSeries[i][index][j][5]);
+                Data[i][j][1] = Number(DataSeries[i][index][j][5])*multiplier+plusY;
 
                 //Null value check
                 if(Data[i][j][1]<-999)
@@ -200,7 +200,7 @@
         for(i=0;i<DataSeries.length;i++)
         {
             LocalData = Data[i];
-            seriesList[i] = {name: SeriesOptions[0][i], color: SeriesOptions[1][i], data: LocalData };
+            seriesList[i] = {name: SeriesOptions[i].name, color: SeriesOptions[i].color, data: LocalData };
         }
 
         //Start setting up the plot
@@ -276,45 +276,6 @@
         map.fitBounds(extent);
     }
 
-    function SetGlobalValues(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InADCLabel,InOBSLabel,InADCColorCode,InOBSColorCode)
-    {
-        PlotTitle = InPlotTitle;
-        YMin = InYMin;
-        YMax = InYMax;
-        XLabel = InXLabel;
-        YLabel = InYLabel;
-        ADCLabel = InADCLabel;
-        OBSLabel = InOBSLabel;
-        ADCColorCode = InADCColorCode;
-        OBSColorCode = InOBSColorCode;
-        AutoY = InAutoY;
-
-        return;
-    }
-
-    function addValidationStation(DoADC,DoOBS,x,y,ID,name,Range,RawDataADC,RawDataOBS){
-          var myLatlng = new google.maps.LatLng(y,x);
-          IMEDSMarkers[ID] = new google.maps.Marker({
-              position: myLatlng,
-              map: map,
-              title: String(ID)
-          });
-          var contentString = "<b>Validation Station:</b> "+name;
-          IMEDSInfoWindow[ID] = new google.maps.InfoWindow({content: contentString});
-          google.maps.event.addListener(IMEDSMarkers[ID], 'click', function() {
-            //Set the Marker ID
-            window.markerID = ID;
-            if(window.LastInfo!=-1)
-            {
-                window.LastInfo.close();
-            }
-            window.LastInfo = IMEDSInfoWindow[ID];
-            IMEDSInfoWindow[ID].open(map,IMEDSMarkers[ID]);
-            PlotValidationData(DoADC,DoOBS,name,RawDataADC,RawDataOBS,Range);
-          });
-
-      }
-
       ////////////////////////////////////////////////////////////
       //   PAN TO FUNCTION                                      //
       //                                                        //
@@ -351,179 +312,6 @@
         logoControlDiv.index = 0; // used for ordering
         map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
        }
-
-
-      function PlotValidationData(DoADC,DoOBS,StationName,RawDataADC,RawDataOBS,Range) {
-
-        //Set the ymin/ymax values
-        if(Range=="auto")
-        {
-            var autorange = 1;
-        }
-        else
-        {
-            var autorange = 0;
-            TempRange = Range.split(":");
-            var ymin = Number(TempRange[0]);
-            var ymax = Number(TempRange[1]);
-        }
-
-        //Split by rows
-        RawDataOBS2 = RawDataOBS.split(";");
-        RawDataADC2 = RawDataADC.split(";");
-
-        //Split the rows into their pieces
-        if(DoOBS == 1)
-        {
-            IMEDSData = new Array();
-            var TempDataOBS = new Array();
-            for(var i=0;i<RawDataOBS2.length;i++)
-            {
-                TempDataOBS = RawDataOBS2[i].split(":");
-                IMEDSData[i] = new Array();
-                for(var j=0;j<TempDataOBS.length;j++)
-                {
-                    IMEDSData[i][j] = TempDataOBS[j];
-                }
-                if(Number(IMEDSData[i][5]) < -400)
-                {
-                    IMEDSData[i][5] = -9999;
-                }
-            }
-        }
-
-        if(DoADC == 1)
-        {
-            ADCData = new Array();
-            var TempDataADC = new Array();
-            for(i=0;i<RawDataADC2.length;i++)
-            {
-                TempDataADC = RawDataADC2[i].split(":");
-                ADCData[i] = new Array();
-                for(var j=0;j<TempDataADC.length;j++)
-                {
-                    ADCData[i][j] = TempDataADC[j];
-                }
-                if(Number(ADCData[i][5]) < -400)
-                {
-                    ADCData[i][5] = -9999;
-                }
-            }
-        }
-
-        // Create the data tables
-        var idx;
-        var idx2;
-        var ThisDate;
-        var ThisData;
-        if(DoOBS == 1)
-        {
-            idx2 = -1;
-            var OBSPlottingData = new Array();
-            for(idx=0; idx<IMEDSData.length;idx++)
-            {
-                ThisDate = Date.UTC(Number(IMEDSData[idx][0]),Number(IMEDSData[idx][1])-1,
-                                    Number(IMEDSData[idx][2]),Number(IMEDSData[idx][3]),
-                                    Number(IMEDSData[idx][4]),0,0);
-                ThisData = Number(IMEDSData[idx][5]);
-                if(ThisData>-999)
-                {
-                    idx2                      = idx2 + 1;
-                    OBSPlottingData[idx2]     = new Array();
-                    OBSPlottingData[idx2][0]  = ThisDate;
-                    OBSPlottingData[idx2][1]  = ThisData;
-                }
-            }
-        }
-
-        if(DoADC == 1)
-        {
-            idx2 = -1;
-            var ADCPlottingData = new Array();
-            for(idx=0; idx<ADCData.length;idx++)
-            {
-                ThisDate = Date.UTC(Number(ADCData[idx][0]),Number(ADCData[idx][1])-1,
-                                    Number(ADCData[idx][2]),Number(ADCData[idx][3]),
-                                    Number(ADCData[idx][4]),0,0);
-                ThisData = Number(ADCData[idx][5]);
-                if(ThisData>-999)
-                {
-                    idx2                      = idx2 + 1;
-                    ADCPlottingData[idx2]     = new Array();
-                    ADCPlottingData[idx2][0]  = ThisDate;
-                    ADCPlottingData[idx2][1]  = ThisData;
-                }
-            }
-        }
-
-        if(AutoY == "auto")
-            var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel } };
-        else
-            var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel } };
-
-        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' } };
-        var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
-        var plotToolTip = {
-                formatter: function() {
-                    return '<b>'+ this.series.name +'</b><br/>'+
-                    Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
-                    }
-                };
-        var seriesData;
-
-        if(DoOBS == 1 && DoADC == 1)
-        {
-            seriesData = [{
-                name: ADCLabel,
-                data: ADCPlottingData,
-                color: ADCColorCode
-                    },{
-                name: OBSLabel,
-                data: OBSPlottingData,
-                color: OBSColorCode
-                }];
-        }
-        else if(DoOBS == 1 && DoADC == 0)
-        {
-            seriesData = [{
-                name: OBSLabel,
-                data: OBSPlottingData,
-                color: OBSColorCode
-                }];
-        }
-        else if(DoOBS == 0 && DoADC == 1)
-        {
-            seriesData = [{
-                name: ADCLabel,
-                data: ADCPlottingData,
-                color: ADCColorCode
-                }];
-        }
-
-        // Create the HighChart
-            $('#plot_area').highcharts({
-                chart: {
-                    type: 'line',
-                    zoomType: 'xy'
-                },
-                exporting: {
-                         enabled: false
-                },
-                title: {
-                    text: PlotTitle
-                },
-                subtitle: {
-                    text: 'Station '+StationName
-                },
-                xAxis: xData,
-                yAxis: yData,
-                plotOptions: plotOption,
-                tooltip: plotToolTip,
-                series: seriesData
-            });
-
-        return;
-      }
 
       function ArcadisLogo(controlDiv) {
             controlDiv.style.padding = '5px';

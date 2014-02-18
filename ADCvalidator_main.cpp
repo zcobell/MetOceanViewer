@@ -83,7 +83,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->imeds_map->load(QUrl("qrc:/html/imeds_maps.html"));
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-    ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
+    //ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
     //Initialize Variables
     IMEDSMinDate.setDate(QDate(2900,1,1));

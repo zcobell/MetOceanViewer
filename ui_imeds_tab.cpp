@@ -107,9 +107,19 @@ void MainWindow::on_button_addrow_clicked()
         ui->table_IMEDSData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
         ui->table_IMEDSData->setItem(NumberOfRows-1,1,new QTableWidgetItem(InputSeriesName));
         ui->table_IMEDSData->setItem(NumberOfRows-1,2,new QTableWidgetItem(InputColorString));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,3,new QTableWidgetItem(InputFilePath));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,3,new QTableWidgetItem(QString::number(UnitConversion)));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,4,new QTableWidgetItem(QString::number(xadjust)));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,5,new QTableWidgetItem(QString::number(yadjust)));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
         CellColor.setNamedColor(InputColorString);
         ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
+
+        //Tooltips in table cells
+        ui->table_IMEDSData->item(NumberOfRows-1,0)->setToolTip(InputFilePath);
+        ui->table_IMEDSData->item(NumberOfRows-1,1)->setToolTip(InputSeriesName);
+        ui->table_IMEDSData->item(NumberOfRows-1,3)->setToolTip(QString::number(UnitConversion));
+        ui->table_IMEDSData->item(NumberOfRows-1,4)->setToolTip(QString::number(xadjust));
+        ui->table_IMEDSData->item(NumberOfRows-1,5)->setToolTip(QString::number(yadjust));
 
         if(!IMEDSData[NumberOfRows-1].success)
         {
@@ -140,16 +150,14 @@ void MainWindow::on_button_deleterow_clicked()
 
 void MainWindow::SetupIMEDSTable()
 {
-    QString HeaderString = "Filename;Series Name;Color;FullPathToFile";
+    QString HeaderString = "Filename;Series Name;Color;Unit Conversion;x-adjustment;y-adjustment;FullPathToFile";
     QStringList Header = HeaderString.split(";");
 
     ui->table_IMEDSData->setRowCount(0);
-    ui->table_IMEDSData->setColumnCount(4);
-    ui->table_IMEDSData->setColumnHidden(3,true);
-    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);
-    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(1,QHeaderView::Stretch);
-    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
+    ui->table_IMEDSData->setColumnCount(7);
+    ui->table_IMEDSData->setColumnHidden(6,true);
     ui->table_IMEDSData->setHorizontalHeaderLabels(Header);
+    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->table_IMEDSData->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     return;
@@ -173,11 +181,15 @@ void MainWindow::on_button_editrow_clicked()
     AddWindow.setModal(true);
     CurrentRow = ui->table_IMEDSData->currentRow();
     Filename = ui->table_IMEDSData->item(CurrentRow,0)->text();
-    Filepath = ui->table_IMEDSData->item(CurrentRow,3)->text();
+    Filepath = ui->table_IMEDSData->item(CurrentRow,2)->text();
     SeriesName = ui->table_IMEDSData->item(CurrentRow,1)->text();
+    UnitConversion = ui->table_IMEDSData->item(CurrentRow,3)->text().toDouble();
+    xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();
+    yadjust = ui->table_IMEDSData->item(CurrentRow,5)->text().toDouble();
     CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
 
-    AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,CellColor);
+    AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
+                                      UnitConversion,xadjust,yadjust,CellColor);
 
     int WindowStatus = AddWindow.exec();
 
@@ -202,7 +214,17 @@ void MainWindow::on_button_editrow_clicked()
 
         ui->table_IMEDSData->setItem(CurrentRow,0,new QTableWidgetItem(InputFileName));
         ui->table_IMEDSData->setItem(CurrentRow,1,new QTableWidgetItem(InputSeriesName));
-        ui->table_IMEDSData->setItem(CurrentRow,3,new QTableWidgetItem(InputFilePath));
+        ui->table_IMEDSData->setItem(CurrentRow,3,new QTableWidgetItem(QString::number(UnitConversion)));
+        ui->table_IMEDSData->setItem(CurrentRow,4,new QTableWidgetItem(QString::number(xadjust)));
+        ui->table_IMEDSData->setItem(CurrentRow,5,new QTableWidgetItem(QString::number(yadjust)));
+        ui->table_IMEDSData->setItem(CurrentRow,6,new QTableWidgetItem(InputFilePath));
+
+        //Tooltips in table cells
+        ui->table_IMEDSData->item(CurrentRow,0)->setToolTip(InputFilePath);
+        ui->table_IMEDSData->item(CurrentRow,1)->setToolTip(InputSeriesName);
+        ui->table_IMEDSData->item(CurrentRow,3)->setToolTip(QString::number(UnitConversion));
+        ui->table_IMEDSData->item(CurrentRow,4)->setToolTip(QString::number(xadjust));
+        ui->table_IMEDSData->item(CurrentRow,5)->setToolTip(QString::number(yadjust));
 
         if(ColorUpdated)
         {
@@ -240,6 +262,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
     bool Checked;
     QString javascript,DataString,name,color;
     QString PlotTitle,XLabel,YLabel,AutoY;
+    QString unit,plusX,plusY;
     QVariant jsResponse;
 
     if(ui->table_IMEDSData->rowCount()==0)
@@ -260,7 +283,8 @@ void MainWindow::on_button_processIMEDSData_clicked()
     else
         AutoY = "none";
 
-    javascript = "setGlobal('"+PlotTitle+"','"+AutoY+"',"+YMin+","+YMax+",'"+XLabel+"','"+YLabel+"')";
+    javascript = "setGlobal('"+PlotTitle+"','"+AutoY+"',"+QString::number(YMin)+
+            ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"')";
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
 
     total = IMEDSData.length()*IMEDSData[0].nstations;
@@ -272,18 +296,23 @@ void MainWindow::on_button_processIMEDSData_clicked()
         for(i=1;i<IMEDSData.length();i++)
         {
             ierr = CheckStationLocationsIMEDS(IMEDSData[0],IMEDSData[i]);
-
-            name  = ui->table_IMEDSData->item(0,1)->text();
-            color = ui->table_IMEDSData->item(0,2)->text();
-            javascript = "setSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"')";
-            ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
-
             if(ierr==1)
             {
                 QMessageBox::information(this,"ERROR","The station locations in the IMEDS files do not match.");
                 return;
             }
         }
+    }
+
+    for(i=0;i<IMEDSData.length();i++)
+    {
+        name  = ui->table_IMEDSData->item(i,1)->text();
+        color = ui->table_IMEDSData->item(i,2)->text();
+        unit  = ui->table_IMEDSData->item(i,3)->text();
+        plusX = ui->table_IMEDSData->item(i,4)->text();
+        plusY = ui->table_IMEDSData->item(i,5)->text();
+        javascript = "SetSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"',"+unit+","+plusX+","+plusY+")";
+        ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
     //Inform HTML on the number of data series
@@ -316,14 +345,6 @@ void MainWindow::on_button_processIMEDSData_clicked()
         }
     }
     ui->progress_IMEDS->setValue(0);
-
-    //Set the names and colors of the data series
-    for(i=0;i<IMEDSData.length();i++)
-    {
-        name = ui->table_IMEDSData->item(i,1)->text();
-        color = ui->table_IMEDSData->item(i,2)->text();
-        ui->imeds_map->page()->mainFrame()->evaluateJavaScript("SetSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"')");
-    }
 
     //Now, all data should be on the backend for plotting. Bombs away...
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript("AddToMap()");
