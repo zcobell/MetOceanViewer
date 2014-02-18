@@ -85,31 +85,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    //Set the initial values for the IMEDS Data input tab
-    ui->browse_ADCIMEDS->setEnabled(false);
-    ui->browse_OBSIMEDS->setEnabled(false);
-    ui->text_ADCIMEDS->setEnabled(false);
-    ui->text_OBSIMEDS->setEnabled(false);
-    ui->text_ADCIMEDS->setReadOnly(true);
-    ui->text_OBSIMEDS->setReadOnly(true);
-    ui->button_processIMEDS->setEnabled(false);
-    ADCIRCIMEDSColor.setRgb(0,255,0);
-    OBSIMEDSColor.setRgb(255,0,0);
-    ButtonStyle = MakeColorString(ADCIRCIMEDSColor);
-    ui->button_adcselectcolor->setStyleSheet(ButtonStyle);
-    ui->button_adcselectcolor->update();
-    ui->button_adcselectcolor->setEnabled(false);
-    ui->label_adcirclabel->setEnabled(false);
-    ui->text_adcirclabel->setEnabled(false);
-    ui->label_adcselectcolor->setEnabled(false);
-    ButtonStyle = MakeColorString(OBSIMEDSColor);
-    ui->button_imedsselectcolor->setStyleSheet(ButtonStyle);
-    ui->button_imedsselectcolor->update();
-    ui->button_imedsselectcolor->setEnabled(false);
-    ui->label_imedslabel->setEnabled(false);
-    ui->text_imedslabel->setEnabled(false);
-    ui->label_imedsselectcolor->setEnabled(false);
-
     //Initialize Variables
     IMEDSMinDate.setDate(QDate(2900,1,1));
     IMEDSMaxDate.setDate(QDate(1820,1,1));

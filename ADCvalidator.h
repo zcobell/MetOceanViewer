@@ -92,18 +92,6 @@ private slots:
 
     void on_Button_FetchData_clicked();
 
-    void on_check_ADCIMEDS_toggled(bool checked);
-
-    void on_check_OBSIMEDS_toggled(bool checked);
-
-    void on_browse_ADCIMEDS_clicked();
-
-    void on_browse_OBSIMEDS_clicked();
-
-    void on_button_processIMEDS_clicked();
-
-    void on_check_imedsalldata_toggled(bool checked);
-
     void on_Combo_PanTo_currentIndexChanged(int index);
 
     void on_button_savechart_clicked();
@@ -126,10 +114,6 @@ private slots:
 
     void on_Button_RefreshNOAAStations_clicked();
 
-    void on_button_adcselectcolor_clicked();
-
-    void on_button_imedsselectcolor_clicked();
-
     void on_button_hwmcolor_clicked();
 
     void on_button_121linecolor_clicked();
@@ -147,6 +131,8 @@ private slots:
     void on_button_editrow_clicked();
 
     void on_button_processIMEDSData_clicked();
+
+    void on_check_imedsalldata_clicked(bool checked);
 
 private:
     Ui::MainWindow *ui;
