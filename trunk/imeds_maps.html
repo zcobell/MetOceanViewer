@@ -75,11 +75,11 @@
     //Build the data series
     function allocateData(NumSeries)
     {
+        Locations[0] = new Array();
         Locations[1] = new Array();
-        Locations[2] = new Array();
 
+        SeriesOptions[0] = new Array();
         SeriesOptions[1] = new Array();
-        SeriesOptions[2] = new Array();
 
         for(var i=0;i<NumSeries;i++)
         {
@@ -91,8 +91,8 @@
     //Set the locations array
     function SetMarkerLocations(index,x,y,name)
     {
-        Locations[1][index] = x;
-        Locations[2][index] = y;
+        Locations[0][index] = x;
+        Locations[1][index] = y;
         StationName[index]  = name;
         return;
     }
@@ -105,13 +105,17 @@
         for(var i=0;i<ThisDataSplit.length;i++)
         {
             DataSeries[SeriesIndex][StationIndex][i] = new Array();
-            ThisDataSplit2 = ThisDataSplit2.split(":");
-            for(var j=0;j<ThisDataSplit2.length;j++)
-            {
-                DataSeries[SeriesIndex][StationIndex][i][j] = ThisDataSplit2[j];
-            }
-            if(Number(DataSeries[SeriesIndex][StationIndex][i][j])<-400)
-                DataSeries[SeriesIndex][StationIndex][i][j] = -9999;
+            ThisDataSplit2 = ThisDataSplit[i].split(":");
+
+            DataSeries[SeriesIndex][StationIndex][i][0] = ThisDataSplit2[0];
+            DataSeries[SeriesIndex][StationIndex][i][1] = ThisDataSplit2[1];
+            DataSeries[SeriesIndex][StationIndex][i][2] = ThisDataSplit2[2];
+            DataSeries[SeriesIndex][StationIndex][i][3] = ThisDataSplit2[3];
+            DataSeries[SeriesIndex][StationIndex][i][4] = ThisDataSplit2[4];
+            DataSeries[SeriesIndex][StationIndex][i][5] = ThisDataSplit2[5];
+
+            if(Number(DataSeries[SeriesIndex][StationIndex][i][5])<-400)
+                DataSeries[SeriesIndex][StationIndex][i][5] = -9999;
         }
         return;
     }
@@ -119,8 +123,8 @@
     //Save the options for each data series
     function SetSeriesOptions(index,name,color)
     {
-        SeriesOptions[1][index] = name;
-        SeriesOptions[2][index] = color;
+        SeriesOptions[0][index] = name;
+        SeriesOptions[1][index] = color;
         return;
     }
 
@@ -132,8 +136,8 @@
 
         for(i=0;i<NLocations;i++)
         {
-            x = Locations[1][i];
-            y = Locations[2][i];
+            x = Locations[0][i];
+            y = Locations[1][i];
             Latlng = new google.maps.LatLng(y,x);
             IMEDSMarkers[i] = new google.maps.Marker({
                 position: Latlng,
@@ -154,7 +158,7 @@
         var seriesList = new Array();
         var Data = new Array();
         var contentString;
-        var ThisData,ThisDate;
+        var ThisData;
 
         index = marker.LocalID;
 
@@ -168,30 +172,86 @@
         IMEDSInfoWindow.open(map,marker);
         LastInfoWindow = IMEDSInfoWindow;
 
+
         //Create the data tables
         for(i=0;i<DataSeries.length;i++)
         {
             Data[i] = new Array();
-            for(j=0;i<DataSeries[i][index].length;j++)
+            for(j=0;j<DataSeries[i][index].length-1;j++)
             {
-                Data[i][j]    = new Array();
-                Data[i][j][1] = new Date.UTC(DataSeries[i][index][j][0],DataSeries[i][index][j][1],
-                                             DataSeries[i][index][j][2],DataSeries[i][index][j][3],
-                                             DataSeries[i][index][j][4],0,0);
-                Data[i][j][2] = DataSeries[i][index][j][5];
+
+                Data[i][j] = new Array();
+                ThisDate = Date.UTC(Number(DataSeries[i][index][j][0]),Number(DataSeries[i][index][j][1])-1,
+                                    Number(DataSeries[i][index][j][2]),Number(DataSeries[i][index][j][3]),
+                                    Number(DataSeries[i][index][j][4]),0,0);
+                Data[i][j][0] = ThisDate;
+                Data[i][j][1] = Number(DataSeries[i][index][j][5]);
+
+                //Null value check
+                if(Data[i][j][1]<-999)
+                    Data[i][j][1] = null;
+
             }
         }
 
 
         //Create the series
+        var LocalData;
         for(i=0;i<DataSeries.length;i++)
         {
-            seriesList[i] = { name: SeriesOptions[i][1],
-                              color: SeriesOptions[i][2],
-                              data: Data[i]
-                            };
+            LocalData = Data[i];
+            seriesList[i] = {name: SeriesOptions[0][i], color: SeriesOptions[1][i], data: LocalData };
         }
 
+        //Start setting up the plot
+        if(AutoY == "auto")
+            var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel } };
+        else
+            var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel } };
+
+        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' } };
+        var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
+        var plotToolTip = {
+                formatter: function() {
+                    return '<b>'+ this.series.name +'</b><br/>'+
+                    Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
+                    }
+                };
+
+        // Create the HighChart
+        $('#plot_area').highcharts({
+            chart: {
+                type: 'line',
+                zoomType: 'xy'
+            },
+            exporting: {
+                     enabled: false
+            },
+            title: {
+                text: PlotTitle
+            },
+            subtitle: {
+                text: 'Station '+StationName[index]
+            },
+            xAxis: xData,
+            yAxis: yData,
+            plotOptions: plotOption,
+            tooltip: plotToolTip,
+            series: seriesList
+        });
+
+        return;
+    }
+
+
+    function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel)
+    {
+        PlotTitle = InPlotTitle;
+        YMin = InYMin;
+        YMax = InYMax;
+        XLabel = InXLabel;
+        YLabel = InYLabel;
+        AutoY = InAutoY;
         return;
     }
 

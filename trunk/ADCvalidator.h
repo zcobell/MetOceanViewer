@@ -54,6 +54,7 @@ extern QVector<QVector<double> > NOAAStations;
 extern QVector<QString> NOAAStationNames;
 extern QVector<QString> panToLocations;
 extern QVariant MarkerID;
+extern bool ColorUpdated;
 
 struct NOAAStationData
 {

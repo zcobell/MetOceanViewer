@@ -39,6 +39,7 @@
 
 int NumIMEDSFiles = 0;
 int CurrentRowsInTable = 0;
+bool ColorUpdated;
 QColor RandomButtonColor;
 QString InputFileName,InputColorString,InputSeriesName,InputFilePath;
 
@@ -106,15 +107,18 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
     QColor TempColor = QColorDialog::getColor(RandomButtonColor);
     QString ButtonStyle;
 
+    ColorUpdated = false;
+
     if(TempColor.isValid())
     {
         RandomButtonColor = TempColor;
+        ColorUpdated = true;
         ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
         ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
         ui->button_IMEDSColor->update();
     }
-    else
-        return;
+
+    return;
 }
 
 //Set the data values when "ok" is selected
