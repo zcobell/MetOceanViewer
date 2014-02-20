@@ -143,8 +143,19 @@ void MainWindow::on_button_deleterow_clicked()
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
         return;
     }
+
+    this->setCursor(Qt::WaitCursor);
+
+    //Reload the page so that arrays are refreshed.
+    //This is sort of cheating, but it works
+    ui->imeds_map->reload();
+    delay(2);
+
     IMEDSData.remove(ui->table_IMEDSData->currentRow());
     ui->table_IMEDSData->removeRow(ui->table_IMEDSData->currentRow());
+
+    this->setCursor(Qt::ArrowCursor);
+
     return;
 }
 
@@ -265,6 +276,9 @@ void MainWindow::on_button_processIMEDSData_clicked()
     QString unit,plusX,plusY;
     QVariant jsResponse;
 
+    //Change the mouse pointer
+    this->setCursor(Qt::WaitCursor);
+
     if(ui->table_IMEDSData->rowCount()==0)
     {
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
@@ -352,6 +366,8 @@ void MainWindow::on_button_processIMEDSData_clicked()
     ui->subtab_IMEDS->setCurrentIndex(1);
     delay(1);
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+
+    this->setCursor(Qt::ArrowCursor);
 }
 
 void MainWindow::on_check_imedsalldata_clicked(bool checked)
