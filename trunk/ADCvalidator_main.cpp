@@ -51,7 +51,8 @@ QVariant MarkerID = -1;
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
     QString ButtonStyle;
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
+
+    //QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true); //This enables Javascript debugging
 
     //Setup UI
     ui->setupUi(this);
