@@ -129,6 +129,14 @@ void MainWindow::on_button_processHWM_clicked()
     MeasuredString = "";
     ModeledString = "";
     MaximumValue = 0;
+
+    //Make sure we are fresh for if this is a second round of plotting
+    ui->map_hwm->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
+    ui->map_regression->reload();
+
+    //Give the browsers a chance to catch up to us
+    delay(2);
+
     for(int i=0;i<HighWaterMarks.size();i++)
     {
         x = HighWaterMarks[i].lon;
