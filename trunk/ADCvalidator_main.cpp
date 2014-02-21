@@ -84,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->imeds_map->load(QUrl("qrc:/html/imeds_maps.html"));
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-    //ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
     //Initialize Variables
     IMEDSMinDate.setDate(QDate(2900,1,1));
@@ -94,9 +94,11 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->map_hwm->load(QUrl("qrc:/html/hwm_map.html"));
     ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+    ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->map_regression->load(QUrl("qrc:/html/reg_plot.html"));
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+    ui->map_regression->setContextMenuPolicy(Qt::CustomContextMenu);
     DotColorHWM.setRgb(11,84,255);
     LineColorRegression.setRgb(7,145,0);
     LineColor121Line.setRgb(255,0,0);
