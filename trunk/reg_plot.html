@@ -49,6 +49,7 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
     <script src="/js/highcharts.js"></script>
     <script src="/js/modules/exporting.js"></script>
+    <script src="http://blacklabel.github.io/annotations/js/annotations.js"></script>
     <script type="text/javascript">
 
     var PlotTitle;
@@ -67,7 +68,7 @@
         return;
     }
 
-    function plotRegression(model,measure,unit,maximum,slope,intercept)
+    function plotRegression(model,measure,unit,maximum,slope,intercept,corr)
     {
         //Split the data into parts
         var modelList = model.split(":");
@@ -82,6 +83,12 @@
         MX = Number(maximum);
         M  = Number(slope);
         B  = Number(intercept);
+        R  = Number(corr);
+
+        var sq = String(2);
+        var ChartAnnotation = 'Slope: y = '+String(M)+'x + '+B+'<br>'+'Correlation: R\u00B2 = '+String(R);
+        var annotation_x=0;
+        var annotation_y=MX;
 
         $('#chart_div').highcharts({
             chart: {
@@ -89,6 +96,15 @@
             exporting: {
                      enabled: false
             },
+            annotations: [{
+                xValue: annotation_x,
+                yValue: annotation_y,
+                anchorX: 'left',
+                anchorY: 'top',
+                title: {
+                    text: ChartAnnotation
+                }
+            }],
             title: { text: PlotTitle },
             subtitle: {
                 text: 'High Water Mark Comparison'

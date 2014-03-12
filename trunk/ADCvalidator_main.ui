@@ -2280,157 +2280,6 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
-             <widget class="QGroupBox" name="groupBox_3">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>65</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>65</height>
-               </size>
-              </property>
-              <property name="title">
-               <string>Statistics</string>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_20">
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_13">
-                 <item>
-                  <widget class="QLabel" name="label_m">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>120</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Regression Line: </string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="label_slope">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>100</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="label_R2">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>90</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>90</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Correlation:    R&lt;span style=&quot; vertical-align:super;&quot;&gt;2&lt;/span&gt; = &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="label_r2">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>100</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_16">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>306</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="button_saveregression">
-                   <property name="text">
-                    <string>Save Image</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <widget class="QWebView" name="map_regression">
               <property name="url">
                <url>
@@ -2439,9 +2288,31 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QSplitter" name="splitter">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <widget class="QPushButton" name="button_saveregression">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>23</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>23</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Save Image</string>
+               </property>
+              </widget>
+             </widget>
+            </item>
            </layout>
-           <zorder>map_regression</zorder>
-           <zorder>groupBox_3</zorder>
           </widget>
          </widget>
         </item>
