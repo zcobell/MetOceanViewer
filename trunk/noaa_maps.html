@@ -55,6 +55,7 @@
 
     var map;
     var markers = [];
+    var MarkerDropCount = 0;
 
     function clearMarkers()
     {
@@ -74,8 +75,11 @@
           var swx = sw.lng() - buffer;
           var swy = sw.lat() - buffer;
 
+          if(MarkerNumber==0)
+              MarkerDropCount = 0;
+
           var myLatlng = new google.maps.LatLng(y,x);
-          if(x>swx && x<nex && y<ney && y>swy)
+          if(x>swx && x<nex && y<ney && y>swy && MarkerDropCount<100)
           {
               var marker = new google.maps.Marker({
                   position: myLatlng,
@@ -83,6 +87,7 @@
                   animation: google.maps.Animation.DROP,
                   title: StationName
               });
+              MarkerDropCount++;
           }
           else
           {
