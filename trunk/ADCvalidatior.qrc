@@ -22,6 +22,7 @@
     <qresource prefix="/js">
         <file>highcharts.js</file>
         <file>annotations.js</file>
+        <file>jquery.js</file>
     </qresource>
     <qresource prefix="/js/modules">
         <file>exporting.js</file>
