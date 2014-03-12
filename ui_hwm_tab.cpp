@@ -191,16 +191,9 @@ void MainWindow::on_button_processHWM_clicked()
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(RegressionGlobal);
 
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
-            unitString+","+QString::number(MaximumValue)+","+QString::number(M)+
-            ","+QString::number(B)+")";
+            unitString+","+QString::number(MaximumValue)+","+QString::number(M,'f',2)+
+            ","+QString::number(B,'f',2)+","+QString::number(R,'f',2)+")";
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(Regression);
-
-    if(ThroughZero)
-        ui->label_slope->setText("y = "+QString::number(M,'f',2)+"x");
-    else
-        ui->label_slope->setText("y = "+QString::number(M,'f',2)+"x"+" + "+QString::number(B,'f',2));
-
-    ui->label_r2->setText(QString::number(R,'f',2));
 
     ui->subtab_hwm->setCurrentIndex(1);
     delay(1);
