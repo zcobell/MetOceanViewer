@@ -112,8 +112,6 @@ private slots:
 
     void on_button_saveregression_clicked();
 
-    void on_Button_RefreshNOAAStations_clicked();
-
     void on_button_hwmcolor_clicked();
 
     void on_button_121linecolor_clicked();

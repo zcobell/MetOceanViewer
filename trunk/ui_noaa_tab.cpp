@@ -219,7 +219,3 @@ void MainWindow::on_Button_FetchData_clicked()
     manager->get(QNetworkRequest(QUrl(RequestURL)));
 }
 
-void MainWindow::on_Button_RefreshNOAAStations_clicked()
-{
-    drawMarkers(false);
-}

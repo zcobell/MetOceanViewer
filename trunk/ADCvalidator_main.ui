@@ -382,19 +382,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="Button_RefreshNOAAStations">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Refresh Station Locations</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QPushButton" name="Button_FetchData">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
