@@ -49,23 +49,67 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
     <script src="/js/highcharts.js"></script>
     <script src="/js/modules/exporting.js"></script>
-
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script src="/js/markercluster.js"></script>
     <script type="text/javascript">
 
     var map;
     var markers = [];
-    var MarkerDropCount = 0;
+    var markerData = [];
+    var markerNames = [];
+    var mc;
+    var loaded = 0;
 
     function clearMarkers()
     {
-        while(markers[0])
-        {
-            markers.pop().setMap(null);
-        }
+        setAllMap(null);
+    }
+
+    function repaint()
+    {
+        google.maps.event.trigger(map,'resize');
+    }
+
+    function setAllMap(map) {
+      for (var i = 0; i < markers.length; i++) {
+        markers[i].setMap(map);
+      }
     }
 
     function addNOAAStation(x,y,ID,MarkerNumber,StationName){
+
+          var TempMarkerData = [];
+          TempMarkerData[0] = x;
+          TempMarkerData[1] = y;
+          TempMarkerData[2] = ID;
+          TempMarkerData[3] = MarkerNumber;
+
+          markerData.push(TempMarkerData);
+          markerNames.push(StationName);
+
+    }
+
+    function readyToPlay()
+    {
+        google.maps.event.addListenerOnce(map, 'tilesloaded', function() {
+          addMarkersToMap();
+          fitMarkers();
+        });
+    }
+
+    function fitMarkers()
+    {
+        var extent = new google.maps.LatLngBounds();
+        var nMarker = markers.length;
+        for(i=0;i<nMarker;i++)
+        {
+            extent.extend(markers[i].getPosition());
+        }
+        map.fitBounds(extent);
+    }
+
+    function addMarkersToMap()
+    {
           var buffer = 0.5;
           var bounds = map.getBounds();
           var ne = bounds.getNorthEast();
@@ -74,44 +118,66 @@
           var ney = ne.lat() + buffer;
           var swx = sw.lng() - buffer;
           var swy = sw.lat() - buffer;
+          var x,y,ID,MarkerNumber,StationName;
+          var myLatlng;
+          var MarkerDropCount = 0;
+          var nMarkers = markerData.length;
+          var infoWindow = null;
 
-          if(MarkerNumber==0)
-              MarkerDropCount = 0;
+          var infowindow = new google.maps.InfoWindow({content: "holding..." });
 
-          var myLatlng = new google.maps.LatLng(y,x);
-          if(x>swx && x<nex && y<ney && y>swy && MarkerDropCount<100)
+          for(var i = 1; i < nMarkers; i++)
           {
+
+            x = markerData[i][0];
+            y = markerData[i][1];
+            ID = markerData[i][2];
+            MarkerNumber = markerData[i][3];
+            StationName = markerNames[i];
+
+            myLatlng = new google.maps.LatLng(y,x);
+
+            var contentString = "<b>NOAA Station Number:</b> "+String(ID)+"<br>"+
+                                "<b>NOAA Station Name:</b> "+StationName;
+
+            if(x>swx && x<nex && y<ney && y>swy && MarkerDropCount<100)
+            {
               var marker = new google.maps.Marker({
                   position: myLatlng,
                   map: map,
                   animation: google.maps.Animation.DROP,
-                  title: StationName
+                  title: StationName,
+                  html: contentString,
+                  stn: ID
               });
               MarkerDropCount++;
-          }
-          else
-          {
+            }
+            else
+            {
               var marker = new google.maps.Marker({
                   position: myLatlng,
                   map: map,
-                  title: StationName
-          });
-          }
-          var contentString = "<b>NOAA Station Number:</b> "+String(ID)+"<br>"+
-                              "<b>NOAA Station Name:</b> "+StationName;
-          var infowindow = new google.maps.InfoWindow({content: contentString});
-          google.maps.event.addListener(marker, 'click', function() {
-            //Set the Marker ID
-            window.markerID = ID;
-            window.markerName = StationName;
-            if(window.LastInfo!=-1)
-            {
-                window.LastInfo.close();
+                  title: StationName,
+                  html: contentString,
+                  stn: ID
+              });
             }
-            window.LastInfo = infowindow;
-            infowindow.open(map,marker);
-          });
-          markers.push(marker);
+            markers.push(marker);
+        }
+        mc.addMarkers(markers);
+
+        for(var i = 0; i < markers.length; i++)
+        {
+            marker = markers[i];
+            google.maps.event.addListener(marker, 'click', function () {
+                infowindow.setContent(this.html);
+                infowindow.open(map, this);
+                window.markerID = this.stn;
+                });
+        }
+
+        return;
+
       }
 
       function returnStationID(){
@@ -153,6 +219,8 @@
         logoControlDiv.index = 0; // used for ordering
         map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
         window.markerID = -1;
+        mc = new MarkerClusterer(map);
+
        }
 
 

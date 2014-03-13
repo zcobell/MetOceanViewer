@@ -106,6 +106,7 @@ void MainWindow::drawMarkers(bool DelayDraw)
     QVariant MyVar;
     QString javastring,StationName;
 
+
     //Make the requests for the all the stations
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
 
@@ -123,13 +124,14 @@ void MainWindow::drawMarkers(bool DelayDraw)
                 +","+QString::number(i)+",'"+StationName+"')";
         MyVar = ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
     }
+    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("readyToPlay()");
     return;
 }
 
 //Routine that starts to read the list of NOAA station locations
 void MainWindow::BeginGatherStations()
 {
-    int i;
+    int i,NumStations;
     QString MyLine,TempString;
     QStringList MyList;
     QFile StationFile(":/data/NOAA_StationList.txt");
@@ -142,15 +144,18 @@ void MainWindow::BeginGatherStations()
 
     NOAAStations.resize(3);
     i = 0;
-    while(!StationFile.atEnd())
+
+    MyLine = StationFile.readLine().simplified();
+    NumStations = MyLine.toInt();
+    NOAAStations[0].resize(NumStations);
+    NOAAStations[1].resize(NumStations);
+    NOAAStations[2].resize(NumStations);
+    NOAAStationNames.resize(NumStations);
+
+    for(i=0;i<NumStations;i++)
     {
-        i = i + 1;
         MyLine = StationFile.readLine().simplified();
         MyList = MyLine.split(";");
-        NOAAStations[0].resize(i+1);
-        NOAAStations[1].resize(i+1);
-        NOAAStations[2].resize(i+1);
-        NOAAStationNames.resize(i+1);
         TempString = MyList.value(0);
         NOAAStations[0][i] = TempString.toDouble();
         TempString = MyList.value(1);
