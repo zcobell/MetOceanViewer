@@ -101,30 +101,30 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 //Routine that draws the markers on the NOAA map
 void MainWindow::drawMarkers(bool DelayDraw)
 {
-    int i,ID;
-    double X,Y;
-    QVariant MyVar;
-    QString javastring,StationName;
+    //int i,ID;
+    //double X,Y;
+    //QVariant MyVar;
+    //QString javastring,StationName;
 
 
     //Make the requests for the all the stations
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
+    //ui->noaa_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
 
-    if(DelayDraw)
-        delay(2); //Give the map a chance to set up
+    //if(DelayDraw)
+    //    delay(2); //Give the map a chance to set up
 
-    for(i=0;i<NOAAStations[0].size();i++)
-    {
-        X  = NOAAStations[1][i];
-        Y  = NOAAStations[2][i];
-        ID = static_cast<int>(NOAAStations[0][i]);
-        StationName = NOAAStationNames[i];
-        //Plot a station
-        javastring = "addNOAAStation("+QString::number(X)+","+QString::number(Y)+","+QString::number(ID)
-                +","+QString::number(i)+",'"+StationName+"')";
-        MyVar = ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
-    }
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("readyToPlay()");
+    //for(i=0;i<NOAAStations[0].size();i++)
+    //{
+    //    X  = NOAAStations[1][i];
+    //    Y  = NOAAStations[2][i];
+    //    ID = static_cast<int>(NOAAStations[0][i]);
+    //    StationName = NOAAStationNames[i];
+    //    //Plot a station
+    //    javastring = "addNOAAStation("+QString::number(X)+","+QString::number(Y)+","+QString::number(ID)
+    //            +","+QString::number(i)+",'"+StationName+"')";
+    //    MyVar = ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
+    //}
+    //ui->noaa_map->page()->mainFrame()->evaluateJavaScript("readyToPlay()");
     return;
 }
 
