@@ -120,7 +120,6 @@
           var swy = sw.lat() - buffer;
           var x,y,ID,MarkerNumber,StationName;
           var myLatlng;
-          var MarkerDropCount = 0;
           var nMarkers = markerData.length;
           var infoWindow = null;
 
@@ -140,28 +139,13 @@
             var contentString = "<b>NOAA Station Number:</b> "+String(ID)+"<br>"+
                                 "<b>NOAA Station Name:</b> "+StationName;
 
-            //if(x>swx && x<nex && y<ney && y>swy && MarkerDropCount<100)
-            //{
-              var marker = new google.maps.Marker({
-                  position: myLatlng,
-                  map: map,
-                  animation: google.maps.Animation.DROP,
-                  title: StationName,
-                  html: contentString,
-                  stn: ID
-              });
-            //  MarkerDropCount++;
-            //}
-            //else
-            //{
-            //  var marker = new google.maps.Marker({
-            //      position: myLatlng,
-            //      map: map,
-            //      title: StationName,
-            //      html: contentString,
-            //      stn: ID
-            //  });
-            //}
+            var marker = new google.maps.Marker({
+              position: myLatlng,
+              map: map,
+              title: StationName,
+              html: contentString,
+              stn: ID
+            });
             markers.push(marker);
         }
         mc.addMarkers(markers);
