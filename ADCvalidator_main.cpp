@@ -52,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 {
     QString ButtonStyle;
 
-    //QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true); //This enables Javascript debugging
+    QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true); //This enables Javascript debugging
 
     //Setup UI
     ui->setupUi(this);

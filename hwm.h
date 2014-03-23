@@ -52,6 +52,8 @@ struct hwm_data
     double error;
 };
 
+extern QVector<double> classes;
+
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM);
 int ComputeLinearRegression(bool ForceThroughZero, QVector<hwm_data> HWM, double &M, double &B, double &Y);
 

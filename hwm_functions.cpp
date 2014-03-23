@@ -42,7 +42,6 @@ int MainWindow::ClassifyHWM(double diff)
 {
     int color;
     int units;
-    QVector<double> classes;
     //This is the default classification
     classes.resize(7);
 
