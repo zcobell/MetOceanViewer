@@ -45,6 +45,21 @@
       html { height: 100% }
       body { height: 100%; margin: 0; padding: 0 }
       #map_canvas { height: 100% }
+
+      #legend {
+        font-family: Arial, sans-serif;
+        background: #fff;
+        padding: 10px;
+        margin: 10px;
+        border: 3px solid #000;
+      }
+      #legend h3 {
+        margin-top: 0;
+      }
+      #legend img {
+        vertical-align: middle;
+      }
+
     </style>
 
     <!-- Load the google maps api and the google visualization api -->
@@ -53,6 +68,7 @@
 
         var HWMMarkers = [];
         var HWMInfoWindow = [];
+        var map;
 
         function clearMarkers()
         {
@@ -60,6 +76,40 @@
             {
                 HWMMarkers.pop().setMap(null);
             }
+        }
+
+        function addLegend(unitString,classes)
+        {
+
+            var classbreaks = classes.split(":");
+            var iconBase = "qrc:/img/";
+            var icons = {
+                c1: { name: "< "+classbreaks[0], icon: iconBase + 'mm_20_purple.png' },
+                c2: { name: classbreaks[0]+" - "+classbreaks[1], icon: iconBase + 'mm_20_darkblue.png' },
+                c3: { name: classbreaks[1]+" - "+classbreaks[2], icon: iconBase + 'mm_20_lightblue.png' },
+                c4: { name: classbreaks[2]+" - "+classbreaks[3], icon: iconBase + 'mm_20_darkgreen.png' },
+                c5: { name: classbreaks[3]+" - "+classbreaks[4], icon: iconBase + 'mm_20_lightgreen.png' },
+                c6: { name: classbreaks[4]+" - "+classbreaks[5], icon: iconBase + 'mm_20_yellow.png' },
+                c7: { name: classbreaks[5]+" - "+classbreaks[6], icon: iconBase + 'mm_20_darkorange.png' },
+                c8: { name: "> "+classbreaks[6], icon: iconBase + 'mm_20_red.png' }
+            };
+
+        var legend = document.getElementById('legend');
+        legend.innerHTML = "<h3>Legend ("+unitString+")</h3>"
+        var lHead = document.createElement('div');
+        lHead.innerHTML = "Modeled less Observed";
+        legend.appendChild(lHead);
+        for (var key in icons) {
+          var type = icons[key];
+          var name = type.name;
+          var icon = type.icon;
+          var div = document.createElement('div');
+          div.innerHTML = '<img src="' + icon + '"> ' + name;
+          legend.appendChild(div);
+        }
+
+        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+
         }
 
         function fitMarkers()
@@ -92,7 +142,7 @@
             else if(color==6)
                 image = "qrc:/img/mm_20_yellow.png";
             else if(color==7)
-                image = "qrc:/img/mm_20_orange.png";
+                image = "qrc:/img/mm_20_darkorange.png";
             else if(color==8)
                 image = "qrc:/img/mm_20_red.png";
 
@@ -187,6 +237,7 @@
   </head>
   <body onload="initializeHWM()">
     <div id="map_canvas" style="width: 100%"></div>
+    <div id="legend"></div>
   </body>
 </html>
 

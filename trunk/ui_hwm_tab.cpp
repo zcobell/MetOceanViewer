@@ -44,6 +44,7 @@
 //Global variables
 QVector<hwm_data> HighWaterMarks;
 QString HighWaterMarkFile;
+QVector<double> classes;
 
 //Called when the browse for HWM file button is clicked
 void MainWindow::on_browse_hwm_clicked()
@@ -64,7 +65,7 @@ void MainWindow::on_button_processHWM_clicked()
 {
     QString Marker, unitString, Regression, MeasuredString, ModeledString;
     QString HWMColor,One21Color,RegColor,BoundColor,RegressionTitle,XLabel,YLabel;
-    QString RegressionGlobal;
+    QString RegressionGlobal,MyClassList;
     double x,y,measurement,modeled,error,M,B,R,MaximumValue;
     double c0,c1,c2,c3,c4,c5,c6;
     int classification, unit, ierr;
@@ -168,14 +169,6 @@ void MainWindow::on_button_processHWM_clicked()
         }
     }
 
-    ui->label_class2->setText(QString::number(ui->spin_class0->value()));
-    ui->label_class3->setText(QString::number(ui->spin_class1->value()));
-    ui->label_class4->setText(QString::number(ui->spin_class2->value()));
-    ui->label_class5->setText(QString::number(ui->spin_class3->value()));
-    ui->label_class6->setText(QString::number(ui->spin_class4->value()));
-    ui->label_class7->setText(QString::number(ui->spin_class5->value()));
-    ui->label_class8->setText(QString::number(ui->spin_class6->value()));
-
     ui->subtab_hwm->setCurrentIndex(2);
 
     RegressionTitle = ui->text_hwmplottitle->text();
@@ -198,6 +191,13 @@ void MainWindow::on_button_processHWM_clicked()
     ui->subtab_hwm->setCurrentIndex(1);
     delay(1);
     ui->map_hwm->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+
+    MyClassList = "addLegend("+unitString+",'"+QString::number(classes[0],'f',2)+":"+QString::number(classes[1],'f',2)+":"+
+            QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
+            QString::number(classes[4],'f',2)+":"+QString::number(classes[5],'f',2)+":"+
+            QString::number(classes[6],'f',2)+"')";
+
+    ui->map_hwm->page()->mainFrame()->evaluateJavaScript(MyClassList);
 
     return;
 

@@ -2071,191 +2071,30 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_11">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_7">
-                <item>
-                 <widget class="QLabel" name="label_class1">
-                  <property name="text">
-                   <string>&lt;-- Lower</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_purple">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_purple.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class2">
-                  <property name="text">
-                   <string>-1.5</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_blue">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_darkblue.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class3">
-                  <property name="text">
-                   <string>-1.0</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_lightblue">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_lightblue.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class4">
-                  <property name="text">
-                   <string>-0.5</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_dkgreen">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_darkgreen.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class5">
-                  <property name="text">
-                   <string>0.0</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_ltgreen">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_lightgreen.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class6">
-                  <property name="text">
-                   <string>0.5</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_yellow">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_yellow.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class7">
-                  <property name="text">
-                   <string>1.0</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_orange">
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_darkorange.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class8">
-                  <property name="text">
-                   <string>1.5</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="img_red">
-                  <property name="pixmap">
-                   <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_red.png</pixmap>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QLabel" name="label_class9">
-                  <property name="text">
-                   <string>Higher --&gt;</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <spacer name="horizontalSpacer_14">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_saveHWMMap">
-                <property name="minimumSize">
-                 <size>
-                  <width>75</width>
-                  <height>23</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>75</width>
-                  <height>23</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Save Image</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
              <widget class="QWebView" name="map_hwm">
               <property name="url">
                <url>
                 <string>about:blank</string>
                </url>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_saveHWMMap">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>23</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>23</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Save Image</string>
               </property>
              </widget>
             </item>
@@ -2315,7 +2154,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
