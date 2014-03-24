@@ -18,6 +18,7 @@
         <file>mm_20_red.png</file>
         <file>mm_20_yellow.png</file>
         <file>arcadis_logo.png</file>
+        <file>mm_20_white.png</file>
     </qresource>
     <qresource prefix="/js">
         <file>highcharts.js</file>

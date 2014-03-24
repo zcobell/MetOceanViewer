@@ -77,7 +77,8 @@
         var ScatterData = new Array();
         for(var idx=0;idx<modelList.length;idx++)
         {
-            ScatterData[idx] = [ Number(measureList[idx]), Number(modelList[idx]) ];
+            if(Number(modelList[idx])>-9999)
+                ScatterData[idx] = [ Number(measureList[idx]), Number(modelList[idx]) ];
         }
 
         MX = Number(maximum);

@@ -83,7 +83,8 @@ int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 
 int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double &M, double &B, double &R2)
 {
-    double SumXY, SumX2, SumX, SumY, SumY2, N;
+    double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar;
+    int i;
 
     //Compute the sums used in the regression
     //  This will be forced through 0,0
@@ -95,31 +96,73 @@ int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double 
     M     = 0;
     B     = 0;
     N     = static_cast<double>(HWM.size());
+    NDry  = 0;
+    SSE   = 0;
+    SSTOT = 0;
 
     try
     {
-        for(int i = 0; i<N; i++)
+        for(i = 0; i<N; i++)
         {
-            SumX  = SumX  + (HWM[i].measured);
-            SumY  = SumY  + (HWM[i].modeled);
-            SumXY = SumXY + (HWM[i].measured*HWM[i].modeled);
-            SumX2 = SumX2 + (HWM[i].measured*HWM[i].measured);
-            SumY2 = SumY2 + (HWM[i].modeled*HWM[i].modeled);
+            //We ditch points that didn't wet since they
+            //skew calculation
+            if(HWM[i].modeled>-9999)
+            {
+                SumX  = SumX  + (HWM[i].measured);
+                SumY  = SumY  + (HWM[i].modeled);
+                SumXY = SumXY + (HWM[i].measured*HWM[i].modeled);
+                SumX2 = SumX2 + (HWM[i].measured*HWM[i].measured);
+                SumY2 = SumY2 + (HWM[i].modeled*HWM[i].modeled);
+            }
+            else
+                NDry = NDry + 1;
         }
+
+        //Number of points that we'll end up using
+        N2 = N - NDry;
 
         //Calculate the slope (M) and Correllation (R2)
         if(ForceThroughZero)
         {
-            M  = SumXY / SumX2;
-            B  = 0;
+            //Slope
+            M   = SumXY / SumX2;
+
+            //Forced through zero
+            B   = 0;
+
+            //Average Y
+            YBar = SumY / N2;
+
+            //Calculate Total Sum of Squares
+            for(i = 1; i<N; i++)
+            {
+                //We ditch points that didn't wet since they
+                //skew calculation
+                if(HWM[i].modeled>-9999)
+                {
+                    SSTOT = SSTOT + qPow((HWM[i].modeled - YBar),2.0);
+                }
+            }
+
+            //Sum of square errors
+            SSE = SumY2 - M*M*SumX2;
+
+            //R2
+            R2  = 1 - ( SSE / SSTOT );
         }
         else
         {
-            M = (N*SumXY - SumX*SumY) / (N*SumX2-(SumX*SumX));
-            B = ((SumY*SumX2)-(SumX*SumXY))/(N*SumX2-(SumX*SumX));
+            //Slope
+            M  = (N2*SumXY - SumX*SumY) / (N2*SumX2-(SumX*SumX));
+
+            //Intercept
+            B  = ((SumY*SumX2)-(SumX*SumXY))/(N2*SumX2-(SumX*SumX));
+
+            //R2 calculation
+            R2 = qPow(((N2*SumXY - (SumX*SumY)) /
+                   sqrt( (N2*SumX2 - (SumX*SumX))*(N2*SumY2-(SumY*SumY)) )),2.0);
         }
-        R2 = qPow(((N*SumXY - (SumX*SumY)) /
-            sqrt( (N*SumX2 - (SumX*SumX))*(N*SumY2-(SumY*SumY)) )),2.0);
+
     }
     catch(...)
     {

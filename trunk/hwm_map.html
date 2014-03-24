@@ -108,6 +108,9 @@
           div.innerHTML = '<img src="' + icon + '"> ' + name;
           legend.appendChild(div);
         }
+        div = document.createElement('div');
+        div.innerHTML = '<img src="qrc:/img/mm_20_white.png"> Dry in model';
+        legend.appendChild(div);
 
         map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].clear();
         map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
@@ -131,7 +134,9 @@
 
             //Set the marker image
             var image;
-            if(color==1)
+            if (color == -1)
+                image = "qrc:/img/mm_20_white.png";
+            else if(color==1)
                 image = "qrc:/img/mm_20_purple.png";
             else if(color==2)
                 image = "qrc:/img/mm_20_darkblue.png";
@@ -155,23 +160,48 @@
               icon: image
             });
 
-            var contentString =
-                "<table>"+
-                    "<tr>"+
-                        "<td align=\"right\"> <b>Location:</b> </td>"+
-                        "<td> "+x+", "+y+
-                    "</tr>"+
-                    "<tr>"+
-                        "<td align=\"right\"> <b>Measured High Water Mark:</b> </td>"+
-                        "<td> "+measured+" "+unit+"</td>"+
-                    "<tr>"+
-                        "<td align=\"right\"> <b>Modeled High Water Mark:</b> </td>"+
-                        "<td> "+modeled+" "+unit+"</td>"+
-                    "</tr>"+
-                        "<td align=\"right\"> <b>Difference:</b> </td>"+
-                        "<td> "+diff+" "+unit+"</td>"+
-                    "</tr>"+
-                "</table>";
+            if(Number(modeled)<-9999)
+            {
+                modeled = "Dry";
+                diff = "N/A";
+                var contentString =
+                    "<table>"+
+                        "<tr>"+
+                            "<td align=\"right\"> <b>Location:</b> </td>"+
+                            "<td> "+x+", "+y+
+                        "</tr>"+
+                        "<tr>"+
+                            "<td align=\"right\"> <b>Measured High Water Mark:</b> </td>"+
+                            "<td> "+measured+" "+unit+"</td>"+
+                        "<tr>"+
+                            "<td align=\"right\"> <b>Modeled High Water Mark:</b> </td>"+
+                            "<td> "+modeled+"</td>"+
+                        "</tr>"+
+                            "<td align=\"right\"> <b>Difference:</b> </td>"+
+                            "<td> "+diff+"</td>"+
+                        "</tr>"+
+                    "</table>";
+            }
+            else
+            {
+                var contentString =
+                    "<table>"+
+                        "<tr>"+
+                            "<td align=\"right\"> <b>Location:</b> </td>"+
+                            "<td> "+x+", "+y+
+                        "</tr>"+
+                        "<tr>"+
+                            "<td align=\"right\"> <b>Measured High Water Mark:</b> </td>"+
+                            "<td> "+measured+" "+unit+"</td>"+
+                        "<tr>"+
+                            "<td align=\"right\"> <b>Modeled High Water Mark:</b> </td>"+
+                            "<td> "+modeled+" "+unit+"</td>"+
+                        "</tr>"+
+                            "<td align=\"right\"> <b>Difference:</b> </td>"+
+                            "<td> "+diff+" "+unit+"</td>"+
+                        "</tr>"+
+                    "</table>";
+            }
             HWMInfoWindow[ID] = new google.maps.InfoWindow({content: contentString});
             google.maps.event.addListener(HWMMarkers[ID], 'click', function() {
             //Set the Marker ID
