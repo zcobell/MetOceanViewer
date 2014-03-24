@@ -145,7 +145,11 @@ void MainWindow::on_button_processHWM_clicked()
         measurement = HighWaterMarks[i].measured;
         modeled = HighWaterMarks[i].modeled;
         error = HighWaterMarks[i].error;
-        classification = ClassifyHWM(error);
+
+        if(modeled < -9999)
+            classification = -1;
+        else
+            classification = ClassifyHWM(error);
 
         if(measurement > MaximumValue)
             MaximumValue = measurement + 1;
