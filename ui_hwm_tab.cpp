@@ -67,8 +67,8 @@ void MainWindow::on_button_processHWM_clicked()
     QString HWMColor,One21Color,RegColor,BoundColor,RegressionTitle,XLabel,YLabel;
     QString RegressionGlobal,MyClassList;
     double x,y,measurement,modeled,error,M,B,R,MaximumValue;
-    double c0,c1,c2,c3,c4,c5,c6;
-    int classification, unit, ierr;
+    double c0,c1,c2,c3,c4,c5,c6,BoundValue;
+    int classification, unit, ierr, PlotUpperLower;
     bool ThroughZero;
 
     ThroughZero = ui->check_forceregthroughzero->isChecked();
@@ -179,13 +179,21 @@ void MainWindow::on_button_processHWM_clicked()
     BoundColor = LineColorBounds.name();
     RegColor = LineColorRegression.name();
 
+    if(ui->check_dispupperlowerlines->isChecked())
+        PlotUpperLower = 1;
+    else
+        PlotUpperLower = 0;
+
+    BoundValue = ui->spin_upperlowervalue->value();
+
     RegressionGlobal = "setGlobal('"+RegressionTitle+"','"+XLabel+"','"+YLabel+"','"+
             HWMColor+"','"+RegColor+"','"+One21Color+"','"+BoundColor+"')";
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(RegressionGlobal);
 
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
             unitString+","+QString::number(MaximumValue)+","+QString::number(M,'f',2)+
-            ","+QString::number(B,'f',2)+","+QString::number(R,'f',2)+")";
+            ","+QString::number(B,'f',2)+","+QString::number(R,'f',2)+","+QString::number(PlotUpperLower)+
+            ","+QString::number(BoundValue)+")";
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(Regression);
 
     ui->subtab_hwm->setCurrentIndex(1);

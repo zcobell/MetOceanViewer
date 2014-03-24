@@ -68,7 +68,7 @@
         return;
     }
 
-    function plotRegression(model,measure,unit,maximum,slope,intercept,corr)
+    function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUpperLowerLines,BoundValue)
     {
         //Split the data into parts
         var modelList = model.split(":");
@@ -95,6 +95,83 @@
                     return '<b>'+YLabel+'</b>: '+this.x+'<br><b>'+XLabel+'</b>: '+this.y+' ';
                     }
                 };
+
+        if(PlotUpperLowerLines == 1)
+        {
+            var seriesList = [{
+                    type: 'line',
+                    name: 'Lower Bound',
+                    data: [[0,-BoundValue],[MX,MX-BoundValue]],
+                    color: BoundColor,
+                    enableMouseTracking: false,
+                    showInLegend: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: 'Upper Bound',
+                    data: [[0,BoundValue],[MX,MX+BoundValue]],
+                    color: BoundColor,
+                    enableMouseTracking: false,
+                    showInLegend: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: '1:1 Line',
+                    data: [[0,0],[MX,MX]],
+                    color: One21Color,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'scatter',
+                    name: 'Comparison',
+                    color: DotColor,
+                    data: ScatterData,
+                    marker: { symbol: "circle" }
+                },{
+                    type: 'line',
+                    name: 'Regression Line',
+                    data: [[0,B],[MX,MX*M+B]],
+                    color: RegColor,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                }];
+        }
+        else
+        {
+            var seriesList = [{
+                    type: 'line',
+                    name: '1:1 Line',
+                    data: [[0,0],[MX,MX]],
+                    color: One21Color,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'scatter',
+                    name: 'Comparison',
+                    color: DotColor,
+                    data: ScatterData,
+                    marker: { symbol: "circle" }
+                },{
+                    type: 'line',
+                    name: 'Regression Line',
+                    data: [[0,B],[MX,MX*M+B]],
+                    color: RegColor,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                }];
+        }
 
         $('#chart_div').highcharts({
             chart: {
@@ -130,49 +207,7 @@
                 max: MX
             },
             tooltip: plotToolTip,
-            series: [{
-                    type: 'line',
-                    name: 'Lower Bound',
-                    data: [[0,-2],[MX,MX-2]],
-                    color: BoundColor,
-                    enableMouseTracking: false,
-                    marker: {
-                        enabled: false
-                        }
-                },{
-                    type: 'line',
-                    name: 'Upper Bound',
-                    data: [[0,2],[MX,MX+2]],
-                    color: BoundColor,
-                    enableMouseTracking: false,
-                    marker: {
-                        enabled: false
-                        }
-                },{
-                    type: 'line',
-                    name: '1:1 Line',
-                    data: [[0,0],[MX,MX]],
-                    color: One21Color,
-                    enableMouseTracking: false,
-                    marker: {
-                        enabled: false
-                        }
-                },{
-                    type: 'scatter',
-                    name: 'Comparison',
-                    color: DotColor,
-                    data: ScatterData,
-                    marker: { symbol: "circle" }
-                },{
-                    type: 'line',
-                    name: 'Regression Line',
-                    data: [[0,B],[MX,MX*M+B]],
-                    color: RegColor,
-                    enableMouseTracking: false,
-                    marker: {
-                        enabled: false
-                        }
-                }]
+            series: seriesList
         });
 
     }
