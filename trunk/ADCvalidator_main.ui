@@ -1276,6 +1276,24 @@
            <layout class="QVBoxLayout" name="verticalLayout_15">
             <item>
              <widget class="QGroupBox" name="group_hwmfile">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>60</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>60</height>
+               </size>
+              </property>
               <property name="title">
                <string>Select HWM File</string>
               </property>
@@ -1318,6 +1336,12 @@
               <layout class="QVBoxLayout" name="verticalLayout_12">
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_35">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
+                 <property name="sizeConstraint">
+                  <enum>QLayout::SetDefaultConstraint</enum>
+                 </property>
                  <item>
                   <widget class="QLabel" name="label_hwmunits">
                    <property name="text">
@@ -1374,6 +1398,24 @@
                </item>
                <item>
                 <widget class="QGroupBox" name="group_hwmclass">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>55</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>55</height>
+                  </size>
+                 </property>
                  <property name="title">
                   <string>Marker Classification</string>
                  </property>
@@ -1679,7 +1721,7 @@
                  <property name="title">
                   <string>Regression Options</string>
                  </property>
-                 <layout class="QHBoxLayout" name="horizontalLayout_30">
+                 <layout class="QHBoxLayout" name="horizontalLayout_4">
                   <item>
                    <layout class="QVBoxLayout" name="verticalLayout_11">
                     <item>
@@ -1798,7 +1840,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>Upper/Lower Bound Line Color:</string>
+                         <string>+/- Lines Color:</string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1824,13 +1866,13 @@
                        <widget class="QLabel" name="label_modeledhwmlabel">
                         <property name="minimumSize">
                          <size>
-                          <width>120</width>
+                          <width>130</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>120</width>
+                          <width>130</width>
                           <height>16777215</height>
                          </size>
                         </property>
@@ -1882,13 +1924,13 @@
                        <widget class="QLabel" name="label_measuredhwmlabel">
                         <property name="minimumSize">
                          <size>
-                          <width>120</width>
+                          <width>130</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>120</width>
+                          <width>130</width>
                           <height>16777215</height>
                          </size>
                         </property>
@@ -1940,13 +1982,13 @@
                        <widget class="QLabel" name="label_hwmplottitle">
                         <property name="minimumSize">
                          <size>
-                          <width>120</width>
+                          <width>130</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>120</width>
+                          <width>130</width>
                           <height>16777215</height>
                          </size>
                         </property>
@@ -1979,6 +2021,110 @@
                       </item>
                       <item>
                        <spacer name="horizontalSpacer_13">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_2">
+                      <item>
+                       <widget class="QLabel" name="label_upperlowervalue">
+                        <property name="minimumSize">
+                         <size>
+                          <width>130</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>130</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="text">
+                         <string>+/-  Lines Value:</string>
+                        </property>
+                        <property name="alignment">
+                         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="spin_upperlowervalue">
+                        <property name="minimumSize">
+                         <size>
+                          <width>140</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>140</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="alignment">
+                         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                        </property>
+                        <property name="value">
+                         <double>2.000000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_14">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_3">
+                      <item>
+                       <spacer name="horizontalSpacer_9">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeType">
+                         <enum>QSizePolicy::Fixed</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>68</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="check_dispupperlowerlines">
+                        <property name="text">
+                         <string>Display +/-  Lines</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_31">
                         <property name="orientation">
                          <enum>Qt::Horizontal</enum>
                         </property>
@@ -2042,19 +2188,6 @@
                </item>
               </layout>
              </widget>
-            </item>
-            <item>
-             <spacer name="verticalSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>122</height>
-               </size>
-              </property>
-             </spacer>
             </item>
             <item>
              <widget class="QPushButton" name="button_processHWM">
@@ -2154,7 +2287,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>19</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
