@@ -39,11 +39,12 @@
 
 int NumIMEDSFiles = 0;
 int CurrentRowsInTable = 0;
-bool ColorUpdated;
+bool ColorUpdated, FileReadError;
 double UnitConversion, xadjust, yadjust;
 
 QColor RandomButtonColor;
-QString InputFileName,InputColorString,InputSeriesName,InputFilePath;
+QString InputFileName,InputColorString,InputSeriesName,InputFilePath,InputFileType;
+QDateTime InputFileColdStart;
 
 add_imeds_data::add_imeds_data(QWidget *parent) :
     QDialog(parent),
@@ -69,6 +70,7 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->text_unitconvert->setText("1.0");
     ui->text_xadjust->setText("0.0");
     ui->text_yadjust->setText("0.0");
+    ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
     RandomButtonColor = MainWindow::GenerateRandomColor();
     ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
@@ -80,7 +82,8 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 //up for the user
 void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
-                                             double xmove, double ymove, QColor Color)
+                                             double xmove, double ymove, QColor Color,
+                                             QDateTime ColdStart, QString FileType)
 {
     QString ButtonStyle;
     ui->text_seriesname->setText(SeriesName);
@@ -98,8 +101,10 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 //Bring up the browse for file dialog
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
+    QStringList List;
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
-                            PreviousDirectory,"IMEDS File (*.imeds *.IMEDS) ;; All Files (*.*)");
+            PreviousDirectory,
+            "IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; All Files (*.*)");
 
     InputFilePath = TempPath;
     if(TempPath!=NULL)
@@ -107,6 +112,39 @@ void add_imeds_data::on_browse_filebrowse_clicked()
         MainWindow::GetLeadingPath(TempPath);
         QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
         ui->text_filename->setText(TempFile);
+
+        FileReadError = false;
+
+        List = TempFile.split(".");
+        InputFileType = List.value(List.length()-1).toUpper();
+        if(InputFileType == "IMEDS")
+        {
+            ui->text_filetype->setText("IMEDS");
+            ui->date_coldstart->setEnabled(false);
+            ui->text_stationfile->setEnabled(false);
+            ui->browse_stationfile->setEnabled(false);
+            FileReadError = false;
+        }
+        else if(InputFileType == "NC")
+        {
+            ui->text_filetype->setText("NetCDF");
+            ui->date_coldstart->setEnabled(true);
+            ui->text_stationfile->setEnabled(false);
+            ui->browse_stationfile->setEnabled(false);
+            FileReadError = false;
+        }
+        else if(InputFileType == ".61" || InputFileType == ".62" || InputFileType == ".71" || InputFileType == ".72")
+        {
+            ui->text_filetype->setText("ADCIRC");
+            ui->date_coldstart->setEnabled(true);
+            ui->text_stationfile->setEnabled(true);
+            ui->browse_stationfile->setEnabled(true);
+            FileReadError = false;
+        }
+        else
+        {
+            FileReadError = true;
+        }
     }
 
     return;

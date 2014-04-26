@@ -135,7 +135,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    void drawMarkers(bool DelayDraw);
+    void drawMarkers();
 
     void delay(int delayTime);
 

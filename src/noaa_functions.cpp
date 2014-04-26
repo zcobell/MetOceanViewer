@@ -99,7 +99,7 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 }
 
 //Routine that draws the markers on the NOAA map
-void MainWindow::drawMarkers(bool DelayDraw)
+void MainWindow::drawMarkers()
 {
     //int i,ID;
     //double X,Y;
@@ -165,7 +165,7 @@ void MainWindow::BeginGatherStations()
         NOAAStationNames[i] = MyList.value(3);
     }
     StationFile.close();
-    drawMarkers(true);
+    drawMarkers();
     return;
 }
 
