@@ -59,7 +59,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 
     //Load the NOAA tab and set accordingly
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    ui->noaa_map->load(QUrl("qrc:/html/noaa_maps.html"));
+    ui->noaa_map->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     QObject::connect(ui->noaa_map,SIGNAL(loadFinished(bool)),this,SLOT(BeginGatherStations()));
@@ -81,7 +81,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 
     //Load the IMEDS tab and set accordingly
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    ui->imeds_map->load(QUrl("qrc:/html/imeds_maps.html"));
+    ui->imeds_map->load(QUrl("qrc:/rsc/html/imeds_maps.html"));
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -91,11 +91,11 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     IMEDSMaxDate.setDate(QDate(1820,1,1));
 
     //Load the High Water Mark Map and Regression Chart
-    ui->map_hwm->load(QUrl("qrc:/html/hwm_map.html"));
+    ui->map_hwm->load(QUrl("qrc:/rsc/html/hwm_map.html"));
     ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->map_regression->load(QUrl("qrc:/html/reg_plot.html"));
+    ui->map_regression->load(QUrl("qrc:/rsc/html/reg_plot.html"));
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->map_regression->setContextMenuPolicy(Qt::CustomContextMenu);
