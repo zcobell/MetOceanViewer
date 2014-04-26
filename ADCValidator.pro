@@ -35,5 +35,9 @@ FORMS    += ADCvalidator_main.ui \
 
 OTHER_FILES +=
 
+LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl
+
+INCLUDEPATH += C:/netcdf/include
+
 RESOURCES += \
     ADCvalidatior.qrc
