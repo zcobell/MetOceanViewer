@@ -64,9 +64,20 @@ FORMS    += ui/ADCvalidator_main.ui \
 
 OTHER_FILES +=
 
+#...Windows - We assume a folder that contains the pre-compiled
+#             shared dll's from Unidata and another with the 
+#             NetCDF header
+win32{
 LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl
-
 INCLUDEPATH += C:/netcdf/include
+}
+
+#...Unix - We assume static library for NetCDF installed
+#          in the system path already
+unix{
+LIBS += -lnetcdf
+}
+
 INCLUDEPATH += include
 
 RESOURCES += \
