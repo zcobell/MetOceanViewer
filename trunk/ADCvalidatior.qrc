@@ -1,32 +1,24 @@
 <RCC>
-    <qresource prefix="/html">
-        <file>noaa_maps.html</file>
-        <file>imeds_maps.html</file>
-        <file>hwm_map.html</file>
-        <file>reg_plot.html</file>
-    </qresource>
-    <qresource prefix="/data">
-        <file>NOAA_StationList.txt</file>
-    </qresource>
-    <qresource prefix="/img">
-        <file>mm_20_darkblue.png</file>
-        <file>mm_20_darkgreen.png</file>
-        <file>mm_20_darkorange.png</file>
-        <file>mm_20_lightblue.png</file>
-        <file>mm_20_lightgreen.png</file>
-        <file>mm_20_purple.png</file>
-        <file>mm_20_red.png</file>
-        <file>mm_20_yellow.png</file>
-        <file>arcadis_logo.png</file>
-        <file>mm_20_white.png</file>
-    </qresource>
-    <qresource prefix="/js">
-        <file>highcharts.js</file>
-        <file>annotations.js</file>
-        <file>jquery.js</file>
-        <file>markercluster.js</file>
-    </qresource>
-    <qresource prefix="/js/modules">
-        <file>exporting.js</file>
+    <qresource prefix="/rsc">
+        <file>html/noaa_maps.html</file>
+        <file>html/imeds_maps.html</file>
+        <file>html/hwm_map.html</file>
+        <file>html/reg_plot.html</file>
+        <file>data/NOAA_StationList.txt</file>
+        <file>img/mm_20_darkblue.png</file>
+        <file>img/mm_20_darkgreen.png</file>
+        <file>img/mm_20_darkorange.png</file>
+        <file>img/mm_20_lightblue.png</file>
+        <file>img/mm_20_lightgreen.png</file>
+        <file>img/mm_20_purple.png</file>
+        <file>img/mm_20_red.png</file>
+        <file>img/mm_20_yellow.png</file>
+        <file>img/arcadis_logo.png</file>
+        <file>img/mm_20_white.png</file>
+        <file>js/highcharts.js</file>
+        <file>js/annotations.js</file>
+        <file>js/jquery.js</file>
+        <file>js/markercluster.js</file>
+        <file>js/exporting.js</file>
     </qresource>
 </RCC>

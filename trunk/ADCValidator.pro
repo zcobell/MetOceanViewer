@@ -1,8 +1,37 @@
-#-------------------------------------------------
+#---- LGPL --------------------------------------------------------------------
 #
-# Project created by QtCreator 2013-11-19T21:34:38
+# Copyright (C)  ARCADIS, 2011-2013.
 #
-#-------------------------------------------------
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# contact: Zachary Cobell, zachary.cobell@arcadis-us.com
+# ARCADIS
+# 4999 Pearl East Circle, Suite 200
+# Boulder, CO 80301
+#
+# All indications and logos of, and references to, "ARCADIS"
+# are registered trademarks of ARCADIS, and remain the property of
+# ARCADIS. All rights reserved.
+#
+#------------------------------------------------------------------------------
+# $Author$
+# $Date$
+# $Id$
+# $HeadURL$
+#------------------------------------------------------------------------------
+#  File: ADCValidator.pro
+#
+#------------------------------------------------------------------------------
 
 QT       += core gui webkitwidgets network xml
 
@@ -12,32 +41,33 @@ TARGET = ADCValidator
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-        ADCvalidator_main.cpp \
-    ui_hwm_tab.cpp \
-    ui_imeds_tab.cpp \
-    ui_noaa_tab.cpp \
-    imeds_data.cpp \
-    hwm_data.cpp \
-    imeds_functions.cpp \
-    hwm_functions.cpp \
-    noaa_functions.cpp \
-    general_functions.cpp \
-    add_imeds_data.cpp
+SOURCES += src/main.cpp\
+        src/ADCvalidator_main.cpp \
+    src/ui_hwm_tab.cpp \
+    src/ui_imeds_tab.cpp \
+    src/ui_noaa_tab.cpp \
+    src/imeds_data.cpp \
+    src/hwm_data.cpp \
+    src/imeds_functions.cpp \
+    src/hwm_functions.cpp \
+    src/noaa_functions.cpp \
+    src/general_functions.cpp \
+    src/add_imeds_data.cpp
 
-HEADERS  += ADCvalidator.h \
-    imeds.h \
-    hwm.h \
-    add_imeds_data.h
+HEADERS  += include/ADCvalidator.h \
+    include/imeds.h \
+    include/hwm.h \
+    include/add_imeds_data.h
 
-FORMS    += ADCvalidator_main.ui \
-    add_imeds_data.ui
+FORMS    += ui/ADCvalidator_main.ui \
+    ui/add_imeds_data.ui
 
 OTHER_FILES +=
 
 LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl
 
 INCLUDEPATH += C:/netcdf/include
+INCLUDEPATH += include
 
 RESOURCES += \
     ADCvalidatior.qrc

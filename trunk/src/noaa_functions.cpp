@@ -134,7 +134,7 @@ void MainWindow::BeginGatherStations()
     int i,NumStations;
     QString MyLine,TempString;
     QStringList MyList;
-    QFile StationFile(":/data/NOAA_StationList.txt");
+    QFile StationFile(":/rsc/data/NOAA_StationList.txt");
 
     if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
     {
