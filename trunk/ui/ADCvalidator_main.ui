@@ -25,6 +25,10 @@
   <property name="windowTitle">
    <string>ADCIRC Validator</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../ADCvalidatior.qrc">
+    <normaloff>:/rsc/img/icon.png</normaloff>:/rsc/img/icon.png</iconset>
+  </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -43,7 +47,7 @@
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
-        <string>View NOAA Data</string>
+        <string>Plot NOAA Data</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <item>
@@ -683,7 +687,7 @@
       </widget>
       <widget class="QWidget" name="tab_IMEDS">
        <attribute name="title">
-        <string>Validate ADCIRC Time Series</string>
+        <string>Plot ADCIRC Time Series Stations</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
@@ -693,7 +697,7 @@
           </property>
           <widget class="QWidget" name="tab_selectIMEDS">
            <attribute name="title">
-            <string>Select IMEDS Data</string>
+            <string>Select Timeseries Data</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
@@ -1063,7 +1067,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>IMEDS Comparison</string>
+                    <string>Timeseries Comparison</string>
                    </property>
                   </widget>
                  </item>
@@ -1196,7 +1200,7 @@
           </widget>
           <widget class="QWidget" name="tab_viewIMEDS">
            <attribute name="title">
-            <string>View IMEDS Data</string>
+            <string>View Timeseries Data</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
@@ -1261,7 +1265,7 @@
       </widget>
       <widget class="QWidget" name="tab_HWM">
        <attribute name="title">
-        <string>Validate ADCIRC High Water Marks</string>
+        <string>Plot ADCIRC High Water Marks</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
@@ -1434,7 +1438,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_purple.png</pixmap>
+                       <pixmap>:/img/mm_20_purple.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1472,7 +1476,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_darkblue.png</pixmap>
+                       <pixmap>:/img/mm_20_darkblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1510,7 +1514,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_lightblue.png</pixmap>
+                       <pixmap>:/img/mm_20_lightblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1548,7 +1552,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_darkgreen.png</pixmap>
+                       <pixmap>:/img/mm_20_darkgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1583,7 +1587,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_lightgreen.png</pixmap>
+                       <pixmap>:/img/mm_20_lightgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1621,7 +1625,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_yellow.png</pixmap>
+                       <pixmap>:/img/mm_20_yellow.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1659,7 +1663,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_darkorange.png</pixmap>
+                       <pixmap>:/img/mm_20_darkorange.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1694,7 +1698,7 @@
                     <item>
                      <widget class="QLabel" name="img_red_2">
                       <property name="pixmap">
-                       <pixmap resource="ADCvalidatior.qrc">:/img/mm_20_red.png</pixmap>
+                       <pixmap>:/img/mm_20_red.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2330,7 +2334,7 @@
   <tabstop>subtab_IMEDS</tabstop>
  </tabstops>
  <resources>
-  <include location="ADCvalidatior.qrc"/>
+  <include location="../ADCvalidatior.qrc"/>
  </resources>
  <connections/>
 </ui>

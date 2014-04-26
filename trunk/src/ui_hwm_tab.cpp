@@ -74,7 +74,19 @@ void MainWindow::on_button_processHWM_clicked()
     ThroughZero = ui->check_forceregthroughzero->isChecked();
 
     ierr = ReadHWMData(HighWaterMarkFile, HighWaterMarks);
+    if(ierr!=0)
+    {
+        QMessageBox::information(this,"ERROR","Could not read the high water mark file.");
+        return;
+    }
+
     ierr = ComputeLinearRegression(ThroughZero, HighWaterMarks, M, B, R);
+    if(ierr!=0)
+    {
+        QMessageBox::information(this,"ERROR","Could not calculate the regression function.");
+        return;
+    }
+
     unit = ui->combo_hwmunits->currentIndex();
     if(unit==0)
         unitString = "'ft'";

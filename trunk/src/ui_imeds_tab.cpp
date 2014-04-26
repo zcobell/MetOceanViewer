@@ -74,7 +74,7 @@ void MainWindow::on_button_addrow_clicked()
     QColor CellColor;
 
     int NumberOfRows = ui->table_IMEDSData->rowCount();
-    AddWindow.setModal(true);
+    AddWindow.setModal(false);
     AddWindow.set_default_dialog_box_elements(NumberOfRows);
 
     int WindowStatus = AddWindow.exec();
@@ -161,12 +161,14 @@ void MainWindow::on_button_deleterow_clicked()
 
 void MainWindow::SetupIMEDSTable()
 {
-    QString HeaderString = "Filename;Series Name;Color;Unit Conversion;x-adjustment;y-adjustment;FullPathToFile";
+    QString HeaderString = "Filename;Series Name;Color;Unit Conversion;x-adjustment;y-adjustment;FullPathToFile;ColdStart;FileType";
     QStringList Header = HeaderString.split(";");
 
     ui->table_IMEDSData->setRowCount(0);
-    ui->table_IMEDSData->setColumnCount(7);
+    ui->table_IMEDSData->setColumnCount(9);
     ui->table_IMEDSData->setColumnHidden(6,true);
+    ui->table_IMEDSData->setColumnHidden(7,false);
+    ui->table_IMEDSData->setColumnHidden(8,false);
     ui->table_IMEDSData->setHorizontalHeaderLabels(Header);
     ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->table_IMEDSData->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -179,7 +181,8 @@ void MainWindow::on_button_editrow_clicked()
 {
     add_imeds_data AddWindow;
     QColor CellColor;
-    QString Filename,Filepath,SeriesName;
+    QString Filename,Filepath,SeriesName,FileType;
+    QDateTime ColdStart;
 
     int CurrentRow;
 
@@ -189,7 +192,7 @@ void MainWindow::on_button_editrow_clicked()
         return;
     }
 
-    AddWindow.setModal(true);
+    AddWindow.setModal(false);
     CurrentRow = ui->table_IMEDSData->currentRow();
     Filename = ui->table_IMEDSData->item(CurrentRow,0)->text();
     Filepath = ui->table_IMEDSData->item(CurrentRow,2)->text();
@@ -198,9 +201,12 @@ void MainWindow::on_button_editrow_clicked()
     xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();
     yadjust = ui->table_IMEDSData->item(CurrentRow,5)->text().toDouble();
     CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
+    ColdStart = QDateTime::currentDateTime();
+    FileType = "testing";
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
-                                      UnitConversion,xadjust,yadjust,CellColor);
+                                      UnitConversion,xadjust,yadjust,
+                                      CellColor,ColdStart,FileType);
 
     int WindowStatus = AddWindow.exec();
 
