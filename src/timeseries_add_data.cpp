@@ -29,13 +29,13 @@
 // $Id$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: add_imeds_data.cpp
+//  File: timeseries_add_data.cpp
 //
 //------------------------------------------------------------------------------
 
-#include "add_imeds_data.h"
-#include "ui_add_imeds_data.h"
-#include "ADCvalidator.h"
+#include <timeseries_add_data.h>
+#include <ui_timeseries_add_data.h>
+#include <ADCvalidator.h>
 
 int NumIMEDSFiles = 0;
 int CurrentRowsInTable = 0;
@@ -127,6 +127,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
         }
         else if(InputFileType == "NC")
         {
+            InputFileType = "NETCDF";
             ui->text_filetype->setText("NetCDF");
             ui->date_coldstart->setEnabled(true);
             ui->text_stationfile->setEnabled(false);
@@ -199,3 +200,4 @@ void add_imeds_data::on_buttonBox_accepted()
 
     return;
 }
+

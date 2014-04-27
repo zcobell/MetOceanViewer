@@ -44,23 +44,23 @@ TEMPLATE = app
 SOURCES += src/main.cpp\
         src/ADCvalidator_main.cpp \
     src/ui_hwm_tab.cpp \
-    src/ui_imeds_tab.cpp \
     src/ui_noaa_tab.cpp \
-    src/imeds_data.cpp \
     src/hwm_data.cpp \
-    src/imeds_functions.cpp \
     src/hwm_functions.cpp \
     src/noaa_functions.cpp \
     src/general_functions.cpp \
-    src/add_imeds_data.cpp
+    src/timeseries_data.cpp \
+    src/timeseries_functions.cpp \
+    src/timeseries_add_data.cpp \
+    src/ui_timeseries_tab.cpp
 
 HEADERS  += include/ADCvalidator.h \
-    include/imeds.h \
     include/hwm.h \
-    include/add_imeds_data.h
+    include/timeseries_add_data.h \
+    include/timeseries.h
 
 FORMS    += ui/ADCvalidator_main.ui \
-    ui/add_imeds_data.ui
+    ui/timeseries_add_data.ui
 
 OTHER_FILES +=
 

@@ -29,14 +29,12 @@
 // $Id$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: imeds_data.cpp
+//  File: timeseries_data.cpp
 //
 //------------------------------------------------------------------------------
 
-#include "imeds.h"
-
-QString ADCIMEDSFile=QString(), OBSIMEDSFile=QString();
-IMEDS ADCIMEDS,OBSIMEDS;
+#include <timeseries.h>
+#include <netcdf.h>
 
 IMEDS readIMEDS(QString filename)
 {
@@ -186,3 +184,21 @@ IMEDS readIMEDS(QString filename)
     }
 
 }
+
+ADCNC readADCIRCnetCDF(QString filename)
+{
+    ADCNC MyData;
+    int ncid, success, dimid_time;
+
+    const char *filename2 = filename.toStdString().c_str();
+
+    //Open the NetCDF file
+    if( (success = nc_open(filename2,NC_NOWRITE,&ncid)) )
+        MyData.success = false; MyData.err = success; return MyData;
+
+    if( (success = nc_inq_dimid(ncid,"time",&dimid_time)))
+        MyData.success = false; MyData.err = success; return MyData;
+
+    return MyData;
+}
+

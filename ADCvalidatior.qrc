@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/rsc">
         <file>html/noaa_maps.html</file>
-        <file>html/imeds_maps.html</file>
+        <file>html/timeseries_maps.html</file>
         <file>html/hwm_map.html</file>
         <file>html/reg_plot.html</file>
         <file>data/NOAA_StationList.txt</file>

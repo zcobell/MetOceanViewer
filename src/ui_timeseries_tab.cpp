@@ -29,14 +29,14 @@
 // $Id$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: ui_imeds_tab.cpp
+//  File: ui_timeseries_tab.cpp
 //
 //------------------------------------------------------------------------------
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
-#include "imeds.h"
-#include "add_imeds_data.h"
+#include <ADCvalidator.h>
+#include <ui_ADCvalidator_main.h>
+#include <timeseries.h>
+#include <timeseries_add_data.h>
 
 QVector<IMEDS> IMEDSData;
 
@@ -72,6 +72,7 @@ void MainWindow::on_button_addrow_clicked()
 {
     add_imeds_data AddWindow;
     QColor CellColor;
+    ADCNC NetCDFData;
 
     int NumberOfRows = ui->table_IMEDSData->rowCount();
     AddWindow.setModal(false);
@@ -101,8 +102,25 @@ void MainWindow::on_button_addrow_clicked()
         //Ok, what we have is good, so populate
         NumberOfRows = NumberOfRows+1;
         IMEDSData.resize(NumberOfRows);
-        IMEDSData[NumberOfRows-1] = readIMEDS(InputFilePath);
-        UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+
+        if(InputFileType=="IMEDS")
+        {
+            qDebug() << "Reading IMEDS...";
+            IMEDSData[NumberOfRows-1] = readIMEDS(InputFilePath);
+            UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+        }
+        else if(InputFileType=="NETCDF")
+        {
+            qDebug() << "Reading NetCDF...";
+            NetCDFData = readADCIRCnetCDF(InputFilePath);
+            if(!NetCDFData.success)
+            {
+                NETCDF_ERR(NetCDFData.err);
+                IMEDSData[NumberOfRows-1].success = false;
+            }
+            //IMEDSData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData);
+        }
+
         ui->table_IMEDSData->setRowCount(NumberOfRows);
         ui->table_IMEDSData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
         ui->table_IMEDSData->setItem(NumberOfRows-1,1,new QTableWidgetItem(InputSeriesName));
@@ -125,7 +143,7 @@ void MainWindow::on_button_addrow_clicked()
         {
             IMEDSData.remove(NumberOfRows-1);
             ui->table_IMEDSData->removeRow(NumberOfRows-1);
-            QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
+            QMessageBox::information(this,"ERROR","This file could not be read correctly.");
             return;
         }
 
