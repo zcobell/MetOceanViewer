@@ -19,7 +19,7 @@
 // 4999 Pearl East Circle, Suite 200
 // Boulder, CO 80301
 //
-// All indications and logos of, and references to, "ARCADIS" 
+// All indications and logos of, and references to, "ARCADIS"
 // are registered trademarks of ARCADIS, and remain the property of
 // ARCADIS. All rights reserved.
 //
@@ -29,47 +29,60 @@
 // $Id$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: imeds.h
+//  File: timeseries_add_data.h
 //
 //------------------------------------------------------------------------------
 
+#ifndef TIMESERIES_ADD_DATA_H
+#define TIMESERIES_ADD_DATA_H
 
-        
-#ifndef IMEDS_H
-#define IMEDS_H
-
-#include <QMainWindow>
+#include <QDialog>
 #include <QVector>
-#include <QFile>
-#include <QMessageBox>
-#include <QDateTime>
 
-struct IMEDS_DATA
+struct IMEDSList
 {
-    double             latitude;
-    double             longitude;
-    QString            StationName;
-    int                NumSnaps;
-    int                StationIndex;
-    QVector<QDateTime>  date;
-    QVector<double>     data;
+    QString Filename;
+    QString Label;
+    QColor  Color;
 };
 
-struct IMEDS{
-    int nstations;
-    QString header1;
-    QString header2;
-    QString header3;
-    QVector<IMEDS_DATA> station;
-    bool success;
+extern int NumIMEDSFiles;
+extern int CurrentRowsIntTable;
+extern QString InputFileName,InputColorString,InputSeriesName,InputFilePath,InputFileType;
+extern double UnitConversion,xadjust,yadjust;
+extern QDateTime InputFileColdStart;
+
+
+namespace Ui {
+class add_imeds_data;
+}
+
+class add_imeds_data : public QDialog
+{
+    Q_OBJECT
+
+public:
+    explicit add_imeds_data(QWidget *parent = 0);
+
+    ~add_imeds_data();
+
+    void set_default_dialog_box_elements(int NumberOfRows);
+
+    void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
+                                 double UnitConvert, double xmove, double ymove, QColor Color,
+                                 QDateTime ColdStart, QString FileType);
+
+private slots:
+
+    void on_browse_filebrowse_clicked();
+
+    void on_button_IMEDSColor_clicked();
+
+    void on_buttonBox_accepted();
+
+private:
+    Ui::add_imeds_data *ui;
+
 };
 
-IMEDS readIMEDS(QString filename);
-
-extern QString ADCIMEDSFile;
-extern QString OBSIMEDSFile;
-extern IMEDS ADCIMEDS;
-extern IMEDS OBSIMEDS;
-extern QVector<IMEDS> IMEDSData;
-
-#endif // IMEDS_H
+#endif // TIMESERIES_ADD_DATA_H

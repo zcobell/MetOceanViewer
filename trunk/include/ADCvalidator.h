@@ -43,7 +43,7 @@
 #include <QVector>
 #include <QFileDialog>
 #include <QColorDialog>
-#include "imeds.h"
+#include <timeseries.h>
 
 extern QString PreviousDirectory;
 extern QColor ADCIRCIMEDSColor,OBSIMEDSColor;
@@ -166,6 +166,8 @@ private:
     QString FormatIMEDSString(IMEDS MyStation,int index);
 
     int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
+
+    void NETCDF_ERR(int status);
 
 };
 

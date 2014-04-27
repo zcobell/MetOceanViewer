@@ -33,9 +33,9 @@
 //
 //------------------------------------------------------------------------------
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
-#include "imeds.h"
+#include <ADCvalidator.h>
+#include <ui_ADCvalidator_main.h>
+#include <timeseries.h>
 
 //Routine that fires after the NOAA data is read from the server
 void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)

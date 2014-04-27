@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
         
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
+#include <ADCvalidator.h>
+#include <ui_ADCvalidator_main.h>
 
 QString PreviousDirectory;
 QColor ADCIRCIMEDSColor,OBSIMEDSColor;
@@ -79,9 +79,9 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     int NumItems = ui->Combo_PanTo->count();
     initializePanToLocations(NumItems);
 
-    //Load the IMEDS tab and set accordingly
+    //Load the timeseries tab and set accordingly [Formerly "IMEDS"]
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    ui->imeds_map->load(QUrl("qrc:/rsc/html/imeds_maps.html"));
+    ui->imeds_map->load(QUrl("qrc:/rsc/html/timeseries_maps.html"));
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);

@@ -33,7 +33,7 @@
 //
 //------------------------------------------------------------------------------
         
-#include "hwm.h"
+#include <hwm.h>
 
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 {

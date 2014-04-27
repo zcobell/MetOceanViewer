@@ -29,13 +29,13 @@
 // $Id$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: imeds_functions.cpp
+//  File: timeseries_functions.cpp
 //
 //------------------------------------------------------------------------------
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
-#include "imeds.h"
+#include <ADCvalidator.h>
+#include <ui_ADCvalidator_main.h>
+#include <timeseries.h>
 
 //Determines the start and end time in an IMEDS variable
 void MainWindow::getStartEndTime(IMEDS Input, int index, QDateTime &Start, QDateTime &End)

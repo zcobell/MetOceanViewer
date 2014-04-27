@@ -33,8 +33,9 @@
 //
 //------------------------------------------------------------------------------
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
+#include <ADCvalidator.h>
+#include <ui_ADCvalidator_main.h>
+#include <netcdf.h>
 
 //Simple delay function which will pause execution for a number of seconds
 void MainWindow::delay(int delayTime)
@@ -120,4 +121,11 @@ QColor MainWindow::GenerateRandomColor()
     }
 
     return MyColor;
+}
+
+//NetCDF Error function
+void MainWindow::NETCDF_ERR(int status)
+{
+    QMessageBox::information(this,"ERROR",nc_strerror(status));
+    return;
 }
