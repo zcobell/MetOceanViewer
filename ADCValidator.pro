@@ -68,8 +68,9 @@ OTHER_FILES +=
 #             shared dll's from Unidata and another with the 
 #             NetCDF header
 win32{
-LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl
-INCLUDEPATH += C:/netcdf/include
+LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl C:/netcdf/cpp/lib/libnetcdf_c++4.a
+INCLUDEPATH += C:/netcdf/include 
+INCLUDEPATH += C:/netcdf/cpp/include
 }
 
 #...Unix - We assume static library for NetCDF installed

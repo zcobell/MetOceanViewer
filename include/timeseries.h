@@ -68,8 +68,12 @@ struct IMEDS{
 struct ADCNC{
     int nstations;
     int NumSnaps;
+    QString DataType;
     QVector<double> time;
     QVector< QVector<double> > data;
+    QVector<double> latitude;
+    QVector<double> longitude;
+    QVector<QString> station_name;
     bool success;
     int err;
 };
@@ -80,6 +84,8 @@ struct ADCNC{
 IMEDS readIMEDS(QString filename);
 
 ADCNC readADCIRCnetCDF(QString filename);
+
+IMEDS NetCDF_to_IMEDS(ADCNC netcdf);
 
 //Data holder
 extern QVector<IMEDS> IMEDSData;

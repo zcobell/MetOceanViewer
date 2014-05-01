@@ -34,7 +34,12 @@
 //------------------------------------------------------------------------------
 
 #include <timeseries.h>
-#include <netcdf.h>
+#include <netcdf>
+#include <QDebug>
+
+using namespace std;
+using namespace netCDF;
+using namespace netCDF::exceptions;
 
 IMEDS readIMEDS(QString filename)
 {
@@ -188,17 +193,156 @@ IMEDS readIMEDS(QString filename)
 ADCNC readADCIRCnetCDF(QString filename)
 {
     ADCNC MyData;
-    int ncid, success, dimid_time;
+    NcDim dimid_time,dimid_station;
+    NcVar var_station,var_lat,var_lon,var_time;
+    size_t station_size,time_size;
+    vector<size_t> start,length;
+    int i,j,time_size_int,station_size_int;
 
-    const char *filename2 = filename.toStdString().c_str();
+    QVector<QString> netcdf_types;
+    netcdf_types.resize(6);
+    netcdf_types[0] = "zeta";
+    netcdf_types[1] = "u-vel";
+    netcdf_types[2] = "v-vel";
+    netcdf_types[3] = "pressure";
+    netcdf_types[4] = "windx";
+    netcdf_types[5] = "windy";
 
-    //Open the NetCDF file
-    if( (success = nc_open(filename2,NC_NOWRITE,&ncid)) )
-        MyData.success = false; MyData.err = success; return MyData;
+    //Open the file
+    NcFile datafile(filename.toStdString().c_str(),NcFile::read);
+    if(datafile.isNull())
+    {
+        MyData.success = false;
+        return MyData;
+    }
 
-    if( (success = nc_inq_dimid(ncid,"time",&dimid_time)))
-        MyData.success = false; MyData.err = success; return MyData;
+    //Get the dimension locations
+    dimid_time = datafile.getDim("time");
+    dimid_station = datafile.getDim("station");
+    if(dimid_station.isNull()||dimid_time.isNull())
+    {
+        MyData.success = false;
+        return MyData;
+    }
+
+    //Find out the dimension size
+    station_size = dimid_station.getSize();
+    time_size = dimid_time.getSize();
+    station_size_int = static_cast<unsigned int>(station_size);
+    time_size_int = static_cast<unsigned int>(time_size);
+
+    //Make some arrays
+    double TempArray[time_size];
+    double TempArray2[station_size];
+
+    //Size the location vectors
+    start.resize(2);
+    length.resize(2);
+
+    //Set up the read sizes for NetCDF
+    length[0] = time_size;
+    length[1] = 1;
+
+    //Find the variable in the NetCDF file
+    for(i=0;i<6;i++)
+    {
+        var_station = datafile.getVar(netcdf_types[i].toStdString().c_str());
+
+        //If we found the variable, we are done here
+        if(!var_station.isNull())
+        {
+            MyData.DataType=netcdf_types[i];
+            break;
+        }
+
+        //If we're at the end of the array
+        //and haven't quit yet, that's a problem
+        if(i==5)
+        {
+            MyData.success = false;
+            return MyData;
+        }
+    }
+
+    //Size the output variables
+    MyData.latitude.resize(station_size_int);
+    MyData.longitude.resize(station_size_int);
+    MyData.nstations = station_size_int;
+    MyData.NumSnaps = time_size_int;
+    MyData.time.resize(time_size_int);
+    MyData.data.resize(station_size_int);
+    for(i=0;i<station_size_int;++i)
+        MyData.data[i].resize(time_size_int);
+
+    //Read the station locations and times
+    var_time = datafile.getVar("time");
+    var_lat = datafile.getVar("x");
+    var_lon = datafile.getVar("y");
+
+    if(var_time.isNull()||var_lat.isNull()||var_lon.isNull())
+    {
+        MyData.success = false;
+        return MyData;
+    }
+
+    var_time.getVar(&TempArray);
+    for(j=0;j<time_size_int;++j)
+        MyData.time[j] = TempArray[j];
+
+    var_lon.getVar(&TempArray2);
+    for(j=0;j<station_size_int;++j)
+        MyData.longitude[j] = TempArray2[j];
+
+    var_lat.getVar(&TempArray2);
+    for(j=0;j<station_size_int;++j)
+        MyData.latitude[j] = TempArray2[j];
+
+    //Loop over the stations, reading the data into memory
+    for(i=0;i<station_size_int;++i)
+    {
+        //Generate the read start position
+        start[0] = 0;
+        start[1] = static_cast<size_t>(i);
+
+        //Read from NetCDF
+        var_station.getVar(start,length,&TempArray);
+
+        //Place in the output variable
+        for(j=0;j<time_size_int;++j)
+            MyData.data[i][j] = TempArray[j];
+    }
+
+    //Finally, name the stations the default names for now. Later
+    //we can get fancy and try to get the ADCIRC written names in
+    //the NetCDF file
+    MyData.station_name.resize(station_size_int);
+    for(i=0;i<station_size_int;++i)
+        MyData.station_name[i] = "Station "+QString::number(i);
+
+    MyData.success = true;
 
     return MyData;
 }
 
+
+IMEDS NetCDF_to_IMEDS(ADCNC netcdf)
+{
+    IMEDS Output;
+
+    Output.nstations = netcdf.nstations;
+    Output.station.resize(netcdf.nstations);
+    for(int i=0;i<Output.nstations;++i)
+    {
+        Output.station[i].latitude = netcdf.latitude[i];
+        Output.station[i].longitude = netcdf.longitude[i];
+        Output.station[i].NumSnaps = netcdf.NumSnaps;
+        Output.station[i].StationIndex = i;
+        Output.station[i].StationName = netcdf.station_name[i];
+        Output.station[i].data.resize(Output.station[i].NumSnaps);
+        for(int j=0;j<Output.station[i].NumSnaps;++j)
+            Output.station[i].data[j] = netcdf.data[i][j];
+    }
+    Output.success = true;
+    return Output;
+
+}
