@@ -105,20 +105,16 @@ void MainWindow::on_button_addrow_clicked()
 
         if(InputFileType=="IMEDS")
         {
-            qDebug() << "Reading IMEDS...";
             IMEDSData[NumberOfRows-1] = readIMEDS(InputFilePath);
             UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
         }
         else if(InputFileType=="NETCDF")
         {
-            qDebug() << "Reading NetCDF...";
             NetCDFData = readADCIRCnetCDF(InputFilePath);
             if(!NetCDFData.success)
-            {
-                NETCDF_ERR(NetCDFData.err);
                 IMEDSData[NumberOfRows-1].success = false;
-            }
-            //IMEDSData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData);
+            else
+                IMEDSData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData);
         }
 
         ui->table_IMEDSData->setRowCount(NumberOfRows);
