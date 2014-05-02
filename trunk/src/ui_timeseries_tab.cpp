@@ -114,7 +114,10 @@ void MainWindow::on_button_addrow_clicked()
             if(!NetCDFData.success)
                 IMEDSData[NumberOfRows-1].success = false;
             else
-                IMEDSData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData);
+            {
+                IMEDSData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData,InputFileColdStart);
+                UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+            }
         }
 
         ui->table_IMEDSData->setRowCount(NumberOfRows);

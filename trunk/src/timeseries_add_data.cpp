@@ -180,6 +180,7 @@ void add_imeds_data::on_buttonBox_accepted()
     InputFileName = ui->text_filename->text();
     InputColorString = RandomButtonColor.name();
     InputSeriesName = ui->text_seriesname->text();
+    InputFileColdStart = ui->date_coldstart->dateTime();
     TempString = ui->text_unitconvert->text();
     if(TempString==NULL)
         UnitConversion = 1.0;
