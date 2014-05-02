@@ -85,7 +85,7 @@ IMEDS readIMEDS(QString filename);
 
 ADCNC readADCIRCnetCDF(QString filename);
 
-IMEDS NetCDF_to_IMEDS(ADCNC netcdf);
+IMEDS NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold);
 
 //Data holder
 extern QVector<IMEDS> IMEDSData;

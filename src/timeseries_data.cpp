@@ -34,12 +34,8 @@
 //------------------------------------------------------------------------------
 
 #include <timeseries.h>
-#include <netcdf>
-#include <QDebug>
-
-using namespace std;
-using namespace netCDF;
-using namespace netCDF::exceptions;
+#include <netcdf.h>
+#include <qmath.h>
 
 IMEDS readIMEDS(QString filename)
 {
@@ -193,11 +189,11 @@ IMEDS readIMEDS(QString filename)
 ADCNC readADCIRCnetCDF(QString filename)
 {
     ADCNC MyData;
-    NcDim dimid_time,dimid_station;
-    NcVar var_station,var_lat,var_lon,var_time;
     size_t station_size,time_size;
-    vector<size_t> start,length;
     int i,j,time_size_int,station_size_int;
+    int ierr, ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
+    int dimid_time,dimid_station;
+    bool isVector;
 
     QVector<QString> netcdf_types;
     netcdf_types.resize(6);
@@ -209,35 +205,56 @@ ADCNC readADCIRCnetCDF(QString filename)
     netcdf_types[5] = "windy";
 
     //Open the file
-    NcFile datafile(filename.toStdString().c_str(),NcFile::read);
-    if(datafile.isNull())
+    ierr = nc_open(filename.toStdString().c_str(),NC_NOWRITE,&ncid);
+    if(ierr!=NC_NOERR)
     {
         MyData.success = false;
+        MyData.err = ierr;
         return MyData;
     }
 
-    //Get the dimension locations
-    dimid_time = datafile.getDim("time");
-    dimid_station = datafile.getDim("station");
-    if(dimid_station.isNull()||dimid_time.isNull())
+    //Get the dimension ids
+    ierr = nc_inq_dimid(ncid,"time",&dimid_time);
+    if(ierr!=NC_NOERR)
     {
         MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
+    ierr = nc_inq_dimid(ncid,"station",&dimid_station);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
         return MyData;
     }
 
     //Find out the dimension size
-    station_size = dimid_station.getSize();
-    time_size = dimid_time.getSize();
+    ierr = nc_inq_dimlen(ncid,dimid_time,&time_size);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
+    ierr = nc_inq_dimlen(ncid,dimid_station,&station_size);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
     station_size_int = static_cast<unsigned int>(station_size);
     time_size_int = static_cast<unsigned int>(time_size);
 
     //Make some arrays
     double TempArray[time_size];
     double TempArray2[station_size];
+    double TempArray3[station_size];
 
-    //Size the location vectors
-    start.resize(2);
-    length.resize(2);
+    //Size the location arrays
+    size_t start[2];
+    size_t length[2];
 
     //Set up the read sizes for NetCDF
     length[0] = time_size;
@@ -246,11 +263,25 @@ ADCNC readADCIRCnetCDF(QString filename)
     //Find the variable in the NetCDF file
     for(i=0;i<6;i++)
     {
-        var_station = datafile.getVar(netcdf_types[i].toStdString().c_str());
+        ierr = nc_inq_varid(ncid,netcdf_types[i].toStdString().c_str(),&varid_zeta);
 
-        //If we found the variable, we are done here
-        if(!var_station.isNull())
+        //If we found the variable, we're done
+        if(ierr==NC_NOERR)
         {
+            if(i==1)
+            {
+                isVector = true;
+                ierr = nc_inq_varid(ncid,netcdf_types[i+1].toStdString().c_str(),&varid_zeta2);
+                if(ierr!=NC_NOERR)
+                {
+                    MyData.err = ierr;
+                    MyData.success = false;
+                    return MyData;
+                }
+            }
+            else
+                isVector = false;
+
             MyData.DataType=netcdf_types[i];
             break;
         }
@@ -259,6 +290,7 @@ ADCNC readADCIRCnetCDF(QString filename)
         //and haven't quit yet, that's a problem
         if(i==5)
         {
+            MyData.err = ierr;
             MyData.success = false;
             return MyData;
         }
@@ -275,25 +307,56 @@ ADCNC readADCIRCnetCDF(QString filename)
         MyData.data[i].resize(time_size_int);
 
     //Read the station locations and times
-    var_time = datafile.getVar("time");
-    var_lat = datafile.getVar("x");
-    var_lon = datafile.getVar("y");
-
-    if(var_time.isNull()||var_lat.isNull()||var_lon.isNull())
+    ierr = nc_inq_varid(ncid,"time",&varid_time);
+    if(ierr!=NC_NOERR)
     {
         MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
+    ierr = nc_inq_varid(ncid,"x",&varid_lon);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
+    ierr = nc_inq_varid(ncid,"y",&varid_lat);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
         return MyData;
     }
 
-    var_time.getVar(&TempArray);
+    ierr = nc_get_var(ncid,varid_time,&TempArray);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
     for(j=0;j<time_size_int;++j)
         MyData.time[j] = TempArray[j];
 
-    var_lon.getVar(&TempArray2);
+    ierr = nc_get_var(ncid,varid_lon,&TempArray2);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
     for(j=0;j<station_size_int;++j)
         MyData.longitude[j] = TempArray2[j];
 
-    var_lat.getVar(&TempArray2);
+
+    ierr = nc_get_var(ncid,varid_lat,&TempArray2);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
+    }
     for(j=0;j<station_size_int;++j)
         MyData.latitude[j] = TempArray2[j];
 
@@ -305,11 +368,40 @@ ADCNC readADCIRCnetCDF(QString filename)
         start[1] = static_cast<size_t>(i);
 
         //Read from NetCDF
-        var_station.getVar(start,length,&TempArray);
-
-        //Place in the output variable
-        for(j=0;j<time_size_int;++j)
-            MyData.data[i][j] = TempArray[j];
+        ierr = nc_get_vara(ncid,varid_zeta,start,length,&TempArray);
+        if(ierr!=NC_NOERR)
+        {
+            MyData.success = false;
+            MyData.err = ierr;
+            return MyData;
+        }
+        if(isVector)
+        {
+            ierr = nc_get_vara(ncid,varid_zeta2,start,length,&TempArray3);
+            if(ierr!=NC_NOERR)
+            {
+                MyData.success = false;
+                MyData.err = ierr;
+                return MyData;
+            }
+            for(j=0;j<time_size_int;++j)
+            {
+                MyData.data[i][j] = qSqrt(qPow(TempArray2[j],2.0) + qPow(TempArray3[j],2.0));
+            }
+        }
+        else
+        {
+            //Place in the output variable
+            for(j=0;j<time_size_int;++j)
+                MyData.data[i][j] = TempArray[j];
+        }
+    }
+    ierr = nc_close(ncid);
+    if(ierr!=NC_NOERR)
+    {
+        MyData.success = false;
+        MyData.err = ierr;
+        return MyData;
     }
 
     //Finally, name the stations the default names for now. Later
@@ -325,7 +417,7 @@ ADCNC readADCIRCnetCDF(QString filename)
 }
 
 
-IMEDS NetCDF_to_IMEDS(ADCNC netcdf)
+IMEDS NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold)
 {
     IMEDS Output;
 
@@ -339,8 +431,12 @@ IMEDS NetCDF_to_IMEDS(ADCNC netcdf)
         Output.station[i].StationIndex = i;
         Output.station[i].StationName = netcdf.station_name[i];
         Output.station[i].data.resize(Output.station[i].NumSnaps);
+        Output.station[i].date.resize(Output.station[i].NumSnaps);
         for(int j=0;j<Output.station[i].NumSnaps;++j)
+        {
             Output.station[i].data[j] = netcdf.data[i][j];
+            Output.station[i].date[j] = Cold.addSecs(netcdf.time[j]);
+        }
     }
     Output.success = true;
     return Output;
