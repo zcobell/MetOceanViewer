@@ -345,3 +345,9 @@ void MainWindow::on_button_boundlinecolor_clicked()
     ui->button_boundlinecolor->update();
     return;
 }
+
+void MainWindow::on_button_fitHWM_clicked()
+{
+    ui->map_hwm->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    return;
+}

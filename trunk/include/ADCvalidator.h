@@ -132,6 +132,10 @@ private slots:
 
     void on_check_imedsalldata_clicked(bool checked);
 
+    void on_button_fitHWM_clicked();
+
+    void on_button_fitIMEDS_clicked();
+
 private:
     Ui::MainWindow *ui;
 

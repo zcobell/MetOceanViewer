@@ -128,6 +128,8 @@ void MainWindow::on_button_addrow_clicked()
         ui->table_IMEDSData->setItem(NumberOfRows-1,4,new QTableWidgetItem(QString::number(xadjust)));
         ui->table_IMEDSData->setItem(NumberOfRows-1,5,new QTableWidgetItem(QString::number(yadjust)));
         ui->table_IMEDSData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,7,new QTableWidgetItem(InputFileColdStart.toString()));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,8,new QTableWidgetItem(InputFileType));
         CellColor.setNamedColor(InputColorString);
         ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
 
@@ -217,8 +219,10 @@ void MainWindow::on_button_editrow_clicked()
     UnitConversion = ui->table_IMEDSData->item(CurrentRow,3)->text().toDouble();
     xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();
     yadjust = ui->table_IMEDSData->item(CurrentRow,5)->text().toDouble();
+    ColdStart.fromString(ui->table_IMEDSData->item(CurrentRow,7)->text());
+    qDebug() << ColdStart;
+    qDebug() << ui->table_IMEDSData->item(CurrentRow,7)->text();
     CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
-    ColdStart = QDateTime::currentDateTime();
     FileType = "testing";
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
@@ -400,3 +404,8 @@ void MainWindow::on_check_imedsalldata_clicked(bool checked)
     return;
 }
 
+void MainWindow::on_button_fitIMEDS_clicked()
+{
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    return;
+}
