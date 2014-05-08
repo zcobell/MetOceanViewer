@@ -43,7 +43,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
@@ -693,7 +693,7 @@
         <item>
          <widget class="QTabWidget" name="subtab_IMEDS">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_selectIMEDS">
            <attribute name="title">
@@ -1244,7 +1244,7 @@
         <item>
          <widget class="QTabWidget" name="subtab_hwm">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_hwmData">
            <attribute name="title">

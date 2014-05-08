@@ -129,3 +129,25 @@ void MainWindow::NETCDF_ERR(int status)
     QMessageBox::information(this,"ERROR",nc_strerror(status));
     return;
 }
+
+
+void MainWindow::unsupportedContent(QNetworkReply * reply)
+{
+
+    while(!reply->isFinished())
+    {
+        delay(1);
+    }
+    QImage* highchart = new QImage();
+    highchart->loadFromData(reply->readAll());
+
+    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
+                PreviousDirectory,"Portable Network Graphic (*.png)");
+
+    if(Filename==NULL)
+        return;
+
+    highchart->save(Filename);
+
+    return;
+}

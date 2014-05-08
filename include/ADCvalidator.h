@@ -136,6 +136,8 @@ private slots:
 
     void on_button_fitIMEDS_clicked();
 
+    void unsupportedContent(QNetworkReply * reply);
+
 private:
     Ui::MainWindow *ui;
 
