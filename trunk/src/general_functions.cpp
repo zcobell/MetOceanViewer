@@ -130,23 +130,31 @@ void MainWindow::NETCDF_ERR(int status)
     return;
 }
 
-
+//Handle the unsupported content, ie the image that comes back
+//from the highcharts export server as a png file. Save using
+//a file save dialog window to select the save location/filename
 void MainWindow::unsupportedContent(QNetworkReply * reply)
 {
 
+    //Wait until we've retrieved the entire image
     while(!reply->isFinished())
     {
         delay(1);
     }
+
+    //Make an image and load the reply from the web
     QImage* highchart = new QImage();
     highchart->loadFromData(reply->readAll());
 
+    //Request the save location
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"Portable Network Graphic (*.png)");
+                PreviousDirectory,"Portable Network Graphics (*.png)");
 
+    //Make sure user didn't click 'Cancel'
     if(Filename==NULL)
         return;
 
+    //Save to disk
     highchart->save(Filename);
 
     return;

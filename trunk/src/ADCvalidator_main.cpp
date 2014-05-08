@@ -52,7 +52,8 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 {
     QString ButtonStyle;
 
-    //QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true); //This enables Javascript debugging
+    //Optional javascript/html debugging - disabled for release versions
+    //QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 
     //Setup UI
     ui->setupUi(this);
@@ -63,7 +64,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     QObject::connect(ui->noaa_map,SIGNAL(loadFinished(bool)),this,SLOT(BeginGatherStations()));
-
     ui->noaa_map->page()->setForwardUnsupportedContent(true);
     connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
     ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);

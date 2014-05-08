@@ -103,6 +103,8 @@ void MainWindow::on_button_addrow_clicked()
         NumberOfRows = NumberOfRows+1;
         IMEDSData.resize(NumberOfRows);
 
+        IMEDSData[NumberOfRows-1].success = false;
+
         if(InputFileType=="IMEDS")
         {
             IMEDSData[NumberOfRows-1] = readIMEDS(InputFilePath);
@@ -128,7 +130,7 @@ void MainWindow::on_button_addrow_clicked()
         ui->table_IMEDSData->setItem(NumberOfRows-1,4,new QTableWidgetItem(QString::number(xadjust)));
         ui->table_IMEDSData->setItem(NumberOfRows-1,5,new QTableWidgetItem(QString::number(yadjust)));
         ui->table_IMEDSData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,7,new QTableWidgetItem(InputFileColdStart.toString()));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,7,new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
         ui->table_IMEDSData->setItem(NumberOfRows-1,8,new QTableWidgetItem(InputFileType));
         CellColor.setNamedColor(InputColorString);
         ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
@@ -180,14 +182,14 @@ void MainWindow::on_button_deleterow_clicked()
 
 void MainWindow::SetupIMEDSTable()
 {
-    QString HeaderString = "Filename;Series Name;Color;Unit Conversion;x-adjustment;y-adjustment;FullPathToFile;ColdStart;FileType";
+    QString HeaderString = "Filename;Series Name;Color;Unit Conversion;x-shift;y-shift;FullPathToFile;Cold Start;FileType";
     QStringList Header = HeaderString.split(";");
 
     ui->table_IMEDSData->setRowCount(0);
     ui->table_IMEDSData->setColumnCount(9);
     ui->table_IMEDSData->setColumnHidden(6,true);
-    ui->table_IMEDSData->setColumnHidden(7,false);
-    ui->table_IMEDSData->setColumnHidden(8,false);
+    ui->table_IMEDSData->setColumnHidden(7,true);
+    ui->table_IMEDSData->setColumnHidden(8,true);
     ui->table_IMEDSData->setHorizontalHeaderLabels(Header);
     ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->table_IMEDSData->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -211,6 +213,12 @@ void MainWindow::on_button_editrow_clicked()
         return;
     }
 
+    if(ui->table_IMEDSData->currentRow() == -1)
+    {
+        QMessageBox::information(this,"ERROR","No row selected.");
+        return;
+    }
+
     AddWindow.setModal(false);
     CurrentRow = ui->table_IMEDSData->currentRow();
     Filename = ui->table_IMEDSData->item(CurrentRow,0)->text();
@@ -219,11 +227,9 @@ void MainWindow::on_button_editrow_clicked()
     UnitConversion = ui->table_IMEDSData->item(CurrentRow,3)->text().toDouble();
     xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();
     yadjust = ui->table_IMEDSData->item(CurrentRow,5)->text().toDouble();
-    ColdStart.fromString(ui->table_IMEDSData->item(CurrentRow,7)->text());
-    qDebug() << ColdStart;
-    qDebug() << ui->table_IMEDSData->item(CurrentRow,7)->text();
+    FileType = ui->table_IMEDSData->item(CurrentRow,8)->text();
+    ColdStart = QDateTime::fromString(ui->table_IMEDSData->item(CurrentRow,7)->text().simplified(),"yyyy-MM-dd hh:mm:ss");
     CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
-    FileType = "testing";
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
                                       UnitConversion,xadjust,yadjust,
@@ -256,6 +262,8 @@ void MainWindow::on_button_editrow_clicked()
         ui->table_IMEDSData->setItem(CurrentRow,4,new QTableWidgetItem(QString::number(xadjust)));
         ui->table_IMEDSData->setItem(CurrentRow,5,new QTableWidgetItem(QString::number(yadjust)));
         ui->table_IMEDSData->setItem(CurrentRow,6,new QTableWidgetItem(InputFilePath));
+        ui->table_IMEDSData->setItem(CurrentRow,7,new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
+        ui->table_IMEDSData->setItem(CurrentRow,8,new QTableWidgetItem(InputFileType));
 
         //Tooltips in table cells
         ui->table_IMEDSData->item(CurrentRow,0)->setToolTip(InputFilePath);
