@@ -444,7 +444,7 @@
           </property>
           <property name="url">
            <url>
-            <string>about:blank</string>
+            <string>qrc:/rsc/html/noaa_maps.html</string>
            </url>
           </property>
          </widget>
@@ -1207,7 +1207,7 @@
              <widget class="QWebView" name="imeds_map">
               <property name="url">
                <url>
-                <string>about:blank</string>
+                <string>qrc:/rsc/html/timeseries_maps.html</string>
                </url>
               </property>
              </widget>
@@ -2184,7 +2184,7 @@
              <widget class="QWebView" name="map_hwm">
               <property name="url">
                <url>
-                <string>about:blank</string>
+                <string>qrc:/rsc/html/hwm_map.html</string>
                </url>
               </property>
              </widget>
@@ -2242,7 +2242,7 @@
              <widget class="QWebView" name="map_regression">
               <property name="url">
                <url>
-                <string>about:blank</string>
+                <string>qrc:/rsc/html/reg_plot.html</string>
                </url>
               </property>
              </widget>

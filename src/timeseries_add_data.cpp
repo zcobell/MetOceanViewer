@@ -75,6 +75,7 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
     ui->button_IMEDSColor->update();
+
     return;
 }
 
@@ -91,10 +92,42 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     ui->text_unitconvert->setText(QString::number(UnitConvert));
     ui->text_xadjust->setText(QString::number(xmove));
     ui->text_yadjust->setText(QString::number(ymove));
+    ui->text_filetype->setText(FileType);
+    ui->date_coldstart->setDateTime(ColdStart);
     InputFilePath = Filepath;
     ButtonStyle = MainWindow::MakeColorString(Color);
+    RandomButtonColor = Color;
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
     ui->button_IMEDSColor->update();
+
+    qDebug() << FileType;
+
+    if(FileType == "IMEDS")
+    {
+        InputFileType = "IMEDS";
+        ui->text_filetype->setText("IMEDS");
+        ui->date_coldstart->setEnabled(false);
+        ui->text_stationfile->setEnabled(false);
+        ui->browse_stationfile->setEnabled(false);
+        FileReadError = false;
+    }
+    else if(FileType == "NETCDF")
+    {
+        FileType = "NETCDF";
+        ui->text_filetype->setText("NetCDF");
+        ui->date_coldstart->setEnabled(true);
+        ui->text_stationfile->setEnabled(false);
+        ui->browse_stationfile->setEnabled(false);
+        FileReadError = false;
+    }
+    else if(FileType == "ADCIRC")
+    {
+        ui->text_filetype->setText("ADCIRC");
+        ui->date_coldstart->setEnabled(true);
+        ui->text_stationfile->setEnabled(true);
+        ui->browse_stationfile->setEnabled(true);
+        FileReadError = false;
+    }
     return;
 }
 
@@ -119,6 +152,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
         InputFileType = List.value(List.length()-1).toUpper();
         if(InputFileType == "IMEDS")
         {
+            InputFileType = "IMEDS";
             ui->text_filetype->setText("IMEDS");
             ui->date_coldstart->setEnabled(false);
             ui->text_stationfile->setEnabled(false);
