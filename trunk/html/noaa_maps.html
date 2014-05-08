@@ -272,7 +272,17 @@
                 type: 'line'
             },
             exporting: {
-                     enabled: false
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
             },
             title: {
                 text: 'NOAA Gauge Data'

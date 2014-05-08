@@ -63,6 +63,9 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     QObject::connect(ui->noaa_map,SIGNAL(loadFinished(bool)),this,SLOT(BeginGatherStations()));
+
+    ui->noaa_map->page()->setForwardUnsupportedContent(true);
+    connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
     ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
     //Set the initial dates to today and today minus a day
@@ -85,6 +88,8 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->imeds_map->page()->setForwardUnsupportedContent(true);
+    connect(ui->imeds_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Initialize Variables
     IMEDSMinDate.setDate(QDate(2900,1,1));
