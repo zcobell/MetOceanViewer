@@ -57,7 +57,8 @@ SOURCES += src/main.cpp\
 HEADERS  += include/ADCvalidator.h \
     include/hwm.h \
     include/timeseries_add_data.h \
-    include/timeseries.h
+    include/timeseries.h \
+    version.h
 
 FORMS    += ui/ADCvalidator_main.ui \
     ui/timeseries_add_data.ui
@@ -82,6 +83,8 @@ INCLUDEPATH += include
 
 RESOURCES += \
     ADCvalidatior.qrc
+
+RC_FILE = resources.rc
 
 QMAKE_CXXFLAGS_RELEASE += -O3
 QMAKE_CXXFLAGS_DEBUG += -O0

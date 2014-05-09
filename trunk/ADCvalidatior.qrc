@@ -21,5 +21,7 @@
         <file>js/markercluster.js</file>
         <file>js/exporting.js</file>
         <file>img/icon.png</file>
+        <file>resources.rc</file>
+        <file>img/icon.ico</file>
     </qresource>
 </RCC>
