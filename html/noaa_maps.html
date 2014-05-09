@@ -296,13 +296,15 @@
                 dateTimeLabelFormats: { // don't display the dummy year
                     month: '%e. %b',
                     year: '%b'
-                }
+                },
+                gridLineWidth: 1
             },
             yAxis: {
                 labels: {format: '{value:.2f}'},
                 title: {
                     text: Product+" ("+Units+", "+Datum+")"
                 },
+                alternateGridColor: '#EEEEEE'
             },
             plotOptions: {
                 series: {
@@ -314,7 +316,7 @@
                        duration: 1000,
                        easing: 'linear'
                     },
-
+                    gridLineWidth: 1
                 }
             },
             tooltip: {
