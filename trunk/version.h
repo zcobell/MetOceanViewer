@@ -8,7 +8,7 @@
 #define VER_PRODUCTVERSION_STR      "0.9\0"
 
 #define VER_COMPANYNAME_STR         "ARCADIS"
-#define VER_FILEDESCRIPTION_STR     "Program for display of modeling data and validation"
+#define VER_FILEDESCRIPTION_STR     "ADCIRC Validator"
 #define VER_INTERNALNAME_STR        "ADCIRC_Validator"
 #define VER_LEGALCOPYRIGHT_STR      "Copyright 2014 ARCADIS"
 #define VER_LEGALTRADEMARKS1_STR    "All Rights Reserved"
