@@ -88,7 +88,7 @@
 
         var sq = String(2);
         var ChartAnnotation = 'Linear Regression Line: y = '+String(M)+'x + '+B+'<br>'+'Correlation: R\u00B2 = '+String(R);
-        var annotation_x=0;
+        var annotation_x=1;
         var annotation_y=MX;
 
         var plotToolTip = {
@@ -189,6 +189,16 @@
                 allowDragY: 'true',
                 title: {
                     text: ChartAnnotation
+                },
+                shape: {
+                    type: 'rect',
+                    params: {
+                        x: 0,
+                        y: 0,
+                        width: 250,
+                        height: 40,
+                        fill: '#FFFFFF'
+                    }
                 }
             }],
             title: { text: PlotTitle },
@@ -199,13 +209,16 @@
                 labels: {format: '{value:.0f}'},
                 title: { text: YLabel },
                 min: 0,
-                max: MX
+                max: MX,
+                gridLineWidth: 1
             },
             yAxis: {
                 labels: {format: '{value:.0f}'},
                 title: { text: XLabel },
                 min: 0,
-                max: MX
+                max: MX,
+                gridLineWidth: 1,
+                alternateGridColor: '#EEEEEE'
             },
             tooltip: plotToolTip,
             series: seriesList

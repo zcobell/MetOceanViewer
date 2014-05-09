@@ -204,11 +204,11 @@
 
         //Start setting up the plot
         if(AutoY == "auto")
-            var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel } };
+            var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
         else
-            var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel } };
+            var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
 
-        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' } };
+        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
         var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
         var plotToolTip = {
                 formatter: function() {
