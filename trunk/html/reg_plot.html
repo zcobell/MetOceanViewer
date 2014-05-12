@@ -68,7 +68,7 @@
         return;
     }
 
-    function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUpperLowerLines,BoundValue)
+    function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUpperLowerLines,BoundValue,SD,Confidence)
     {
         //Split the data into parts
         var modelList = model.split(":");
@@ -86,8 +86,9 @@
         B  = Number(intercept);
         R  = Number(corr);
 
-        var sq = String(2);
-        var ChartAnnotation = 'Linear Regression Line: y = '+String(M)+'x + '+B+'<br>'+'Correlation: R^2 = '+String(R);
+        var ChartAnnotation = 'Linear Regression Line: y = '+String(M)+'x + '+B+'<br>'+
+            'Correlation: R^2 = '+String(R)+'<br>Standard Deviation = '+
+            String(SD)+'<br>Confidence Interval Shown = '+String(Confidence)+"%";
         var annotation_x=1;
         var annotation_y=MX;
 
@@ -209,7 +210,7 @@
                         x: 0,
                         y: 0,
                         width: 250,
-                        height: 40,
+                        height: 70,
                         fill: '#FFFFFF'
                     }
                 }

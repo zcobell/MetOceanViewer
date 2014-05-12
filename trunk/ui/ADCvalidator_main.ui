@@ -1817,7 +1817,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>+/- Lines Color:</string>
+                         <string>Standard Deviation Lines Color:</string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2028,7 +2028,7 @@
                          </size>
                         </property>
                         <property name="text">
-                         <string>+/-  Lines Value:</string>
+                         <string>Standard Deviations:</string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2036,7 +2036,7 @@
                        </widget>
                       </item>
                       <item>
-                       <widget class="QDoubleSpinBox" name="spin_upperlowervalue">
+                       <widget class="QSpinBox" name="spin_upperlowervalue">
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
@@ -2052,8 +2052,14 @@
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                         </property>
+                        <property name="minimum">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <number>3</number>
+                        </property>
                         <property name="value">
-                         <double>2.000000000000000</double>
+                         <number>2</number>
                         </property>
                        </widget>
                       </item>
@@ -2093,7 +2099,7 @@
                       <item>
                        <widget class="QCheckBox" name="check_dispupperlowerlines">
                         <property name="text">
-                         <string>Display +/-  Lines</string>
+                         <string>Display Standard Deviation Lines</string>
                         </property>
                         <property name="checked">
                          <bool>true</bool>

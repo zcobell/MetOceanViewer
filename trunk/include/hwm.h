@@ -55,6 +55,6 @@ struct hwm_data
 extern QVector<double> classes;
 
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM);
-int ComputeLinearRegression(bool ForceThroughZero, QVector<hwm_data> HWM, double &M, double &B, double &Y);
+int ComputeLinearRegression(bool ForceThroughZero, QVector<hwm_data> HWM, double &M, double &B, double &Y, double &StdDev);
 
 #endif // HWM_H
