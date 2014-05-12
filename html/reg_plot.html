@@ -87,7 +87,7 @@
         R  = Number(corr);
 
         var sq = String(2);
-        var ChartAnnotation = 'Linear Regression Line: y = '+String(M)+'x + '+B+'<br>'+'Correlation: R\u00B2 = '+String(R);
+        var ChartAnnotation = 'Linear Regression Line: y = '+String(M)+'x + '+B+'<br>'+'Correlation: R^2 = '+String(R);
         var annotation_x=1;
         var annotation_y=MX;
 
@@ -178,7 +178,20 @@
             chart: {
             },
             exporting: {
-                     enabled: false
+                sourceWidth: 1200,
+                sourceHeight: 600,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
             },
             annotations: [{
                 xValue: annotation_x,
