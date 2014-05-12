@@ -259,25 +259,6 @@ void MainWindow::on_button_saveHWMMap_clicked()
 
 }
 
-//Called when the save regression image button is clicked
-void MainWindow::on_button_saveregression_clicked()
-{
-    QString filter = "JPG (*.jpg *.jpeg)";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
-
-    if(Filename==NULL)
-        return;
-
-    GetLeadingPath(Filename);
-
-    QFile HWMOutput(Filename);
-    QPixmap HWMImage(ui->map_regression->size());
-    ui->map_regression->render(&HWMImage);
-    HWMOutput.open(QIODevice::WriteOnly);
-    HWMImage.save(&HWMOutput,"JPG",100);
-}
-
 void MainWindow::on_button_hwmcolor_clicked()
 {
     QString ButtonStyle;

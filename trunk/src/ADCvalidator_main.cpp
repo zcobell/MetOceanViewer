@@ -104,6 +104,8 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
     ui->map_regression->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->map_regression->page()->setForwardUnsupportedContent(true);
+    connect(ui->map_regression->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
     DotColorHWM.setRgb(11,84,255);
     LineColorRegression.setRgb(7,145,0);
     LineColor121Line.setRgb(255,0,0);
