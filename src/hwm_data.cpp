@@ -34,6 +34,7 @@
 //------------------------------------------------------------------------------
         
 #include <hwm.h>
+#include <QDebug>
 
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 {
@@ -81,24 +82,25 @@ int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 
 }
 
-int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double &M, double &B, double &R2)
+int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double &M, double &B, double &R2, double &StdDev)
 {
-    double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar;
+    double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar, SumErr, MeanErr;
     int i;
 
     //Compute the sums used in the regression
     //  This will be forced through 0,0
-    SumXY = 0;
-    SumX2 = 0;
-    SumY2 = 0;
-    SumY  = 0;
-    SumX  = 0;
-    M     = 0;
-    B     = 0;
-    N     = static_cast<double>(HWM.size());
-    NDry  = 0;
-    SSE   = 0;
-    SSTOT = 0;
+    SumXY  = 0;
+    SumX2  = 0;
+    SumY2  = 0;
+    SumY   = 0;
+    SumX   = 0;
+    M      = 0;
+    B      = 0;
+    N      = static_cast<double>(HWM.size());
+    NDry   = 0;
+    SSE    = 0;
+    SSTOT  = 0;
+    SumErr = 0;
 
     try
     {
@@ -108,11 +110,12 @@ int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double 
             //skew calculation
             if(HWM[i].modeled>-9999)
             {
-                SumX  = SumX  + (HWM[i].measured);
-                SumY  = SumY  + (HWM[i].modeled);
-                SumXY = SumXY + (HWM[i].measured*HWM[i].modeled);
-                SumX2 = SumX2 + (HWM[i].measured*HWM[i].measured);
-                SumY2 = SumY2 + (HWM[i].modeled*HWM[i].modeled);
+                SumX   = SumX   + (HWM[i].measured);
+                SumY   = SumY   + (HWM[i].modeled);
+                SumXY  = SumXY  + (HWM[i].measured*HWM[i].modeled);
+                SumX2  = SumX2  + (HWM[i].measured*HWM[i].measured);
+                SumY2  = SumY2  + (HWM[i].modeled*HWM[i].modeled);
+                SumErr = SumErr +  HWM[i].error;
             }
             else
                 NDry = NDry + 1;
@@ -134,7 +137,7 @@ int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double 
             YBar = SumY / N2;
 
             //Calculate Total Sum of Squares
-            for(i = 1; i<N; i++)
+            for(i = 0; i<N; i++)
             {
                 //We ditch points that didn't wet since they
                 //skew calculation
@@ -162,6 +165,16 @@ int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double 
             R2 = qPow(((N2*SumXY - (SumX*SumY)) /
                    sqrt( (N2*SumX2 - (SumX*SumX))*(N2*SumY2-(SumY*SumY)) )),2.0);
         }
+
+        //Calculate Standard Deviation
+        MeanErr = SumErr / N2;
+        SumErr = 0;
+        for( i = 0; i<N; i++)
+            if(HWM[i].modeled>-9999)
+                SumErr = SumErr + qPow(HWM[i].error - MeanErr,2.0);
+
+        StdDev = qSqrt(SumErr / N2);
+
 
     }
     catch(...)

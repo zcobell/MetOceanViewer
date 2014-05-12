@@ -66,9 +66,9 @@ void MainWindow::on_button_processHWM_clicked()
     QString Marker, unitString, Regression, MeasuredString, ModeledString;
     QString HWMColor,One21Color,RegColor,BoundColor,RegressionTitle,XLabel,YLabel;
     QString RegressionGlobal,MyClassList;
-    double x,y,measurement,modeled,error,M,B,R,MaximumValue;
-    double c0,c1,c2,c3,c4,c5,c6,BoundValue;
-    int classification, unit, ierr, PlotUpperLower;
+    double x,y,measurement,modeled,error,M,B,R,SD,MaximumValue;
+    double c0,c1,c2,c3,c4,c5,c6,BoundValue,Confidence;
+    int classification, unit, ierr, PlotUpperLower, NumSD;
     bool ThroughZero;
 
     ThroughZero = ui->check_forceregthroughzero->isChecked();
@@ -80,7 +80,7 @@ void MainWindow::on_button_processHWM_clicked()
         return;
     }
 
-    ierr = ComputeLinearRegression(ThroughZero, HighWaterMarks, M, B, R);
+    ierr = ComputeLinearRegression(ThroughZero, HighWaterMarks, M, B, R, SD);
     if(ierr!=0)
     {
         QMessageBox::information(this,"ERROR","Could not calculate the regression function.");
@@ -200,7 +200,17 @@ void MainWindow::on_button_processHWM_clicked()
     else
         PlotUpperLower = 0;
 
-    BoundValue = ui->spin_upperlowervalue->value();
+    BoundValue = static_cast<double>(ui->spin_upperlowervalue->value())*SD;
+    NumSD = ui->spin_upperlowervalue->value();
+
+    if(NumSD==1)
+        Confidence=68.0;
+    else if(NumSD==2)
+        Confidence=95.0;
+    else if(NumSD==3)
+        Confidence=99.7;
+    else
+        Confidence=0.0;
 
     RegressionGlobal = "setGlobal('"+RegressionTitle+"','"+XLabel+"','"+YLabel+"','"+
             HWMColor+"','"+RegColor+"','"+One21Color+"','"+BoundColor+"')";
@@ -209,7 +219,7 @@ void MainWindow::on_button_processHWM_clicked()
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
             unitString+","+QString::number(MaximumValue)+","+QString::number(M,'f',2)+
             ","+QString::number(B,'f',2)+","+QString::number(R,'f',2)+","+QString::number(PlotUpperLower)+
-            ","+QString::number(BoundValue)+")";
+            ","+QString::number(BoundValue)+","+QString::number(SD,'f',2)+","+QString::number(Confidence,'f',1)+")";
     ui->map_regression->page()->mainFrame()->evaluateJavaScript(Regression);
 
     ui->subtab_hwm->setCurrentIndex(1);
