@@ -73,6 +73,7 @@ void MainWindow::on_button_addrow_clicked()
     add_imeds_data AddWindow;
     QColor CellColor;
     ADCNC NetCDFData;
+    ADCASCII ADCData;
 
     int NumberOfRows = ui->table_IMEDSData->rowCount();
     AddWindow.setModal(false);
@@ -82,24 +83,6 @@ void MainWindow::on_button_addrow_clicked()
 
     if(WindowStatus == 1)
     {
-        //Verify the input is valid
-        if(InputFileName==NULL)
-        {
-            QMessageBox::information(this,"ERROR","Please select an input file.");
-            return;
-        }
-        if(InputSeriesName==NULL)
-        {
-            QMessageBox::information(this,"ERROR","Please input a series name.");
-            return;
-        }
-        if(InputColorString==NULL)
-        {
-            QMessageBox::information(this,"ERROR","Please select a valid color for this series.");
-            return;
-        }
-
-        //Ok, what we have is good, so populate
         NumberOfRows = NumberOfRows+1;
         IMEDSData.resize(NumberOfRows);
 
@@ -121,6 +104,17 @@ void MainWindow::on_button_addrow_clicked()
                 UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
             }
         }
+        else if(InputFileType=="ADCIRC")
+        {
+            ADCData = readADCIRCascii(InputFilePath,StationFilePath);
+            if(!ADCData.success)
+                IMEDSData[NumberOfRows-1].success = false;
+            else
+            {
+                IMEDSData[NumberOfRows-1] = ADCIRC_to_IMEDS(ADCData,InputFileColdStart);
+                UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+            }
+        }
 
         ui->table_IMEDSData->setRowCount(NumberOfRows);
         ui->table_IMEDSData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
@@ -132,6 +126,8 @@ void MainWindow::on_button_addrow_clicked()
         ui->table_IMEDSData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
         ui->table_IMEDSData->setItem(NumberOfRows-1,7,new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
         ui->table_IMEDSData->setItem(NumberOfRows-1,8,new QTableWidgetItem(InputFileType));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,9,new QTableWidgetItem(InputStationFile));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,10,new QTableWidgetItem(StationFilePath));
         CellColor.setNamedColor(InputColorString);
         ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
 
@@ -182,14 +178,18 @@ void MainWindow::on_button_deleterow_clicked()
 
 void MainWindow::SetupIMEDSTable()
 {
-    QString HeaderString = "Filename;Series Name;Color;Unit Conversion;x-shift;y-shift;FullPathToFile;Cold Start;FileType";
+    QString HeaderString = QString("Filename;Series Name;Color;Unit Conversion;")+
+                           QString("x-shift;y-shift;FullPathToFile;Cold Start;")+
+                           QString("FileType;StationFile;StationFilePath");
     QStringList Header = HeaderString.split(";");
 
     ui->table_IMEDSData->setRowCount(0);
-    ui->table_IMEDSData->setColumnCount(9);
+    ui->table_IMEDSData->setColumnCount(11);
     ui->table_IMEDSData->setColumnHidden(6,true);
     ui->table_IMEDSData->setColumnHidden(7,true);
     ui->table_IMEDSData->setColumnHidden(8,true);
+    ui->table_IMEDSData->setColumnHidden(9,true);
+    ui->table_IMEDSData->setColumnHidden(10,true);
     ui->table_IMEDSData->setHorizontalHeaderLabels(Header);
     ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->table_IMEDSData->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -233,29 +233,13 @@ void MainWindow::on_button_editrow_clicked()
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
                                       UnitConversion,xadjust,yadjust,
-                                      CellColor,ColdStart,FileType);
+                                      CellColor,ColdStart,FileType,
+                                      InputStationFile,StationFilePath);
 
     int WindowStatus = AddWindow.exec();
 
     if(WindowStatus == 1)
     {
-        //Verify the input is valid
-        if(InputFileName==NULL)
-        {
-            QMessageBox::information(this,"ERROR","Please select an input file.");
-            return;
-        }
-        if(InputSeriesName==NULL)
-        {
-            QMessageBox::information(this,"ERROR","Please input a series name.");
-            return;
-        }
-        if(InputColorString==NULL)
-        {
-            QMessageBox::information(this,"ERROR","Please select a valid color for this series.");
-            return;
-        }
-
         ui->table_IMEDSData->setItem(CurrentRow,0,new QTableWidgetItem(InputFileName));
         ui->table_IMEDSData->setItem(CurrentRow,1,new QTableWidgetItem(InputSeriesName));
         ui->table_IMEDSData->setItem(CurrentRow,3,new QTableWidgetItem(QString::number(UnitConversion)));
@@ -264,6 +248,8 @@ void MainWindow::on_button_editrow_clicked()
         ui->table_IMEDSData->setItem(CurrentRow,6,new QTableWidgetItem(InputFilePath));
         ui->table_IMEDSData->setItem(CurrentRow,7,new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
         ui->table_IMEDSData->setItem(CurrentRow,8,new QTableWidgetItem(InputFileType));
+        ui->table_IMEDSData->setItem(CurrentRow,9,new QTableWidgetItem(InputStationFile));
+        ui->table_IMEDSData->setItem(CurrentRow,10,new QTableWidgetItem(StationFilePath));
 
         //Tooltips in table cells
         ui->table_IMEDSData->item(CurrentRow,0)->setToolTip(InputFilePath);
@@ -282,14 +268,42 @@ void MainWindow::on_button_editrow_clicked()
         //If we need to, read the new IMEDS file into the appropriate slot
         if(InputFilePath!=Filepath)
         {
-            IMEDSData.remove(CurrentRow);
-            IMEDSData.insert(CurrentRow,readIMEDS(InputFilePath));
-            if(!IMEDSData[CurrentRow].success)
+            if(InputFileType=="IMEDS")
             {
                 IMEDSData.remove(CurrentRow);
-                ui->table_IMEDSData->removeRow(CurrentRow);
-                QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
-                return;
+                IMEDSData.insert(CurrentRow,readIMEDS(InputFilePath));
+                if(!IMEDSData[CurrentRow].success)
+                {
+                    IMEDSData.remove(CurrentRow);
+                    ui->table_IMEDSData->removeRow(CurrentRow);
+                    QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
+                    return;
+                }
+            }
+            else if(InputFileType=="NETCDF")
+            {
+                IMEDSData.remove(CurrentRow);
+                IMEDSData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),InputFileColdStart));
+                if(!IMEDSData[CurrentRow].success)
+                {
+                    IMEDSData.remove(CurrentRow);
+                    ui->table_IMEDSData->removeRow(CurrentRow);
+                    QMessageBox::information(this,"ERROR","This NETCDF file could not be read correctly.");
+                    return;
+                }
+            }
+            else if(InputFileType=="ADCIRC")
+            {
+                IMEDSData.remove(CurrentRow);
+                IMEDSData.insert(CurrentRow,
+                    ADCIRC_to_IMEDS(readADCIRCascii(InputFilePath,StationFilePath),InputFileColdStart));
+                if(!IMEDSData[CurrentRow].success)
+                {
+                    IMEDSData.remove(CurrentRow);
+                    ui->table_IMEDSData->removeRow(CurrentRow);
+                    QMessageBox::information(this,"ERROR","This ADCIRC file could not be read correctly.");
+                    return;
+                }
             }
             UpdateIMEDSDateRange(IMEDSData[CurrentRow]);
         }

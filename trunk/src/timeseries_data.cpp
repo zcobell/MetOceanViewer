@@ -33,6 +33,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include <QDebug>
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
@@ -441,4 +442,142 @@ IMEDS NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold)
     Output.success = true;
     return Output;
 
+}
+
+ADCASCII readADCIRCascii(QString filename, QString stationfile)
+{
+    ADCASCII MyData;
+    QFile MyFile(filename), StationFile(stationfile);
+    QString header1, header2, TempLine;
+    QStringList headerData, TempList, TempList2;
+    int type;
+
+    MyData.success = false;
+
+    //Check if we can open the file
+    if(!MyFile.open(QIODevice::ReadOnly|QIODevice::Text))
+    {
+        QMessageBox::information(NULL,"ERROR","ERROR:"+MyFile.errorString());
+        MyFile.close();
+        return MyData;
+    }
+    if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
+    {
+        qDebug() << stationfile;
+        QMessageBox::information(NULL,"ERROR","ERROR:"+StationFile.errorString());
+        StationFile.close();
+        return MyData;
+    }
+
+
+    //Read the 61/62 style file
+    header1 = MyFile.readLine();
+    header2 = MyFile.readLine().simplified();
+    headerData = header2.split(" ");
+
+    MyData.NumSnaps = headerData.value(0).toInt();
+    MyData.nstations = headerData.value(1).toInt();
+    MyData.OutputTimeFreq = headerData.value(2).toDouble();
+    MyData.OutputTSFreq = headerData.value(3).toInt();
+    MyData.NumColumns = headerData.value(4).toInt();
+
+    MyData.time.resize(MyData.NumSnaps);
+    MyData.data.resize(MyData.nstations);
+
+    for(int i=0;i<MyData.nstations;++i)
+        MyData.data[i].resize(MyData.NumSnaps);
+
+    for(int i=0;i<MyData.NumSnaps;++i)
+    {
+        TempLine = MyFile.readLine().simplified();
+        TempList = TempLine.split(" ");
+        MyData.time[i] = TempList.value(1).toDouble();
+        for(int j=0;j<MyData.nstations;++j)
+        {
+            TempLine = MyFile.readLine().simplified();
+            TempList = TempLine.split(" ");
+            MyData.data[j][i] = TempList.value(1).toDouble();
+            if(MyData.NumColumns==2)
+                MyData.data[j][i] = qPow(qPow(MyData.data[j][i],2) +
+                                         qPow(TempList.value(2).toDouble(),2),2);
+        }
+    }
+    MyFile.close();
+
+    //Now read the station location file
+    TempLine = StationFile.readLine().simplified();
+    TempList = TempLine.split(" ");
+    int TempStations = TempList.value(0).toInt();
+    if(TempStations!=MyData.nstations)
+    {
+        QMessageBox::information(NULL,"ERROR","The number of stations do not match in both files");
+        return MyData;
+    }
+
+    MyData.longitude.resize(MyData.nstations);
+    MyData.latitude.resize(MyData.nstations);
+    MyData.station_name.resize(MyData.nstations);
+    type = -1;
+    for(int i=0;i<TempStations;++i)
+    {
+        TempLine = StationFile.readLine().simplified();
+        if(type==1)
+            TempList = TempLine.split(" ");
+        else if(type==2)
+            TempList = TempLine.split(",");
+        else
+        {
+            TempList = TempLine.split(" ");
+            TempList2 = TempLine.split(",");
+            if(TempList.length()>0)
+                type = 1;
+            else if(TempList2.length()>0)
+            {
+                type = 2;
+                TempList = TempList2;
+            }
+        }
+        MyData.longitude[i] = TempList.value(0).toDouble();
+        MyData.latitude[i] = TempList.value(1).toDouble();
+
+        if(TempList.length()>2)
+        {
+            MyData.station_name[i] = "";
+            for(int j=2;j<TempList.length();++j)
+                MyData.station_name[i] = MyData.station_name[i]+" "+TempList.value(j);
+        }
+        else
+            MyData.station_name[i] = "Station_"+QString::number(i);
+
+    }
+    StationFile.close();
+
+    MyData.success = true;
+    return MyData;
+}
+
+IMEDS ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold)
+{
+    IMEDS MyOutput;
+
+    MyOutput.nstations = ASCII.nstations;
+    MyOutput.station.resize(MyOutput.nstations);
+
+    for(int i=0;i<MyOutput.nstations;++i)
+    {
+        MyOutput.station[i].data.resize(ASCII.NumSnaps);
+        MyOutput.station[i].date.resize(ASCII.NumSnaps);
+        MyOutput.station[i].StationName = ASCII.station_name[i];
+        MyOutput.station[i].NumSnaps = ASCII.NumSnaps;
+        MyOutput.station[i].longitude = ASCII.longitude[i];
+        MyOutput.station[i].latitude = ASCII.latitude[i];
+        MyOutput.station[i].StationIndex = i;
+        for(int j=0;j<ASCII.NumSnaps;++j)
+        {
+            MyOutput.station[i].date[j] = Cold.addSecs(ASCII.time[j]);
+            MyOutput.station[i].data[j] = ASCII.data[i][j];
+        }
+    }
+    MyOutput.success = true;
+    return MyOutput;
 }

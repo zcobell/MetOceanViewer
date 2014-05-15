@@ -48,7 +48,7 @@ struct IMEDSList
 
 extern int NumIMEDSFiles;
 extern int CurrentRowsIntTable;
-extern QString InputFileName,InputColorString,InputSeriesName,InputFilePath,InputFileType;
+extern QString InputFileName,InputStationFile,InputColorString,InputSeriesName,InputFilePath,StationFilePath,InputFileType;
 extern double UnitConversion,xadjust,yadjust;
 extern QDateTime InputFileColdStart;
 
@@ -70,7 +70,8 @@ public:
 
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, QString FileType);
+                                 QDateTime ColdStart, QString FileType, QString StationFile,
+                                 QString StationPath);
 
 private slots:
 
@@ -78,7 +79,9 @@ private slots:
 
     void on_button_IMEDSColor_clicked();
 
-    void on_buttonBox_accepted();
+    void on_browse_stationfile_clicked();
+
+    void accept();
 
 private:
     Ui::add_imeds_data *ui;
