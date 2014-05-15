@@ -43,7 +43,8 @@ bool ColorUpdated, FileReadError;
 double UnitConversion, xadjust, yadjust;
 
 QColor RandomButtonColor;
-QString InputFileName,InputColorString,InputSeriesName,InputFilePath,InputFileType;
+QString InputFileName,InputColorString,InputSeriesName,InputFilePath,StationFilePath,InputFileType;
+QString InputStationFile;
 QDateTime InputFileColdStart;
 
 add_imeds_data::add_imeds_data(QWidget *parent) :
@@ -84,7 +85,8 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
-                                             QDateTime ColdStart, QString FileType)
+                                             QDateTime ColdStart, QString FileType,
+                                             QString StationFile, QString StationPath)
 {
     QString ButtonStyle;
     ui->text_seriesname->setText(SeriesName);
@@ -94,13 +96,13 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     ui->text_yadjust->setText(QString::number(ymove));
     ui->text_filetype->setText(FileType);
     ui->date_coldstart->setDateTime(ColdStart);
+    ui->text_stationfile->setText(StationFile);
     InputFilePath = Filepath;
+    StationFilePath = StationPath;
     ButtonStyle = MainWindow::MakeColorString(Color);
     RandomButtonColor = Color;
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
     ui->button_IMEDSColor->update();
-
-    qDebug() << FileType;
 
     if(FileType == "IMEDS")
     {
@@ -137,7 +139,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
     QStringList List;
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
             PreviousDirectory,
-            "IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; All Files (*.*)");
+            "IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)");
 
     InputFilePath = TempPath;
     if(TempPath!=NULL)
@@ -150,6 +152,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 
         List = TempFile.split(".");
         InputFileType = List.value(List.length()-1).toUpper();
+
         if(InputFileType == "IMEDS")
         {
             InputFileType = "IMEDS";
@@ -168,8 +171,9 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             ui->browse_stationfile->setEnabled(false);
             FileReadError = false;
         }
-        else if(InputFileType == ".61" || InputFileType == ".62" || InputFileType == ".71" || InputFileType == ".72")
+        else if(InputFileType == "61" || InputFileType == "62" || InputFileType == "71" || InputFileType == "72")
         {
+            InputFileType = "ADCIRC";
             ui->text_filetype->setText("ADCIRC");
             ui->date_coldstart->setEnabled(true);
             ui->text_stationfile->setEnabled(true);
@@ -206,9 +210,23 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
     return;
 }
 
-//Set the data values when "ok" is selected
-void add_imeds_data::on_buttonBox_accepted()
+void add_imeds_data::on_browse_stationfile_clicked()
 {
+    QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
+            PreviousDirectory,
+            "Text File (*.txt) ;; Comma Separated File (*.csv) ;; All Files (*.*)");
+    StationFilePath = TempPath;
+    MainWindow::GetLeadingPath(TempPath);
+    QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
+    ui->text_stationfile->setText(TempFile);
+    return;
+}
+
+//Redefine the local accept event with some validation
+//of the dialog box
+void add_imeds_data::accept()
+{
+
     QString TempString;
 
     InputFileName = ui->text_filename->text();
@@ -216,6 +234,7 @@ void add_imeds_data::on_buttonBox_accepted()
     InputSeriesName = ui->text_seriesname->text();
     InputFileColdStart = ui->date_coldstart->dateTime();
     TempString = ui->text_unitconvert->text();
+    InputStationFile = ui->text_stationfile->text();
     if(TempString==NULL)
         UnitConversion = 1.0;
     else
@@ -233,6 +252,26 @@ void add_imeds_data::on_buttonBox_accepted()
     else
         yadjust = TempString.toDouble();
 
-    return;
+    if(InputFileName==NULL)
+    {
+        QMessageBox::information(this,"ERROR","Please select an input file.");
+        return;
+    }
+    else if(InputSeriesName==NULL)
+    {
+        QMessageBox::information(this,"ERROR","Please input a series name.");
+        return;
+    }
+    else if(InputColorString==NULL)
+    {
+        QMessageBox::information(this,"ERROR","Please select a valid color for this series.");
+        return;
+    }
+    else if(InputStationFile==NULL && InputFileType=="ADCIRC")
+    {
+        QMessageBox::information(this,"ERROR","You did not select a station file.");
+        return;
+    }
+    else
+        QDialog::accept();
 }
-

@@ -78,6 +78,19 @@ struct ADCNC{
     int err;
 };
 
+struct ADCASCII{
+    int nstations;
+    int NumSnaps;
+    int OutputTSFreq;
+    int NumColumns;
+    double OutputTimeFreq;
+    QVector<double> time;
+    QVector< QVector<double> > data;
+    QVector<double> latitude;
+    QVector<double> longitude;
+    QVector<QString> station_name;
+    bool success;
+};
 
 
 //Function prototypes
@@ -85,7 +98,11 @@ IMEDS readIMEDS(QString filename);
 
 ADCNC readADCIRCnetCDF(QString filename);
 
+ADCASCII readADCIRCascii(QString filename, QString stationfile);
+
 IMEDS NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold);
+
+IMEDS ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold);
 
 //Data holder
 extern QVector<IMEDS> IMEDSData;
