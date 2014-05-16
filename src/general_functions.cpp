@@ -71,6 +71,7 @@ void MainWindow::GetLeadingPath(QString Input)
 
     }
     PreviousDirectory = Directory;
+
     return;
 }
 
@@ -153,6 +154,9 @@ void MainWindow::unsupportedContent(QNetworkReply * reply)
     //Make sure user didn't click 'Cancel'
     if(Filename==NULL)
         return;
+
+    //Get leading path and save so we open in same place next time
+    GetLeadingPath(Filename);
 
     //Save to disk
     highchart->save(Filename);
