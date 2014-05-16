@@ -126,6 +126,13 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     //Setup the IMEDS Table
     SetupIMEDSTable();
 
+    //Get the directory path to start in
+    PreviousDirectory = QDir::homePath();
+#ifdef Q_OS_WIN
+    PreviousDirectory = PreviousDirectory+"/Desktop";
+#endif
+
+
 }
 
 //Main destructor routine
