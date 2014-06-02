@@ -58,7 +58,8 @@
     var XLabel,YLabel;
     var ADCLabel,OBSLabel;
     var ADCColorCode,OBSColorCode;
-    var AutoY;
+    var AutoY, AutoX;
+    var XMin,XMax;
 
     var Locations = new Array();
     var DataSeries = new Array();
@@ -208,7 +209,11 @@
         else
             var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
 
-        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+        if(AutoX == "auto")
+            var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+        else
+            var xData = { min: XMin, max: XMax, type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+
         var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
         var plotToolTip = {
                 formatter: function() {
@@ -256,7 +261,7 @@
     }
 
 
-    function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel)
+    function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,InXMin,InXMax)
     {
         PlotTitle = InPlotTitle;
         YMin = InYMin;
@@ -264,6 +269,15 @@
         XLabel = InXLabel;
         YLabel = InYLabel;
         AutoY = InAutoY;
+        AutoX = InAutoX;
+
+        if(AutoX=="none")
+        {
+            var Temp1 = InXMin.split("-");
+            var Temp2 = InXMax.split("-");
+            XMin      = Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
+            XMax      = Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
+        }
         return;
     }
 

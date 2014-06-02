@@ -129,8 +129,8 @@ QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index)
     Response = "";
     for(int j=0;j<MyStation.station[index].NumSnaps;j++)
     {
-        if(MyStation.station[index].date[j].operator >(StartData) &&
-             MyStation.station[index].date[j].operator <(EndData))
+        if(MyStation.station[index].date[j] > StartData &&
+             MyStation.station[index].date[j] < EndData)
         {
             TempString = "";
             TempString = MyStation.station[index].date[j].toString("yyyy:MM:dd:hh:mm");
