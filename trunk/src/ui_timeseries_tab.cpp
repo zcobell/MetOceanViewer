@@ -322,6 +322,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
     bool Checked;
     QString javascript,DataString,name,color;
     QString PlotTitle,XLabel,YLabel,AutoY;
+    QString AutoX,XMin,XMax;
     QString unit,plusX,plusY;
     QVariant jsResponse;
 
@@ -340,14 +341,24 @@ void MainWindow::on_button_processIMEDSData_clicked()
     YLabel  = ui->text_yaxislabel->text();
     YMin    = ui->spin_imedsymin->value();
     YMax    = ui->spin_imedsymax->value();
+    XMin    = ui->date_imedsstart->dateTime().toString("yyyy-MM-dd");
+    XMax    = ui->date_imedsend->dateTime().toString("yyyy-MM-dd");
     Checked = ui->check_imedyauto->isChecked();
     if(Checked)
         AutoY = "auto";
     else
         AutoY = "none";
 
+    Checked = ui->check_imedsalldata->isChecked();
+    if(Checked)
+        AutoX = "auto";
+    else
+        AutoX = "none";
+
     javascript = "setGlobal('"+PlotTitle+"','"+AutoY+"',"+QString::number(YMin)+
-            ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"')";
+            ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"','"+AutoX+"','"+
+            XMin+"','"+XMax+"')";
+
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
 
     total = IMEDSData.length()*IMEDSData[0].nstations;
