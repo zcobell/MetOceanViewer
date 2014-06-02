@@ -332,6 +332,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
     if(ui->table_IMEDSData->rowCount()==0)
     {
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
+        this->setCursor(Qt::ArrowCursor);
         return;
     }
 
@@ -373,10 +374,14 @@ void MainWindow::on_button_processIMEDSData_clicked()
             if(ierr==1)
             {
                 QMessageBox::information(this,"ERROR","The station locations in the IMEDS files do not match.");
+                this->setCursor(Qt::ArrowCursor);
                 return;
             }
         }
     }
+
+    //Start by clearing the markers
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
 
     for(i=0;i<IMEDSData.length();i++)
     {
