@@ -85,26 +85,34 @@ void MainWindow::getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime 
 //Reset the IMEDS data range shown the selection boxes
 void MainWindow::UpdateIMEDSDateRange(IMEDS MyIMEDS)
 {
-    QDateTime CurrentMin,CurrentMax;
     QDateTime MyMin,MyMax;
-
-    CurrentMin = IMEDSMinDate;
-    CurrentMax = IMEDSMaxDate;
 
     getGlobalStartEndTime(MyIMEDS, MyMin, MyMax);
 
-    if(MyMin.operator <(CurrentMin))
-        CurrentMin = MyMin;
+    if(MyMin<IMEDSMinDate)
+        IMEDSMinDate = MyMin;
 
-    if(MyMax.operator >(CurrentMax))
-        CurrentMax = MyMax;
+    if(MyMax>IMEDSMaxDate)
+        IMEDSMaxDate = MyMax;
 
-    ui->date_imedsstart->setDateTime(CurrentMin);
-    ui->date_imedsend->setDateTime(CurrentMax);
+    if(ui->check_imedsalldata->isChecked() || ui->date_imedsstart->dateTime() < IMEDSMinDate )
+        ui->date_imedsstart->setDateTime(IMEDSMinDate);
+
+    if(ui->check_imedsalldata->isChecked() || ui->date_imedsend->dateTime() > IMEDSMaxDate )
+        ui->date_imedsend->setDateTime(IMEDSMaxDate);
+
+    /*
+
+    Commented this out so user can select a date to plot that falls outside of the
+    range in the IMEDS files. This is useful so plots are a consistent time range
+    between datasets.
+
     ui->date_imedsstart->setMinimumDateTime(CurrentMin);
     ui->date_imedsstart->setMaximumDateTime(CurrentMax);
     ui->date_imedsend->setMinimumDateTime(CurrentMin);
     ui->date_imedsend->setMaximumDateTime(CurrentMax);
+
+    */
 
     return;
 }
