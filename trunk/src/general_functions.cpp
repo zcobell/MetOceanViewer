@@ -153,6 +153,8 @@ void MainWindow::NETCDF_ERR(int status)
 void MainWindow::unsupportedContent(QNetworkReply * reply)
 {
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
     //Wait until we've retrieved the entire image
     while(!reply->isFinished())
     {
@@ -162,6 +164,8 @@ void MainWindow::unsupportedContent(QNetworkReply * reply)
     //Make an image and load the reply from the web
     QImage* highchart = new QImage();
     highchart->loadFromData(reply->readAll());
+
+    QApplication::restoreOverrideCursor();
 
     //Request the save location
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
