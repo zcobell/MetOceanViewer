@@ -348,6 +348,11 @@ void MainWindow::on_button_processIMEDSData_clicked()
     //Change the mouse pointer
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
+    //Start by clearing the markers
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
+    ui->imeds_map->reload();
+    delay(1);
+
     if(ui->table_IMEDSData->rowCount()==0)
     {
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
@@ -398,9 +403,6 @@ void MainWindow::on_button_processIMEDSData_clicked()
             }
         }
     }
-
-    //Start by clearing the markers
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
 
     for(i=0;i<IMEDSData.length();i++)
     {
