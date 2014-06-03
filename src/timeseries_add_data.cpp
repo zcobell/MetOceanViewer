@@ -45,7 +45,7 @@ double UnitConversion, xadjust, yadjust;
 
 QColor RandomButtonColor;
 QString InputFileName,InputColorString,InputSeriesName,InputFilePath,StationFilePath,InputFileType;
-QString InputStationFile;
+QString InputStationFile,CurrentFileName;
 QDateTime InputFileColdStart;
 
 add_imeds_data::add_imeds_data(QWidget *parent) :
@@ -77,6 +77,7 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
     ui->button_IMEDSColor->update();
+    CurrentFileName = QString();
     return;
 }
 
@@ -98,6 +99,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     ui->date_coldstart->setDateTime(ColdStart);
     ui->text_stationfile->setText(StationFile);
     InputFilePath = Filepath;
+    CurrentFileName = Filepath;
     StationFilePath = StationPath;
     ButtonStyle = MainWindow::MakeColorString(Color);
     RandomButtonColor = Color;
@@ -149,8 +151,17 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             "IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)");
 
     InputFilePath = TempPath;
-    if(TempPath!=NULL)
+    if(TempPath!=NULL || (TempPath==NULL && CurrentFileName!=NULL) )
     {
+
+        if(TempPath==NULL)
+        {
+            TempPath = CurrentFileName;
+            InputFilePath = CurrentFileName;
+        }
+        else
+            CurrentFileName = TempPath;
+
         MainWindow::GetLeadingPath(TempPath);
         QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
         ui->text_filename->setText(TempFile);
@@ -192,6 +203,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             FileReadError = true;
         }
     }
+
 
     return;
 }
