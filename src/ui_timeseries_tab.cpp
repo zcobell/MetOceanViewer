@@ -83,8 +83,11 @@ void MainWindow::on_button_addrow_clicked()
 
     int WindowStatus = AddWindow.exec();
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
     if(WindowStatus == 1)
     {
+
         NumberOfRows = NumberOfRows+1;
         IMEDSData.resize(NumberOfRows);
 
@@ -142,13 +145,17 @@ void MainWindow::on_button_addrow_clicked()
 
         if(!IMEDSData[NumberOfRows-1].success)
         {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
             IMEDSData.remove(NumberOfRows-1);
             ui->table_IMEDSData->removeRow(NumberOfRows-1);
             QMessageBox::information(this,"ERROR","This file could not be read correctly.");
+            QApplication::restoreOverrideCursor();
             return;
         }
 
     }
+
+    QApplication::restoreOverrideCursor();
     AddWindow.close();
     return;
 }
@@ -163,7 +170,7 @@ void MainWindow::on_button_deleterow_clicked()
         return;
     }
 
-    this->setCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //Reload the page so that arrays are refreshed.
     //This is sort of cheating, but it works
@@ -173,7 +180,7 @@ void MainWindow::on_button_deleterow_clicked()
     IMEDSData.remove(ui->table_IMEDSData->currentRow());
     ui->table_IMEDSData->removeRow(ui->table_IMEDSData->currentRow());
 
-    this->setCursor(Qt::ArrowCursor);
+    QApplication::restoreOverrideCursor();
 
     return;
 }
@@ -274,30 +281,36 @@ void MainWindow::on_button_editrow_clicked()
         {
             if(InputFileType=="IMEDS")
             {
+                QApplication::setOverrideCursor(Qt::WaitCursor);
                 IMEDSData.remove(CurrentRow);
                 IMEDSData.insert(CurrentRow,readIMEDS(InputFilePath));
                 if(!IMEDSData[CurrentRow].success)
                 {
                     IMEDSData.remove(CurrentRow);
                     ui->table_IMEDSData->removeRow(CurrentRow);
+                    QApplication::restoreOverrideCursor();
                     QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
                     return;
                 }
             }
             else if(InputFileType=="NETCDF")
             {
+                QApplication::setOverrideCursor(Qt::WaitCursor);
                 IMEDSData.remove(CurrentRow);
                 IMEDSData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),InputFileColdStart));
                 if(!IMEDSData[CurrentRow].success)
                 {
                     IMEDSData.remove(CurrentRow);
                     ui->table_IMEDSData->removeRow(CurrentRow);
+                    QApplication::restoreOverrideCursor();
                     QMessageBox::information(this,"ERROR","This NETCDF file could not be read correctly.");
                     return;
                 }
+                QApplication::restoreOverrideCursor();
             }
             else if(InputFileType=="ADCIRC")
             {
+                QApplication::setOverrideCursor(Qt::WaitCursor);
                 IMEDSData.remove(CurrentRow);
                 IMEDSData.insert(CurrentRow,
                     ADCIRC_to_IMEDS(readADCIRCascii(InputFilePath,StationFilePath),InputFileColdStart));
@@ -305,9 +318,11 @@ void MainWindow::on_button_editrow_clicked()
                 {
                     IMEDSData.remove(CurrentRow);
                     ui->table_IMEDSData->removeRow(CurrentRow);
+                    QApplication::restoreOverrideCursor();
                     QMessageBox::information(this,"ERROR","This ADCIRC file could not be read correctly.");
                     return;
                 }
+                QApplication::restoreOverrideCursor();
             }
             UpdateIMEDSDateRange(IMEDSData[CurrentRow]);
         }
@@ -331,12 +346,12 @@ void MainWindow::on_button_processIMEDSData_clicked()
     QVariant jsResponse;
 
     //Change the mouse pointer
-    this->setCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     if(ui->table_IMEDSData->rowCount()==0)
     {
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
-        this->setCursor(Qt::ArrowCursor);
+        QApplication::restoreOverrideCursor();
         return;
     }
 
@@ -378,7 +393,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
             if(ierr==1)
             {
                 QMessageBox::information(this,"ERROR","The station locations in the IMEDS files do not match.");
-                this->setCursor(Qt::ArrowCursor);
+                QApplication::restoreOverrideCursor();
                 return;
             }
         }
@@ -436,7 +451,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
     delay(1);
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
 
-    this->setCursor(Qt::ArrowCursor);
+    QApplication::restoreOverrideCursor();
 }
 
 void MainWindow::on_check_imedsalldata_clicked(bool checked)
