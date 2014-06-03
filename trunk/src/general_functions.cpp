@@ -75,6 +75,22 @@ void MainWindow::GetLeadingPath(QString Input)
     return;
 }
 
+QString MainWindow::GetMyLeadingPath(QString Input)
+{
+    QRegExp rx("[/\\\\]");
+    QStringList parts = Input.split(rx);
+    QString Directory = "";
+    for(int i=0; i<parts.length()-1; i++)
+    {
+        if(i>0)
+            Directory = Directory+"/"+parts.value(i);
+        else
+            Directory = parts.value(i);
+
+    }
+    return Directory;
+}
+
 //Makes a string that sets the CSS style according to the input color
 QString MainWindow::MakeColorString(QColor InputColor)
 {

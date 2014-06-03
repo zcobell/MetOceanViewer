@@ -75,6 +75,8 @@ void MainWindow::on_button_addrow_clicked()
     ADCNC NetCDFData;
     ADCASCII ADCData;
 
+    EditBox = false;
+
     int NumberOfRows = ui->table_IMEDSData->rowCount();
     AddWindow.setModal(false);
     AddWindow.set_default_dialog_box_elements(NumberOfRows);
@@ -207,6 +209,8 @@ void MainWindow::on_button_editrow_clicked()
 
     int CurrentRow;
 
+    EditBox = true;
+
     if(ui->table_IMEDSData->rowCount() == 0)
     {
         QMessageBox::information(this,"ERROR","Insert a row first.");
@@ -222,7 +226,7 @@ void MainWindow::on_button_editrow_clicked()
     AddWindow.setModal(false);
     CurrentRow = ui->table_IMEDSData->currentRow();
     Filename = ui->table_IMEDSData->item(CurrentRow,0)->text();
-    Filepath = ui->table_IMEDSData->item(CurrentRow,2)->text();
+    Filepath = ui->table_IMEDSData->item(CurrentRow,6)->text();
     SeriesName = ui->table_IMEDSData->item(CurrentRow,1)->text();
     UnitConversion = ui->table_IMEDSData->item(CurrentRow,3)->text().toDouble();
     xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();

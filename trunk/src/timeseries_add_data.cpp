@@ -40,6 +40,7 @@
 int NumIMEDSFiles = 0;
 int CurrentRowsInTable = 0;
 bool ColorUpdated, FileReadError;
+bool EditBox;
 double UnitConversion, xadjust, yadjust;
 
 QColor RandomButtonColor;
@@ -76,7 +77,6 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
     ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
     ui->button_IMEDSColor->update();
-
     return;
 }
 
@@ -137,8 +137,15 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
+    QString Directory;
+
+    if(EditBox)
+        Directory = MainWindow::GetMyLeadingPath(InputFilePath);
+    else
+        Directory = PreviousDirectory;
+
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
-            PreviousDirectory,
+            Directory,
             "IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)");
 
     InputFilePath = TempPath;
