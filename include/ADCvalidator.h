@@ -55,6 +55,7 @@ extern QVector<QString> NOAAStationNames;
 extern QVector<QString> panToLocations;
 extern QVariant MarkerID;
 extern bool ColorUpdated;
+extern bool EditBox;
 
 struct NOAAStationData
 {
@@ -80,6 +81,8 @@ public:
     static QString MakeColorString(QColor InputColor);
 
     static void GetLeadingPath(QString Input);
+
+    static QString GetMyLeadingPath(QString Input);
 
     static QColor GenerateRandomColor();
 
