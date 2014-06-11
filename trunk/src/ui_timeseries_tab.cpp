@@ -292,6 +292,7 @@ void MainWindow::on_button_editrow_clicked()
                     QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
                     return;
                 }
+                QApplication::restoreOverrideCursor();
             }
             else if(InputFileType=="NETCDF")
             {
