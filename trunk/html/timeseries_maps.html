@@ -97,6 +97,9 @@
     //Save the time series data into a single 3 dimensional array
     function AddDataSeries(SeriesIndex,ThisData)
     {
+
+        DataSeries[SeriesIndex] = [];
+
         var ThisDataSplit = ThisData.split(";");
         for(var i=0;i<ThisDataSplit.length;i++)
         {
@@ -179,7 +182,6 @@
 
             for(j=0;j<DataSeries[i].length-1;j++)
             {
-
                 Data[i][j] = new Array();
                 ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
                                     Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3])+plusX,
@@ -190,7 +192,6 @@
                 //Null value check
                 if(Data[i][j][1]<-999)
                     Data[i][j][1] = null;
-
             }
         }
 
