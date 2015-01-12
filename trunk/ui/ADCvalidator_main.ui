@@ -1189,13 +1189,6 @@
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QProgressBar" name="progress_IMEDS">
-              <property name="value">
-               <number>0</number>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
           <widget class="QWidget" name="tab_viewIMEDS">
@@ -1215,9 +1208,9 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <item>
-               <widget class="QPushButton" name="button_saveIMEDSImage">
+               <widget class="QPushButton" name="button_plotStation">
                 <property name="text">
-                 <string>Save Map and Chart</string>
+                 <string>Plot Station</string>
                 </property>
                </widget>
               </item>
@@ -1225,6 +1218,13 @@
                <widget class="QPushButton" name="button_fitIMEDS">
                 <property name="text">
                  <string>Fit Markers</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_saveIMEDSImage">
+                <property name="text">
+                 <string>Save Map and Chart</string>
                 </property>
                </widget>
               </item>
@@ -2309,7 +2309,6 @@
   <tabstop>Date_EndTime</tabstop>
   <tabstop>Button_FetchData</tabstop>
   <tabstop>noaa_map</tabstop>
-  <tabstop>subtab_IMEDS</tabstop>
  </tabstops>
  <resources>
   <include location="../ADCvalidatior.qrc"/>
