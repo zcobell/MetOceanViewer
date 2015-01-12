@@ -139,6 +139,8 @@ private slots:
 
     void unsupportedContent(QNetworkReply * reply);
 
+    void on_button_plotStation_clicked();
+
 private:
     Ui::MainWindow *ui;
 

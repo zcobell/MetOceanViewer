@@ -94,25 +94,24 @@
         return;
     }
 
-    //Save the time series data into a single 4 dimensional array
-    function AddDataSeries(StationIndex,SeriesIndex,ThisData)
+    //Save the time series data into a single 3 dimensional array
+    function AddDataSeries(SeriesIndex,ThisData)
     {
         var ThisDataSplit = ThisData.split(";");
-        DataSeries[SeriesIndex][StationIndex] = new Array();
         for(var i=0;i<ThisDataSplit.length;i++)
         {
-            DataSeries[SeriesIndex][StationIndex][i] = new Array();
+            DataSeries[SeriesIndex][i] = new Array();
             ThisDataSplit2 = ThisDataSplit[i].split(":");
 
-            DataSeries[SeriesIndex][StationIndex][i][0] = ThisDataSplit2[0];
-            DataSeries[SeriesIndex][StationIndex][i][1] = ThisDataSplit2[1];
-            DataSeries[SeriesIndex][StationIndex][i][2] = ThisDataSplit2[2];
-            DataSeries[SeriesIndex][StationIndex][i][3] = ThisDataSplit2[3];
-            DataSeries[SeriesIndex][StationIndex][i][4] = ThisDataSplit2[4];
-            DataSeries[SeriesIndex][StationIndex][i][5] = ThisDataSplit2[5];
+            DataSeries[SeriesIndex][i][0] = ThisDataSplit2[0];
+            DataSeries[SeriesIndex][i][1] = ThisDataSplit2[1];
+            DataSeries[SeriesIndex][i][2] = ThisDataSplit2[2];
+            DataSeries[SeriesIndex][i][3] = ThisDataSplit2[3];
+            DataSeries[SeriesIndex][i][4] = ThisDataSplit2[4];
+            DataSeries[SeriesIndex][i][5] = ThisDataSplit2[5];
 
-            if(Number(DataSeries[SeriesIndex][StationIndex][i][5])<-400)
-                DataSeries[SeriesIndex][StationIndex][i][5] = -9999;
+            if(Number(DataSeries[SeriesIndex][i][5])<-400)
+                DataSeries[SeriesIndex][i][5] = -9999;
         }
         return;
     }
@@ -142,32 +141,33 @@
                 LocalID: i
             });
             google.maps.event.addListener(IMEDSMarkers[i], 'click', function() {
-                PlotIMEDSSeries(this);
-                });
+                //PlotIMEDSSeries(this);
+                window.MarkerID = this.LocalID;
+                if(LastMarker!=-1)
+                    LastInfoWindow.close();
+                LastMarker = this.LocalID;
+                contentString = "<b>Station:</b> "+StationName[this.LocalID];
+                var InfoWindow = new google.maps.InfoWindow({content: contentString});
+                InfoWindow.open(map,this);
+                LastInfoWindow = InfoWindow;
+            });
         }
         return;
     }
 
-    function PlotIMEDSSeries(marker)
+    function getMarker()
     {
-        var i,j,k,index;
+        return LastMarker;
+    }
+
+    function PlotIMEDSSeries()
+    {
+        var i,j,k;
         var seriesList = new Array();
         var Data = new Array();
         var contentString;
         var ThisData;
         var multiplier,plusX,plusY;
-
-        index = marker.LocalID;
-
-        if(LastMarker!=-1)
-            LastInfoWindow.close();
-
-        LastMarker = index;
-
-        contentString = "<b>Station:</b> "+StationName[index];
-        var IMEDSInfoWindow = new google.maps.InfoWindow({content: contentString});
-        IMEDSInfoWindow.open(map,marker);
-        LastInfoWindow = IMEDSInfoWindow;
 
         //Create the data tables
         for(i=0;i<DataSeries.length;i++)
@@ -177,15 +177,15 @@
             plusX      = SeriesOptions[i].xadjust;
             plusY      = SeriesOptions[i].yadjust;
 
-            for(j=0;j<DataSeries[i][index].length-1;j++)
+            for(j=0;j<DataSeries[i].length-1;j++)
             {
 
                 Data[i][j] = new Array();
-                ThisDate = Date.UTC(Number(DataSeries[i][index][j][0]),Number(DataSeries[i][index][j][1])-1,
-                                    Number(DataSeries[i][index][j][2]),Number(DataSeries[i][index][j][3])+plusX,
-                                    Number(DataSeries[i][index][j][4]),0,0);
+                ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
+                                    Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3])+plusX,
+                                    Number(DataSeries[i][j][4]),0,0);
                 Data[i][j][0] = ThisDate;
-                Data[i][j][1] = Number(DataSeries[i][index][j][5])*multiplier+plusY;
+                Data[i][j][1] = Number(DataSeries[i][j][5])*multiplier+plusY;
 
                 //Null value check
                 if(Data[i][j][1]<-999)
@@ -248,7 +248,7 @@
                 text: PlotTitle
             },
             subtitle: {
-                text: 'Station '+StationName[index]
+                text: 'Station '+StationName[LastMarker]
             },
             xAxis: xData,
             yAxis: yData,

@@ -337,10 +337,10 @@ void MainWindow::on_button_editrow_clicked()
 //Send the data to the HTML side of the code for plotting
 void MainWindow::on_button_processIMEDSData_clicked()
 {
-    int i,j,ierr,total,count,pct;
+    int i,ierr;
     double x,y,YMin,YMax;
     bool Checked;
-    QString javascript,DataString,name,color;
+    QString javascript,name,color;
     QString PlotTitle,XLabel,YLabel,AutoY;
     QString AutoX,XMin,XMax;
     QString unit,plusX,plusY;
@@ -351,7 +351,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
 
     //Start by clearing the markers
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
-    ui->imeds_map->reload();
+    //ui->imeds_map->reload();
     delay(1);
 
     if(ui->table_IMEDSData->rowCount()==0)
@@ -387,9 +387,6 @@ void MainWindow::on_button_processIMEDSData_clicked()
 
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
 
-    total = IMEDSData.length()*IMEDSData[0].nstations;
-    count = 0;
-
     //Verify that the stations are the same in all files
     if(IMEDSData.length()>1)
     {        
@@ -421,7 +418,6 @@ void MainWindow::on_button_processIMEDSData_clicked()
                                                            QString::number(IMEDSData.length())+")");
 
     //Send locations to HTML side
-    ui->progress_IMEDS->setValue(0);
     for(i=0;i<IMEDSData[0].nstations;i++)
     {
         x = IMEDSData[0].station[i].longitude;
@@ -431,21 +427,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
                 QString::number(y)+",'"+
                 IMEDSData[0].station[i].StationName+"')";
         jsResponse = ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
-
-        javascript = "";
-        //Send the data series to the back end as well
-        for(j=0;j<IMEDSData.length();j++)
-        {
-            DataString = FormatIMEDSString(IMEDSData[j],i);
-            javascript = "";
-            javascript = "AddDataSeries("+QString::number(i)+","+QString::number(j)+",'"+DataString+"')";
-            ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
-            count = count + 1;
-            pct = static_cast<int>((static_cast<double>(count) / static_cast<double>(total))*100.0);
-            ui->progress_IMEDS->setValue(pct);
-        }
     }
-    ui->progress_IMEDS->setValue(0);
 
     //Now, all data should be on the backend for plotting. Bombs away...
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript("AddToMap()");
@@ -467,5 +449,26 @@ void MainWindow::on_check_imedsalldata_clicked(bool checked)
 void MainWindow::on_button_fitIMEDS_clicked()
 {
     ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    return;
+}
+
+void MainWindow::on_button_plotStation_clicked()
+{
+    QString DataString, javascript;
+
+    //Get the marker ID from the page
+    int markerID = ui->imeds_map->page()->mainFrame()->evaluateJavaScript("getMarker()").toInt();
+
+    //Format the data
+    for(int j=0;j<IMEDSData.length();j++)
+    {
+        DataString = FormatIMEDSString(IMEDSData[j],markerID);
+        javascript = "";
+        javascript = "AddDataSeries("+QString::number(j)+",'"+DataString+"')";
+        ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+    }
+
+    //Call the plotting routine in HighCharts
+    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("PlotIMEDSSeries()");
     return;
 }
