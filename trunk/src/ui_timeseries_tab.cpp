@@ -459,6 +459,9 @@ void MainWindow::on_button_plotStation_clicked()
     //Get the marker ID from the page
     int markerID = ui->imeds_map->page()->mainFrame()->evaluateJavaScript("getMarker()").toInt();
 
+    //Catch false marker number
+    if(markerID==-1)return;
+
     //Format the data
     for(int j=0;j<IMEDSData.length();j++)
     {

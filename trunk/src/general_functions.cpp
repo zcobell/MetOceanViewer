@@ -183,3 +183,27 @@ void MainWindow::unsupportedContent(QNetworkReply * reply)
 
     return;
 }
+
+//Handle the "enter" or "return" keypress events on certain
+//pages to automatically draw plots
+void MainWindow::keyPressEvent(QKeyEvent *key)
+{
+    if(ui->MainTabs->currentIndex()==1)
+    {
+        if(ui->subtab_IMEDS->currentIndex()==1)
+        {
+            if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
+            {
+                on_button_plotStation_clicked();
+            }
+        }
+    }
+    else if(ui->MainTabs->currentIndex()==0)
+    {
+        if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
+        {
+            on_Button_FetchData_clicked();
+        }
+    }
+    return;
+}

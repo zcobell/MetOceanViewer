@@ -141,6 +141,8 @@ private slots:
 
     void on_button_plotStation_clicked();
 
+    void keyPressEvent(QKeyEvent* key);
+
 private:
     Ui::MainWindow *ui;
 
