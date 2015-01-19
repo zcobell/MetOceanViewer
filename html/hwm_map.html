@@ -265,6 +265,12 @@
         map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
       }
 
+        google.maps.event.addDomListener(window, "resize", function() {
+         var center = map.getCenter();
+         google.maps.event.trigger(map, "resize");
+         map.setCenter(center);
+        });
+
     </script>
   </head>
   <body onload="initializeHWM()">

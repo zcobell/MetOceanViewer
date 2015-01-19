@@ -56,6 +56,11 @@
     var XLabel,YLabel;
     var DotColor,RegColor,One21Color,BoundColor;
 
+    window.onresize = function()
+    {
+        $('#chart_div').highcharts().setSize($(window).width()/2,$(window).height(), false);
+    }
+
     function setGlobal(InPlotTitle,InXLabel,InYLabel,InDotColor,InRegColor,In121Color,InBoundColor)
     {
         PlotTitle = InPlotTitle;

@@ -69,8 +69,12 @@
     var LastInfoWindow;
     var LastMarker = -1;
 
-
     //Functions for the new version of the IMEDS map
+
+    window.onresize = function()
+    {
+        $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
+    }
 
     //Build the data series
     function allocateData(NumSeries)
@@ -351,6 +355,12 @@
                 window.location = 'http://www.arcadis-us.com';
             });
       }
+
+        google.maps.event.addDomListener(window, "resize", function() {
+         var center = map.getCenter();
+         google.maps.event.trigger(map, "resize");
+         map.setCenter(center);
+        });
 
 
     </script>
