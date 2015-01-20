@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     QString ButtonStyle;
 
     //Optional javascript/html debugging - disabled for release versions
-    //QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
+    QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 
     //Setup UI
     ui->setupUi(this);
@@ -66,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     QObject::connect(ui->noaa_map,SIGNAL(loadFinished(bool)),this,SLOT(BeginGatherStations()));
     ui->noaa_map->page()->setForwardUnsupportedContent(true);
     connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
-    ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
+    //ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
     //Set the initial dates to today and today minus a day
     ui->Date_StartTime->setDateTime(QDateTime::currentDateTime().addDays(-1));

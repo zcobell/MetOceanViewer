@@ -152,7 +152,7 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    QString FormatNOAAResponse(QByteArray InputString);
+    QString FormatNOAAResponse(QByteArray InputString, QString &ErrorString);
 
     void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
 

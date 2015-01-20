@@ -41,7 +41,7 @@
 void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 {
     QByteArray NOAAWebData;
-    QString NOAAData,javastring;
+    QString NOAAData,javastring,Error;
     QString Datum,Units,Product;
     int ProductIndex;
 
@@ -57,15 +57,15 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
             Units="ft";
         Datum = ui->combo_noaadatum->currentText();
     }
-    else if(ProductIndex == 2 || ProductIndex == 5)
+    else if(ProductIndex == 4)
     {
         if(Units=="metric")
             Units="m/s";
         else
-            Units="ft/s";
+            Units="knots";
         Datum = "Stnd";
     }
-    else if(ProductIndex == 3 || ProductIndex == 4)
+    else if(ProductIndex == 2 || ProductIndex == 3)
     {
         if(Units=="metric")
             Units="Celcius";
@@ -73,12 +73,12 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
             Units="Fahrenheit";
         Datum = "Stnd";
     }
-    else if(ProductIndex == 6)
+    else if(ProductIndex == 5)
     {
         Units = "%";
         Datum = "Stnd";
     }
-    else if(ProductIndex == 7)
+    else if(ProductIndex == 6)
     {
         Units = "mb";
         Datum = "Stnd";
@@ -91,11 +91,12 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
         return;
     }
     NOAAWebData=reply->readAll();
-    NOAAData = FormatNOAAResponse(NOAAWebData);
+    NOAAData = FormatNOAAResponse(NOAAWebData,Error);
+    Error.remove(QRegExp("[\\n\\t\\r]"));
 
-    javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"','"+Product+"')";
+    javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"','"+Product+"','"+Error+"')";
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
-
+    return;
 }
 
 //Routine that draws the markers on the NOAA map
@@ -170,13 +171,15 @@ void MainWindow::BeginGatherStations()
 }
 
 //Routine that formats the response from the NOAA server in CSV
-QString MainWindow::FormatNOAAResponse(QByteArray Input)
+QString MainWindow::FormatNOAAResponse(QByteArray Input,QString &ErrorString)
 {
     int i;
     QString Output,TempData,DateS,YearS,MonthS,DayS,HourMinS,HourS,MinS,WLS;
     QString InputData(Input);
     QStringList DataList = InputData.split(QRegExp("[\r\n]"),QString::SkipEmptyParts);
     QStringList TimeSnap;
+    QString Temp(Input);
+    ErrorString = Temp;
 
     Output = "'";
     CurrentStation.resize(DataList.length()-1);
@@ -251,12 +254,11 @@ QString MainWindow::retrieveProduct(int type)
         {
             case(0):Product = "Observed Water Level"; break;
             case(1):Product = "Predicted Water Level"; break;
-            case(2):Product = "Current Speed"; break;
-            case(3):Product = "Air Temperature"; break;
-            case(4):Product = "Water Temperature"; break;
-            case(5):Product = "Wind Speed"; break;
-            case(6):Product = "Relative Humidity"; break;
-            case(7):Product = "Air Pressure"; break;
+            case(2):Product = "Air Temperature"; break;
+            case(3):Product = "Water Temperature"; break;
+            case(4):Product = "Wind Speed"; break;
+            case(5):Product = "Relative Humidity"; break;
+            case(6):Product = "Air Pressure"; break;
         }
     }
     else if(type==2)
@@ -265,12 +267,11 @@ QString MainWindow::retrieveProduct(int type)
         {
             case(0):Product = "water_level"; break;
             case(1):Product = "predictions"; break;
-            case(2):Product = "currents"; break;
-            case(3):Product = "air_temperature"; break;
-            case(4):Product = "water_temperature"; break;
-            case(5):Product = "wind"; break;
-            case(6):Product = "humidity"; break;
-            case(7):Product = "air_pressure"; break;
+            case(2):Product = "air_temperature"; break;
+            case(3):Product = "water_temperature"; break;
+            case(4):Product = "wind"; break;
+            case(5):Product = "humidity"; break;
+            case(6):Product = "air_pressure"; break;
         }
     }
     return Product;
