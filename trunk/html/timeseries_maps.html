@@ -148,12 +148,24 @@
                 LocalID: i
             });
             google.maps.event.addListener(IMEDSMarkers[i], 'click', function() {
-                //PlotIMEDSSeries(this);
                 window.MarkerID = this.LocalID;
                 if(LastMarker!=-1)
                     LastInfoWindow.close();
                 LastMarker = this.LocalID;
-                contentString = "<b>Station:</b> "+StationName[this.LocalID];
+                var xLocal = Locations[0][this.LocalID];
+                var yLocal = Locations[1][this.LocalID];
+                contentString = "<table>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Station Name:</b> </td>"+
+                                    "<td> "+StationName[this.LocalID]+
+                                    "</td>"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Location:</b> </td>"+
+                                    "<td> "+xLocal+"&deg, "+yLocal+"&deg"+
+                                "</tr>"+
+                                "</table>";
+
                 var InfoWindow = new google.maps.InfoWindow({content: contentString});
                 InfoWindow.open(map,this);
                 LastInfoWindow = InfoWindow;

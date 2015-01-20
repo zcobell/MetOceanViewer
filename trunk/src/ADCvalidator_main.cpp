@@ -66,6 +66,9 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     QObject::connect(ui->noaa_map,SIGNAL(loadFinished(bool)),this,SLOT(BeginGatherStations()));
     ui->noaa_map->page()->setForwardUnsupportedContent(true);
     connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    ui->noaa_map->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
+    connect( ui->noaa_map->page(), SIGNAL(linkClicked(const QUrl &)),
+                    this, SLOT(OpenExternalBrowser(const QUrl &)));
     //ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
     //Set the initial dates to today and today minus a day
@@ -139,4 +142,9 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::OpenExternalBrowser(const QUrl & url)
+{
+        QDesktopServices::openUrl(url);
 }

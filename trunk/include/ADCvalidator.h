@@ -143,6 +143,8 @@ private slots:
 
     void keyPressEvent(QKeyEvent* key);
 
+    void OpenExternalBrowser(const QUrl & url);
+
 private:
     Ui::MainWindow *ui;
 
@@ -179,7 +181,6 @@ private:
     int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
 
     void NETCDF_ERR(int status);
-
 };
 
 
