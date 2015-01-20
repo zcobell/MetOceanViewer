@@ -139,6 +139,7 @@
           var myLatlng;
           var nMarkers = markerData.length;
           var infoWindow = null;
+          var link;
 
           var infowindow = new google.maps.InfoWindow({content: "holding..." });
 
@@ -153,8 +154,26 @@
 
             myLatlng = new google.maps.LatLng(y,x);
 
-            var contentString = "<b>NOAA Station Number:</b> "+String(ID)+"<br>"+
-                                "<b>NOAA Station Name:</b> "+StationName;
+            link = "<a href=http://tidesandcurrents.noaa.gov/stationhome.html?id="+ID+">Click Here</a>";
+
+            var contentString = "<table>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Location:</b> </td>"+
+                                    "<td> "+x+"&deg, "+y+"&deg"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Station Number:</b> </td>"+
+                                    "<td> "+String(ID)+"</td>"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Station Name:</b> </td>"+
+                                    "<td> "+StationName+"</td>"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Homepage:</b> </td>"+
+                                    "<td> "+link+"</td>"+
+                                "</tr>"+
+                            "</table>";
 
             var marker = new google.maps.Marker({
               position: myLatlng,
