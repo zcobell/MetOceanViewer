@@ -205,11 +205,6 @@
                </item>
                <item>
                 <property name="text">
-                 <string>Currents</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
                  <string>Air Temperature</string>
                 </property>
                </item>

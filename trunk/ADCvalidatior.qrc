@@ -23,5 +23,8 @@
         <file>img/icon.png</file>
         <file>resources.rc</file>
         <file>img/icon.ico</file>
+        <file>js/jquery.alerts.css</file>
+        <file>js/jquery.alerts.js</file>
+        <file>js/jquery.ui.draggable.js</file>
     </qresource>
 </RCC>

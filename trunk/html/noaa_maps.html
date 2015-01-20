@@ -47,6 +47,9 @@
 
     <!-- Load the google maps api and the google visualization api -->
     <script src="/rsc/js/jquery.js"></script>
+    <script src="/rsc/js/jquery.ui.draggable.js"></script>
+    <script src="/rsc/js/jquery.alerts.js"></script>
+    <link href="/rsc/js/jquery.alerts.css" rel="stylesheet" type="text/css" media="screen" />
     <script src="/rsc/js/highcharts.js"></script>
     <script src="/rsc/js/exporting.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
@@ -236,7 +239,7 @@
       //                                                        //
       //  Plot the NOAA data on the google chart api            //
       ////////////////////////////////////////////////////////////
-      function drawNOAAData(RawData,Datum,Units,Product) {
+      function drawNOAAData(RawData,Datum,Units,Product,ErrorString) {
 
         //Split by rows
         RawData2 = new Array();
@@ -246,7 +249,7 @@
         //Split the rows into their pieces
         if(RawData2.length<5)
         {
-            alert('WARNING: No data at this location!');
+            jAlert('The following error was returned from the NOAA server: \n\n'+ErrorString,'NOAA Data Retreival Error');
             return;
         }
 
