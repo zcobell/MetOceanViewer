@@ -101,30 +101,21 @@ void MainWindow::UpdateIMEDSDateRange(IMEDS MyIMEDS)
     if(ui->check_imedsalldata->isChecked() || ui->date_imedsend->dateTime() > IMEDSMaxDate )
         ui->date_imedsend->setDateTime(IMEDSMaxDate);
 
-    /*
-
-    Commented this out so user can select a date to plot that falls outside of the
-    range in the IMEDS files. This is useful so plots are a consistent time range
-    between datasets.
-
-    ui->date_imedsstart->setMinimumDateTime(CurrentMin);
-    ui->date_imedsstart->setMaximumDateTime(CurrentMax);
-    ui->date_imedsend->setMinimumDateTime(CurrentMin);
-    ui->date_imedsend->setMaximumDateTime(CurrentMax);
-
-    */
-
     return;
 }
 
 //Format the IMEDS data string into something we can use in Javascript
-QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index)
+QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index, double unitConvert)
 {
     QString Response,TempString;
     QDateTime StartData,EndData;
+    int DecPlaces;
+    double value,value2,multiplier;
 
     StartData = ui->date_imedsstart->dateTime();
     EndData = ui->date_imedsend->dateTime();
+    DecPlaces = ui->spin_imedsdecimalplaces->value();
+    multiplier = qPow(10.0,static_cast<double>(DecPlaces));
 
     Response = "";
     for(int j=0;j<MyStation.station[index].NumSnaps;j++)
@@ -134,7 +125,9 @@ QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index)
         {
             TempString = "";
             TempString = MyStation.station[index].date[j].toString("yyyy:MM:dd:hh:mm");
-            TempString = TempString+":"+QString::number(MyStation.station[index].data[j]);
+            value = MyStation.station[index].data[j]*unitConvert;
+            value2 = qRound(value*multiplier)/multiplier;
+            TempString = TempString+":"+QString::number(value2);
             Response=Response+TempString+";";
         }
     }

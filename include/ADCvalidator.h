@@ -176,7 +176,7 @@ private:
 
     void UpdateIMEDSDateRange(IMEDS MyIMEDS);
 
-    QString FormatIMEDSString(IMEDS MyStation,int index);
+    QString FormatIMEDSString(IMEDS MyStation, int index, double unitConvert);
 
     int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
 
