@@ -196,7 +196,7 @@ void MainWindow::on_Button_FetchData_clicked()
     ProductIndex = ui->combo_NOAAProduct->currentIndex();
     if(ProductIndex == 0 || ProductIndex == 1)
         Datum = ui->combo_noaadatum->currentText();
-    else if(ProductIndex == 2 || ProductIndex == 5 || ProductIndex == 3
+    else if(ProductIndex == 3 || ProductIndex == 5
          || ProductIndex == 4 || ProductIndex == 6 || ProductIndex == 7)
         Datum = "Stnd";
 

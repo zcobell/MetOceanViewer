@@ -195,7 +195,12 @@
                </property>
                <item>
                 <property name="text">
-                 <string>Water Level (Verified or Preliminary)</string>
+                 <string>6 Minute Water Level (Verified or Preliminary)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Hourly Water Level</string>
                 </property>
                </item>
                <item>
