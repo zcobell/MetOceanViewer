@@ -455,6 +455,7 @@ void MainWindow::on_button_fitIMEDS_clicked()
 void MainWindow::on_button_plotStation_clicked()
 {
     QString DataString, javascript;
+    double units;
 
     //Get the marker ID from the page
     int markerID = ui->imeds_map->page()->mainFrame()->evaluateJavaScript("getMarker()").toInt();
@@ -465,7 +466,8 @@ void MainWindow::on_button_plotStation_clicked()
     //Format the data
     for(int j=0;j<IMEDSData.length();j++)
     {
-        DataString = FormatIMEDSString(IMEDSData[j],markerID);
+        units = ui->table_IMEDSData->item(j,3)->text().toDouble();
+        DataString = FormatIMEDSString(IMEDSData[j],markerID,units);
         javascript = "";
         javascript = "AddDataSeries("+QString::number(j)+",'"+DataString+"')";
         ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
