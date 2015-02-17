@@ -49,7 +49,7 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
     ProductIndex = ui->combo_NOAAProduct->currentIndex();
     Product = retrieveProduct(1);
 
-    if(ProductIndex == 0 || ProductIndex == 1)
+    if(ProductIndex == 0 || ProductIndex == 1 || ProductIndex == 2)
     {
         if(Units=="metric")
             Units="m";
@@ -57,7 +57,7 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
             Units="ft";
         Datum = ui->combo_noaadatum->currentText();
     }
-    else if(ProductIndex == 4)
+    else if(ProductIndex == 5)
     {
         if(Units=="metric")
             Units="m/s";
@@ -65,7 +65,7 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
             Units="knots";
         Datum = "Stnd";
     }
-    else if(ProductIndex == 2 || ProductIndex == 3)
+    else if(ProductIndex == 3 || ProductIndex == 4)
     {
         if(Units=="metric")
             Units="Celcius";
@@ -73,12 +73,12 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
             Units="Fahrenheit";
         Datum = "Stnd";
     }
-    else if(ProductIndex == 5)
+    else if(ProductIndex == 6)
     {
         Units = "%";
         Datum = "Stnd";
     }
-    else if(ProductIndex == 6)
+    else if(ProductIndex == 7)
     {
         Units = "mb";
         Datum = "Stnd";
@@ -252,13 +252,14 @@ QString MainWindow::retrieveProduct(int type)
     {
         switch(index)
         {
-            case(0):Product = "Observed Water Level"; break;
-            case(1):Product = "Predicted Water Level"; break;
-            case(2):Product = "Air Temperature"; break;
-            case(3):Product = "Water Temperature"; break;
-            case(4):Product = "Wind Speed"; break;
-            case(5):Product = "Relative Humidity"; break;
-            case(6):Product = "Air Pressure"; break;
+            case(0):Product = "6 Min Observed Water Level"; break;
+            case(1):Product = "Hourly Observed Water Level"; break;
+            case(2):Product = "Predicted Water Level"; break;
+            case(3):Product = "Air Temperature"; break;
+            case(4):Product = "Water Temperature"; break;
+            case(5):Product = "Wind Speed"; break;
+            case(6):Product = "Relative Humidity"; break;
+            case(7):Product = "Air Pressure"; break;
         }
     }
     else if(type==2)
@@ -266,12 +267,13 @@ QString MainWindow::retrieveProduct(int type)
         switch(index)
         {
             case(0):Product = "water_level"; break;
-            case(1):Product = "predictions"; break;
-            case(2):Product = "air_temperature"; break;
-            case(3):Product = "water_temperature"; break;
-            case(4):Product = "wind"; break;
-            case(5):Product = "humidity"; break;
-            case(6):Product = "air_pressure"; break;
+            case(1):Product = "hourly_height"; break;
+            case(2):Product = "predictions"; break;
+            case(3):Product = "air_temperature"; break;
+            case(4):Product = "water_temperature"; break;
+            case(5):Product = "wind"; break;
+            case(6):Product = "humidity"; break;
+            case(7):Product = "air_pressure"; break;
         }
     }
     return Product;
