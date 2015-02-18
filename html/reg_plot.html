@@ -58,7 +58,7 @@
 
     window.onresize = function()
     {
-        $('#chart_div').highcharts().setSize($(window).width()/2,$(window).height(), false);
+        $('#chart_div').highcharts().setSize($(window).width(),$(window).height(), false);
     }
 
     function setGlobal(InPlotTitle,InXLabel,InYLabel,InDotColor,InRegColor,In121Color,InBoundColor)
@@ -216,7 +216,9 @@
                         y: 0,
                         width: 250,
                         height: 70,
-                        fill: '#FFFFFF'
+                        fill: '#FFFFFF',
+                        stroke: "#000000",
+                        strokeWidth: 2
                     }
                 }
             }],
