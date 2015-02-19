@@ -38,6 +38,7 @@
 
 #include <QMainWindow>
 #include <QtWebKitWidgets>
+#include <QNetworkInterface>
 #include <QUrl>
 #include <QtNetwork>
 #include <QVector>
@@ -56,6 +57,8 @@ extern QVector<QString> panToLocations;
 extern QVariant MarkerID;
 extern bool ColorUpdated;
 extern bool EditBox;
+
+bool isConnectedToNetwork();
 
 struct NOAAStationData
 {
