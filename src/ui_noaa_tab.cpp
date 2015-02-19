@@ -194,7 +194,7 @@ void MainWindow::on_Button_FetchData_clicked()
     Units = ui->combo_noaaunits->currentText();
     Product = retrieveProduct(2);
     ProductIndex = ui->combo_NOAAProduct->currentIndex();
-    if(ProductIndex == 0 || ProductIndex == 1)
+    if(ProductIndex == 0 || ProductIndex == 1 || ProductIndex == 2)
         Datum = ui->combo_noaadatum->currentText();
     else if(ProductIndex == 3 || ProductIndex == 5
          || ProductIndex == 4 || ProductIndex == 6 || ProductIndex == 7)
