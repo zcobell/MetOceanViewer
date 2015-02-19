@@ -39,6 +39,15 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    if(!isConnectedToNetwork())
+    {
+        QMessageBox::critical(0,"Internet Connection Not Detected",
+                              "No internet connection was detected.\n "
+                              "The program will now be terminated.");
+        return 1;
+    }
+
     MainWindow w;
     w.show();
     return a.exec();

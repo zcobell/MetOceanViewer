@@ -297,19 +297,12 @@
                <property name="autoFillBackground">
                 <bool>false</bool>
                </property>
+               <property name="currentText">
+                <string>MSL</string>
+               </property>
                <item>
                 <property name="text">
-                 <string>MLLW</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MLW</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MSL</string>
+                 <string>MHHW</string>
                 </property>
                </item>
                <item>
@@ -319,12 +312,42 @@
                </item>
                <item>
                 <property name="text">
-                 <string>MHHW</string>
+                 <string>MTL</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MSL</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MLW</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MLLW</string>
                 </property>
                </item>
                <item>
                 <property name="text">
                  <string>NAVD</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>LWI</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>HWI</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>IGLD</string>
                 </property>
                </item>
                <item>
