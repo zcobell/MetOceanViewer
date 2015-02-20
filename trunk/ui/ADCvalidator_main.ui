@@ -298,7 +298,10 @@
                 <bool>false</bool>
                </property>
                <property name="currentText">
-                <string>MHHW</string>
+                <string>MSL</string>
+               </property>
+               <property name="currentIndex">
+                <number>3</number>
                </property>
                <item>
                 <property name="text">
