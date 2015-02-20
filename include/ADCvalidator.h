@@ -57,6 +57,7 @@ extern QVector<QString> panToLocations;
 extern QVariant MarkerID;
 extern bool ColorUpdated;
 extern bool EditBox;
+extern QString SessionFile;
 
 bool isConnectedToNetwork();
 
@@ -148,6 +149,14 @@ private slots:
 
     void OpenExternalBrowser(const QUrl & url);
 
+    void on_actionAbout_triggered();
+
+    void on_actionLoad_Session_triggered();
+
+    void on_actionSave_Session_triggered();
+
+    void on_actionSave_Session_As_triggered();
+
 private:
     Ui::MainWindow *ui;
 
@@ -182,6 +191,8 @@ private:
     QString FormatIMEDSString(IMEDS MyStation, int index, double unitConvert);
 
     int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
+
+    int saveSession();
 
     void NETCDF_ERR(int status);
 };
