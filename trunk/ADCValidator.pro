@@ -52,16 +52,19 @@ SOURCES += src/main.cpp\
     src/timeseries_data.cpp \
     src/timeseries_functions.cpp \
     src/timeseries_add_data.cpp \
-    src/ui_timeseries_tab.cpp
+    src/ui_timeseries_tab.cpp \
+    src/about_dialog.cpp
 
 HEADERS  += include/ADCvalidator.h \
     include/hwm.h \
     include/timeseries_add_data.h \
     include/timeseries.h \
-    version.h
+    include/about_dialog.h \
+    version.h \
 
 FORMS    += ui/ADCvalidator_main.ui \
-    ui/timeseries_add_data.ui
+    ui/timeseries_add_data.ui \
+    ui/about_dialog.ui
 
 OTHER_FILES +=
 
@@ -88,3 +91,8 @@ RC_FILE = resources.rc
 
 QMAKE_CXXFLAGS_RELEASE += -O3
 QMAKE_CXXFLAGS_DEBUG += -O0
+
+#...Gets the SVN Revision and appends it to the versioning in the code
+VSN = $$system(svnversion)
+VERSTR = '\\"$${VSN}\\"'  # place quotes around the version string
+DEFINES += SVER=\"$${VERSTR}\" # create a VER macro containing the version string

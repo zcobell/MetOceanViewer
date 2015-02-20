@@ -35,7 +35,10 @@
 
 #include <ADCvalidator.h>
 #include <ui_ADCvalidator_main.h>
+#include <about_dialog.h>
 #include <netcdf.h>
+
+QString SessionFile;
 
 //Simple delay function which will pause execution for a number of seconds
 void MainWindow::delay(int delayTime)
@@ -242,4 +245,161 @@ bool isConnectedToNetwork(){
     }
 
     return result;
+}
+
+void MainWindow::on_actionAbout_triggered()
+{
+    about_dialog aboutWindow;
+    aboutWindow.setModal(false);
+    aboutWindow.exec();
+    return;
+}
+
+void MainWindow::on_actionLoad_Session_triggered()
+{
+    QString LoadFile = QFileDialog::getOpenFileName(this,"Open Session...",PreviousDirectory,"ADCIRC Validator Sessions (*.avs)");
+
+    if(LoadFile==NULL)
+        return;
+
+    SessionFile = LoadFile;
+
+    QMessageBox::information(this,"Not yet...","Feature not yet implemented.");
+    return;
+}
+
+void MainWindow::on_actionSave_Session_triggered()
+{
+    saveSession();
+    return;
+}
+
+void MainWindow::on_actionSave_Session_As_triggered()
+{
+    QString SaveFile = QFileDialog::getSaveFileName(this,"Save Session...",PreviousDirectory,"ADCIRC Validatior Sessions (*.avs)");
+    if(SaveFile!=NULL)
+    {
+        SessionFile = SaveFile;
+        saveSession();
+    }
+    return;
+}
+
+int MainWindow::saveSession()
+{
+    int ierr,ncid,i;
+    int dimid_ntimeseries;
+    int varid_filename,varid_colors,varid_units,varid_names;
+    int varid_xshift,varid_yshift,varid_type,varid_coldstart;
+    int varid_stationfile;
+    int dims_1d[1];
+    int nTimeseries;
+    unsigned int start[1];
+    unsigned int count[1];
+    unsigned int iu;
+    double mydatadouble[1];
+    const char * mydatastring[1];
+
+    QFile Session(SessionFile);
+
+    QVector<QString> filenames_ts;
+    QVector<QString> filetype_ts;
+    QVector<QString> colors_ts;
+    QVector<double> units_ts;
+    QVector<QString> seriesname_ts;
+    QVector<double> xshift_ts;
+    QVector<double> yshift_ts;
+    QVector<QString> date_ts;
+    QVector<QString> stationfile_ts;
+
+    if(SessionFile==NULL)
+    {
+        QString SaveFile = QFileDialog::getSaveFileName(this,"Save Session...",PreviousDirectory,"ADCIRC Validatior Sessions (*.avs)");
+        if(SaveFile==NULL)
+            return 0;
+    }
+
+    if(Session.exists())
+        Session.remove();
+
+    ierr = nc_create(SessionFile.toStdString().c_str(),NC_NETCDF4,&ncid);
+
+    //Start setting up the definitions
+    nTimeseries = ui->table_IMEDSData->rowCount();
+
+    filenames_ts.resize(nTimeseries);
+    colors_ts.resize(nTimeseries);
+    units_ts.resize(nTimeseries);
+    seriesname_ts.resize(nTimeseries);
+    xshift_ts.resize(nTimeseries);
+    yshift_ts.resize(nTimeseries);
+    date_ts.resize(nTimeseries);
+    stationfile_ts.resize(nTimeseries);
+    filetype_ts.resize(nTimeseries);
+
+    for(i=0;i<nTimeseries;i++)
+    {
+        filenames_ts[i] = ui->table_IMEDSData->item(i,0)->text();
+        seriesname_ts[i] = ui->table_IMEDSData->item(i,1)->text();
+        colors_ts[i] = ui->table_IMEDSData->item(i,2)->text();
+        units_ts[i] = ui->table_IMEDSData->item(i,3)->text().toDouble();
+        xshift_ts[i] = ui->table_IMEDSData->item(i,4)->text().toDouble();
+        yshift_ts[i] = ui->table_IMEDSData->item(i,5)->text().toDouble();
+        date_ts[i] = ui->table_IMEDSData->item(i,7)->text();
+        filetype_ts[i] = ui->table_IMEDSData->item(i,8)->text();
+        stationfile_ts[i] = ui->table_IMEDSData->item(i,10)->text();
+    }
+
+    ierr = nc_def_dim(ncid,"ntimeseries",static_cast<size_t>(nTimeseries),&dimid_ntimeseries);
+
+    dims_1d[0] = dimid_ntimeseries;
+    ierr = nc_def_var(ncid,"timeseries_filename",NC_STRING,1,dims_1d,&varid_filename);
+    ierr = nc_def_var(ncid,"timeseries_colors",NC_STRING,1,dims_1d,&varid_colors);
+    ierr = nc_def_var(ncid,"timeseries_names",NC_STRING,1,dims_1d,&varid_names);
+    ierr = nc_def_var(ncid,"timeseries_filetype",NC_STRING,1,dims_1d,&varid_type);
+    ierr = nc_def_var(ncid,"timeseries_coldstartdate",NC_STRING,1,dims_1d,&varid_coldstart);
+    ierr = nc_def_var(ncid,"timeseries_stationfile",NC_STRING,1,dims_1d,&varid_coldstart);
+    ierr = nc_def_var(ncid,"timeseries_units",NC_DOUBLE,1,dims_1d,&varid_units);
+    ierr = nc_def_var(ncid,"timeseries_xshift",NC_DOUBLE,1,dims_1d,&varid_xshift);
+    ierr = nc_def_var(ncid,"timeseries_yshift",NC_DOUBLE,1,dims_1d,&varid_yshift);
+
+    ierr = nc_enddef(ncid);
+
+    for(iu=0;iu<static_cast<unsigned int>(nTimeseries);iu++)
+    {
+        start[0] = iu;
+        count[0] = 1;
+
+        mydatastring[0]  = filenames_ts[0].toStdString().c_str();
+        ierr  = nc_put_var1_string(ncid,varid_filename,start,mydatastring);
+
+        mydatastring[0]  = seriesname_ts[0].toStdString().c_str();
+        ierr  = nc_put_var1_string(ncid,varid_names,start,mydatastring);
+
+        mydatastring[0]  = colors_ts[0].toStdString().c_str();
+        ierr  = nc_put_var1_string(ncid,varid_colors,start,mydatastring);
+
+        mydatastring[0]  = date_ts[0].toStdString().c_str();
+        ierr  = nc_put_var1_string(ncid,varid_coldstart,start,mydatastring);
+
+        mydatastring[0]  = stationfile_ts[0].toStdString().c_str();
+        ierr  = nc_put_var1_string(ncid,varid_stationfile,start,mydatastring);
+
+        mydatastring[0]  = filetype_ts[0].toStdString().c_str();
+        ierr  = nc_put_var1_string(ncid,varid_type,start,mydatastring);
+
+        mydatadouble[0]  = xshift_ts[0];
+        ierr  = nc_put_var1_double(ncid,varid_xshift,start,mydatadouble);
+
+        mydatadouble[0]  = yshift_ts[0];
+        ierr  = nc_put_var1_double(ncid,varid_yshift,start,mydatadouble);
+
+        mydatadouble[0]  = units_ts[0];
+        ierr  = nc_put_var1_double(ncid,varid_units,start,mydatadouble);
+
+    }
+
+    ierr = nc_close(ncid);
+
+    return 0;
 }
