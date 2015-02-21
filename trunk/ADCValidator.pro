@@ -53,7 +53,8 @@ SOURCES += src/main.cpp\
     src/timeseries_functions.cpp \
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
-    src/about_dialog.cpp
+    src/about_dialog.cpp \
+    src/fileio.cpp
 
 HEADERS  += include/ADCvalidator.h \
     include/hwm.h \

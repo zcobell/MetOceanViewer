@@ -135,7 +135,7 @@ private slots:
 
     void on_button_processIMEDSData_clicked();
 
-    void on_check_imedsalldata_clicked(bool checked);
+    void on_check_imedsalldata_toggled(bool checked);
 
     void on_button_fitHWM_clicked();
 
@@ -194,7 +194,9 @@ private:
 
     int saveSession();
 
-    void NETCDF_ERR(int status);
+    int loadSession();
+
+    int NETCDF_ERR(int status);
 };
 
 

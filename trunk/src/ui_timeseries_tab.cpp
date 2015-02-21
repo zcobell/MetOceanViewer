@@ -439,7 +439,7 @@ void MainWindow::on_button_processIMEDSData_clicked()
     QApplication::restoreOverrideCursor();
 }
 
-void MainWindow::on_check_imedsalldata_clicked(bool checked)
+void MainWindow::on_check_imedsalldata_toggled(bool checked)
 {
     ui->date_imedsstart->setEnabled(!checked);
     ui->date_imedsend->setEnabled(!checked);
