@@ -58,6 +58,7 @@ extern QVariant MarkerID;
 extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
+extern QString AlternateFolder;
 
 bool isConnectedToNetwork();
 

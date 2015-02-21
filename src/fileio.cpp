@@ -37,6 +37,8 @@
 #include <ui_ADCvalidator_main.h>
 #include <netcdf.h>
 
+QString AlternateFolder;
+
 int MainWindow::saveSession()
 {
     int ierr,ncid,i;
@@ -48,6 +50,7 @@ int MainWindow::saveSession()
     int varid_autodate,varid_autoy;
     int dims_1d[1];
     int nTimeseries;
+    QString relFile,relPath;
     unsigned int start[1];
     unsigned int iu;
     double mydatadouble[1];
@@ -66,17 +69,25 @@ int MainWindow::saveSession()
     QVector<QString> date_ts;
     QVector<QString> stationfile_ts;
 
+    //See how we are approaching this routine. If "save as..." or "load" has not been clicked before
+    //get a file name to save as.
     if(SessionFile==NULL)
     {
-        QString SaveFile = QFileDialog::getSaveFileName(this,"Save Session...",PreviousDirectory,"ADCIRC Validatior Sessions (*.avs)");
+        QString SaveFile = QFileDialog::getSaveFileName(this,"Save Session...",
+                                                        PreviousDirectory,
+                                                        "ADCIRC Validatior Sessions (*.avs)");
         if(SaveFile==NULL)
             return 0;
         else
             SessionFile = SaveFile;
     }
 
+    //Remove the old file
     if(Session.exists())
         Session.remove();
+
+    //Get the path of the session file so we can save a relative path later
+    QDir CurrentDir(GetMyLeadingPath(SessionFile));
 
     ierr = NETCDF_ERR(nc_create(SessionFile.toStdString().c_str(),NC_NETCDF4,&ncid));
     if(ierr!=NC_NOERR)return 1;
@@ -201,7 +212,8 @@ int MainWindow::saveSession()
     {
         start[0] = iu;
 
-        mydatastring[0]  = filenames_ts[iu].toStdString().c_str();
+        relPath = CurrentDir.relativeFilePath(filenames_ts[iu]);
+        mydatastring[0]  = relPath.toStdString().c_str();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_filename,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
@@ -217,7 +229,8 @@ int MainWindow::saveSession()
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_coldstart,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatastring[0]  = stationfile_ts[iu].toStdString().c_str();
+        relPath = CurrentDir.relativeFilePath(stationfile_ts[iu]);
+        mydatastring[0]  = relPath.toStdString().c_str();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_stationfile,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
@@ -257,8 +270,10 @@ int MainWindow::loadSession()
     const char * mydatachar[1];
     double mydatadouble[1];
     int mydataint[1];
+    QMessageBox::StandardButton reply;
     QString filelocation,filename,series_name,color,type;
     QString coldstartstring,stationfile,stationfilepath;
+    QString BaseFile,CurrentDirectory,NewFile;
     double unitconvert,xshift,yshift;
     size_t temp_size_t;
     size_t start[1];
@@ -268,6 +283,7 @@ int MainWindow::loadSession()
     QDateTime ColdStart;
     ADCNC NetCDFData;
     ADCASCII ADCData;
+    bool continueToLoad,getNewFolder;
 
     QFile Session(SessionFile);
     if(!Session.exists())
@@ -401,6 +417,9 @@ int MainWindow::loadSession()
     nTimeseries = static_cast<int>(temp_size_t);
     nrow = 0;
 
+    //Get the location we are currently working in
+    CurrentDirectory = GetMyLeadingPath(SessionFile);
+
     for(i=0;i<nTimeseries;i++)
     {
         start[0] = static_cast<size_t>(i);
@@ -443,11 +462,86 @@ int MainWindow::loadSession()
         stationfilepath = QString(mydatachar[0]);
         stationfile = RemoveLeadingPath(stationfilepath);
 
+        continueToLoad = false;
+
+        filelocation = CurrentDirectory+"/"+filelocation;
+        BaseFile = RemoveLeadingPath(filelocation);
+
         QFile myfile(filelocation);
         if(!myfile.exists())
-            QMessageBox::critical(this,"ERROR","File "+filename+"could not be located. \n"+
-                                               "The data has been skipped.");
+        {
+            //The file wasn't found where we think it should be. Give the
+            //user a chance to specify an alternate data directory
+            if(AlternateFolder==NULL)
+            {
+                //If we haven't previously specified an alternate folder, inform the user and
+                //ask if they want to specify.
+                reply = QMessageBox::question(this,"File not found",
+                    "File not found in default location. Would you like to specify another?");
+                if(reply==QMessageBox::Yes)
+                {
+                    //Get an alternate location
+                    AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder");
+                    NewFile = AlternateFolder+"/"+BaseFile;
+                    QFile myfile(NewFile);
+                    if(!myfile.exists())
+                    {
+                        continueToLoad = false;
+                        QMessageBox::critical(this,"File Not Found","The file "+
+                                              BaseFile+" was not found and has been skipped.");
+                    }
+                    else
+                    {
+                        continueToLoad = true;
+                        filelocation = NewFile;
+                    }
+                }
+                else
+                    continueToLoad = false;
+            }
+            else
+            {
+                //Start by trying the previously specified alternate folder
+                NewFile = AlternateFolder+"/"+BaseFile;
+                QFile myfile(NewFile);
+                if(!myfile.exists())
+                {
+                    reply = QMessageBox::question(this,"File not found",
+                        "File not found in default location. Would you like to specify another?");
+                    if(reply==QMessageBox::Yes)
+                    {
+                        //Get an alternate location
+                        AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder");
+                        NewFile = AlternateFolder+"/"+BaseFile;
+                        QFile myfile(NewFile);
+                        if(!myfile.exists())
+                        {
+                            continueToLoad = false;
+                            QMessageBox::critical(this,"File Not Found","The file "+
+                                                  BaseFile+" was not found and has been skipped.");
+                        }
+                        else
+                        {
+                            continueToLoad = true;
+                            filelocation = NewFile;
+                        }
+                    }
+                    else
+                        continueToLoad = false;
+                }
+                else
+                {
+                    continueToLoad = true;
+                    filelocation = NewFile;
+                }
+            }
+        }
         else
+        {
+            continueToLoad = true;
+        }
+
+        if(continueToLoad)
         {
             //Build the table
             nrow = nrow + 1;

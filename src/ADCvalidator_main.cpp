@@ -37,6 +37,7 @@
 #include <ui_ADCvalidator_main.h>
 
 QString PreviousDirectory;
+QString SLASH;
 QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 QColor LineColor121Line,LineColorBounds;
 QColor DotColorHWM,LineColorRegression;
@@ -134,7 +135,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 #ifdef Q_OS_WIN
     PreviousDirectory = PreviousDirectory+"/Desktop";
 #endif
-
 
 }
 
