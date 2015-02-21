@@ -63,7 +63,7 @@ QString about_dialog::generateAboutText()
     QString text;
 
     text = "<html><body>" +
-            QString(VER_LEGALCOPYRIGHT_STR) + "<br><br>" +
+            QString(0xA9) + " Copyright 2015 Zach Cobell, ARCADIS <br><br>" +
             "<b>Version: </b> "+QString(VER_FILEVERSION_STR) + "<br><br>" +
             "<b>Subversion Revision: </b>"+QString(SVER) + "<br><br>" +
             "<b>External Libraries</b> <br><br>" +
