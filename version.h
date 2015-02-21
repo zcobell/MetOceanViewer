@@ -35,21 +35,10 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define VER_FILEVERSION             1,02,SVER
-#define VER_FILEVERSION_STR         "1.02." SVER
+#define VER_FILEVERSION             1,03,SVER
+#define VER_FILEVERSION_STR         "1.03." SVER
 
-#define VER_PRODUCTVERSION          1,02,SVER
-#define VER_PRODUCTVERSION_STR      "1.02" SVER
-
-#define VER_COMPANYNAME_STR         "ZachCobell"
-#define VER_FILEDESCRIPTION_STR     "ADCIRC Validator"
-#define VER_INTERNALNAME_STR        "ADCIRC_Validator"
-#define VER_LEGALCOPYRIGHT_STR      "Copyright 2015 Zach Cobell, ARCADIS"
-#define VER_LEGALTRADEMARKS1_STR    "All Rights Reserved"
-#define VER_LEGALTRADEMARKS2_STR    VER_LEGALTRADEMARKS1_STR
-#define VER_ORIGINALFILENAME_STR    "ADCValidator.exe"
-#define VER_PRODUCTNAME_STR         "ADCValidator"
-
-#define VER_COMPANYDOMAIN_STR       "http://www.zachcobell.com"
+#define VER_PRODUCTVERSION          1,03,SVER
+#define VER_PRODUCTVERSION_STR      "1.03" SVER
 
 #endif // VERSION_H
