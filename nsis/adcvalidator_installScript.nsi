@@ -1,6 +1,6 @@
 #---- LGPL --------------------------------------------------------------------
 #
-# Copyright (C)  ARCADIS, 2011-2013.
+# Copyright (C)  ARCADIS, 2011-2015.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -38,8 +38,8 @@
 !define COMPANYNAME "ARCADIS"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 1
-!define VERSIONMINOR 5
-!define VERSIONBUILD 102
+!define VERSIONMINOR 7
+!define VERSIONBUILD 103
 !define HELPURL "http://www.zachcobell.com/" # "Support Information" link
 !define UPDATEURL "http://www.zachcobell.com/" # "Product Updates" link
 !define ABOUTURL "http://www.zachcobell.com/" # "Publisher" link
