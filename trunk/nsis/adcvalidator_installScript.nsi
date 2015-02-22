@@ -39,7 +39,7 @@
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 1
 !define VERSIONMINOR 5
-!define VERSIONBUILD 100
+!define VERSIONBUILD 101
 !define HELPURL "http://www.zachcobell.com/" # "Support Information" link
 !define UPDATEURL "http://www.zachcobell.com/" # "Product Updates" link
 !define ABOUTURL "http://www.zachcobell.com/" # "Publisher" link
