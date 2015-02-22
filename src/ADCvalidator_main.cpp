@@ -136,6 +136,13 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     PreviousDirectory = PreviousDirectory+"/Desktop";
 #endif
 
+    //Check if the command line argument was passed
+    if(SessionFile!=NULL)
+    {
+        GetLeadingPath(SessionFile);
+        loadSession();
+    }
+
 }
 
 //Main destructor routine

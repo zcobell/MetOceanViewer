@@ -283,7 +283,7 @@ int MainWindow::loadSession()
     QDateTime ColdStart;
     ADCNC NetCDFData;
     ADCASCII ADCData;
-    bool continueToLoad,getNewFolder;
+    bool continueToLoad;
 
     QFile Session(SessionFile);
     if(!Session.exists())
@@ -481,7 +481,7 @@ int MainWindow::loadSession()
                 if(reply==QMessageBox::Yes)
                 {
                     //Get an alternate location
-                    AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder");
+                    AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder",PreviousDirectory);
                     NewFile = AlternateFolder+"/"+BaseFile;
                     QFile myfile(NewFile);
                     if(!myfile.exists())
@@ -511,7 +511,7 @@ int MainWindow::loadSession()
                     if(reply==QMessageBox::Yes)
                     {
                         //Get an alternate location
-                        AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder");
+                        AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder",PreviousDirectory);
                         NewFile = AlternateFolder+"/"+BaseFile;
                         QFile myfile(NewFile);
                         if(!myfile.exists())
