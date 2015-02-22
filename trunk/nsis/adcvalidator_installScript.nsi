@@ -33,13 +33,20 @@
 #
 #------------------------------------------------------------------------------
 
+#Get the SVN revision number for inclusion
+!tempfile "svnrev.txt"
+!appendfile "svnrev.txt" "!define SVN_REV "
+!system "svnversion ..\ >> svnrev.txt" 
+!include "svnrev.txt" 
+!delfile "svnrev.txt" 
+
 #Define some basic variables for the installer
 !define APPNAME "ADCIRC Validator"
 !define COMPANYNAME "ARCADIS"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 1
-!define VERSIONMINOR 7
-!define VERSIONBUILD 103
+!define VERSIONMINOR 8
+!define VERSIONBUILD ${SVN_REV}
 !define HELPURL "http://www.zachcobell.com/" # "Support Information" link
 !define UPDATEURL "http://www.zachcobell.com/" # "Product Updates" link
 !define ABOUTURL "http://www.zachcobell.com/" # "Publisher" link

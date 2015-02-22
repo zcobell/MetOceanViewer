@@ -87,9 +87,11 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, QString FileType,
-                                             QString StationFile, QString StationPath)
+                                             QString StationPath)
 {
-    QString ButtonStyle;
+    QString ButtonStyle,StationFile;
+
+    StationFile = MainWindow::RemoveLeadingPath(StationPath);
     ui->text_seriesname->setText(SeriesName);
     ui->text_filename->setText(Filename);
     ui->text_unitconvert->setText(QString::number(UnitConvert));
@@ -234,10 +236,13 @@ void add_imeds_data::on_browse_stationfile_clicked()
     QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
             PreviousDirectory,
             "Text File (*.txt) ;; Comma Separated File (*.csv) ;; All Files (*.*)");
-    StationFilePath = TempPath;
-    MainWindow::GetLeadingPath(TempPath);
-    QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
-    ui->text_stationfile->setText(TempFile);
+    if(TempPath!=NULL)
+    {
+        StationFilePath = TempPath;
+        MainWindow::GetLeadingPath(TempPath);
+        QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
+        ui->text_stationfile->setText(TempFile);
+    }
     return;
 }
 
