@@ -48,6 +48,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    //If the session file was dropped onto the executable,
+    //try to load it.
+    if(argc==2)
+        SessionFile = QCoreApplication::arguments().at(1);
+
     MainWindow w;
     w.show();
     return a.exec();
