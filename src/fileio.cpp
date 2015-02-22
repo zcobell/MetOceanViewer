@@ -453,7 +453,7 @@ int MainWindow::loadSession()
         if(ierr!=NC_NOERR)return 1;
         xshift = mydatadouble[0];
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_xshift,start,&mydatadouble));
+        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_yshift,start,&mydatadouble));
         if(ierr!=NC_NOERR)return 1;
         yshift = mydatadouble[0];
 
