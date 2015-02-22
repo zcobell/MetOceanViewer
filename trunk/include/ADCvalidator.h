@@ -93,6 +93,8 @@ public:
 
     static QString RemoveLeadingPath(QString Input);
 
+    int loadSession();
+
 private slots:
     void BeginGatherStations();
 
@@ -194,8 +196,6 @@ private:
     int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
 
     int saveSession();
-
-    int loadSession();
 
     int NETCDF_ERR(int status);
 };

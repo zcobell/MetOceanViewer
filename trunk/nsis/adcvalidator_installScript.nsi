@@ -32,34 +32,41 @@
 #  File: adcvalidator_installScript.nsi
 #
 #------------------------------------------------------------------------------
+
+#Define some basic variables for the installer
 !define APPNAME "ADCIRC Validator"
 !define COMPANYNAME "ARCADIS"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
-
 !define VERSIONMAJOR 1
 !define VERSIONMINOR 5
-!define VERSIONBUILD 97
-
+!define VERSIONBUILD 99
 !define HELPURL "http://www.zachcobell.com/" # "Support Information" link
 !define UPDATEURL "http://www.zachcobell.com/" # "Product Updates" link
 !define ABOUTURL "http://www.zachcobell.com/" # "Publisher" link
-
-# This is the size (in kB) of all the files copied into "Program Files"
 !define INSTALLSIZE 100760
+!define MUI_ICON "..\img\icon.ico"
 
-RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
+#Include files
+!include MUI2.nsh
+!include LogicLib.nsh
+
+RequestExecutionLevel admin
 
 # define installer name
-OutFile "adcvalidator_installer.exe"
+OutFile "adcvalidator_installer_v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
  
 # set desktop as install directory
 InstallDir $PROGRAMFILES32\ADCIRCValidator
 
-LicenseData "LGPL.txt"
-Name "${COMPANYNAME} - ${APPNAME}"
+# Set the name of the program
+Name "${APPNAME}"
+
+# Set the Icon
 Icon "..\img\icon.ico"
 
-!include LogicLib.nsh
+;--------------------------------
+;Macros
+;--------------------------------
 
 !macro VerifyUserIsAdmin
 UserInfo::GetAccountType
@@ -76,14 +83,39 @@ function .onInit
 	!insertmacro VerifyUserIsAdmin
 functionEnd
 
-#pages
-Page license
-Page directory
-Page instfiles
-UninstPage uninstConfirm
-UninstPage instfiles
+function un.onInit
+	SetShellVarContext all
+	!insertmacro VerifyUserIsAdmin
+functionEnd
 
-# default section start
+;--------------------------------
+
+;--------------------------------
+;Interface Settings
+
+  !define MUI_ABORTWARNING
+
+;--------------------------------
+;Pages
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_LICENSE "LGPL.txt"
+  !insertmacro MUI_PAGE_DIRECTORY
+  !insertmacro MUI_PAGE_INSTFILES
+  !insertmacro MUI_PAGE_FINISH
+  
+  !insertmacro MUI_UNPAGE_WELCOME
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+  !insertmacro MUI_UNPAGE_FINISH
+  
+;--------------------------------
+;Languages
+ 
+  !insertmacro MUI_LANGUAGE "English"
+
+;--------------------------------
+;Installer Sections
+
 Section "Install"
  
     # define output path
@@ -133,49 +165,43 @@ Section "Install"
     WriteUninstaller $INSTDIR\uninstaller.exe
 
     # Start Menu
-	CreateDirectory "$SMPROGRAMS\${COMPANYNAME}"
-	CreateShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\ADCValidator.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$DESKTOP\ADCIRCValidator.lnk" "$INSTDIR\ADCValidator.exe" ""
+	CreateDirectory "$SMPROGRAMS\${APPNAME}"
+	CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\ADCValidator.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$DESKTOP\ADCIRC Validator.lnk" "$INSTDIR\ADCValidator.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall ADCIRC Validator.lnk" "$INSTDIR\uninstaller.exe" ""
  
 	# Registry information for add/remove programs
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayName" "${COMPANYNAME} - ${APPNAME} - ${DESCRIPTION}"
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "InstallLocation" "$\"$INSTDIR$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayIcon" "$\"$INSTDIR\logo.ico$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "Publisher" "$\"${COMPANYNAME}$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "HelpLink" "$\"${HELPURL}$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "URLUpdateInfo" "$\"${UPDATEURL}$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "URLInfoAbout" "$\"${ABOUTURL}$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayVersion" "$\"${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}$\""
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "VersionMajor" ${VERSIONMAJOR}
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "VersionMinor" ${VERSIONMINOR}
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "UninstallString" "$\"$INSTDIR\uninstaller.exe$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "QuietUninstallString" "$\"$INSTDIR\uninstaller.exe$\" /S"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "InstallLocation" "$\"$INSTDIR$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$\"$INSTDIR\icon.ico$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "$\"${COMPANYNAME}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "HelpLink" "$\"${HELPURL}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "URLUpdateInfo" "$\"${UPDATEURL}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "URLInfoAbout" "$\"${ABOUTURL}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "$\"${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}$\""
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "VersionMajor" ${VERSIONMAJOR}
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "VersionMinor" ${VERSIONMINOR}
 	# There is no option for modifying or repairing the install
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "NoModify" 1
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "NoRepair" 1
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "NoModify" 1
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "NoRepair" 1
 	# Set the INSTALLSIZE constant (!defined at the top of this script) so Add/Remove Programs can accurately report the size
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
- 
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
+        
 SectionEnd
 
-function un.onInit
-	SetShellVarContext all
- 
-	#Verify the uninstaller - last chance to back out
-	MessageBox MB_OKCANCEL "Permanantly remove ${APPNAME}?" IDOK next
-		Abort
-	next:
-	!insertmacro VerifyUserIsAdmin
-functionEnd
- 
 # create a section to define what the uninstaller does.
 # the section will always be named "Uninstall"
 Section "Uninstall"
 
-    # Remove Start Menu launcher
-	Delete "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk"
+    # Remove Shortcuts
+	Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
+    Delete "$SMPROGRAMS\${APPNAME}\Uninstall ADCIRC Validator.lnk"
+    Delete "$DESKTOP\ADCIRC Validator.lnk"
+    
 	# Try to remove the Start Menu folder - this will only happen if it is empty
-	RMDir "$SMPROGRAMS\${COMPANYNAME}"
+	RMDir "$SMPROGRAMS\${APPNAME}"
     
     # now delete installed files
     Delete $INSTDIR\D3DCompiler_43.dll
@@ -220,6 +246,6 @@ Section "Uninstall"
     RMDir $INSTDIR
     
     # Remove uninstaller information from the registry
-	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}"
+	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
  
 SectionEnd
