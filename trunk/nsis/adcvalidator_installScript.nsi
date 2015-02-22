@@ -85,15 +85,32 @@ ${If} $0 != "admin" ;Require admin rights on NT4+
 ${EndIf}
 !macroend
  
-function .onInit
+Function .onInit
 	setShellVarContext all
 	!insertmacro VerifyUserIsAdmin
-functionEnd
-
-function un.onInit
+     
+  ReadRegStr $R0 HKLM \
+  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" \
+  "UninstallString"
+  StrCmp $R0 "" done
+ 
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+  "${APPNAME} is already installed. $\n$\nClick `OK` to remove the \
+  previous version or `Cancel` to cancel this upgrade." \
+  IDOK uninst
+  Abort
+ 
+;Run the uninstaller
+uninst:
+  ClearErrors
+  Exec $INSTDIR\uninstaller.exe
+done:
+ 
+FunctionEnd
+Function un.onInit
 	SetShellVarContext all
 	!insertmacro VerifyUserIsAdmin
-functionEnd
+FunctionEnd
 
 ;--------------------------------
 
@@ -249,7 +266,7 @@ Section "Uninstall"
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\icon.ico
     Delete $INSTDIR\ADCValidator.exe
-    Delete $INSTDIR\uninstaller.exe
+    Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
     
     # Remove uninstaller information from the registry
