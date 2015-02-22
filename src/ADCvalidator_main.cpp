@@ -141,6 +141,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     {
         GetLeadingPath(SessionFile);
         loadSession();
+        ui->MainTabs->setCurrentIndex(1);
     }
 
 }
