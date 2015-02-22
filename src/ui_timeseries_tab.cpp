@@ -129,7 +129,8 @@ void MainWindow::on_button_addrow_clicked()
         ui->table_IMEDSData->setItem(NumberOfRows-1,4,new QTableWidgetItem(QString::number(xadjust)));
         ui->table_IMEDSData->setItem(NumberOfRows-1,5,new QTableWidgetItem(QString::number(yadjust)));
         ui->table_IMEDSData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,7,new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
+        ui->table_IMEDSData->setItem(NumberOfRows-1,7,
+                                     new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
         ui->table_IMEDSData->setItem(NumberOfRows-1,8,new QTableWidgetItem(InputFileType));
         ui->table_IMEDSData->setItem(NumberOfRows-1,9,new QTableWidgetItem(InputStationFile));
         ui->table_IMEDSData->setItem(NumberOfRows-1,10,new QTableWidgetItem(StationFilePath));
@@ -239,13 +240,14 @@ void MainWindow::on_button_editrow_clicked()
     xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();
     yadjust = ui->table_IMEDSData->item(CurrentRow,5)->text().toDouble();
     FileType = ui->table_IMEDSData->item(CurrentRow,8)->text();
-    ColdStart = QDateTime::fromString(ui->table_IMEDSData->item(CurrentRow,7)->text().simplified(),"yyyy-MM-dd hh:mm:ss");
+    ColdStart = QDateTime::fromString(ui->table_IMEDSData->
+                                      item(CurrentRow,7)->text().simplified(),"yyyy-MM-dd hh:mm:ss");
     CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
+    StationFilePath = ui->table_IMEDSData->item(CurrentRow,10)->text();
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
                                       UnitConversion,xadjust,yadjust,
-                                      CellColor,ColdStart,FileType,
-                                      InputStationFile,StationFilePath);
+                                      CellColor,ColdStart,FileType,StationFilePath);
 
     int WindowStatus = AddWindow.exec();
 
@@ -257,7 +259,8 @@ void MainWindow::on_button_editrow_clicked()
         ui->table_IMEDSData->setItem(CurrentRow,4,new QTableWidgetItem(QString::number(xadjust)));
         ui->table_IMEDSData->setItem(CurrentRow,5,new QTableWidgetItem(QString::number(yadjust)));
         ui->table_IMEDSData->setItem(CurrentRow,6,new QTableWidgetItem(InputFilePath));
-        ui->table_IMEDSData->setItem(CurrentRow,7,new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
+        ui->table_IMEDSData->setItem(CurrentRow,7,new QTableWidgetItem(
+                                         InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
         ui->table_IMEDSData->setItem(CurrentRow,8,new QTableWidgetItem(InputFileType));
         ui->table_IMEDSData->setItem(CurrentRow,9,new QTableWidgetItem(InputStationFile));
         ui->table_IMEDSData->setItem(CurrentRow,10,new QTableWidgetItem(StationFilePath));
@@ -277,7 +280,7 @@ void MainWindow::on_button_editrow_clicked()
         }
 
         //If we need to, read the new IMEDS file into the appropriate slot
-        if(InputFilePath!=Filepath)
+        if(InputFilePath!=Filepath || ColdStart!=InputFileColdStart)
         {
             if(InputFileType=="IMEDS")
             {

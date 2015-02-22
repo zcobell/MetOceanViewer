@@ -477,7 +477,7 @@ int MainWindow::loadSession()
                 //If we haven't previously specified an alternate folder, inform the user and
                 //ask if they want to specify.
                 reply = QMessageBox::question(this,"File not found",
-                    "File not found in default location. Would you like to specify another?");
+                    "Data file not found in default location. Would you like to specify another?");
                 if(reply==QMessageBox::Yes)
                 {
                     //Get an alternate location
@@ -541,6 +541,85 @@ int MainWindow::loadSession()
             continueToLoad = true;
         }
 
+        if(type == "ADCIRC")
+        {
+            BaseFile = RemoveLeadingPath(stationfilepath);
+            stationfilepath = CurrentDirectory+"/"+stationfilepath;
+            QFile myfile(stationfilepath);
+            if(!myfile.exists())
+            {
+                //The file wasn't found where we think it should be. Give the
+                //user a chance to specify an alternate data directory
+                if(AlternateFolder==NULL)
+                {
+                    //If we haven't previously specified an alternate folder, inform the user and
+                    //ask if they want to specify.
+                    reply = QMessageBox::question(this,"File not found",
+                        "Station file not found in default location. Would you like to specify another?");
+                    if(reply==QMessageBox::Yes)
+                    {
+                        //Get an alternate location
+                        AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder",PreviousDirectory);
+                        NewFile = AlternateFolder+"/"+BaseFile;
+                        QFile myfile(NewFile);
+                        if(!myfile.exists())
+                        {
+                            continueToLoad = false;
+                            QMessageBox::critical(this,"File Not Found","The file "+
+                                                  BaseFile+" was not found and has been skipped.");
+                        }
+                        else
+                        {
+                            continueToLoad = true;
+                            stationfilepath = NewFile;
+                        }
+                    }
+                    else
+                        continueToLoad = false;
+                }
+                else
+                {
+                    //Start by trying the previously specified alternate folder
+                    NewFile = AlternateFolder+"/"+BaseFile;
+                    QFile myfile(NewFile);
+                    if(!myfile.exists())
+                    {
+                        reply = QMessageBox::question(this,"File not found",
+                            "File not found in default location. Would you like to specify another?");
+                        if(reply==QMessageBox::Yes)
+                        {
+                            //Get an alternate location
+                            AlternateFolder = QFileDialog::getExistingDirectory(this,"Select Folder",PreviousDirectory);
+                            NewFile = AlternateFolder+"/"+BaseFile;
+                            QFile myfile(NewFile);
+                            if(!myfile.exists())
+                            {
+                                continueToLoad = false;
+                                QMessageBox::critical(this,"File Not Found","The file "+
+                                                      BaseFile+" was not found and has been skipped.");
+                            }
+                            else
+                            {
+                                continueToLoad = true;
+                                stationfilepath = NewFile;
+                            }
+                        }
+                        else
+                            continueToLoad = false;
+                    }
+                    else
+                    {
+                        continueToLoad = true;
+                        stationfilepath = NewFile;
+                    }
+                }
+            }
+            else
+            {
+                continueToLoad = true;
+            }
+        }
+
         if(continueToLoad)
         {
             //Build the table
@@ -560,7 +639,7 @@ int MainWindow::loadSession()
             ui->table_IMEDSData->setItem(nrow-1,10,new QTableWidgetItem(stationfilepath));
             CellColor.setNamedColor(color);
             ui->table_IMEDSData->item(nrow-1,2)->setBackgroundColor(CellColor);
-            ColdStart.fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
+            ColdStart = QDateTime::fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
 
             //Read the data into the appropriate structure
             IMEDSData.resize(nrow);
@@ -585,7 +664,7 @@ int MainWindow::loadSession()
             }
             else if(type=="ADCIRC")
             {
-                ADCData = readADCIRCascii(filelocation,stationfile);
+                ADCData = readADCIRCascii(filelocation,stationfilepath);
                 if(!ADCData.success)
                     IMEDSData[nrow-1].success = false;
                 else

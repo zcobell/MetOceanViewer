@@ -70,8 +70,7 @@ public:
 
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, QString FileType, QString StationFile,
-                                 QString StationPath);
+                                 QDateTime ColdStart, QString FileType, QString StationPath);
 
 private slots:
 

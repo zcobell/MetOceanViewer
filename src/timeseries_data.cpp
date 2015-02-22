@@ -36,6 +36,7 @@
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
+#include <qdebug.h>
 
 IMEDS readIMEDS(QString filename)
 {
@@ -462,6 +463,7 @@ ADCASCII readADCIRCascii(QString filename, QString stationfile)
     }
     if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
     {
+        qDebug() << stationfile;
         QMessageBox::information(NULL,"ERROR","ERROR:"+StationFile.errorString());
         StationFile.close();
         return MyData;
