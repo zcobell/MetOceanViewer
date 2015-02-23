@@ -673,5 +673,7 @@ int MainWindow::loadSession()
 
         }
     }
+    ierr = NETCDF_ERR(nc_close(ncid));
+    if(ierr!=NC_NOERR)return 1;
     return 0;
 }
