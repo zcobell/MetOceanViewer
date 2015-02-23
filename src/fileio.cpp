@@ -277,7 +277,7 @@ int MainWindow::loadSession()
     double unitconvert,xshift,yshift;
     size_t temp_size_t;
     size_t start[1];
-    QDate tempdate;
+    QDate tempstartdate,tempenddate;
     QString tempstring;
     QColor CellColor;
     QDateTime ColdStart;
@@ -372,15 +372,15 @@ int MainWindow::loadSession()
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_startdate,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
-    tempstring = QString(mydatachar[0]).simplified();
-    tempdate.fromString(tempstring,"yyyy-MM-dd");
-    ui->date_imedsstart->setDate(tempdate);
+    tempstring = QString(mydatachar[0]);
+    tempstartdate = QDateTime::fromString(tempstring,"yyyy-MM-dd hh:mm:ss").date();
+    ui->date_imedsstart->setDate(tempstartdate);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_enddate,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
-    tempstring = QString(mydatachar[0]).simplified();
-    tempdate.fromString(tempstring,"yyyy-MM-dd");
-    ui->date_imedsend->setDate(tempdate);
+    tempstring = QString(mydatachar[0]);
+    tempenddate = QDateTime::fromString(tempstring,"yyyy-MM-dd hh:mm:ss").date();
+    ui->date_imedsend->setDate(tempenddate);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_ymin,&mydatadouble));
     if(ierr!=NC_NOERR)return 1;
@@ -649,7 +649,6 @@ int MainWindow::loadSession()
             if(type=="IMEDS")
             {
                 IMEDSData[nrow-1] = readIMEDS(filelocation);
-                UpdateIMEDSDateRange(IMEDSData[nrow-1]);
             }
             else if(type=="NETCDF")
             {
@@ -659,7 +658,6 @@ int MainWindow::loadSession()
                 else
                 {
                     IMEDSData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
-                    UpdateIMEDSDateRange(IMEDSData[nrow-1]);
                 }
             }
             else if(type=="ADCIRC")
@@ -670,7 +668,6 @@ int MainWindow::loadSession()
                 else
                 {
                     IMEDSData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
-                    UpdateIMEDSDateRange(IMEDSData[nrow-1]);
                 }
             }
 
