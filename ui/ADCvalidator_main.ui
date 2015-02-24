@@ -1500,11 +1500,23 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_blue_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="text">
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_darkblue.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_darkblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1538,11 +1550,23 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_lightblue_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="text">
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_lightblue.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_lightblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1576,11 +1600,23 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_dkgreen_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="text">
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_darkgreen.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_darkgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1611,11 +1647,23 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_ltgreen_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="text">
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_lightgreen.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_lightgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1649,11 +1697,23 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_yellow_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="text">
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_yellow.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_yellow.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1687,11 +1747,23 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_orange_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="text">
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_darkorange.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_darkorange.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -1725,8 +1797,20 @@
                     </item>
                     <item>
                      <widget class="QLabel" name="img_red_2">
+                      <property name="minimumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>15</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="pixmap">
-                       <pixmap>:/img/mm_20_red.png</pixmap>
+                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_red.png</pixmap>
                       </property>
                      </widget>
                     </item>
