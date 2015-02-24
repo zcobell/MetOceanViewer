@@ -68,6 +68,7 @@ add_imeds_data::~add_imeds_data()
 void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 {
     QString ButtonStyle;
+    InputFileColdStart.setTimeSpec(Qt::UTC);
     ui->text_seriesname->setText("Series "+QString::number(NumRowsInTable+1));
     ui->text_unitconvert->setText("1.0");
     ui->text_xadjust->setText("0.0");
@@ -90,7 +91,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString StationPath)
 {
     QString ButtonStyle,StationFile;
-
+    InputFileColdStart.setTimeSpec(Qt::UTC);
     StationFile = MainWindow::RemoveLeadingPath(StationPath);
     ui->text_seriesname->setText(SeriesName);
     ui->text_filename->setText(Filename);
