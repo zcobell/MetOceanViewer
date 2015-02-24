@@ -1,0 +1,389 @@
+<!-- 
+//---- LGPL --------------------------------------------------------------------
+//
+// Copyright (C)  ARCADIS, 2011-2015.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// contact: Zachary Cobell, zachary.cobell@arcadis-us.com
+// ARCADIS
+// 4999 Pearl East Circle, Suite 200
+// Boulder, CO 80301
+//
+// All indications and logos of, and references to, "ARCADIS" 
+// are registered trademarks of ARCADIS, and remain the property of
+// ARCADIS. All rights reserved.
+//
+//------------------------------------------------------------------------------
+// $Author$
+// $Date$
+// $Id$
+// $HeadURL$
+//------------------------------------------------------------------------------
+//  File: timeseries_maps.html
+//
+//------------------------------------------------------------------------------
+-->
+        
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="/rsc/js/jquery.js"></script>
+    <script src="/rsc/js/highcharts.js"></script>
+    <script src="/rsc/js/exporting.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script type="text/javascript">
+
+    var IMEDSMarkers = new Array();
+    var YMin,YMax;
+    var PlotTitle;
+    var XLabel,YLabel;
+    var ADCLabel,OBSLabel;
+    var ADCColorCode,OBSColorCode;
+    var AutoY, AutoX;
+    var XMin,XMax;
+
+    var Locations = new Array();
+    var DataSeries = new Array();
+    var SeriesOptions = new Array();
+    var StationName = new Array();
+    var map;
+    var LastInfoWindow;
+    var LastMarker = -1;
+
+    //Functions for the new version of the IMEDS map
+
+    window.onresize = function()
+    {
+        $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
+    }
+
+    //Build the data series
+    function allocateData(NumSeries)
+    {
+        Locations[0] = new Array();
+        Locations[1] = new Array();
+
+        for(var i=0;i<NumSeries;i++)
+        {
+            DataSeries[i] = new Array();
+        }
+        return;
+    }
+
+    //Set the locations array
+    function SetMarkerLocations(index,x,y,name)
+    {
+        Locations[0][index] = x;
+        Locations[1][index] = y;
+        StationName[index]  = name;
+        return;
+    }
+
+    //Save the time series data into a single 3 dimensional array
+    function AddDataSeries(SeriesIndex,ThisData)
+    {
+
+        DataSeries[SeriesIndex] = [];
+
+        var ThisDataSplit = ThisData.split(";");
+        for(var i=0;i<ThisDataSplit.length;i++)
+        {
+            DataSeries[SeriesIndex][i] = new Array();
+            ThisDataSplit2 = ThisDataSplit[i].split(":");
+
+            DataSeries[SeriesIndex][i][0] = ThisDataSplit2[0];
+            DataSeries[SeriesIndex][i][1] = ThisDataSplit2[1];
+            DataSeries[SeriesIndex][i][2] = ThisDataSplit2[2];
+            DataSeries[SeriesIndex][i][3] = ThisDataSplit2[3];
+            DataSeries[SeriesIndex][i][4] = ThisDataSplit2[4];
+            DataSeries[SeriesIndex][i][5] = ThisDataSplit2[5];
+
+            if(Number(DataSeries[SeriesIndex][i][5])<-400)
+                DataSeries[SeriesIndex][i][5] = -9999;
+        }
+        return;
+    }
+
+    //Save the options for each data series
+    function SetSeriesOptions(index,MyName,MyColor,MyUnit,MyXadjust,MyYadjust)
+    {
+        SeriesOptions[index] = { name: MyName, color: MyColor, unit: MyUnit, xadjust: MyXadjust, yadjust: MyYadjust };
+        return;
+    }
+
+    function AddToMap()
+    {
+        var i,x,y,NLocations,Latlng,contentString;
+
+        NLocations = Locations[1].length;
+
+        for(i=0;i<NLocations;i++)
+        {
+            x = Locations[0][i];
+            y = Locations[1][i];
+            Latlng = new google.maps.LatLng(y,x);
+            IMEDSMarkers[i] = new google.maps.Marker({
+                position: Latlng,
+                map: map,
+                title: StationName[i],
+                LocalID: i
+            });
+            google.maps.event.addListener(IMEDSMarkers[i], 'click', function() {
+                window.MarkerID = this.LocalID;
+                if(LastMarker!=-1)
+                    LastInfoWindow.close();
+                LastMarker = this.LocalID;
+                var xLocal = Locations[0][this.LocalID];
+                var yLocal = Locations[1][this.LocalID];
+                contentString = "<table>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Station Name:</b> </td>"+
+                                    "<td> "+StationName[this.LocalID]+
+                                    "</td>"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Location:</b> </td>"+
+                                    "<td> "+xLocal+"&deg, "+yLocal+"&deg"+
+                                "</tr>"+
+                                "</table>";
+
+                var InfoWindow = new google.maps.InfoWindow({content: contentString});
+                InfoWindow.open(map,this);
+                LastInfoWindow = InfoWindow;
+            });
+        }
+        return;
+    }
+
+    function getMarker()
+    {
+        return LastMarker;
+    }
+
+    function PlotIMEDSSeries()
+    {
+        var i,j,k;
+        var seriesList = new Array();
+        var Data = new Array();
+        var contentString;
+        var ThisData;
+        var multiplier,plusX,plusY;
+
+        //Create the data tables
+        for(i=0;i<DataSeries.length;i++)
+        {
+            Data[i]    = new Array();
+            multiplier = SeriesOptions[i].unit;
+            plusX      = SeriesOptions[i].xadjust;
+            plusY      = SeriesOptions[i].yadjust;
+
+            for(j=0;j<DataSeries[i].length-1;j++)
+            {
+                Data[i][j] = new Array();
+                ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
+                                    Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3])+plusX,
+                                    Number(DataSeries[i][j][4]),0,0);
+                Data[i][j][0] = ThisDate;
+                Data[i][j][1] = Number(DataSeries[i][j][5])+plusY;
+
+                //Null value check
+                if(Data[i][j][1]<-999)
+                    Data[i][j][1] = null;
+            }
+        }
+
+
+        //Create the series
+        var LocalData;
+        for(i=0;i<DataSeries.length;i++)
+        {
+            LocalData = Data[i];
+            seriesList[i] = {name: SeriesOptions[i].name, color: SeriesOptions[i].color, data: LocalData };
+        }
+
+        //Start setting up the plot
+        if(AutoY == "auto")
+            var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
+        else
+            var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
+
+        if(AutoX == "auto")
+            var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+        else
+            var xData = { min: XMin, max: XMax, type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+
+        var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
+        var plotToolTip = {
+                formatter: function() {
+                    return '<b>'+ this.series.name +'</b><br/>'+
+                    Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
+                    }
+                };
+
+        // Create the HighChart
+        $('#plot_area').highcharts({
+            chart: {
+                type: 'line',
+                zoomType: 'xy'
+            },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            title: {
+                text: PlotTitle
+            },
+            subtitle: {
+                text: 'Station '+StationName[LastMarker]
+            },
+            xAxis: xData,
+            yAxis: yData,
+            plotOptions: plotOption,
+            tooltip: plotToolTip,
+            series: seriesList
+        });
+
+        return;
+    }
+
+
+    function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,InXMin,InXMax)
+    {
+        PlotTitle = InPlotTitle;
+        YMin = InYMin;
+        YMax = InYMax;
+        XLabel = InXLabel;
+        YLabel = InYLabel;
+        AutoY = InAutoY;
+        AutoX = InAutoX;
+
+        if(AutoX=="none")
+        {
+            var Temp1 = InXMin.split("-");
+            var Temp2 = InXMax.split("-");
+            XMin      = Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
+            XMax      = Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
+        }
+        return;
+    }
+
+
+    //Old IMEDS map Functions
+    function clearMarkers()
+    {
+        while(IMEDSMarkers[0])
+        {
+            IMEDSMarkers.pop().setMap(null);
+        }
+    }
+
+    function fitMarkers()
+    {
+        var extent = new google.maps.LatLngBounds();
+        var nMarker = IMEDSMarkers.length;
+        for(i=0;i<nMarker;i++)
+        {
+            extent.extend(IMEDSMarkers[i].getPosition());
+        }
+        map.fitBounds(extent);
+    }
+
+      ////////////////////////////////////////////////////////////
+      //   PAN TO FUNCTION                                      //
+      //                                                        //
+      //  Function to pan to a different x,y,zoom on the map    //
+      ////////////////////////////////////////////////////////////
+      function panToIMEDS(x,y,z){
+        var center = new google.maps.LatLng(y,x);
+        map.setCenter(center);
+        map.setZoom(z);
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   INITIALIZE FUNCTION                                  //
+      //                                                        //
+      //  Function to initialize the google maps area on load   //
+      ////////////////////////////////////////////////////////////
+      function initializeIMEDS() {
+        //Initialize the map
+
+        window.LastInfo = -1;
+
+        var myOptions = {
+          center: new google.maps.LatLng(29.5, -91.5),
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true,
+          streetViewControl: false,
+          panControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+          zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+        var logoControlDiv = document.createElement('DIV');
+        var logoControl = new ArcadisLogo(logoControlDiv);
+        logoControlDiv.index = 0; // used for ordering
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+       }
+
+      function ArcadisLogo(controlDiv) {
+            controlDiv.style.padding = '5px';
+            var logo = document.createElement('IMG');
+            logo.src = 'qrc:/rsc/img/arcadis_logo.png';
+            logo.style.cursor = 'pointer';
+            controlDiv.appendChild(logo);
+
+            google.maps.event.addDomListener(logo, 'click', function() {
+                window.location = 'http://www.arcadis-us.com';
+            });
+      }
+
+        google.maps.event.addDomListener(window, "resize", function() {
+         var center = map.getCenter();
+         google.maps.event.trigger(map, "resize");
+         map.setCenter(center);
+        });
+
+
+    </script>
+  </head>
+  <body onload="initializeIMEDS()">
+      <div style="height:100%; width: 100%; display: table">
+          <div style="display: table-row">
+            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
+            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
+          </div>
+      </div>
+  </body>
+</html>
+

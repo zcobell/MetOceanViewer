@@ -1,0 +1,726 @@
+<!-- 
+//---- LGPL --------------------------------------------------------------------
+//
+// Copyright (C)  ARCADIS, 2011-2015.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// contact: Zachary Cobell, zachary.cobell@arcadis-us.com
+// ARCADIS
+// 4999 Pearl East Circle, Suite 200
+// Boulder, CO 80301
+//
+// All indications and logos of, and references to, "ARCADIS" 
+// are registered trademarks of ARCADIS, and remain the property of
+// ARCADIS. All rights reserved.
+//
+//------------------------------------------------------------------------------
+// $Author$
+// $Date$
+// $Id$
+// $HeadURL$
+//------------------------------------------------------------------------------
+//  File: noaa_maps.html
+//
+//------------------------------------------------------------------------------
+-->
+        
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="/rsc/js/jquery.js"></script>
+    <script src="/rsc/js/jquery.ui.draggable.js"></script>
+    <script src="/rsc/js/jquery.alerts.js"></script>
+    <link href="/rsc/js/jquery.alerts.css" rel="stylesheet" type="text/css" media="screen" />
+    <script src="/rsc/js/highcharts.js"></script>
+    <script src="/rsc/js/exporting.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script src="/rsc/js/markercluster.js"></script>
+    <script type="text/javascript">
+
+    var map;
+    var markers = [];
+    var markerData = [];
+    var markerNames = [];
+    var mc;
+    var loaded = 0;
+    var NOAALIST = new Array();
+
+    window.onresize = function()
+    {
+        $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
+    }
+
+    function clearMarkers()
+    {
+        setAllMap(null);
+    }
+
+    function repaint()
+    {
+        google.maps.event.trigger(map,'resize');
+    }
+
+    function setAllMap(map) {
+      for (var i = 0; i < markers.length; i++) {
+        markers[i].setMap(map);
+      }
+    }
+
+    function addNOAAStation(x,y,ID,MarkerNumber,StationName){
+
+          var TempMarkerData = [];
+          TempMarkerData[0] = x;
+          TempMarkerData[1] = y;
+          TempMarkerData[2] = ID;
+          TempMarkerData[3] = MarkerNumber;
+
+          markerData.push(TempMarkerData);
+          markerNames.push(StationName);
+
+    }
+
+    function NOAAMarkers()
+    {
+        var Temp;
+        var TempMarkerData = [];
+
+        NOAAArraySetup();
+
+        for(var i=1;i<NOAALIST.length;i++)
+        {
+            Temp = NOAALIST[i].split("#");
+            TempMarkerData = [];
+            TempMarkerData[0] = Number(Temp[1]);
+            TempMarkerData[1] = Number(Temp[2]);
+            TempMarkerData[2] = Number(Temp[0]);
+            TempMarkerData[3] = i;
+            markerData.push(TempMarkerData);
+            markerNames.push(Temp[3]);
+        }
+
+        addMarkersToMap();
+        fitMarkers();
+    }
+
+    function fitMarkers()
+    {
+        var extent = new google.maps.LatLngBounds();
+        var nMarker = markers.length;
+        for(i=0;i<nMarker;i++)
+        {
+            extent.extend(markers[i].getPosition());
+        }
+        map.fitBounds(extent);
+    }
+
+    function addMarkersToMap()
+    {
+
+          var x,y,ID,MarkerNumber,StationName;
+          var myLatlng;
+          var nMarkers = markerData.length;
+          var infoWindow = null;
+          var link;
+
+          var infowindow = new google.maps.InfoWindow({content: "holding..." });
+
+          for(var i = 1; i < nMarkers; i++)
+          {
+
+            x = markerData[i][0];
+            y = markerData[i][1];
+            ID = markerData[i][2];
+            MarkerNumber = markerData[i][3];
+            StationName = markerNames[i];
+
+            myLatlng = new google.maps.LatLng(y,x);
+
+            link = "<a href=http://tidesandcurrents.noaa.gov/stationhome.html?id="+ID+">Click Here</a>";
+
+            var contentString = "<table>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Location:</b> </td>"+
+                                    "<td> "+x+"&deg, "+y+"&deg"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Station Number:</b> </td>"+
+                                    "<td> "+String(ID)+"</td>"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Station Name:</b> </td>"+
+                                    "<td> "+StationName+"</td>"+
+                                "</tr>"+
+                                "<tr>"+
+                                    "<td align=\"right\"> <b>Homepage:</b> </td>"+
+                                    "<td> "+link+"</td>"+
+                                "</tr>"+
+                            "</table>";
+
+            var marker = new google.maps.Marker({
+              position: myLatlng,
+              map: map,
+              title: StationName,
+              html: contentString,
+              stn: ID
+            });
+            markers.push(marker);
+        }
+        mc.addMarkers(markers);
+
+        for(var i = 0; i < markers.length; i++)
+        {
+            marker = markers[i];
+            google.maps.event.addListener(marker, 'click', function () {
+                infowindow.setContent(this.html);
+                infowindow.open(map, this);
+                window.markerID = this.stn;
+                window.markerName = this.title;
+                });
+        }
+
+        return;
+
+      }
+
+      function returnStationID(){
+        return window.markerID;
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   PAN TO FUNCTION                                      //
+      //                                                        //
+      //  Function to pan to a different x,y,zoom on the map    //
+      ////////////////////////////////////////////////////////////
+      function panTo(x,y,z){
+        var center = new google.maps.LatLng(y,x);
+        map.setCenter(center);
+        map.setZoom(z);
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   INITIALIZE FUNCTION                                  //
+      //                                                        //
+      //  Function to initialize the google maps area on load   //
+      ////////////////////////////////////////////////////////////
+      function initialize() {
+        //Initialize the map
+
+        window.LastInfo = -1;
+        var myOptions = {
+          center: new google.maps.LatLng(29.5, -91.5),
+          zoom: 1,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true,
+          streetViewControl: false,
+          panControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+          zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+        var logoControlDiv = document.createElement('DIV');
+        var logoControl = new ArcadisLogo(logoControlDiv);
+        logoControlDiv.index = 0; // used for ordering
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+        window.markerID = -1;
+        mc = new MarkerClusterer(map);
+        NOAAMarkers();
+
+       }
+
+        google.maps.event.addDomListener(window, "resize", function() {
+         var center = map.getCenter();
+         google.maps.event.trigger(map, "resize");
+         map.setCenter(center);
+        });
+
+
+      ////////////////////////////////////////////////////////////
+      //   DRAWNOAADATA                                         //
+      //                                                        //
+      //  Plot the NOAA data on the google chart api            //
+      ////////////////////////////////////////////////////////////
+      function drawNOAAData(RawData,Datum,Units,Product,ErrorString) {
+
+        //Split by rows
+        RawData2 = new Array();
+        RawData2 = RawData.split(";");
+        NOAAData = new Array();
+
+        //Split the rows into their pieces
+        if(RawData2.length<5)
+        {
+            jAlert('The following error was returned from the NOAA server: \n\n'+ErrorString,'NOAA Data Retreival Error');
+            return;
+        }
+
+        var TempData = new Array();
+        for(var i=0;i<RawData2.length;i++)
+        {
+            TempData = RawData2[i].split(":");
+            NOAAData[i] = new Array();
+            for(var j=0;j<TempData.length;j++)
+                NOAAData[i][j] = TempData[j];
+        }
+
+        var PlottingData = new Array();
+        idx2=-1;
+        var ThisDate;
+        var ThisData;
+        for( var idx=0;idx<NOAAData.length;idx++)
+        {
+            ThisDate = Date.UTC(Number(NOAAData[idx][0]),Number(NOAAData[idx][1])-1,
+                                Number(NOAAData[idx][2]),Number(NOAAData[idx][3]),
+                                Number(NOAAData[idx][4]),0,0);
+            ThisData = Number(NOAAData[idx][5]);
+            if(!isNaN(ThisDate) && !isNaN(ThisData) && (ThisData!=0))
+            {
+                idx2 = idx2 + 1;
+                PlottingData[idx2]     = new Array();
+                PlottingData[idx2][0]  = ThisDate;
+                PlottingData[idx2][1]  = ThisData;
+            }
+        }
+
+        // Create the HighChart
+        $('#plot_area').highcharts({
+            chart: {
+                type: 'line',
+                zoomType: 'xy'
+            },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            title: {
+                text: 'NOAA Gauge Data'
+            },
+            subtitle: {
+                text: 'Station '+window.markerID+' - '+window.markerName
+            },
+            xAxis: {
+                type: 'datetime',
+                title: 'Date (GMT)',
+                dateTimeLabelFormats: { // don't display the dummy year
+                    month: '%e. %b',
+                    year: '%b'
+                },
+                gridLineWidth: 1
+            },
+            yAxis: {
+                labels: {format: '{value:.2f}'},
+                title: {
+                    text: Product+" ("+Units+", "+Datum+")"
+                },
+                alternateGridColor: '#EEEEEE'
+            },
+            plotOptions: {
+                series: {
+                    marker: {
+                        enabled: false
+                    },
+                    animation: {
+                       enabled: true,
+                       duration: 1000,
+                       easing: 'linear'
+                    },
+                    gridLineWidth: 1
+                }
+            },
+            tooltip: {
+                formatter: function() {
+                        return '<b>'+ this.series.name +'</b><br/>'+
+                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' '+Units;
+                }
+            },
+            series: [{
+                name: Product,
+                data: PlottingData
+            }]
+        });
+
+
+        return;
+      }
+
+      function ArcadisLogo(controlDiv) {
+            controlDiv.style.padding = '5px';
+            var logo = document.createElement('IMG');
+            logo.src = 'qrc:/rsc/img/arcadis_logo.png';
+            logo.style.cursor = 'pointer';
+            controlDiv.appendChild(logo);
+
+            google.maps.event.addDomListener(logo, 'click', function() {
+                window.location = 'http://www.arcadis-us.com';
+            });
+      }
+
+    function NOAAArraySetup()
+    {
+    NOAALIST[1] = "8732828#-87.8250#30.4167#Weeks Bay"
+    NOAALIST[2] = "8735180#-88.0750#30.2500#Dauphin Island"
+    NOAALIST[3] = "8735391#-88.0880#30.5652#Dog River Bridge"
+    NOAALIST[4] = "8735523#-88.1139#30.4437#East Fowl River Bridge"
+    NOAALIST[5] = "8736897#-88.0583#30.6483#Coast Guard Sector Mobile"
+    NOAALIST[6] = "8737048#-88.0433#30.7083#Mobile State Docks"
+    NOAALIST[7] = "8737138#-88.0736#30.7819#Chickasaw Creek"
+    NOAALIST[8] = "8738043#-88.1586#30.3766#West Fowl River Bridge"
+    NOAALIST[9] = "8739803#-88.2477#30.4057#Bayou La Batre Bridge"
+    NOAALIST[10] = "9450460#-131.6262#55.3318#Ketchikan"
+    NOAALIST[11] = "9451054#-134.6470#56.2467#Port Alexander"
+    NOAALIST[12] = "9451600#-135.3420#57.0517#Sitka"
+    NOAALIST[13] = "9452210#-134.4120#58.2983#Juneau"
+    NOAALIST[14] = "9452400#-135.3270#59.4500#Skagway"
+    NOAALIST[15] = "9452634#-136.3469#58.1947#Elfin Cove"
+    NOAALIST[16] = "9453220#-139.7334#59.5485#Yakutat, Yakutat Bay"
+    NOAALIST[17] = "9454050#-145.7530#60.5583#Cordova"
+    NOAALIST[18] = "9454240#-146.3620#61.1250#Valdez"
+    NOAALIST[19] = "9455090#-149.4267#60.1200#Seward"
+    NOAALIST[20] = "9455500#-151.7199#59.4405#Seldovia"
+    NOAALIST[21] = "9455760#-151.3980#60.6833#Nikiski"
+    NOAALIST[22] = "9455920#-149.8900#61.2383#Anchorage"
+    NOAALIST[23] = "9457292#-152.5120#57.7317#Kodiak Island"
+    NOAALIST[24] = "9457743#-154.0526#56.7279#Aiaktalik Island"
+    NOAALIST[25] = "9457804#-154.2470#56.8983#Alitak"
+    NOAALIST[26] = "9459450#-160.5020#55.3367#Sand Point"
+    NOAALIST[27] = "9459881#-162.3270#55.0617#King Cove"
+    NOAALIST[28] = "9461380#-176.6320#51.8633#Adak Island"
+    NOAALIST[29] = "9461710#-174.1730#52.2317#Atka"
+    NOAALIST[30] = "9462450#-168.8713#52.9406#Nikolski"
+    NOAALIST[31] = "9462620#-166.5370#53.8800#Unalaska"
+    NOAALIST[32] = "9462808#-164.7457#54.3936#Scotch Cap, Unimak Island, AK"
+    NOAALIST[33] = "9463502#-160.5620#55.9900#Port Moller"
+    NOAALIST[34] = "9464212#-170.2852#57.1253#Village Cove, St Paul Island"
+    NOAALIST[35] = "9466153#-162.4102#60.2703#Helmick Point"
+    NOAALIST[36] = "9468756#-165.4300#64.5000#Nome, Norton Sound"
+    NOAALIST[37] = "9491094#-164.0650#67.5767#Red Dog Dock"
+    NOAALIST[38] = "9497645#-148.5270#70.4000#Prudhoe Bay"
+    NOAALIST[39] = "2695540#-64.7033#32.3734#Bermuda Esso Pier"
+    NOAALIST[40] = "9410170#-117.1736#32.7142#San Diego"
+    NOAALIST[41] = "9410230#-117.2580#32.8667#La Jolla"
+    NOAALIST[42] = "9410660#-118.2720#33.7200#Los Angeles"
+    NOAALIST[43] = "9410689#-118.2200#33.7650#Gerald Desmond Bridge Air Gap"
+    NOAALIST[44] = "9410840#-118.5000#34.0083#Santa Monica"
+    NOAALIST[45] = "9411340#-119.6850#34.4083#Santa Barbara"
+    NOAALIST[46] = "9411406#-120.6730#34.4683#Oil Platform Harvest"
+    NOAALIST[47] = "9412110#-120.7600#35.1767#Port San Luis"
+    NOAALIST[48] = "9413450#-121.8880#36.6050#Monterey"
+    NOAALIST[49] = "9414290#-122.4650#37.8067#San Francisco"
+    NOAALIST[50] = "9414304#-122.3728#37.8044#Oakland Bay Bridge, D-E Span Air Gap"
+    NOAALIST[51] = "9414523#-122.2100#37.5067#Redwood City"
+    NOAALIST[52] = "9414575#-122.0230#37.4650#Coyote Creek"
+    NOAALIST[53] = "9414750#-122.2983#37.7717#Alameda"
+    NOAALIST[54] = "9414764#-122.2820#37.7950#Oakland Inner Harbor"
+    NOAALIST[55] = "9414848#-122.3170#37.9000#Stege Marsh"
+    NOAALIST[56] = "9414863#-122.4000#37.9283#Richmond"
+    NOAALIST[57] = "9414958#-122.6785#37.9080#Bolinas, Bolinas Lagoon"
+    NOAALIST[58] = "9415020#-122.9767#37.9961#Point Reyes"
+    NOAALIST[59] = "9415102#-122.1252#38.0346#Martinez-Amorco Pier"
+    NOAALIST[60] = "9415144#-122.0395#38.0560#Port Chicago"
+    NOAALIST[61] = "9416841#-123.7080#38.9133#Arena Cove"
+    NOAALIST[62] = "9417426#-123.8051#39.4258#NOYO HARBOR"
+    NOAALIST[63] = "9418767#-124.2170#40.7667#North Spit"
+    NOAALIST[64] = "9419750#-124.1830#41.7450#Crescent City"
+    NOAALIST[65] = "9751364#-64.7050#17.7500#Christiansted Harbor, St Croix"
+    NOAALIST[66] = "9751381#-64.7242#18.3182#Lameshur Bay, St John"
+    NOAALIST[67] = "9751401#-64.7538#17.6947#Lime Tree Bay"
+    NOAALIST[68] = "9751639#-64.9200#18.3358#Charlotte Amalie"
+    NOAALIST[69] = "9752619#-65.4438#18.1525#Isabel Segunda, Vieques Island"
+    NOAALIST[70] = "9752695#-65.4714#18.0939#Esperanza, Vieques Island"
+    NOAALIST[71] = "9753216#-65.6311#18.3352#Fajardo"
+    NOAALIST[72] = "9754228#-65.8330#18.0551#Yabucoa Harbor"
+    NOAALIST[73] = "9755371#-66.1164#18.4589#San Juan"
+    NOAALIST[74] = "9757112#-66.5281#17.8875#Caja de Muerto"
+    NOAALIST[75] = "9757809#-66.7024#18.4805#Arecibo"
+    NOAALIST[76] = "9759110#-67.0464#17.9701#Magueyes Island"
+    NOAALIST[77] = "9759394#-67.1600#18.2200#Mayaguez"
+    NOAALIST[78] = "9759938#-67.9385#18.0899#Mona Island"
+    NOAALIST[79] = "9761115#-61.8206#17.5907#Barbuda"
+    NOAALIST[80] = "8461490#-72.0900#41.3614#New London"
+    NOAALIST[81] = "8465705#-72.9083#41.2833#New Haven"
+    NOAALIST[82] = "8467150#-73.1817#41.1733#Bridgeport"
+    NOAALIST[83] = "8551762#-75.5883#39.5817#Delaware City"
+    NOAALIST[84] = "8551910#-75.5733#39.5583#Reedy Point"
+    NOAALIST[85] = "8551911#-75.5683#39.5600#Reedy Point Air Gap"
+    NOAALIST[86] = "8555889#-75.1133#38.9867#Brandywine Shoal Light"
+    NOAALIST[87] = "8557380#-75.1200#38.7817#Lewes"
+    NOAALIST[88] = "8594900#-77.0217#38.8733#Washington"
+    NOAALIST[89] = "8720030#-81.4650#30.6717#Fernandina Beach"
+    NOAALIST[90] = "8720218#-81.4300#30.3967#Mayport (Bar Pilots Dock)"
+    NOAALIST[91] = "8720219#-81.5583#30.3867#Dames Point"
+    NOAALIST[92] = "8720226#-81.6583#30.3200#Southbank Riverwalk, St Johns River"
+    NOAALIST[93] = "8720357#-81.6917#30.1917#I-295 Bridge, St Johns River"
+    NOAALIST[94] = "8720376#-81.5571#30.3845#Dames Point Bridge Air Gap"
+    NOAALIST[95] = "8720503#-81.6283#29.9783#Red Bay Point, St Johns River"
+    NOAALIST[96] = "8720625#-81.5483#29.8017#Racy Point, St Johns River"
+    NOAALIST[97] = "8721604#-80.5931#28.4158#Trident Pier"
+    NOAALIST[98] = "8722670#-80.0333#26.6117#Lake Worth Pier"
+    NOAALIST[99] = "8723214#-80.1618#25.7314#Virginia Key"
+    NOAALIST[100] = "8723970#-81.1050#24.7117#Vaca Key"
+    NOAALIST[101] = "8724580#-81.8079#24.5557#Key West"
+    NOAALIST[102] = "8725110#-81.8075#26.1317#Naples"
+    NOAALIST[103] = "8725520#-81.8712#26.6477#Fort Myers"
+    NOAALIST[104] = "8726384#-82.5621#27.6387#Port Manatee"
+    NOAALIST[105] = "8726520#-82.6269#27.7606#St Petersburg"
+    NOAALIST[106] = "8726607#-82.5527#27.8578#Old Port Tampa"
+    NOAALIST[107] = "8726667#-82.4250#27.9133#Mckay Bay Entrance"
+    NOAALIST[108] = "8726724#-82.8317#27.9783#Clearwater Beach"
+    NOAALIST[109] = "8727520#-83.0317#29.1350#Cedar Key"
+    NOAALIST[110] = "8728690#-84.9817#29.7267#Apalachicola"
+    NOAALIST[111] = "8729108#-85.6669#30.1523#Panama City"
+    NOAALIST[112] = "8729210#-85.8783#30.2133#Panama City Beach"
+    NOAALIST[113] = "8729840#-87.2112#30.4044#Pensacola"
+    NOAALIST[114] = "8670870#-80.9017#32.0333#Fort Pulaski"
+    NOAALIST[115] = "9044020#-83.1860#42.0909#Gibraltar"
+    NOAALIST[116] = "9044030#-83.1475#42.2024#Wyandotte"
+    NOAALIST[117] = "9044036#-83.0926#42.2989#Fort Wayne"
+    NOAALIST[118] = "9044049#-82.9299#42.3578#Windmill Point"
+    NOAALIST[119] = "9063020#-78.8905#42.8774#Buffalo"
+    NOAALIST[120] = "9063028#-79.0473#42.6913#Sturgeon Point"
+    NOAALIST[121] = "9063038#-80.0925#42.1540#Erie"
+    NOAALIST[122] = "9063053#-81.2811#41.7598#Fairport"
+    NOAALIST[123] = "9063063#-81.6355#41.5409#Cleveland"
+    NOAALIST[124] = "9063079#-82.7314#41.5436#Marblehead"
+    NOAALIST[125] = "9063085#-83.4723#41.6936#Toledo"
+    NOAALIST[126] = "9063090#-83.2569#41.9601#Fermi Power Plant"
+    NOAALIST[127] = "9075002#-82.4939#43.1404#Lakeport"
+    NOAALIST[128] = "9075014#-82.6431#43.8462#Harbor Beach"
+    NOAALIST[129] = "9075035#-83.8468#43.6404#Essexville"
+    NOAALIST[130] = "9075065#-83.4286#45.0630#Alpena"
+    NOAALIST[131] = "9075080#-84.7253#45.7779#Mackinaw City"
+    NOAALIST[132] = "9075099#-83.8982#45.9925#De Tour Village"
+    NOAALIST[133] = "9087023#-86.4416#43.9474#Ludington"
+    NOAALIST[134] = "9087031#-86.2012#42.7681#Holland"
+    NOAALIST[135] = "9087044#-87.5384#41.7299#Calumet Harbor"
+    NOAALIST[136] = "9087057#-87.8876#43.0020#Milwaukee"
+    NOAALIST[137] = "9087068#-87.5010#44.4640#Kewaunee"
+    NOAALIST[138] = "9087072#-87.3143#44.7956#Sturgeon Bay Canal"
+    NOAALIST[139] = "9087079#-88.0072#44.5411#Green Bay"
+    NOAALIST[140] = "9087088#-87.5899#45.0959#Menominee"
+    NOAALIST[141] = "9087096#-85.8715#45.9699#Port Inland"
+    NOAALIST[142] = "9052000#-76.3320#44.1302#Cape Vincent"
+    NOAALIST[143] = "9052030#-76.5118#43.4642#Oswego"
+    NOAALIST[144] = "9052058#-77.6258#43.2690#Rochester"
+    NOAALIST[145] = "9052076#-78.7273#43.3384#Olcott"
+    NOAALIST[146] = "9034052#-82.8792#42.4732#St Clair Shores"
+    NOAALIST[147] = "9099004#-84.6309#46.4845#Point Iroquois"
+    NOAALIST[148] = "9099018#-87.3791#46.5456#Marquette C.G."
+    NOAALIST[149] = "9099044#-89.3242#46.8743#Ontonagon"
+    NOAALIST[150] = "9099064#-92.0920#46.7757#Duluth"
+    NOAALIST[151] = "9099090#-90.3413#47.7478#Grand Marais"
+    NOAALIST[152] = "9063007#-79.0599#43.0999#Ashland Ave"
+    NOAALIST[153] = "9063009#-79.0614#43.0811#American Falls"
+    NOAALIST[154] = "9063012#-79.0139#43.0769#Niagara Intake"
+    NOAALIST[155] = "9014070#-82.5269#42.6210#Algonac"
+    NOAALIST[156] = "9014080#-82.4858#42.8124#St Clair State Police"
+    NOAALIST[157] = "9014087#-82.4435#42.9453#Dry Dock"
+    NOAALIST[158] = "9014090#-82.4204#42.9738#Mouth of the Black River"
+    NOAALIST[159] = "9014096#-82.4224#43.0025#Dunn Paper"
+    NOAALIST[160] = "9014098#-82.4225#43.0069#Fort Gratiot"
+    NOAALIST[161] = "8311030#-75.4944#44.7029#Ogdensburg"
+    NOAALIST[162] = "8311062#-75.9345#44.3311#Alexandria Bay"
+    NOAALIST[163] = "9076024#-84.1912#46.2648#Rock Cut"
+    NOAALIST[164] = "9076027#-84.2098#46.2847#West Neebish Island"
+    NOAALIST[165] = "9076033#-84.3018#46.4857#Little Rapids"
+    NOAALIST[166] = "9076060#-84.3403#46.5010#U.S. Slip"
+    NOAALIST[167] = "9076070#-84.3726#46.5011#S.W. Pier"
+    NOAALIST[168] = "1611400#-159.3561#21.9544#Nawiliwili"
+    NOAALIST[169] = "1612340#-157.8670#21.3067#Honolulu"
+    NOAALIST[170] = "1612480#-157.7900#21.4331#Mokuoloe"
+    NOAALIST[171] = "1615680#-156.4767#20.8950#Kahului, Kahului Harbor"
+    NOAALIST[172] = "1617433#-155.8294#20.0366#Kawaihae"
+    NOAALIST[173] = "1617760#-155.0558#19.7303#Hilo, Hilo Bay, Kuhio Bay"
+    NOAALIST[174] = "8760721#-89.2583#29.1783#Pilottown"
+    NOAALIST[175] = "8760922#-89.4075#28.9322#Pilots Station East, SW Pass"
+    NOAALIST[176] = "8761305#-89.6732#29.8681#Shell Beach"
+    NOAALIST[177] = "8761724#-89.9567#29.2633#Grand Isle"
+    NOAALIST[178] = "8761847#-90.0573#29.9384#Crescent City Air Gap"
+    NOAALIST[179] = "8761927#-90.1134#30.0272#New Canal Station"
+    NOAALIST[180] = "8761955#-90.1355#29.9329#Carrollton"
+    NOAALIST[181] = "8762002#-90.1681#29.9431#Huey Long Bridge Air Gap"
+    NOAALIST[182] = "8762075#-90.1992#29.1142#Port Fourchon"
+    NOAALIST[183] = "8762482#-90.4202#29.7886#West Bank 1, Bayou Gauche"
+    NOAALIST[184] = "8764044#-91.2376#29.6675#Berwick"
+    NOAALIST[185] = "8764227#-91.3381#29.4496#LAWMA, Amerada Pass"
+    NOAALIST[186] = "8766072#-92.3050#29.5550#Freshwater Canal Locks"
+    NOAALIST[187] = "8767816#-93.2217#30.2236#Lake Charles"
+    NOAALIST[188] = "8767931#-93.2806#30.2016#Lake Charles I-210 Bridge Air Gap"
+    NOAALIST[189] = "8767961#-93.3007#30.1903#Bulk Terminal"
+    NOAALIST[190] = "8768094#-93.3429#29.7682#Calcasieu Pass"
+    NOAALIST[191] = "8410140#-66.9829#44.9046#Eastport"
+    NOAALIST[192] = "8411060#-67.2100#44.6567#Cutler Farris Wharf"
+    NOAALIST[193] = "8413320#-68.2050#44.3917#Bar Harbor"
+    NOAALIST[194] = "8418150#-70.2467#43.6567#Portland"
+    NOAALIST[195] = "8419317#-70.5633#43.3200#Wells"
+    NOAALIST[196] = "8570283#-75.0917#38.3283#Ocean City Inlet"
+    NOAALIST[197] = "8571421#-76.0383#38.2200#Bishops Head"
+    NOAALIST[198] = "8571892#-76.0683#38.5733#Cambridge"
+    NOAALIST[199] = "8573364#-76.2450#39.2133#Tolchester Beach"
+    NOAALIST[200] = "8573927#-75.8100#39.5267#Chesapeake City"
+    NOAALIST[201] = "8573928#-75.8100#39.5267#Chesapeake City Air Gap"
+    NOAALIST[202] = "8574680#-76.5783#39.2667#Baltimore"
+    NOAALIST[203] = "8575512#-76.4816#38.9833#Annapolis"
+    NOAALIST[204] = "8577087#-76.2276#38.4295#A33 (HOBO) Blackwater Refuge"
+    NOAALIST[205] = "8577330#-76.4517#38.3167#Solomons Island"
+    NOAALIST[206] = "8443970#-71.0534#42.3548#Boston"
+    NOAALIST[207] = "8447386#-71.1641#41.7043#Fall River"
+    NOAALIST[208] = "8447435#-69.9511#41.6885#Chatham"
+    NOAALIST[209] = "8447930#-70.6717#41.5233#Woods Hole"
+    NOAALIST[210] = "8449130#-70.0967#41.2850#Nantucket Island"
+    NOAALIST[211] = "8740166#-88.4027#30.4130#Grand Bay NERR, Mississippi Sound"
+    NOAALIST[212] = "8741041#-88.5054#30.3477#Dock E, Port of Pascagoula"
+    NOAALIST[213] = "8741533#-88.5630#30.3679#Pascagoula NOAA Lab"
+    NOAALIST[214] = "8747437#-89.3258#30.3264#Bay Waveland Yacht Club"
+    NOAALIST[215] = "8423898#-70.7117#43.0717#Fort Point"
+    NOAALIST[216] = "8531680#-74.0094#40.4669#Sandy Hook"
+    NOAALIST[217] = "8534720#-74.4183#39.3550#Atlantic City"
+    NOAALIST[218] = "8536110#-74.9600#38.9683#Cape May"
+    NOAALIST[219] = "8537121#-75.3750#39.3050#Ship John Shoal"
+    NOAALIST[220] = "8538886#-75.0430#40.0119#Tacony-Palmyra Bridge"
+    NOAALIST[221] = "8539094#-74.8697#40.0817#Burlington, Delaware River"
+    NOAALIST[222] = "8510560#-71.9600#41.0483#Montauk"
+    NOAALIST[223] = "8514779#-73.1506#40.6492#Seaview Ferry Dock"
+    NOAALIST[224] = "8516945#-73.7649#40.8103#Kings Point"
+    NOAALIST[225] = "8517986#-74.0448#40.6062#Verrazano-Narrows Air Gap"
+    NOAALIST[226] = "8518750#-74.0142#40.7006#The Battery"
+    NOAALIST[227] = "8519461#-74.1422#40.6415#Bayonne Bridge Air Gap"
+    NOAALIST[228] = "8519483#-74.1417#40.6367#Bergen Point West Reach"
+    NOAALIST[229] = "8651370#-75.7467#36.1833#Duck"
+    NOAALIST[230] = "8652587#-75.5483#35.7950#Oregon Inlet Marina"
+    NOAALIST[231] = "8654467#-75.7042#35.2086#USCG Station Hatteras"
+    NOAALIST[232] = "8656483#-76.6700#34.7200#Beaufort"
+    NOAALIST[233] = "8658120#-77.9533#34.2267#Wilmington"
+    NOAALIST[234] = "8658163#-77.7867#34.2133#Wrightsville Beach"
+    NOAALIST[235] = "9431647#-124.4983#42.7390#Port Orford"
+    NOAALIST[236] = "9432780#-124.3220#43.3450#Charleston"
+    NOAALIST[237] = "9435355#-123.9070#44.6150#Yaquina Swamp"
+    NOAALIST[238] = "9435380#-124.0430#44.6250#South Beach"
+    NOAALIST[239] = "9436009#-123.9970#44.8867#Millport"
+    NOAALIST[240] = "9436034#-124.0130#44.8983#Siletz Bay"
+    NOAALIST[241] = "9437540#-123.9189#45.5545#Garibaldi"
+    NOAALIST[242] = "9437987#-123.8580#45.7450#Coal Creek"
+    NOAALIST[243] = "9439040#-123.7683#46.2073#Astoria"
+    NOAALIST[244] = "9439084#-123.5770#46.1917#Blind Slough"
+    NOAALIST[245] = "9439099#-123.4050#46.1600#Wauna"
+    NOAALIST[246] = "9439201#-122.7970#45.8650#St Helens"
+    NOAALIST[247] = "1619908#-177.3720#28.2050#MIDWAY ISLAND"
+    NOAALIST[248] = "1619910#-177.3600#28.2117#Sand Island, Midway Islands"
+    NOAALIST[249] = "1630000#144.6539#13.4387#Apra Harbor, Guam"
+    NOAALIST[250] = "1631428#144.7970#13.4283#Pago Bay, Guam"
+    NOAALIST[251] = "1770000#-170.6900#-14.2800#Pago Pago, American Samoa"
+    NOAALIST[252] = "1820000#167.7362#8.7316#Kwajalein, Marshall Islands"
+    NOAALIST[253] = "1890000#166.6180#19.2900#Wake Island, Pacific Ocean"
+    NOAALIST[254] = "8540433#-75.4100#39.8117#Marcus Hook"
+    NOAALIST[255] = "8545240#-75.1417#39.9333#Philadelphia"
+    NOAALIST[256] = "8548989#-74.7517#40.1367#Newbold"
+    NOAALIST[257] = "8452660#-71.3267#41.5050#Newport"
+    NOAALIST[258] = "8452944#-71.3433#41.7167#Conimicut Light"
+    NOAALIST[259] = "8454000#-71.4012#41.8071#Providence"
+    NOAALIST[260] = "8454049#-71.4110#41.5868#Quonset Point"
+    NOAALIST[261] = "8661070#-78.9183#33.6550#Springmaid Pier"
+    NOAALIST[262] = "8662245#-79.1867#33.3517#Oyster Landing (N Inlet Estuary)"
+    NOAALIST[263] = "8664753#-79.9644#32.8912#Don Holt Bridge Air Gap"
+    NOAALIST[264] = "8665530#-79.9250#32.7817#Charleston"
+    NOAALIST[265] = "8770475#-93.9300#29.8667#Port Arthur (TCOON)"
+    NOAALIST[266] = "8770520#-93.8817#29.9800#Rainbow Bridge (TCOON)"
+    NOAALIST[267] = "8770570#-93.8701#29.7284#Sabine Pass North"
+    NOAALIST[268] = "8770613#-94.9850#29.6817#Morgans Point"
+    NOAALIST[269] = "8770733#-95.0783#29.7650#Lynchburg Landing (TCOON)"
+    NOAALIST[270] = "8770777#-95.2658#29.7263#Manchester (TCOON)"
+    NOAALIST[271] = "8770808#-94.3903#29.5947#High Island (TCOON)"
+    NOAALIST[272] = "8770822#-93.8418#29.6893#Texas Point, Sabine Pass (TCOON)"
+    NOAALIST[273] = "8770971#-94.5133#29.5150#Rollover Pass (TCOON)"
+    NOAALIST[274] = "8771013#-94.9183#29.4800#Eagle Point"
+    NOAALIST[275] = "8771341#-94.7248#29.3573#Galveston Bay Entrance, N Jetty (TCOON)"
+    NOAALIST[276] = "8771450#-94.7933#29.3100#Galveston Pier 21"
+    NOAALIST[277] = "8771486#-94.8971#29.3026#Galveston Railroad Bridge (TCOON)"
+    NOAALIST[278] = "8771972#-95.1133#29.0950#San Luis Pass (TCOON)"
+    NOAALIST[279] = "8772447#-95.3025#28.9433#USCG Freeport"
+    NOAALIST[280] = "8772985#-95.6168#28.7716#Sargent (TCOON)"
+    NOAALIST[281] = "8773037#-96.7117#28.4083#Seadrift (TCOON)"
+    NOAALIST[282] = "8773146#-95.9139#28.7100#Matagorda City (TCOON)"
+    NOAALIST[283] = "8773259#-96.5950#28.6400#Port Lavaca (TCOON)"
+    NOAALIST[284] = "8773701#-96.3883#28.4517#Port O'Connor (TCOON)"
+    NOAALIST[285] = "8774230#-96.7950#28.2283#Aransas Wildlife Refuge (TCOON)"
+    NOAALIST[286] = "8774513#-97.0217#28.1183#Copano Bay (TCOON)"
+    NOAALIST[287] = "8774770#-97.0467#28.0217#Rockport"
+    NOAALIST[288] = "8775237#-97.0733#27.8383#Port Aransas (TCOON)"
+    NOAALIST[289] = "8775244#-97.4859#27.8328#Nueces Bay (TCOON)"
+    NOAALIST[290] = "8775283#-97.2033#27.8217#Port Ingleside (TCOON)"
+    NOAALIST[291] = "8775296#-97.3900#27.8117#USS Lexington (TCOON)"
+    NOAALIST[292] = "8775792#-97.2367#27.6333#Packery Channel (TCOON)"
+    NOAALIST[293] = "8775870#-97.2167#27.5800#Bob Hall Pier, Corpus Christi"
+    NOAALIST[294] = "8776139#-97.3217#27.4800#S. Bird Island (TCOON)"
+    NOAALIST[295] = "8776604#-97.4050#27.2950#Baffin Bay (TCOON)"
+    NOAALIST[296] = "8777812#-97.4917#26.8250#Rincon Del San Jose (TCOON)"
+    NOAALIST[297] = "8778490#-97.4221#26.5546#Port Mansfield (TCOON)"
+    NOAALIST[298] = "8779280#-97.2854#26.2622#Realitos Peninsula (TCOON)"
+    NOAALIST[299] = "8779748#-97.1767#26.0767#South Padre Island CG Station (TCOON)"
+    NOAALIST[300] = "8779770#-97.2150#26.0600#Port Isabel"
+    NOAALIST[301] = "8631044#-75.6858#37.6078#Wachapreague"
+    NOAALIST[302] = "8632200#-75.9884#37.1652#Kiptopeke"
+    NOAALIST[303] = "8635750#-76.4644#37.9961#Lewisetta"
+    NOAALIST[304] = "8635767#-76.4542#37.9942#Lewisetta GPS Buoy, Potomac River"
+    NOAALIST[305] = "8636580#-76.2900#37.6162#Windmill Point"
+    NOAALIST[306] = "8637689#-76.4783#37.2267#Yorktown USCG Training Center"
+    NOAALIST[307] = "8638610#-76.3300#36.9467#Sewells Point"
+    NOAALIST[308] = "8638861#-76.1081#36.9617#Chesapeake Bay Bridge Tunnel Buoy"
+    NOAALIST[309] = "8638863#-76.1133#36.9667#Chesapeake Bay Bridge Tunnel"
+    NOAALIST[310] = "8639348#-76.3017#36.7783#Money Point"
+    NOAALIST[311] = "9440083#-122.6970#45.6317#Vancouver"
+    NOAALIST[312] = "9440422#-122.9542#46.1061#Longview"
+    NOAALIST[313] = "9440569#-123.4520#46.2667#Skamokawa"
+    NOAALIST[314] = "9440910#-123.9669#46.7075#Toke Point"
+    NOAALIST[315] = "9441102#-124.1051#46.9043#Westport"
+    NOAALIST[316] = "9442396#-124.6370#47.9133#La Push"
+    NOAALIST[317] = "9443090#-124.6117#48.3667#Neah Bay"
+    NOAALIST[318] = "9444090#-123.4400#48.1250#Port Angeles"
+    NOAALIST[319] = "9444900#-122.7580#48.1117#Port Townsend"
+    NOAALIST[320] = "9446484#-122.4133#47.2667#Tacoma"
+    NOAALIST[321] = "9447130#-122.3393#47.6026#Seattle"
+    NOAALIST[322] = "9449424#-122.7580#48.8633#Cherry Point"
+    NOAALIST[323] = "9449880#-123.0100#48.5467#Friday Harbor"
+    }
+
+    </script>
+  </head>
+  <body onload="initialize()">
+      <div style="height:100%; width: 100%; display: table">
+          <div style="display: table-row">
+            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
+            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
+          </div>
+      </div>
+  </body>
+</html>
+

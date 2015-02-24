@@ -1,0 +1,261 @@
+<!-- 
+//---- LGPL --------------------------------------------------------------------
+//
+// Copyright (C)  ARCADIS, 2011-2015.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// contact: Zachary Cobell, zachary.cobell@arcadis-us.com
+// ARCADIS
+// 4999 Pearl East Circle, Suite 200
+// Boulder, CO 80301
+//
+// All indications and logos of, and references to, "ARCADIS" 
+// are registered trademarks of ARCADIS, and remain the property of
+// ARCADIS. All rights reserved.
+//
+//------------------------------------------------------------------------------
+// $Author$
+// $Date$
+// $Id$
+// $HeadURL$
+//------------------------------------------------------------------------------
+//  File: reg_plot.html
+//
+//------------------------------------------------------------------------------
+-->
+        
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="/rsc/js/jquery.js"></script>
+    <script src="/rsc/js/highcharts.js"></script>
+    <script src="/rsc/js/exporting.js"></script>
+    <script src="/rsc/js/annotations.js"></script>
+    <script type="text/javascript">
+
+    var PlotTitle;
+    var XLabel,YLabel;
+    var DotColor,RegColor,One21Color,BoundColor;
+
+    window.onresize = function()
+    {
+        $('#chart_div').highcharts().setSize($(window).width(),$(window).height(), false);
+    }
+
+    function setGlobal(InPlotTitle,InXLabel,InYLabel,InDotColor,InRegColor,In121Color,InBoundColor)
+    {
+        PlotTitle = InPlotTitle;
+        XLabel = InXLabel;
+        YLabel = InYLabel;
+        DotColor = InDotColor;
+        RegColor = InRegColor;
+        One21Color = In121Color;
+        BoundColor = InBoundColor;
+        return;
+    }
+
+    function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUpperLowerLines,BoundValue,SD,Confidence)
+    {
+        //Split the data into parts
+        var modelList = model.split(":");
+        var measureList = measure.split(":");
+
+        var ScatterData = new Array();
+        for(var idx=0;idx<modelList.length;idx++)
+        {
+            if(Number(modelList[idx])>-9999)
+                ScatterData[idx] = [ Number(measureList[idx]), Number(modelList[idx]) ];
+        }
+
+        MX = Number(maximum);
+        M  = Number(slope);
+        B  = Number(intercept);
+        R  = Number(corr);
+
+        var ChartAnnotation = 'Linear Regression Line: y = '+String(M)+'x + '+B+'<br>'+
+            'Correlation: R^2 = '+String(R)+'<br>Standard Deviation = '+
+            String(SD)+'<br>Confidence Interval Shown = '+String(Confidence)+"%";
+        var annotation_x=1;
+        var annotation_y=MX;
+
+        var plotToolTip = {
+                formatter: function() {
+                    return '<b>'+YLabel+'</b>: '+this.x+'<br><b>'+XLabel+'</b>: '+this.y+' ';
+                    }
+                };
+
+        if(PlotUpperLowerLines == 1)
+        {
+            var seriesList = [{
+                    type: 'line',
+                    name: 'Lower Bound',
+                    data: [[0,-BoundValue],[MX,MX-BoundValue]],
+                    color: BoundColor,
+                    enableMouseTracking: false,
+                    showInLegend: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: 'Upper Bound',
+                    data: [[0,BoundValue],[MX,MX+BoundValue]],
+                    color: BoundColor,
+                    enableMouseTracking: false,
+                    showInLegend: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'line',
+                    name: '1:1 Line',
+                    data: [[0,0],[MX,MX]],
+                    color: One21Color,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'scatter',
+                    name: 'Comparison',
+                    color: DotColor,
+                    data: ScatterData,
+                    marker: { symbol: "circle" }
+                },{
+                    type: 'line',
+                    name: 'Regression Line',
+                    data: [[0,B],[MX,MX*M+B]],
+                    color: RegColor,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                }];
+        }
+        else
+        {
+            var seriesList = [{
+                    type: 'line',
+                    name: '1:1 Line',
+                    data: [[0,0],[MX,MX]],
+                    color: One21Color,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                },{
+                    type: 'scatter',
+                    name: 'Comparison',
+                    color: DotColor,
+                    data: ScatterData,
+                    marker: { symbol: "circle" }
+                },{
+                    type: 'line',
+                    name: 'Regression Line',
+                    data: [[0,B],[MX,MX*M+B]],
+                    color: RegColor,
+                    enableMouseTracking: false,
+                    marker: {
+                        enabled: false
+                        }
+                }];
+        }
+
+        $('#chart_div').highcharts({
+            chart: {
+            },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            annotations: [{
+                xValue: annotation_x,
+                yValue: annotation_y,
+                anchorX: 'left',
+                anchorY: 'top',
+                allowDragX: 'true',
+                allowDragY: 'true',
+                title: {
+                    text: ChartAnnotation
+                },
+                shape: {
+                    type: 'rect',
+                    params: {
+                        x: 0,
+                        y: 0,
+                        width: 250,
+                        height: 70,
+                        fill: '#FFFFFF',
+                        stroke: "#000000",
+                        strokeWidth: 2
+                    }
+                }
+            }],
+            title: { text: PlotTitle },
+            subtitle: {
+                text: 'High Water Mark Comparison'
+            },
+            xAxis: {
+                labels: {format: '{value:.0f}'},
+                title: { text: YLabel },
+                min: 0,
+                max: MX,
+                gridLineWidth: 1
+            },
+            yAxis: {
+                labels: {format: '{value:.0f}'},
+                title: { text: XLabel },
+                min: 0,
+                max: MX,
+                gridLineWidth: 1,
+                alternateGridColor: '#EEEEEE'
+            },
+            tooltip: plotToolTip,
+            series: seriesList
+        });
+
+    }
+
+    function initializePlot()
+    {
+
+    }
+
+    </script>
+  </head>
+  <body>
+    <div id="chart_div" style="width: 100%; height: 100%;"></div>
+  </body>
+</html>
+

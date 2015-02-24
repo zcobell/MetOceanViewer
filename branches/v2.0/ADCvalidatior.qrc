@@ -1,0 +1,30 @@
+<RCC>
+    <qresource prefix="/rsc">
+        <file>html/noaa_maps.html</file>
+        <file>html/timeseries_maps.html</file>
+        <file>html/hwm_map.html</file>
+        <file>html/reg_plot.html</file>
+        <file>data/NOAA_StationList.txt</file>
+        <file>img/mm_20_darkblue.png</file>
+        <file>img/mm_20_darkgreen.png</file>
+        <file>img/mm_20_darkorange.png</file>
+        <file>img/mm_20_lightblue.png</file>
+        <file>img/mm_20_lightgreen.png</file>
+        <file>img/mm_20_purple.png</file>
+        <file>img/mm_20_red.png</file>
+        <file>img/mm_20_yellow.png</file>
+        <file>img/arcadis_logo.png</file>
+        <file>img/mm_20_white.png</file>
+        <file>js/highcharts.js</file>
+        <file>js/annotations.js</file>
+        <file>js/jquery.js</file>
+        <file>js/markercluster.js</file>
+        <file>js/exporting.js</file>
+        <file>img/icon.png</file>
+        <file>resources.rc</file>
+        <file>img/icon.ico</file>
+        <file>js/jquery.alerts.css</file>
+        <file>js/jquery.alerts.js</file>
+        <file>js/jquery.ui.draggable.js</file>
+    </qresource>
+</RCC>
