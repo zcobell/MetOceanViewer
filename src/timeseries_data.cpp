@@ -150,6 +150,7 @@ IMEDS readIMEDS(QString filename)
                 Output.station[j].date[k] =
                         QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
                                   QTime(hour.toInt(),minute.toInt(),second.toInt()));
+                Output.station[j].date[k].setTimeSpec(Qt::UTC);
                 Output.station[j].data[k] = value;
                 Output.success = true;
             }
@@ -166,6 +167,7 @@ IMEDS readIMEDS(QString filename)
                 Output.station[j].date[k] =
                         QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
                                   QTime(hour.toInt(),minute.toInt(),second.toInt()));
+                Output.station[j].date[k].setTimeSpec(Qt::UTC);
                 Output.station[j].data[k] = value;
                 Output.success = true;
             }
@@ -463,7 +465,6 @@ ADCASCII readADCIRCascii(QString filename, QString stationfile)
     }
     if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
     {
-        qDebug() << stationfile;
         QMessageBox::information(NULL,"ERROR","ERROR:"+StationFile.errorString());
         StationFile.close();
         return MyData;
