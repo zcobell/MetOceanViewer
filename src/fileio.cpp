@@ -51,8 +51,8 @@ int MainWindow::saveSession()
     int dims_1d[1];
     int nTimeseries;
     QString relFile,relPath;
-    unsigned int start[1];
-    unsigned int iu;
+    size_t start[1];
+    size_t iu;
     double mydatadouble[1];
     int mydataint[1];
     const char * mydatastring[1];
