@@ -26,7 +26,7 @@
 //------------------------------------------------------------------------------
 // $Author$
 // $Date$
-// $Id$
+// $Rev$
 // $HeadURL$
 //------------------------------------------------------------------------------
 //  File: fileio.cpp
@@ -51,8 +51,8 @@ int MainWindow::saveSession()
     int dims_1d[1];
     int nTimeseries;
     QString relFile,relPath;
-    unsigned int start[1];
-    unsigned int iu;
+    size_t start[1];
+    size_t iu;
     double mydatadouble[1];
     int mydataint[1];
     const char * mydatastring[1];
@@ -184,7 +184,7 @@ int MainWindow::saveSession()
     mydatastring[0] = ui->date_imedsend->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydataint[0] = ui->spin_imedsdecimalplaces->value();
+    mydataint[0] = 3;
     ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_precision,mydataint));
     if(ierr!=NC_NOERR)return 1;
     mydatadouble[0] = ui->spin_imedsymin->value();

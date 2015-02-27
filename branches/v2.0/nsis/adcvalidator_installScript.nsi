@@ -265,7 +265,7 @@ Section "Uninstall"
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\icon.ico
-    Delete $INSTDIR\ADCValidator.exe
+    Delete $INSTDIR\ADCIRC_Validator.exe
     Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
     

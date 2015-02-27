@@ -1,6 +1,6 @@
 #---- LGPL --------------------------------------------------------------------
 #
-# Copyright (C)  ARCADIS, 2011-2013.
+# Copyright (C)  ARCADIS, 2011-2015.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +26,7 @@
 #------------------------------------------------------------------------------
 # $Author$
 # $Date$
-# $Id$
+# $Rev$
 # $HeadURL$
 #------------------------------------------------------------------------------
 #  File: ADCValidator.pro
@@ -37,7 +37,7 @@ QT       += core gui webkitwidgets network xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = ADCValidator
+TARGET = ADCIRC_Validator
 TEMPLATE = app
 
 
@@ -72,6 +72,8 @@ OTHER_FILES +=
 #...Windows - We assume a folder that contains the pre-compiled
 #             shared dll's from Unidata and another with the 
 #             NetCDF header
+#         This, obviously, will vary by the machine
+#         the code is built on
 win32{
 LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl
 INCLUDEPATH += C:/netcdf/include 
@@ -79,9 +81,19 @@ INCLUDEPATH += C:/netcdf/include
 
 #...Unix - We assume static library for NetCDF installed
 #          in the system path already
-unix{
+unix:!macx{
 LIBS += -lnetcdf
 }
+
+#...Mac - Assume static libs for netCDF in this path
+#         This, obviously, will vary by the machine
+#         the code is built on
+macx{
+LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
+INCLUDEPATH += /Users/zcobell/Software/netCDF/include
+ICON = img/icon.icns
+}
+
 
 INCLUDEPATH += include
 
