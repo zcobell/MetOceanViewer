@@ -1,0 +1,286 @@
+<!-- 
+//---- LGPL --------------------------------------------------------------------
+//
+// Copyright (C)  ARCADIS, 2011-2015.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// contact: Zachary Cobell, zachary.cobell@arcadis-us.com
+// ARCADIS
+// 4999 Pearl East Circle, Suite 200
+// Boulder, CO 80301
+//
+// All indications and logos of, and references to, "ARCADIS" 
+// are registered trademarks of ARCADIS, and remain the property of
+// ARCADIS. All rights reserved.
+//
+//------------------------------------------------------------------------------
+// $Author$
+// $Date$
+// $Rev$
+// $HeadURL$
+//------------------------------------------------------------------------------
+//  File: usgs_maps.html
+//
+//------------------------------------------------------------------------------
+-->
+        
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+
+    <!-- Load the google maps api and the google visualization api -->
+    <script src="/rsc/js/jquery.js"></script>
+    <script src="/rsc/js/jquery.ui.draggable.js"></script>
+    <script src="/rsc/js/jquery.alerts.js"></script>
+    <link href="/rsc/js/jquery.alerts.css" rel="stylesheet" type="text/css" media="screen" />
+    <script src="/rsc/js/highcharts.js"></script>
+    <script src="/rsc/js/exporting.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script src="/rsc/js/markercluster.js"></script>
+    <script type="text/javascript">
+
+    var map;
+    var CurrentID = -1;
+
+    window.onresize = function()
+    {
+        $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
+    }
+
+    function repaint()
+    {
+        google.maps.event.trigger(map,'resize');
+    }
+
+
+      function returnStationID(){
+        return CurrentID;
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   PAN TO FUNCTION                                      //
+      //                                                        //
+      //  Function to pan to a different x,y,zoom on the map    //
+      ////////////////////////////////////////////////////////////
+      function panTo(x,y,z){
+        var center = new google.maps.LatLng(y,x);
+        map.setCenter(center);
+        map.setZoom(z);
+      }
+
+      ////////////////////////////////////////////////////////////
+      //   INITIALIZE FUNCTION                                  //
+      //                                                        //
+      //  Function to initialize the google maps area on load   //
+      ////////////////////////////////////////////////////////////
+      function initialize() {
+        //Initialize the map
+
+        window.LastInfo = -1;
+        var myOptions = {
+          center: new google.maps.LatLng(29.5, -91.5),
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true,
+          streetViewControl: false,
+          panControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+          zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+        var logoControlDiv = document.createElement('DIV');
+        var logoControl = new ArcadisLogo(logoControlDiv);
+        logoControlDiv.index = 0; // used for ordering
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+        window.markerID = -1;
+
+        var layer = new google.maps.FusionTablesLayer({
+            query: {
+                select: '\'Geocodable address\'',
+                from: '1-CzrrjD1E8_IPs9yOTQnJaJspruMdj3PBgpXkfzq'
+            },
+            options: {
+                styleId: 2,
+                templateId: 3
+            }
+        });
+        layer.setMap(map);
+
+
+          google.maps.event.addListener(layer, 'click', function(event) {
+            CurrentID = event.row.SiteNumber.value;
+          });
+
+       }
+
+        google.maps.event.addDomListener(window, "resize", function() {
+         var center = map.getCenter();
+         google.maps.event.trigger(map, "resize");
+         map.setCenter(center);
+        });
+
+
+
+
+      ////////////////////////////////////////////////////////////
+      //   DRAWUSGSDATA                                         //
+      //                                                        //
+      //  Plot the USGS data on the google chart api            //
+      ////////////////////////////////////////////////////////////
+      function drawUSGSData(RawData,Datum,Units,Product,ErrorString) {
+
+        //Split by rows
+        RawData2 = new Array();
+        RawData2 = RawData.split(";");
+        USGSData = new Array();
+
+        //Split the rows into their pieces
+        if(RawData2.length<5)
+        {
+            jAlert('The following error was returned from the USGS server: \n\n'+ErrorString,'USGS Data Retreival Error');
+            return;
+        }
+
+        var TempData = new Array();
+        for(var i=0;i<RawData2.length;i++)
+        {
+            TempData = RawData2[i].split(":");
+            USGSData[i] = new Array();
+            for(var j=0;j<TempData.length;j++)
+                USGSData[i][j] = TempData[j];
+        }
+
+        var PlottingData = new Array();
+        idx2=-1;
+        var ThisDate;
+        var ThisData;
+        for( var idx=0;idx<USGSData.length;idx++)
+        {
+            ThisDate = Date.UTC(Number(USGSData[idx][0]),Number(USGSData[idx][1])-1,
+                                Number(USGSData[idx][2]),Number(USGSData[idx][3]),
+                                Number(USGSData[idx][4]),0,0);
+            ThisData = Number(USGSData[idx][5]);
+            if(!isNaN(ThisDate) && !isNaN(ThisData) && (ThisData!=0))
+            {
+                idx2 = idx2 + 1;
+                PlottingData[idx2]     = new Array();
+                PlottingData[idx2][0]  = ThisDate;
+                PlottingData[idx2][1]  = ThisData;
+            }
+        }
+
+        // Create the HighChart
+        $('#plot_area').highcharts({
+            chart: {
+                type: 'line',
+                zoomType: 'xy'
+            },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            title: {
+                text: 'USGS Gauge Data'
+            },
+            subtitle: {
+                text: 'Station '+window.markerID+' - '+window.markerName
+            },
+            xAxis: {
+                type: 'datetime',
+                title: 'Date (GMT)',
+                dateTimeLabelFormats: { // don't display the dummy year
+                    month: '%e. %b',
+                    year: '%b'
+                },
+                gridLineWidth: 1
+            },
+            yAxis: {
+                labels: {format: '{value:.2f}'},
+                title: {
+                    text: Product+" ("+Units+", "+Datum+")"
+                },
+                alternateGridColor: '#EEEEEE'
+            },
+            plotOptions: {
+                series: {
+                    marker: {
+                        enabled: false
+                    },
+                    animation: {
+                       enabled: true,
+                       duration: 1000,
+                       easing: 'linear'
+                    },
+                    gridLineWidth: 1
+                }
+            },
+            tooltip: {
+                formatter: function() {
+                        return '<b>'+ this.series.name +'</b><br/>'+
+                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' '+Units;
+                }
+            },
+            series: [{
+                name: Product,
+                data: PlottingData
+            }]
+        });
+
+
+        return;
+      }
+
+      function ArcadisLogo(controlDiv) {
+            controlDiv.style.padding = '5px';
+            var logo = document.createElement('IMG');
+            logo.src = 'qrc:/rsc/img/arcadis_logo.png';
+            logo.style.cursor = 'pointer';
+            controlDiv.appendChild(logo);
+
+            google.maps.event.addDomListener(logo, 'click', function() {
+                window.location = 'http://www.arcadis-us.com';
+            });
+      }
+
+
+    </script>
+  </head>
+  <body onload="initialize()">
+      <div style="height:100%; width: 100%; display: table">
+          <div style="display: table-row">
+            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
+            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
+          </div>
+      </div>
+  </body>
+</html>
+

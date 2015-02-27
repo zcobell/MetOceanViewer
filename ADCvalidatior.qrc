@@ -4,6 +4,7 @@
         <file>html/timeseries_maps.html</file>
         <file>html/hwm_map.html</file>
         <file>html/reg_plot.html</file>
+		<file>html/usgs_maps.html</file>
         <file>data/NOAA_StationList.txt</file>
         <file>img/mm_20_darkblue.png</file>
         <file>img/mm_20_darkgreen.png</file>
