@@ -47,7 +47,7 @@
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
-        <string>Plot NOAA Data</string>
+        <string>Plot NOAA CO-OPS Data</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <item>
@@ -55,15 +55,15 @@
           <property name="minimumSize">
            <size>
             <width>660</width>
-            <height>120</height>
+            <height>150</height>
            </size>
           </property>
           <property name="title">
-           <string>Select Dates, Datum and Units, then click Fetch</string>
+           <string>Select a station, the NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_12">
+            <layout class="QHBoxLayout" name="horizontalLayout_11">
              <item>
               <widget class="QLabel" name="Label_NOAAStartTime">
                <property name="sizePolicy">
@@ -74,13 +74,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>53</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>53</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
@@ -127,13 +127,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>47</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>47</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
@@ -174,6 +174,45 @@
               </widget>
              </item>
              <item>
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_12">
+             <item>
+              <widget class="QLabel" name="label_noaaproduct">
+               <property name="minimumSize">
+                <size>
+                 <width>75</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>75</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Product:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QComboBox" name="combo_NOAAProduct">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -183,13 +222,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>290</width>
+                 <width>350</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>290</width>
+                 <width>350</width>
                  <height>20</height>
                 </size>
                </property>
@@ -262,13 +301,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>40</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>40</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
@@ -276,7 +315,10 @@
                 <bool>false</bool>
                </property>
                <property name="text">
-                <string>Datum</string>
+                <string>Datum:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -421,13 +463,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>75</width>
+                 <width>110</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>75</width>
+                 <width>110</width>
                  <height>27</height>
                 </size>
                </property>
@@ -435,7 +477,7 @@
                 <bool>false</bool>
                </property>
                <property name="text">
-                <string>Fetch</string>
+                <string>Plot</string>
                </property>
               </widget>
              </item>
@@ -711,9 +753,9 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_IMEDS">
+      <widget class="QWidget" name="tab_timeseries">
        <attribute name="title">
-        <string>Plot ADCIRC Time Series Stations</string>
+        <string>Plot Time Series Stations</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
@@ -816,7 +858,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>60</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -829,13 +871,13 @@
                   <widget class="QCheckBox" name="check_imedsalldata">
                    <property name="minimumSize">
                     <size>
-                     <width>46</width>
+                     <width>55</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>46</width>
+                     <width>55</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -930,7 +972,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>60</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -943,13 +985,13 @@
                   <widget class="QCheckBox" name="check_imedyauto">
                    <property name="minimumSize">
                     <size>
-                     <width>46</width>
+                     <width>55</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>46</width>
+                     <width>55</width>
                      <height>16777215</height>
                     </size>
                    </property>
@@ -1050,7 +1092,7 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>60</height>
+                <height>125</height>
                </size>
               </property>
               <property name="title">
@@ -1063,18 +1105,21 @@
                   <widget class="QLabel" name="label_imedsplottitle">
                    <property name="minimumSize">
                     <size>
-                     <width>0</width>
+                     <width>110</width>
                      <height>21</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>16777215</width>
+                     <width>110</width>
                      <height>21</height>
                     </size>
                    </property>
                    <property name="text">
                     <string>Main Plot Title:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                    </property>
                   </widget>
                  </item>
@@ -1098,36 +1143,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLabel" name="label_imedsdecimalplaces">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>21</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>21</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Plot Precision (decimal places):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QSpinBox" name="spin_imedsdecimalplaces">
-                   <property name="maximum">
-                    <number>10</number>
-                   </property>
-                   <property name="value">
-                    <number>2</number>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_25">
+                  <spacer name="horizontalSpacer_3">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
                    </property>
@@ -1142,61 +1158,26 @@
                 </layout>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_34">
-                 <item>
-                  <widget class="QLabel" name="label_yaxislabel">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>21</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>21</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>y-axis label:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="text_yaxislabel">
-                   <property name="minimumSize">
-                    <size>
-                     <width>200</width>
-                     <height>21</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>200</width>
-                     <height>21</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Water Surface Elevation (m)</string>
-                   </property>
-                  </widget>
-                 </item>
+                <layout class="QHBoxLayout" name="horizontalLayout_13">
                  <item>
                   <widget class="QLabel" name="label_xaxislabel">
                    <property name="minimumSize">
                     <size>
-                     <width>0</width>
+                     <width>110</width>
                      <height>21</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>16777215</width>
+                     <width>110</width>
                      <height>21</height>
                     </size>
                    </property>
                    <property name="text">
                     <string>x-axis label:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                    </property>
                   </widget>
                  </item>
@@ -1204,13 +1185,13 @@
                   <widget class="QLineEdit" name="text_xaxislabel">
                    <property name="minimumSize">
                     <size>
-                     <width>200</width>
+                     <width>250</width>
                      <height>21</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>200</width>
+                     <width>250</width>
                      <height>21</height>
                     </size>
                    </property>
@@ -1220,7 +1201,65 @@
                   </widget>
                  </item>
                  <item>
-                  <spacer name="horizontalSpacer_26">
+                  <spacer name="horizontalSpacer_4">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_14">
+                 <item>
+                  <widget class="QLabel" name="label_yaxislabel">
+                   <property name="minimumSize">
+                    <size>
+                     <width>110</width>
+                     <height>21</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>110</width>
+                     <height>21</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>y-axis label:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="text_yaxislabel">
+                   <property name="minimumSize">
+                    <size>
+                     <width>250</width>
+                     <height>21</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>250</width>
+                     <height>21</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Water Surface Elevation (m)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_5">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
                    </property>
@@ -1293,7 +1332,7 @@
       </widget>
       <widget class="QWidget" name="tab_HWM">
        <attribute name="title">
-        <string>Plot ADCIRC High Water Marks</string>
+        <string>Plot High Water Marks</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
@@ -1316,24 +1355,31 @@
               </property>
               <property name="minimumSize">
                <size>
-                <width>60</width>
-                <height>0</height>
+                <width>0</width>
+                <height>80</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>60</height>
+                <height>80</height>
                </size>
               </property>
               <property name="title">
                <string>Select HWM File</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_18">
+              <layout class="QVBoxLayout" name="verticalLayout_14">
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_9">
                  <item>
-                  <widget class="QLineEdit" name="Text_HWMFile"/>
+                  <widget class="QLineEdit" name="Text_HWMFile">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>21</height>
+                    </size>
+                   </property>
+                  </widget>
                  </item>
                  <item>
                   <widget class="QPushButton" name="browse_hwm">
@@ -1439,13 +1485,13 @@
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
-                   <height>55</height>
+                   <height>75</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
-                   <height>55</height>
+                   <height>75</height>
                   </size>
                  </property>
                  <property name="title">
@@ -1477,13 +1523,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1527,13 +1573,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1577,13 +1623,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1627,13 +1673,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1674,13 +1720,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1724,13 +1770,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1774,13 +1820,13 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>45</width>
+                        <width>55</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -1834,6 +1880,18 @@
                </item>
                <item>
                 <widget class="QGroupBox" name="groupBox_2">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>200</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>200</height>
+                  </size>
+                 </property>
                  <property name="title">
                   <string>Regression Options</string>
                  </property>
@@ -1846,18 +1904,18 @@
                        <widget class="QLabel" name="label_hwmcolor">
                         <property name="minimumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>16777215</height>
                          </size>
                         </property>
                         <property name="text">
-                         <string>High Water Mark Color:</string>
+                         <string>High Water Mark Color: </string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1866,6 +1924,18 @@
                       </item>
                       <item>
                        <widget class="QPushButton" name="button_hwmcolor">
+                        <property name="minimumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string/>
                         </property>
@@ -1879,18 +1949,18 @@
                        <widget class="QLabel" name="label_121linecolor">
                         <property name="minimumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>16777215</height>
                          </size>
                         </property>
                         <property name="text">
-                         <string>1:1 Line Color:</string>
+                         <string>1:1 Line Color: </string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1899,6 +1969,18 @@
                       </item>
                       <item>
                        <widget class="QPushButton" name="button_121linecolor">
+                        <property name="minimumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string/>
                         </property>
@@ -1912,18 +1994,18 @@
                        <widget class="QLabel" name="label_reglinecolor">
                         <property name="minimumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>16777215</height>
                          </size>
                         </property>
                         <property name="text">
-                         <string>Regression Line Color:</string>
+                         <string>Regression Line Color: </string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1932,6 +2014,18 @@
                       </item>
                       <item>
                        <widget class="QPushButton" name="button_reglinecolor">
+                        <property name="minimumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string/>
                         </property>
@@ -1945,18 +2039,18 @@
                        <widget class="QLabel" name="label_boundlinecolor">
                         <property name="minimumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>0</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
-                          <width>180</width>
+                          <width>225</width>
                           <height>16777215</height>
                          </size>
                         </property>
                         <property name="text">
-                         <string>Standard Deviation Lines Color:</string>
+                         <string>Standard Deviation Lines Color: </string>
                         </property>
                         <property name="alignment">
                          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1965,6 +2059,18 @@
                       </item>
                       <item>
                        <widget class="QPushButton" name="button_boundlinecolor">
+                        <property name="minimumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>21</width>
+                          <height>21</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string/>
                         </property>
@@ -1975,6 +2081,13 @@
                    </layout>
                   </item>
                   <item>
+                   <widget class="Line" name="line">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <layout class="QVBoxLayout" name="verticalLayout_10">
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_24">
@@ -1983,13 +2096,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>130</width>
-                          <height>0</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>16777215</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="text">
@@ -2005,7 +2118,7 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>0</height>
+                          <height>21</height>
                          </size>
                         </property>
                         <property name="maximumSize">
@@ -2041,13 +2154,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>130</width>
-                          <height>0</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>16777215</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="text">
@@ -2063,7 +2176,7 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>0</height>
+                          <height>21</height>
                          </size>
                         </property>
                         <property name="maximumSize">
@@ -2099,13 +2212,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>130</width>
-                          <height>0</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>16777215</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="text">
@@ -2121,7 +2234,7 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>0</height>
+                          <height>21</height>
                          </size>
                         </property>
                         <property name="maximumSize">
@@ -2157,13 +2270,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>130</width>
-                          <height>0</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>16777215</height>
+                          <height>30</height>
                          </size>
                         </property>
                         <property name="text">
@@ -2179,7 +2292,7 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>0</height>
+                          <height>21</height>
                          </size>
                         </property>
                         <property name="maximumSize">
@@ -2220,23 +2333,19 @@
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_3">
                       <item>
-                       <spacer name="horizontalSpacer_9">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                        <property name="sizeType">
-                         <enum>QSizePolicy::Fixed</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
+                       <widget class="QCheckBox" name="check_dispupperlowerlines">
+                        <property name="minimumSize">
                          <size>
-                          <width>68</width>
-                          <height>20</height>
+                          <width>130</width>
+                          <height>30</height>
                          </size>
                         </property>
-                       </spacer>
-                      </item>
-                      <item>
-                       <widget class="QCheckBox" name="check_dispupperlowerlines">
+                        <property name="maximumSize">
+                         <size>
+                          <width>16777215</width>
+                          <height>30</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string>Display Standard Deviation Lines</string>
                         </property>
@@ -2263,23 +2372,19 @@
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_29">
                       <item>
-                       <spacer name="horizontalSpacer_7">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                        <property name="sizeType">
-                         <enum>QSizePolicy::Fixed</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
+                       <widget class="QCheckBox" name="check_forceregthroughzero">
+                        <property name="minimumSize">
                          <size>
-                          <width>68</width>
-                          <height>20</height>
+                          <width>130</width>
+                          <height>30</height>
                          </size>
                         </property>
-                       </spacer>
-                      </item>
-                      <item>
-                       <widget class="QCheckBox" name="check_forceregthroughzero">
+                        <property name="maximumSize">
+                         <size>
+                          <width>16777215</width>
+                          <height>30</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string>Force Regression Line Through Zero</string>
                         </property>
@@ -2408,7 +2513,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
