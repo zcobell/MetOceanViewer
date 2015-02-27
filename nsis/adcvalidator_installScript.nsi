@@ -183,7 +183,7 @@ Section "Install"
     File /r ..\libs\imageformats
     File /r ..\libs\platforms
     File ..\img\icon.ico
-    File ..\..\build-ADCValidator-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\ADCValidator.exe
+    File ..\..\build-ADCValidator-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\ADCIRC_Validator.exe
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
