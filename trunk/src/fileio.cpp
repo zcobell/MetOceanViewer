@@ -184,7 +184,7 @@ int MainWindow::saveSession()
     mydatastring[0] = ui->date_imedsend->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydataint[0] = ui->spin_imedsdecimalplaces->value();
+    mydataint[0] = 3;
     ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_precision,mydataint));
     if(ierr!=NC_NOERR)return 1;
     mydatadouble[0] = ui->spin_imedsymin->value();
