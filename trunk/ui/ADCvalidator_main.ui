@@ -59,7 +59,7 @@
            </size>
           </property>
           <property name="title">
-           <string>Select NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
+           <string>Select a station, the NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
