@@ -1,6 +1,6 @@
 #---- LGPL --------------------------------------------------------------------
 #
-# Copyright (C)  ARCADIS, 2011-2013.
+# Copyright (C)  ARCADIS, 2011-2015.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -37,7 +37,7 @@ QT       += core gui webkitwidgets network xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = ADCValidator
+TARGET = ADCIRC_Validator
 TEMPLATE = app
 
 
