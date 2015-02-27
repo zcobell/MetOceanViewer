@@ -43,7 +43,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
@@ -59,7 +59,7 @@
            </size>
           </property>
           <property name="title">
-           <string>Select Dates, Datum and Units, then click Fetch</string>
+           <string>Select NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
@@ -192,8 +192,23 @@
             <layout class="QHBoxLayout" name="horizontalLayout_12">
              <item>
               <widget class="QLabel" name="label_noaaproduct">
+               <property name="minimumSize">
+                <size>
+                 <width>75</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>75</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Product:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -286,13 +301,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>45</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>45</width>
+                 <width>75</width>
                  <height>27</height>
                 </size>
                </property>
@@ -300,7 +315,10 @@
                 <bool>false</bool>
                </property>
                <property name="text">
-                <string>Datum</string>
+                <string>Datum:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -445,13 +463,13 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>75</width>
+                 <width>110</width>
                  <height>27</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>75</width>
+                 <width>110</width>
                  <height>27</height>
                 </size>
                </property>
@@ -459,7 +477,7 @@
                 <bool>false</bool>
                </property>
                <property name="text">
-                <string>Fetch</string>
+                <string>Plot</string>
                </property>
               </widget>
              </item>
