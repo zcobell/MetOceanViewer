@@ -45,710 +45,749 @@
       <property name="currentIndex">
        <number>0</number>
       </property>
-      <widget class="QWidget" name="tab_NOAA">
+      <widget class="QWidget" name="tab_livedata">
        <attribute name="title">
-        <string>Plot NOAA CO-OPS Data</string>
+        <string>Plot Live Data</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <item>
-         <widget class="QGroupBox" name="group_noaa">
-          <property name="minimumSize">
-           <size>
-            <width>660</width>
-            <height>150</height>
-           </size>
+         <widget class="QTabWidget" name="tabWidget">
+          <property name="currentIndex">
+           <number>1</number>
           </property>
-          <property name="title">
-           <string>Select a station, the NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_11">
-             <item>
-              <widget class="QLabel" name="Label_NOAAStartTime">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>75</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>75</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Start Time:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QDateEdit" name="Date_StartTime">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>145</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="calendarPopup">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="Label_NOAA">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>75</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>75</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>End Time:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QDateEdit" name="Date_EndTime">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>145</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="frame">
-                <bool>true</bool>
-               </property>
-               <property name="calendarPopup">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_12">
-             <item>
-              <widget class="QLabel" name="label_noaaproduct">
-               <property name="minimumSize">
-                <size>
-                 <width>75</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>75</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Product:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="combo_NOAAProduct">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>350</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>350</width>
-                 <height>20</height>
-                </size>
-               </property>
+          <widget class="QWidget" name="tab_noaa">
+           <attribute name="title">
+            <string>NOAA</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_16">
+            <item>
+             <widget class="QGroupBox" name="group_noaa">
+              <property name="minimumSize">
+               <size>
+                <width>660</width>
+                <height>150</height>
+               </size>
+              </property>
+              <property name="title">
+               <string>Select a station, the NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_2">
                <item>
-                <property name="text">
-                 <string>6 Minute Water Level (Verified or Preliminary)</string>
-                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_11">
+                 <item>
+                  <widget class="QLabel" name="Label_NOAAStartTime">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="text">
+                    <string>Start Time:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDateEdit" name="Date_StartTime">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>145</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="calendarPopup">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="Label_NOAA">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="text">
+                    <string>End Time:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDateEdit" name="Date_EndTime">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>145</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="calendarPopup">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_2">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
                </item>
                <item>
-                <property name="text">
-                 <string>Hourly Water Level</string>
-                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_12">
+                 <item>
+                  <widget class="QLabel" name="label_noaaproduct">
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Product:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_NOAAProduct">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>350</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>350</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>6 Minute Water Level (Verified or Preliminary)</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Hourly Water Level</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Water Level (Predictions)</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Air Temperature</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Water Temperature</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Wind Speed</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Humidity</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Air Pressure</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_18">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>48</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
                </item>
                <item>
-                <property name="text">
-                 <string>Water Level (Predictions)</string>
-                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_10">
+                 <item>
+                  <widget class="QLabel" name="label_noaadatum">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="text">
+                    <string>Datum:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_noaadatum">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="currentText">
+                    <string>MSL</string>
+                   </property>
+                   <property name="currentIndex">
+                    <number>3</number>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>MHHW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MHW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MTL</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MSL</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MLW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MLLW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>NAVD</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>LWI</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>HWI</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>IGLD</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>STND</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_noaaunits">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Units</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_noaaunits">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>metric</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>english</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="Button_FetchData">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>110</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>110</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="text">
+                    <string>Plot</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_17">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>298</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
                </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWebView" name="noaa_map">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="autoFillBackground">
+               <bool>false</bool>
+              </property>
+              <property name="url">
+               <url>
+                <string>qrc:/rsc/html/noaa_maps.html</string>
+               </url>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox">
+              <property name="minimumSize">
+               <size>
+                <width>660</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="title">
+               <string>Map Operations</string>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_21">
                <item>
-                <property name="text">
-                 <string>Air Temperature</string>
-                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout">
+                 <item>
+                  <widget class="QComboBox" name="Combo_PanTo">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>200</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>200</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="currentText">
+                    <string>Louisiana</string>
+                   </property>
+                   <property name="currentIndex">
+                    <number>13</number>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>Gulf of Mexico</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Atlantic Ocean</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Pacific Ocean</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>------------------</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Alabama</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Alaska</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>California</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Connecticut</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Delaware</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>District of Columbia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Florida</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Georgia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Hawaii</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Louisiana</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Maine</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Maryland</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Massachusetts</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Mississippi</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New Hampshire</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New Jersey</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New York</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>North Carolina</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Oregon</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Puerto Rico</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Rhode Island</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>South Carolina</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Texas</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Washington</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Virginia</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_savechart">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Save Map and Chart</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_savedata">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Save Data</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
                </item>
-               <item>
-                <property name="text">
-                 <string>Water Temperature</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Wind Speed</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Humidity</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Air Pressure</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_18">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>48</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_10">
-             <item>
-              <widget class="QLabel" name="label_noaadatum">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>75</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>75</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Datum:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="combo_noaadatum">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="currentText">
-                <string>MSL</string>
-               </property>
-               <property name="currentIndex">
-                <number>3</number>
-               </property>
-               <item>
-                <property name="text">
-                 <string>MHHW</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MHW</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MTL</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MSL</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MLW</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>MLLW</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>NAVD</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>LWI</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>HWI</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>IGLD</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>STND</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_noaaunits">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Units</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="combo_noaaunits">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <item>
-                <property name="text">
-                 <string>metric</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>english</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="Button_FetchData">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>110</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>110</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Plot</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_17">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>298</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QWebView" name="noaa_map">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="autoFillBackground">
-           <bool>false</bool>
-          </property>
-          <property name="url">
-           <url>
-            <string>qrc:/rsc/html/noaa_maps.html</string>
-           </url>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="minimumSize">
-           <size>
-            <width>660</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="title">
-           <string>Map Operations</string>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_21">
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout">
-             <item>
-              <widget class="QComboBox" name="Combo_PanTo">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>200</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>200</width>
-                 <height>22</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="currentText">
-                <string>Louisiana</string>
-               </property>
-               <property name="currentIndex">
-                <number>13</number>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Gulf of Mexico</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Atlantic Ocean</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Pacific Ocean</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>------------------</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Alabama</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Alaska</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>California</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Connecticut</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Delaware</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>District of Columbia</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Florida</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Georgia</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Hawaii</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Louisiana</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Maine</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Maryland</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Massachusetts</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Mississippi</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>New Hampshire</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>New Jersey</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>New York</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>North Carolina</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Oregon</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Puerto Rico</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Rhode Island</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>South Carolina</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Texas</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Washington</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Virginia</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="button_savechart">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Save Map and Chart</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="button_savedata">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>27</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Save Data</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-          </layout>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_usgs">
+           <attribute name="title">
+            <string>USGS</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_17">
+            <item>
+             <widget class="QWebView" name="noaa_map_2">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="autoFillBackground">
+               <bool>false</bool>
+              </property>
+              <property name="url">
+               <url>
+                <string>qrc:/rsc/html/usgs_maps.html</string>
+               </url>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </item>
        </layout>
@@ -2513,7 +2552,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -2583,7 +2622,6 @@
   <tabstop>Date_StartTime</tabstop>
   <tabstop>Date_EndTime</tabstop>
   <tabstop>Button_FetchData</tabstop>
-  <tabstop>noaa_map</tabstop>
  </tabstops>
  <resources>
   <include location="../ADCvalidatior.qrc"/>
