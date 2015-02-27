@@ -60,7 +60,7 @@
 RequestExecutionLevel admin
 
 # define installer name
-OutFile "adcvalidator_installer_v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
+OutFile "adcirc_validator_installer_v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
  
 # set desktop as install directory
 InstallDir $PROGRAMFILES32\ADCIRCValidator
@@ -190,8 +190,8 @@ Section "Install"
 
     # Start Menu
 	CreateDirectory "$SMPROGRAMS\${APPNAME}"
-	CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\ADCValidator.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$DESKTOP\ADCIRC Validator.lnk" "$INSTDIR\ADCValidator.exe" "" "$INSTDIR\icon.ico"
+	CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\ADCIRC_Validator.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$DESKTOP\ADCIRC Validator.lnk" "$INSTDIR\ADCIRC_Validator.exe" "" "$INSTDIR\icon.ico"
     CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall ADCIRC Validator.lnk" "$INSTDIR\uninstaller.exe" ""
  
 	# Registry information for add/remove programs
