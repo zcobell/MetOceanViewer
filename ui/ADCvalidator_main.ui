@@ -47,7 +47,7 @@
       </property>
       <widget class="QWidget" name="tab_NOAA">
        <attribute name="title">
-        <string>Plot NOAA Data</string>
+        <string>Plot NOAA CO-OPS Data</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <item>
@@ -753,9 +753,9 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_IMEDS">
+      <widget class="QWidget" name="tab_timeseries">
        <attribute name="title">
-        <string>Plot ADCIRC Time Series Stations</string>
+        <string>Plot Time Series Stations</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
@@ -1332,7 +1332,7 @@
       </widget>
       <widget class="QWidget" name="tab_HWM">
        <attribute name="title">
-        <string>Plot ADCIRC High Water Marks</string>
+        <string>Plot High Water Marks</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
