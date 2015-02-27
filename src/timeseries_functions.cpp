@@ -114,7 +114,7 @@ QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index, double unitConv
 
     StartData = ui->date_imedsstart->dateTime();
     EndData = ui->date_imedsend->dateTime();
-    DecPlaces = ui->spin_imedsdecimalplaces->value();
+    DecPlaces = 3;
     multiplier = qPow(10.0,static_cast<double>(DecPlaces));
 
     Response = "";
