@@ -70,7 +70,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->noaa_map->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
     connect( ui->noaa_map->page(), SIGNAL(linkClicked(const QUrl &)),
                     this, SLOT(OpenExternalBrowser(const QUrl &)));
-    //ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
     //Set the initial dates to today and today minus a day
     ui->Date_StartTime->setDateTime(QDateTime::currentDateTime().addDays(-1));

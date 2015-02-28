@@ -119,9 +119,15 @@
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>85</width>
+                     <height>27</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
-                     <width>145</width>
+                     <width>85</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -172,9 +178,15 @@
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>85</width>
+                     <height>27</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
-                     <width>145</width>
+                     <width>85</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -580,10 +592,10 @@
                     <bool>true</bool>
                    </property>
                    <property name="currentText">
-                    <string/>
+                    <string>Louisiana</string>
                    </property>
                    <property name="currentIndex">
-                    <number>-1</number>
+                    <number>19</number>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
@@ -905,7 +917,228 @@
            <attribute name="title">
             <string>USGS</string>
            </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_17">
+           <layout class="QVBoxLayout" name="verticalLayout_20">
+            <item>
+             <widget class="QGroupBox" name="group_usgs_select">
+              <property name="title">
+               <string>Select a station and click fetch to see the available products. Then click plot.</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_17">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_17">
+                 <item>
+                  <widget class="QLabel" name="label_usgs_startdate">
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Start  Date:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDateEdit" name="dateEdit">
+                   <property name="minimumSize">
+                    <size>
+                     <width>85</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>85</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_usgs_enddate">
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>End Date: </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDateEdit" name="dateEdit_2">
+                   <property name="minimumSize">
+                    <size>
+                     <width>85</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>85</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_8">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>208</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_18">
+                 <item>
+                  <widget class="QLabel" name="label_usgs_product">
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Product:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_USGSProduct">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>350</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>350</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_25">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>48</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_20">
+                 <item>
+                  <widget class="QPushButton" name="button_usgs_fetch">
+                   <property name="minimumSize">
+                    <size>
+                     <width>110</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>110</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Fetch</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_usgs_plot">
+                   <property name="enabled">
+                    <bool>false</bool>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>110</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>110</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Plot</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_9">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
             <item>
              <widget class="QWebView" name="usgs_map">
               <property name="sizePolicy">
@@ -971,10 +1204,10 @@
                     <bool>true</bool>
                    </property>
                    <property name="currentText">
-                    <string>Alaska</string>
+                    <string>Louisiana</string>
                    </property>
                    <property name="currentIndex">
-                    <number>0</number>
+                    <number>19</number>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>

@@ -43,12 +43,6 @@ void MainWindow::on_Combo_PanTo_currentIndexChanged(int index)
     return;
 }
 
-void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
-{
-    ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
-    return;
-}
-
 //Called when the user attempts to save the NOAA chart
 void MainWindow::on_button_savechart_clicked()
 {
