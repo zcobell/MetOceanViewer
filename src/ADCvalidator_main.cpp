@@ -44,9 +44,11 @@ QColor DotColorHWM,LineColorRegression;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
 
 int NOAAMarkerID = -1;
-int CurrentNOAAID = -1;
+int USGSMarkerID = -1;
 double CurrentNOAALat,CurrentNOAALon;
+double CurrentUSGSLat,CurrentUSGSLon;
 QString CurrentNOAAStationName;
+QString CurrentUSGSStationName;
 QVector<NOAAStationData> CurrentNOAAStation;
 
 //Main routine which will intialize all the tabs
