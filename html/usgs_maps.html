@@ -158,8 +158,8 @@
                     layer.setOptions({options: {suppressInfoWindows: false}});
                     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].clear();
                     listenerHandle = google.maps.event.addListener(layer, 'click', function(event) {
-                        CurrentID = event.row.StationID.value;
-                        CurrentName = event.row.StationName.value;
+                        CurrentID = event.row.SiteNumber.value;
+                        CurrentName = event.row.SiteName.value;
                         CurrentLat = event.row.Latitude.value;
                         CurrentLon = event.row.Longitude.value;
                     });

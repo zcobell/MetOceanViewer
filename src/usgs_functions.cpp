@@ -35,3 +35,29 @@
 
 #include "ADCvalidator.h"
 #include "ui_ADCvalidator_main.h"
+
+void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
+{
+    QString Error;
+    if(reply->error()!=0)
+    {
+        QMessageBox::information(this,"ERROR","ERROR: "+reply->errorString());
+        return;
+    }
+    QByteArray RawUSGSData = reply->readAll();
+    QString USGSData = FormatUSGSResponse(RawUSGSData,Error);
+    reply->deleteLater();
+    return;
+}
+
+QString MainWindow::FormatUSGSResponse(QByteArray Input,QString &ErrorString)
+{
+    int i;
+    QString Output,TempData,DateS,YearS,MonthS,DayS,HourMinS,HourS,MinS,WLS;
+    QString InputData(Input);
+    QStringList DataList = InputData.split(QRegExp("[\r\n]"),QString::SkipEmptyParts);
+    QStringList TimeSnap;
+    QString Temp(Input);
+    ErrorString = Temp;
+    return InputData;
+}
