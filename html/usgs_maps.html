@@ -53,7 +53,6 @@
     <script src="/rsc/js/highcharts.js"></script>
     <script src="/rsc/js/exporting.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
-    <script src="/rsc/js/markercluster.js"></script>
     <script type="text/javascript">
 
     var map;
@@ -77,12 +76,17 @@
       ////////////////////////////////////////////////////////////
       //   PAN TO FUNCTION                                      //
       //                                                        //
-      //  Function to pan to a different x,y,zoom on the map    //
+      //  Function to pan to a different area on the map        //
       ////////////////////////////////////////////////////////////
-      function panTo(x,y,z){
-        var center = new google.maps.LatLng(y,x);
-        map.setCenter(center);
-        map.setZoom(z);
+      function panTo(location){
+      var geocoder = new google.maps.Geocoder();
+         geocoder.geocode( { 'address': location}, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+              map.setCenter(results[0].geometry.location);
+              map.fitBounds(results[0].geometry.viewport);
+            }
+          });
+
       }
 
       ////////////////////////////////////////////////////////////
@@ -96,7 +100,7 @@
         window.LastInfo = -1;
         var myOptions = {
           center: new google.maps.LatLng(29.5, -91.5),
-          zoom: 8,
+          zoom: 4,
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           panControl: true,
           streetViewControl: false,
@@ -109,7 +113,6 @@
         var logoControl = new ArcadisLogo(logoControlDiv);
         logoControlDiv.index = 0; // used for ordering
         map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
-        window.markerID = -1;
 
         var layer = new google.maps.FusionTablesLayer({
             query: {
@@ -124,8 +127,16 @@
         layer.setMap(map);
 
 
-          google.maps.event.addListener(layer, 'click', function(event) {
+        google.maps.event.addListener(layer, 'click', function(event) {
             CurrentID = event.row.SiteNumber.value;
+        });
+
+        var geocoder = new google.maps.Geocoder();
+         geocoder.geocode( { 'address': "United States"}, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+              map.setCenter(results[0].geometry.location);
+              map.fitBounds(results[0].geometry.viewport);
+            }
           });
 
        }
@@ -135,8 +146,6 @@
          google.maps.event.trigger(map, "resize");
          map.setCenter(center);
         });
-
-
 
 
       ////////////////////////////////////////////////////////////
