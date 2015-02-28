@@ -96,6 +96,9 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 
     javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"','"+Product+"','"+Error+"')";
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
+
+    reply->deleteLater();
+
     return;
 }
 

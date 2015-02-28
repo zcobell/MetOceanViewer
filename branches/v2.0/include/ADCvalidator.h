@@ -58,9 +58,12 @@ extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
-extern int NOAAMarkerID,CurrentNOAAID;
+extern int NOAAMarkerID;
 extern double CurrentNOAALat,CurrentNOAALon;
 extern QString CurrentNOAAStationName;
+extern int USGSMarkerID;
+extern double CurrentUSGSLat,CurrentUSGSLon;
+extern QString CurrentUSGSStationName;
 
 bool isConnectedToNetwork();
 
@@ -100,6 +103,8 @@ public:
 private slots:
 
     void ReadNOAADataFinished(QNetworkReply*);
+
+    void ReadUSGSDataFinished(QNetworkReply*);
 
     void on_Button_FetchData_clicked();
 
@@ -163,6 +168,8 @@ private slots:
 
     void on_combo_usgs_panto_currentIndexChanged(int index);
 
+    void on_button_usgs_fetch_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -172,7 +179,9 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    QString FormatNOAAResponse(QByteArray InputString, QString &ErrorString);
+    QString FormatNOAAResponse(QByteArray Input, QString &ErrorString);
+
+    QString FormatUSGSResponse(QByteArray Input, QString &ErrorString);
 
     void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
 
