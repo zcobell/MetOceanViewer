@@ -54,11 +54,13 @@ extern QDateTime IMEDSMinDate,IMEDSMaxDate;
 extern QVector<QVector<double> > NOAAStations;
 extern QVector<QString> NOAAStationNames;
 extern QVector<QString> panToLocations;
-extern QVariant MarkerID;
 extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
+extern int NOAAMarkerID,CurrentNOAAID;
+extern double CurrentNOAALat,CurrentNOAALon;
+extern QString CurrentNOAAStationName;
 
 bool isConnectedToNetwork();
 
@@ -68,7 +70,7 @@ struct NOAAStationData
     QTime Time;
     double value;
 };
-extern QVector<NOAAStationData> CurrentStation;
+extern QVector<NOAAStationData> CurrentNOAAStation;
 
 namespace Ui {
 class MainWindow;
@@ -96,7 +98,6 @@ public:
     int loadSession();
 
 private slots:
-    void BeginGatherStations();
 
     void ReadNOAADataFinished(QNetworkReply*);
 
@@ -160,6 +161,8 @@ private slots:
 
     void on_actionSave_Session_As_triggered();
 
+    void on_combo_usgs_panto_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
 
@@ -182,8 +185,6 @@ private:
     void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
 
     int ClassifyHWM(double diff);
-
-    void initializePanToLocations(int size);
 
     QString retrieveProduct(int type);
 

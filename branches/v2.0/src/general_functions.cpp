@@ -193,6 +193,18 @@ void MainWindow::unsupportedContent(QNetworkReply * reply)
 //pages to automatically draw plots
 void MainWindow::keyPressEvent(QKeyEvent *key)
 {
+    if(ui->Combo_PanTo->hasFocus())
+    {
+        ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_PanTo->currentText()+"')");
+        return;
+    }
+
+    if(ui->combo_usgs_panto->hasFocus())
+    {
+        ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
+        return;
+    }
+
     if(ui->MainTabs->currentIndex()==1)
     {
         if(ui->subtab_IMEDS->currentIndex()==1)
@@ -205,10 +217,11 @@ void MainWindow::keyPressEvent(QKeyEvent *key)
     }
     else if(ui->MainTabs->currentIndex()==0)
     {
-        if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
-        {
-            on_Button_FetchData_clicked();
-        }
+        if(ui->tab_livedata->currentIndex()==0)
+            if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
+            {
+              on_Button_FetchData_clicked();
+            }
     }
     return;
 }

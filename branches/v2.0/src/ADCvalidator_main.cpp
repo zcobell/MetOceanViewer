@@ -42,11 +42,12 @@ QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 QColor LineColor121Line,LineColorBounds;
 QColor DotColorHWM,LineColorRegression;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
-QVector<QVector<double> > NOAAStations;
-QVector<QString> NOAAStationNames;
-QVector<QString> panToLocations;
-QVector<NOAAStationData> CurrentStation;
-QVariant MarkerID = -1;
+
+int NOAAMarkerID = -1;
+int CurrentNOAAID = -1;
+double CurrentNOAALat,CurrentNOAALon;
+QString CurrentNOAAStationName;
+QVector<NOAAStationData> CurrentNOAAStation;
 
 //Main routine which will intialize all the tabs
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
@@ -64,7 +65,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->noaa_map->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
     ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-    QObject::connect(ui->noaa_map,SIGNAL(loadFinished(bool)),this,SLOT(BeginGatherStations()));
     ui->noaa_map->page()->setForwardUnsupportedContent(true);
     connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
     ui->noaa_map->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
@@ -81,10 +81,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     QModelIndex firstIndex = model->index(3,ui->Combo_PanTo->modelColumn(),ui->Combo_PanTo->rootModelIndex());
     QStandardItem* firstItem = model->itemFromIndex(firstIndex);
     firstItem->setSelectable(false);
-
-    //Set up the pan to combo box limits for the google map
-    int NumItems = ui->Combo_PanTo->count();
-    initializePanToLocations(NumItems);
 
     //Load the timeseries tab and set accordingly [Formerly "IMEDS"]
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);

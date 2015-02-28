@@ -39,19 +39,14 @@
 //Called when the pan to combo box is updated
 void MainWindow::on_Combo_PanTo_currentIndexChanged(int index)
 {
-    //Call the javascript code to reposition the google map center and zoom
-    double x,y,z;
-    QString data,xS,yS,zS;
-    data = panToLocations.value(index);
-    QStringList List = data.split(",");
-    xS = List.value(0);
-    yS = List.value(1);
-    zS = List.value(2);
-    x = xS.toDouble();
-    y = yS.toDouble();
-    z = zS.toDouble();
-    QString javastring = "panTo("+QString::number(x)+","+QString::number(y)+","+QString::number(z)+")";
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
+    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_PanTo->currentText()+"')");
+    return;
+}
+
+void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
+{
+    ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
+    return;
 }
 
 //Called when the user attempts to save the NOAA chart
@@ -77,13 +72,13 @@ void MainWindow::on_button_savechart_clicked()
 void MainWindow::on_button_savedata_clicked()
 {
 
-    if(MarkerID==-1)
+    if(NOAAMarkerID==-1)
     {
         QMessageBox::information(this,"ERROR","No Station has been selected.");
         return;
     }
-    QVariant MarkerID2 = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
-    if(MarkerID != MarkerID2)
+    QVariant NOAAMarkerID2 = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    if(NOAAMarkerID != NOAAMarkerID2)
     {
         QMessageBox::information(this,"ERROR","The currently selected station is not the data loaded.");
         return;
@@ -104,32 +99,19 @@ void MainWindow::on_button_savedata_clicked()
 
     if(format.compare("CSV")==0)
     {
-        Output << "Station: "+MarkerID.toString()+"\n";
+        Output << "Station: "+QString::number(NOAAMarkerID)+"\n";
         Output << "Datum: "+ui->combo_noaadatum->currentText()+"\n";
         Output << "Units: "+ui->combo_noaaunits->currentText()+"\n";
         Output << "\n";
-        for(int i=0;i<CurrentStation.size();i++)
+        for(int i=0;i<CurrentNOAAStation.size();i++)
         {
-            Output << CurrentStation[i].Date.toString("MM/dd/yyyy")+","+
-                      CurrentStation[i].Time.toString("hh:mm")+","+
-                      QString::number(CurrentStation[i].value)+"\n";
+            Output << CurrentNOAAStation[i].Date.toString("MM/dd/yyyy")+","+
+                      CurrentNOAAStation[i].Time.toString("hh:mm")+","+
+                      QString::number(CurrentNOAAStation[i].value)+"\n";
         }
     }
     else if(format.compare("IMEDS")==0)
     {
-        //Find the station index from the station ID
-        double Lat,Lon;
-        Lat = -9999;
-        Lon = -9999;
-        for(int i=0;i<NOAAStations[0].size();i++)
-        {
-            if(MarkerID.toDouble()==NOAAStations[0][i])
-            {
-                Lat = NOAAStations[2][i];
-                Lon = NOAAStations[1][i];
-            }
-        }
-
         QString datum = ui->combo_noaadatum->currentText();
         QString units = ui->combo_noaaunits->currentText();
         QString units2;
@@ -146,16 +128,17 @@ void MainWindow::on_button_savedata_clicked()
         Output << "% IMEDS generic format - Water Level\n";
         Output << "% year month day hour min sec watlev("+units2+")\n";
         Output << "NOAA    UTC    "+datum+"\n";
-        Output << "NOAA_"+MarkerID.toString()+"   "+QString::number(Lat)+"   "+QString::number(Lon)+"\n";
-        for(int i=0;i<CurrentStation.size();i++)
+        Output << "NOAA_"+QString::number(NOAAMarkerID)+"   "+QString::number(CurrentNOAALat)+
+                  "   "+QString::number(CurrentNOAALon)+"\n";
+        for(int i=0;i<CurrentNOAAStation.size();i++)
         {
-            Output << CurrentStation[i].Date.toString("yyyy")+"    "+
-                        CurrentStation[i].Date.toString("MM")+"    "+
-                        CurrentStation[i].Date.toString("dd")+"    "+
-                        CurrentStation[i].Time.toString("hh")+"    "+
-                        CurrentStation[i].Time.toString("mm")+"    "+
+            Output << CurrentNOAAStation[i].Date.toString("yyyy")+"    "+
+                        CurrentNOAAStation[i].Date.toString("MM")+"    "+
+                        CurrentNOAAStation[i].Date.toString("dd")+"    "+
+                        CurrentNOAAStation[i].Time.toString("hh")+"    "+
+                        CurrentNOAAStation[i].Time.toString("mm")+"    "+
                                                         "00" +"    "+
-                        QString::number(CurrentStation[i].value)+"\n";
+                        QString::number(CurrentNOAAStation[i].value)+"\n";
         }
 
     }
@@ -171,7 +154,12 @@ void MainWindow::on_Button_FetchData_clicked()
     QDateTime StartDate,EndDate;
     int ProductIndex;
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
-    MarkerID = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QStringList evalList = eval.toString().split(";");
+    NOAAMarkerID = evalList.value(0).toInt();
+    CurrentNOAAStationName = evalList.value(1).simplified();
+    CurrentNOAALat = evalList.value(2).toDouble();
+    CurrentNOAALon = evalList.value(3).toDouble();
 
     //Get the date range
     StartDate = ui->Date_StartTime->dateTime();
@@ -212,7 +200,7 @@ void MainWindow::on_Button_FetchData_clicked()
     RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
                  QString("product="+Product+"&application=adcvalidator")+
                  QString("&begin_date=")+StartString+QString("&end_date=")+EndString+
-                 QString("&station=")+MarkerID.toString()+
+                 QString("&station=")+QString::number(NOAAMarkerID)+
                  QString("&time_zone=GMT&units=")+Units+
                  QString("&interval=&format=csv");
     if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
