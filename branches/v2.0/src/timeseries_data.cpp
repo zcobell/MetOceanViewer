@@ -36,7 +36,6 @@
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
-#include <qdebug.h>
 
 IMEDS readIMEDS(QString filename)
 {
