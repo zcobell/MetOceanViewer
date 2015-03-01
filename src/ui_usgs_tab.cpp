@@ -45,27 +45,46 @@ void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 
 void MainWindow::on_button_usgs_fetch_clicked()
 {
-    QString RequestURL;
+    QString RequestURL,USGSMarkerString;
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
+    QDateTime startDate,endDate;
+    QString startDateString,endDateString;
+
+    USGSbeenPlotted = false;
+    USGSdataReady = false;
+
+    //Wipe out the combo box
+    ui->combo_USGSProduct->clear();
 
     //Retrieve info from google maps
     QVariant eval = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
-    USGSMarkerID = evalList.value(0).toInt();
-    CurrentUSGSStationName = evalList.value(1).simplified();
-    CurrentUSGSLat = evalList.value(2).toDouble();
-    CurrentUSGSLon = evalList.value(3).toDouble();
 
-    if(USGSMarkerID==-1)
+    //Sanity Check
+    if(evalList.value(0)=="none")
     {
         QMessageBox::warning(this,"Warning","No station has been selected.");
         return;
     }
 
+    //Get the station information
+    USGSMarkerString = evalList.value(0).mid(4);
+    USGSMarkerID = USGSMarkerString;
+    CurrentUSGSStationName = evalList.value(1).simplified();
+    CurrentUSGSLat = evalList.value(2).toDouble();
+    CurrentUSGSLon = evalList.value(3).toDouble();
+
+    //Get the time period for the data
+    endDate = ui->Date_usgsEnd->dateTime();
+    startDate = ui->Date_usgsStart->dateTime();
+    endDateString = "&endDT="+endDate.toString("yyyy-MM-dd");
+    startDateString = "&startDT="+startDate.toString("yyyy-MM-dd");
+
+
     //Connect the finished downloading signal to the routine that plots the markers
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
-    QUrl url = QString::fromLocal8Bit("http://waterservices.usgs.gov/nwis/iv/?sites=08313000&period=P7D&format=rdb");
-    manager->get(QNetworkRequest(url));
+    RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString+endDateString+"&format=rdb";
+    manager->get(QNetworkRequest(QUrl(RequestURL)));
 
     return;
 }

@@ -69,7 +69,7 @@
     <script type="text/javascript">
 
     var map;
-    var CurrentID = -1;
+    var CurrentID = "none";
     var CurrentName;
     var CurrentLat;
     var CurrentLon;
@@ -86,8 +86,9 @@
         google.maps.event.trigger(map,'resize');
     }
 
-    function returnStationID(){
-        var answer = String(CurrentID)+";"+CurrentName+";"+String(CurrentLon)+";"+String(CurrentLat);
+    function returnStationID()
+    {
+        var answer = CurrentID+";"+CurrentName+";"+String(CurrentLon)+";"+String(CurrentLat);
         return answer;
     }
 
@@ -140,11 +141,11 @@
         layer = new google.maps.FusionTablesLayer({
             query: {
                 select: '\'Geocodable address\'',
-                from: '1-CzrrjD1E8_IPs9yOTQnJaJspruMdj3PBgpXkfzq'
+                from: '1qfMjyRF6Tyz8m12mWb1-4dz8muBZGv8cEvuSE5Gt'
             },
             options: {
-                styleId: 2,
-                templateId: 3
+                styleId: 3,
+                templateId: 4
             }
         });
 
@@ -158,7 +159,7 @@
                     layer.setOptions({options: {suppressInfoWindows: false}});
                     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].clear();
                     listenerHandle = google.maps.event.addListener(layer, 'click', function(event) {
-                        CurrentID = event.row.SiteNumber.value;
+                        CurrentID = event.row.SiteNumber2.value;
                         CurrentName = event.row.SiteName.value;
                         CurrentLat = event.row.Latitude.value;
                         CurrentLon = event.row.Longitude.value;
@@ -188,12 +189,18 @@
       //                                                        //
       //  Plot the USGS data on the google chart api            //
       ////////////////////////////////////////////////////////////
-      function drawUSGSData(RawData,Datum,Units,Product,ErrorString) {
+      function drawUSGSData(RawData,Product,YLabel,NData,ErrorString) {
 
         //Split by rows
         RawData2 = new Array();
         RawData2 = RawData.split(";");
         USGSData = new Array();
+
+        if(NData<2)
+        {
+            jAlert('There is not currently data for this parameter at this station.','USGS Data Retreival Error');
+            return;
+        }
 
         //Split the rows into their pieces
         if(RawData2.length<5)
@@ -256,11 +263,11 @@
                 text: 'USGS Gauge Data'
             },
             subtitle: {
-                text: 'Station '+window.markerID+' - '+window.markerName
+                text: 'Station '+window.CurrentID+' - '+window.CurrentName
             },
             xAxis: {
                 type: 'datetime',
-                title: 'Date (GMT)',
+                title: 'Date (UTC)',
                 dateTimeLabelFormats: { // don't display the dummy year
                     month: '%e. %b',
                     year: '%b'
@@ -270,7 +277,7 @@
             yAxis: {
                 labels: {format: '{value:.2f}'},
                 title: {
-                    text: Product+" ("+Units+", "+Datum+")"
+                    text: YLabel
                 },
                 alternateGridColor: '#EEEEEE'
             },
@@ -290,7 +297,7 @@
             tooltip: {
                 formatter: function() {
                         return '<b>'+ this.series.name +'</b><br/>'+
-                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' '+Units;
+                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y;
                 }
             },
             series: [{
