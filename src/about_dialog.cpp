@@ -67,7 +67,10 @@ QString about_dialog::generateAboutText()
             "<b>Version: </b> "+QString(VER_FILEVERSION_STR) + "<br><br>" +
             "<b>Subversion Revision: </b>"+QString(SVER) + "<br><br>" +
             "<b>External Libraries</b> <br><br>" +
+            "NOAA CO-OPS API - http://tidesandcurrents.noaa.gov<br>" +
+            "USGS Waterdata API - http://waterdata.usgs.gov<br>" +
             "Google Maps v3.x API - http://maps.google.com <br>" +
+            "Google Fusion Tables API - http://tables.googlelabs.com<br>" +
             "HighCharts v4.1.1 - http://www.highcharts.com/ <br>" +
             "netCDF v4.3.3 - http://www.unidata.ucar.edu/software/netcdf/ <br>" +
             "HDF5 v1.8.14 - http://www.hdfgroup.org/HDF5/ <br>" +
