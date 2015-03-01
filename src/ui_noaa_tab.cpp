@@ -44,7 +44,7 @@ void MainWindow::on_Combo_PanTo_currentIndexChanged(int index)
 }
 
 //Called when the user attempts to save the NOAA chart
-void MainWindow::on_button_savechart_clicked()
+void MainWindow::on_button_noaasavechart_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
@@ -63,7 +63,7 @@ void MainWindow::on_button_savechart_clicked()
 }
 
 //Called when the user tries to save the NOAA data
-void MainWindow::on_button_savedata_clicked()
+void MainWindow::on_button_noaasavedata_clicked()
 {
 
     if(NOAAMarkerID==-1)

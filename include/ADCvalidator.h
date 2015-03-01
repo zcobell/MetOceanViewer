@@ -61,9 +61,10 @@ extern QString AlternateFolder;
 extern int NOAAMarkerID;
 extern double CurrentNOAALat,CurrentNOAALon;
 extern QString CurrentNOAAStationName;
-extern int USGSMarkerID;
+extern QString USGSMarkerID;
 extern double CurrentUSGSLat,CurrentUSGSLon;
-extern QString CurrentUSGSStationName;
+extern QString CurrentUSGSStationName,USGSErrorString;
+extern bool USGSbeenPlotted,USGSdataReady;
 
 bool isConnectedToNetwork();
 
@@ -74,6 +75,16 @@ struct NOAAStationData
     double value;
 };
 extern QVector<NOAAStationData> CurrentNOAAStation;
+extern QVector<NOAAStationData> USGSPlot;
+
+struct USGSData
+{
+    int NumDataPoints;
+    QString Description;
+    QVector<QDateTime> Date;
+    QVector<double> Data;
+};
+extern QVector<USGSData> CurrentUSGSStation;
 
 namespace Ui {
 class MainWindow;
@@ -110,9 +121,9 @@ private slots:
 
     void on_Combo_PanTo_currentIndexChanged(int index);
 
-    void on_button_savechart_clicked();
+    void on_button_noaasavechart_clicked();
 
-    void on_button_savedata_clicked();
+    void on_button_noaasavedata_clicked();
 
     void on_button_saveIMEDSImage_clicked();
 
@@ -170,6 +181,16 @@ private slots:
 
     void on_button_usgs_fetch_clicked();
 
+    int GetTimezoneOffset(QString timezone);
+
+    void on_button_usgssavemap_clicked();
+
+    void on_button_usgssavedata_clicked();
+
+    void on_combo_USGSProduct_currentIndexChanged(int index);
+
+    void PlotUSGS();
+
 private:
     Ui::MainWindow *ui;
 
@@ -181,7 +202,7 @@ private:
 
     QString FormatNOAAResponse(QByteArray Input, QString &ErrorString);
 
-    QString FormatUSGSResponse(QByteArray Input, QString &ErrorString);
+    void FormatUSGSResponse(QByteArray Input);
 
     void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
 
