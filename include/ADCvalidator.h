@@ -64,7 +64,7 @@ extern QString CurrentNOAAStationName;
 extern QString USGSMarkerID;
 extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
-extern bool USGSbeenPlotted,USGSdataReady;
+extern bool USGSbeenPlotted,USGSdataReady,USGSinstantData;
 
 bool isConnectedToNetwork();
 
@@ -191,6 +191,10 @@ private slots:
 
     void PlotUSGS();
 
+    void on_radio_usgsInstant_clicked();
+
+    void on_radio_usgsDaily_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -202,7 +206,9 @@ private:
 
     QString FormatNOAAResponse(QByteArray Input, QString &ErrorString);
 
-    void FormatUSGSResponse(QByteArray Input);
+    void FormatUSGSInstantResponse(QByteArray Input);
+
+    void FormatUSGSDailyResponse(QByteArray Input);
 
     void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
 

@@ -49,7 +49,10 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
     QByteArray RawUSGSData = reply->readAll();
 
     //Put the data into an array with all variables
-    FormatUSGSResponse(RawUSGSData);
+    if(USGSinstantData)
+        FormatUSGSInstantResponse(RawUSGSData);
+    else
+        FormatUSGSDailyResponse(RawUSGSData);
 
     //Delete the QNetworkReply object off the heap
     reply->deleteLater();
@@ -57,7 +60,123 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
     return;
 }
 
-void MainWindow::FormatUSGSResponse(QByteArray Input)
+void MainWindow::FormatUSGSDailyResponse(QByteArray Input)
+{
+    int i,j,ParamStart,ParamStop,OffsetHours;
+    int HeaderEnd;
+    double TempData;
+    QStringList TempList;
+    QString TempLine,TempDateString,TempTimeZoneString,TempString;
+    QString InputData(Input);
+    QStringList SplitByLine = InputData.split(QRegExp("[\n]"),QString::SkipEmptyParts);
+    QVector<QString> Parameters;
+    QDateTime CurrentDate;
+    bool doubleok;
+
+    ParamStart = -1;
+    ParamStop = -1;
+    HeaderEnd = -1;
+
+    //Save the potential error string
+    USGSErrorString = InputData.remove(QRegExp("[\n\t\r]"));
+
+    //Start by finding the header and reading the parameters from it
+    for(i=0;i<SplitByLine.length();i++)
+    {
+        if(SplitByLine.value(i).left(15)=="# Data provided")
+        {
+            ParamStart = i + 2;
+            break;
+        }
+    }
+
+    for(i=ParamStart;i<SplitByLine.length();i++)
+    {
+        TempLine = SplitByLine.value(i);
+        if(TempLine == "#")
+        {
+            ParamStop = i - 1;
+            break;
+        }
+    }
+
+    Parameters.resize(ParamStop-ParamStart+1);
+
+    for(i=ParamStart;i<=ParamStop;i++)
+    {
+        TempLine = SplitByLine.value(i);
+        TempList = TempLine.split(" ",QString::SkipEmptyParts);
+        Parameters[i-ParamStart] = QString();
+        for(j=3;j<TempList.length();j++)
+        {
+            if(j==3)
+                Parameters[i-ParamStart] = TempList.value(j);
+            else
+                Parameters[i-ParamStart] = Parameters[i-ParamStart] + " " + TempList.value(j);
+        }
+
+    }
+
+    //Add the parameters to the selection box
+    for(i=0;i<Parameters.length();i++)
+    {
+        Parameters[i] = Parameters[i].mid(5);
+        ui->combo_USGSProduct->addItem(Parameters[i]);
+    }
+
+    //Find out where the header ends
+    for(i=0;i<SplitByLine.length();i++)
+    {
+        if(SplitByLine.value(i).left(1) != "#")
+        {
+            HeaderEnd = i + 2;
+            break;
+        }
+    }
+
+    //Delete the old data
+    for(i=0;i<CurrentUSGSStation.length();i++)
+    {
+        CurrentUSGSStation[i].Data.clear();
+        CurrentUSGSStation[i].Date.clear();
+        CurrentUSGSStation[i].NumDataPoints = 0;
+    }
+    CurrentUSGSStation.clear();
+
+    //Initialize the array
+    CurrentUSGSStation.resize(Parameters.length());
+
+    //Read the data into the array
+    for(i=HeaderEnd;i<SplitByLine.length();i++)
+    {
+        TempLine = SplitByLine.value(i);
+        TempList = TempLine.split(QRegExp("[\t]"));
+        TempDateString = TempList.value(2);
+        CurrentDate = QDateTime::fromString(TempDateString,"yyyy-MM-dd");
+        CurrentDate.setTimeSpec(Qt::UTC);
+        for(j=0;j<Parameters.length();j++)
+        {
+            TempData = TempList.value(2*j+3).toDouble(&doubleok);
+            if(!TempList.value(2*j+3).isNull() && doubleok)
+            {
+                CurrentUSGSStation[j].NumDataPoints = CurrentUSGSStation[j].NumDataPoints + 1;
+                CurrentUSGSStation[j].Data.resize(CurrentUSGSStation[j].Data.length()+1);
+                CurrentUSGSStation[j].Date.resize(CurrentUSGSStation[j].Date.length()+1);
+                TempString = TempList.value(2*j+4).simplified();
+                CurrentUSGSStation[j].Data[CurrentUSGSStation[j].Data.length()-1] = TempList.value(2*j+3).toDouble();
+                CurrentUSGSStation[j].Date[CurrentUSGSStation[j].Date.length()-1] = CurrentDate;
+            }
+        }
+    }
+
+    USGSdataReady = true;
+    PlotUSGS();
+
+    return;
+}
+
+
+void MainWindow::FormatUSGSInstantResponse(QByteArray Input)
 {
     int i,j,ParamStart,ParamStop,OffsetHours;
     int HeaderEnd;
