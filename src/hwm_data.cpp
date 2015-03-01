@@ -34,7 +34,6 @@
 //------------------------------------------------------------------------------
         
 #include <hwm.h>
-#include <QDebug>
 
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 {

@@ -374,7 +374,7 @@ int MainWindow::GetTimezoneOffset(QString timezone)
         return -10;
     else
     {
-        qDebug() << timezone;
+        //qDebug() << timezone;
         QMessageBox::warning(this,"WARNING","The timezone conversion is not known for this locatin. The data is not converted to UTC.");
         return 0;
     }
