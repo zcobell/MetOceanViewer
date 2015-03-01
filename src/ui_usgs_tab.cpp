@@ -80,11 +80,35 @@ void MainWindow::on_button_usgs_fetch_clicked()
     endDateString = "&endDT="+endDate.toString("yyyy-MM-dd");
     startDateString = "&startDT="+startDate.toString("yyyy-MM-dd");
 
-
     //Connect the finished downloading signal to the routine that plots the markers
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
-    RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString+endDateString+"&format=rdb";
+    if(USGSinstantData)
+        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString+endDateString+"&format=rdb";
+    else
+        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString+endDateString+"&format=rdb";
+
     manager->get(QNetworkRequest(QUrl(RequestURL)));
 
     return;
+}
+
+void MainWindow::on_radio_usgsInstant_clicked()
+{
+    USGSinstantData = true;
+    ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
+    ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
+
+    if(ui->Date_usgsStart->dateTime()<QDateTime::currentDateTime().addDays(-120))
+        ui->Date_usgsStart->setDateTime(QDateTime::currentDateTime().addDays(-120));
+
+    if(ui->Date_usgsEnd->dateTime()<QDateTime::currentDateTime().addDays(-120))
+        ui->Date_usgsEnd->setDateTime(QDateTime::currentDateTime().addDays(-120));
+
+}
+
+void MainWindow::on_radio_usgsDaily_clicked()
+{
+    USGSinstantData = false;
+    ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
+    ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
 }
