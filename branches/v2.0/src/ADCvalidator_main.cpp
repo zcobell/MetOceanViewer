@@ -44,12 +44,17 @@ QColor DotColorHWM,LineColorRegression;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
 
 int NOAAMarkerID = -1;
-int USGSMarkerID = -1;
+QString USGSMarkerID = "none";
 double CurrentNOAALat,CurrentNOAALon;
 double CurrentUSGSLat,CurrentUSGSLon;
 QString CurrentNOAAStationName;
 QString CurrentUSGSStationName;
+QString USGSErrorString;
 QVector<NOAAStationData> CurrentNOAAStation;
+QVector<USGSData> CurrentUSGSStation;
+QVector<NOAAStationData> USGSPlot;
+bool USGSbeenPlotted = false;
+bool USGSdataReady = false;
 
 //Main routine which will intialize all the tabs
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
@@ -77,6 +82,14 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     //Set the initial dates to today and today minus a day
     ui->Date_StartTime->setDateTime(QDateTime::currentDateTime().addDays(-1));
     ui->Date_EndTime->setDateTime(QDateTime::currentDateTime());
+    ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTime());
+    ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTime());
+    ui->Date_usgsStart->setDateTime(QDateTime::currentDateTime().addDays(-7));
+    ui->Date_usgsEnd->setDateTime(QDateTime::currentDateTime());
+    ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
+    ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
+    ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
+    ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
 
     //Set unselectable combo box items
     QStandardItemModel* model = qobject_cast<QStandardItemModel*>(ui->Combo_PanTo->model());
