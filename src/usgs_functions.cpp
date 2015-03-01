@@ -49,7 +49,7 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
     QByteArray RawUSGSData = reply->readAll();
 
     //Put the data into an array with all variables
-    if(USGSinstantData)
+    if(USGSdataMethod==0||USGSdataMethod==1)
         FormatUSGSInstantResponse(RawUSGSData);
     else
         FormatUSGSDailyResponse(RawUSGSData);
@@ -162,8 +162,7 @@ void MainWindow::FormatUSGSDailyResponse(QByteArray Input)
                 CurrentUSGSStation[j].NumDataPoints = CurrentUSGSStation[j].NumDataPoints + 1;
                 CurrentUSGSStation[j].Data.resize(CurrentUSGSStation[j].Data.length()+1);
                 CurrentUSGSStation[j].Date.resize(CurrentUSGSStation[j].Date.length()+1);
-                TempString = TempList.value(2*j+4).simplified();
-                CurrentUSGSStation[j].Data[CurrentUSGSStation[j].Data.length()-1] = TempList.value(2*j+3).toDouble();
+                CurrentUSGSStation[j].Data[CurrentUSGSStation[j].Data.length()-1] = TempData;
                 CurrentUSGSStation[j].Date[CurrentUSGSStation[j].Date.length()-1] = CurrentDate;
             }
         }
@@ -199,9 +198,9 @@ void MainWindow::FormatUSGSInstantResponse(QByteArray Input)
         return;
     }
 
-
     //Save the potential error string
     USGSErrorString = InputData.remove(QRegExp("[\n\t\r]"));
+    USGSErrorString = "";
 
     //Start by finding the header and reading the parameters from it
     for(i=0;i<SplitByLine.length();i++)
@@ -285,8 +284,7 @@ void MainWindow::FormatUSGSInstantResponse(QByteArray Input)
                 CurrentUSGSStation[j].NumDataPoints = CurrentUSGSStation[j].NumDataPoints + 1;
                 CurrentUSGSStation[j].Data.resize(CurrentUSGSStation[j].Data.length()+1);
                 CurrentUSGSStation[j].Date.resize(CurrentUSGSStation[j].Date.length()+1);
-                TempString = TempList.value(2*j+4).simplified();
-                CurrentUSGSStation[j].Data[CurrentUSGSStation[j].Data.length()-1] = TempList.value(2*j+4).toDouble();
+                CurrentUSGSStation[j].Data[CurrentUSGSStation[j].Data.length()-1] = TempData;
                 CurrentUSGSStation[j].Date[CurrentUSGSStation[j].Date.length()-1] = CurrentDate;
             }
         }
