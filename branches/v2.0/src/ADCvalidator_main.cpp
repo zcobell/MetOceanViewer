@@ -55,6 +55,7 @@ QVector<USGSData> CurrentUSGSStation;
 QVector<NOAAStationData> USGSPlot;
 bool USGSbeenPlotted = false;
 bool USGSdataReady = false;
+bool USGSinstantData = false;
 
 //Main routine which will intialize all the tabs
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
@@ -86,8 +87,8 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTime());
     ui->Date_usgsStart->setDateTime(QDateTime::currentDateTime().addDays(-7));
     ui->Date_usgsEnd->setDateTime(QDateTime::currentDateTime());
-    ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
-    ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
+    ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
+    ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
     ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
 
