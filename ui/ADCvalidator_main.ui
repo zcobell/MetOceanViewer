@@ -59,7 +59,7 @@
            </size>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_noaa">
            <attribute name="title">
@@ -1064,19 +1064,29 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QRadioButton" name="radio_usgsInstant">
+                  <widget class="QRadioButton" name="radio_usgshistoric">
                    <property name="text">
-                    <string>Instantaneous</string>
+                    <string>Historic Data</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radio_usgs_instant">
+                   <property name="text">
+                    <string>Instantaneous Data</string>
                    </property>
                   </widget>
                  </item>
                  <item>
                   <widget class="QRadioButton" name="radio_usgsDaily">
                    <property name="text">
-                    <string>Daily</string>
+                    <string>Daily Data</string>
                    </property>
                    <property name="checked">
-                    <bool>true</bool>
+                    <bool>false</bool>
                    </property>
                   </widget>
                  </item>

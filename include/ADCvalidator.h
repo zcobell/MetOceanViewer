@@ -64,7 +64,8 @@ extern QString CurrentNOAAStationName;
 extern QString USGSMarkerID;
 extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
-extern bool USGSbeenPlotted,USGSdataReady,USGSinstantData;
+extern bool USGSbeenPlotted,USGSdataReady;
+extern int USGSdataMethod;
 
 bool isConnectedToNetwork();
 
@@ -194,6 +195,8 @@ private slots:
     void on_radio_usgsInstant_clicked();
 
     void on_radio_usgsDaily_clicked();
+
+    void on_radio_usgshistoric_clicked();
 
 private:
     Ui::MainWindow *ui;

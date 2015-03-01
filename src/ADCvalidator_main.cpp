@@ -55,7 +55,7 @@ QVector<USGSData> CurrentUSGSStation;
 QVector<NOAAStationData> USGSPlot;
 bool USGSbeenPlotted = false;
 bool USGSdataReady = false;
-bool USGSinstantData = false;
+int USGSdataMethod= 0;
 
 //Main routine which will intialize all the tabs
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
