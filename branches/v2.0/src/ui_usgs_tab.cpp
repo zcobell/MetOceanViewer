@@ -95,8 +95,6 @@ void MainWindow::on_button_usgs_fetch_clicked()
     else
         RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
 
-    qDebug() << RequestURL;
-
     //Make the request to the server
     manager->get(QNetworkRequest(QUrl(RequestURL)));
 
