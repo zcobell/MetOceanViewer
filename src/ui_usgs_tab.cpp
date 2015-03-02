@@ -48,7 +48,8 @@ void MainWindow::on_button_usgs_fetch_clicked()
     QString RequestURL,USGSMarkerString;
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QDateTime startDate,endDate;
-    QString startDateString,endDateString;
+    QString startDateString1,endDateString1;
+    QString startDateString2,endDateString2;
 
     USGSbeenPlotted = false;
     USGSdataReady = false;
@@ -77,19 +78,24 @@ void MainWindow::on_button_usgs_fetch_clicked()
     //Get the time period for the data
     endDate = ui->Date_usgsEnd->dateTime();
     startDate = ui->Date_usgsStart->dateTime();
-    endDateString = "&endDT="+endDate.toString("yyyy-MM-dd");
-    startDateString = "&startDT="+startDate.toString("yyyy-MM-dd");
+    endDateString1 = "&endDT="+endDate.toString("yyyy-MM-dd");
+    startDateString1 = "&startDT="+startDate.toString("yyyy-MM-dd");
+    endDateString2 = "&end_date="+endDate.toString("yyyy-MM-dd");
+    startDateString2 = "&begin_date="+startDate.toString("yyyy-MM-dd");
+
 
     //Connect the finished downloading signal to the routine that plots the markers
     connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
 
     //Construct the correct request URL
     if(USGSdataMethod==0)
-        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+USGSMarkerString+startDateString+endDateString;
+        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+USGSMarkerString+startDateString2+endDateString2;
     else if(USGSdataMethod==1)
-        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString+endDateString+"&format=rdb";
+        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
     else
-        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString+endDateString+"&format=rdb";
+        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
+
+    qDebug() << RequestURL;
 
     //Make the request to the server
     manager->get(QNetworkRequest(QUrl(RequestURL)));
