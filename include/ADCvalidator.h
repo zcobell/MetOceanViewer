@@ -192,11 +192,11 @@ private slots:
 
     void PlotUSGS();
 
-    void on_radio_usgsInstant_clicked();
-
     void on_radio_usgsDaily_clicked();
 
     void on_radio_usgshistoric_clicked();
+
+    void on_radio_usgs_instant_clicked();
 
 private:
     Ui::MainWindow *ui;

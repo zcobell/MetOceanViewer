@@ -97,7 +97,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
     return;
 }
 
-void MainWindow::on_radio_usgsInstant_clicked()
+void MainWindow::on_radio_usgs_instant_clicked()
 {
     USGSdataMethod = 1;
     ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
