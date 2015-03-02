@@ -47,8 +47,9 @@ void MainWindow::on_Combo_PanTo_currentIndexChanged(int index)
 void MainWindow::on_button_noaasavechart_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
+    QString DefaultFile = "/NOAA_"+QString::number(NOAAMarkerID)+".jpg";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
 
     if(Filename==NULL)
         return;
@@ -71,7 +72,9 @@ void MainWindow::on_button_noaasavedata_clicked()
         QMessageBox::information(this,"ERROR","No Station has been selected.");
         return;
     }
-    QVariant NOAAMarkerID2 = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QStringList evalList = eval.toString().split(";");
+    int NOAAMarkerID2 = evalList.value(0).toInt();
     if(NOAAMarkerID != NOAAMarkerID2)
     {
         QMessageBox::information(this,"ERROR","The currently selected station is not the data loaded.");
@@ -79,7 +82,9 @@ void MainWindow::on_button_noaasavedata_clicked()
     }
 
     QString filter;
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory,"CSV (*.csv);;IMEDS (*.imeds)",&filter);
+    QString DefaultFile = "/NOAA_"+QString::number(NOAAMarkerID)+".imeds";
+    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,
+                                                    "IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
 
