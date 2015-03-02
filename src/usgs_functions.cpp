@@ -383,7 +383,7 @@ int MainWindow::GetTimezoneOffset(QString timezone)
 void MainWindow::on_button_usgssavemap_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString DefaultFile = "/"+USGSMarkerID+".jpg";
+    QString DefaultFile = "/USGS_"+USGSMarkerID+".jpg";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
 
@@ -419,7 +419,7 @@ void MainWindow::on_button_usgssavedata_clicked()
     }
 
     QString filter;
-    QString DefaultFile = "/"+USGSMarkerID+".imeds";
+    QString DefaultFile = "/USGS_"+USGSMarkerID+".imeds";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,"IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
