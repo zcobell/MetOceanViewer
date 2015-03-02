@@ -72,8 +72,8 @@ void MainWindow::on_button_usgs_fetch_clicked()
     USGSMarkerString = evalList.value(0).mid(4);
     USGSMarkerID = USGSMarkerString;
     CurrentUSGSStationName = evalList.value(1).simplified();
-    CurrentUSGSLat = evalList.value(2).toDouble();
-    CurrentUSGSLon = evalList.value(3).toDouble();
+    CurrentUSGSLon = evalList.value(2).toDouble();
+    CurrentUSGSLat = evalList.value(3).toDouble();
 
     //Get the time period for the data
     endDate = ui->Date_usgsEnd->dateTime();
