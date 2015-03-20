@@ -128,14 +128,14 @@
         };
         map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
 
-        var logoControlDiv = document.createElement('DIV');
+        //var logoControlDiv = document.createElement('DIV');
         var zoomDiv        = document.createElement('DIV');
         zoomDiv.id         = "zoomText";
         zoomDiv.innerHTML  = "Zoom in to see stations";
-        var logoControl = new ArcadisLogo(logoControlDiv);
-        logoControlDiv.index = 0; // used for ordering
+        //var logoControl = new ArcadisLogo(logoControlDiv);
+        //logoControlDiv.index = 0; // used for ordering
         zoomDiv.index = 1;
-        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+        //map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
         map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(zoomDiv);
 
         layer = new google.maps.FusionTablesLayer({
