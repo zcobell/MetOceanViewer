@@ -121,13 +121,13 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -183,13 +183,13 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -598,10 +598,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="currentText">
-                    <string>Louisiana</string>
-                   </property>
-                   <property name="currentIndex">
-                    <number>19</number>
+                    <string>United States</string>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
@@ -958,13 +955,13 @@
                   <widget class="QDateEdit" name="Date_usgsStart">
                    <property name="minimumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -1002,13 +999,13 @@
                   <widget class="QDateEdit" name="Date_usgsEnd">
                    <property name="minimumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>95</width>
+                     <width>115</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -1234,10 +1231,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="currentText">
-                    <string>Louisiana</string>
-                   </property>
-                   <property name="currentIndex">
-                    <number>19</number>
+                    <string>Gulf of Mexico</string>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
