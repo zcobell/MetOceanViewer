@@ -62,11 +62,11 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 
 void MainWindow::FormatUSGSDailyResponse(QByteArray Input)
 {
-    int i,j,ParamStart,ParamStop,OffsetHours;
+    int i,j,ParamStart,ParamStop;
     int HeaderEnd;
     double TempData;
     QStringList TempList;
-    QString TempLine,TempDateString,TempTimeZoneString,TempString;
+    QString TempLine,TempDateString;
     QString InputData(Input);
     QStringList SplitByLine = InputData.split(QRegExp("[\n]"),QString::SkipEmptyParts);
     QVector<QString> Parameters;
@@ -275,7 +275,7 @@ void MainWindow::FormatUSGSInstantResponse(QByteArray Input)
         CurrentDate = QDateTime::fromString(TempDateString,"yyyy-MM-dd hh:mm");
         CurrentDate.setTimeSpec(Qt::UTC);
         OffsetHours = GetTimezoneOffset(TempTimeZoneString);
-        CurrentDate.addSecs(3600*OffsetHours);
+        CurrentDate = CurrentDate.addSecs(3600*OffsetHours);
         for(j=0;j<Parameters.length();j++)
         {
             TempData = TempList.value(2*j+4).toDouble(&doubleok);
