@@ -68,6 +68,7 @@
         var HWMMarkers = [];
         var HWMInfoWindow = [];
         var map;
+        var classbreaks;
 
         function clearMarkers()
         {
@@ -80,7 +81,7 @@
         function addLegend(unitString,classes)
         {
 
-            var classbreaks = classes.split(":");
+            classbreaks = classes.split(":");
             var iconBase = "qrc:/rsc/img/";
             var icons = {
                 c1: { name: "< "+classbreaks[0], icon: iconBase + 'mm_20_purple.png' },
