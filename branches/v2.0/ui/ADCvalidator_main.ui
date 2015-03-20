@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>702</height>
+    <width>780</width>
+    <height>720</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,8 +18,8 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>700</width>
-    <height>650</height>
+    <width>780</width>
+    <height>720</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -598,7 +598,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="currentText">
-                    <string>United States</string>
+                    <string>Alaska</string>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
@@ -924,7 +924,7 @@
             <item>
              <widget class="QGroupBox" name="group_usgs_select">
               <property name="title">
-               <string>Select a station and click fetch to see the available products. Then click plot.</string>
+               <string>Select a station and click fetch to generate a list of products. Select from the drop down to plot.</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_17">
                <item>
@@ -1231,7 +1231,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="currentText">
-                    <string>Gulf of Mexico</string>
+                    <string>Alaska</string>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
@@ -3344,7 +3344,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>700</width>
+     <width>780</width>
      <height>19</height>
     </rect>
    </property>
