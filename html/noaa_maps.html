@@ -107,10 +107,11 @@
         };
         map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
 
-        var logoControlDiv = document.createElement('DIV');
-        var logoControl = new ArcadisLogo(logoControlDiv);
-        logoControlDiv.index = 0; // used for ordering
-        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+        //var logoControlDiv = document.createElement('DIV');
+        //var logoControl = new ArcadisLogo(logoControlDiv);
+        //logoControlDiv.index = 0; // used for ordering
+        //map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+
         var layer = new google.maps.FusionTablesLayer({
             query: {
                 select: '\'Geocodable address\'',
