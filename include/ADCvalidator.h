@@ -198,6 +198,8 @@ private slots:
 
     void on_radio_usgs_instant_clicked();
 
+    void on_check_regressionColorMatch_clicked(bool checked);
+
 private:
     Ui::MainWindow *ui;
 

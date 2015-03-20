@@ -254,7 +254,7 @@
             tooltip: {
                 formatter: function() {
                         return '<b>'+ this.series.name +'</b><br/>'+
-                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' '+Units;
+                        Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y.toFixed(2) +' '+Units;
                 }
             },
             series: [{

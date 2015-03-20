@@ -157,8 +157,8 @@ void MainWindow::on_Button_FetchData_clicked()
     QStringList evalList = eval.toString().split(";");
     NOAAMarkerID = evalList.value(0).toInt();
     CurrentNOAAStationName = evalList.value(1).simplified();
-    CurrentNOAALat = evalList.value(2).toDouble();
-    CurrentNOAALon = evalList.value(3).toDouble();
+    CurrentNOAALat = evalList.value(3).toDouble();
+    CurrentNOAALon = evalList.value(2).toDouble();
 
     //Get the date range
     StartDate = ui->Date_StartTime->dateTime();

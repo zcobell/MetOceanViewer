@@ -235,7 +235,7 @@
         var plotToolTip = {
                 formatter: function() {
                     return '<b>'+ this.series.name +'</b><br/>'+
-                    Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y +' ';
+                    Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y.toFixed(2) +' ';
                     }
                 };
 
@@ -350,10 +350,10 @@
           zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
         };
         map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-        var logoControlDiv = document.createElement('DIV');
-        var logoControl = new ArcadisLogo(logoControlDiv);
-        logoControlDiv.index = 0; // used for ordering
-        map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+        //var logoControlDiv = document.createElement('DIV');
+        //var logoControl = new ArcadisLogo(logoControlDiv);
+        //logoControlDiv.index = 0; // used for ordering
+        //map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
        }
 
       function ArcadisLogo(controlDiv) {
