@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>700</width>
-    <height>650</height>
+    <height>702</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2293,6 +2293,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="check_regressionColorMatch">
+                 <property name="text">
+                  <string>Color regression scatter points to match high water mark map</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QGroupBox" name="group_hwmclass">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -3235,6 +3242,19 @@
              </widget>
             </item>
             <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
              <widget class="QPushButton" name="button_processHWM">
               <property name="text">
                <string>Plot High Water Marks</string>
@@ -3331,7 +3351,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
