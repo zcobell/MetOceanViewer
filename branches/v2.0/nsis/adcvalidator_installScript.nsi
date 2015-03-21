@@ -158,6 +158,7 @@ Section "Install"
     File ..\libs\libssl32.dll
     File ..\libs\libstdc++-6.dll
     File ..\libs\libwinpthread-1.dll
+	File ..\libs\libgcc_s_dw2-1.dll
     File ..\libs\netcdf.dll
     File ..\libs\Qt5Core.dll
     File ..\libs\Qt5Gui.dll
@@ -239,6 +240,7 @@ Section "Uninstall"
     Delete $INSTDIR\libEGL.dll
     Delete $INSTDIR\libssl32.dll
     Delete $INSTDIR\libstdc++-6.dll
+	Delete $INSTDIR\libgcc_s_dw2-1.dll
     Delete $INSTDIR\libwinpthread-1.dll
     Delete $INSTDIR\netcdf.dll
     Delete $INSTDIR\Qt5Core.dll
