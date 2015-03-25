@@ -160,6 +160,9 @@ void MainWindow::on_Button_FetchData_clicked()
     CurrentNOAALat = evalList.value(3).toDouble();
     CurrentNOAALon = evalList.value(2).toDouble();
 
+    //Update status
+    ui->statusBar->showMessage("Downloading data from NOAA...",0);
+
     //Get the date range
     StartDate = ui->Date_StartTime->dateTime();
     EndDate = ui->Date_EndTime->dateTime();
@@ -169,11 +172,13 @@ void MainWindow::on_Button_FetchData_clicked()
     if(Duration>31)
     {
         QMessageBox::information(NULL,"ERROR","Date range must be less than 31 days.");
+        ui->statusBar->clearMessage();
         return;
     }
     if(StartDate==EndDate||EndDate<StartDate)
     {
         QMessageBox::information(NULL,"ERROR","Dates must be a valid range.");
+        ui->statusBar->clearMessage();
         return;
     }
 
