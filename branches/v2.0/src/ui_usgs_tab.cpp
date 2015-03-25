@@ -54,6 +54,8 @@ void MainWindow::on_button_usgs_fetch_clicked()
     USGSbeenPlotted = false;
     USGSdataReady = false;
 
+    ui->statusBar->showMessage("Downloading data from USGS...");
+
     //Wipe out the combo box
     ui->combo_USGSProduct->clear();
 
@@ -65,6 +67,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
     if(evalList.value(0)=="none")
     {
         QMessageBox::warning(this,"Warning","No station has been selected.");
+        ui->statusBar->clearMessage();
         return;
     }
 

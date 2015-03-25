@@ -88,6 +88,7 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
     if(reply->error()!=0)
     {
         QMessageBox::information(this,"ERROR","ERROR: "+reply->errorString());
+        ui->statusBar->clearMessage();
         return;
     }
     NOAAWebData=reply->readAll();
@@ -98,6 +99,7 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
 
     reply->deleteLater();
+    ui->statusBar->clearMessage();
 
     return;
 }

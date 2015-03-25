@@ -38,10 +38,10 @@
 
 void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 {
-    QString Error;
     if(reply->error()!=0)
     {
         QMessageBox::information(this,"ERROR","ERROR: "+reply->errorString());
+        ui->statusBar->clearMessage();
         return;
     }
 
@@ -56,6 +56,9 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 
     //Delete the QNetworkReply object off the heap
     reply->deleteLater();
+
+    //Clear message
+    ui->statusBar->clearMessage();
 
     return;
 }
