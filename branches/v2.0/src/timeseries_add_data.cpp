@@ -206,8 +206,6 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             FileReadError = true;
         }
     }
-
-
     return;
 }
 

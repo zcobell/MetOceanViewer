@@ -58,7 +58,7 @@ void MainWindow::getStartEndTime(IMEDS Input, int index, QDateTime &Start, QDate
     return;
 }
 
-//Determines the start and end time in a IMEDS vector
+//Determines the start and end time in a IMEDS variable
 void MainWindow::getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End)
 {
     Start.setDate(QDate(2200,1,1));
@@ -82,8 +82,8 @@ void MainWindow::getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime 
     return;
 }
 
-//Reset the IMEDS data range shown the selection boxes
-void MainWindow::UpdateIMEDSDateRange(IMEDS MyIMEDS)
+//Reset the data range shown the selection boxes
+void MainWindow::UpdateTimeseriesDateRange(IMEDS MyIMEDS)
 {
     QDateTime MyMin,MyMax;
 
@@ -95,47 +95,55 @@ void MainWindow::UpdateIMEDSDateRange(IMEDS MyIMEDS)
     if(MyMax>IMEDSMaxDate)
         IMEDSMaxDate = MyMax;
 
-    if(ui->check_imedsalldata->isChecked() || ui->date_imedsstart->dateTime() < IMEDSMinDate )
-        ui->date_imedsstart->setDateTime(IMEDSMinDate);
+    if(ui->check_TimeseriesAllData->isChecked() && ui->date_TimeseriesStartDate->dateTime() < IMEDSMinDate )
+        ui->date_TimeseriesStartDate->setDateTime(IMEDSMinDate);
 
-    if(ui->check_imedsalldata->isChecked() || ui->date_imedsend->dateTime() > IMEDSMaxDate )
-        ui->date_imedsend->setDateTime(IMEDSMaxDate);
+    if(ui->check_TimeseriesAllData->isChecked() && ui->date_TimeseriesEndDate->dateTime() > IMEDSMaxDate )
+        ui->date_TimeseriesEndDate->setDateTime(IMEDSMaxDate);
 
     return;
 }
 
 //Format the IMEDS data string into something we can use in Javascript
-QString MainWindow::FormatIMEDSString(IMEDS MyStation,int index, double unitConvert)
+QString MainWindow::FormatTimeseriesString(IMEDS MyStation,int index, double unitConvert)
 {
     QString Response,TempString;
     QDateTime StartData,EndData;
-    int DecPlaces;
-    double value,value2,multiplier;
+    double value;
 
-    StartData = ui->date_imedsstart->dateTime();
-    EndData = ui->date_imedsend->dateTime();
-    DecPlaces = 3;
-    multiplier = qPow(10.0,static_cast<double>(DecPlaces));
+    StartData = ui->date_TimeseriesStartDate->dateTime();
+    EndData = ui->date_TimeseriesEndDate->dateTime();
 
     Response = "";
+    qDebug() << MyStation.station[index].NumSnaps;
     for(int j=0;j<MyStation.station[index].NumSnaps;j++)
     {
-        if(MyStation.station[index].date[j] > StartData &&
-             MyStation.station[index].date[j] < EndData)
+        if(ui->check_TimeseriesAllData->isChecked())
         {
             TempString = "";
             TempString = MyStation.station[index].date[j].toString("yyyy:MM:dd:hh:mm");
             value = MyStation.station[index].data[j]*unitConvert;
-            value2 = qRound(value*multiplier)/multiplier;
-            TempString = TempString+":"+QString::number(value2);
+            TempString = TempString+":"+QString::number(value);
             Response=Response+TempString+";";
+        }
+        else
+        {
+            if(MyStation.station[index].date[j] > StartData &&
+                 MyStation.station[index].date[j] < EndData)
+            {
+                TempString = "";
+                TempString = MyStation.station[index].date[j].toString("yyyy:MM:dd:hh:mm");
+                value = MyStation.station[index].data[j]*unitConvert;
+                TempString = TempString+":"+QString::number(value);
+                Response=Response+TempString+";";
+            }
         }
     }
     return Response;
 }
 
-//Check if two IMEDS files have the same station locations inside
-int MainWindow::CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test)
+//Check if two files have the same station locations inside
+int MainWindow::CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test)
 {
     if(Control.nstations!=Test.nstations)
     {

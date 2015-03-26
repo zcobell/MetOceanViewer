@@ -105,6 +105,6 @@ IMEDS NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold);
 IMEDS ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold);
 
 //Data holder
-extern QVector<IMEDS> IMEDSData;
+extern QVector<IMEDS> TimeseriesData;
 
 #endif // TIMESERIES_H
