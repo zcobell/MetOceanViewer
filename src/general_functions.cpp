@@ -193,37 +193,51 @@ void MainWindow::unsupportedContent(QNetworkReply * reply)
 //pages to automatically draw plots
 void MainWindow::keyPressEvent(QKeyEvent *key)
 {
-    if(ui->Combo_PanTo->hasFocus())
-    {
-        ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_PanTo->currentText()+"')");
-        return;
-    }
 
-    if(ui->combo_usgs_panto->hasFocus())
+    //Catch "ENTER" or "RETURN" Key
+    if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
     {
-        ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
-        return;
-    }
-
-    if(ui->MainTabs->currentIndex()==1)
-    {
-        if(ui->subtab_IMEDS->currentIndex()==1)
+        //Events for "ENTER" on the Live Data tabs
+        if(ui->MainTabs->currentIndex()==0)
         {
-            if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
+            //NOAA Tab
+            if(ui->subtab_livedata->currentIndex()==0)
             {
-                on_button_plotStation_clicked();
+                if(ui->Combo_NOAAPanTo->hasFocus())
+                    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
+                else
+                    on_Button_FetchData_clicked();
+            }
+            //USGS Tab
+            else if(ui->subtab_livedata->currentIndex()==1)
+            {
+                if(ui->combo_usgs_panto->hasFocus())
+                    ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
+                else
+                    on_button_usgs_fetch_clicked();
             }
         }
-    }
-    else if(ui->MainTabs->currentIndex()==0)
-    {
-        if(ui->tab_livedata->currentIndex()==0)
-            if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
-            {
-              on_Button_FetchData_clicked();
-            }
+        //Events for "ENTER" on the timeseries tabs
+        else if(ui->MainTabs->currentIndex()==1)
+        {
+           if(ui->subtab_timeseries->currentIndex()==0)
+           {
+               on_button_processTimeseriesData_clicked();
+           }
+           else if(ui->subtab_timeseries->currentIndex()==1)
+           {
+               on_button_plotTimeseriesStation_clicked();
+           }
+        }
+        else if(ui->MainTabs->currentIndex()==2)
+        {
+            if(ui->subtab_hwm->currentIndex()==1)
+                on_button_processHWM_clicked();
+        }
+
     }
     return;
+
 }
 
 bool isConnectedToNetwork(){

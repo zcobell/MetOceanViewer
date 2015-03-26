@@ -93,7 +93,7 @@ int MainWindow::saveSession()
     if(ierr!=NC_NOERR)return 1;
 
     //Start setting up the definitions
-    nTimeseries = ui->table_IMEDSData->rowCount();
+    nTimeseries = ui->table_TimeseriesData->rowCount();
 
     filenames_ts.resize(nTimeseries);
     colors_ts.resize(nTimeseries);
@@ -107,15 +107,15 @@ int MainWindow::saveSession()
 
     for(i=0;i<nTimeseries;i++)
     {
-        filenames_ts[i] = ui->table_IMEDSData->item(i,6)->text();
-        seriesname_ts[i] = ui->table_IMEDSData->item(i,1)->text();
-        colors_ts[i] = ui->table_IMEDSData->item(i,2)->text();
-        units_ts[i] = ui->table_IMEDSData->item(i,3)->text().toDouble();
-        xshift_ts[i] = ui->table_IMEDSData->item(i,4)->text().toDouble();
-        yshift_ts[i] = ui->table_IMEDSData->item(i,5)->text().toDouble();
-        date_ts[i] = ui->table_IMEDSData->item(i,7)->text();
-        filetype_ts[i] = ui->table_IMEDSData->item(i,8)->text();
-        stationfile_ts[i] = ui->table_IMEDSData->item(i,10)->text();
+        filenames_ts[i] = ui->table_TimeseriesData->item(i,6)->text();
+        seriesname_ts[i] = ui->table_TimeseriesData->item(i,1)->text();
+        colors_ts[i] = ui->table_TimeseriesData->item(i,2)->text();
+        units_ts[i] = ui->table_TimeseriesData->item(i,3)->text().toDouble();
+        xshift_ts[i] = ui->table_TimeseriesData->item(i,4)->text().toDouble();
+        yshift_ts[i] = ui->table_TimeseriesData->item(i,5)->text().toDouble();
+        date_ts[i] = ui->table_TimeseriesData->item(i,7)->text();
+        filetype_ts[i] = ui->table_TimeseriesData->item(i,8)->text();
+        stationfile_ts[i] = ui->table_TimeseriesData->item(i,10)->text();
     }
 
     ierr = NETCDF_ERR(nc_def_dim(ncid,"ntimeseries",static_cast<size_t>(nTimeseries),&dimid_ntimeseries));
@@ -169,39 +169,39 @@ int MainWindow::saveSession()
     ierr = NETCDF_ERR(nc_enddef(ncid));
     if(ierr!=NC_NOERR)return 1;
 
-    mydatastring[0] = ui->text_imedsplottitle->text().toStdString().c_str();
+    mydatastring[0] = ui->text_TimeseriesPlotTitle->text().toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_plottitle,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->text_xaxislabel->text().toStdString().c_str();
+    mydatastring[0] = ui->text_TimeseriesXaxisLabel->text().toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_xlabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->text_yaxislabel->text().toStdString().c_str();
+    mydatastring[0] = ui->text_TimeseriesYaxisLabel->text().toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_ylabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->date_imedsstart->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
+    mydatastring[0] = ui->date_TimeseriesStartDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_startdate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->date_imedsend->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
+    mydatastring[0] = ui->date_TimeseriesEndDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydataint[0] = 3;
     ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_precision,mydataint));
     if(ierr!=NC_NOERR)return 1;
-    mydatadouble[0] = ui->spin_imedsymin->value();
+    mydatadouble[0] = ui->spin_TimeseriesYmin->value();
     ierr = NETCDF_ERR(nc_put_var_double(ncid,varid_ymin,mydatadouble));
     if(ierr!=NC_NOERR)return 1;
-    mydatadouble[0] = ui->spin_imedsymax->value();
+    mydatadouble[0] = ui->spin_TimeseriesYmax->value();
     ierr = NETCDF_ERR(nc_put_var_double(ncid,varid_ymax,mydatadouble));
     if(ierr!=NC_NOERR)return 1;
 
-    if(ui->check_imedsalldata->isChecked())
+    if(ui->check_TimeseriesAllData->isChecked())
         mydataint[0] = 1;
     else
         mydataint[0] = 0;
     ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_autodate,mydataint));
     if(ierr!=NC_NOERR)return 1;
 
-    if(ui->check_imedyauto->isChecked())
+    if(ui->check_TimeseriesYauto->isChecked())
         mydataint[0] = 1;
     else
         mydataint[0] = 0;
@@ -360,55 +360,55 @@ int MainWindow::loadSession()
     //Read the scalar variables
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_plottitle,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
-    ui->text_imedsplottitle->setText(QString(mydatachar[0]));
+    ui->text_TimeseriesPlotTitle->setText(QString(mydatachar[0]));
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_xlabel,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
-    ui->text_xaxislabel->setText(QString(mydatachar[0]));
+    ui->text_TimeseriesXaxisLabel->setText(QString(mydatachar[0]));
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_ylabel,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
-    ui->text_yaxislabel->setText(QString(mydatachar[0]));
+    ui->text_TimeseriesYaxisLabel->setText(QString(mydatachar[0]));
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_startdate,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     tempstring = QString(mydatachar[0]);
     tempstartdate = QDateTime::fromString(tempstring,"yyyy-MM-dd hh:mm:ss").date();
-    ui->date_imedsstart->setDate(tempstartdate);
+    ui->date_TimeseriesStartDate->setDate(tempstartdate);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_enddate,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     tempstring = QString(mydatachar[0]);
     tempenddate = QDateTime::fromString(tempstring,"yyyy-MM-dd hh:mm:ss").date();
-    ui->date_imedsend->setDate(tempenddate);
+    ui->date_TimeseriesEndDate->setDate(tempenddate);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_ymin,&mydatadouble));
     if(ierr!=NC_NOERR)return 1;
-    ui->spin_imedsymin->setValue(mydatadouble[0]);
+    ui->spin_TimeseriesYmin->setValue(mydatadouble[0]);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_ymax,&mydatadouble));
     if(ierr!=NC_NOERR)return 1;
-    ui->spin_imedsymax->setValue(mydatadouble[0]);
+    ui->spin_TimeseriesYmax->setValue(mydatadouble[0]);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_autodate,&mydataint));
     if(ierr!=NC_NOERR)return 1;
     if(mydataint[0]==0)
-        ui->check_imedsalldata->setChecked(false);
+        ui->check_TimeseriesAllData->setChecked(false);
     else
-        ui->check_imedsalldata->setChecked(true);
+        ui->check_TimeseriesAllData->setChecked(true);
 
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_autoy,&mydataint));
     if(ierr!=NC_NOERR)return 1;
     if(mydataint[0]==0)
-        ui->check_imedyauto->setChecked(false);
+        ui->check_TimeseriesYauto->setChecked(false);
     else
-        ui->check_imedyauto->setChecked(true);
+        ui->check_TimeseriesYauto->setChecked(true);
 
     //Now, before we begin building the table, we need to empty everything
-    for(i=IMEDSData.length()-1;i>=0;i--)
+    for(i=TimeseriesData.length()-1;i>=0;i--)
     {
-        IMEDSData.remove(i);
-        ui->table_IMEDSData->removeRow(i);
+        TimeseriesData.remove(i);
+        ui->table_TimeseriesData->removeRow(i);
     }
 
     //Next, read in the data and add rows to the table
@@ -624,50 +624,50 @@ int MainWindow::loadSession()
         {
             //Build the table
             nrow = nrow + 1;
-            ui->table_IMEDSData->setRowCount(nrow);
-            ui->table_IMEDSData->setRowCount(nrow);
-            ui->table_IMEDSData->setItem(nrow-1,0,new QTableWidgetItem(filename));
-            ui->table_IMEDSData->setItem(nrow-1,1,new QTableWidgetItem(series_name));
-            ui->table_IMEDSData->setItem(nrow-1,2,new QTableWidgetItem(color));
-            ui->table_IMEDSData->setItem(nrow-1,3,new QTableWidgetItem(QString::number(unitconvert)));
-            ui->table_IMEDSData->setItem(nrow-1,4,new QTableWidgetItem(QString::number(xshift)));
-            ui->table_IMEDSData->setItem(nrow-1,5,new QTableWidgetItem(QString::number(yshift)));
-            ui->table_IMEDSData->setItem(nrow-1,6,new QTableWidgetItem(filelocation));
-            ui->table_IMEDSData->setItem(nrow-1,7,new QTableWidgetItem((coldstartstring)));
-            ui->table_IMEDSData->setItem(nrow-1,8,new QTableWidgetItem(type));
-            ui->table_IMEDSData->setItem(nrow-1,9,new QTableWidgetItem(stationfile));
-            ui->table_IMEDSData->setItem(nrow-1,10,new QTableWidgetItem(stationfilepath));
+            ui->table_TimeseriesData->setRowCount(nrow);
+            ui->table_TimeseriesData->setRowCount(nrow);
+            ui->table_TimeseriesData->setItem(nrow-1,0,new QTableWidgetItem(filename));
+            ui->table_TimeseriesData->setItem(nrow-1,1,new QTableWidgetItem(series_name));
+            ui->table_TimeseriesData->setItem(nrow-1,2,new QTableWidgetItem(color));
+            ui->table_TimeseriesData->setItem(nrow-1,3,new QTableWidgetItem(QString::number(unitconvert)));
+            ui->table_TimeseriesData->setItem(nrow-1,4,new QTableWidgetItem(QString::number(xshift)));
+            ui->table_TimeseriesData->setItem(nrow-1,5,new QTableWidgetItem(QString::number(yshift)));
+            ui->table_TimeseriesData->setItem(nrow-1,6,new QTableWidgetItem(filelocation));
+            ui->table_TimeseriesData->setItem(nrow-1,7,new QTableWidgetItem((coldstartstring)));
+            ui->table_TimeseriesData->setItem(nrow-1,8,new QTableWidgetItem(type));
+            ui->table_TimeseriesData->setItem(nrow-1,9,new QTableWidgetItem(stationfile));
+            ui->table_TimeseriesData->setItem(nrow-1,10,new QTableWidgetItem(stationfilepath));
             CellColor.setNamedColor(color);
-            ui->table_IMEDSData->item(nrow-1,2)->setBackgroundColor(CellColor);
+            ui->table_TimeseriesData->item(nrow-1,2)->setBackgroundColor(CellColor);
             ColdStart = QDateTime::fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
 
             //Read the data into the appropriate structure
-            IMEDSData.resize(nrow);
+            TimeseriesData.resize(nrow);
 
-            IMEDSData[nrow-1].success = false;
+            TimeseriesData[nrow-1].success = false;
 
             if(type=="IMEDS")
             {
-                IMEDSData[nrow-1] = readIMEDS(filelocation);
+                TimeseriesData[nrow-1] = readIMEDS(filelocation);
             }
             else if(type=="NETCDF")
             {
                 NetCDFData = readADCIRCnetCDF(filelocation);
                 if(!NetCDFData.success)
-                    IMEDSData[nrow-1].success = false;
+                    TimeseriesData[nrow-1].success = false;
                 else
                 {
-                    IMEDSData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
+                    TimeseriesData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
                 }
             }
             else if(type=="ADCIRC")
             {
                 ADCData = readADCIRCascii(filelocation,stationfilepath);
                 if(!ADCData.success)
-                    IMEDSData[nrow-1].success = false;
+                    TimeseriesData[nrow-1].success = false;
                 else
                 {
-                    IMEDSData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
+                    TimeseriesData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
                 }
             }
 

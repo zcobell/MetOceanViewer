@@ -37,9 +37,9 @@
 #include "ui_ADCvalidator_main.h"
 
 //Called when the pan to combo box is updated
-void MainWindow::on_Combo_PanTo_currentIndexChanged(int index)
+void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 {
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_PanTo->currentText()+"')");
+    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
     return;
 }
 
