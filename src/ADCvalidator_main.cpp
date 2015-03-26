@@ -92,20 +92,16 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
     ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
 
-    //Set unselectable combo box items
-    QStandardItemModel* model = qobject_cast<QStandardItemModel*>(ui->Combo_PanTo->model());
-    QModelIndex firstIndex = model->index(3,ui->Combo_PanTo->modelColumn(),ui->Combo_PanTo->rootModelIndex());
-    QStandardItem* firstItem = model->itemFromIndex(firstIndex);
-    firstItem->setSelectable(false);
-
-    //Load the timeseries tab and set accordingly [Formerly "IMEDS"]
+    //Load the timeseries tab and set accordingly
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    ui->imeds_map->load(QUrl("qrc:/rsc/html/timeseries_maps.html"));
-    ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    ui->imeds_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-    ui->imeds_map->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->imeds_map->page()->setForwardUnsupportedContent(true);
-    connect(ui->imeds_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    ui->timeseries_map->load(QUrl("qrc:/rsc/html/timeseries_maps.html"));
+    ui->timeseries_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
+    ui->timeseries_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+    ui->timeseries_map->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->timeseries_map->page()->setForwardUnsupportedContent(true);
+    ui->date_TimeseriesStartDate->setDateTime(ui->date_TimeseriesStartDate->minimumDateTime());
+    ui->date_TimeseriesEndDate->setDateTime(ui->date_TimeseriesEndDate->maximumDateTime());
+    connect(ui->timeseries_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Initialize Variables
     IMEDSMinDate.setDate(QDate(2900,1,1));
@@ -139,8 +135,8 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
     ui->button_boundlinecolor->update();
 
-    //Setup the IMEDS Table
-    SetupIMEDSTable();
+    //Setup the Table
+    SetupTimeseriesTable();
 
     //Get the directory path to start in
     PreviousDirectory = QDir::homePath();

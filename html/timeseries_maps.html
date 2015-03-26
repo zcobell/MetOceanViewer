@@ -52,7 +52,7 @@
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
     <script type="text/javascript">
 
-    var IMEDSMarkers = new Array();
+    var TimeseriesMarkers = new Array();
     var YMin,YMax;
     var PlotTitle;
     var XLabel,YLabel;
@@ -69,8 +69,7 @@
     var LastInfoWindow;
     var LastMarker = -1;
 
-    //Functions for the new version of the IMEDS map
-
+    //Functions for the new version of the timeseries map
     window.onresize = function()
     {
         $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
@@ -141,13 +140,13 @@
             x = Locations[0][i];
             y = Locations[1][i];
             Latlng = new google.maps.LatLng(y,x);
-            IMEDSMarkers[i] = new google.maps.Marker({
+            TimeseriesMarkers[i] = new google.maps.Marker({
                 position: Latlng,
                 map: map,
                 title: StationName[i],
                 LocalID: i
             });
-            google.maps.event.addListener(IMEDSMarkers[i], 'click', function() {
+            google.maps.event.addListener(TimeseriesMarkers[i], 'click', function() {
                 window.MarkerID = this.LocalID;
                 if(LastMarker!=-1)
                     LastInfoWindow.close();
@@ -179,7 +178,7 @@
         return LastMarker;
     }
 
-    function PlotIMEDSSeries()
+    function PlotTimeseries()
     {
         var i,j,k;
         var seriesList = new Array();
@@ -299,43 +298,33 @@
     }
 
 
-    //Old IMEDS map Functions
+    //Old map Functions
     function clearMarkers()
     {
-        while(IMEDSMarkers[0])
+        while(TimeseriesMarkers[0])
         {
-            IMEDSMarkers.pop().setMap(null);
+            TimeseriesMarkers.pop().setMap(null);
         }
     }
 
     function fitMarkers()
     {
         var extent = new google.maps.LatLngBounds();
-        var nMarker = IMEDSMarkers.length;
+        var nMarker = TimeseriesMarkers.length;
         for(i=0;i<nMarker;i++)
         {
-            extent.extend(IMEDSMarkers[i].getPosition());
+            extent.extend(TimeseriesMarkers[i].getPosition());
         }
         map.fitBounds(extent);
     }
 
-      ////////////////////////////////////////////////////////////
-      //   PAN TO FUNCTION                                      //
-      //                                                        //
-      //  Function to pan to a different x,y,zoom on the map    //
-      ////////////////////////////////////////////////////////////
-      function panToIMEDS(x,y,z){
-        var center = new google.maps.LatLng(y,x);
-        map.setCenter(center);
-        map.setZoom(z);
-      }
 
       ////////////////////////////////////////////////////////////
       //   INITIALIZE FUNCTION                                  //
       //                                                        //
       //  Function to initialize the google maps area on load   //
       ////////////////////////////////////////////////////////////
-      function initializeIMEDS() {
+      function initializeTimeseries() {
         //Initialize the map
 
         window.LastInfo = -1;
@@ -377,7 +366,7 @@
 
     </script>
   </head>
-  <body onload="initializeIMEDS()">
+  <body onload="initializeTimeseries()">
       <div style="height:100%; width: 100%; display: table">
           <div style="display: table-row">
             <div id="map_canvas" style="width: 50%; display: table-cell;"></div>

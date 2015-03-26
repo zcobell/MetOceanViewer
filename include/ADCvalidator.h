@@ -120,15 +120,15 @@ private slots:
 
     void on_Button_FetchData_clicked();
 
-    void on_Combo_PanTo_currentIndexChanged(int index);
+    void on_Combo_NOAAPanTo_currentIndexChanged(int index);
 
     void on_button_noaasavechart_clicked();
 
     void on_button_noaasavedata_clicked();
 
-    void on_button_saveIMEDSImage_clicked();
+    void on_button_saveTimeseriesImage_clicked();
 
-    void on_check_imedyauto_toggled(bool checked);
+    void on_check_TimeseriesYauto_toggled(bool checked);
 
     void on_browse_hwm_clicked();
 
@@ -148,23 +148,23 @@ private slots:
 
     void on_actionQuit_triggered();
 
-    void on_button_deleterow_clicked();
+    void on_button_TimeseriesDeleteRow_clicked();
 
-    void on_button_addrow_clicked();
+    void on_button_TimeseriesAddRow_clicked();
 
-    void on_button_editrow_clicked();
+    void on_button_TimeseriesEditRow_clicked();
 
-    void on_button_processIMEDSData_clicked();
+    void on_button_processTimeseriesData_clicked();
 
-    void on_check_imedsalldata_toggled(bool checked);
+    void on_check_TimeseriesAllData_toggled(bool checked);
 
     void on_button_fitHWM_clicked();
 
-    void on_button_fitIMEDS_clicked();
+    void on_button_fitTimeseries_clicked();
 
     void unsupportedContent(QNetworkReply * reply);
 
-    void on_button_plotStation_clicked();
+    void on_button_plotTimeseriesStation_clicked();
 
     void keyPressEvent(QKeyEvent* key);
 
@@ -215,11 +215,11 @@ private:
 
     void FormatUSGSDailyResponse(QByteArray Input);
 
-    void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
+    //void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
 
-    void addADCIRCMarker(IMEDS ADCIRC);
+    //void addADCIRCMarker(IMEDS ADCIRC);
 
-    void addIMEDSMarker(IMEDS Observation);
+    //void addIMEDSMarker(IMEDS Observation);
 
     void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
 
@@ -229,13 +229,13 @@ private:
 
     QString retrieveProduct(int type);
 
-    void SetupIMEDSTable();
+    void SetupTimeseriesTable();
 
-    void UpdateIMEDSDateRange(IMEDS MyIMEDS);
+    void UpdateTimeseriesDateRange(IMEDS MyIMEDS);
 
-    QString FormatIMEDSString(IMEDS MyStation, int index, double unitConvert);
+    QString FormatTimeseriesString(IMEDS MyStation, int index, double unitConvert);
 
-    int CheckStationLocationsIMEDS(IMEDS Control, IMEDS Test);
+    int CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test);
 
     int saveSession();
 

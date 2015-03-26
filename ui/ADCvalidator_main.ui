@@ -51,7 +51,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <item>
-         <widget class="QTabWidget" name="tab_livedata">
+         <widget class="QTabWidget" name="subtab_livedata">
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -135,7 +135,7 @@
                     <bool>false</bool>
                    </property>
                    <property name="displayFormat">
-                    <string>M/d/yyyy</string>
+                    <string>MM/dd/yyyy</string>
                    </property>
                    <property name="calendarPopup">
                     <bool>true</bool>
@@ -200,7 +200,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="displayFormat">
-                    <string>M/d/yyyy</string>
+                    <string>MM/dd/yyyy</string>
                    </property>
                    <property name="calendarPopup">
                     <bool>true</bool>
@@ -572,7 +572,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_15">
                  <item>
-                  <widget class="QComboBox" name="Combo_PanTo">
+                  <widget class="QComboBox" name="Combo_NOAAPanTo">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -1571,17 +1571,17 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="QTabWidget" name="subtab_IMEDS">
+         <widget class="QTabWidget" name="subtab_timeseries">
           <property name="currentIndex">
            <number>0</number>
           </property>
-          <widget class="QWidget" name="tab_selectIMEDS">
+          <widget class="QWidget" name="tab_timeseriesData">
            <attribute name="title">
             <string>Select Timeseries Data</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
-             <widget class="QTableWidget" name="table_IMEDSData">
+             <widget class="QTableWidget" name="table_TimeseriesData">
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
@@ -1630,21 +1630,21 @@
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="button_addrow">
+               <widget class="QPushButton" name="button_TimeseriesAddRow">
                 <property name="text">
                  <string>Add New Row</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_editrow">
+               <widget class="QPushButton" name="button_TimeseriesEditRow">
                 <property name="text">
                  <string>Edit Current Row</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_deleterow">
+               <widget class="QPushButton" name="button_TimeseriesDeleteRow">
                 <property name="text">
                  <string>Delete Current Row</string>
                 </property>
@@ -1666,7 +1666,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QGroupBox" name="group_imedsrange">
+             <widget class="QGroupBox" name="group_TimeseriesRange">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1680,7 +1680,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_36">
                  <item>
-                  <widget class="QCheckBox" name="check_imedsalldata">
+                  <widget class="QCheckBox" name="check_TimeseriesAllData">
                    <property name="minimumSize">
                     <size>
                      <width>55</width>
@@ -1702,7 +1702,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QDateEdit" name="date_imedsstart">
+                  <widget class="QDateEdit" name="date_TimeseriesStartDate">
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
@@ -1717,6 +1717,9 @@
                      <width>137</width>
                      <height>23</height>
                     </size>
+                   </property>
+                   <property name="displayFormat">
+                    <string>MM/dd/yyyy</string>
                    </property>
                    <property name="calendarPopup">
                     <bool>true</bool>
@@ -1740,7 +1743,7 @@
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QDateEdit" name="date_imedsend">
+                  <widget class="QDateEdit" name="date_TimeseriesEndDate">
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
@@ -1755,6 +1758,12 @@
                      <width>137</width>
                      <height>23</height>
                     </size>
+                   </property>
+                   <property name="accelerated">
+                    <bool>false</bool>
+                   </property>
+                   <property name="displayFormat">
+                    <string>MM/dd/yyyy</string>
                    </property>
                    <property name="calendarPopup">
                     <bool>true</bool>
@@ -1780,7 +1789,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="group_imedsyaxis">
+             <widget class="QGroupBox" name="group_TimeseriesYaxis">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1794,7 +1803,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_38">
                  <item>
-                  <widget class="QCheckBox" name="check_imedyauto">
+                  <widget class="QCheckBox" name="check_TimeseriesYauto">
                    <property name="minimumSize">
                     <size>
                      <width>55</width>
@@ -1816,7 +1825,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QDoubleSpinBox" name="spin_imedsymin">
+                  <widget class="QDoubleSpinBox" name="spin_TimeseriesYmin">
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
@@ -1857,7 +1866,7 @@
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QDoubleSpinBox" name="spin_imedsymax">
+                  <widget class="QDoubleSpinBox" name="spin_TimeseriesYmax">
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
@@ -1900,7 +1909,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="group_imedsgeneral">
+             <widget class="QGroupBox" name="group_TimeseriesGeneral">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1914,7 +1923,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_7">
                  <item>
-                  <widget class="QLabel" name="label_imedsplottitle">
+                  <widget class="QLabel" name="label_TimeseriesPlotTitle">
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
@@ -1936,7 +1945,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="text_imedsplottitle">
+                  <widget class="QLineEdit" name="text_TimeseriesPlotTitle">
                    <property name="minimumSize">
                     <size>
                      <width>250</width>
@@ -1972,7 +1981,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_13">
                  <item>
-                  <widget class="QLabel" name="label_xaxislabel">
+                  <widget class="QLabel" name="label_TimeseriesXaxisLabel">
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
@@ -1994,7 +2003,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="text_xaxislabel">
+                  <widget class="QLineEdit" name="text_TimeseriesXaxisLabel">
                    <property name="minimumSize">
                     <size>
                      <width>250</width>
@@ -2030,7 +2039,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_14">
                  <item>
-                  <widget class="QLabel" name="label_yaxislabel">
+                  <widget class="QLabel" name="label_TimeseriesYaxisLabel">
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
@@ -2052,7 +2061,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="text_yaxislabel">
+                  <widget class="QLineEdit" name="text_TimeseriesYaxisLabel">
                    <property name="minimumSize">
                     <size>
                      <width>250</width>
@@ -2089,7 +2098,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_processIMEDSData">
+             <widget class="QPushButton" name="button_processTimeseriesData">
               <property name="text">
                <string>Process Data</string>
               </property>
@@ -2097,13 +2106,13 @@
             </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="tab_viewIMEDS">
+          <widget class="QWidget" name="tab_viewTimeseries">
            <attribute name="title">
             <string>View Timeseries Data</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QWebView" name="imeds_map">
+             <widget class="QWebView" name="timeseries_map">
               <property name="url">
                <url>
                 <string>qrc:/rsc/html/timeseries_maps.html</string>
@@ -2114,21 +2123,21 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <item>
-               <widget class="QPushButton" name="button_plotStation">
+               <widget class="QPushButton" name="button_plotTimeseriesStation">
                 <property name="text">
                  <string>Plot Station</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_fitIMEDS">
+               <widget class="QPushButton" name="button_fitTimeseries">
                 <property name="text">
                  <string>Fit Markers</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_saveIMEDSImage">
+               <widget class="QPushButton" name="button_saveTimeseriesImage">
                 <property name="text">
                  <string>Save Map and Chart</string>
                 </property>

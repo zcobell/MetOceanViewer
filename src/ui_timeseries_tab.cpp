@@ -38,10 +38,10 @@
 #include <timeseries.h>
 #include <timeseries_add_data.h>
 
-QVector<IMEDS> IMEDSData;
+QVector<IMEDS> TimeseriesData;
 
-//Called when the user tries to save the IMEDS image
-void MainWindow::on_button_saveIMEDSImage_clicked()
+//Called when the user tries to save the Timeseries image
+void MainWindow::on_button_saveTimeseriesImage_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
@@ -51,24 +51,24 @@ void MainWindow::on_button_saveIMEDSImage_clicked()
         return;
 
     GetLeadingPath(Filename);
-    QFile IMEDSOutput(Filename);
-    QPixmap IMEDSImage(ui->imeds_map->size());
-    ui->imeds_map->render(&IMEDSImage);
-    IMEDSOutput.open(QIODevice::WriteOnly);
-    IMEDSImage.save(&IMEDSOutput,"JPG",100);
+    QFile TimeseriesOutput(Filename);
+    QPixmap TimeseriesImage(ui->timeseries_map->size());
+    ui->timeseries_map->render(&TimeseriesImage);
+    TimeseriesOutput.open(QIODevice::WriteOnly);
+    TimeseriesImage.save(&TimeseriesOutput,"JPG",100);
 
 }
 
-//Called when the user checks the imeds auto y axis box
-void MainWindow::on_check_imedyauto_toggled(bool checked)
+//Called when the user checks the timeseries auto y axis box
+void MainWindow::on_check_TimeseriesYauto_toggled(bool checked)
 {
-    ui->spin_imedsymin->setEnabled(!checked);
-    ui->spin_imedsymax->setEnabled(!checked);
+    ui->spin_TimeseriesYmin->setEnabled(!checked);
+    ui->spin_TimeseriesYmax->setEnabled(!checked);
 }
 
 
-//Adds a row to the table and reads the new data into the IMEDS variable
-void MainWindow::on_button_addrow_clicked()
+//Adds a row to the table and reads the new data into the timeseries variable
+void MainWindow::on_button_TimeseriesAddRow_clicked()
 {
     add_imeds_data AddWindow;
     QColor CellColor;
@@ -77,7 +77,7 @@ void MainWindow::on_button_addrow_clicked()
 
     EditBox = false;
 
-    int NumberOfRows = ui->table_IMEDSData->rowCount();
+    int NumberOfRows = ui->table_TimeseriesData->rowCount();
     AddWindow.setModal(false);
     AddWindow.set_default_dialog_box_elements(NumberOfRows);
 
@@ -89,66 +89,66 @@ void MainWindow::on_button_addrow_clicked()
     {
 
         NumberOfRows = NumberOfRows+1;
-        IMEDSData.resize(NumberOfRows);
+        TimeseriesData.resize(NumberOfRows);
 
-        IMEDSData[NumberOfRows-1].success = false;
+        TimeseriesData[NumberOfRows-1].success = false;
 
         if(InputFileType=="IMEDS")
         {
-            IMEDSData[NumberOfRows-1] = readIMEDS(InputFilePath);
-            UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+            TimeseriesData[NumberOfRows-1] = readIMEDS(InputFilePath);
+            UpdateTimeseriesDateRange(TimeseriesData[NumberOfRows-1]);
         }
         else if(InputFileType=="NETCDF")
         {
             NetCDFData = readADCIRCnetCDF(InputFilePath);
             if(!NetCDFData.success)
-                IMEDSData[NumberOfRows-1].success = false;
+                TimeseriesData[NumberOfRows-1].success = false;
             else
             {
-                IMEDSData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData,InputFileColdStart);
-                UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+                TimeseriesData[NumberOfRows-1] = NetCDF_to_IMEDS(NetCDFData,InputFileColdStart);
+                UpdateTimeseriesDateRange(TimeseriesData[NumberOfRows-1]);
             }
         }
         else if(InputFileType=="ADCIRC")
         {
             ADCData = readADCIRCascii(InputFilePath,StationFilePath);
             if(!ADCData.success)
-                IMEDSData[NumberOfRows-1].success = false;
+                TimeseriesData[NumberOfRows-1].success = false;
             else
             {
-                IMEDSData[NumberOfRows-1] = ADCIRC_to_IMEDS(ADCData,InputFileColdStart);
-                UpdateIMEDSDateRange(IMEDSData[NumberOfRows-1]);
+                TimeseriesData[NumberOfRows-1] = ADCIRC_to_IMEDS(ADCData,InputFileColdStart);
+                UpdateTimeseriesDateRange(TimeseriesData[NumberOfRows-1]);
             }
         }
 
-        ui->table_IMEDSData->setRowCount(NumberOfRows);
-        ui->table_IMEDSData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,1,new QTableWidgetItem(InputSeriesName));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,2,new QTableWidgetItem(InputColorString));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,3,new QTableWidgetItem(QString::number(UnitConversion)));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,4,new QTableWidgetItem(QString::number(xadjust)));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,5,new QTableWidgetItem(QString::number(yadjust)));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,7,
+        ui->table_TimeseriesData->setRowCount(NumberOfRows);
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,0,new QTableWidgetItem(InputFileName));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,1,new QTableWidgetItem(InputSeriesName));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,2,new QTableWidgetItem(InputColorString));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,3,new QTableWidgetItem(QString::number(UnitConversion)));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,4,new QTableWidgetItem(QString::number(xadjust)));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,5,new QTableWidgetItem(QString::number(yadjust)));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,6,new QTableWidgetItem(InputFilePath));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,7,
                                      new QTableWidgetItem(InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,8,new QTableWidgetItem(InputFileType));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,9,new QTableWidgetItem(InputStationFile));
-        ui->table_IMEDSData->setItem(NumberOfRows-1,10,new QTableWidgetItem(StationFilePath));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,8,new QTableWidgetItem(InputFileType));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,9,new QTableWidgetItem(InputStationFile));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,10,new QTableWidgetItem(StationFilePath));
         CellColor.setNamedColor(InputColorString);
-        ui->table_IMEDSData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
+        ui->table_TimeseriesData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
 
         //Tooltips in table cells
-        ui->table_IMEDSData->item(NumberOfRows-1,0)->setToolTip(InputFilePath);
-        ui->table_IMEDSData->item(NumberOfRows-1,1)->setToolTip(InputSeriesName);
-        ui->table_IMEDSData->item(NumberOfRows-1,3)->setToolTip(QString::number(UnitConversion));
-        ui->table_IMEDSData->item(NumberOfRows-1,4)->setToolTip(QString::number(xadjust));
-        ui->table_IMEDSData->item(NumberOfRows-1,5)->setToolTip(QString::number(yadjust));
+        ui->table_TimeseriesData->item(NumberOfRows-1,0)->setToolTip(InputFilePath);
+        ui->table_TimeseriesData->item(NumberOfRows-1,1)->setToolTip(InputSeriesName);
+        ui->table_TimeseriesData->item(NumberOfRows-1,3)->setToolTip(QString::number(UnitConversion));
+        ui->table_TimeseriesData->item(NumberOfRows-1,4)->setToolTip(QString::number(xadjust));
+        ui->table_TimeseriesData->item(NumberOfRows-1,5)->setToolTip(QString::number(yadjust));
 
-        if(!IMEDSData[NumberOfRows-1].success)
+        if(!TimeseriesData[NumberOfRows-1].success)
         {
             QApplication::setOverrideCursor(Qt::WaitCursor);
-            IMEDSData.remove(NumberOfRows-1);
-            ui->table_IMEDSData->removeRow(NumberOfRows-1);
+            TimeseriesData.remove(NumberOfRows-1);
+            ui->table_TimeseriesData->removeRow(NumberOfRows-1);
             QMessageBox::information(this,"ERROR","This file could not be read correctly.");
             QApplication::restoreOverrideCursor();
             return;
@@ -163,9 +163,9 @@ void MainWindow::on_button_addrow_clicked()
 
 //Called when the delete row button is clicked. Removes from the
 //table as well as the data vector
-void MainWindow::on_button_deleterow_clicked()
+void MainWindow::on_button_TimeseriesDeleteRow_clicked()
 {
-    if(ui->table_IMEDSData->rowCount()==0)
+    if(ui->table_TimeseriesData->rowCount()==0)
     {
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
         return;
@@ -175,40 +175,40 @@ void MainWindow::on_button_deleterow_clicked()
 
     //Reload the page so that arrays are refreshed.
     //This is sort of cheating, but it works
-    ui->imeds_map->reload();
+    ui->timeseries_map->reload();
     delay(2);
 
-    IMEDSData.remove(ui->table_IMEDSData->currentRow());
-    ui->table_IMEDSData->removeRow(ui->table_IMEDSData->currentRow());
+    TimeseriesData.remove(ui->table_TimeseriesData->currentRow());
+    ui->table_TimeseriesData->removeRow(ui->table_TimeseriesData->currentRow());
 
     QApplication::restoreOverrideCursor();
 
     return;
 }
 
-void MainWindow::SetupIMEDSTable()
+void MainWindow::SetupTimeseriesTable()
 {
     QString HeaderString = QString("Filename;Series Name;Color;Unit Conversion;")+
                            QString("x-shift;y-shift;FullPathToFile;Cold Start;")+
                            QString("FileType;StationFile;StationFilePath");
     QStringList Header = HeaderString.split(";");
 
-    ui->table_IMEDSData->setRowCount(0);
-    ui->table_IMEDSData->setColumnCount(11);
-    ui->table_IMEDSData->setColumnHidden(6,true);
-    ui->table_IMEDSData->setColumnHidden(7,true);
-    ui->table_IMEDSData->setColumnHidden(8,true);
-    ui->table_IMEDSData->setColumnHidden(9,true);
-    ui->table_IMEDSData->setColumnHidden(10,true);
-    ui->table_IMEDSData->setHorizontalHeaderLabels(Header);
-    ui->table_IMEDSData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    ui->table_IMEDSData->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->table_TimeseriesData->setRowCount(0);
+    ui->table_TimeseriesData->setColumnCount(11);
+    ui->table_TimeseriesData->setColumnHidden(6,true);
+    ui->table_TimeseriesData->setColumnHidden(7,true);
+    ui->table_TimeseriesData->setColumnHidden(8,true);
+    ui->table_TimeseriesData->setColumnHidden(9,true);
+    ui->table_TimeseriesData->setColumnHidden(10,true);
+    ui->table_TimeseriesData->setHorizontalHeaderLabels(Header);
+    ui->table_TimeseriesData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->table_TimeseriesData->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     return;
 }
 
-//Called when the edit row button is clicked. Updates the IMEDS data vector
-void MainWindow::on_button_editrow_clicked()
+//Called when the edit row button is clicked. Updates the timeseries data vector
+void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
     add_imeds_data AddWindow;
     QColor CellColor;
@@ -219,31 +219,31 @@ void MainWindow::on_button_editrow_clicked()
 
     EditBox = true;
 
-    if(ui->table_IMEDSData->rowCount() == 0)
+    if(ui->table_TimeseriesData->rowCount() == 0)
     {
         QMessageBox::information(this,"ERROR","Insert a row first.");
         return;
     }
 
-    if(ui->table_IMEDSData->currentRow() == -1)
+    if(ui->table_TimeseriesData->currentRow() == -1)
     {
         QMessageBox::information(this,"ERROR","No row selected.");
         return;
     }
 
     AddWindow.setModal(false);
-    CurrentRow = ui->table_IMEDSData->currentRow();
-    Filename = ui->table_IMEDSData->item(CurrentRow,0)->text();
-    Filepath = ui->table_IMEDSData->item(CurrentRow,6)->text();
-    SeriesName = ui->table_IMEDSData->item(CurrentRow,1)->text();
-    UnitConversion = ui->table_IMEDSData->item(CurrentRow,3)->text().toDouble();
-    xadjust = ui->table_IMEDSData->item(CurrentRow,4)->text().toDouble();
-    yadjust = ui->table_IMEDSData->item(CurrentRow,5)->text().toDouble();
-    FileType = ui->table_IMEDSData->item(CurrentRow,8)->text();
-    ColdStart = QDateTime::fromString(ui->table_IMEDSData->
+    CurrentRow = ui->table_TimeseriesData->currentRow();
+    Filename = ui->table_TimeseriesData->item(CurrentRow,0)->text();
+    Filepath = ui->table_TimeseriesData->item(CurrentRow,6)->text();
+    SeriesName = ui->table_TimeseriesData->item(CurrentRow,1)->text();
+    UnitConversion = ui->table_TimeseriesData->item(CurrentRow,3)->text().toDouble();
+    xadjust = ui->table_TimeseriesData->item(CurrentRow,4)->text().toDouble();
+    yadjust = ui->table_TimeseriesData->item(CurrentRow,5)->text().toDouble();
+    FileType = ui->table_TimeseriesData->item(CurrentRow,8)->text();
+    ColdStart = QDateTime::fromString(ui->table_TimeseriesData->
                                       item(CurrentRow,7)->text().simplified(),"yyyy-MM-dd hh:mm:ss");
-    CellColor.setNamedColor(ui->table_IMEDSData->item(CurrentRow,2)->text());
-    StationFilePath = ui->table_IMEDSData->item(CurrentRow,10)->text();
+    CellColor.setNamedColor(ui->table_TimeseriesData->item(CurrentRow,2)->text());
+    StationFilePath = ui->table_TimeseriesData->item(CurrentRow,10)->text();
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
                                       UnitConversion,xadjust,yadjust,
@@ -253,30 +253,30 @@ void MainWindow::on_button_editrow_clicked()
 
     if(WindowStatus == 1)
     {
-        ui->table_IMEDSData->setItem(CurrentRow,0,new QTableWidgetItem(InputFileName));
-        ui->table_IMEDSData->setItem(CurrentRow,1,new QTableWidgetItem(InputSeriesName));
-        ui->table_IMEDSData->setItem(CurrentRow,3,new QTableWidgetItem(QString::number(UnitConversion)));
-        ui->table_IMEDSData->setItem(CurrentRow,4,new QTableWidgetItem(QString::number(xadjust)));
-        ui->table_IMEDSData->setItem(CurrentRow,5,new QTableWidgetItem(QString::number(yadjust)));
-        ui->table_IMEDSData->setItem(CurrentRow,6,new QTableWidgetItem(InputFilePath));
-        ui->table_IMEDSData->setItem(CurrentRow,7,new QTableWidgetItem(
+        ui->table_TimeseriesData->setItem(CurrentRow,0,new QTableWidgetItem(InputFileName));
+        ui->table_TimeseriesData->setItem(CurrentRow,1,new QTableWidgetItem(InputSeriesName));
+        ui->table_TimeseriesData->setItem(CurrentRow,3,new QTableWidgetItem(QString::number(UnitConversion)));
+        ui->table_TimeseriesData->setItem(CurrentRow,4,new QTableWidgetItem(QString::number(xadjust)));
+        ui->table_TimeseriesData->setItem(CurrentRow,5,new QTableWidgetItem(QString::number(yadjust)));
+        ui->table_TimeseriesData->setItem(CurrentRow,6,new QTableWidgetItem(InputFilePath));
+        ui->table_TimeseriesData->setItem(CurrentRow,7,new QTableWidgetItem(
                                          InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
-        ui->table_IMEDSData->setItem(CurrentRow,8,new QTableWidgetItem(InputFileType));
-        ui->table_IMEDSData->setItem(CurrentRow,9,new QTableWidgetItem(InputStationFile));
-        ui->table_IMEDSData->setItem(CurrentRow,10,new QTableWidgetItem(StationFilePath));
+        ui->table_TimeseriesData->setItem(CurrentRow,8,new QTableWidgetItem(InputFileType));
+        ui->table_TimeseriesData->setItem(CurrentRow,9,new QTableWidgetItem(InputStationFile));
+        ui->table_TimeseriesData->setItem(CurrentRow,10,new QTableWidgetItem(StationFilePath));
 
         //Tooltips in table cells
-        ui->table_IMEDSData->item(CurrentRow,0)->setToolTip(InputFilePath);
-        ui->table_IMEDSData->item(CurrentRow,1)->setToolTip(InputSeriesName);
-        ui->table_IMEDSData->item(CurrentRow,3)->setToolTip(QString::number(UnitConversion));
-        ui->table_IMEDSData->item(CurrentRow,4)->setToolTip(QString::number(xadjust));
-        ui->table_IMEDSData->item(CurrentRow,5)->setToolTip(QString::number(yadjust));
+        ui->table_TimeseriesData->item(CurrentRow,0)->setToolTip(InputFilePath);
+        ui->table_TimeseriesData->item(CurrentRow,1)->setToolTip(InputSeriesName);
+        ui->table_TimeseriesData->item(CurrentRow,3)->setToolTip(QString::number(UnitConversion));
+        ui->table_TimeseriesData->item(CurrentRow,4)->setToolTip(QString::number(xadjust));
+        ui->table_TimeseriesData->item(CurrentRow,5)->setToolTip(QString::number(yadjust));
 
         if(ColorUpdated)
         {
-            ui->table_IMEDSData->setItem(CurrentRow,2,new QTableWidgetItem(InputColorString));
+            ui->table_TimeseriesData->setItem(CurrentRow,2,new QTableWidgetItem(InputColorString));
             CellColor.setNamedColor(InputColorString);
-            ui->table_IMEDSData->item(CurrentRow,2)->setBackgroundColor(CellColor);
+            ui->table_TimeseriesData->item(CurrentRow,2)->setBackgroundColor(CellColor);
         }
 
         //If we need to, read the new IMEDS file into the appropriate slot
@@ -285,12 +285,12 @@ void MainWindow::on_button_editrow_clicked()
             if(InputFileType=="IMEDS")
             {
                 QApplication::setOverrideCursor(Qt::WaitCursor);
-                IMEDSData.remove(CurrentRow);
-                IMEDSData.insert(CurrentRow,readIMEDS(InputFilePath));
-                if(!IMEDSData[CurrentRow].success)
+                TimeseriesData.remove(CurrentRow);
+                TimeseriesData.insert(CurrentRow,readIMEDS(InputFilePath));
+                if(!TimeseriesData[CurrentRow].success)
                 {
-                    IMEDSData.remove(CurrentRow);
-                    ui->table_IMEDSData->removeRow(CurrentRow);
+                    TimeseriesData.remove(CurrentRow);
+                    ui->table_TimeseriesData->removeRow(CurrentRow);
                     QApplication::restoreOverrideCursor();
                     QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
                     return;
@@ -300,12 +300,12 @@ void MainWindow::on_button_editrow_clicked()
             else if(InputFileType=="NETCDF")
             {
                 QApplication::setOverrideCursor(Qt::WaitCursor);
-                IMEDSData.remove(CurrentRow);
-                IMEDSData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),InputFileColdStart));
-                if(!IMEDSData[CurrentRow].success)
+                TimeseriesData.remove(CurrentRow);
+                TimeseriesData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),InputFileColdStart));
+                if(!TimeseriesData[CurrentRow].success)
                 {
-                    IMEDSData.remove(CurrentRow);
-                    ui->table_IMEDSData->removeRow(CurrentRow);
+                    TimeseriesData.remove(CurrentRow);
+                    ui->table_TimeseriesData->removeRow(CurrentRow);
                     QApplication::restoreOverrideCursor();
                     QMessageBox::information(this,"ERROR","This NETCDF file could not be read correctly.");
                     return;
@@ -315,20 +315,20 @@ void MainWindow::on_button_editrow_clicked()
             else if(InputFileType=="ADCIRC")
             {
                 QApplication::setOverrideCursor(Qt::WaitCursor);
-                IMEDSData.remove(CurrentRow);
-                IMEDSData.insert(CurrentRow,
+                TimeseriesData.remove(CurrentRow);
+                TimeseriesData.insert(CurrentRow,
                     ADCIRC_to_IMEDS(readADCIRCascii(InputFilePath,StationFilePath),InputFileColdStart));
-                if(!IMEDSData[CurrentRow].success)
+                if(!TimeseriesData[CurrentRow].success)
                 {
-                    IMEDSData.remove(CurrentRow);
-                    ui->table_IMEDSData->removeRow(CurrentRow);
+                    TimeseriesData.remove(CurrentRow);
+                    ui->table_TimeseriesData->removeRow(CurrentRow);
                     QApplication::restoreOverrideCursor();
                     QMessageBox::information(this,"ERROR","This ADCIRC file could not be read correctly.");
                     return;
                 }
                 QApplication::restoreOverrideCursor();
             }
-            UpdateIMEDSDateRange(IMEDSData[CurrentRow]);
+            UpdateTimeseriesDateRange(TimeseriesData[CurrentRow]);
         }
 
     }
@@ -338,7 +338,7 @@ void MainWindow::on_button_editrow_clicked()
 
 
 //Send the data to the HTML side of the code for plotting
-void MainWindow::on_button_processIMEDSData_clicked()
+void MainWindow::on_button_processTimeseriesData_clicked()
 {
     int i,ierr;
     double x,y,YMin,YMax;
@@ -353,11 +353,10 @@ void MainWindow::on_button_processIMEDSData_clicked()
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //Start by clearing the markers
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
-    //ui->imeds_map->reload();
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
     delay(1);
 
-    if(ui->table_IMEDSData->rowCount()==0)
+    if(ui->table_TimeseriesData->rowCount()==0)
     {
         QMessageBox::information(this,"ERROR","There are no rows in the table.");
         QApplication::restoreOverrideCursor();
@@ -365,20 +364,21 @@ void MainWindow::on_button_processIMEDSData_clicked()
     }
 
     //Set up our axis labels and plot titles
-    PlotTitle = ui->text_imedsplottitle->text();
-    XLabel  = ui->text_xaxislabel->text();
-    YLabel  = ui->text_yaxislabel->text();
-    YMin    = ui->spin_imedsymin->value();
-    YMax    = ui->spin_imedsymax->value();
-    XMin    = ui->date_imedsstart->dateTime().toString("yyyy-MM-dd");
-    XMax    = ui->date_imedsend->dateTime().toString("yyyy-MM-dd");
-    Checked = ui->check_imedyauto->isChecked();
+    PlotTitle = ui->text_TimeseriesPlotTitle->text();
+    XLabel  = ui->text_TimeseriesXaxisLabel->text();
+    YLabel  = ui->text_TimeseriesYaxisLabel->text();
+    YMin    = ui->spin_TimeseriesYmin->value();
+    YMax    = ui->spin_TimeseriesYmax->value();
+    XMin    = ui->date_TimeseriesStartDate->dateTime().toString("yyyy-MM-dd");
+    XMax    = ui->date_TimeseriesEndDate->dateTime().toString("yyyy-MM-dd");
+
+    Checked = ui->check_TimeseriesYauto->isChecked();
     if(Checked)
         AutoY = "auto";
     else
         AutoY = "none";
 
-    Checked = ui->check_imedsalldata->isChecked();
+    Checked = ui->check_TimeseriesAllData->isChecked();
     if(Checked)
         AutoX = "auto";
     else
@@ -388,95 +388,95 @@ void MainWindow::on_button_processIMEDSData_clicked()
             ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"','"+AutoX+"','"+
             XMin+"','"+XMax+"')";
 
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
 
     //Verify that the stations are the same in all files
-    if(IMEDSData.length()>1)
+    if(TimeseriesData.length()>1)
     {        
-        for(i=1;i<IMEDSData.length();i++)
+        for(i=1;i<TimeseriesData.length();i++)
         {
-            ierr = CheckStationLocationsIMEDS(IMEDSData[0],IMEDSData[i]);
+            ierr = CheckStationLocationsTimeseries(TimeseriesData[0],TimeseriesData[i]);
             if(ierr==1)
             {
-                QMessageBox::information(this,"ERROR","The station locations in the IMEDS files do not match.");
+                QMessageBox::information(this,"ERROR","The station locations in the timeseries files do not match.");
                 QApplication::restoreOverrideCursor();
                 return;
             }
         }
     }
 
-    for(i=0;i<IMEDSData.length();i++)
+    for(i=0;i<TimeseriesData.length();i++)
     {
-        name  = ui->table_IMEDSData->item(i,1)->text();
-        color = ui->table_IMEDSData->item(i,2)->text();
-        unit  = ui->table_IMEDSData->item(i,3)->text();
-        plusX = ui->table_IMEDSData->item(i,4)->text();
-        plusY = ui->table_IMEDSData->item(i,5)->text();
+        name  = ui->table_TimeseriesData->item(i,1)->text();
+        color = ui->table_TimeseriesData->item(i,2)->text();
+        unit  = ui->table_TimeseriesData->item(i,3)->text();
+        plusX = ui->table_TimeseriesData->item(i,4)->text();
+        plusY = ui->table_TimeseriesData->item(i,5)->text();
         javascript = "SetSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"',"+unit+","+plusX+","+plusY+")";
-        ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
     //Inform HTML on the number of data series
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("allocateData("+
-                                                           QString::number(IMEDSData.length())+")");
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("allocateData("+
+                                                           QString::number(TimeseriesData.length())+")");
 
     //Send locations to HTML side
-    for(i=0;i<IMEDSData[0].nstations;i++)
+    for(i=0;i<TimeseriesData[0].nstations;i++)
     {
-        x = IMEDSData[0].station[i].longitude;
-        y = IMEDSData[0].station[i].latitude;
+        x = TimeseriesData[0].station[i].longitude;
+        y = TimeseriesData[0].station[i].latitude;
         javascript = "SetMarkerLocations("+QString::number(i)+
                 ","+QString::number(x)+","+
                 QString::number(y)+",'"+
-                IMEDSData[0].station[i].StationName+"')";
-        jsResponse = ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+                TimeseriesData[0].station[i].StationName+"')";
+        jsResponse = ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
     //Now, all data should be on the backend for plotting. Bombs away...
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("AddToMap()");
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("AddToMap()");
     ui->MainTabs->setCurrentIndex(1);
-    ui->subtab_IMEDS->setCurrentIndex(1);
+    ui->subtab_timeseries->setCurrentIndex(1);
     delay(1);
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
 
     QApplication::restoreOverrideCursor();
 }
 
-void MainWindow::on_check_imedsalldata_toggled(bool checked)
+void MainWindow::on_check_TimeseriesAllData_toggled(bool checked)
 {
-    ui->date_imedsstart->setEnabled(!checked);
-    ui->date_imedsend->setEnabled(!checked);
+    ui->date_TimeseriesStartDate->setEnabled(!checked);
+    ui->date_TimeseriesEndDate->setEnabled(!checked);
     return;
 }
 
-void MainWindow::on_button_fitIMEDS_clicked()
+void MainWindow::on_button_fitTimeseries_clicked()
 {
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
     return;
 }
 
-void MainWindow::on_button_plotStation_clicked()
+void MainWindow::on_button_plotTimeseriesStation_clicked()
 {
     QString DataString, javascript;
     double units;
 
     //Get the marker ID from the page
-    int markerID = ui->imeds_map->page()->mainFrame()->evaluateJavaScript("getMarker()").toInt();
+    int markerID = ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("getMarker()").toInt();
 
     //Catch false marker number
     if(markerID==-1)return;
 
     //Format the data
-    for(int j=0;j<IMEDSData.length();j++)
+    for(int j=0;j<TimeseriesData.length();j++)
     {
-        units = ui->table_IMEDSData->item(j,3)->text().toDouble();
-        DataString = FormatIMEDSString(IMEDSData[j],markerID,units);
+        units = ui->table_TimeseriesData->item(j,3)->text().toDouble();
+        DataString = FormatTimeseriesString(TimeseriesData[j],markerID,units);
         javascript = "";
         javascript = "AddDataSeries("+QString::number(j)+",'"+DataString+"')";
-        ui->imeds_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
     //Call the plotting routine in HighCharts
-    ui->imeds_map->page()->mainFrame()->evaluateJavaScript("PlotIMEDSSeries()");
+    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("PlotTimeseries()");
     return;
 }
