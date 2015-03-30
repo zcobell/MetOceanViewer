@@ -184,16 +184,16 @@ Section "Install"
     File /r ..\libs\imageformats
     File /r ..\libs\platforms
     File ..\img\icon.ico
-    File ..\..\build-MetOceanViewer-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\MetOceanViewer.exe
+    File ..\..\build-MetOceanViewer-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\MetOcean_Viewer.exe
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
 
     # Start Menu
 	CreateDirectory "$SMPROGRAMS\${APPNAME}"
-	CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\MetOceanViewer.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$DESKTOP\MetOceanViewer.lnk" "$INSTDIR\MetOceanViewer.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall MetOceanViewer.lnk" "$INSTDIR\uninstaller.exe" ""
+	CreateShortCut "$SMPROGRAMS\${APPNAME}\MetOcean Viewer.lnk" "$INSTDIR\MetOcean_Viewer.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$DESKTOP\MetOcean Viewer.lnk" "$INSTDIR\MetOcean_Viewer.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall MetOcean Viewer.lnk" "$INSTDIR\uninstaller.exe" ""
  
 	# Registry information for add/remove programs
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
@@ -222,8 +222,8 @@ Section "Uninstall"
 
     # Remove Shortcuts
 	Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
-    Delete "$SMPROGRAMS\${APPNAME}\Uninstall MetOceanViewer.lnk"
-    Delete "$DESKTOP\MetOceanViewer.lnk"
+    Delete "$SMPROGRAMS\${APPNAME}\Uninstall MetOcean Viewer.lnk"
+    Delete "$DESKTOP\MetOcean Viewer.lnk"
     
 	# Try to remove the Start Menu folder - this will only happen if it is empty
 	RMDir "$SMPROGRAMS\${APPNAME}"
@@ -267,7 +267,7 @@ Section "Uninstall"
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\icon.ico
-    Delete $INSTDIR\MetOceanViewer.exe
+    Delete $INSTDIR\MetOcean_Viewer.exe
     Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
     

@@ -37,7 +37,7 @@ QT       += core gui webkitwidgets network xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = MetOceanViewer
+TARGET = MetOcean_Viewer
 TEMPLATE = app
 
 
