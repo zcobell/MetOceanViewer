@@ -23,10 +23,10 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>MetOceanViewer</string>
+   <string>MetOcean Viewer</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../ADCvalidatior.qrc">
+   <iconset resource="../MetOceanViewer.qrc">
     <normaloff>:/rsc/img/icon.png</normaloff>:/rsc/img/icon.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
@@ -2388,7 +2388,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_darkblue.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_darkblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2438,7 +2438,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_lightblue.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_lightblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2488,7 +2488,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_darkgreen.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_darkgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2535,7 +2535,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_lightgreen.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_lightgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2585,7 +2585,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_yellow.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_yellow.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2635,7 +2635,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_darkorange.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_darkorange.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -2682,7 +2682,7 @@
                        </size>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../ADCvalidatior.qrc">:/rsc/img/mm_20_red.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_red.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3423,7 +3423,7 @@
   <tabstop>Button_FetchData</tabstop>
  </tabstops>
  <resources>
-  <include location="../ADCvalidatior.qrc"/>
+  <include location="../MetOceanViewer.qrc"/>
  </resources>
  <connections/>
 </ui>
