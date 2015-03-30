@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <ADCvalidator.h>
-#include <ui_ADCvalidator_main.h>
+#include <MetOceanViewer.h>
+#include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 
 //Routine that fires after the NOAA data is read from the server

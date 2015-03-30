@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <ADCvalidator.h>
-#include <ui_ADCvalidator_main.h>
+#include <MetOceanViewer.h>
+#include <ui_MetOceanViewer_main.h>
 #include <netcdf.h>
 
 QString AlternateFolder;
@@ -75,7 +75,7 @@ int MainWindow::saveSession()
     {
         QString SaveFile = QFileDialog::getSaveFileName(this,"Save Session...",
                                                         PreviousDirectory,
-                                                        "ADCIRC Validatior Sessions (*.avs)");
+                                                        "MetOceanViewer Session (*.mvs)");
         if(SaveFile==NULL)
             return 0;
         else
