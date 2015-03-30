@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <ADCvalidator.h>
-#include <ui_ADCvalidator_main.h>
+#include <MetOceanViewer.h>
+#include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 #include <timeseries_add_data.h>
 

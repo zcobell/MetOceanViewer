@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <ADCvalidator.h>
-#include <ui_ADCvalidator_main.h>
+#include <MetOceanViewer.h>
+#include <ui_MetOceanViewer_main.h>
 #include <hwm.h>
 
 //Classifies high water marks into classes for coloring

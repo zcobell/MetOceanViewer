@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <ADCvalidator.h>
-#include <ui_ADCvalidator_main.h>
+#include <MetOceanViewer.h>
+#include <ui_MetOceanViewer_main.h>
 #include <about_dialog.h>
 #include <netcdf.h>
 
@@ -286,7 +286,7 @@ void MainWindow::on_actionAbout_triggered()
 
 void MainWindow::on_actionLoad_Session_triggered()
 {
-    QString LoadFile = QFileDialog::getOpenFileName(this,"Open Session...",PreviousDirectory,"ADCIRC Validator Sessions (*.avs)");
+    QString LoadFile = QFileDialog::getOpenFileName(this,"Open Session...",PreviousDirectory,"MetOceanViewer Sessions (*.mvs, *.avs)");
 
     if(LoadFile==NULL)
         return;

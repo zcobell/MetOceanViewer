@@ -33,7 +33,7 @@
 //
 //------------------------------------------------------------------------------
         
-#include <ADCvalidator.h>
+#include <MetOceanViewer.h>
 #include <QApplication>
 
 int main(int argc, char *argv[])

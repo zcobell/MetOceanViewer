@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
 
 //Called when the pan to combo box is updated
 void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)

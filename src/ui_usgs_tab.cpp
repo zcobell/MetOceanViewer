@@ -33,8 +33,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
 
 //Send the data to the panTo function
 void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)

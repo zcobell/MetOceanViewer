@@ -29,12 +29,12 @@
 // $Rev$
 // $HeadURL$
 //------------------------------------------------------------------------------
-//  File: ADCvalidator_main.cpp
+//  File: MetOceanViewer_main.cpp
 //
 //------------------------------------------------------------------------------
         
-#include <ADCvalidator.h>
-#include <ui_ADCvalidator_main.h>
+#include <MetOceanViewer.h>
+#include <ui_MetOceanViewer_main.h>
 
 QString PreviousDirectory;
 QString SLASH;
