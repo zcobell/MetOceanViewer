@@ -41,7 +41,7 @@
 !delfile "svnrev.txt" 
 
 #Define some basic variables for the installer
-!define APPNAME "ADCIRC Validator"
+!define APPNAME "MetOceanViewer"
 !define COMPANYNAME "ARCADIS"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 2
@@ -60,10 +60,10 @@
 RequestExecutionLevel admin
 
 # define installer name
-OutFile "adcirc_validator_installer_v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
+OutFile "MetOceanViewer_installer_v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
  
 # set desktop as install directory
-InstallDir $PROGRAMFILES32\ADCIRCValidator
+InstallDir $PROGRAMFILES32\MetOceanViewer
 
 # Set the name of the program
 Name "${APPNAME}"
@@ -184,16 +184,16 @@ Section "Install"
     File /r ..\libs\imageformats
     File /r ..\libs\platforms
     File ..\img\icon.ico
-    File ..\..\build-ADCValidator-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\ADCIRC_Validator.exe
+    File ..\..\build-MetOceanViewer-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\MetOceanViewer.exe
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
 
     # Start Menu
 	CreateDirectory "$SMPROGRAMS\${APPNAME}"
-	CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\ADCIRC_Validator.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$DESKTOP\ADCIRC Validator.lnk" "$INSTDIR\ADCIRC_Validator.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall ADCIRC Validator.lnk" "$INSTDIR\uninstaller.exe" ""
+	CreateShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\MetOceanViewer.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$DESKTOP\MetOceanViewer.lnk" "$INSTDIR\MetOceanViewer.exe" "" "$INSTDIR\icon.ico"
+    CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall MetOceanViewer.lnk" "$INSTDIR\uninstaller.exe" ""
  
 	# Registry information for add/remove programs
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayName" "${APPNAME}"
@@ -222,8 +222,8 @@ Section "Uninstall"
 
     # Remove Shortcuts
 	Delete "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk"
-    Delete "$SMPROGRAMS\${APPNAME}\Uninstall ADCIRC Validator.lnk"
-    Delete "$DESKTOP\ADCIRC Validator.lnk"
+    Delete "$SMPROGRAMS\${APPNAME}\Uninstall MetOceanViewer.lnk"
+    Delete "$DESKTOP\MetOceanViewer.lnk"
     
 	# Try to remove the Start Menu folder - this will only happen if it is empty
 	RMDir "$SMPROGRAMS\${APPNAME}"
@@ -267,7 +267,7 @@ Section "Uninstall"
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\icon.ico
-    Delete $INSTDIR\ADCIRC_Validator.exe
+    Delete $INSTDIR\MetOceanViewer.exe
     Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
     

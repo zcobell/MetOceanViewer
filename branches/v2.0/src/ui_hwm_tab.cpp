@@ -37,8 +37,8 @@
 //This file contains all the user interactions that occur on the HWM tab
 //
 
-#include "ADCvalidator.h"
-#include "ui_ADCvalidator_main.h"
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
 #include "hwm.h"
 
 //Global variables

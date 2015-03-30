@@ -37,12 +37,11 @@ QT       += core gui webkitwidgets network xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = ADCIRC_Validator
+TARGET = MetOceanViewer
 TEMPLATE = app
 
 
 SOURCES += src/main.cpp\
-        src/ADCvalidator_main.cpp \
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
     src/ui_usgs_tab.cpp \
@@ -56,18 +55,21 @@ SOURCES += src/main.cpp\
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
-    src/fileio.cpp
+    src/fileio.cpp \
+    src/MetOceanViewer_main.cpp
 
-HEADERS  += include/ADCvalidator.h \
+HEADERS  += \
     include/hwm.h \
     include/timeseries_add_data.h \
     include/timeseries.h \
     include/about_dialog.h \
     version.h \
+    include/MetOceanViewer.h
 
-FORMS    += ui/ADCvalidator_main.ui \
+FORMS    += \
     ui/timeseries_add_data.ui \
-    ui/about_dialog.ui
+    ui/about_dialog.ui \
+    ui/MetOceanViewer_main.ui
 
 OTHER_FILES +=
 
@@ -100,7 +102,7 @@ ICON = img/icon.icns
 INCLUDEPATH += include
 
 RESOURCES += \
-    ADCvalidatior.qrc
+    MetOceanViewer.qrc
 
 RC_FILE = resources.rc
 
