@@ -1,36 +1,19 @@
-//---- LGPL --------------------------------------------------------------------
+//----GPL-----------------------------------------------------------------------
 //
-// Copyright (C)  ARCADIS, 2011-2015.
+// This file is part of MetOceanViewer.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation version 3.
+//    MetOceanViewer is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
+//    MetOceanViewer is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
 //
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-// contact: Zachary Cobell, zachary.cobell@arcadis-us.com
-// ARCADIS
-// 4999 Pearl East Circle, Suite 200
-// Boulder, CO 80301
-//
-// All indications and logos of, and references to, "ARCADIS" 
-// are registered trademarks of ARCADIS, and remain the property of
-// ARCADIS. All rights reserved.
-//
-//------------------------------------------------------------------------------
-// $Author$
-// $Date$
-// $Rev$
-// $HeadURL$
-//------------------------------------------------------------------------------
-//  File: main.cpp
-//
+//    You should have received a copy of the GNU General Public License
+//    along with MetOceanViewer.  If not, see <http://www.gnu.org/licenses/>.
 //------------------------------------------------------------------------------
         
 #include <MetOceanViewer.h>
@@ -53,7 +36,34 @@ int main(int argc, char *argv[])
     if(argc==2)
         SessionFile = QCoreApplication::arguments().at(1);
 
+    //Create the window
     MainWindow w;
+
+    //Splash Screen
+    QPixmap pixmap(":/rsc/img/logo_full.png");
+    if(pixmap.isNull())
+    {
+        //Warning about splash screen, which shouldn't happen
+        QMessageBox::warning(0,"ERROR","Failed to load spash screen image.");
+    }
+    else
+    {
+        //Display the splash screen for 2 seconds
+        QSplashScreen splash(pixmap,Qt::WindowStaysOnTopHint);
+        splash.setEnabled(false);
+        splash.show();
+        a.processEvents();
+
+        QTime dieTime= QTime::currentTime().addSecs(2);
+        while( QTime::currentTime() < dieTime )
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+
+        splash.hide();
+    }
+
+    //Show the user the window
     w.show();
+
+
     return a.exec();
 }

@@ -1,55 +1,31 @@
-#---- LGPL --------------------------------------------------------------------
+#----GPL-----------------------------------------------------------------------
 #
-# Copyright (C)  ARCADIS, 2011-2015.
+# This file is part of MetOceanViewer.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation version 3.
+#    MetOceanViewer is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
+#    MetOceanViewer is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# contact: Zachary Cobell, zachary.cobell@arcadis-us.com
-# ARCADIS
-# 4999 Pearl East Circle, Suite 200
-# Boulder, CO 80301
-#
-# All indications and logos of, and references to, "ARCADIS"
-# are registered trademarks of ARCADIS, and remain the property of
-# ARCADIS. All rights reserved.
-#
+#    You should have received a copy of the GNU General Public License
+#    along with MetOceanViewer.  If not, see <http:#www.gnu.org/licenses/>.
 #------------------------------------------------------------------------------
-# $Author$
-# $Date$
-# $Id$
-# $HeadURL$
-#------------------------------------------------------------------------------
-#  File: adcvalidator_installScript.nsi
-#
-#------------------------------------------------------------------------------
-
-#Get the SVN revision number for inclusion
-!tempfile "svnrev.txt"
-!appendfile "svnrev.txt" "!define SVN_REV "
-!system "svnversion ..\ >> svnrev.txt" 
-!include "svnrev.txt" 
-!delfile "svnrev.txt" 
 
 #Define some basic variables for the installer
 !define APPNAME "MetOceanViewer"
-!define COMPANYNAME "ARCADIS"
+!define COMPANYNAME "ZachCobell"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 2
 !define VERSIONMINOR 0
-!define VERSIONBUILD ${SVN_REV}
-!define HELPURL "http://www.zachcobell.com/" # "Support Information" link
-!define UPDATEURL "http://www.zachcobell.com/" # "Product Updates" link
-!define ABOUTURL "http://www.zachcobell.com/" # "Publisher" link
+!define VERSIONBUILD 0
+!define HELPURL "https://github.com/zcobell/MetOceanViewer" # "Support Information" link
+!define UPDATEURL "https://github.com/zcobell/MetOceanViewer" # "Product Updates" link
+!define ABOUTURL "http://zachcobell.com/?p=281" # "Publisher" link
 !define INSTALLSIZE 100760
 !define MUI_ICON "..\img\icon.ico"
 
@@ -122,7 +98,7 @@ FunctionEnd
 ;--------------------------------
 ;Pages
   !insertmacro MUI_PAGE_WELCOME
-  !insertmacro MUI_PAGE_LICENSE "LGPL.txt"
+  !insertmacro MUI_PAGE_LICENSE "GNU_GPLv3.txt"
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
   !insertmacro MUI_PAGE_FINISH
