@@ -24,5 +24,17 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 # Compiling
 To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.4.0 on Windows, Mac OSX, and Linux.
 
+# Credits
+The following external libraries/APIs are used in this software
+- NOAA CO-OPS API (http://tidesandcurrents.noaa.gov)
+- USGS Waterdata API (http://waterdata.usgs.gov)
+- Google Maps v3.x API (http://maps.google.com)
+- Google Fusion Tables API (http://tables.googlelabs.com)
+- HighCharts v4.1.1 (http://www.highcharts.com)
+- netCDF v4.3.3 (http://www.unidata.ucar.edu/software/netcdf)
+- HDF5 v1.8.14 (http://www.hdfgroup.org/HDF5)
+- Curl v7.35.0 (http://curl.haxx.se)
+- zlib v1.2.8 (http://www.zlib.net)
+
 # License
 This program conforms to the GNU GPL, Version 3. 
