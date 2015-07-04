@@ -13,13 +13,14 @@
         <file>img/mm_20_purple.png</file>
         <file>img/mm_20_red.png</file>
         <file>img/mm_20_yellow.png</file>
-        <file>img/arcadis_logo.png</file>
         <file>img/mm_20_white.png</file>
         <file>js/highcharts.js</file>
         <file>js/annotations.js</file>
         <file>js/jquery.js</file>
         <file>js/exporting.js</file>
         <file>img/icon.png</file>
+        <file>img/logo_small.png</file>
+        <file>img/logo_full.png</file>
         <file>resources.rc</file>
         <file>img/icon.ico</file>
         <file>js/jquery.alerts.css</file>
