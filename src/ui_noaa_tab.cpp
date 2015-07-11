@@ -19,14 +19,20 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 
+//-------------------------------------------//
 //Called when the pan to combo box is updated
+//-------------------------------------------//
 void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 {
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Called when the user attempts to save the NOAA chart
+//-------------------------------------------//
 void MainWindow::on_button_noaasavechart_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -45,8 +51,12 @@ void MainWindow::on_button_noaasavechart_clicked()
     NOAAImage.save(&NOAAOutput,"JPG",100);
 
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Called when the user tries to save the NOAA data
+//-------------------------------------------//
 void MainWindow::on_button_noaasavedata_clicked()
 {
 
@@ -125,10 +135,14 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     }
     NOAAOutput.close();
-
+    return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Called when the NOAA fetch data button is clicked
+//-------------------------------------------//
 void MainWindow::on_Button_FetchData_clicked()
 {
     qint64 Duration;
@@ -193,4 +207,5 @@ void MainWindow::on_Button_FetchData_clicked()
     if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
     manager->get(QNetworkRequest(QUrl(RequestURL)));
 }
+//-------------------------------------------//
 

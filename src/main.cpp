@@ -19,6 +19,9 @@
 #include <MetOceanViewer.h>
 #include <QApplication>
 
+//-------------------------------------------//
+//Main function for the code
+//-------------------------------------------//
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -67,3 +70,4 @@ int main(int argc, char *argv[])
 
     return a.exec();
 }
+//-------------------------------------------//

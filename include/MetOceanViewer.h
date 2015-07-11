@@ -29,38 +29,24 @@
 #include <QColorDialog>
 #include <timeseries.h>
 
-extern QString PreviousDirectory;
-extern QColor ADCIRCIMEDSColor,OBSIMEDSColor;
-extern QColor LineColor121Line,LineColorBounds;
-extern QColor DotColorHWM,LineColorRegression;
-extern QDateTime IMEDSMinDate,IMEDSMaxDate;
-extern QVector<QVector<double> > NOAAStations;
-extern QVector<QString> NOAAStationNames;
-extern QVector<QString> panToLocations;
-extern bool ColorUpdated;
-extern bool EditBox;
-extern QString SessionFile;
-extern QString AlternateFolder;
-extern int NOAAMarkerID;
-extern double CurrentNOAALat,CurrentNOAALon;
-extern QString CurrentNOAAStationName;
-extern QString USGSMarkerID;
-extern double CurrentUSGSLat,CurrentUSGSLon;
-extern QString CurrentUSGSStationName,USGSErrorString;
-extern bool USGSbeenPlotted,USGSdataReady;
-extern int USGSdataMethod;
-
-bool isConnectedToNetwork();
-
+//-------------------------------------------//
+//Data structures
+//-------------------------------------------//
+//Structure that holds data downloaded from
+//the NOAA website
+//-------------------------------------------//
 struct NOAAStationData
 {
     QDate Date;
     QTime Time;
     double value;
 };
-extern QVector<NOAAStationData> CurrentNOAAStation;
-extern QVector<NOAAStationData> USGSPlot;
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Structure that holds the data downloaded
+//from the USGS website
+//-------------------------------------------//
 struct USGSData
 {
     int NumDataPoints;
@@ -68,8 +54,12 @@ struct USGSData
     QVector<QDateTime> Date;
     QVector<double> Data;
 };
-extern QVector<USGSData> CurrentUSGSStation;
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Main class used by the Qt program that holds
+//the main set of functions used
+//-------------------------------------------//
 namespace Ui {
 class MainWindow;
 }
@@ -198,12 +188,6 @@ private:
 
     void FormatUSGSDailyResponse(QByteArray Input);
 
-    //void addIMEDSandADCIRCMarker(IMEDS Observation, IMEDS ADCIRC);
-
-    //void addADCIRCMarker(IMEDS ADCIRC);
-
-    //void addIMEDSMarker(IMEDS Observation);
-
     void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
 
     void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
@@ -224,6 +208,41 @@ private:
 
     int NETCDF_ERR(int status);
 };
+
+//-------------------------------------------//
+//Function prototypes not included in the class
+bool isConnectedToNetwork();
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Some global variables used throughout the
+//code
+//-------------------------------------------//
+extern QString PreviousDirectory;
+extern QColor ADCIRCIMEDSColor,OBSIMEDSColor;
+extern QColor LineColor121Line,LineColorBounds;
+extern QColor DotColorHWM,LineColorRegression;
+extern QDateTime IMEDSMinDate,IMEDSMaxDate;
+extern QVector<QVector<double> > NOAAStations;
+extern QVector<QString> NOAAStationNames;
+extern QVector<QString> panToLocations;
+extern bool ColorUpdated;
+extern bool EditBox;
+extern QString SessionFile;
+extern QString AlternateFolder;
+extern int NOAAMarkerID;
+extern double CurrentNOAALat,CurrentNOAALon;
+extern QString CurrentNOAAStationName;
+extern QString USGSMarkerID;
+extern double CurrentUSGSLat,CurrentUSGSLon;
+extern QString CurrentUSGSStationName,USGSErrorString;
+extern bool USGSbeenPlotted,USGSdataReady;
+extern int USGSdataMethod;
+extern QVector<NOAAStationData> CurrentNOAAStation;
+extern QVector<NOAAStationData> USGSPlot;
+extern QVector<USGSData> CurrentUSGSStation;
+//-------------------------------------------//
 
 
 #endif // ADCVALIDATOR_H

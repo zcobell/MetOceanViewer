@@ -21,7 +21,7 @@
 !define COMPANYNAME "ZachCobell"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 2
-!define VERSIONMINOR 0
+!define VERSIONMINOR 1
 !define VERSIONBUILD 0
 !define HELPURL "https://github.com/zcobell/MetOceanViewer" # "Support Information" link
 !define UPDATEURL "https://github.com/zcobell/MetOceanViewer" # "Product Updates" link
@@ -125,9 +125,9 @@ Section "Install"
     File ..\libs\D3DCompiler_43.dll
     File ..\libs\hdf5.dll
     File ..\libs\hdf5_hl.dll
-    File ..\libs\icudt53.dll
-    File ..\libs\icuin53.dll
-    File ..\libs\icuuc53.dll
+    File ..\libs\icudt54.dll
+    File ..\libs\icuin54.dll
+    File ..\libs\icuuc54.dll
     File ..\libs\libcurl.dll
     File ..\libs\libeay32.dll
     File ..\libs\libEGL.dll
@@ -160,7 +160,7 @@ Section "Install"
     File /r ..\libs\imageformats
     File /r ..\libs\platforms
     File ..\img\icon.ico
-    File ..\..\build-MetOceanViewer-Desktop_Qt_5_4_0_MinGW_32bit-Release\release\MetOcean_Viewer.exe
+    File ..\..\build-MetOceanViewer-Desktop_Qt_5_5_0_MinGW_32bit-Release\release\MetOcean_Viewer.exe
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
@@ -208,9 +208,9 @@ Section "Uninstall"
     Delete $INSTDIR\D3DCompiler_43.dll
     Delete $INSTDIR\hdf5.dll
     Delete $INSTDIR\hdf5_hl.dll
-    Delete $INSTDIR\icudt53.dll
-    Delete $INSTDIR\icuin53.dll
-    Delete $INSTDIR\icuuc53.dll
+    Delete $INSTDIR\icudt54.dll
+    Delete $INSTDIR\icuin54.dll
+    Delete $INSTDIR\icuuc54.dll
     Delete $INSTDIR\libcurl.dll
     Delete $INSTDIR\libeay32.dll
     Delete $INSTDIR\libEGL.dll

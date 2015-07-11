@@ -21,18 +21,28 @@
 #include <about_dialog.h>
 #include <netcdf.h>
 
+
+//The name of the session file
 QString SessionFile;
 
-//Simple delay function which will pause execution for a number of seconds
+
+//-------------------------------------------//
+//Simple delay function which will pause
+//execution for a number of seconds
+//-------------------------------------------//
 void MainWindow::delay(int delayTime)
 {
     QTime dieTime= QTime::currentTime().addSecs(delayTime);
     while( QTime::currentTime() < dieTime )
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Routine to remove the leading path of a filename for a simpler
-// display in a text box
+//display in a text box
+//-------------------------------------------//
 QString MainWindow::RemoveLeadingPath(QString Input)
 {
     QRegExp rx("[/\\\\]");
@@ -40,9 +50,14 @@ QString MainWindow::RemoveLeadingPath(QString Input)
     QString Output = parts.value(parts.length()-1);
     return Output;
 }
+//-------------------------------------------//
 
-//Gets the leading path from the directory that is worked in, used for staying
+
+//-------------------------------------------//
+//Gets the leading path from the directory
+//that is worked in, used for staying
 //in the same directory for subsequent selections
+//-------------------------------------------//
 void MainWindow::GetLeadingPath(QString Input)
 {
     QRegExp rx("[/\\\\]");
@@ -60,7 +75,13 @@ void MainWindow::GetLeadingPath(QString Input)
 
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//A routine that gets the leading path, aka
+//the folder, from a file path
+//-------------------------------------------//
 QString MainWindow::GetMyLeadingPath(QString Input)
 {
     QRegExp rx("[/\\\\]");
@@ -76,8 +97,13 @@ QString MainWindow::GetMyLeadingPath(QString Input)
     }
     return Directory;
 }
+//-------------------------------------------//
 
-//Makes a string that sets the CSS style according to the input color
+
+//-------------------------------------------//
+//Makes a string that sets the CSS style
+//according to the input color
+//-------------------------------------------//
 QString MainWindow::MakeColorString(QColor InputColor)
 {
     QString S("background-color: #"
@@ -86,15 +112,24 @@ QString MainWindow::MakeColorString(QColor InputColor)
                 + QString(InputColor.blue() < 16? "0" : "") + QString::number(InputColor.blue(),16) + ";");
     return S;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Terminates the application when quit button clicked
+//-------------------------------------------//
 void MainWindow::on_actionQuit_triggered()
 {
     close();
 }
+//-------------------------------------------//
 
-//Generates a random color and mixes in white to make it
-//more aestetically pleasing
+
+//-------------------------------------------//
+//Generates a random color and optionally
+//mixes in white to make it a more pastel
+//type color. This is turned off by default
+//-------------------------------------------//
 QColor MainWindow::GenerateRandomColor()
 {
     QColor MyColor, Mix;
@@ -125,8 +160,12 @@ QColor MainWindow::GenerateRandomColor()
 
     return MyColor;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //NetCDF Error function
+//-------------------------------------------//
 int MainWindow::NETCDF_ERR(int status)
 {
     if(status != NC_NOERR)
@@ -134,10 +173,14 @@ int MainWindow::NETCDF_ERR(int status)
 
     return status;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Handle the unsupported content, ie the image that comes back
 //from the highcharts export server as a png file. Save using
 //a file save dialog window to select the save location/filename
+//-------------------------------------------//
 void MainWindow::unsupportedContent(QNetworkReply * reply)
 {
 
@@ -171,9 +214,14 @@ void MainWindow::unsupportedContent(QNetworkReply * reply)
 
     return;
 }
+//-------------------------------------------//
 
-//Handle the "enter" or "return" keypress events on certain
-//pages to automatically draw plots
+
+//-------------------------------------------//
+//Handle the "enter" or "return" keypress
+//events on certain pages to automatically
+//draw plots
+//-------------------------------------------//
 void MainWindow::keyPressEvent(QKeyEvent *key)
 {
 
@@ -222,7 +270,16 @@ void MainWindow::keyPressEvent(QKeyEvent *key)
     return;
 
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Function that checks if the computer is
+//connected to the network. This is set as a
+//prerequisite for running the program since
+//every page is Google Maps based, and requires
+//a connection to the internet
+//-------------------------------------------//
 bool isConnectedToNetwork(){
 
     QList<QNetworkInterface> ifaces = QNetworkInterface::allInterfaces();
@@ -258,7 +315,11 @@ bool isConnectedToNetwork(){
 
     return result;
 }
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Bring up the about dialog box
+//-------------------------------------------//
 void MainWindow::on_actionAbout_triggered()
 {
     about_dialog aboutWindow;
@@ -266,10 +327,19 @@ void MainWindow::on_actionAbout_triggered()
     aboutWindow.exec();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Use of the load session button from the
+//menu is triggered here
+//-------------------------------------------//
 void MainWindow::on_actionLoad_Session_triggered()
 {
-    QString LoadFile = QFileDialog::getOpenFileName(this,"Open Session...",PreviousDirectory,"MetOceanViewer Sessions (*.mvs, *.avs)");
+    QString LoadFile = QFileDialog::getOpenFileName(this,
+                            "Open Session...",
+                            PreviousDirectory,
+                            "MetOceanViewer Sessions (*.mvs, *.avs)");
 
     if(LoadFile==NULL)
         return;
@@ -280,16 +350,30 @@ void MainWindow::on_actionLoad_Session_triggered()
 
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//The save session button from the file menu
+//is triggered here
+//-------------------------------------------//
 void MainWindow::on_actionSave_Session_triggered()
 {
     saveSession();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//The save as session button from the file
+//menu is triggered here
+//-------------------------------------------//
 void MainWindow::on_actionSave_Session_As_triggered()
 {
-    QString SaveFile = QFileDialog::getSaveFileName(this,"Save Session...",PreviousDirectory,"ADCIRC Validatior Sessions (*.avs)");
+    QString SaveFile = QFileDialog::getSaveFileName(this,
+                        "Save Session...",PreviousDirectory,
+                        "ADCIRC Validatior Sessions (*.avs)");
     if(SaveFile!=NULL)
     {
         SessionFile = SaveFile;
@@ -297,3 +381,4 @@ void MainWindow::on_actionSave_Session_As_triggered()
     }
     return;
 }
+//-------------------------------------------//

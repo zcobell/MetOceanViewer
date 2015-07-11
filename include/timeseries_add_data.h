@@ -22,18 +22,30 @@
 #include <QDialog>
 #include <QVector>
 
+//-------------------------------------------//
+//Data structure used for a list of files
+//for time series plotting
+//-------------------------------------------//
 struct IMEDSList
 {
     QString Filename;
     QString Label;
     QColor  Color;
 };
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Some variables that will be used throughout
+//-------------------------------------------//
 extern int NumIMEDSFiles;
 extern int CurrentRowsIntTable;
-extern QString InputFileName,InputStationFile,InputColorString,InputSeriesName,InputFilePath,StationFilePath,InputFileType;
+extern QString InputFileName,InputStationFile;
+extern QString InputColorString,InputSeriesName;
+extern QString InputFilePath,StationFilePath,InputFileType;
 extern double UnitConversion,xadjust,yadjust;
 extern QDateTime InputFileColdStart;
+//-------------------------------------------//
 
 
 namespace Ui {
