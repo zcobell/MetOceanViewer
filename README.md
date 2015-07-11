@@ -22,7 +22,7 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 ![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/screenshots/mov_ss3.JPG)
 
 # Compiling
-To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.4.0 on Windows, Mac OSX, and Linux.
+To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.5.0 on Windows, Mac OSX, and Linux.
 
 # Credits
 The following external libraries/APIs are used in this software
