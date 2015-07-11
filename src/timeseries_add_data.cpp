@@ -20,17 +20,30 @@
 #include <ui_timeseries_add_data.h>
 #include <MetOceanViewer.h>
 
+//-------------------------------------------//
+//A bunch of variables that we'll just
+//define here because it is easy for the
+//old FORTRAN programmer in me that likes
+//global variables
+//-------------------------------------------//
 int NumIMEDSFiles = 0;
 int CurrentRowsInTable = 0;
 bool ColorUpdated, FileReadError;
 bool EditBox;
 double UnitConversion, xadjust, yadjust;
-
 QColor RandomButtonColor;
-QString InputFileName,InputColorString,InputSeriesName,InputFilePath,StationFilePath,InputFileType;
+QString InputFileName,InputColorString;
+QString InputSeriesName,InputFilePath;
+QString StationFilePath,InputFileType;
 QString InputStationFile,CurrentFileName;
 QDateTime InputFileColdStart;
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//This brings up the dialog box used to add
+//a file to the table of files
+//-------------------------------------------//
 add_imeds_data::add_imeds_data(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::add_imeds_data)
@@ -40,14 +53,23 @@ add_imeds_data::add_imeds_data(QWidget *parent) :
     ui->text_xadjust->setValidator(new QDoubleValidator(this));
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Destructor routine for the add imeds window
+//-------------------------------------------//
 add_imeds_data::~add_imeds_data()
 {
     delete ui;
 }
+//-------------------------------------------//
 
-//Set the default elements with a series name, a blank filename, and
-//a randomly generated color
+
+//-------------------------------------------//
+//Set the default elements with a series name,
+//a blank filename, and a randomly generated color
+//-------------------------------------------//
 void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 {
     QString ButtonStyle;
@@ -64,9 +86,13 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     CurrentFileName = QString();
     return;
 }
+//-------------------------------------------//
 
-//When editing an existing row, set the dialog box elements that we're bringing
-//up for the user
+
+//-------------------------------------------//
+//When editing an existing row, set the dialog
+//box elements that we're bringing up for the user
+//-------------------------------------------//
 void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
@@ -120,8 +146,12 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     }
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Bring up the browse for file dialog
+//-------------------------------------------//
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
@@ -191,9 +221,13 @@ void add_imeds_data::on_browse_filebrowse_clicked()
     }
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Bring up a color palette and change the button color
 //in the dialog when return comes
+//-------------------------------------------//
 void add_imeds_data::on_button_IMEDSColor_clicked()
 {
     QColor TempColor = QColorDialog::getColor(RandomButtonColor);
@@ -212,7 +246,12 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
 
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Browse dialog for a station file
+//-------------------------------------------//
 void add_imeds_data::on_browse_stationfile_clicked()
 {
     QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
@@ -227,9 +266,13 @@ void add_imeds_data::on_browse_stationfile_clicked()
     }
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Redefine the local accept event with some validation
 //of the dialog box
+//-------------------------------------------//
 void add_imeds_data::accept()
 {
 
@@ -281,3 +324,4 @@ void add_imeds_data::accept()
     else
         QDialog::accept();
 }
+//-------------------------------------------//

@@ -20,7 +20,9 @@
 #include <ui_MetOceanViewer_main.h>
 #include <hwm.h>
 
+//-------------------------------------------//
 //Classifies high water marks into classes for coloring
+//-------------------------------------------//
 int MainWindow::ClassifyHWM(double diff)
 {
     int color;
@@ -90,3 +92,4 @@ int MainWindow::ClassifyHWM(double diff)
 
     return color;
 }
+//-------------------------------------------//

@@ -21,9 +21,16 @@
 #include <timeseries.h>
 #include <timeseries_add_data.h>
 
-QVector<IMEDS> TimeseriesData;
+//The variables that hold all the time series data
+//One for the "raw" and another for the data after
+//it has been rectified to the same station list
+QVector<IMEDS> TimeseriesData,UniqueTimeseriesData;
 
-//Called when the user tries to save the Timeseries image
+
+//-------------------------------------------//
+//Called when the user tries to save the
+//timeseries image
+//-------------------------------------------//
 void MainWindow::on_button_saveTimeseriesImage_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -41,16 +48,26 @@ void MainWindow::on_button_saveTimeseriesImage_clicked()
     TimeseriesImage.save(&TimeseriesOutput,"JPG",100);
 
 }
+//-------------------------------------------//
 
-//Called when the user checks the timeseries auto y axis box
+
+//-------------------------------------------//
+//Called when the user checks the timeseries
+//auto y axis box
+//-------------------------------------------//
 void MainWindow::on_check_TimeseriesYauto_toggled(bool checked)
 {
     ui->spin_TimeseriesYmin->setEnabled(!checked);
     ui->spin_TimeseriesYmax->setEnabled(!checked);
+    return;
 }
+//-------------------------------------------//
 
 
-//Adds a row to the table and reads the new data into the timeseries variable
+//-------------------------------------------//
+//Adds a row to the table and reads the new
+//data into the timeseries variable
+//-------------------------------------------//
 void MainWindow::on_button_TimeseriesAddRow_clicked()
 {
     add_imeds_data AddWindow;
@@ -143,9 +160,14 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
     AddWindow.close();
     return;
 }
+//-------------------------------------------//
 
-//Called when the delete row button is clicked. Removes from the
+
+//-------------------------------------------//
+//Called when the delete row button is
+//clicked. Removes from the
 //table as well as the data vector
+//-------------------------------------------//
 void MainWindow::on_button_TimeseriesDeleteRow_clicked()
 {
     if(ui->table_TimeseriesData->rowCount()==0)
@@ -168,7 +190,12 @@ void MainWindow::on_button_TimeseriesDeleteRow_clicked()
 
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Set up the table of time series files
+//-------------------------------------------//
 void MainWindow::SetupTimeseriesTable()
 {
     QString HeaderString = QString("Filename;Series Name;Color;Unit Conversion;")+
@@ -189,8 +216,13 @@ void MainWindow::SetupTimeseriesTable()
 
     return;
 }
+//-------------------------------------------//
 
-//Called when the edit row button is clicked. Updates the timeseries data vector
+
+//-------------------------------------------//
+//Called when the edit row button is clicked.
+//Updates the timeseries data vector
+//-------------------------------------------//
 void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
     add_imeds_data AddWindow;
@@ -284,7 +316,8 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
             {
                 QApplication::setOverrideCursor(Qt::WaitCursor);
                 TimeseriesData.remove(CurrentRow);
-                TimeseriesData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),InputFileColdStart));
+                TimeseriesData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),
+                                                                 InputFileColdStart));
                 if(!TimeseriesData[CurrentRow].success)
                 {
                     TimeseriesData.remove(CurrentRow);
@@ -318,9 +351,14 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
     AddWindow.close();
     return;
 }
+//-------------------------------------------//
 
 
-//Send the data to the HTML side of the code for plotting
+
+//-------------------------------------------//
+//Send the data to the HTML side of the code
+//for plotting
+//-------------------------------------------//
 void MainWindow::on_button_processTimeseriesData_clicked()
 {
     int i,ierr;
@@ -331,6 +369,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
     QString AutoX,XMin,XMax;
     QString unit,plusX,plusY;
     QVariant jsResponse;
+    QVector<double> StationX,StationY;
 
     //Change the mouse pointer
     QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -369,49 +408,42 @@ void MainWindow::on_button_processTimeseriesData_clicked()
 
     javascript = "setGlobal('"+PlotTitle+"','"+AutoY+"',"+QString::number(YMin)+
             ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"','"+AutoX+"','"+
-            XMin+"','"+XMax+"')";
+            XMin+"','"+XMax+"','"+QString::number(FLAG_NULL_TS)+"')";
 
     ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
 
-    //Verify that the stations are the same in all files
-    if(TimeseriesData.length()>1)
-    {        
-        for(i=1;i<TimeseriesData.length();i++)
-        {
-            ierr = CheckStationLocationsTimeseries(TimeseriesData[0],TimeseriesData[i]);
-            if(ierr==1)
-            {
-                QMessageBox::information(this,"ERROR","The station locations in the timeseries files do not match.");
-                QApplication::restoreOverrideCursor();
-                return;
-            }
-        }
-    }
+    //Build a new Timeseries Data variable
+    // (1) Get list of unique stations
+    // (2) Build a variable on the unique list
+    // (3) Pass the new variable forward
+    ierr = GetUniqueStationList(TimeseriesData,StationX,StationY);
+    ierr = BuildRevisedIMEDS(TimeseriesData,StationX,StationY,UniqueTimeseriesData);
 
-    for(i=0;i<TimeseriesData.length();i++)
+    for(i=0;i<UniqueTimeseriesData.length();i++)
     {
         name  = ui->table_TimeseriesData->item(i,1)->text();
         color = ui->table_TimeseriesData->item(i,2)->text();
         unit  = ui->table_TimeseriesData->item(i,3)->text();
         plusX = ui->table_TimeseriesData->item(i,4)->text();
         plusY = ui->table_TimeseriesData->item(i,5)->text();
-        javascript = "SetSeriesOptions("+QString::number(i)+",'"+name+"','"+color+"',"+unit+","+plusX+","+plusY+")";
+        javascript = "SetSeriesOptions("+QString::number(i)+",'"+name+
+                "','"+color+"',"+unit+","+plusX+","+plusY+")";
         ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
     //Inform HTML on the number of data series
     ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("allocateData("+
-                                                           QString::number(TimeseriesData.length())+")");
+                                                           QString::number(UniqueTimeseriesData.length())+")");
 
     //Send locations to HTML side
-    for(i=0;i<TimeseriesData[0].nstations;i++)
+    for(i=0;i<UniqueTimeseriesData[0].nstations;i++)
     {
-        x = TimeseriesData[0].station[i].longitude;
-        y = TimeseriesData[0].station[i].latitude;
+        x = UniqueTimeseriesData[0].station[i].longitude;
+        y = UniqueTimeseriesData[0].station[i].latitude;
         javascript = "SetMarkerLocations("+QString::number(i)+
                 ","+QString::number(x)+","+
                 QString::number(y)+",'"+
-                TimeseriesData[0].station[i].StationName+"')";
+                UniqueTimeseriesData[0].station[i].StationName+"')";
         jsResponse = ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
@@ -424,20 +456,40 @@ void MainWindow::on_button_processTimeseriesData_clicked()
 
     QApplication::restoreOverrideCursor();
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Toggle the enable/disabled states for options
+//that are not available when using all or a
+//specific set of time series dates
+//-------------------------------------------//
 void MainWindow::on_check_TimeseriesAllData_toggled(bool checked)
 {
     ui->date_TimeseriesStartDate->setEnabled(!checked);
     ui->date_TimeseriesEndDate->setEnabled(!checked);
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//A button to fit the time series locations
+//to the viewport
+//-------------------------------------------//
 void MainWindow::on_button_fitTimeseries_clicked()
 {
     ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Function called when the button to plot time
+//series data is clicked or the enter/return
+//key is pressed
+//-------------------------------------------//
 void MainWindow::on_button_plotTimeseriesStation_clicked()
 {
     QString DataString, javascript;
@@ -450,10 +502,10 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
     if(markerID==-1)return;
 
     //Format the data
-    for(int j=0;j<TimeseriesData.length();j++)
+    for(int j=0;j<UniqueTimeseriesData.length();j++)
     {
         units = ui->table_TimeseriesData->item(j,3)->text().toDouble();
-        DataString = FormatTimeseriesString(TimeseriesData[j],markerID,units);
+        DataString = FormatTimeseriesString(UniqueTimeseriesData[j],markerID,units);
         javascript = "";
         javascript = "AddDataSeries("+QString::number(j)+",'"+DataString+"')";
         ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
@@ -463,3 +515,4 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
     ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("PlotTimeseries()");
     return;
 }
+//-------------------------------------------//

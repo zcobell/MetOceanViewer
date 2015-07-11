@@ -20,8 +20,14 @@
 #include <ui_MetOceanViewer_main.h>
 #include <netcdf.h>
 
+//A variable used to define an alternate save location
 QString AlternateFolder;
 
+//-------------------------------------------//
+//Routine used for saving a session in
+//netCDF format. This will define the file
+//locations in a relative way
+//-------------------------------------------//
 int MainWindow::saveSession()
 {
     int ierr,ncid,i;
@@ -240,7 +246,13 @@ int MainWindow::saveSession()
 
     return 0;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//This routine will load the session file
+//from netCDF format
+//-------------------------------------------//
 int MainWindow::loadSession()
 {
     int ierr,ncid,i,nrow;
@@ -660,3 +672,4 @@ int MainWindow::loadSession()
     if(ierr!=NC_NOERR)return 1;
     return 0;
 }
+//-------------------------------------------//

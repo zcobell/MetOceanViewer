@@ -20,7 +20,10 @@
 #include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 
-//Routine that fires after the NOAA data is read from the server
+//-------------------------------------------//
+//Routine that fires after the NOAA data is
+//read from the server
+//-------------------------------------------//
 void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 {
     QByteArray NOAAWebData;
@@ -86,8 +89,13 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
 
     return;
 }
+//-------------------------------------------//
 
-//Routine that formats the response from the NOAA server in CSV
+
+//-------------------------------------------//
+//Routine that formats the response from the
+//NOAA server in CSV
+//-------------------------------------------//
 QString MainWindow::FormatNOAAResponse(QByteArray Input,QString &ErrorString)
 {
     int i;
@@ -123,8 +131,14 @@ QString MainWindow::FormatNOAAResponse(QByteArray Input,QString &ErrorString)
 
     return Output;
 }
+//-------------------------------------------//
 
 
+//-------------------------------------------//
+//Function that picks the product name and
+//the product id on the NOAA site by the
+//index in the NOAA selection combo box
+//-------------------------------------------//
 QString MainWindow::retrieveProduct(int type)
 {
     QString Product;
@@ -159,3 +173,4 @@ QString MainWindow::retrieveProduct(int type)
     }
     return Product;
 }
+//-------------------------------------------//

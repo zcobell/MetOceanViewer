@@ -19,6 +19,11 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 
+
+//-------------------------------------------//
+//Function that fires on the signal when the
+//USGS data has finished downloading
+//-------------------------------------------//
 void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 {
     if(reply->error()!=0)
@@ -45,7 +50,13 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Formats the USGS daily response when
+//the download has completed.
+//-------------------------------------------//
 void MainWindow::FormatUSGSDailyResponse(QByteArray Input)
 {
     int i,j,ParamStart,ParamStop;
@@ -159,8 +170,13 @@ void MainWindow::FormatUSGSDailyResponse(QByteArray Input)
 
     return;
 }
+//-------------------------------------------//
 
 
+//-------------------------------------------//
+//Formats the USGS instant data respone when
+//the data has finished downloading
+//-------------------------------------------//
 void MainWindow::FormatUSGSInstantResponse(QByteArray Input)
 {
     int i,j,ParamStart,ParamStop,OffsetHours;
@@ -281,8 +297,13 @@ void MainWindow::FormatUSGSInstantResponse(QByteArray Input)
 
     return;
 }
+//-------------------------------------------//
 
 
+//-------------------------------------------//
+//Plots the USGS data and sends everything
+//to the HTML/Javascript backend
+//-------------------------------------------//
 void MainWindow::PlotUSGS()
 {
     QString PlotData,javastring,Product;
@@ -313,10 +334,13 @@ void MainWindow::PlotUSGS()
 
     return;
 }
+//-------------------------------------------//
 
 
+//-------------------------------------------//
 //This routine will help convert everything back to UTC since
 //USGS supplies all products in local time via the web api
+//-------------------------------------------//
 int MainWindow::GetTimezoneOffset(QString timezone)
 {
 
@@ -365,7 +389,12 @@ int MainWindow::GetTimezoneOffset(QString timezone)
         return 0;
     }
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Function to save the map and chart as a jpg
+//-------------------------------------------//
 void MainWindow::on_button_usgssavemap_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -382,8 +411,15 @@ void MainWindow::on_button_usgssavemap_clicked()
     ui->usgs_map->render(&USGSImage);
     USGSOutput.open(QIODevice::WriteOnly);
     USGSImage.save(&USGSOutput,"JPG",100);
+    return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Saves the USGS data as an IMEDS formatted file
+//or a CSV
+//-------------------------------------------//
 void MainWindow::on_button_usgssavedata_clicked()
 {
     if(USGSMarkerID=="none")
@@ -453,10 +489,17 @@ void MainWindow::on_button_usgssavedata_clicked()
     USGSOutput.close();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Fires when the combo box is changed and
+//plots the data immediately
+//-------------------------------------------//
 void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
 {
     if(USGSdataReady)
         PlotUSGS();
     return;
 }
+//-------------------------------------------//
