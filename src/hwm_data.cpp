@@ -18,6 +18,10 @@
         
 #include <hwm.h>
 
+//-------------------------------------------//
+//A function that reads a CSV high water
+//mark file
+//-------------------------------------------//
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
 {
     QFile MyFile(Filename);
@@ -63,8 +67,17 @@ int ReadHWMData(QString Filename, QVector<hwm_data> &HWM)
     }
 
 }
+//-------------------------------------------//
 
-int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double &M, double &B, double &R2, double &StdDev)
+
+//-------------------------------------------//
+//Function that computes a linear regression
+//from the high water marks
+//-------------------------------------------//
+int ComputeLinearRegression(bool ForceThroughZero,
+                            QVector<hwm_data> HWM,
+                            double &M, double &B,
+                            double &R2, double &StdDev)
 {
     double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar, SumErr, MeanErr;
     int i;
@@ -166,3 +179,4 @@ int ComputeLinearRegression(bool ForceThroughZero,QVector<hwm_data> HWM, double 
     return 0;
 
 }
+//-------------------------------------------//

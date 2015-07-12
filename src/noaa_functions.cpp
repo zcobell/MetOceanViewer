@@ -20,10 +20,46 @@
 #include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 
-//Routine that fires after the NOAA data is read from the server
-void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
+int NumNOAADataRead;
+QVector<QByteArray> NOAAWebData;
+
+//-------------------------------------------//
+//Routine to read the data that has been
+//received from the NOAA server
+//-------------------------------------------//
+void MainWindow::ReadNOAAResponse(QNetworkReply *reply)
 {
-    QByteArray NOAAWebData;
+    QByteArray Data;
+
+    //Catch some errors during the download
+    if(reply->error()!=0)
+    {
+        QMessageBox::information(this,"ERROR","ERROR: "+reply->errorString());
+        ui->statusBar->clearMessage();
+        return;
+    }
+
+    //Read the data received from NOAA server
+    Data=reply->readAll();
+
+    //Save the data into an array and increment the counter
+    NOAAWebData[NumNOAADataRead] = Data;
+    NumNOAADataRead = NumNOAADataRead + 1;
+
+    //Delete this response
+    reply->deleteLater();
+
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Routine that fires after the NOAA data is
+//finished downloading
+//-------------------------------------------//
+void MainWindow::PlotNOAAResponse()
+{
     QString NOAAData,javastring,Error;
     QString Datum,Units,Product;
     int ProductIndex;
@@ -67,64 +103,83 @@ void MainWindow::ReadNOAADataFinished(QNetworkReply *reply)
         Datum = "Stnd";
     }
 
-
-    if(reply->error()!=0)
-    {
-        QMessageBox::information(this,"ERROR","ERROR: "+reply->errorString());
-        ui->statusBar->clearMessage();
-        return;
-    }
-    NOAAWebData=reply->readAll();
     NOAAData = FormatNOAAResponse(NOAAWebData,Error);
     Error.remove(QRegExp("[\\n\\t\\r]"));
 
     javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"','"+Product+"','"+Error+"')";
     ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
 
-    reply->deleteLater();
     ui->statusBar->clearMessage();
 
     return;
 }
+//-------------------------------------------//
 
-//Routine that formats the response from the NOAA server in CSV
-QString MainWindow::FormatNOAAResponse(QByteArray Input,QString &ErrorString)
+
+//-------------------------------------------//
+//Routine that formats the response from the
+//NOAA server in CSV
+//-------------------------------------------//
+QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString)
 {
-    int i;
+    int i,j;
     QString Output,TempData,DateS,YearS,MonthS,DayS,HourMinS,HourS,MinS,WLS;
-    QString InputData(Input);
-    QStringList DataList = InputData.split(QRegExp("[\r\n]"),QString::SkipEmptyParts);
     QStringList TimeSnap;
-    QString Temp(Input);
-    ErrorString = Temp;
+    QVector<QString> InputData;
+    QVector<QStringList> DataList;
+    QVector<QString> Temp;
+
+    InputData.resize(Input.length());
+    DataList.resize(Input.length());
+    Temp.resize(Input.length());
+
+    for(i=0;i<DataList.length();i++)
+    {
+        InputData[i] = QString(Input[i]);
+        DataList[i] = InputData[i].split(QRegExp("[\r\n]"),QString::SkipEmptyParts);
+        Temp[i] = QString(Input[i]);
+        ErrorString = Temp[i] + "\n";
+    }
 
     Output = "'";
-    CurrentNOAAStation.resize(DataList.length()-1);
-    for(i=1;i<DataList.length();i++)
+
+    for(i=0;i<DataList.length();i++)
+        CurrentNOAAStation.resize(CurrentNOAAStation.length()+DataList[i].length()-1);
+
+    for(j=0;j<DataList.length();j++)
     {
-        TempData = DataList.value(i);
-        TimeSnap = TempData.split(",");
-        DateS    = TimeSnap.value(0);
-        YearS    = DateS.mid(0,4);
-        MonthS   = DateS.mid(5,2);
-        DayS     = DateS.mid(8,2);
-        HourMinS = DateS.mid(11,5);
-        HourS    = HourMinS.mid(0,2);
-        MinS     = HourMinS.mid(3,2);
-        WLS      = TimeSnap.value(1);
-        Output=Output+YearS+":"+MonthS+":"+
-               DayS+":"+HourS+":"+MinS+":"+WLS+";";
-        TempData = YearS+"/"+MonthS+"/"+DayS;
-        CurrentNOAAStation[i-1].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
-        CurrentNOAAStation[i-1].Time = QTime(HourS.toInt(),MinS.toInt(),0);
-        CurrentNOAAStation[i-1].value = WLS.toDouble();
+        for(i=1;i<DataList[j].length();i++)
+        {
+            TempData = DataList[j].value(i);
+            TimeSnap = TempData.split(",");
+            DateS    = TimeSnap.value(0);
+            YearS    = DateS.mid(0,4);
+            MonthS   = DateS.mid(5,2);
+            DayS     = DateS.mid(8,2);
+            HourMinS = DateS.mid(11,5);
+            HourS    = HourMinS.mid(0,2);
+            MinS     = HourMinS.mid(3,2);
+            WLS      = TimeSnap.value(1);
+            Output=Output+YearS+":"+MonthS+":"+
+                   DayS+":"+HourS+":"+MinS+":"+WLS+";";
+            TempData = YearS+"/"+MonthS+"/"+DayS;
+            CurrentNOAAStation[i-1].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
+            CurrentNOAAStation[i-1].Time = QTime(HourS.toInt(),MinS.toInt(),0);
+            CurrentNOAAStation[i-1].value = WLS.toDouble();
+        }
     }
     Output = Output+"'";
 
     return Output;
 }
+//-------------------------------------------//
 
 
+//-------------------------------------------//
+//Function that picks the product name and
+//the product id on the NOAA site by the
+//index in the NOAA selection combo box
+//-------------------------------------------//
 QString MainWindow::retrieveProduct(int type)
 {
     QString Product;
@@ -159,3 +214,4 @@ QString MainWindow::retrieveProduct(int type)
     }
     return Product;
 }
+//-------------------------------------------//

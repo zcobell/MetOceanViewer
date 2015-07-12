@@ -25,6 +25,9 @@
 #include <QMessageBox>
 #include <qmath.h>
 
+//-------------------------------------------//
+//Data structure for high water marks
+//-------------------------------------------//
 struct hwm_data
 {
     double lat;
@@ -34,10 +37,24 @@ struct hwm_data
     double modeled;
     double error;
 };
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Global variable used for the high water
+//marks
+//-------------------------------------------//
 extern QVector<double> classes;
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Function prototypes
+//-------------------------------------------//
 int ReadHWMData(QString Filename, QVector<hwm_data> &HWM);
-int ComputeLinearRegression(bool ForceThroughZero, QVector<hwm_data> HWM, double &M, double &B, double &Y, double &StdDev);
+
+int ComputeLinearRegression(bool ForceThroughZero,
+                            QVector<hwm_data> HWM,
+                            double &M, double &B,
+                            double &Y, double &StdDev);
+//-------------------------------------------//
 
 #endif // HWM_H

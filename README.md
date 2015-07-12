@@ -11,8 +11,8 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 
 # Planned Upgrades
 - [ ] Read Delft3D native formatted NEFIS files
-- [ ] Allow download of longer periods of data from NOAA interface
-- [ ] Remove restriction on files having same locations
+- [x] Allow download of longer periods of data from NOAA interface
+- [x] Remove restriction on files having same locations
 - [ ] Add interface to NOAA Currents stations
 - [ ] Add data to session files upon request of user
 
@@ -22,7 +22,7 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 ![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/screenshots/mov_ss3.JPG)
 
 # Compiling
-To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.4.0 on Windows, Mac OSX, and Linux.
+To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.5.0 on Windows, Mac OSX, and Linux.
 
 # Credits
 The following external libraries/APIs are used in this software
