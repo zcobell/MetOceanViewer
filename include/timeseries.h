@@ -26,6 +26,11 @@
 #include <QDateTime>
 
 //Data Sructures
+
+//-------------------------------------------//
+//Data contained within a single IMEDS
+//station. This ends up wrapped in the IMEDS
+//data structure.
 struct IMEDS_DATA
 {
     double              latitude;
@@ -35,8 +40,14 @@ struct IMEDS_DATA
     int                 StationIndex;
     QVector<QDateTime>  date;
     QVector<double>     data;
+    bool                isNull;
 };
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Wrapper for the IMEDS file format which
+//will be used as the prototype throughout.
+//All other formats end up converted to this.
 struct IMEDS{
     int nstations;
     QString header1;
@@ -45,7 +56,11 @@ struct IMEDS{
     QVector<IMEDS_DATA> station;
     bool success;
 };
+//-------------------------------------------//
 
+//-------------------------------------------//
+//Structure to hold ADCIRC data structure
+//read from a netCDF formatted file
 struct ADCNC{
     int nstations;
     int NumSnaps;
@@ -58,7 +73,12 @@ struct ADCNC{
     bool success;
     int err;
 };
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Structure to hold the ADCIRC data structure
+//read from an ASCII formatted file
 struct ADCASCII{
     int nstations;
     int NumSnaps;
@@ -72,20 +92,39 @@ struct ADCASCII{
     QVector<QString> station_name;
     bool success;
 };
+//-------------------------------------------//
 
 
+ //-------------------------------------------//
+//Some variables used throughout
+extern double FLAG_NULL_TS;
+extern QDateTime FLAG_NULL_DATE;
+extern QVector<IMEDS> TimeseriesData;
+//-------------------------------------------//
+
+//-------------------------------------------//
 //Function prototypes
 IMEDS readIMEDS(QString filename);
 
 ADCNC readADCIRCnetCDF(QString filename);
 
-ADCASCII readADCIRCascii(QString filename, QString stationfile);
+ADCASCII readADCIRCascii(QString filename,
+                         QString stationfile);
 
-IMEDS NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold);
+IMEDS NetCDF_to_IMEDS(ADCNC netcdf,
+                      QDateTime Cold);
 
-IMEDS ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold);
+IMEDS ADCIRC_to_IMEDS(ADCASCII ASCII,
+                      QDateTime Cold);
 
-//Data holder
-extern QVector<IMEDS> TimeseriesData;
+int GetUniqueStationList(QVector<IMEDS> Data,
+                         QVector<double> &X,
+                         QVector<double> &Y);
+
+int BuildRevisedIMEDS(QVector<IMEDS> Data,
+                      QVector<double> X,
+                      QVector<double> Y,
+                      QVector<IMEDS> &DataOut);
+//-------------------------------------------//
 
 #endif // TIMESERIES_H

@@ -20,7 +20,10 @@
 #include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 
-//Determines the start and end time in an IMEDS variable
+//-------------------------------------------//
+//Determines the start and end time in an
+//IMEDS variable
+//-------------------------------------------//
 void MainWindow::getStartEndTime(IMEDS Input, int index, QDateTime &Start, QDateTime &End)
 {
     Start.setDate(QDate(2200,1,1));
@@ -40,8 +43,12 @@ void MainWindow::getStartEndTime(IMEDS Input, int index, QDateTime &Start, QDate
     }
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Determines the start and end time in a IMEDS variable
+//-------------------------------------------//
 void MainWindow::getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End)
 {
     Start.setDate(QDate(2200,1,1));
@@ -64,8 +71,12 @@ void MainWindow::getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime 
     }
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Reset the data range shown the selection boxes
+//-------------------------------------------//
 void MainWindow::UpdateTimeseriesDateRange(IMEDS MyIMEDS)
 {
     QDateTime MyMin,MyMax;
@@ -86,8 +97,13 @@ void MainWindow::UpdateTimeseriesDateRange(IMEDS MyIMEDS)
 
     return;
 }
+//-------------------------------------------//
 
-//Format the IMEDS data string into something we can use in Javascript
+
+//-------------------------------------------//
+//Format the IMEDS data string into something
+//we can use in Javascript
+//-------------------------------------------//
 QString MainWindow::FormatTimeseriesString(IMEDS MyStation,int index, double unitConvert)
 {
     QString Response,TempString;
@@ -125,7 +141,11 @@ QString MainWindow::FormatTimeseriesString(IMEDS MyStation,int index, double uni
     return Response;
 }
 
-//Check if two files have the same station locations inside
+
+//-------------------------------------------//
+//Check if two files have the same station
+//locations inside
+//-------------------------------------------//
 int MainWindow::CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test)
 {
     if(Control.nstations!=Test.nstations)
@@ -141,3 +161,4 @@ int MainWindow::CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test)
     }
     return 0;
 }
+//-------------------------------------------//

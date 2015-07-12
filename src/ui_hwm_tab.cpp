@@ -29,7 +29,11 @@ QVector<hwm_data> HighWaterMarks;
 QString HighWaterMarkFile;
 QVector<double> classes;
 
-//Called when the browse for HWM file button is clicked
+
+//-------------------------------------------//
+//Called when the browse for HWM file button
+//is clicked
+//-------------------------------------------//
 void MainWindow::on_browse_hwm_clicked()
 {
     HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",
@@ -42,8 +46,12 @@ void MainWindow::on_browse_hwm_clicked()
     GetLeadingPath(HighWaterMarkFile);
     ui->Text_HWMFile->setText(TempString);
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
 //Called when the process HWM button is clicked
+//-------------------------------------------//
 void MainWindow::on_button_processHWM_clicked()
 {
     QString Marker, unitString, Regression, MeasuredString, ModeledString;
@@ -228,8 +236,13 @@ void MainWindow::on_button_processHWM_clicked()
     return;
 
 }
+//-------------------------------------------//
 
-//Called when the manual HWM scale button is clicked
+
+//-------------------------------------------//
+//Called when the manual HWM scale button is
+//clicked
+//-------------------------------------------//
 void MainWindow::on_check_manualHWM_toggled(bool checked)
 {
     ui->spin_class0->setEnabled(checked);
@@ -239,10 +252,15 @@ void MainWindow::on_check_manualHWM_toggled(bool checked)
     ui->spin_class4->setEnabled(checked);
     ui->spin_class5->setEnabled(checked);
     ui->spin_class6->setEnabled(checked);
-
+    return;
 }
+//-------------------------------------------//
 
-//Called when the save HWM map image button is clicked
+
+//-------------------------------------------//
+//Called when the save HWM map image button
+//is clicked
+//-------------------------------------------//
 void MainWindow::on_button_saveHWMMap_clicked()
 {
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -258,9 +276,15 @@ void MainWindow::on_button_saveHWMMap_clicked()
     ui->map_hwm->render(&HWMImage);
     HWMOutput.open(QIODevice::WriteOnly);
     HWMImage.save(&HWMOutput,"JPG",100);
-
+    return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Bring up a color dialog to choose the color
+//used for plotting high water marks
+//-------------------------------------------//
 void MainWindow::on_button_hwmcolor_clicked()
 {
     QString ButtonStyle;
@@ -277,7 +301,13 @@ void MainWindow::on_button_hwmcolor_clicked()
     ui->button_hwmcolor->update();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Bring up a color dialog box for choosing the
+//1:1 color
+//-------------------------------------------//
 void MainWindow::on_button_121linecolor_clicked()
 {
     QString ButtonStyle;
@@ -294,7 +324,13 @@ void MainWindow::on_button_121linecolor_clicked()
     ui->button_121linecolor->update();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Bring up a color dialog for choosing the
+//regression line color
+//-------------------------------------------//
 void MainWindow::on_button_reglinecolor_clicked()
 {
     QString ButtonStyle;
@@ -311,7 +347,13 @@ void MainWindow::on_button_reglinecolor_clicked()
     ui->button_reglinecolor->update();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Bring up a color dialog to choose the
+//standard deviation bounding line color
+//-------------------------------------------//
 void MainWindow::on_button_boundlinecolor_clicked()
 {
     QString ButtonStyle;
@@ -328,15 +370,29 @@ void MainWindow::on_button_boundlinecolor_clicked()
     ui->button_boundlinecolor->update();
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Button click routine for fitting high water
+//marks to the current view
+//-------------------------------------------//
 void MainWindow::on_button_fitHWM_clicked()
 {
     ui->map_hwm->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Button to toggle options when the color match
+//option for the linear regression is clicked
+//-------------------------------------------//
 void MainWindow::on_check_regressionColorMatch_clicked(bool checked)
 {
     ui->button_hwmcolor->setEnabled(!checked);
     ui->label_hwmcolor->setEnabled(!checked);
+    return;
 }
+//-------------------------------------------//

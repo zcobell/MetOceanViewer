@@ -43,6 +43,7 @@
     var ADCColorCode,OBSColorCode;
     var AutoY, AutoX;
     var XMin,XMax;
+    var NullFlag;
 
     var Locations = new Array();
     var DataSeries = new Array();
@@ -200,6 +201,19 @@
         {
             LocalData = Data[i];
             seriesList[i] = {name: SeriesOptions[i].name, color: SeriesOptions[i].color, data: LocalData };
+
+            //For the data series that is not available at this station,
+            //turn it off in both the legend and the plot
+            if(seriesList[i].data.length < 2)
+            {
+                seriesList[i].visible = false;
+                seriesList[i].showInLegend = false;
+            }
+            else
+            {
+                seriesList[i].visible = true;
+                seriesList[i].showInLegend = true;
+            }
         }
 
         //Start setting up the plot
@@ -260,7 +274,7 @@
     }
 
 
-    function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,InXMin,InXMax)
+    function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,InXMin,InXMax,InNullFlag)
     {
         PlotTitle = InPlotTitle;
         YMin = InYMin;
@@ -269,6 +283,7 @@
         YLabel = InYLabel;
         AutoY = InAutoY;
         AutoX = InAutoX;
+        NullFlag = InNullFlag;
 
         if(AutoX=="none")
         {

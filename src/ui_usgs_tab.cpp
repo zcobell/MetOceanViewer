@@ -19,13 +19,21 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 
+//-------------------------------------------//
 //Send the data to the panTo function
+//-------------------------------------------//
 void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 {
     ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Function to fetch the data from the USGS
+//server
+//-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked()
 {
     QString RequestURL,USGSMarkerString;
@@ -36,6 +44,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
 
     USGSbeenPlotted = false;
     USGSdataReady = false;
+    USGSDataReadFinished = false;
 
     ui->statusBar->showMessage("Downloading data from USGS...");
 
@@ -84,9 +93,23 @@ void MainWindow::on_button_usgs_fetch_clicked()
     //Make the request to the server
     manager->get(QNetworkRequest(QUrl(RequestURL)));
 
+    //Wait for the read to finish before the disconnect
+    while(!USGSDataReadFinished)
+        delayM(100);
+
+    //Disconnect the slot
+    disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
+
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Sets the data range when the usgs instant
+//radio button is clicked since the "instant"
+//data is only available 120 days into the past
+//-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked()
 {
     USGSdataMethod = 1;
@@ -101,7 +124,13 @@ void MainWindow::on_radio_usgs_instant_clicked()
 
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Resets the minimum datetime to a long time
+//ago when using daily data from USGS
+//-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked()
 {
     USGSdataMethod = 2;
@@ -109,7 +138,13 @@ void MainWindow::on_radio_usgsDaily_clicked()
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
 }
+//-------------------------------------------//
 
+
+//-------------------------------------------//
+//Resets the minimum datetime to a long time
+//ago when using daily data from USGS
+//-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked()
 {
     USGSdataMethod = 0;
@@ -117,3 +152,4 @@ void MainWindow::on_radio_usgshistoric_clicked()
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
 }
+//-------------------------------------------//
