@@ -19,6 +19,7 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 
+bool USGSDataReadFinished;
 
 //-------------------------------------------//
 //Function that fires on the signal when the
@@ -47,6 +48,9 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 
     //Clear message
     ui->statusBar->clearMessage();
+
+    //Alert to the other routines
+    USGSDataReadFinished = true;
 
     return;
 }

@@ -44,6 +44,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
 
     USGSbeenPlotted = false;
     USGSdataReady = false;
+    USGSDataReadFinished = false;
 
     ui->statusBar->showMessage("Downloading data from USGS...");
 
@@ -91,6 +92,13 @@ void MainWindow::on_button_usgs_fetch_clicked()
 
     //Make the request to the server
     manager->get(QNetworkRequest(QUrl(RequestURL)));
+
+    //Wait for the read to finish before the disconnect
+    while(!USGSDataReadFinished)
+        delayM(100);
+
+    //Disconnect the slot
+    disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
 
     return;
 }

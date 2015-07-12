@@ -35,7 +35,25 @@ void MainWindow::delay(int delayTime)
     QTime dieTime= QTime::currentTime().addSecs(delayTime);
     while( QTime::currentTime() < dieTime )
         QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    return;
 }
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Simple delay function which will pause
+//execution for a number of milliseconds
+//-------------------------------------------//
+void MainWindow::delayM(int delayTime)
+{
+    QTime dieTime= QTime::currentTime().addMSecs(delayTime);
+    while( QTime::currentTime() < dieTime )
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    return;
+}
+//-------------------------------------------//
+
+
 //-------------------------------------------//
 
 
