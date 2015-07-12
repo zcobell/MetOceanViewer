@@ -148,10 +148,13 @@ void MainWindow::on_Button_FetchData_clicked()
     qint64 Duration;
     QString RequestURL,StartString,EndString,Datum,Units,Product;
     QDateTime StartDate,EndDate;
-    int ProductIndex;
+    int i,ProductIndex,NumDownloads,CurrentDownloadIndex;
+    QVector<QDateTime> StartDateList,EndDateList;
+
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
+
     NOAAMarkerID = evalList.value(0).toInt();
     CurrentNOAAStationName = evalList.value(1).simplified();
     CurrentNOAALat = evalList.value(3).toDouble();
@@ -164,19 +167,28 @@ void MainWindow::on_Button_FetchData_clicked()
     StartDate = ui->Date_StartTime->dateTime();
     EndDate = ui->Date_EndTime->dateTime();
 
-    //Sanity check
-    Duration = StartDate.daysTo(EndDate);
-    if(Duration>31)
-    {
-        QMessageBox::information(NULL,"ERROR","Date range must be less than 31 days.");
-        ui->statusBar->clearMessage();
-        return;
-    }
     if(StartDate==EndDate||EndDate<StartDate)
     {
         QMessageBox::information(NULL,"ERROR","Dates must be a valid range.");
         ui->statusBar->clearMessage();
         return;
+    }
+
+    //Begin organizing the dates for download
+    Duration = StartDate.daysTo(EndDate);
+    NumDownloads = (Duration / 30) + 1;
+    StartDateList.resize(NumDownloads);
+    EndDateList.resize(NumDownloads);
+
+    //Build the list of dates in 30 day intervals
+    for(i=0;i<NumDownloads;i++)
+    {
+        StartDateList[i] = StartDate.addDays(i*30).addDays(i);
+        StartDateList[i].setTime(QTime(0,0,0));
+        EndDateList[i]   = StartDateList[i].addDays(30);
+        EndDateList[i].setTime(QTime(23,59,59));
+        if(EndDateList[i]>EndDate)
+            EndDateList[i] = EndDate;
     }
 
     //Get options
@@ -189,23 +201,50 @@ void MainWindow::on_Button_FetchData_clicked()
          || ProductIndex == 4 || ProductIndex == 6 || ProductIndex == 7)
         Datum = "Stnd";
 
-
-    //Make the date string
-    StartString = StartDate.toString("yyyyMMdd");
-    EndString = EndDate.toString("yyyyMMdd");
-    StartString = StartString+" 00:00";
-    EndString = EndString+" 23:59";
-
     //Connect the finished downloading signal to the routine that plots the markers
-    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAADataFinished(QNetworkReply*)));
-    RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
-                 QString("product="+Product+"&application=adcvalidator")+
-                 QString("&begin_date=")+StartString+QString("&end_date=")+EndString+
-                 QString("&station=")+QString::number(NOAAMarkerID)+
-                 QString("&time_zone=GMT&units=")+Units+
-                 QString("&interval=&format=csv");
-    if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
-    manager->get(QNetworkRequest(QUrl(RequestURL)));
+    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAAResponse(QNetworkReply*)));
+
+    //Allocate the NOAA array
+    NOAAWebData.clear();
+    NOAAWebData.resize(NumDownloads);
+
+    NumNOAADataRead = 0;
+    for(i=0;i<NumDownloads;i++)
+    {
+        //Make the date string
+        StartString = StartDateList[i].toString("yyyyMMdd hh:mm");
+        EndString = EndDateList[i].toString("yyyyMMdd hh:mm");
+
+        //See where we are in the download list
+        CurrentDownloadIndex = NumNOAADataRead;
+
+        //Build the URL to request data from the NOAA CO-OPS API
+        RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
+                     QString("product="+Product+"&application=metoceanviewer")+
+                     QString("&begin_date=")+StartString+QString("&end_date=")+EndString+
+                     QString("&station=")+QString::number(NOAAMarkerID)+
+                     QString("&time_zone=GMT&units=")+Units+
+                     QString("&interval=&format=csv");
+
+        //Allow a different datum where allowed
+        if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
+
+        //Send the request
+        manager->get(QNetworkRequest(QUrl(RequestURL)));
+
+        //Wait for the download before starting the next
+        while(CurrentDownloadIndex==NumNOAADataRead)
+            delayM(100);
+
+    }
+
+    //Disconnect the download manager
+    disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAAResponse(QNetworkReply*)));
+
+    //Call the plotting routine
+    PlotNOAAResponse();
+
+    return;
 }
 //-------------------------------------------//
 

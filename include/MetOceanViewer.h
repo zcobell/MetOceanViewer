@@ -87,9 +87,13 @@ public:
 
     void delay(int delayTime);
 
+    void delayM(int delayTime);
+
 private slots:
 
-    void ReadNOAADataFinished(QNetworkReply*);
+    void PlotNOAAResponse();
+
+    void ReadNOAAResponse(QNetworkReply*);
 
     void ReadUSGSDataFinished(QNetworkReply*);
 
@@ -182,7 +186,7 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    QString FormatNOAAResponse(QByteArray Input, QString &ErrorString);
+    QString FormatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString);
 
     void FormatUSGSInstantResponse(QByteArray Input);
 
@@ -232,16 +236,18 @@ extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
 extern int NOAAMarkerID;
+extern int NumNOAADataRead;
 extern double CurrentNOAALat,CurrentNOAALon;
 extern QString CurrentNOAAStationName;
 extern QString USGSMarkerID;
 extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
-extern bool USGSbeenPlotted,USGSdataReady;
+extern bool USGSbeenPlotted,USGSdataReady,USGSDataReadFinished;
 extern int USGSdataMethod;
 extern QVector<NOAAStationData> CurrentNOAAStation;
 extern QVector<NOAAStationData> USGSPlot;
 extern QVector<USGSData> CurrentUSGSStation;
+extern QVector<QByteArray> NOAAWebData;
 //-------------------------------------------//
 
 
