@@ -11,7 +11,7 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 
 # Planned Upgrades
 - [ ] Read Delft3D native formatted NEFIS files
-- [ ] Allow download of longer periods of data from NOAA interface
+- [x] Allow download of longer periods of data from NOAA interface
 - [x] Remove restriction on files having same locations
 - [ ] Add interface to NOAA Currents stations
 - [ ] Add data to session files upon request of user
