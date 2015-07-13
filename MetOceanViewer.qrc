@@ -18,11 +18,11 @@
         <file>js/annotations.js</file>
         <file>js/jquery.js</file>
         <file>js/exporting.js</file>
-        <file>img/icon.png</file>
+        <file>img/mov.png</file>
         <file>img/logo_small.png</file>
         <file>img/logo_full.png</file>
         <file>resources.rc</file>
-        <file>img/icon.ico</file>
+        <file>img/mov.ico</file>
         <file>js/jquery.alerts.css</file>
         <file>js/jquery.alerts.js</file>
         <file>js/jquery.ui.draggable.js</file>

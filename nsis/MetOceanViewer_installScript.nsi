@@ -18,16 +18,16 @@
 
 #Define some basic variables for the installer
 !define APPNAME "MetOceanViewer"
-!define COMPANYNAME "ZachCobell"
+!define COMPANYNAME "Zach Cobell"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 2
 !define VERSIONMINOR 1
 !define VERSIONBUILD 0
 !define HELPURL "https://github.com/zcobell/MetOceanViewer" # "Support Information" link
 !define UPDATEURL "https://github.com/zcobell/MetOceanViewer" # "Product Updates" link
-!define ABOUTURL "http://zachcobell.com/?p=281" # "Publisher" link
+!define ABOUTURL "http://zachcobell.com/" # "Publisher" link
 !define INSTALLSIZE 100760
-!define MUI_ICON "..\img\icon.ico"
+!define MUI_ICON "..\img\mov.ico"
 
 #Include files
 !include MUI2.nsh
@@ -45,7 +45,7 @@ InstallDir $PROGRAMFILES32\MetOceanViewer
 Name "${APPNAME}"
 
 # Set the Icon
-Icon "..\img\icon.ico"
+Icon "..\img\mov.ico"
 
 ;--------------------------------
 ;Macros
@@ -159,7 +159,7 @@ Section "Install"
     File ..\libs\zlib1.dll
     File /r ..\libs\imageformats
     File /r ..\libs\platforms
-    File ..\img\icon.ico
+    File ..\img\mov.ico
     File ..\..\build-MetOceanViewer-Desktop_Qt_5_5_0_MinGW_32bit-Release\release\MetOcean_Viewer.exe
      
     # define uninstaller name
@@ -167,8 +167,8 @@ Section "Install"
 
     # Start Menu
 	CreateDirectory "$SMPROGRAMS\${APPNAME}"
-	CreateShortCut "$SMPROGRAMS\${APPNAME}\MetOcean Viewer.lnk" "$INSTDIR\MetOcean_Viewer.exe" "" "$INSTDIR\icon.ico"
-    CreateShortCut "$DESKTOP\MetOcean Viewer.lnk" "$INSTDIR\MetOcean_Viewer.exe" "" "$INSTDIR\icon.ico"
+	CreateShortCut "$SMPROGRAMS\${APPNAME}\MetOcean Viewer.lnk" "$INSTDIR\MetOcean_Viewer.exe" "" "$INSTDIR\mov.ico"
+    CreateShortCut "$DESKTOP\MetOcean Viewer.lnk" "$INSTDIR\MetOcean_Viewer.exe" "" "$INSTDIR\mov.ico"
     CreateShortCut "$SMPROGRAMS\${APPNAME}\Uninstall MetOcean Viewer.lnk" "$INSTDIR\uninstaller.exe" ""
  
 	# Registry information for add/remove programs
@@ -176,7 +176,7 @@ Section "Install"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "UninstallString" "$\"$INSTDIR\uninstaller.exe$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "QuietUninstallString" "$\"$INSTDIR\uninstaller.exe$\" /S"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "InstallLocation" "$\"$INSTDIR$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$\"$INSTDIR\icon.ico$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayIcon" "$\"$INSTDIR\mov.ico$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "$\"${COMPANYNAME}$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "HelpLink" "$\"${HELPURL}$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "URLUpdateInfo" "$\"${UPDATEURL}$\""
@@ -242,7 +242,7 @@ Section "Uninstall"
     Delete $INSTDIR\zlib1.dll
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
-    Delete $INSTDIR\icon.ico
+    Delete $INSTDIR\mov.ico
     Delete $INSTDIR\MetOcean_Viewer.exe
     Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
