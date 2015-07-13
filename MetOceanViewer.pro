@@ -78,7 +78,7 @@ LIBS += -lnetcdf
 macx{
 LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
 INCLUDEPATH += /Users/zcobell/Software/netCDF/include
-ICON = img/icon.icns
+ICON = img/mov.icns
 }
 
 

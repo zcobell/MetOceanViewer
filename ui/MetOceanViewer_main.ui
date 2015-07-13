@@ -26,7 +26,7 @@
    <string>MetOcean Viewer</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../MetOceanViewer.qrc">
+   <iconset>
     <normaloff>:/rsc/img/icon.png</normaloff>:/rsc/img/icon.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
@@ -590,6 +590,12 @@
                      <width>200</width>
                      <height>22</height>
                     </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>Type an address or location to go to that area</string>
+                   </property>
+                   <property name="statusTip">
+                    <string>Type an address or location to go to that area</string>
                    </property>
                    <property name="autoFillBackground">
                     <bool>false</bool>
@@ -1223,6 +1229,12 @@
                      <width>200</width>
                      <height>22</height>
                     </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>Type an address or location to go to that area</string>
+                   </property>
+                   <property name="statusTip">
+                    <string>Type an address or location to go to that area</string>
                    </property>
                    <property name="autoFillBackground">
                     <bool>false</bool>
