@@ -35,6 +35,7 @@ The following external libraries/APIs are used in this software
 - HDF5 v1.8.14 (http://www.hdfgroup.org/HDF5)
 - Curl v7.35.0 (http://curl.haxx.se)
 - zlib v1.2.8 (http://www.zlib.net)
+- OpenSSL v1.0.2d (https://www.openssl.org/)
 
 # License
 This program conforms to the GNU GPL, Version 3, with the caveat that the name MetOcean Viewer is specific to this project and derivative works should be named differently.

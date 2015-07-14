@@ -63,9 +63,8 @@ QString about_dialog::generateAboutText()
            "</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:8pt; font-weight:400; font-style:normal;\">" +
            "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">" +
 
-           "Copyleft 2015 Zach Cobell <br>" +
-           "<a href=\"http://www.zachcobell.com\">Visit Website</a><br>" +
-           "<a href=\"https://github.com/zcobell/MetOceanViewer\">Visit GitHub repository</a><br><br>" +
+           "<a href=\"https://github.com/zcobell/MetOceanViewer\">Visit GitHub repository</a><br>" +
+           "<a href=\"https://github.com/zcobell/MetOceanViewer/wiki\">Visit Documentation Page</a><br><br>" +
            "<b>Version: </b> "+QString(VER_FILEVERSION_STR) + "<br><br>" +
            "<b>External Libraries</b> <br><br>" +
            "NOAA CO-OPS API - <a href=\"http://tidesandcurrents.noaa.gov\">http://tidesandcurrents.noaa.gov</a><br>" +
@@ -76,7 +75,8 @@ QString about_dialog::generateAboutText()
            "netCDF v4.3.3 - <a href=\"http://www.unidata.ucar.edu/software/netcdf/\">http://www.unidata.ucar.edu/software/netcdf/</a><br>" +
            "HDF5 v1.8.14 - <a href=\"http://www.hdfgroup.org/HDF5/\">http://www.hdfgroup.org/HDF5/</a> <br>" +
            "Curl v7.35.0 - <a href=\"http://curl.haxx.se/\">http://curl.haxx.se/</a><br>" +
-           "zlib v1.2.8 - <a href=\"http://www.zlib.net/\">http://www.zlib.net/</a>" +
+           "zlib v1.2.8 - <a href=\"http://www.zlib.net/\">http://www.zlib.net/</a><br>" +
+           "OpenSSL v1.0.2d - <a href=\"https://www.openssl.org\">https://www.openssl.org</a>" +
 
            "</p></body></html>";
 
@@ -93,8 +93,8 @@ QString about_dialog::generateLicenseText()
            "p, li { white-space: pre-wrap; }" +
            "</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:8pt; font-weight:400; font-style:normal;\">" +
            "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">" +
-           "MetOcean Viewer <br>" +
-           "A simple interface for viewing hydrodynamic model data <br><br>" +
+           "<b>MetOcean Viewer</b> <br>" +
+           "<i>A simple interface for viewing hydrodynamic model data</i> <br><br>" +
            "Copyright (C) 2015  Zach Cobell <br><br>" +
            "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License" +
            " as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. <br><br>"
