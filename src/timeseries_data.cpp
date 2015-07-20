@@ -24,8 +24,6 @@
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
-#include <QDebug>
-
 
 //-------------------------------------------//
 //Read an IMEDS file
