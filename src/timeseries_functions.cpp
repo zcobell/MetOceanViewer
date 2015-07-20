@@ -119,7 +119,7 @@ QString MainWindow::FormatTimeseriesString(IMEDS MyStation,int index, double uni
     EndData = ui->date_TimeseriesEndDate->dateTime();
 
     Response = "";
-    qDebug() << MyStation.station[index].NumSnaps;
+
     for(int j=0;j<MyStation.station[index].NumSnaps;j++)
     {
         if(ui->check_TimeseriesAllData->isChecked())
