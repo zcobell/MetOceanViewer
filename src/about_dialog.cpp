@@ -65,7 +65,13 @@ QString about_dialog::generateAboutText()
 
            "<a href=\"https://github.com/zcobell/MetOceanViewer\">Visit GitHub repository</a><br>" +
            "<a href=\"https://github.com/zcobell/MetOceanViewer/wiki\">Visit Documentation Page</a><br><br>" +
+
+#ifndef GIT_VERSION
            "<b>Version: </b> "+QString(VER_FILEVERSION_STR) + "<br><br>" +
+#else
+           "<b>Git Revision: </b>"+QString(GIT_VERSION) + "<br><br>" +
+#endif
+
            "<b>External Libraries</b> <br><br>" +
            "NOAA CO-OPS API - <a href=\"http://tidesandcurrents.noaa.gov\">http://tidesandcurrents.noaa.gov</a><br>" +
            "USGS Waterdata API - <a href=\"http://waterdata.usgs.gov\">http://waterdata.usgs.gov</a><br>" +

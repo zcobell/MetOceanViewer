@@ -94,5 +94,9 @@ RESOURCES += \
 
 RC_FILE = resources.rc
 
+#...Ensure that git is in the system path
+GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
+DEFINES += GIT_VERSION=\\\"$$GIT_VERSION\\\"
+
 QMAKE_CXXFLAGS_RELEASE += -O3
 QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
