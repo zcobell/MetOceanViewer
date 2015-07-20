@@ -366,12 +366,12 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_processTimeseriesData_clicked()
 {
-    int i,ierr;
+    int i,j,ierr;
     double x,y,YMin,YMax;
     bool Checked;
     QString javascript,name,color;
     QString PlotTitle,XLabel,YLabel,AutoY;
-    QString AutoX,XMin,XMax;
+    QString AutoX,XMin,XMax,StationName;
     QString unit,plusX,plusY;
     QVariant jsResponse;
     QVector<double> StationX,StationY;
@@ -443,12 +443,27 @@ void MainWindow::on_button_processTimeseriesData_clicked()
     //Send locations to HTML side
     for(i=0;i<UniqueTimeseriesData[0].nstations;i++)
     {
-        x = UniqueTimeseriesData[0].station[i].longitude;
-        y = UniqueTimeseriesData[0].station[i].latitude;
+        x=-1.0;
+        y=-1.0;
+        StationName = "NONAME";
+
+        //Check that we aren't sending a null location to
+        //the backend
+        for(j=0;j<UniqueTimeseriesData.length();i++)
+        {
+            if(!UniqueTimeseriesData[j].station[i].isNull)
+            {
+                StationName = UniqueTimeseriesData[j].station[i].StationName;
+                x = UniqueTimeseriesData[j].station[i].longitude;
+                y = UniqueTimeseriesData[j].station[i].latitude;
+                break;
+            }
+        }
+
         javascript = "SetMarkerLocations("+QString::number(i)+
                 ","+QString::number(x)+","+
                 QString::number(y)+",'"+
-                UniqueTimeseriesData[0].station[i].StationName+"')";
+                StationName+"')";
         jsResponse = ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 

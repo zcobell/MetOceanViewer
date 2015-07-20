@@ -675,6 +675,7 @@ int BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, 
                     DataOut[i].station[j].data.resize(Data[i].station[k].data.length());
                     DataOut[i].station[j].date.resize(Data[i].station[k].date.length());
                     DataOut[i].station[j].NumSnaps = Data[i].station[k].NumSnaps;
+                    DataOut[i].station[j].StationName = Data[i].station[k].StationName;
                     DataOut[i].station[j].data = Data[i].station[k].data;
                     DataOut[i].station[j].date = Data[i].station[k].date;
                     DataOut[i].station[j].isNull = false;
@@ -687,6 +688,7 @@ int BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, 
                 //Build a station with a null dataset we can find later
                 DataOut[i].station[j].data.resize(1);
                 DataOut[i].station[j].date.resize(1);
+                DataOut[i].station[j].StationName = "NONAME";
                 DataOut[i].station[j].data[0] = FLAG_NULL_TS;
                 DataOut[i].station[j].date[0] = FLAG_NULL_DATE;
                 DataOut[i].station[j].isNull = true;
