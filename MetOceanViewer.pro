@@ -67,8 +67,8 @@ OTHER_FILES +=
 #         This, obviously, will vary by the machine
 #         the code is built on
 win32{
-LIBS += -LC:/netcdf/bin_qt -lnetcdf -lhdf5 -lz -lcurl
-INCLUDEPATH += C:/netcdf/include 
+LIBS += -L$$PWD/libs -lnetcdf -lhdf5 -lz -lcurl
+INCLUDEPATH += $$PWD/include
 }
 
 #...Unix - We assume static library for NetCDF installed
