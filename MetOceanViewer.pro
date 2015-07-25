@@ -28,7 +28,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = MetOcean_Viewer
 TEMPLATE = app
 
-
 SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
@@ -61,20 +60,66 @@ FORMS    += \
 
 OTHER_FILES +=
 
-#...Windows - We assume a folder that contains the pre-compiled
-#             shared dll's from Unidata and another with the 
-#             NetCDF header
-#         This, obviously, will vary by the machine
-#         the code is built on
-win32{
-LIBS += -L$$PWD/libs -lnetcdf -lhdf5 -lz -lcurl
-INCLUDEPATH += $$PWD/include
+#...Location of the netCDF includes
+INCLUDEPATH += $$PWD/thirdparty/netcdf/include
+
+#...Compiler dependent options
+DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
+
+#...Microsoft Visual C++ compilers
+*msvc* {
+
+contains(QT_ARCH, i386){
+
+#...Microsoft Visual C++ 32-bit compiler
+message("Using MSVC-32 bit compiler...")
+LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+
+#...Optimization flags
+QMAKE_CXXFLAGS_RELEASE +=
+QMAKE_CXXFLAGS_DEBUG +=
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"msvc\\\"
+
+} else {
+
+#...Microsoft Visual C++ 64-bit compiler
+message("Using MSVC-64 bit compiler...")
+LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+
+#...Optimization flags
+QMAKE_CXXFLAGS_RELEASE +=
+QMAKE_CXXFLAGS_DEBUG +=
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"msvc\\\"
+}
+
+}
+
+
+#...MinGW 32 bit compiler
+win32-g++{
+message("Using MinGW-32 bit compiler...")
+
+LIBS += -L$$PWD/thirdparty/netcdf/bin_32 -lnetcdf -lhdf5 -lz -lcurl
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"mingw\\\"
 }
 
 #...Unix - We assume static library for NetCDF installed
 #          in the system path already
 unix:!macx{
 LIBS += -lnetcdf
+
+#...Optimization flags
+QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"gpp\\\"
 }
 
 #...Mac - Assume static libs for netCDF in this path
@@ -84,8 +129,14 @@ macx{
 LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
 INCLUDEPATH += /Users/zcobell/Software/netCDF/include
 ICON = img/mov.icns
-}
 
+#...Optimization flags
+QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"xcode\\\"
+}
 
 INCLUDEPATH += include
 
@@ -97,7 +148,3 @@ RC_FILE = resources.rc
 #...Ensure that git is in the system path. If not using GIT comment these two lines
 GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
 DEFINES += GIT_VERSION=\\\"$$GIT_VERSION\\\"
-
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE += -O3
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
