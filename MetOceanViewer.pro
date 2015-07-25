@@ -64,6 +64,7 @@ OTHER_FILES +=
 INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
 #...Compiler dependent options
+DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
 
 #...Microsoft Visual C++ compilers
 *msvc* {
@@ -78,6 +79,9 @@ LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 QMAKE_CXXFLAGS_RELEASE +=
 QMAKE_CXXFLAGS_DEBUG +=
 
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"msvc\\\"
+
 } else {
 
 #...Microsoft Visual C++ 64-bit compiler
@@ -87,6 +91,9 @@ LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
 QMAKE_CXXFLAGS_DEBUG +=
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"msvc\\\"
 }
 
 }
@@ -97,6 +104,9 @@ win32-g++{
 message("Using MinGW-32 bit compiler...")
 
 LIBS += -L$$PWD/thirdparty/netcdf/bin_32 -lnetcdf -lhdf5 -lz -lcurl
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"mingw\\\"
 }
 
 #...Unix - We assume static library for NetCDF installed
@@ -107,6 +117,9 @@ LIBS += -lnetcdf
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE += -O3
 QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"gpp\\\"
 }
 
 #...Mac - Assume static libs for netCDF in this path
@@ -120,8 +133,10 @@ ICON = img/mov.icns
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE += -O3
 QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
-}
 
+#...Define a variable for the about dialog
+DEFINES += MOV_COMPILER=\\\"xcode\\\"
+}
 
 INCLUDEPATH += include
 

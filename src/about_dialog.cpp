@@ -54,7 +54,23 @@ void about_dialog::on_button_ok_clicked()
 //-------------------------------------------//
 QString about_dialog::generateAboutText()
 {
-    QString text;
+    QString text,compiler,architecture;
+
+    if(QString(MOV_COMPILER)=="msvc")
+        compiler = "Microsoft Visual C++ with Qt";
+    else if(QString(MOV_COMPILER)=="mingw")
+        compiler = "MinGW g++ with Qt";
+    else if(QString(MOV_COMPILER)=="gpp")
+        compiler = "g++ with Qt";
+    else if(QString(MOV_COMPILER)=="xcode")
+        compiler = "XCode with Qt";
+
+    if(QString(MOV_ARCH)=="i386")
+        architecture = "32 bit";
+    else if(QString(MOV_ARCH)=="x86_64")
+        architecture = "64 bit";
+    else
+        architecture = QString(MOV_ARCH);
 
     text = QString("") +
            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">" +
@@ -71,6 +87,9 @@ QString about_dialog::generateAboutText()
 #else
            "<b>Git Revision: </b>"+QString(GIT_VERSION) + "<br><br>" +
 #endif
+
+           "<b>Compiler: </b>" + compiler + "<br>" +
+           "<b>Architecture: </b>" + architecture +  "<br><br>" +
 
            "<b>External Libraries</b> <br><br>" +
            "NOAA CO-OPS API - <a href=\"http://tidesandcurrents.noaa.gov\">http://tidesandcurrents.noaa.gov</a><br>" +
