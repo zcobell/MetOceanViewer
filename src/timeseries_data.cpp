@@ -246,9 +246,9 @@ ADCNC readADCIRCnetCDF(QString filename)
     time_size_int = static_cast<unsigned int>(time_size);
 
     //Make some arrays
-    double TempArray[time_size];
-    double TempArray2[station_size];
-    double TempArray3[station_size];
+    double TempArray[1000000];
+    double TempArray2[1000000];
+    double TempArray3[1000000];
 
     //Size the location arrays
     size_t start[2];
