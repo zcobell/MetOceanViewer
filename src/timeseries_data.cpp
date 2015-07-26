@@ -24,6 +24,7 @@
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
+#include <qDebug>
 
 //-------------------------------------------//
 //Read an IMEDS file
@@ -47,6 +48,7 @@ IMEDS readIMEDS(QString filename)
     int i;
     int j;
     int k;
+    int expectedLength;
     double value;
     QFile MyFile(filename);
 
@@ -61,8 +63,7 @@ IMEDS readIMEDS(QString filename)
     }
 
     //Read the header to output variable
-    try
-    {
+
         Output.header1 = MyFile.readLine().simplified();
         Output.header2 = MyFile.readLine().simplified();
         Output.header3 = MyFile.readLine().simplified();
@@ -118,7 +119,8 @@ IMEDS readIMEDS(QString filename)
         }
 
         //Now, loop over the data section and save to vectors
-        j=-1;k=-1;
+        j=-1;
+        k=-1;
         for(i=0;i<nLine;i++)
         {
             TempList = FileData[i].split(" ");
@@ -127,57 +129,96 @@ IMEDS readIMEDS(QString filename)
                 j=j+1;
                 k=-1;
             }
-            else if(TempList.length()==6)
-            {
-                k=k+1;
-                year = TempList.value(0);
-                month = TempList.value(1);
-                day = TempList.value(2);
-                hour = TempList.value(3);
-                minute = TempList.value(4);
-                second = "0";
-                value = TempList.value(5).toDouble();
-                Output.station[j].date[k] =
-                        QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
-                                  QTime(hour.toInt(),minute.toInt(),second.toInt()));
-                Output.station[j].date[k].setTimeSpec(Qt::UTC);
-                Output.station[j].data[k] = value;
-                Output.success = true;
-            }
-            else if(TempList.length()==7)
-            {
-                k=k+1;
-                year = TempList.value(0);
-                month = TempList.value(1);
-                day = TempList.value(2);
-                hour = TempList.value(3);
-                minute = TempList.value(4);
-                second = TempList.value(5);
-                value = TempList.value(6).toDouble();
-                Output.station[j].date[k] =
-                        QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
-                                  QTime(hour.toInt(),minute.toInt(),second.toInt()));
-                Output.station[j].date[k].setTimeSpec(Qt::UTC);
-                Output.station[j].data[k] = value;
-                Output.success = true;
-            }
             else
             {
-                QMessageBox::information(NULL,"ERROR","Invalid dataset");
-                Output.success = false;
-                return Output;
-            }
+                if(k==-1)
+                {
+                    if(TempList.length()==6)
+                    {
+                        expectedLength=6;
+                        k=k+1;
+                        year = TempList.value(0);
+                        month = TempList.value(1);
+                        day = TempList.value(2);
+                        hour = TempList.value(3);
+                        minute = TempList.value(4);
+                        second = "0";
+                        value = TempList.value(5).toDouble();
+                        Output.station[j].date[k] =
+                                QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
+                                          QTime(hour.toInt(),minute.toInt(),second.toInt()));
+                        Output.station[j].date[k].setTimeSpec(Qt::UTC);
+                        Output.station[j].data[k] = value;
+                        Output.success = true;
+                    }
+                    else if(TempList.length()==7)
+                    {
+                        expectedLength=7;
+                        k=k+1;
+                        year = TempList.value(0);
+                        month = TempList.value(1);
+                        day = TempList.value(2);
+                        hour = TempList.value(3);
+                        minute = TempList.value(4);
+                        second = TempList.value(5);
+                        value = TempList.value(6).toDouble();
+                        Output.station[j].date[k] =
+                                QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
+                                          QTime(hour.toInt(),minute.toInt(),second.toInt()));
+                        Output.station[j].date[k].setTimeSpec(Qt::UTC);
+                        Output.station[j].data[k] = value;
+                        Output.success = true;
+                    }
+                }
+                else
+                {
+                    if(expectedLength!=TempList.length())
+                    {
+                        Output.success = false;
+                        return Output;
+                    }
 
+                    if(expectedLength==6)
+                    {
+                        k=k+1;
+                        year = TempList.value(0);
+                        month = TempList.value(1);
+                        day = TempList.value(2);
+                        hour = TempList.value(3);
+                        minute = TempList.value(4);
+                        second = "0";
+                        value = TempList.value(5).toDouble();
+                        Output.station[j].date[k] =
+                                QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
+                                          QTime(hour.toInt(),minute.toInt(),second.toInt()));
+                        Output.station[j].date[k].setTimeSpec(Qt::UTC);
+                        Output.station[j].data[k] = value;
+                        Output.success = true;
+                    }
+                    else if(expectedLength==7)
+                    {
+                        expectedLength=7;
+                        k=k+1;
+                        year = TempList.value(0);
+                        month = TempList.value(1);
+                        day = TempList.value(2);
+                        hour = TempList.value(3);
+                        minute = TempList.value(4);
+                        second = TempList.value(5);
+                        value = TempList.value(6).toDouble();
+                        Output.station[j].date[k] =
+                                QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
+                                          QTime(hour.toInt(),minute.toInt(),second.toInt()));
+                        Output.station[j].date[k].setTimeSpec(Qt::UTC);
+                        Output.station[j].data[k] = value;
+                        Output.success = true;
+                    }
+                }
+            }
         }
         return Output;
     }
-    catch(...)
-    {
-        Output.success = false;
-        return Output;
-    }
 
-}
 //-------------------------------------------//
 
 
