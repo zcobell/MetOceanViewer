@@ -449,7 +449,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
 
         //Check that we aren't sending a null location to
         //the backend
-        for(j=0;j<UniqueTimeseriesData.length();i++)
+        for(j=0;j<UniqueTimeseriesData.length();j++)
         {
             if(!UniqueTimeseriesData[j].station[i].isNull)
             {
