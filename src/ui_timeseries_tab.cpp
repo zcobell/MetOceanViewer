@@ -79,6 +79,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
     QColor CellColor;
     ADCNC NetCDFData;
     ADCASCII ADCData;
+    int ierr;
 
     EditBox = false;
 
@@ -105,7 +106,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
         }
         else if(InputFileType=="NETCDF")
         {
-            NetCDFData = readADCIRCnetCDF(InputFilePath);
+            ierr = readADCIRCnetCDF(InputFilePath,NetCDFData);
             if(!NetCDFData.success)
                 TimeseriesData[NumberOfRows-1].success = false;
             else
@@ -231,11 +232,13 @@ void MainWindow::SetupTimeseriesTable()
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
+    ADCNC netCDFData;
     add_imeds_data AddWindow;
     QColor CellColor;
     QString Filename,Filepath,SeriesName,FileType;
     QDateTime ColdStart;
     Qt::CheckState CheckState;
+    int ierr;
 
     int CurrentRow;
 
@@ -325,8 +328,8 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
             {
                 QApplication::setOverrideCursor(Qt::WaitCursor);
                 TimeseriesData.remove(CurrentRow);
-                TimeseriesData.insert(CurrentRow,NetCDF_to_IMEDS(readADCIRCnetCDF(InputFilePath),
-                                                                 InputFileColdStart));
+                ierr = readADCIRCnetCDF(InputFilePath,netCDFData);
+                TimeseriesData.insert(CurrentRow,NetCDF_to_IMEDS(netCDFData,InputFileColdStart));
                 if(!TimeseriesData[CurrentRow].success)
                 {
                     TimeseriesData.remove(CurrentRow);

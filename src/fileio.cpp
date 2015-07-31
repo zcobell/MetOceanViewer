@@ -652,7 +652,7 @@ int MainWindow::loadSession()
             }
             else if(type=="NETCDF")
             {
-                NetCDFData = readADCIRCnetCDF(filelocation);
+                ierr = readADCIRCnetCDF(filelocation,NetCDFData);
                 if(!NetCDFData.success)
                     TimeseriesData[nrow-1].success = false;
                 else

@@ -111,7 +111,7 @@ extern QVector<IMEDS> TimeseriesData;
 //Function prototypes
 IMEDS readIMEDS(QString filename);
 
-ADCNC readADCIRCnetCDF(QString filename);
+int readADCIRCnetCDF(QString filename, ADCNC &MyData);
 
 ADCASCII readADCIRCascii(QString filename,
                          QString stationfile);
