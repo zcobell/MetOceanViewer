@@ -26,5 +26,7 @@
         <file>js/jquery.alerts.css</file>
         <file>js/jquery.alerts.js</file>
         <file>js/jquery.ui.draggable.js</file>
+		<file>img/arrow_down.png</file>
+        <file>img/arrow_up.png</file>
     </qresource>
 </RCC>

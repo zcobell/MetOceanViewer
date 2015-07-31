@@ -184,6 +184,14 @@ private slots:
 
     void on_check_regressionColorMatch_clicked(bool checked);
 
+    void on_button_moveRowUp_clicked();
+
+    void on_button_moveRowDown_clicked();
+
+    QList<QTableWidgetItem *> grabTableRow(int row);
+
+    void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
+
 private:
     Ui::MainWindow *ui;
 

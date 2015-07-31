@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-<comment>
+ <comment>
 //-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -19,8 +19,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 //
-// The name "MetOcean Viewer" is specific to this project and may not be
-// used for projects "forked" or derived from this work.
+// The name &quot;MetOcean Viewer&quot; is specific to this project and may not be
+// used for projects &quot;forked&quot; or derived from this work.
 //
 //-----------------------------------------------------------------------//
 </comment>
@@ -67,7 +67,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_livedata_main">
        <attribute name="title">
@@ -1683,6 +1683,28 @@
                <widget class="QPushButton" name="button_TimeseriesDeleteRow">
                 <property name="text">
                  <string>Delete Current Row</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_moveRowUp">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../MetOceanViewer.qrc">
+                  <normaloff>:/rsc/img/arrow_up.png</normaloff>:/rsc/img/arrow_up.png</iconset>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_moveRowDown">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../MetOceanViewer.qrc">
+                  <normaloff>:/rsc/img/arrow_down.png</normaloff>:/rsc/img/arrow_down.png</iconset>
                 </property>
                </widget>
               </item>
