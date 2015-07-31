@@ -112,9 +112,9 @@
     }
 
     //Save the options for each data series
-    function SetSeriesOptions(index,MyName,MyColor,MyUnit,MyXadjust,MyYadjust)
+    function SetSeriesOptions(index,MyName,MyColor,MyUnit,MyXadjust,MyYadjust,MyDefaultOn)
     {
-        SeriesOptions[index] = { name: MyName, color: MyColor, unit: MyUnit, xadjust: MyXadjust, yadjust: MyYadjust };
+        SeriesOptions[index] = { name: MyName, color: MyColor, unit: MyUnit, xadjust: MyXadjust, yadjust: MyYadjust, defaultOn: MyDefaultOn };
         return;
     }
 
@@ -213,6 +213,10 @@
             {
                 seriesList[i].visible = false;
                 seriesList[i].showInLegend = false;
+            }
+            else if(SeriesOptions[i].defaultOn=="off")
+            {
+                seriesList[i].visible = false;
             }
             else
             {

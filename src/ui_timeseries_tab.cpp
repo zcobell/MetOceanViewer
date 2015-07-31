@@ -141,6 +141,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
         ui->table_TimeseriesData->setItem(NumberOfRows-1,10,new QTableWidgetItem(StationFilePath));
         CellColor.setNamedColor(InputColorString);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
+        ui->table_TimeseriesData->item(NumberOfRows-1,0)->setCheckState(Qt::Checked);
 
         //Tooltips in table cells
         ui->table_TimeseriesData->item(NumberOfRows-1,0)->setToolTip(InputFilePath);
@@ -234,6 +235,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
     QColor CellColor;
     QString Filename,Filepath,SeriesName,FileType;
     QDateTime ColdStart;
+    Qt::CheckState CheckState;
 
     int CurrentRow;
 
@@ -264,6 +266,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
                                       item(CurrentRow,7)->text().simplified(),"yyyy-MM-dd hh:mm:ss");
     CellColor.setNamedColor(ui->table_TimeseriesData->item(CurrentRow,2)->text());
     StationFilePath = ui->table_TimeseriesData->item(CurrentRow,10)->text();
+    CheckState = ui->table_TimeseriesData->item(CurrentRow,0)->checkState();
 
     AddWindow.set_dialog_box_elements(Filename,Filepath,SeriesName,
                                       UnitConversion,xadjust,yadjust,
@@ -291,6 +294,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
         ui->table_TimeseriesData->item(CurrentRow,3)->setToolTip(QString::number(UnitConversion));
         ui->table_TimeseriesData->item(CurrentRow,4)->setToolTip(QString::number(xadjust));
         ui->table_TimeseriesData->item(CurrentRow,5)->setToolTip(QString::number(yadjust));
+        ui->table_TimeseriesData->item(CurrentRow,0)->setCheckState(CheckState);
 
         if(ColorUpdated)
         {
@@ -372,9 +376,10 @@ void MainWindow::on_button_processTimeseriesData_clicked()
     QString javascript,name,color;
     QString PlotTitle,XLabel,YLabel,AutoY;
     QString AutoX,XMin,XMax,StationName;
-    QString unit,plusX,plusY;
+    QString unit,plusX,plusY,checkStateString;
     QVariant jsResponse;
     QVector<double> StationX,StationY;
+    Qt::CheckState checkState;
 
     //Change the mouse pointer
     QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -426,13 +431,20 @@ void MainWindow::on_button_processTimeseriesData_clicked()
 
     for(i=0;i<UniqueTimeseriesData.length();i++)
     {
+
+        checkState = ui->table_TimeseriesData->item(i,0)->checkState();
+        if(checkState==Qt::Checked)
+            checkStateString="on";
+        else
+            checkStateString="off";
+
         name  = ui->table_TimeseriesData->item(i,1)->text();
         color = ui->table_TimeseriesData->item(i,2)->text();
         unit  = ui->table_TimeseriesData->item(i,3)->text();
         plusX = ui->table_TimeseriesData->item(i,4)->text();
         plusY = ui->table_TimeseriesData->item(i,5)->text();
         javascript = "SetSeriesOptions("+QString::number(i)+",'"+name+
-                "','"+color+"',"+unit+","+plusX+","+plusY+")";
+                "','"+color+"',"+unit+","+plusX+","+plusY+",'"+checkStateString+"')";
         ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
