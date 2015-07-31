@@ -231,14 +231,20 @@ IMEDS readIMEDS(QString filename)
 //-------------------------------------------//
 //Read an ADCIRC netCDF file
 //-------------------------------------------//
-ADCNC readADCIRCnetCDF(QString filename)
+int readADCIRCnetCDF(QString filename, ADCNC &MyData)
 {
-    ADCNC MyData;
-    size_t station_size,time_size;
+
+    size_t station_size,time_size,startIndex;
     int i,j,time_size_int,station_size_int;
     int ierr, ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
     int dimid_time,dimid_station;
     bool isVector;
+    double Temp;
+    QVector<double> readData1;
+    QVector<double> readData2;
+
+    //Size the location array
+    size_t start[2];
 
     QVector<QString> netcdf_types;
     netcdf_types.resize(6);
@@ -250,12 +256,12 @@ ADCNC readADCIRCnetCDF(QString filename)
     netcdf_types[5] = "windy";
 
     //Open the file
-    ierr = nc_open(filename.toStdString().c_str(),NC_NOWRITE,&ncid);
+    ierr = nc_open(filename.toUtf8(),NC_NOWRITE,&ncid);
     if(ierr!=NC_NOERR)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
 
     //Get the dimension ids
@@ -264,14 +270,14 @@ ADCNC readADCIRCnetCDF(QString filename)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
     ierr = nc_inq_dimid(ncid,"station",&dimid_station);
     if(ierr!=NC_NOERR)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
 
     //Find out the dimension size
@@ -280,35 +286,22 @@ ADCNC readADCIRCnetCDF(QString filename)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
     ierr = nc_inq_dimlen(ncid,dimid_station,&station_size);
     if(ierr!=NC_NOERR)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
     station_size_int = static_cast<unsigned int>(station_size);
     time_size_int = static_cast<unsigned int>(time_size);
 
-    //Make some arrays
-    double TempArray[1000000];
-    double TempArray2[1000000];
-    double TempArray3[1000000];
-
-    //Size the location arrays
-    size_t start[2];
-    size_t length[2];
-
-    //Set up the read sizes for NetCDF
-    length[0] = time_size;
-    length[1] = 1;
-
     //Find the variable in the NetCDF file
     for(i=0;i<6;i++)
     {
-        ierr = nc_inq_varid(ncid,netcdf_types[i].toStdString().c_str(),&varid_zeta);
+        ierr = nc_inq_varid(ncid,netcdf_types[i].toUtf8(),&varid_zeta);
 
         //If we found the variable, we're done
         if(ierr==NC_NOERR)
@@ -316,12 +309,12 @@ ADCNC readADCIRCnetCDF(QString filename)
             if(i==1)
             {
                 isVector = true;
-                ierr = nc_inq_varid(ncid,netcdf_types[i+1].toStdString().c_str(),&varid_zeta2);
+                ierr = nc_inq_varid(ncid,netcdf_types[i+1].toUtf8(),&varid_zeta2);
                 if(ierr!=NC_NOERR)
                 {
                     MyData.err = ierr;
                     MyData.success = false;
-                    return MyData;
+                    return -1;
                 }
             }
             else
@@ -337,7 +330,7 @@ ADCNC readADCIRCnetCDF(QString filename)
         {
             MyData.err = ierr;
             MyData.success = false;
-            return MyData;
+            return -1;
         }
     }
 
@@ -357,88 +350,103 @@ ADCNC readADCIRCnetCDF(QString filename)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
     ierr = nc_inq_varid(ncid,"x",&varid_lon);
     if(ierr!=NC_NOERR)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
     ierr = nc_inq_varid(ncid,"y",&varid_lat);
     if(ierr!=NC_NOERR)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
 
-    ierr = nc_get_var(ncid,varid_time,&TempArray);
-    if(ierr!=NC_NOERR)
+    for(j=0;j<time_size_int;j++)
     {
-        MyData.success = false;
-        MyData.err = ierr;
-        return MyData;
-    }
-    for(j=0;j<time_size_int;++j)
-        MyData.time[j] = TempArray[j];
-
-    ierr = nc_get_var(ncid,varid_lon,&TempArray2);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return MyData;
-    }
-    for(j=0;j<station_size_int;++j)
-        MyData.longitude[j] = TempArray2[j];
-
-
-    ierr = nc_get_var(ncid,varid_lat,&TempArray2);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return MyData;
-    }
-    for(j=0;j<station_size_int;++j)
-        MyData.latitude[j] = TempArray2[j];
-
-    //Loop over the stations, reading the data into memory
-    for(i=0;i<station_size_int;++i)
-    {
-        //Generate the read start position
-        start[0] = 0;
-        start[1] = static_cast<size_t>(i);
-
-        //Read from NetCDF
-        ierr = nc_get_vara(ncid,varid_zeta,start,length,&TempArray);
+        startIndex = static_cast<size_t>(j);
+        ierr = nc_get_var1(ncid,varid_time,&startIndex,&Temp);
         if(ierr!=NC_NOERR)
         {
             MyData.success = false;
             MyData.err = ierr;
-            return MyData;
+            return -1;
         }
-        if(isVector)
+        MyData.time[j] = Temp;
+    }
+
+    for(j=0;j<station_size_int;j++)
+    {
+        startIndex = static_cast<size_t>(j);
+        ierr = nc_get_var1(ncid,varid_lon,&startIndex,&Temp);
+        if(ierr!=NC_NOERR)
         {
-            ierr = nc_get_vara(ncid,varid_zeta2,start,length,&TempArray3);
+            MyData.success = false;
+            MyData.err = ierr;
+            return -1;
+        }
+        MyData.longitude[j] = Temp;
+
+        ierr = nc_get_var1(ncid,varid_lat,&startIndex,&Temp);
+        if(ierr!=NC_NOERR)
+        {
+            MyData.success = false;
+            MyData.err = ierr;
+            return -1;
+        }
+        MyData.latitude[j] = Temp;
+    }
+
+    readData1.resize(time_size_int);
+    readData2.resize(time_size_int);
+
+    //Loop over the stations, reading the data into memory
+    for(i=0;i<station_size_int;++i)
+    {
+
+
+        //Read from NetCDF
+        for(j=0;j<time_size_int;j++)
+        {
+            start[0] = static_cast<size_t>(j);
+            start[1] = static_cast<size_t>(i);
+            ierr = nc_get_var1(ncid,varid_zeta,start,&Temp);
             if(ierr!=NC_NOERR)
             {
                 MyData.success = false;
                 MyData.err = ierr;
-                return MyData;
+                return -1;
             }
-            for(j=0;j<time_size_int;++j)
+            readData1[j] = Temp;
+        }
+
+        if(isVector)
+        {
+            for(j=0;j<time_size_int;j++)
             {
-                MyData.data[i][j] = qSqrt(qPow(TempArray2[j],2.0) + qPow(TempArray3[j],2.0));
+                start[0] = static_cast<size_t>(j);
+                start[1] = static_cast<size_t>(i);
+                ierr = nc_get_var1(ncid,varid_zeta2,start,&Temp);
+                if(ierr!=NC_NOERR)
+                {
+                    MyData.success = false;
+                    MyData.err = ierr;
+                    return -1;
+                }
+                readData2[j] = Temp;
+                MyData.data[i][j] = qSqrt(qPow(readData1[j],2.0)+qPow(readData2[j],2.0));
             }
         }
         else
         {
             //Place in the output variable
             for(j=0;j<time_size_int;++j)
-                MyData.data[i][j] = TempArray[j];
+                MyData.data[i][j] = readData1[j];
         }
     }
     ierr = nc_close(ncid);
@@ -446,7 +454,7 @@ ADCNC readADCIRCnetCDF(QString filename)
     {
         MyData.success = false;
         MyData.err = ierr;
-        return MyData;
+        return -1;
     }
 
     //Finally, name the stations the default names for now. Later
@@ -458,7 +466,7 @@ ADCNC readADCIRCnetCDF(QString filename)
 
     MyData.success = true;
 
-    return MyData;
+    return 0;
 }
 //-------------------------------------------//
 
