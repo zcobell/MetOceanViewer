@@ -536,3 +536,89 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
     return;
 }
 //-------------------------------------------//
+
+//-------------------------------------------//
+//Moves a table row up
+//-------------------------------------------//
+void MainWindow::on_button_moveRowUp_clicked()
+{
+    int currentRow = ui->table_TimeseriesData->currentRow();
+
+    if(currentRow<1)
+        return;
+
+    //...Grab the rows
+    QList<QTableWidgetItem*> row1 = grabTableRow(currentRow);
+    QList<QTableWidgetItem*> row2 = grabTableRow(currentRow-1);
+
+    //...Move the rows
+    setTableRow(currentRow,row2);
+    setTableRow(currentRow-1,row1);
+
+    //...Move the data
+    IMEDS imeds_row1 = TimeseriesData[currentRow];
+    IMEDS imeds_row2 = TimeseriesData[currentRow-1];
+    TimeseriesData[currentRow] = imeds_row2;
+    TimeseriesData[currentRow-1] = imeds_row1;
+
+    //...Set the selection
+    ui->table_TimeseriesData->selectRow(currentRow-1);
+
+    return;
+}
+//-------------------------------------------//
+
+//-------------------------------------------//
+//Move a table row down
+//-------------------------------------------//
+void MainWindow::on_button_moveRowDown_clicked()
+{
+    int currentRow = ui->table_TimeseriesData->currentRow();
+
+    if(currentRow==ui->table_TimeseriesData->rowCount()-1)
+        return;
+
+    //...Grab the rows
+    QList<QTableWidgetItem*> row1 = grabTableRow(currentRow);
+    QList<QTableWidgetItem*> row2 = grabTableRow(currentRow+1);
+
+    //...Move the rows
+    setTableRow(currentRow,row2);
+    setTableRow(currentRow+1,row1);
+
+    //...Move the data
+    IMEDS imeds_row1 = TimeseriesData[currentRow];
+    IMEDS imeds_row2 = TimeseriesData[currentRow+1];
+    TimeseriesData[currentRow] = imeds_row2;
+    TimeseriesData[currentRow+1] = imeds_row1;
+
+    //...Set the selection
+    ui->table_TimeseriesData->selectRow(currentRow+1);
+
+    return;
+}
+//-------------------------------------------//
+
+//-------------------------------------------//
+//Function that grabs an entire table row
+//-------------------------------------------//
+QList<QTableWidgetItem*> MainWindow::grabTableRow(int row)
+{
+    QList<QTableWidgetItem*> rowItems;
+    for (int col = 0; col < ui->table_TimeseriesData->columnCount(); ++col)
+        rowItems << ui->table_TimeseriesData->takeItem(row, col);
+    return rowItems;
+}
+//-------------------------------------------//
+
+//-------------------------------------------//
+//Function that sets a table row based upon
+//an input list
+//-------------------------------------------//
+void MainWindow::setTableRow(int row, const QList<QTableWidgetItem*>& rowItems)
+{
+    for (int col = 0; col < ui->table_TimeseriesData->columnCount(); ++col)
+        ui->table_TimeseriesData->setItem(row, col, rowItems.at(col));
+    return;
+}
+//-------------------------------------------//
