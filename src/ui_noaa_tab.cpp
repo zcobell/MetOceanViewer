@@ -100,7 +100,7 @@ void MainWindow::on_button_noaasavedata_clicked()
         Output << "Datum: "+ui->combo_noaadatum->currentText()+"\n";
         Output << "Units: "+ui->combo_noaaunits->currentText()+"\n";
         Output << "\n";
-        for(int i=0;i<CurrentNOAAStation.size();i++)
+        for(int i=0;i<CurrentNOAAStation.length();i++)
         {
             Output << CurrentNOAAStation[i].Date.toString("MM/dd/yyyy")+","+
                       CurrentNOAAStation[i].Time.toString("hh:mm")+","+
@@ -127,7 +127,7 @@ void MainWindow::on_button_noaasavedata_clicked()
         Output << "NOAA    UTC    "+datum+"\n";
         Output << "NOAA_"+QString::number(NOAAMarkerID)+"   "+QString::number(CurrentNOAALat)+
                   "   "+QString::number(CurrentNOAALon)+"\n";
-        for(int i=0;i<CurrentNOAAStation.size();i++)
+        for(int i=0;i<CurrentNOAAStation.length();i++)
         {
             Output << CurrentNOAAStation[i].Date.toString("yyyy")+"    "+
                         CurrentNOAAStation[i].Date.toString("MM")+"    "+
