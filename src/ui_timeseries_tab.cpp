@@ -153,11 +153,10 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
 
         if(!TimeseriesData[NumberOfRows-1].success)
         {
-            QApplication::setOverrideCursor(Qt::WaitCursor);
             TimeseriesData.remove(NumberOfRows-1);
             ui->table_TimeseriesData->removeRow(NumberOfRows-1);
-            QMessageBox::information(this,"ERROR","This file could not be read correctly.");
             QApplication::restoreOverrideCursor();
+            QMessageBox::information(this,"ERROR","This file could not be read correctly.");
             return;
         }
 
