@@ -128,6 +128,7 @@ void MainWindow::PlotNOAAResponse()
 QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString)
 {
     int i,j,k;
+    int dataCount;
     QString Output,TempData,DateS,YearS,MonthS,DayS,HourMinS,HourS,MinS,WLS;
     QStringList TimeSnap;
     QVector<QString> InputData;
@@ -148,6 +149,12 @@ QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorS
 
     Output = "'";
 
+    dataCount = 0;
+    for(i=0;i<DataList.length();i++)
+        dataCount = dataCount+DataList[i].length()-1;
+
+    CurrentNOAAStation.resize(dataCount);
+
     k = 0;
     for(j=0;j<DataList.length();j++)
     {
@@ -166,7 +173,6 @@ QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorS
             Output=Output+YearS+":"+MonthS+":"+
                    DayS+":"+HourS+":"+MinS+":"+WLS+";";
             TempData = YearS+"/"+MonthS+"/"+DayS;
-            CurrentNOAAStation.resize(k+1);
             CurrentNOAAStation[k].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
             CurrentNOAAStation[k].Time = QTime(HourS.toInt(),MinS.toInt(),0);
             CurrentNOAAStation[k].value = WLS.toDouble();
