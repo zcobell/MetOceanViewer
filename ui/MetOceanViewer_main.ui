@@ -1667,27 +1667,87 @@
               </item>
               <item>
                <widget class="QPushButton" name="button_TimeseriesAddRow">
+                <property name="minimumSize">
+                 <size>
+                  <width>50</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Add new dataset</string>
+                </property>
                 <property name="text">
-                 <string>Add New Row</string>
+                 <string>Add</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="button_TimeseriesEditRow">
+                <property name="minimumSize">
+                 <size>
+                  <width>50</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Edit selected dataset</string>
+                </property>
                 <property name="text">
-                 <string>Edit Current Row</string>
+                 <string>Edit</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="button_TimeseriesDeleteRow">
+                <property name="minimumSize">
+                 <size>
+                  <width>50</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Delete selected dataset</string>
+                </property>
                 <property name="text">
-                 <string>Delete Current Row</string>
+                 <string>Delete</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="button_moveRowUp">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Move selected dataset up</string>
+                </property>
                 <property name="text">
                  <string/>
                 </property>
@@ -1699,6 +1759,21 @@
               </item>
               <item>
                <widget class="QPushButton" name="button_moveRowDown">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Move selected dataset down</string>
+                </property>
                 <property name="text">
                  <string/>
                 </property>
@@ -1732,7 +1807,7 @@
                </size>
               </property>
               <property name="title">
-               <string>Select x-axis Range</string>
+               <string>Select Date Axis Range</string>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_39">
                <item>

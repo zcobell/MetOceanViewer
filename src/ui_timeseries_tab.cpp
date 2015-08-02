@@ -156,7 +156,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
             TimeseriesData.remove(NumberOfRows-1);
             ui->table_TimeseriesData->removeRow(NumberOfRows-1);
             QApplication::restoreOverrideCursor();
-            QMessageBox::information(this,"ERROR","This file could not be read correctly.");
+            QMessageBox::critical(this,"ERROR","This file could not be read correctly.");
             return;
         }
 
@@ -178,7 +178,7 @@ void MainWindow::on_button_TimeseriesDeleteRow_clicked()
 {
     if(ui->table_TimeseriesData->rowCount()==0)
     {
-        QMessageBox::information(this,"ERROR","There are no rows in the table.");
+        QMessageBox::critical(this,"ERROR","There are no datasets currently.");
         return;
     }
 
@@ -245,13 +245,13 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
 
     if(ui->table_TimeseriesData->rowCount() == 0)
     {
-        QMessageBox::information(this,"ERROR","Insert a row first.");
+        QMessageBox::critical(this,"ERROR","Insert a dataset first.");
         return;
     }
 
     if(ui->table_TimeseriesData->currentRow() == -1)
     {
-        QMessageBox::information(this,"ERROR","No row selected.");
+        QMessageBox::critical(this,"ERROR","No dataset selected.");
         return;
     }
 
@@ -318,7 +318,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
                     TimeseriesData.remove(CurrentRow);
                     ui->table_TimeseriesData->removeRow(CurrentRow);
                     QApplication::restoreOverrideCursor();
-                    QMessageBox::information(this,"ERROR","This IMEDS file could not be read correctly.");
+                    QMessageBox::critical(this,"ERROR","This IMEDS file could not be read correctly.");
                     return;
                 }
                 QApplication::restoreOverrideCursor();
@@ -334,7 +334,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
                     TimeseriesData.remove(CurrentRow);
                     ui->table_TimeseriesData->removeRow(CurrentRow);
                     QApplication::restoreOverrideCursor();
-                    QMessageBox::information(this,"ERROR","This NETCDF file could not be read correctly.");
+                    QMessageBox::critical(this,"ERROR","This NETCDF file could not be read correctly.");
                     return;
                 }
                 QApplication::restoreOverrideCursor();
@@ -350,7 +350,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
                     TimeseriesData.remove(CurrentRow);
                     ui->table_TimeseriesData->removeRow(CurrentRow);
                     QApplication::restoreOverrideCursor();
-                    QMessageBox::information(this,"ERROR","This ADCIRC file could not be read correctly.");
+                    QMessageBox::critical(this,"ERROR","This ADCIRC file could not be read correctly.");
                     return;
                 }
                 QApplication::restoreOverrideCursor();
@@ -392,7 +392,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
 
     if(ui->table_TimeseriesData->rowCount()==0)
     {
-        QMessageBox::information(this,"ERROR","There are no rows in the table.");
+        QMessageBox::critical(this,"ERROR","There are no rows in the table.");
         QApplication::restoreOverrideCursor();
         return;
     }

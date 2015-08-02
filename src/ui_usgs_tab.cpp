@@ -51,6 +51,9 @@ void MainWindow::on_button_usgs_fetch_clicked()
     USGSdataReady = false;
     USGSDataReadFinished = false;
 
+    //Display the wait cursor
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
     ui->statusBar->showMessage("Downloading data from USGS...");
 
     //Wipe out the combo box
@@ -65,6 +68,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
     {
         QMessageBox::warning(this,"Warning","No station has been selected.");
         ui->statusBar->clearMessage();
+        QApplication::restoreOverrideCursor();
         return;
     }
 
@@ -101,6 +105,9 @@ void MainWindow::on_button_usgs_fetch_clicked()
     //Wait for the read to finish before the disconnect
     while(!USGSDataReadFinished)
         delayM(100);
+
+    //Restore the mouse pointer
+    QApplication::restoreOverrideCursor();
 
     //Disconnect the slot
     disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));

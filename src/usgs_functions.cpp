@@ -406,6 +406,24 @@ int MainWindow::GetTimezoneOffset(QString timezone)
 //-------------------------------------------//
 void MainWindow::on_button_usgssavemap_clicked()
 {
+    if(USGSMarkerID=="none")
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+
+    QVariant USGSMarkerID2 = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    if(USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+    if(!USGSbeenPlotted)
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/USGS_"+USGSMarkerID+".jpg";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
