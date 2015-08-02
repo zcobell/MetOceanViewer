@@ -36,8 +36,14 @@
 
 RequestExecutionLevel admin
 
+#Get the git version
+!tempfile StdOut
+!system "git --git-dir ../.git --work-tree $$PWD describe --always --tags > ${StdOut}"
+!define /file GITREV ${StdOut}
+!delfile StdOut
+
 # define installer name
-OutFile "MetOceanViewer_${COMPILER}_installer_v${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
+OutFile "MetOceanViewer_${COMPILER}_installer_${GITREV}.exe"
  
 # set desktop as install directory
 InstallDir $PROGRAMFILES64\MetOceanViewer
