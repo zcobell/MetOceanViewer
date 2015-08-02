@@ -362,10 +362,12 @@ void MainWindow::on_actionLoad_Session_triggered()
     QString LoadFile = QFileDialog::getOpenFileName(this,
                             "Open Session...",
                             PreviousDirectory,
-                            "MetOceanViewer Sessions (*.mvs, *.avs)");
+                            "MetOcean Viewer Sessions (*.mvs)");
 
     if(LoadFile==NULL)
         return;
+
+    GetLeadingPath(LoadFile);
 
     SessionFile = LoadFile;
 
@@ -396,7 +398,7 @@ void MainWindow::on_actionSave_Session_As_triggered()
 {
     QString SaveFile = QFileDialog::getSaveFileName(this,
                         "Save Session...",PreviousDirectory,
-                        "ADCIRC Validatior Sessions (*.avs)");
+                        "MetOcean Viewer Sessions (*.mvs)");
     if(SaveFile!=NULL)
     {
         SessionFile = SaveFile;
