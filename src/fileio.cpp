@@ -41,7 +41,7 @@ int MainWindow::saveSession()
     int varid_xshift,varid_yshift,varid_type,varid_coldstart;
     int varid_stationfile,varid_plottitle,varid_xlabel,varid_ylabel;
     int varid_startdate,varid_enddate,varid_precision,varid_ymin,varid_ymax;
-    int varid_autodate,varid_autoy;
+    int varid_autodate,varid_autoy,varid_checkState;
     int dims_1d[1];
     int nTimeseries;
     QString relFile,relPath;
@@ -62,6 +62,7 @@ int MainWindow::saveSession()
     QVector<double> yshift_ts;
     QVector<QString> date_ts;
     QVector<QString> stationfile_ts;
+    QVector<int> checkStates_ts;
 
     //See how we are approaching this routine. If "save as..." or "load" has not been clicked before
     //get a file name to save as.
@@ -83,7 +84,7 @@ int MainWindow::saveSession()
     //Get the path of the session file so we can save a relative path later
     QDir CurrentDir(GetMyLeadingPath(SessionFile));
 
-    ierr = NETCDF_ERR(nc_create(SessionFile.toStdString().c_str(),NC_NETCDF4,&ncid));
+    ierr = NETCDF_ERR(nc_create(SessionFile.toUtf8(),NC_NETCDF4,&ncid));
     if(ierr!=NC_NOERR)return 1;
 
     //Start setting up the definitions
@@ -98,6 +99,7 @@ int MainWindow::saveSession()
     date_ts.resize(nTimeseries);
     stationfile_ts.resize(nTimeseries);
     filetype_ts.resize(nTimeseries);
+    checkStates_ts.resize(nTimeseries);
 
     for(i=0;i<nTimeseries;i++)
     {
@@ -110,6 +112,10 @@ int MainWindow::saveSession()
         date_ts[i] = ui->table_TimeseriesData->item(i,7)->text();
         filetype_ts[i] = ui->table_TimeseriesData->item(i,8)->text();
         stationfile_ts[i] = ui->table_TimeseriesData->item(i,10)->text();
+        if(ui->table_TimeseriesData->item(i,0)->checkState()==Qt::Checked)
+            checkStates_ts[i] = 1;
+        else
+            checkStates_ts[i] = 0;
     }
 
     ierr = NETCDF_ERR(nc_def_dim(ncid,"ntimeseries",static_cast<size_t>(nTimeseries),&dimid_ntimeseries));
@@ -137,6 +143,8 @@ int MainWindow::saveSession()
     if(ierr!=NC_NOERR)return 1;
     ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_units",NC_DOUBLE,1,dims_1d,&varid_units));
     if(ierr!=NC_NOERR)return 1;
+    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_checkState",NC_INT,1,dims_1d,&varid_checkState));
+    if(ierr!=NC_NOERR)return 1;
 
     //Scalars
     dims_1d[0] = dimid_one;
@@ -163,19 +171,19 @@ int MainWindow::saveSession()
     ierr = NETCDF_ERR(nc_enddef(ncid));
     if(ierr!=NC_NOERR)return 1;
 
-    mydatastring[0] = ui->text_TimeseriesPlotTitle->text().toStdString().c_str();
+    mydatastring[0] = ui->text_TimeseriesPlotTitle->text().toUtf8();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_plottitle,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->text_TimeseriesXaxisLabel->text().toStdString().c_str();
+    mydatastring[0] = ui->text_TimeseriesXaxisLabel->text().toUtf8();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_xlabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->text_TimeseriesYaxisLabel->text().toStdString().c_str();
+    mydatastring[0] = ui->text_TimeseriesYaxisLabel->text().toUtf8();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_ylabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->date_TimeseriesStartDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
+    mydatastring[0] = ui->date_TimeseriesStartDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_startdate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = ui->date_TimeseriesEndDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toStdString().c_str();
+    mydatastring[0] = ui->date_TimeseriesEndDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
     ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydataint[0] = 3;
@@ -207,28 +215,28 @@ int MainWindow::saveSession()
         start[0] = iu;
 
         relPath = CurrentDir.relativeFilePath(filenames_ts[iu]);
-        mydatastring[0]  = relPath.toStdString().c_str();
+        mydatastring[0]  = relPath.toUtf8();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_filename,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatastring[0]  = seriesname_ts[iu].toStdString().c_str();
+        mydatastring[0]  = seriesname_ts[iu].toUtf8();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_names,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatastring[0]  = colors_ts[iu].toStdString().c_str();
+        mydatastring[0]  = colors_ts[iu].toUtf8();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_colors,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatastring[0]  = date_ts[iu].toStdString().c_str();
+        mydatastring[0]  = date_ts[iu].toUtf8();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_coldstart,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         relPath = CurrentDir.relativeFilePath(stationfile_ts[iu]);
-        mydatastring[0]  = relPath.toStdString().c_str();
+        mydatastring[0]  = relPath.toUtf8();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_stationfile,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatastring[0]  = filetype_ts[iu].toStdString().c_str();
+        mydatastring[0]  = filetype_ts[iu].toUtf8();
         ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_type,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
@@ -242,6 +250,10 @@ int MainWindow::saveSession()
 
         mydatadouble[0]  = units_ts[iu];
         ierr  = NETCDF_ERR(nc_put_var1_double(ncid,varid_units,start,mydatadouble));
+        if(ierr!=NC_NOERR)return 1;
+
+        mydataint[0] = checkStates_ts[iu];
+        ierr = NETCDF_ERR(nc_put_var1_int(ncid,varid_checkState,start,mydataint));
         if(ierr!=NC_NOERR)return 1;
 
     }
@@ -266,7 +278,7 @@ int MainWindow::loadSession()
     int varid_xshift,varid_yshift,varid_type,varid_coldstart;
     int varid_stationfile,varid_plottitle,varid_xlabel,varid_ylabel;
     int varid_startdate,varid_enddate,varid_precision,varid_ymin,varid_ymax;
-    int varid_autodate,varid_autoy;
+    int varid_autodate,varid_autoy,varid_checkState;
     const char * mydatachar[1];
     double mydatadouble[1];
     int mydataint[1];
@@ -283,7 +295,8 @@ int MainWindow::loadSession()
     QDateTime ColdStart;
     ADCNC NetCDFData;
     ADCASCII ADCData;
-    bool continueToLoad;
+    bool continueToLoad,hasCheckInfo;
+    Qt::CheckState checkState;
 
     QFile Session(SessionFile);
     if(!Session.exists())
@@ -293,7 +306,7 @@ int MainWindow::loadSession()
     }
 
     //Open the netCDF file
-    ierr = NETCDF_ERR(nc_open(SessionFile.toStdString().c_str(),NC_NOWRITE,&ncid));
+    ierr = NETCDF_ERR(nc_open(SessionFile.toUtf8(),NC_NOWRITE,&ncid));
     if(ierr!=NC_NOERR)return 1;
 
     //Read some of the basics from the file (dimensions, variable IDs)
@@ -356,6 +369,12 @@ int MainWindow::loadSession()
 
     ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_autoy",&varid_autoy));
     if(ierr!=NC_NOERR)return 1;
+
+    ierr = nc_inq_varid(ncid,"timeseries_checkState",&varid_checkState);
+    if(ierr!=NC_NOERR)
+        hasCheckInfo = false;
+    else
+        hasCheckInfo = true;
 
     //Read the scalar variables
     ierr = NETCDF_ERR(nc_get_var(ncid,varid_plottitle,&mydatachar));
@@ -461,6 +480,17 @@ int MainWindow::loadSession()
         if(ierr!=NC_NOERR)return 1;
         stationfilepath = QString(mydatachar[0]);
         stationfile = RemoveLeadingPath(stationfilepath);
+
+        if(hasCheckInfo)
+        {
+            ierr = NETCDF_ERR(nc_get_var1(ncid,varid_checkState,start,&mydataint));
+            if(mydataint[0]==1)
+                checkState = Qt::Checked;
+            else
+                checkState = Qt::Unchecked;
+        }
+        else
+            checkState = Qt::Checked;
 
         continueToLoad = false;
 
@@ -639,6 +669,7 @@ int MainWindow::loadSession()
             ui->table_TimeseriesData->setItem(nrow-1,10,new QTableWidgetItem(stationfilepath));
             CellColor.setNamedColor(color);
             ui->table_TimeseriesData->item(nrow-1,2)->setBackgroundColor(CellColor);
+            ui->table_TimeseriesData->item(nrow-1,0)->setCheckState(checkState);
             ColdStart = QDateTime::fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
 
             //Read the data into the appropriate structure
@@ -675,6 +706,11 @@ int MainWindow::loadSession()
     }
     ierr = NETCDF_ERR(nc_close(ncid));
     if(ierr!=NC_NOERR)return 1;
+
+    //Change to the time series data screen
+    ui->MainTabs->setCurrentIndex(1);
+    ui->subtab_timeseries->setCurrentIndex(0);
+
     return 0;
 }
 //-------------------------------------------//
