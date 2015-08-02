@@ -40,6 +40,21 @@ void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_button_noaasavechart_clicked()
 {
+
+    if(NOAAMarkerID==-1)
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+    QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QStringList evalList = eval.toString().split(";");
+    int NOAAMarkerID2 = evalList.value(0).toInt();
+    if(NOAAMarkerID != NOAAMarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/NOAA_"+QString::number(NOAAMarkerID)+".jpg";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
@@ -67,7 +82,7 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     if(NOAAMarkerID==-1)
     {
-        QMessageBox::information(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
     }
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
@@ -75,7 +90,7 @@ void MainWindow::on_button_noaasavedata_clicked()
     int NOAAMarkerID2 = evalList.value(0).toInt();
     if(NOAAMarkerID != NOAAMarkerID2)
     {
-        QMessageBox::information(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
         return;
     }
 
@@ -156,6 +171,9 @@ void MainWindow::on_Button_FetchData_clicked()
     int i,ProductIndex,NumDownloads,CurrentDownloadIndex;
     QVector<QDateTime> StartDateList,EndDateList;
 
+    //Display the wait cursor
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
@@ -174,8 +192,9 @@ void MainWindow::on_Button_FetchData_clicked()
 
     if(StartDate==EndDate||EndDate<StartDate)
     {
-        QMessageBox::information(NULL,"ERROR","Dates must be a valid range.");
+        QMessageBox::critical(this,"ERROR","Dates must be a valid range.");
         ui->statusBar->clearMessage();
+        QApplication::restoreOverrideCursor();
         return;
     }
 
@@ -245,6 +264,9 @@ void MainWindow::on_Button_FetchData_clicked()
 
     //Disconnect the download manager
     disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAAResponse(QNetworkReply*)));
+
+    //Remove the wait cursor
+    QApplication::restoreOverrideCursor();
 
     //Call the plotting routine
     PlotNOAAResponse();

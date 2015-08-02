@@ -72,14 +72,14 @@ void MainWindow::on_button_processHWM_clicked()
     ierr = ReadHWMData(HighWaterMarkFile, HighWaterMarks);
     if(ierr!=0)
     {
-        QMessageBox::information(this,"ERROR","Could not read the high water mark file.");
+        QMessageBox::critical(this,"ERROR","Could not read the high water mark file.");
         return;
     }
 
     ierr = ComputeLinearRegression(ThroughZero, HighWaterMarks, M, B, R, SD);
     if(ierr!=0)
     {
-        QMessageBox::information(this,"ERROR","Could not calculate the regression function.");
+        QMessageBox::critical(this,"ERROR","Could not calculate the regression function.");
         return;
     }
 
@@ -104,32 +104,32 @@ void MainWindow::on_button_processHWM_clicked()
 
         if(c1<=c0)
         {
-            QMessageBox::information(this,"ERROR","Your classifications are invalid.");
+            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
             return;
         }
         else if(c2<=c1)
         {
-            QMessageBox::information(this,"ERROR","Your classifications are invalid.");
+            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
             return;
         }
         else if(c3<=c2)
         {
-            QMessageBox::information(this,"ERROR","Your classifications are invalid.");
+            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
             return;
         }
         else if(c4<=c3)
         {
-            QMessageBox::information(this,"ERROR","Your classifications are invalid.");
+            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
             return;
         }
         else if(c5<=c4)
         {
-            QMessageBox::information(this,"ERROR","Your classifications are invalid.");
+            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
             return;
         }
         else if(c6<=c5)
         {
-            QMessageBox::information(this,"ERROR","Your classifications are invalid.");
+            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
             return;
         }
     }
@@ -144,7 +144,7 @@ void MainWindow::on_button_processHWM_clicked()
     ui->map_regression->reload();
 
     //Give the browsers a chance to catch up to us
-    delay(2);
+    delay(1);
 
     for(int i=0;i<HighWaterMarks.size();i++)
     {
