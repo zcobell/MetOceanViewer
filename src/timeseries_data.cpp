@@ -24,7 +24,6 @@
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
-#include <qDebug>
 
 //-------------------------------------------//
 //Read an IMEDS file
@@ -40,7 +39,6 @@ IMEDS readIMEDS(QString filename)
     QString hour;
     QString minute;
     QString second;
-    QString DateString;
     QStringList TempList;
     QVector<QString> FileData;
     int nLine;
@@ -127,6 +125,7 @@ IMEDS readIMEDS(QString filename)
     //Now, loop over the data section and save to vectors
     j=-1;
     k=-1;
+    expectedLength = 0;
     for(i=0;i<nLine;i++)
     {
         TempList = FileData[i].split(" ");
@@ -512,7 +511,6 @@ ADCASCII readADCIRCascii(QString filename, QString stationfile)
     QFile MyFile(filename), StationFile(stationfile);
     QString header1, header2, TempLine;
     QStringList headerData, TempList, TempList2;
-    int type;
 
     MyData.success = false;
 
@@ -578,7 +576,7 @@ ADCASCII readADCIRCascii(QString filename, QString stationfile)
     MyData.longitude.resize(MyData.nstations);
     MyData.latitude.resize(MyData.nstations);
     MyData.station_name.resize(MyData.nstations);
-    type = -1;
+
     for(int i=0;i<TempStations;++i)
     {
         TempLine = StationFile.readLine().simplified();
