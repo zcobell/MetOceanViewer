@@ -169,7 +169,9 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
             Directory,
-            "IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)");
+            QString("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; ")+
+            QString("IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ")+
+            QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
     InputFilePath = TempPath;
     if(TempPath!=NULL || (TempPath==NULL && CurrentFileName!=NULL) )
@@ -261,7 +263,8 @@ void add_imeds_data::on_browse_stationfile_clicked()
 {
     QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
             PreviousDirectory,
-            "Text File (*.txt) ;; Comma Separated File (*.csv) ;; All Files (*.*)");
+            QString("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )")+
+            QString("Comma Separated File (*.csv) ;; All Files (*.*)"));
     if(TempPath!=NULL)
     {
         StationFilePath = TempPath;

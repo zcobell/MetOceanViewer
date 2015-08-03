@@ -590,13 +590,13 @@ ADCASCII readADCIRCascii(QString filename, QString stationfile)
         {
             TempList = TempLine.split(" ");
             TempList2 = TempLine.split(",");
-            if(TempList.length()>0)
-                type = 1;
-            else if(TempList2.length()>0)
+            if(TempList2.length()>0)
             {
                 type = 2;
                 TempList = TempList2;
             }
+            else if(TempList.length()>0)
+                type = 1;
         }
         MyData.longitude[i] = TempList.value(0).toDouble();
         MyData.latitude[i] = TempList.value(1).toDouble();
