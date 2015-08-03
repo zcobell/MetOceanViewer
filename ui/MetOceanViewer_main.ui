@@ -67,7 +67,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_livedata_main">
        <attribute name="title">
@@ -1669,14 +1669,14 @@
                <widget class="QPushButton" name="button_TimeseriesAddRow">
                 <property name="minimumSize">
                  <size>
-                  <width>50</width>
-                  <height>23</height>
+                  <width>75</width>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>50</width>
-                  <height>23</height>
+                  <width>75</width>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="toolTip">
@@ -1691,14 +1691,14 @@
                <widget class="QPushButton" name="button_TimeseriesEditRow">
                 <property name="minimumSize">
                  <size>
-                  <width>50</width>
-                  <height>23</height>
+                  <width>75</width>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>50</width>
-                  <height>23</height>
+                  <width>75</width>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="toolTip">
@@ -1713,14 +1713,14 @@
                <widget class="QPushButton" name="button_TimeseriesDeleteRow">
                 <property name="minimumSize">
                  <size>
-                  <width>50</width>
-                  <height>23</height>
+                  <width>75</width>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>50</width>
-                  <height>23</height>
+                  <width>75</width>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="toolTip">
@@ -1736,13 +1736,13 @@
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>23</height>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>23</height>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="toolTip">
@@ -1762,13 +1762,13 @@
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>23</height>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>23</height>
+                  <height>28</height>
                  </size>
                 </property>
                 <property name="toolTip">
@@ -3485,7 +3485,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
