@@ -582,22 +582,7 @@ ADCASCII readADCIRCascii(QString filename, QString stationfile)
     for(int i=0;i<TempStations;++i)
     {
         TempLine = StationFile.readLine().simplified();
-        if(type==1)
-            TempList = TempLine.split(" ");
-        else if(type==2)
-            TempList = TempLine.split(",");
-        else
-        {
-            TempList = TempLine.split(" ");
-            TempList2 = TempLine.split(",");
-            if(TempList2.length()>0)
-            {
-                type = 2;
-                TempList = TempList2;
-            }
-            else if(TempList.length()>0)
-                type = 1;
-        }
+        TempList = TempLine.split(QRegExp(",| "));
         MyData.longitude[i] = TempList.value(0).toDouble();
         MyData.latitude[i] = TempList.value(1).toDouble();
 
