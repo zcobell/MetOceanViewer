@@ -311,22 +311,22 @@ void add_imeds_data::accept()
 
     if(InputFileName==NULL)
     {
-        QMessageBox::information(this,"ERROR","Please select an input file.");
+        QMessageBox::critical(this,"ERROR","Please select an input file.");
         return;
     }
     else if(InputSeriesName==NULL)
     {
-        QMessageBox::information(this,"ERROR","Please input a series name.");
+        QMessageBox::critical(this,"ERROR","Please input a series name.");
         return;
     }
     else if(InputColorString==NULL)
     {
-        QMessageBox::information(this,"ERROR","Please select a valid color for this series.");
+        QMessageBox::critical(this,"ERROR","Please select a valid color for this series.");
         return;
     }
     else if(InputStationFile==NULL && InputFileType=="ADCIRC")
     {
-        QMessageBox::information(this,"ERROR","You did not select a station file.");
+        QMessageBox::critical(this,"ERROR","You did not select a station file.");
         return;
     }
     else
