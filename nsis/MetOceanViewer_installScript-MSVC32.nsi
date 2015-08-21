@@ -151,6 +151,8 @@ Section "Install"
     File ..\libs\msvc32\Qt5WebKitWidgets.dll
     File ..\libs\msvc32\Qt5Widgets.dll
     File ..\libs\msvc32\Qt5Xml.dll
+    File ..\libs\msvc32\msvcp120.dll
+    File ..\libs\msvc32\msvcr120.dll
 	
 	File /r ..\libs\msvc32\imageformats
     File /r ..\libs\msvc32\platforms
@@ -244,6 +246,8 @@ Section "Uninstall"
     Delete $INSTDIR\Qt5Xml.dll
     Delete $INSTDIR\ssleay32.dll
     Delete $INSTDIR\zlib1.dll
+    Delete $INSTDIR\msvcp120.dll
+    Delete $INSTDIR\msvcr120.dll
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\mov.ico
