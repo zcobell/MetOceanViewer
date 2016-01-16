@@ -25,14 +25,13 @@
 #include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 
-int NumNOAADataRead;
 QVector<QByteArray> NOAAWebData;
 
 //-------------------------------------------//
 //Routine to read the data that has been
 //received from the NOAA server
 //-------------------------------------------//
-void MainWindow::ReadNOAAResponse(QNetworkReply *reply)
+void MainWindow::ReadNOAAResponse(QNetworkReply *reply, int index)
 {
     QByteArray Data;
 
@@ -48,8 +47,7 @@ void MainWindow::ReadNOAAResponse(QNetworkReply *reply)
     Data=reply->readAll();
 
     //Save the data into an array and increment the counter
-    NOAAWebData[NumNOAADataRead] = Data;
-    NumNOAADataRead = NumNOAADataRead + 1;
+    NOAAWebData[index] = Data;
 
     //Delete this response
     reply->deleteLater();
