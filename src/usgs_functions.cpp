@@ -24,8 +24,6 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 
-bool USGSDataReadFinished;
-
 //-------------------------------------------//
 //Function that fires on the signal when the
 //USGS data has finished downloading
@@ -50,12 +48,6 @@ void MainWindow::ReadUSGSDataFinished(QNetworkReply *reply)
 
     //Delete the QNetworkReply object off the heap
     reply->deleteLater();
-
-    //Clear message
-    ui->statusBar->clearMessage();
-
-    //Alert to the other routines
-    USGSDataReadFinished = true;
 
     return;
 }
@@ -317,6 +309,8 @@ void MainWindow::PlotUSGS()
 {
     QString PlotData,javastring,Product;
 
+    ui->statusBar->showMessage("Plotting USGS data...");
+
     PlotData="'";
 
     //Get the index of the data to plot
@@ -340,6 +334,8 @@ void MainWindow::PlotUSGS()
     ui->usgs_map->page()->mainFrame()->evaluateJavaScript(javastring);
 
     USGSbeenPlotted = true;
+
+    ui->statusBar->clearMessage();
 
     return;
 }
