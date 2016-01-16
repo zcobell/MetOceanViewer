@@ -165,10 +165,11 @@ void MainWindow::on_button_noaasavedata_clicked()
 //-------------------------------------------//
 void MainWindow::on_Button_FetchData_clicked()
 {
+    QEventLoop loop;
     qint64 Duration;
     QString RequestURL,StartString,EndString,Datum,Units,Product;
     QDateTime StartDate,EndDate;
-    int i,ProductIndex,NumDownloads,CurrentDownloadIndex;
+    int i,ProductIndex,NumDownloads;
     QVector<QDateTime> StartDateList,EndDateList;
 
     //Display the wait cursor
@@ -225,22 +226,16 @@ void MainWindow::on_Button_FetchData_clicked()
          || ProductIndex == 4 || ProductIndex == 6 || ProductIndex == 7)
         Datum = "Stnd";
 
-    //Connect the finished downloading signal to the routine that plots the markers
-    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAAResponse(QNetworkReply*)));
 
     //Allocate the NOAA array
     NOAAWebData.clear();
     NOAAWebData.resize(NumDownloads);
 
-    NumNOAADataRead = 0;
     for(i=0;i<NumDownloads;i++)
     {
         //Make the date string
         StartString = StartDateList[i].toString("yyyyMMdd hh:mm");
         EndString = EndDateList[i].toString("yyyyMMdd hh:mm");
-
-        //See where we are in the download list
-        CurrentDownloadIndex = NumNOAADataRead;
 
         //Build the URL to request data from the NOAA CO-OPS API
         RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
@@ -254,22 +249,24 @@ void MainWindow::on_Button_FetchData_clicked()
         if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
 
         //Send the request
-        manager->get(QNetworkRequest(QUrl(RequestURL)));
-
-        //Wait for the download before starting the next
-        while(CurrentDownloadIndex==NumNOAADataRead)
-            delayM(100);
+        QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
+        connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
+        connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
+        loop.exec();
+        ReadNOAAResponse(reply,i);
 
     }
 
-    //Disconnect the download manager
-    disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadNOAAResponse(QNetworkReply*)));
-
-    //Remove the wait cursor
-    QApplication::restoreOverrideCursor();
+    //Update status
+    ui->statusBar->showMessage("Plotting the data from NOAA...",0);
 
     //Call the plotting routine
     PlotNOAAResponse();
+
+    //Remove the wait cursor
+    QApplication::restoreOverrideCursor();
+    ui->statusBar->clearMessage();
+
 
     return;
 }

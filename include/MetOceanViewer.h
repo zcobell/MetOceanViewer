@@ -96,9 +96,6 @@ public:
 
 private slots:
 
-    void PlotNOAAResponse();
-
-    void ReadNOAAResponse(QNetworkReply*);
 
     void ReadUSGSDataFinished(QNetworkReply*);
 
@@ -224,6 +221,10 @@ private:
     int saveSession();
 
     int NETCDF_ERR(int status);
+
+    void ReadNOAAResponse(QNetworkReply *reply, int index);
+
+    void PlotNOAAResponse();
 };
 
 //-------------------------------------------//
