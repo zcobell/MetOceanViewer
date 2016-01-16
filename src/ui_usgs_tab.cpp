@@ -41,6 +41,7 @@ void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked()
 {
+    QEventLoop loop;
     QString RequestURL,USGSMarkerString;
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QDateTime startDate,endDate;
@@ -49,7 +50,6 @@ void MainWindow::on_button_usgs_fetch_clicked()
 
     USGSbeenPlotted = false;
     USGSdataReady = false;
-    USGSDataReadFinished = false;
 
     //Display the wait cursor
     QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -87,10 +87,6 @@ void MainWindow::on_button_usgs_fetch_clicked()
     endDateString2 = "&end_date="+endDate.toString("yyyy-MM-dd");
     startDateString2 = "&begin_date="+startDate.toString("yyyy-MM-dd");
 
-
-    //Connect the finished downloading signal to the routine that plots the markers
-    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
-
     //Construct the correct request URL
     if(USGSdataMethod==0)
         RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+USGSMarkerString+startDateString2+endDateString2;
@@ -100,17 +96,14 @@ void MainWindow::on_button_usgs_fetch_clicked()
         RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
 
     //Make the request to the server
-    manager->get(QNetworkRequest(QUrl(RequestURL)));
-
-    //Wait for the read to finish before the disconnect
-    while(!USGSDataReadFinished)
-        delayM(100);
+    QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
+    connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
+    connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
+    loop.exec();
+    ReadUSGSDataFinished(reply);
 
     //Restore the mouse pointer
     QApplication::restoreOverrideCursor();
-
-    //Disconnect the slot
-    disconnect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(ReadUSGSDataFinished(QNetworkReply*)));
 
     return;
 }

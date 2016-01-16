@@ -96,9 +96,6 @@ public:
 
 private slots:
 
-
-    void ReadUSGSDataFinished(QNetworkReply*);
-
     void on_Button_FetchData_clicked();
 
     void on_Combo_NOAAPanTo_currentIndexChanged(int index);
@@ -171,8 +168,6 @@ private slots:
 
     void on_combo_USGSProduct_currentIndexChanged(int index);
 
-    void PlotUSGS();
-
     void on_radio_usgsDaily_clicked();
 
     void on_radio_usgshistoric_clicked();
@@ -225,6 +220,10 @@ private:
     void ReadNOAAResponse(QNetworkReply *reply, int index);
 
     void PlotNOAAResponse();
+
+    void ReadUSGSDataFinished(QNetworkReply*);
+
+    void PlotUSGS();
 };
 
 //-------------------------------------------//
