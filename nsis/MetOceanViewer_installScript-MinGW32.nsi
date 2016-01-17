@@ -154,6 +154,7 @@ Section "Install"
     File ..\libs\mingw32\Qt5WebKitWidgets.dll
     File ..\libs\mingw32\Qt5Widgets.dll
     File ..\libs\mingw32\Qt5Xml.dll
+    File ..\libs\mingw32\msvcr120.dll
 	
 	File /r ..\libs\mingw32\imageformats
     File /r ..\libs\mingw32\platforms
@@ -256,6 +257,7 @@ Section "Uninstall"
     Delete $INSTDIR\mfhdf.dll
     Delete $INSTDIR\xdr.dll
     Delete $INSTDIR\jpeg.dll
+    Delete $INSTDIR\msvcr120.dll
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\mov.ico
