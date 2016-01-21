@@ -96,7 +96,7 @@ QString about_dialog::generateAboutText()
            "USGS Waterdata API - <a href=\"http://waterdata.usgs.gov\">http://waterdata.usgs.gov</a><br>" +
            "Google Maps v3.x API - <a href=\"http://maps.google.com\">http://maps.google.com</a><br>" +
            "Google Fusion Tables API - <a href=\"http://tables.googlelabs.com\">http://tables.googlelabs.com</a><br>" +
-           "HighCharts v4.1.1 - <a href=\"http://www.highcharts.com/\">http://www.highcharts.com/</a><br>" +
+           "HighCharts v4.2.1 - <a href=\"http://www.highcharts.com/\">http://www.highcharts.com/</a><br>" +
            "netCDF v4.3.3 - <a href=\"http://www.unidata.ucar.edu/software/netcdf/\">http://www.unidata.ucar.edu/software/netcdf/</a><br>" +
            "HDF5 v1.8.14 - <a href=\"http://www.hdfgroup.org/HDF5/\">http://www.hdfgroup.org/HDF5/</a> <br>" +
            "Curl v7.35.0 - <a href=\"http://curl.haxx.se/\">http://curl.haxx.se/</a><br>" +

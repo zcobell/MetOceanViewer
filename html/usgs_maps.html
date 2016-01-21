@@ -53,6 +53,8 @@
     <link href="/rsc/js/jquery.alerts.css" rel="stylesheet" type="text/css" media="screen" />
     <script src="/rsc/js/highcharts.js"></script>
     <script src="/rsc/js/exporting.js"></script>
+    <script src="/rsc/js/offline-exporting.js"></script>
+    <script src="/rsc/js/no-data-to-display.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
     <script type="text/javascript">
 
@@ -163,6 +165,42 @@
             }
           });
 
+        $('#plot_area').highcharts({
+            title: {
+                text: ''
+            },
+            legend: {
+                enabled: false},
+            yAxis: {
+                labels: {format: '{value:.2f}'},
+                title: {
+                    text: " "
+                },
+                alternateGridColor: '#EEEEEE'
+                },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            series: [{
+                type: 'line',
+                name: 'none',
+                data: []
+            }]
+        });
+
        }
 
         google.maps.event.addDomListener(window, "resize", function() {
@@ -248,7 +286,7 @@
                 }
             },
             title: {
-                text: 'USGS Gauge Data'
+                text: 'USGS Gage Data'
             },
             subtitle: {
                 text: 'Station '+window.CurrentID+' - '+window.CurrentName
