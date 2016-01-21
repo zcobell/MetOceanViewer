@@ -39,6 +39,7 @@
     <script src="/rsc/js/exporting.js"></script>
     <script src="/rsc/js/annotations.js"></script>
     <script src="/rsc/js/offline-exporting.js"></script>
+    <script src="/rsc/js/no-data-to-display.js"></script>
     <script type="text/javascript">
 
     var PlotTitle;
@@ -528,11 +529,47 @@
     function initializePlot()
     {
 
+        $('#chart_div').highcharts({
+            title: {
+                text: ''
+            },
+            legend: {
+                enabled: false},
+            yAxis: {
+                labels: {format: '{value:.2f}'},
+                title: {
+                    text: " "
+                },
+                alternateGridColor: '#EEEEEE'
+                },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            series: [{
+                type: 'line',
+                name: 'none',
+                data: []
+            }]
+        });
+
     }
 
     </script>
   </head>
-  <body>
+  <body onload="initializePlot()">
     <div id="chart_div" style="width: 100%; height: 100%;"></div>
   </body>
 </html>
