@@ -38,6 +38,7 @@
     <script src="/rsc/js/highcharts.js"></script>
     <script src="/rsc/js/exporting.js"></script>
     <script src="/rsc/js/offline-exporting.js"></script>
+    <script src="/rsc/js/no-data-to-display.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
     <script type="text/javascript">
 
@@ -347,23 +348,44 @@
           zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
         };
         map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-        //var logoControlDiv = document.createElement('DIV');
-        //var logoControl = new ArcadisLogo(logoControlDiv);
-        //logoControlDiv.index = 0; // used for ordering
-        //map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
+
+        $('#plot_area').highcharts({
+            title: {
+                text: ''
+            },
+            legend: {
+                enabled: false},
+            yAxis: {
+                labels: {format: '{value:.2f}'},
+                title: {
+                    text: " "
+                },
+                alternateGridColor: '#EEEEEE'
+                },
+            exporting: {
+                sourceWidth: 800,
+                sourceHeight: 800,
+                scale: 2,
+                buttons: {
+                    contextButton: {
+                        menuItems: [{
+                            text: 'Export to PNG',
+                            onclick: function() {
+                                this.exportChart();
+                            },
+                            separator: false
+                        }]
+                    }
+                }
+            },
+            series: [{
+                type: 'line',
+                name: 'none',
+                data: []
+            }]
+        });
+
        }
-
-      function ArcadisLogo(controlDiv) {
-            controlDiv.style.padding = '5px';
-            var logo = document.createElement('IMG');
-            logo.src = 'qrc:/rsc/img/arcadis_logo.png';
-            logo.style.cursor = 'pointer';
-            controlDiv.appendChild(logo);
-
-            google.maps.event.addDomListener(logo, 'click', function() {
-                window.location = 'http://www.arcadis-us.com';
-            });
-      }
 
         google.maps.event.addDomListener(window, "resize", function() {
          var center = map.getCenter();

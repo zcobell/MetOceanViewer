@@ -19,7 +19,7 @@
         <file>js/jquery.js</file>
         <file>js/exporting.js</file>
         <file>js/offline-exporting.js</file>
-        <file>js/canvas-tools.js</file>
+        <file>js/no-data-to-display.js</file>
         <file>img/mov.png</file>
         <file>img/logo_small.png</file>
         <file>img/logo_full.png</file>
