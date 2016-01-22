@@ -44,7 +44,7 @@ double CurrentUSGSLat,CurrentUSGSLon;
 QString CurrentNOAAStationName;
 QString CurrentUSGSStationName;
 QString USGSErrorString;
-QVector<NOAAStationData> CurrentNOAAStation;
+QVector< QVector<NOAAStationData> > CurrentNOAAStation;
 QVector<USGSData> CurrentUSGSStation;
 QVector<NOAAStationData> USGSPlot;
 bool USGSbeenPlotted = false;
@@ -55,9 +55,8 @@ int USGSdataMethod= 0;
 //values we might need to search for at some point
 double FLAG_NULL_TS = -999991025;
 QDateTime FLAG_NULL_DATE = QDateTime::fromString(
-                              "08/09/1987 17:50",
+                              "01/01/1900 00:00",
                               "MM/dd/yyyy hh:mm");
-                              //Happy birthday to me
 //-------------------------------------------//
 
 
