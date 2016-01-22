@@ -203,7 +203,7 @@ private:
 
     int ClassifyHWM(double diff);
 
-    QString retrieveProduct(int type);
+    int retrieveProduct(int type, QString &Product, QString &Product2);
 
     void SetupTimeseriesTable();
 
@@ -217,7 +217,7 @@ private:
 
     int NETCDF_ERR(int status);
 
-    void ReadNOAAResponse(QNetworkReply *reply, int index);
+    void ReadNOAAResponse(QNetworkReply *reply, int index, int index2);
 
     void PlotNOAAResponse();
 
@@ -260,7 +260,7 @@ extern int USGSdataMethod;
 extern QVector<NOAAStationData> CurrentNOAAStation;
 extern QVector<NOAAStationData> USGSPlot;
 extern QVector<USGSData> CurrentUSGSStation;
-extern QVector<QByteArray> NOAAWebData;
+extern QVector< QVector<QByteArray> > NOAAWebData;
 //-------------------------------------------//
 
 
