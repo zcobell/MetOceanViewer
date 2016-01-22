@@ -163,10 +163,12 @@ Section "Install"
 	
 	File ..\thirdparty\netcdf\bin_32\netcdf.dll
 	File ..\thirdparty\netcdf\bin_32\libcurl.dll
+    File ..\thirdparty\netcdf\bin_32\hdf.dll
 	File ..\thirdparty\netcdf\bin_32\hdf5.dll
     File ..\thirdparty\netcdf\bin_32\hdf5_hl.dll
-    File ..\thirdparty\netcdf\bin_32\szip.dll
-    File ..\thirdparty\netcdf\bin_32\zlib.dll
+    File ..\thirdparty\netcdf\bin_32\jpeg.dll
+    File ..\thirdparty\netcdf\bin_32\xdr.dll
+    File ..\thirdparty\netcdf\bin_32\mfhdf.dll
     File ..\thirdparty\netcdf\bin_32\zlib1.dll
 	
     File ..\img\mov.ico
@@ -217,6 +219,7 @@ Section "Uninstall"
     
     # now delete installed files
     Delete $INSTDIR\d3dcompiler_47.dll
+    Delete $INSTDIR\hdf.dll
     Delete $INSTDIR\hdf5.dll
     Delete $INSTDIR\hdf5_hl.dll
     Delete $INSTDIR\icudt54.dll
@@ -246,6 +249,9 @@ Section "Uninstall"
     Delete $INSTDIR\Qt5Xml.dll
     Delete $INSTDIR\ssleay32.dll
     Delete $INSTDIR\zlib1.dll
+    Delete $INSTDIR\mfhdf.dll
+    Delete $INSTDIR\xdr.dll
+    Delete $INSTDIR\jpeg.dll
     Delete $INSTDIR\msvcp120.dll
     Delete $INSTDIR\msvcr120.dll
     RMDir /r $INSTDIR\imageformats
