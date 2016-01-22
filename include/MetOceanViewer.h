@@ -191,7 +191,7 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    QString FormatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString);
+    QString FormatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
 
     void FormatUSGSInstantResponse(QByteArray Input);
 
@@ -257,7 +257,7 @@ extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
 extern bool USGSbeenPlotted,USGSdataReady,USGSDataReadFinished;
 extern int USGSdataMethod;
-extern QVector<NOAAStationData> CurrentNOAAStation;
+extern QVector< QVector<NOAAStationData> > CurrentNOAAStation;
 extern QVector<NOAAStationData> USGSPlot;
 extern QVector<USGSData> CurrentUSGSStation;
 extern QVector< QVector<QByteArray> > NOAAWebData;

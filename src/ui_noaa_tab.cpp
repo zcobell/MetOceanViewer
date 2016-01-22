@@ -80,6 +80,9 @@ void MainWindow::on_button_noaasavechart_clicked()
 void MainWindow::on_button_noaasavedata_clicked()
 {
 
+    int index;
+    QString Filename2;
+
     if(NOAAMarkerID==-1)
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
@@ -105,56 +108,71 @@ void MainWindow::on_button_noaasavedata_clicked()
         return;
 
     GetLeadingPath(Filename);
-    QFile NOAAOutput(Filename);
-    QTextStream Output(&NOAAOutput);
-    NOAAOutput.open(QIODevice::WriteOnly);
 
-    if(format.compare("CSV")==0)
+    for(index=0;index<CurrentNOAAStation.length();index++)
     {
-        Output << "Station: "+QString::number(NOAAMarkerID)+"\n";
-        Output << "Datum: "+ui->combo_noaadatum->currentText()+"\n";
-        Output << "Units: "+ui->combo_noaaunits->currentText()+"\n";
-        Output << "\n";
-        for(int i=0;i<CurrentNOAAStation.length();i++)
+        if(CurrentNOAAStation.length()==2)
         {
-            Output << CurrentNOAAStation[i].Date.toString("MM/dd/yyyy")+","+
-                      CurrentNOAAStation[i].Time.toString("hh:mm")+","+
-                      QString::number(CurrentNOAAStation[i].value)+"\n";
-        }
-    }
-    else if(format.compare("IMEDS")==0)
-    {
-        QString datum = ui->combo_noaadatum->currentText();
-        QString units = ui->combo_noaaunits->currentText();
-        QString units2;
-        if(units.compare("metric")==0)
-        {
-            units = "meters";
-            units2 = "m";
+            if(index==1)
+                Filename2 = "Observation_"+Filename;
+            else
+                Filename2 = "Predictions_"+Filename;
         }
         else
-        {
-            units = "feet";
-            units2 = "ft";
-        }
-        Output << "% IMEDS generic format - Water Level\n";
-        Output << "% year month day hour min sec watlev("+units2+")\n";
-        Output << "NOAA    UTC    "+datum+"\n";
-        Output << "NOAA_"+QString::number(NOAAMarkerID)+"   "+QString::number(CurrentNOAALat)+
-                  "   "+QString::number(CurrentNOAALon)+"\n";
-        for(int i=0;i<CurrentNOAAStation.length();i++)
-        {
-            Output << CurrentNOAAStation[i].Date.toString("yyyy")+"    "+
-                        CurrentNOAAStation[i].Date.toString("MM")+"    "+
-                        CurrentNOAAStation[i].Date.toString("dd")+"    "+
-                        CurrentNOAAStation[i].Time.toString("hh")+"    "+
-                        CurrentNOAAStation[i].Time.toString("mm")+"    "+
-                                                        "00" +"    "+
-                        QString::number(CurrentNOAAStation[i].value)+"\n";
-        }
+            Filename2 = Filename;
 
+        QFile NOAAOutput(Filename2);
+
+        QTextStream Output(&NOAAOutput);
+        NOAAOutput.open(QIODevice::WriteOnly);
+
+        if(format.compare("CSV")==0)
+        {
+            Output << "Station: "+QString::number(NOAAMarkerID)+"\n";
+            Output << "Datum: "+ui->combo_noaadatum->currentText()+"\n";
+            Output << "Units: "+ui->combo_noaaunits->currentText()+"\n";
+            Output << "\n";
+            for(int i=0;i<CurrentNOAAStation.length();i++)
+            {
+                Output << CurrentNOAAStation[index][i].Date.toString("MM/dd/yyyy")+","+
+                          CurrentNOAAStation[index][i].Time.toString("hh:mm")+","+
+                          QString::number(CurrentNOAAStation[index][i].value)+"\n";
+            }
+        }
+        else if(format.compare("IMEDS")==0)
+        {
+            QString datum = ui->combo_noaadatum->currentText();
+            QString units = ui->combo_noaaunits->currentText();
+            QString units2;
+            if(units.compare("metric")==0)
+            {
+                units = "meters";
+                units2 = "m";
+            }
+            else
+            {
+                units = "feet";
+                units2 = "ft";
+            }
+            Output << "% IMEDS generic format - Water Level\n";
+            Output << "% year month day hour min sec watlev("+units2+")\n";
+            Output << "NOAA    UTC    "+datum+"\n";
+            Output << "NOAA_"+QString::number(NOAAMarkerID)+"   "+QString::number(CurrentNOAALat)+
+                      "   "+QString::number(CurrentNOAALon)+"\n";
+            for(int i=0;i<CurrentNOAAStation[index].length();i++)
+            {
+                Output << CurrentNOAAStation[index][i].Date.toString("yyyy")+"    "+
+                            CurrentNOAAStation[index][i].Date.toString("MM")+"    "+
+                            CurrentNOAAStation[index][i].Date.toString("dd")+"    "+
+                            CurrentNOAAStation[index][i].Time.toString("hh")+"    "+
+                            CurrentNOAAStation[index][i].Time.toString("mm")+"    "+
+                                                            "00" +"    "+
+                            QString::number(CurrentNOAAStation[index][i].value)+"\n";
+            }
+
+        }
+        NOAAOutput.close();
     }
-    NOAAOutput.close();
     return;
 }
 //-------------------------------------------//
