@@ -66,14 +66,17 @@ void MainWindow::PlotNOAAResponse()
 {
     QVector<QString> NOAAData,Error;
     QString javascript;
-    QString Datum,Units,Product;
     int i;
+
+    for(i=0;i<CurrentNOAAStation.length();i++)
+        CurrentNOAAStation[i].clear();
+    CurrentNOAAStation.clear();
 
     NOAAData.resize(NOAAWebData.length());
     Error.resize(NOAAWebData.length());
     for(i=0;i<NOAAWebData.length();i++)
     {
-        NOAAData[i] = FormatNOAAResponse(NOAAWebData[i],Error[i]);
+        NOAAData[i] = FormatNOAAResponse(NOAAWebData[i],Error[i],i);
         Error[i].remove(QRegExp("[\\n\\t\\r]"));
         javascript="AddDataSeries("+QString::number(i)+","+NOAAData[i]+",'"+Error[i]+"')";
         ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
@@ -92,7 +95,7 @@ void MainWindow::PlotNOAAResponse()
 //Routine that formats the response from the
 //NOAA server in CSV
 //-------------------------------------------//
-QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString)
+QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString,int index)
 {
     int i,j,k;
     int dataCount;
@@ -120,7 +123,7 @@ QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorS
     for(i=0;i<DataList.length();i++)
         dataCount = dataCount+DataList[i].length()-1;
 
-    CurrentNOAAStation.resize(dataCount);
+    CurrentNOAAStation[index].resize(dataCount);
 
     k = 0;
     for(j=0;j<DataList.length();j++)
@@ -140,9 +143,9 @@ QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorS
             Output=Output+YearS+":"+MonthS+":"+
                    DayS+":"+HourS+":"+MinS+":"+WLS+";";
             TempData = YearS+"/"+MonthS+"/"+DayS;
-            CurrentNOAAStation[k].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
-            CurrentNOAAStation[k].Time = QTime(HourS.toInt(),MinS.toInt(),0);
-            CurrentNOAAStation[k].value = WLS.toDouble();
+            CurrentNOAAStation[index][k].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
+            CurrentNOAAStation[index][k].Time = QTime(HourS.toInt(),MinS.toInt(),0);
+            CurrentNOAAStation[index][k].value = WLS.toDouble();
             k = k + 1;
         }
     }
