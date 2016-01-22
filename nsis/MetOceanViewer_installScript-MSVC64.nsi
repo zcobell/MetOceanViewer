@@ -157,9 +157,9 @@ Section "Install"
 	File /r ..\libs\msvc64\imageformats
     File /r ..\libs\msvc64\platforms
 	
-	File ..\thirdparty\openssl\libssl32.dll
-	File ..\thirdparty\openssl\libeay32.dll
-    File ..\thirdparty\openssl\ssleay32.dll
+	File ..\thirdparty\openssl\bin_64\libssl32.dll
+	File ..\thirdparty\openssl\bin_64\libeay32.dll
+    File ..\thirdparty\openssl\bin_64\ssleay32.dll
 	
 	File ..\thirdparty\netcdf\bin_64\netcdf.dll
 	File ..\thirdparty\netcdf\bin_64\libcurl.dll

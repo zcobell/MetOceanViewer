@@ -159,9 +159,9 @@ Section "Install"
 	File /r ..\libs\mingw32\imageformats
     File /r ..\libs\mingw32\platforms
 	
-	File ..\thirdparty\openssl\libssl32.dll
-	File ..\thirdparty\openssl\libeay32.dll
-    File ..\thirdparty\openssl\ssleay32.dll
+	File ..\thirdparty\openssl\bin_32\libssl32.dll
+	File ..\thirdparty\openssl\bin_32\libeay32.dll
+    File ..\thirdparty\openssl\bin_32\ssleay32.dll
 	
 	File ..\thirdparty\netcdf\bin_32\netcdf.dll
 	File ..\thirdparty\netcdf\bin_32\libcurl.dll
