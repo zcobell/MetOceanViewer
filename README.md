@@ -30,7 +30,7 @@ The following external libraries/APIs are used in this software
 - USGS Waterdata API (http://waterdata.usgs.gov)
 - Google Maps v3.x API (http://maps.google.com)
 - Google Fusion Tables API (http://tables.googlelabs.com)
-- HighCharts v4.1.1 (http://www.highcharts.com)
+- HighCharts v4.2.1 (http://www.highcharts.com)
 - netCDF v4.3.3 (http://www.unidata.ucar.edu/software/netcdf)
 - HDF5 v1.8.14 (http://www.hdfgroup.org/HDF5)
 - Curl v7.35.0 (http://curl.haxx.se)
