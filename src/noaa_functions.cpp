@@ -25,13 +25,13 @@
 #include <ui_MetOceanViewer_main.h>
 #include <timeseries.h>
 
-QVector<QByteArray> NOAAWebData;
+QVector< QVector<QByteArray> > NOAAWebData;
 
 //-------------------------------------------//
 //Routine to read the data that has been
 //received from the NOAA server
 //-------------------------------------------//
-void MainWindow::ReadNOAAResponse(QNetworkReply *reply, int index)
+void MainWindow::ReadNOAAResponse(QNetworkReply *reply, int index, int index2)
 {
     QByteArray Data;
 
@@ -40,6 +40,7 @@ void MainWindow::ReadNOAAResponse(QNetworkReply *reply, int index)
     {
         QMessageBox::information(this,"ERROR","ERROR: "+reply->errorString());
         ui->statusBar->clearMessage();
+        reply->deleteLater();
         return;
     }
 
@@ -47,7 +48,7 @@ void MainWindow::ReadNOAAResponse(QNetworkReply *reply, int index)
     Data=reply->readAll();
 
     //Save the data into an array and increment the counter
-    NOAAWebData[index] = Data;
+    NOAAWebData[index2][index] = Data;
 
     //Delete this response
     reply->deleteLater();
@@ -63,54 +64,22 @@ void MainWindow::ReadNOAAResponse(QNetworkReply *reply, int index)
 //-------------------------------------------//
 void MainWindow::PlotNOAAResponse()
 {
-    QString NOAAData,javastring,Error;
+    QVector<QString> NOAAData,Error;
+    QString javascript;
     QString Datum,Units,Product;
-    int ProductIndex;
+    int i;
 
-    Units = ui->combo_noaaunits->currentText();
-    ProductIndex = ui->combo_NOAAProduct->currentIndex();
-    Product = retrieveProduct(1);
-
-    if(ProductIndex == 0 || ProductIndex == 1 || ProductIndex == 2)
+    NOAAData.resize(NOAAWebData.length());
+    Error.resize(NOAAWebData.length());
+    for(i=0;i<NOAAWebData.length();i++)
     {
-        if(Units=="metric")
-            Units="m";
-        else
-            Units="ft";
-        Datum = ui->combo_noaadatum->currentText();
-    }
-    else if(ProductIndex == 5)
-    {
-        if(Units=="metric")
-            Units="m/s";
-        else
-            Units="knots";
-        Datum = "Stnd";
-    }
-    else if(ProductIndex == 3 || ProductIndex == 4)
-    {
-        if(Units=="metric")
-            Units="Celcius";
-        else
-            Units="Fahrenheit";
-        Datum = "Stnd";
-    }
-    else if(ProductIndex == 6)
-    {
-        Units = "%";
-        Datum = "Stnd";
-    }
-    else if(ProductIndex == 7)
-    {
-        Units = "mb";
-        Datum = "Stnd";
+        NOAAData[i] = FormatNOAAResponse(NOAAWebData[i],Error[i]);
+        Error[i].remove(QRegExp("[\\n\\t\\r]"));
+        javascript="AddDataSeries("+QString::number(i)+","+NOAAData[i]+")";
+        ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
-    NOAAData = FormatNOAAResponse(NOAAWebData,Error);
-    Error.remove(QRegExp("[\\n\\t\\r]"));
-
-    javastring="drawNOAAData("+NOAAData+",'"+Datum+"','"+Units+"','"+Product+"','"+Error+"')";
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javastring);
+    ui->noaa_map->page()->mainFrame()->evaluateJavaScript("PlotTimeseries()");
 
     ui->statusBar->clearMessage();
 
@@ -189,38 +158,40 @@ QString MainWindow::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorS
 //the product id on the NOAA site by the
 //index in the NOAA selection combo box
 //-------------------------------------------//
-QString MainWindow::retrieveProduct(int type)
+int MainWindow::retrieveProduct(int type, QString &Product, QString &Product2)
 {
-    QString Product;
+    Product2 = "null";
     int index = ui->combo_NOAAProduct->currentIndex();
     if(type==1)
     {
         switch(index)
         {
-            case(0):Product = "6 Min Observed Water Level"; break;
-            case(1):Product = "Hourly Observed Water Level"; break;
-            case(2):Product = "Predicted Water Level"; break;
-            case(3):Product = "Air Temperature"; break;
-            case(4):Product = "Water Temperature"; break;
-            case(5):Product = "Wind Speed"; break;
-            case(6):Product = "Relative Humidity"; break;
-            case(7):Product = "Air Pressure"; break;
+            case(0):Product = "6 Min Observed Water Level vs. Predicted"; break;
+            case(1):Product = "6 Min Observed Water Level"; break;
+            case(2):Product = "Hourly Observed Water Level"; break;
+            case(3):Product = "Predicted Water Level"; break;
+            case(4):Product = "Air Temperature"; break;
+            case(5):Product = "Water Temperature"; break;
+            case(6):Product = "Wind Speed"; break;
+            case(7):Product = "Relative Humidity"; break;
+            case(8):Product = "Air Pressure"; break;
         }
     }
     else if(type==2)
     {
         switch(index)
         {
-            case(0):Product = "water_level"; break;
-            case(1):Product = "hourly_height"; break;
-            case(2):Product = "predictions"; break;
-            case(3):Product = "air_temperature"; break;
-            case(4):Product = "water_temperature"; break;
-            case(5):Product = "wind"; break;
-            case(6):Product = "humidity"; break;
-            case(7):Product = "air_pressure"; break;
+            case(0):Product = "water_level"; Product2 = "predictions"; break;
+            case(1):Product = "water_level"; break;
+            case(2):Product = "hourly_height"; break;
+            case(3):Product = "predictions"; break;
+            case(4):Product = "air_temperature"; break;
+            case(5):Product = "water_temperature"; break;
+            case(6):Product = "wind"; break;
+            case(7):Product = "humidity"; break;
+            case(8):Product = "air_pressure"; break;
         }
     }
-    return Product;
+    return 0;
 }
 //-------------------------------------------//
