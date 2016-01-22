@@ -55,7 +55,7 @@
     var DataSeries = new Array();
     var SeriesOptions = new Array();
     var StationName = new Array();
-    var TimeseriesMarkers = new Array();
+    var ErrorList = new Array();
     var PlotTitle;
     var XLabel,YLabel;
 
@@ -197,10 +197,11 @@
         }
 
         //Save the time series data into a single 3 dimensional array
-        function AddDataSeries(SeriesIndex,ThisData)
+        function AddDataSeries(SeriesIndex,ThisData,ThisError)
         {
 
             DataSeries[SeriesIndex] = [];
+            ErrorList[SeriesIndex] = ThisError;
 
             var ThisDataSplit = ThisData.split(";");
             for(var i=0;i<ThisDataSplit.length;i++)
@@ -244,12 +245,18 @@
             var Data = new Array();
             var contentString;
             var ThisData;
-            var multiplier,plusX,plusY;
+
+            if(DataSeries[0].length<5)
+            {
+                jAlert('The following error was returned from the NOAA server: \n\n'+ErrorList[0],'NOAA Data Retreival Error');
+                return;
+            }
 
             //Create the data tables
             for(i=0;i<DataSeries.length;i++)
             {
                 Data[i]    = new Array();
+
                 for(j=0;j<DataSeries[i].length-1;j++)
                 {
                     Data[i][j] = new Array();

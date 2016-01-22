@@ -75,7 +75,7 @@ void MainWindow::PlotNOAAResponse()
     {
         NOAAData[i] = FormatNOAAResponse(NOAAWebData[i],Error[i]);
         Error[i].remove(QRegExp("[\\n\\t\\r]"));
-        javascript="AddDataSeries("+QString::number(i)+","+NOAAData[i]+")";
+        javascript="AddDataSeries("+QString::number(i)+","+NOAAData[i]+",'"+Error[i]+"')";
         ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
     }
 
