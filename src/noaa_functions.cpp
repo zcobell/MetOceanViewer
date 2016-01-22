@@ -72,6 +72,8 @@ void MainWindow::PlotNOAAResponse()
         CurrentNOAAStation[i].clear();
     CurrentNOAAStation.clear();
 
+    CurrentNOAAStation.resize(NOAAWebData.length());
+
     NOAAData.resize(NOAAWebData.length());
     Error.resize(NOAAWebData.length());
     for(i=0;i<NOAAWebData.length();i++)

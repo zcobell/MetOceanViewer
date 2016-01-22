@@ -81,7 +81,7 @@ void MainWindow::on_button_noaasavedata_clicked()
 {
 
     int index;
-    QString Filename2;
+    QString Filename2,Filename3;
 
     if(NOAAMarkerID==-1)
     {
@@ -108,20 +108,21 @@ void MainWindow::on_button_noaasavedata_clicked()
         return;
 
     GetLeadingPath(Filename);
+    Filename2 = RemoveLeadingPath(Filename);
 
     for(index=0;index<CurrentNOAAStation.length();index++)
     {
         if(CurrentNOAAStation.length()==2)
         {
             if(index==1)
-                Filename2 = "Observation_"+Filename;
+                Filename3 = PreviousDirectory+"/Observation_"+Filename2;
             else
-                Filename2 = "Predictions_"+Filename;
+                Filename3 = PreviousDirectory+"/Predictions_"+Filename2;
         }
         else
-            Filename2 = Filename;
+            Filename3 = Filename;
 
-        QFile NOAAOutput(Filename2);
+        QFile NOAAOutput(Filename3);
 
         QTextStream Output(&NOAAOutput);
         NOAAOutput.open(QIODevice::WriteOnly);
