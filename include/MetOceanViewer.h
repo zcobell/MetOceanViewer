@@ -184,6 +184,8 @@ private slots:
 
     void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
 
+    void on_combo_NOAAProduct_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
 
