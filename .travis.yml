@@ -5,6 +5,5 @@ before_install:
  - sudo apt-get install qt5-default qttools5-dev-tools
 
 script:
- - qmake -project
  - qmake MetOceanViewer.pro
  - make
