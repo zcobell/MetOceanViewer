@@ -23,6 +23,7 @@
 
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
+#include "noaa.h"
 
 //-------------------------------------------//
 //Called when the pan to combo box is updated
@@ -202,202 +203,31 @@ void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_Button_FetchData_clicked()
 {
-    QEventLoop loop;
-    qint64 Duration;
-    QString PlotTitle,RequestURL,StartString,EndString,Product,Product2;
-    QString javascript,Units,Datum,XLabel,YLabel;
-    QDateTime StartDate,EndDate;
-    int i,j,ierr,ProductIndex,NumDownloads,NumData;
-    QVector<QDateTime> StartDateList,EndDateList;
-
     //Display the wait cursor
     QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
-    QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
-    QStringList evalList = eval.toString().split(";");
-
-    NOAAMarkerID = evalList.value(0).toInt();
-    CurrentNOAAStationName = evalList.value(1).simplified();
-    CurrentNOAALat = evalList.value(3).toDouble();
-    CurrentNOAALon = evalList.value(2).toDouble();
 
     //Update status
     ui->statusBar->showMessage("Downloading data from NOAA...",0);
 
-    //Get the date range
-    StartDate = ui->Date_StartTime->dateTime();
-    EndDate = ui->Date_EndTime->dateTime();
+    //...Create a new NOAA object
+    noaa *NoaaData = new noaa();
 
-    if(StartDate==EndDate||EndDate<StartDate)
-    {
-        QMessageBox::critical(this,"ERROR","Dates must be a valid range.");
-        ui->statusBar->clearMessage();
-        QApplication::restoreOverrideCursor();
-        return;
-    }
+    //...Grab the station from the javascript
+    QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QStringList evalList = eval.toString().split(";");
 
-    //Begin organizing the dates for download
-    Duration = StartDate.daysTo(EndDate);
-    NumDownloads = (Duration / 30) + 1;
-    StartDateList.resize(NumDownloads);
-    EndDateList.resize(NumDownloads);
-
-    //Build the list of dates in 30 day intervals
-    for(i=0;i<NumDownloads;i++)
-    {
-        StartDateList[i] = StartDate.addDays(i*30).addDays(i);
-        StartDateList[i].setTime(QTime(0,0,0));
-        EndDateList[i]   = StartDateList[i].addDays(30);
-        EndDateList[i].setTime(QTime(23,59,59));
-        if(EndDateList[i]>EndDate)
-            EndDateList[i] = EndDate;
-    }
-
-    //Get options
-    Units = ui->combo_noaaunits->currentText();
-    ierr = retrieveProduct(2,Product,Product2);
-    ProductIndex = ui->combo_NOAAProduct->currentIndex();
-    if(ProductIndex == 0 || ProductIndex == 1 || ProductIndex == 2 || ProductIndex == 3)
-        Datum = ui->combo_noaadatum->currentText();
-    else if(ProductIndex == 4 || ProductIndex == 5
-         || ProductIndex == 6 || ProductIndex == 7 || ProductIndex == 8)
-        Datum = "Stnd";
-
-    if(ProductIndex==0)
-        NumData = 2;
-    else
-        NumData = 1;
-
-    //Allocate the NOAA array
-    NOAAWebData.clear();
-    NOAAWebData.resize(NumData);
-    for(i=0;i<NumData;i++)
-        NOAAWebData[i].resize(NumDownloads);
-
-    for(j=0;j<NumData;j++)
-    {
-        for(i=0;i<NumDownloads;i++)
-        {
-            //Make the date string
-            StartString = StartDateList[i].toString("yyyyMMdd hh:mm");
-            EndString = EndDateList[i].toString("yyyyMMdd hh:mm");
-
-            //Build the URL to request data from the NOAA CO-OPS API
-            if(j==0)
-                RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
-                             QString("product="+Product+"&application=metoceanviewer")+
-                             QString("&begin_date=")+StartString+QString("&end_date=")+EndString+
-                             QString("&station=")+QString::number(NOAAMarkerID)+
-                             QString("&time_zone=GMT&units=")+Units+
-                             QString("&interval=&format=csv");
-            else
-                RequestURL = QString("http://tidesandcurrents.noaa.gov/api/datagetter?")+
-                             QString("product="+Product2+"&application=metoceanviewer")+
-                             QString("&begin_date=")+StartString+QString("&end_date=")+EndString+
-                             QString("&station=")+QString::number(NOAAMarkerID)+
-                             QString("&time_zone=GMT&units=")+Units+
-                             QString("&interval=&format=csv");
-
-            //Allow a different datum where allowed
-            if(Datum != "Stnd")RequestURL = RequestURL+QString("&datum=")+Datum;
-
-            //Send the request
-            QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
-            connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
-            connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
-            loop.exec();
-            ReadNOAAResponse(reply,i,j);
-
-        }
-    }
-
-    //Update status
-    ui->statusBar->showMessage("Plotting the data from NOAA...",0);
-
-    Units = ui->combo_noaaunits->currentText();
-    ProductIndex = ui->combo_NOAAProduct->currentIndex();
-    ierr = retrieveProduct(1,Product,Product2);
-
-    if(ProductIndex == 0)
-    {
-        if(Units=="metric")
-            Units="m";
-        else
-            Units="ft";
-        Datum = ui->combo_noaadatum->currentText();
-        YLabel = "Water Level ("+Units+", "+Datum+")";
-    }
-    else if(ProductIndex == 1 || ProductIndex == 2 || ProductIndex == 3)
-    {
-        if(Units=="metric")
-            Units="m";
-        else
-            Units="ft";
-        Datum = ui->combo_noaadatum->currentText();
-        YLabel = Product+" ("+Units+", "+Datum+")";
-    }
-    else if(ProductIndex == 6)
-    {
-        if(Units=="metric")
-            Units="m/s";
-        else
-            Units="knots";
-        Datum = "Stnd";
-        YLabel = Product+" ("+Units+")";
-    }
-    else if(ProductIndex == 4 || ProductIndex == 5)
-    {
-        if(Units=="metric")
-            Units="Celcius";
-        else
-            Units="Fahrenheit";
-        Datum = "Stnd";
-        YLabel = Product+" ("+Units+")";
-    }
-    else if(ProductIndex == 7)
-    {
-        Units = "%";
-        Datum = "Stnd";
-        YLabel = Product+" ("+Units+")";
-    }
-    else if(ProductIndex == 8)
-    {
-        Units = "mb";
-        Datum = "Stnd";
-        YLabel = Product+" ("+Units+")";
-    }
-
-    XLabel = "Date";
-    PlotTitle = "Station "+QString::number(NOAAMarkerID)+": "+CurrentNOAAStationName;
-    javascript = "setGlobal('"+PlotTitle+"','"+XLabel+"','"+YLabel+"','"+QString::number(FLAG_NULL_TS)+"')";
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
-
-    if(NumData==2)
-    {
-        javascript = "SetSeriesOptions(0,'Observed Water Level','#0101DF')";
-        ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
-        javascript = "SetSeriesOptions(1,'Predicted Water Level','#00FF00')";
-        ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
-    }
-    else
-    {
-        javascript = "SetSeriesOptions(0,'"+Product+"','#0101DF')";
-        ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
-    }
-
-    javascript = "allocateData("+QString::number(NumData)+")";
-    ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript);
-
-    //Call the plotting routine
-    PlotNOAAResponse();
-
-    //Remove the wait cursor
-    QApplication::restoreOverrideCursor();
-    ui->statusBar->clearMessage();
+    //...Grab the options from the UI
+    NoaaData->NOAAMarkerID = evalList.value(0).toInt();
+    NoaaData->CurrentNOAAStationName = evalList.value(1).simplified();
+    NoaaData->CurrentNOAALat = evalList.value(3).toDouble();
+    NoaaData->CurrentNOAALon = evalList.value(2).toDouble();
+    NoaaData->StartDate = ui->Date_StartTime->dateTime();
+    NoaaData->EndDate = ui->Date_EndTime->dateTime();
+    NoaaData->Units = ui->combo_noaaunits->currentText();
+    NoaaData->Datum = ui->combo_noaadatum->currentText();
+    NoaaData->ProductIndex = ui->combo_NOAAProduct->currentIndex();
 
 
-    return;
 }
 //-------------------------------------------//
 
