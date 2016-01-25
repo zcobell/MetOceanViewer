@@ -30,5 +30,10 @@
         <file>js/jquery.ui.draggable.js</file>
         <file>img/arrow_down.png</file>
         <file>img/arrow_up.png</file>
+        <file>js/noaa_maps.js</file>
+        <file>js/timeseries_maps.js</file>
+        <file>js/hwm_map.js</file>
+        <file>js/reg_plot.js</file>
+        <file>js/usgs_maps.js</file>
     </qresource>
 </RCC>
