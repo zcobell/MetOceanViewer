@@ -89,23 +89,23 @@ function addHWM(x,y,ID,modeled,measured,diff,color,unit)
 
     //Set the marker image
     var image;
-    if (color == -1)
+    if (color === -1)
         image = "qrc:/rsc/img/mm_20_white.png";
-    else if(color==1)
+    else if(color===1)
         image = "qrc:/rsc/img/mm_20_purple.png";
-    else if(color==2)
+    else if(color===2)
         image = "qrc:/rsc/img/mm_20_darkblue.png";
-    else if(color==3)
+    else if(color===3)
         image = "qrc:/rsc/img/mm_20_lightblue.png";
-    else if(color==4)
+    else if(color===4)
         image = "qrc:/rsc/img/mm_20_darkgreen.png";
-    else if(color==5)
+    else if(color===5)
         image = "qrc:/rsc/img/mm_20_lightgreen.png";
-    else if(color==6)
+    else if(color===6)
         image = "qrc:/rsc/img/mm_20_yellow.png";
-    else if(color==7)
+    else if(color===7)
         image = "qrc:/rsc/img/mm_20_darkorange.png";
-    else if(color==8)
+    else if(color===8)
         image = "qrc:/rsc/img/mm_20_red.png";
 
     HWMMarkers[ID] = new google.maps.Marker({
@@ -115,11 +115,13 @@ function addHWM(x,y,ID,modeled,measured,diff,color,unit)
       icon: image
     });
 
+    var contentString;
+
     if(Number(modeled)<-9999)
     {
         modeled = "Dry";
         diff = "N/A";
-        var contentString =
+        contentString =
             "<table>"+
                 "<tr>"+
                     "<td align=\"right\"> <b>Location:</b> </td>"+
@@ -139,7 +141,7 @@ function addHWM(x,y,ID,modeled,measured,diff,color,unit)
     }
     else
     {
-        var contentString =
+        contentString =
             "<table>"+
                 "<tr>"+
                     "<td align=\"right\"> <b>Location:</b> </td>"+
@@ -163,7 +165,7 @@ function addHWM(x,y,ID,modeled,measured,diff,color,unit)
     google.maps.event.addListener(HWMMarkers[ID], 'click', function() {
     //Set the Marker ID
     window.markerID = ID;
-    if(window.LastInfo!=-1)
+    if(window.LastInfo!==-1)
     {
         window.LastInfo.close();
     }
@@ -205,7 +207,7 @@ function initializeHWM()
 }
 
 google.maps.event.addDomListener(window, "resize", function() {
- var center = map.getCenter();
- google.maps.event.trigger(map, "resize");
- map.setCenter(center);
+    var center = map.getCenter();
+    google.maps.event.trigger(map, "resize");
+    map.setCenter(center);
 });

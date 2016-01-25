@@ -26,11 +26,11 @@ var CurrentName;
 var CurrentLat;
 var CurrentLon;
 
-var Locations = new Array();
-var DataSeries = new Array();
-var SeriesOptions = new Array();
-var StationName = new Array();
-var ErrorList = new Array();
+var Locations = [];
+var DataSeries = [];
+var SeriesOptions = [];
+var StationName = [];
+var ErrorList = [];
 var PlotTitle;
 var XLabel,YLabel;
 
@@ -52,7 +52,7 @@ function returnStationID(){
 function panTo(location){
 var geocoder = new google.maps.Geocoder();
     geocoder.geocode( { 'address': location}, function(results, status) {
-        if (status == google.maps.GeocoderStatus.OK) {
+        if (status === google.maps.GeocoderStatus.OK) {
           map.setCenter(results[0].geometry.location);
           map.fitBounds(results[0].geometry.viewport);
         }
@@ -154,10 +154,10 @@ function initialize() {
 //Build the data series
 function allocateData(NumSeries)
 {
-    DataSeries = new Array();
+    DataSeries = [];
     for(var i=0;i<NumSeries;i++)
     {
-      DataSeries[i] = new Array();
+      DataSeries[i] = [];
     }
     return;
 }
@@ -181,7 +181,7 @@ function AddDataSeries(SeriesIndex,ThisData,ThisError)
     var ThisDataSplit = ThisData.split(";");
     for(var i=0;i<ThisDataSplit.length;i++)
     {
-        DataSeries[SeriesIndex][i] = new Array();
+        DataSeries[SeriesIndex][i] = [];
         ThisDataSplit2 = ThisDataSplit[i].split(":");
 
         DataSeries[SeriesIndex][i][0] = ThisDataSplit2[0];
@@ -216,8 +216,8 @@ function setGlobal(InPlotTitle,InXLabel,InYLabel,InNullFlag)
 function PlotTimeseries()
 {
     var i,j,k;
-    var seriesList = new Array();
-    var Data = new Array();
+    var seriesList = [];
+    var Data = [];
     var contentString;
     var ThisData;
 
@@ -230,12 +230,12 @@ function PlotTimeseries()
     //Create the data tables
     for(i=0;i<DataSeries.length;i++)
     {
-        Data[i]    = new Array();
+        Data[i]    = [];
 
         for(j=0;j<DataSeries[i].length-1;j++)
         {
-            Data[i][j] = new Array();
-            ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
+            Data[i][j] = [];
+            ThisDate = new Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
                                 Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3]),
                                 Number(DataSeries[i][j][4]),0,0);
             Data[i][j][0] = ThisDate;

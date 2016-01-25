@@ -52,7 +52,7 @@ function returnStationID()
 function panTo(location){
     var geocoder = new google.maps.Geocoder();
      geocoder.geocode( { 'address': location}, function(results, status) {
-        if (status == google.maps.GeocoderStatus.OK) {
+        if (status === google.maps.GeocoderStatus.OK) {
           map.setCenter(results[0].geometry.location);
           map.fitBounds(results[0].geometry.viewport);
         }
@@ -78,15 +78,10 @@ function initialize() {
       zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
     };
     map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-
-    //var logoControlDiv = document.createElement('DIV');
     var zoomDiv        = document.createElement('DIV');
     zoomDiv.id         = "zoomText";
     zoomDiv.innerHTML  = "Zoom in to see stations";
-    //var logoControl = new ArcadisLogo(logoControlDiv);
-    //logoControlDiv.index = 0; // used for ordering
     zoomDiv.index = 1;
-    //map.controls[google.maps.ControlPosition.TOP_LEFT].push(logoControlDiv);
     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(zoomDiv);
 
     layer = new google.maps.FusionTablesLayer({
@@ -104,7 +99,7 @@ function initialize() {
         var zoomLevel = map.getZoom();
         if(zoomLevel>5)
         {
-            if(layer.map == null)
+            if(layer.map === null)
             {
                 layer.setMap(map);
                 layer.setOptions({options: {suppressInfoWindows: false}});
@@ -172,17 +167,17 @@ google.maps.event.addDomListener(window, "resize", function() {
 });
 
 
-  ////////////////////////////////////////////////////////////
-  //   DRAWUSGSDATA                                         //
-  //                                                        //
-  //  Plot the USGS data on the google chart api            //
-  ////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+//   DRAWUSGSDATA                                         //
+//                                                        //
+//  Plot the USGS data on the google chart api            //
+////////////////////////////////////////////////////////////
 function drawUSGSData(RawData,Product,YLabel,NData,ErrorString) {
 
     //Split by rows
-    RawData2 = new Array();
+    RawData2 = [];
     RawData2 = RawData.split(";");
-    USGSData = new Array();
+    USGSData = [];
 
     if(NData<2)
     {
@@ -197,29 +192,29 @@ function drawUSGSData(RawData,Product,YLabel,NData,ErrorString) {
         return;
     }
 
-    var TempData = new Array();
+    var TempData = [];
     for(var i=0;i<RawData2.length;i++)
     {
         TempData = RawData2[i].split(":");
-        USGSData[i] = new Array();
+        USGSData[i] = [];
         for(var j=0;j<TempData.length;j++)
             USGSData[i][j] = TempData[j];
     }
 
-    var PlottingData = new Array();
+    var PlottingData = [];
     idx2=-1;
     var ThisDate;
     var ThisData;
     for( var idx=0;idx<USGSData.length;idx++)
     {
-        ThisDate = Date.UTC(Number(USGSData[idx][0]),Number(USGSData[idx][1])-1,
+        ThisDate = new Date.UTC(Number(USGSData[idx][0]),Number(USGSData[idx][1])-1,
                             Number(USGSData[idx][2]),Number(USGSData[idx][3]),
                             Number(USGSData[idx][4]),0,0);
         ThisData = Number(USGSData[idx][5]);
         if(!isNaN(ThisDate) && !isNaN(ThisData) && (ThisData!=0))
         {
             idx2 = idx2 + 1;
-            PlottingData[idx2]     = new Array();
+            PlottingData[idx2]     = [];
             PlottingData[idx2][0]  = ThisDate;
             PlottingData[idx2][1]  = ThisData;
         }
