@@ -20,7 +20,7 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-var TimeseriesMarkers = new Array();
+var TimeseriesMarkers = [];
 var YMin,YMax;
 var PlotTitle;
 var XLabel,YLabel;
@@ -30,10 +30,10 @@ var AutoY, AutoX;
 var XMin,XMax;
 var NullFlag;
 
-var Locations = new Array();
-var DataSeries = new Array();
-var SeriesOptions = new Array();
-var StationName = new Array();
+var Locations = [];
+var DataSeries = [];
+var SeriesOptions = [];
+var StationName = [];
 var map;
 var LastInfoWindow;
 var LastMarker = -1;
@@ -47,12 +47,12 @@ window.onresize = function()
 //Build the data series
 function allocateData(NumSeries)
 {
-    Locations[0] = new Array();
-    Locations[1] = new Array();
+    Locations[0] = [];
+    Locations[1] = [];
 
     for(var i=0;i<NumSeries;i++)
     {
-        DataSeries[i] = new Array();
+        DataSeries[i] = [];
     }
     return;
 }
@@ -75,7 +75,7 @@ function AddDataSeries(SeriesIndex,ThisData)
     var ThisDataSplit = ThisData.split(";");
     for(var i=0;i<ThisDataSplit.length;i++)
     {
-        DataSeries[SeriesIndex][i] = new Array();
+        DataSeries[SeriesIndex][i] = [];
         ThisDataSplit2 = ThisDataSplit[i].split(":");
 
         DataSeries[SeriesIndex][i][0] = ThisDataSplit2[0];
@@ -117,7 +117,7 @@ function AddToMap()
         });
         google.maps.event.addListener(TimeseriesMarkers[i], 'click', function() {
             window.MarkerID = this.LocalID;
-            if(LastMarker!=-1)
+            if(LastMarker!==-1)
                 LastInfoWindow.close();
             LastMarker = this.LocalID;
             var xLocal = Locations[0][this.LocalID];
@@ -150,8 +150,8 @@ function getMarker()
 function PlotTimeseries()
 {
     var i,j,k;
-    var seriesList = new Array();
-    var Data = new Array();
+    var seriesList = [];
+    var Data = [];
     var contentString;
     var ThisData;
     var multiplier,plusX,plusY;
@@ -159,15 +159,15 @@ function PlotTimeseries()
     //Create the data tables
     for(i=0;i<DataSeries.length;i++)
     {
-        Data[i]    = new Array();
+        Data[i]    = [];
         multiplier = SeriesOptions[i].unit;
         plusX      = SeriesOptions[i].xadjust;
         plusY      = SeriesOptions[i].yadjust;
 
         for(j=0;j<DataSeries[i].length-1;j++)
         {
-            Data[i][j] = new Array();
-            ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
+            Data[i][j] = [];
+            ThisDate = new Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
                                 Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3])+plusX,
                                 Number(DataSeries[i][j][4]),0,0);
             Data[i][j][0] = ThisDate;
@@ -194,7 +194,7 @@ function PlotTimeseries()
             seriesList[i].visible = false;
             seriesList[i].showInLegend = false;
         }
-        else if(SeriesOptions[i].defaultOn=="off")
+        else if(SeriesOptions[i].defaultOn==="off")
         {
             seriesList[i].visible = false;
         }
@@ -206,15 +206,18 @@ function PlotTimeseries()
     }
 
     //Start setting up the plot
-    if(AutoY == "auto")
-        var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
-    else
-        var yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
 
-    if(AutoX == "auto")
-        var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+    var yData, xData;
+
+    if(AutoY === "auto")
+        yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
     else
-        var xData = { min: XMin, max: XMax, type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+        yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
+
+    if(AutoX === "auto")
+        xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
+    else
+        xData = { min: XMin, max: XMax, type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
 
     var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
     var plotToolTip = {
@@ -278,8 +281,8 @@ function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,I
     {
         var Temp1 = InXMin.split("-");
         var Temp2 = InXMax.split("-");
-        XMin      = Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
-        XMax      = Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
+        XMin      = new Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
+        XMax      = new Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
     }
     return;
 }

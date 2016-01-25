@@ -57,11 +57,12 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
     var modelList = model.split(":");
     var measureList = measure.split(":");
     var classbreaks = classes.split(":");
+    var idx;
 
-    if(DynamicColor == "off")
+    if(DynamicColor === "off")
     {
-        var ScatterData = new Array();
-        for(var idx=0;idx<modelList.length;idx++)
+        var ScatterData = [];
+        for(idx=0;idx<modelList.length;idx++)
         {
             if(Number(modelList[idx])>-9999)
                 ScatterData[idx] = [ Number(measureList[idx]), Number(modelList[idx]) ];
@@ -69,16 +70,16 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
     }
     else
     {
-        var Scatter_Class0 = new Array();
-        var Scatter_Class1 = new Array();
-        var Scatter_Class2 = new Array();
-        var Scatter_Class3 = new Array();
-        var Scatter_Class4 = new Array();
-        var Scatter_Class5 = new Array();
-        var Scatter_Class6 = new Array();
-        var Scatter_Class7 = new Array();
-        var Scatter_Class8 = new Array();
-        var Length_Scatter = new Array();
+        var Scatter_Class0 = [];
+        var Scatter_Class1 = [];
+        var Scatter_Class2 = [];
+        var Scatter_Class3 = [];
+        var Scatter_Class4 = [];
+        var Scatter_Class5 = [];
+        var Scatter_Class6 = [];
+        var Scatter_Class7 = [];
+        var Scatter_Class8 = [];
+        var Length_Scatter = [];
         Length_Scatter[0] = 0;
         Length_Scatter[1] = 0;
         Length_Scatter[2] = 0;
@@ -90,7 +91,7 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
         Length_Scatter[8] = 0;
 
 
-        for(var idx=0;idx<modelList.length;idx++)
+        for(idx=0;idx<modelList.length;idx++)
         {
             if(Number(modelList[idx])<-100)
             {
@@ -162,11 +163,13 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
                 }
             };
 
-    if(DynamicColor == "off")
+    var seriesList;
+
+    if(DynamicColor === "off")
     {
-        if(PlotUpperLowerLines == 1)
+        if(PlotUpperLowerLines === 1)
         {
-            var seriesList = [{
+            seriesList = [{
                     type: 'line',
                     name: 'Lower Bound',
                     data: [[0,-BoundValue],[MX,MX-BoundValue]],
@@ -215,7 +218,7 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
         }
         else
         {
-            var seriesList = [{
+            seriesList = [{
                     type: 'line',
                     name: '1:1 Line',
                     data: [[0,0],[MX,MX]],
@@ -245,9 +248,9 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
     }
     else
     {
-        if(PlotUpperLowerLines == 1)
+        if(PlotUpperLowerLines === 1)
         {
-            var seriesList = [{
+            seriesList = [{
                     type: 'line',
                     name: 'Lower Bound',
                     data: [[0,-BoundValue],[MX,MX-BoundValue]],
@@ -352,7 +355,7 @@ function plotRegression(model,measure,unit,maximum,slope,intercept,corr,PlotUppe
         }
         else
         {
-            var seriesList = [{
+            seriesList = [{
                     type: 'line',
                     name: '1:1 Line',
                     data: [[0,0],[MX,MX]],
