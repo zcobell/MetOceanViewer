@@ -34,7 +34,6 @@ SOURCES += src/main.cpp\
     src/ui_usgs_tab.cpp \
     src/hwm_data.cpp \
     src/hwm_functions.cpp \
-    src/noaa_functions.cpp \
     src/usgs_functions.cpp \
     src/general_functions.cpp \
     src/timeseries_data.cpp \
@@ -43,7 +42,8 @@ SOURCES += src/main.cpp\
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
     src/fileio.cpp \
-    src/MetOceanViewer_main.cpp
+    src/MetOceanViewer_main.cpp \
+    src/noaa.cpp
 
 HEADERS  += \
     include/hwm.h \
@@ -51,7 +51,8 @@ HEADERS  += \
     include/timeseries.h \
     include/about_dialog.h \
     version.h \
-    include/MetOceanViewer.h
+    include/MetOceanViewer.h \
+    include/noaa.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

@@ -219,10 +219,6 @@ private:
 
     int NETCDF_ERR(int status);
 
-    void ReadNOAAResponse(QNetworkReply *reply, int index, int index2);
-
-    void PlotNOAAResponse();
-
     void ReadUSGSDataFinished(QNetworkReply*);
 
     void PlotUSGS();
@@ -250,10 +246,7 @@ extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
-extern int NOAAMarkerID;
 extern int NumNOAADataRead;
-extern double CurrentNOAALat,CurrentNOAALon;
-extern QString CurrentNOAAStationName;
 extern QString USGSMarkerID;
 extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
@@ -262,7 +255,6 @@ extern int USGSdataMethod;
 extern QVector< QVector<NOAAStationData> > CurrentNOAAStation;
 extern QVector<NOAAStationData> USGSPlot;
 extern QVector<USGSData> CurrentUSGSStation;
-extern QVector< QVector<QByteArray> > NOAAWebData;
 //-------------------------------------------//
 
 
