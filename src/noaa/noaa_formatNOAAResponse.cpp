@@ -50,7 +50,7 @@ QString noaa::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString,
     for(i=0;i<DataList.length();i++)
         dataCount = dataCount+DataList[i].length()-1;
 
-    CurrentNOAAStation[index].resize(dataCount);
+    this->CurrentNOAAStation[index].resize(dataCount);
 
     k = 0;
     for(j=0;j<DataList.length();j++)

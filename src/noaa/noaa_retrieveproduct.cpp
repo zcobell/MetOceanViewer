@@ -25,10 +25,9 @@
 int noaa::retrieveProduct(int type, QString &Product, QString &Product2)
 {
     Product2 = "null";
-    int index = this->ProductIndex;
     if(type==1)
     {
-        switch(index)
+        switch(this->ProductIndex)
         {
             case(0):Product = "6 Min Observed Water Level vs. Predicted"; break;
             case(1):Product = "6 Min Observed Water Level"; break;
@@ -43,7 +42,7 @@ int noaa::retrieveProduct(int type, QString &Product, QString &Product2)
     }
     else if(type==2)
     {
-        switch(index)
+        switch(this->ProductIndex)
         {
             case(0):Product = "water_level"; Product2 = "predictions"; break;
             case(1):Product = "water_level"; break;

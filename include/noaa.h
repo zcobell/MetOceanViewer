@@ -10,11 +10,14 @@
 #include <QtNetwork>
 #include <QVector>
 
-class noaa : public QMainWindow
+class noaa : public QObject
 {
 public:
-    //...Initializer
-    noaa();
+    //...Constructor
+    noaa(QObject *parent = 0);
+
+    //...Destructor
+    ~noaa();
 
     //...Public Functions
     int fetchNOAAData(QVector<QString> &javascript);

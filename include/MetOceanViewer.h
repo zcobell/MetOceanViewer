@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------//
         
-#ifndef ADCVALIDATOR_H
-#define ADCVALIDATOR_H
+#ifndef METOCEANVIEWER_H
+#define METOCEANVIEWER_H
 
 #include <noaa.h>
 #include <QMainWindow>
@@ -240,18 +240,13 @@ bool isConnectedToNetwork();
 //code
 //-------------------------------------------//
 extern QString PreviousDirectory;
-extern QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 extern QColor LineColor121Line,LineColorBounds;
 extern QColor DotColorHWM,LineColorRegression;
 extern QDateTime IMEDSMinDate,IMEDSMaxDate;
-extern QVector<QVector<double> > NOAAStations;
-extern QVector<QString> NOAAStationNames;
-extern QVector<QString> panToLocations;
 extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
-extern int NumNOAADataRead;
 extern QString USGSMarkerID;
 extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
@@ -262,4 +257,4 @@ extern QVector<USGSData> CurrentUSGSStation;
 //-------------------------------------------//
 
 
-#endif // ADCVALIDATOR_H
+#endif // METOCEANVIEWER_H

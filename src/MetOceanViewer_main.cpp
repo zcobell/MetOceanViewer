@@ -64,6 +64,9 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     //Setup UI
     ui->setupUi(this);
     setupMetOceanViewerUI();
+
+    //Initialize some things
+    this->thisNOAA = NULL;
 }
 
 //Main destructor routine

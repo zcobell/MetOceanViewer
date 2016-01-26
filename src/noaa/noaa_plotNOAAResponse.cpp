@@ -28,11 +28,11 @@ int noaa::PlotNOAAResponse(QVector<QString> &javascript)
     QString tempJava;
     int i;
 
-    for(i=0;i<CurrentNOAAStation.length();i++)
-        CurrentNOAAStation[i].clear();
-    CurrentNOAAStation.clear();
+    for(i=0;i<this->CurrentNOAAStation.length();i++)
+        this->CurrentNOAAStation[i].clear();
+    this->CurrentNOAAStation.clear();
 
-    CurrentNOAAStation.resize(NOAAWebData.length());
+    this->CurrentNOAAStation.resize(NOAAWebData.length());
 
     NOAAData.resize(NOAAWebData.length());
     Error.resize(NOAAWebData.length());
