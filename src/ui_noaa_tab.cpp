@@ -210,7 +210,8 @@ void MainWindow::on_Button_FetchData_clicked()
     QVector<QString> javascript;
 
     //...Create a new NOAA object
-    delete thisNOAA;
+    if(!thisNOAA.isNull())
+        delete thisNOAA;
     thisNOAA = new noaa(this);
 
     //...Grab the station from the javascript
@@ -247,7 +248,7 @@ void MainWindow::on_Button_FetchData_clicked()
     ui->statusBar->showMessage("Plotting the data from NOAA...");
 
     //...Generate the javascript to plot the data
-    ierr = thisNOAA->PlotNOAAResponse(javascript);
+    ierr = thisNOAA->plotNOAAResponse(javascript);
 
     //...Execute the javascript
     for(i=0;i<javascript.length();i++)
@@ -259,7 +260,7 @@ void MainWindow::on_Button_FetchData_clicked()
     ui->statusBar->clearMessage();
     QApplication::restoreOverrideCursor();
 
-
+    return;
 }
 //-------------------------------------------//
 

@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------//
 #include <noaa.h>
 
-int noaa::PlotNOAAResponse(QVector<QString> &javascript)
+int noaa::plotNOAAResponse(QVector<QString> &javascript)
 {
     QVector<QString> NOAAData,Error;
     QString tempJava;
@@ -39,7 +39,7 @@ int noaa::PlotNOAAResponse(QVector<QString> &javascript)
     javascript.resize(NOAAWebData.length()+1);
     for(i=0;i<NOAAWebData.length();i++)
     {
-        NOAAData[i] = this->FormatNOAAResponse(this->NOAAWebData[i],Error[i],i);
+        NOAAData[i] = this->formatNOAAResponse(this->NOAAWebData[i],Error[i],i);
         Error[i].remove(QRegExp("[\\n\\t\\r]"));
         tempJava="AddDataSeries("+QString::number(i)+","+NOAAData[i]+",'"+Error[i]+"')";
         javascript[i] = tempJava;

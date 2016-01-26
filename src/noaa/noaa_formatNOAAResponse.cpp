@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------//
 #include <noaa.h>
 
-QString noaa::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString,int index)
+QString noaa::formatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString,int index)
 {
     int i,j,k;
     int dataCount;

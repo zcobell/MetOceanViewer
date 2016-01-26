@@ -37,16 +37,6 @@ QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 QColor LineColor121Line,LineColorBounds;
 QColor DotColorHWM,LineColorRegression;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
-QString USGSMarkerID = "none";
-double CurrentNOAALat,CurrentNOAALon;
-double CurrentUSGSLat,CurrentUSGSLon;
-QString CurrentUSGSStationName;
-QString USGSErrorString;
-QVector<USGSData> CurrentUSGSStation;
-QVector<NOAAStationData> USGSPlot;
-bool USGSbeenPlotted = false;
-bool USGSdataReady = false;
-int USGSdataMethod= 0;
 
 //Some flags that we'll use later. These are just
 //values we might need to search for at some point
