@@ -210,12 +210,12 @@ void MainWindow::on_Button_FetchData_clicked()
     QVector<QString> javascript;
 
     //...Create a new NOAA object
+    delete thisNOAA;
     thisNOAA = new noaa(this);
 
     //...Grab the station from the javascript
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
-
 
     //...Grab the options from the UI
     thisNOAA->NOAAMarkerID = evalList.value(0).toInt();
