@@ -35,7 +35,7 @@ int noaa::fetchNOAAData(QVector<QString> &javascript)
     javascript.resize(5);
 
     if(this->StartDate==this->EndDate||this->EndDate<this->StartDate)
-        return NOAA_ERR_INVALIDDATERANGE;
+        return ERR_NOAA_INVALIDDATERANGE;
 
     //Begin organizing the dates for download
     Duration = StartDate.daysTo(EndDate);
@@ -105,7 +105,7 @@ int noaa::fetchNOAAData(QVector<QString> &javascript)
             connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
             connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
             loop.exec();
-            this->ReadNOAAResponse(reply,i,j);
+            this->readNOAAResponse(reply,i,j);
 
         }
     }

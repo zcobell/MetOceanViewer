@@ -41,29 +41,36 @@ void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked()
 {
-    QEventLoop loop;
-    QString RequestURL,USGSMarkerString;
-    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
-    QDateTime startDate,endDate;
-    QString startDateString1,endDateString1;
-    QString startDateString2,endDateString2;
+    int i,ierr;
+    QString USGSMarkerString;
+    QString javascript;
 
-    USGSbeenPlotted = false;
-    USGSdataReady = false;
+    //...Create a new USGS object
+    if(!thisUSGS.isNull())
+        delete thisUSGS;
+    thisUSGS = new usgs(this);
 
-    //Display the wait cursor
+    //...Check the data type
+    if(ui->radio_usgs_instant->isChecked())
+        thisUSGS->USGSdataMethod = 1;
+    else if(ui->radio_usgsDaily->isChecked())
+        thisUSGS->USGSdataMethod = 2;
+    else
+        thisUSGS->USGSdataMethod = 0;
+
+    //...Display the wait cursor
     QApplication::setOverrideCursor(Qt::WaitCursor);
-
     ui->statusBar->showMessage("Downloading data from USGS...");
 
-    //Wipe out the combo box
+    //...Wipe out the combo box
     ui->combo_USGSProduct->clear();
 
-    //Retrieve info from google maps
+    //...Retrieve info from google maps
     QVariant eval = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
+    thisUSGS->USGSMarkerString = evalList.value(0).mid(4);
 
-    //Sanity Check
+    //...Sanity Check
     if(evalList.value(0)=="none")
     {
         QMessageBox::warning(this,"Warning","No station has been selected.");
@@ -72,38 +79,47 @@ void MainWindow::on_button_usgs_fetch_clicked()
         return;
     }
 
-    //Get the station information
-    USGSMarkerString = evalList.value(0).mid(4);
-    USGSMarkerID = USGSMarkerString;
-    CurrentUSGSStationName = evalList.value(1).simplified();
-    CurrentUSGSLon = evalList.value(2).toDouble();
-    CurrentUSGSLat = evalList.value(3).toDouble();
+    //...Store the station information
+    thisUSGS->USGSMarkerID = USGSMarkerString;
+    thisUSGS->CurrentUSGSStationName = evalList.value(1).simplified();
+    thisUSGS->CurrentUSGSLon = evalList.value(2).toDouble();
+    thisUSGS->CurrentUSGSLat = evalList.value(3).toDouble();
 
-    //Get the time period for the data
-    endDate = ui->Date_usgsEnd->dateTime();
-    startDate = ui->Date_usgsStart->dateTime();
-    endDateString1 = "&endDT="+endDate.toString("yyyy-MM-dd");
-    startDateString1 = "&startDT="+startDate.toString("yyyy-MM-dd");
-    endDateString2 = "&end_date="+endDate.toString("yyyy-MM-dd");
-    startDateString2 = "&begin_date="+startDate.toString("yyyy-MM-dd");
+    //...Get the time period for the data
+    thisUSGS->requestEndDate = ui->Date_usgsEnd->dateTime();
+    thisUSGS->requestStartDate = ui->Date_usgsStart->dateTime();
 
-    //Construct the correct request URL
-    if(USGSdataMethod==0)
-        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+USGSMarkerString+startDateString2+endDateString2;
-    else if(USGSdataMethod==1)
-        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
+    //...Grab the data from the server
+    ierr = thisUSGS->fetchUSGSData();
+    if(ierr!=0)
+    {
+        QApplication::restoreOverrideCursor();
+        ui->statusBar->clearMessage();
+        QMessageBox::critical(this,"ERROR",thisUSGS->USGSErrorString);
+        return;
+    }
+
+    //...Update the combo box
+    for(i=0;i<thisUSGS->Parameters.length();i++)
+        ui->combo_USGSProduct->addItem(thisUSGS->Parameters[i]);
+    ui->combo_USGSProduct->setCurrentIndex(0);
+    thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
+
+    //...Plot the first series
+    ierr = thisUSGS->plotUSGS(javascript);
+    if(ierr==0)
+        ui->usgs_map->page()->mainFrame()->evaluateJavaScript(javascript);
     else
-        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
+    {
+        QApplication::restoreOverrideCursor();
+        ui->statusBar->clearMessage();
+        QMessageBox::critical(this,"ERROR",thisUSGS->USGSErrorString);
+        return;
+    }
 
-    //Make the request to the server
-    QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
-    connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
-    connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
-    loop.exec();
-    ReadUSGSDataFinished(reply);
-
-    //Restore the mouse pointer
+    //...Restore the mouse pointer
     QApplication::restoreOverrideCursor();
+    ui->statusBar->clearMessage();
 
     return;
 }
@@ -117,7 +133,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked()
 {
-    USGSdataMethod = 1;
+    thisUSGS->USGSBeenPlotted = false;
     ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
 
@@ -138,7 +154,7 @@ void MainWindow::on_radio_usgs_instant_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked()
 {
-    USGSdataMethod = 2;
+    thisUSGS->USGSBeenPlotted = false;
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
@@ -152,9 +168,29 @@ void MainWindow::on_radio_usgsDaily_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked()
 {
-    USGSdataMethod = 0;
+    thisUSGS->USGSBeenPlotted = false;
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Fires when the combo box is changed and
+//plots the data immediately
+//-------------------------------------------//
+void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
+{
+    QString javascript;
+    thisUSGS->USGSBeenPlotted = false;
+    if(thisUSGS->USGSDataReady)
+    {
+        thisUSGS->ProductIndex = index;
+        thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
+        thisUSGS->plotUSGS(javascript);
+        ui->usgs_map->page()->mainFrame()->evaluateJavaScript(javascript);
+    }
     return;
 }
 //-------------------------------------------//

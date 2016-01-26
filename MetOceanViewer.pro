@@ -49,7 +49,14 @@ SOURCES += src/main.cpp\
     src/noaa/noaa_formatNOAAResponse.cpp \
     src/noaa/noaa_plotNOAAResponse.cpp \
     src/noaa/noaa_readNOAAResponse.cpp \
-    src/noaa/noaa_retrieveproduct.cpp
+    src/noaa/noaa_retrieveproduct.cpp \
+    src/usgs/usgs.cpp \
+    src/usgs/usgs_fetchUSGSData.cpp \
+    src/usgs/usgs_formastUSGSInstantResponse.cpp \
+    src/usgs/usgs_readUSGSDataFinished.cpp \
+    src/usgs/usgs_formatUSGSDailyResponse.cpp \
+    src/usgs/usgs_getTimezone.cpp \
+    src/usgs/usgs_plotUSGS.cpp
 
 HEADERS  += \
     include/hwm.h \
@@ -60,7 +67,8 @@ HEADERS  += \
     include/MetOceanViewer.h \
     include/noaa.h \
     include/mov_errors.h \
-    include/mov_flags.h 
+    include/mov_flags.h \ 
+    include/usgs.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
@@ -73,7 +81,7 @@ OTHER_FILES +=
 INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
 #...Compiler dependent options
-DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
+DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" EBUG
 
 #...Microsoft Visual C++ compilers
 *msvc* {

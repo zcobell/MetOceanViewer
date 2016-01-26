@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------//
 #include <noaa.h>
 
-void noaa::ReadNOAAResponse(QNetworkReply *reply, int index, int index2)
+void noaa::readNOAAResponse(QNetworkReply *reply, int index, int index2)
 {
     QByteArray Data;
 

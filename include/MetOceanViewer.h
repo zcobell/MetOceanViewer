@@ -24,7 +24,6 @@
 #ifndef METOCEANVIEWER_H
 #define METOCEANVIEWER_H
 
-#include <noaa.h>
 #include <QMainWindow>
 #include <QtWebKitWidgets>
 #include <QNetworkInterface>
@@ -33,36 +32,14 @@
 #include <QVector>
 #include <QFileDialog>
 #include <QColorDialog>
+#include <noaa.h>
+#include <usgs.h>
 #include <timeseries.h>
 
 
 //...Forward Declarations of classes
 class noaa;
-
-//-------------------------------------------//
-//Data structures
-//-------------------------------------------//
-
-//-------------------------------------------//
-//Structure that holds the data downloaded
-//from the USGS website
-//-------------------------------------------//
-struct USGSData
-{
-    int NumDataPoints;
-    QString Description;
-    QVector<QDateTime> Date;
-    QVector<double> Data;
-};
-//-------------------------------------------//
-
-//...Structures
-struct NOAAStationData
-{
-    QDate Date;
-    QTime Time;
-    double value;
-};
+class usgs;
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -96,8 +73,6 @@ public:
     void delay(int delayTime);
 
     void delayM(int delayTime);
-
-    noaa *thisNOAA;
 
 private slots:
 
@@ -167,8 +142,6 @@ private slots:
 
     void on_button_usgs_fetch_clicked();
 
-    int GetTimezoneOffset(QString timezone);
-
     void on_button_usgssavemap_clicked();
 
     void on_button_usgssavedata_clicked();
@@ -200,17 +173,11 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    void FormatUSGSInstantResponse(QByteArray Input);
-
-    void FormatUSGSDailyResponse(QByteArray Input);
-
     void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
 
     void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
 
     int ClassifyHWM(double diff);
-
-    int retrieveProduct(int type, QString &Product, QString &Product2);
 
     void SetupTimeseriesTable();
 
@@ -224,9 +191,10 @@ private:
 
     int NETCDF_ERR(int status);
 
-    void ReadUSGSDataFinished(QNetworkReply*);
+    QPointer<noaa> thisNOAA;
 
-    void PlotUSGS();
+    QPointer<usgs> thisUSGS;
+
 };
 
 //-------------------------------------------//
@@ -247,13 +215,6 @@ extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
-extern QString USGSMarkerID;
-extern double CurrentUSGSLat,CurrentUSGSLon;
-extern QString CurrentUSGSStationName,USGSErrorString;
-extern bool USGSbeenPlotted,USGSdataReady,USGSDataReadFinished;
-extern int USGSdataMethod;
-extern QVector<NOAAStationData> USGSPlot;
-extern QVector<USGSData> CurrentUSGSStation;
 //-------------------------------------------//
 
 
