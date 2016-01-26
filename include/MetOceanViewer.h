@@ -24,6 +24,7 @@
 #ifndef ADCVALIDATOR_H
 #define ADCVALIDATOR_H
 
+#include <noaa.h>
 #include <QMainWindow>
 #include <QtWebKitWidgets>
 #include <QNetworkInterface>
@@ -34,18 +35,12 @@
 #include <QColorDialog>
 #include <timeseries.h>
 
+
+//...Forward Declarations of classes
+class noaa;
+
 //-------------------------------------------//
 //Data structures
-//-------------------------------------------//
-//Structure that holds data downloaded from
-//the NOAA website
-//-------------------------------------------//
-struct NOAAStationData
-{
-    QDate Date;
-    QTime Time;
-    double value;
-};
 //-------------------------------------------//
 
 //-------------------------------------------//
@@ -60,6 +55,14 @@ struct USGSData
     QVector<double> Data;
 };
 //-------------------------------------------//
+
+//...Structures
+struct NOAAStationData
+{
+    QDate Date;
+    QTime Time;
+    double value;
+};
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -94,7 +97,11 @@ public:
 
     void delayM(int delayTime);
 
+    noaa *thisNOAA;
+
 private slots:
+
+    void setupMetOceanViewerUI();
 
     void on_Button_FetchData_clicked();
 
@@ -193,8 +200,6 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    QString FormatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
-
     void FormatUSGSInstantResponse(QByteArray Input);
 
     void FormatUSGSDailyResponse(QByteArray Input);
@@ -252,7 +257,6 @@ extern double CurrentUSGSLat,CurrentUSGSLon;
 extern QString CurrentUSGSStationName,USGSErrorString;
 extern bool USGSbeenPlotted,USGSdataReady,USGSDataReadFinished;
 extern int USGSdataMethod;
-extern QVector< QVector<NOAAStationData> > CurrentNOAAStation;
 extern QVector<NOAAStationData> USGSPlot;
 extern QVector<USGSData> CurrentUSGSStation;
 //-------------------------------------------//
