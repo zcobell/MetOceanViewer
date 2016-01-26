@@ -1,0 +1,8 @@
+#ifndef MOV_ERRORS_H
+#define MOV_ERRORS_H
+
+#define NOAA_ERR_INVALIDDATERANGE -9990
+
+
+#endif // ERRORS_H
+

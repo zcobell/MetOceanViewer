@@ -42,7 +42,7 @@ void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 void MainWindow::on_button_noaasavechart_clicked()
 {
 
-    if(NOAAMarkerID==-1)
+    if(this->thisNOAA->NOAAMarkerID==-1)
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
@@ -50,14 +50,14 @@ void MainWindow::on_button_noaasavechart_clicked()
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
     int NOAAMarkerID2 = evalList.value(0).toInt();
-    if(NOAAMarkerID != NOAAMarkerID2)
+    if(this->thisNOAA->NOAAMarkerID != NOAAMarkerID2)
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
         return;
     }
 
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString DefaultFile = "/NOAA_"+QString::number(NOAAMarkerID)+".jpg";
+    QString DefaultFile = "/NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+".jpg";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
 
@@ -84,7 +84,7 @@ void MainWindow::on_button_noaasavedata_clicked()
     int index;
     QString Filename2,Filename3;
 
-    if(NOAAMarkerID==-1)
+    if(this->thisNOAA->NOAAMarkerID==-1)
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
@@ -92,14 +92,14 @@ void MainWindow::on_button_noaasavedata_clicked()
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
     int NOAAMarkerID2 = evalList.value(0).toInt();
-    if(NOAAMarkerID != NOAAMarkerID2)
+    if(this->thisNOAA->NOAAMarkerID != NOAAMarkerID2)
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
         return;
     }
 
     QString filter;
-    QString DefaultFile = "/NOAA_"+QString::number(NOAAMarkerID)+".imeds";
+    QString DefaultFile = "/NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+".imeds";
     QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,
                                                     "IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
@@ -111,9 +111,9 @@ void MainWindow::on_button_noaasavedata_clicked()
     GetLeadingPath(Filename);
     Filename2 = RemoveLeadingPath(Filename);
 
-    for(index=0;index<CurrentNOAAStation.length();index++)
+    for(index=0;index<thisNOAA->CurrentNOAAStation.length();index++)
     {
-        if(CurrentNOAAStation.length()==2)
+        if(thisNOAA->CurrentNOAAStation.length()==2)
         {
             if(index==1)
                 Filename3 = PreviousDirectory+"/Observation_"+Filename2;
@@ -130,15 +130,15 @@ void MainWindow::on_button_noaasavedata_clicked()
 
         if(format.compare("CSV")==0)
         {
-            Output << "Station: "+QString::number(NOAAMarkerID)+"\n";
+            Output << "Station: "+QString::number(this->thisNOAA->NOAAMarkerID)+"\n";
             Output << "Datum: "+ui->combo_noaadatum->currentText()+"\n";
             Output << "Units: "+ui->combo_noaaunits->currentText()+"\n";
             Output << "\n";
-            for(int i=0;i<CurrentNOAAStation.length();i++)
+            for(int i=0;i<thisNOAA->CurrentNOAAStation.length();i++)
             {
-                Output << CurrentNOAAStation[index][i].Date.toString("MM/dd/yyyy")+","+
-                          CurrentNOAAStation[index][i].Time.toString("hh:mm")+","+
-                          QString::number(CurrentNOAAStation[index][i].value)+"\n";
+                Output << thisNOAA->CurrentNOAAStation[index][i].Date.toString("MM/dd/yyyy")+","+
+                          thisNOAA->CurrentNOAAStation[index][i].Time.toString("hh:mm")+","+
+                          QString::number(thisNOAA->CurrentNOAAStation[index][i].value)+"\n";
             }
         }
         else if(format.compare("IMEDS")==0)
@@ -159,17 +159,18 @@ void MainWindow::on_button_noaasavedata_clicked()
             Output << "% IMEDS generic format - Water Level\n";
             Output << "% year month day hour min sec watlev("+units2+")\n";
             Output << "NOAA    UTC    "+datum+"\n";
-            Output << "NOAA_"+QString::number(NOAAMarkerID)+"   "+QString::number(CurrentNOAALat)+
-                      "   "+QString::number(CurrentNOAALon)+"\n";
-            for(int i=0;i<CurrentNOAAStation[index].length();i++)
+            Output << "NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+
+                      "   "+QString::number(this->thisNOAA->CurrentNOAALat)+
+                      "   "+QString::number(this->thisNOAA->CurrentNOAALon)+"\n";
+            for(int i=0;i<thisNOAA->CurrentNOAAStation[index].length();i++)
             {
-                Output << CurrentNOAAStation[index][i].Date.toString("yyyy")+"    "+
-                            CurrentNOAAStation[index][i].Date.toString("MM")+"    "+
-                            CurrentNOAAStation[index][i].Date.toString("dd")+"    "+
-                            CurrentNOAAStation[index][i].Time.toString("hh")+"    "+
-                            CurrentNOAAStation[index][i].Time.toString("mm")+"    "+
+                Output << thisNOAA->CurrentNOAAStation[index][i].Date.toString("yyyy")+"    "+
+                            thisNOAA->CurrentNOAAStation[index][i].Date.toString("MM")+"    "+
+                            thisNOAA->CurrentNOAAStation[index][i].Date.toString("dd")+"    "+
+                            thisNOAA->CurrentNOAAStation[index][i].Time.toString("hh")+"    "+
+                            thisNOAA->CurrentNOAAStation[index][i].Time.toString("mm")+"    "+
                                                             "00" +"    "+
-                            QString::number(CurrentNOAAStation[index][i].value)+"\n";
+                            QString::number(thisNOAA->CurrentNOAAStation[index][i].value)+"\n";
             }
 
         }
@@ -203,30 +204,57 @@ void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_Button_FetchData_clicked()
 {
-    //Display the wait cursor
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    //Update status
-    ui->statusBar->showMessage("Downloading data from NOAA...",0);
+    int i,ierr;
+    QVector<QString> javascript;
 
     //...Create a new NOAA object
-    noaa *NoaaData = new noaa();
+    thisNOAA = new noaa();
 
     //...Grab the station from the javascript
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
 
     //...Grab the options from the UI
-    NoaaData->NOAAMarkerID = evalList.value(0).toInt();
-    NoaaData->CurrentNOAAStationName = evalList.value(1).simplified();
-    NoaaData->CurrentNOAALat = evalList.value(3).toDouble();
-    NoaaData->CurrentNOAALon = evalList.value(2).toDouble();
-    NoaaData->StartDate = ui->Date_StartTime->dateTime();
-    NoaaData->EndDate = ui->Date_EndTime->dateTime();
-    NoaaData->Units = ui->combo_noaaunits->currentText();
-    NoaaData->Datum = ui->combo_noaadatum->currentText();
-    NoaaData->ProductIndex = ui->combo_NOAAProduct->currentIndex();
+    thisNOAA->NOAAMarkerID = evalList.value(0).toInt();
+    thisNOAA->CurrentNOAAStationName = evalList.value(1).simplified();
+    thisNOAA->CurrentNOAALat = evalList.value(3).toDouble();
+    thisNOAA->CurrentNOAALon = evalList.value(2).toDouble();
+    thisNOAA->StartDate = ui->Date_StartTime->dateTime();
+    thisNOAA->EndDate = ui->Date_EndTime->dateTime();
+    thisNOAA->Units = ui->combo_noaaunits->currentText();
+    thisNOAA->Datum = ui->combo_noaadatum->currentText();
+    thisNOAA->ProductIndex = ui->combo_NOAAProduct->currentIndex();
 
+    //Display the wait cursor
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    //Update status
+    ui->statusBar->showMessage("Downloading data from NOAA...",0);
+
+    //...Generate the javascript calls in this array
+    ierr = thisNOAA->fetchNOAAData(javascript);
+
+    //...Execute the javascript
+    for(i=0;i<javascript.length();i++)
+        if(javascript[i]!=QString())
+            ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript[i]);
+    javascript.clear();
+
+    //...Update the status bar
+    ui->statusBar->showMessage("Plotting the data from NOAA...");
+
+    //...Generate the javascript to plot the data
+    ierr = thisNOAA->PlotNOAAResponse(javascript);
+
+    //...Execute the javascript
+    for(i=0;i<javascript.length();i++)
+        if(javascript[i]!=QString())
+            ui->noaa_map->page()->mainFrame()->evaluateJavaScript(javascript[i]);
+    javascript.clear();
+
+    //...Clear messages and cursors
+    ui->statusBar->clearMessage();
+    QApplication::restoreOverrideCursor();
 
 }
 //-------------------------------------------//

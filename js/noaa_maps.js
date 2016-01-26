@@ -220,6 +220,8 @@ function PlotTimeseries()
     var Data = [];
     var contentString;
     var ThisData;
+    var ThisDate;
+
 
     if(DataSeries[0].length<5)
     {
@@ -235,7 +237,7 @@ function PlotTimeseries()
         for(j=0;j<DataSeries[i].length-1;j++)
         {
             Data[i][j] = [];
-            ThisDate = new Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
+            ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
                                 Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3]),
                                 Number(DataSeries[i][j][4]),0,0);
             Data[i][j][0] = ThisDate;

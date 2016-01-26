@@ -43,7 +43,13 @@ SOURCES += src/main.cpp\
     src/about_dialog.cpp \
     src/fileio.cpp \
     src/MetOceanViewer_main.cpp \
-    src/noaa.cpp
+    src/setupMetOceanViewerUI.cpp \
+    src/noaa/noaa.cpp \
+    src/noaa/fetchNOAAData.cpp \
+    src/noaa/readNOAAResponse.cpp \
+    src/noaa/plotNOAAResponse.cpp \
+    src/noaa/formatNOAAResponse.cpp \
+    src/noaa/retrieveproduct.cpp
 
 HEADERS  += \
     include/hwm.h \
@@ -52,7 +58,9 @@ HEADERS  += \
     include/about_dialog.h \
     version.h \
     include/MetOceanViewer.h \
-    include/noaa.h
+    include/noaa.h \
+    include/mov_errors.h \
+    include/mov_flags.h 
 
 FORMS    += \
     ui/timeseries_add_data.ui \

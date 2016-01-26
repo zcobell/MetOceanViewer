@@ -167,7 +167,7 @@ function PlotTimeseries()
         for(j=0;j<DataSeries[i].length-1;j++)
         {
             Data[i][j] = [];
-            ThisDate = new Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
+            ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
                                 Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3])+plusX,
                                 Number(DataSeries[i][j][4]),0,0);
             Data[i][j][0] = ThisDate;
@@ -281,8 +281,8 @@ function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,I
     {
         var Temp1 = InXMin.split("-");
         var Temp2 = InXMax.split("-");
-        XMin      = new Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
-        XMax      = new Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
+        XMin      = Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
+        XMax      = Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
     }
     return;
 }

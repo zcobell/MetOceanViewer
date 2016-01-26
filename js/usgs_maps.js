@@ -207,7 +207,7 @@ function drawUSGSData(RawData,Product,YLabel,NData,ErrorString) {
     var ThisData;
     for( var idx=0;idx<USGSData.length;idx++)
     {
-        ThisDate = new Date.UTC(Number(USGSData[idx][0]),Number(USGSData[idx][1])-1,
+        ThisDate = Date.UTC(Number(USGSData[idx][0]),Number(USGSData[idx][1])-1,
                             Number(USGSData[idx][2]),Number(USGSData[idx][3]),
                             Number(USGSData[idx][4]),0,0);
         ThisData = Number(USGSData[idx][5]);
