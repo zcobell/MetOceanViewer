@@ -45,11 +45,11 @@ SOURCES += src/main.cpp\
     src/MetOceanViewer_main.cpp \
     src/setupMetOceanViewerUI.cpp \
     src/noaa/noaa.cpp \
-    src/noaa/fetchNOAAData.cpp \
-    src/noaa/readNOAAResponse.cpp \
-    src/noaa/plotNOAAResponse.cpp \
-    src/noaa/formatNOAAResponse.cpp \
-    src/noaa/retrieveproduct.cpp
+    src/noaa/noaa_fetchNOAAData.cpp \
+    src/noaa/noaa_formatNOAAResponse.cpp \
+    src/noaa/noaa_plotNOAAResponse.cpp \
+    src/noaa/noaa_readNOAAResponse.cpp \
+    src/noaa/noaa_retrieveproduct.cpp
 
 HEADERS  += \
     include/hwm.h \

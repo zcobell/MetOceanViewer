@@ -70,9 +70,9 @@ QString noaa::FormatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString,
             Output=Output+YearS+":"+MonthS+":"+
                    DayS+":"+HourS+":"+MinS+":"+WLS+";";
             TempData = YearS+"/"+MonthS+"/"+DayS;
-            CurrentNOAAStation[index][k].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
-            CurrentNOAAStation[index][k].Time = QTime(HourS.toInt(),MinS.toInt(),0);
-            CurrentNOAAStation[index][k].value = WLS.toDouble();
+            this->CurrentNOAAStation[index][k].Date.setDate(YearS.toInt(),MonthS.toInt(),DayS.toInt());
+            this->CurrentNOAAStation[index][k].Time = QTime(HourS.toInt(),MinS.toInt(),0);
+            this->CurrentNOAAStation[index][k].value = WLS.toDouble();
             k = k + 1;
         }
     }
