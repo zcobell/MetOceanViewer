@@ -83,6 +83,7 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     int index;
     QString Filename2,Filename3;
+    QString value;
 
     if(this->thisNOAA->NOAAMarkerID==-1)
     {
@@ -115,7 +116,7 @@ void MainWindow::on_button_noaasavedata_clicked()
     {
         if(thisNOAA->CurrentNOAAStation.length()==2)
         {
-            if(index==1)
+            if(index==0)
                 Filename3 = PreviousDirectory+"/Observation_"+Filename2;
             else
                 Filename3 = PreviousDirectory+"/Predictions_"+Filename2;
@@ -136,9 +137,10 @@ void MainWindow::on_button_noaasavedata_clicked()
             Output << "\n";
             for(int i=0;i<thisNOAA->CurrentNOAAStation.length();i++)
             {
+                value.sprintf("%10.4e",thisNOAA->CurrentNOAAStation[index][i].value);
                 Output << thisNOAA->CurrentNOAAStation[index][i].Date.toString("MM/dd/yyyy")+","+
                           thisNOAA->CurrentNOAAStation[index][i].Time.toString("hh:mm")+","+
-                          QString::number(thisNOAA->CurrentNOAAStation[index][i].value)+"\n";
+                          value+"\n";
             }
         }
         else if(format.compare("IMEDS")==0)
@@ -164,13 +166,13 @@ void MainWindow::on_button_noaasavedata_clicked()
                       "   "+QString::number(this->thisNOAA->CurrentNOAALon)+"\n";
             for(int i=0;i<thisNOAA->CurrentNOAAStation[index].length();i++)
             {
+                value.sprintf("%10.4e",thisNOAA->CurrentNOAAStation[index][i].value);
                 Output << thisNOAA->CurrentNOAAStation[index][i].Date.toString("yyyy")+"    "+
                             thisNOAA->CurrentNOAAStation[index][i].Date.toString("MM")+"    "+
                             thisNOAA->CurrentNOAAStation[index][i].Date.toString("dd")+"    "+
                             thisNOAA->CurrentNOAAStation[index][i].Time.toString("hh")+"    "+
                             thisNOAA->CurrentNOAAStation[index][i].Time.toString("mm")+"    "+
-                                                            "00" +"    "+
-                            QString::number(thisNOAA->CurrentNOAAStation[index][i].value)+"\n";
+                                                            "00" +"    "+value+"\n";
             }
 
         }
@@ -208,11 +210,12 @@ void MainWindow::on_Button_FetchData_clicked()
     QVector<QString> javascript;
 
     //...Create a new NOAA object
-    thisNOAA = new noaa();
+    thisNOAA = new noaa(this);
 
     //...Grab the station from the javascript
     QVariant eval = ui->noaa_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
     QStringList evalList = eval.toString().split(";");
+
 
     //...Grab the options from the UI
     thisNOAA->NOAAMarkerID = evalList.value(0).toInt();
@@ -255,6 +258,7 @@ void MainWindow::on_Button_FetchData_clicked()
     //...Clear messages and cursors
     ui->statusBar->clearMessage();
     QApplication::restoreOverrideCursor();
+
 
 }
 //-------------------------------------------//
