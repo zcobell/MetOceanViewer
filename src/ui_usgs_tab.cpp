@@ -29,7 +29,7 @@
 //-------------------------------------------//
 void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 {
-    ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
+    ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
     return;
 }
 //-------------------------------------------//
@@ -66,7 +66,8 @@ void MainWindow::on_button_usgs_fetch_clicked()
     ui->combo_USGSProduct->clear();
 
     //...Retrieve info from google maps
-    QVariant eval = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QVariant eval;
+    ui->usgs_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     QStringList evalList = eval.toString().split(";");
     thisUSGS->USGSMarkerString = evalList.value(0).mid(4);
 
@@ -108,7 +109,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
     //...Plot the first series
     ierr = thisUSGS->plotUSGS(javascript);
     if(ierr==0)
-        ui->usgs_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->usgs_map->page()->runJavaScript(javascript);
     else
     {
         QApplication::restoreOverrideCursor();
@@ -189,7 +190,7 @@ void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
         thisUSGS->ProductIndex = index;
         thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
         thisUSGS->plotUSGS(javascript);
-        ui->usgs_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->usgs_map->page()->runJavaScript(javascript);
     }
     return;
 }

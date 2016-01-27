@@ -48,7 +48,7 @@
 
 #include <mov_errors.h>
 #include <mov_flags.h>
-#include <QtWebKitWidgets>
+#include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QtNetwork>

@@ -563,7 +563,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWebView" name="noaa_map">
+             <widget class="QWebEngineView" name="noaa_map">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -1202,7 +1202,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWebView" name="usgs_map">
+             <widget class="QWebEngineView" name="usgs_map">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -2250,7 +2250,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QWebView" name="timeseries_map">
+             <widget class="QWebEngineView" name="timeseries_map">
               <property name="url">
                <url>
                 <string>qrc:/rsc/html/timeseries_maps.html</string>
@@ -3408,7 +3408,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
-             <widget class="QWebView" name="map_hwm">
+             <widget class="QWebEngineView" name="map_hwm">
               <property name="url">
                <url>
                 <string>qrc:/rsc/html/hwm_map.html</string>
@@ -3466,7 +3466,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
-             <widget class="QWebView" name="map_regression">
+             <widget class="QWebEngineView" name="map_regression">
               <property name="url">
                <url>
                 <string>qrc:/rsc/html/reg_plot.html</string>
@@ -3550,9 +3550,9 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>QWebView</class>
+   <class>QWebEngineView</class>
    <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
+   <header>QtWebEngineWidgets/QWebEngineView</header>
   </customwidget>
  </customwidgets>
  <tabstops>

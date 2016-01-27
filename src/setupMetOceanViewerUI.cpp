@@ -8,23 +8,19 @@ void MainWindow::setupMetOceanViewerUI()
     //Setting up the NOAA tab for the user
 
     //Turn plugins on
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
+    QWebEngineSettings::globalSettings()->setAttribute(QWebEngineSettings::PluginsEnabled, true);
 
     //Define which web page we will use from the resource included
     ui->noaa_map->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
-    //Turn off scroll bars
-    ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    ui->noaa_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-
     //Catch unsupported content coming from highcharts to download images for the user
-    ui->noaa_map->page()->setForwardUnsupportedContent(true);
-    connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    //ui->noaa_map->page()->setForwardUnsupportedContent(true);
+    //connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Tell Qt to delegate clicked links to the users dafault browser
-    ui->noaa_map->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-    connect( ui->noaa_map->page(), SIGNAL(linkClicked(const QUrl &)),
-                    this, SLOT(OpenExternalBrowser(const QUrl &)));
+    //ui->noaa_map->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
+    //connect( ui->noaa_map->page(), SIGNAL(linkClicked(const QUrl &)),
+    //                this, SLOT(OpenExternalBrowser(const QUrl &)));
 
     //For NOAA, set the default date/time to today and today minus 1
     ui->Date_StartTime->setDateTime(QDateTime::currentDateTime().addDays(-1));
@@ -46,8 +42,8 @@ void MainWindow::setupMetOceanViewerUI()
     ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
 
     //Catch unsupported content coming from highcharts to download images for the user
-    ui->usgs_map->page()->setForwardUnsupportedContent(true);
-    connect(ui->usgs_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    //ui->usgs_map->page()->setForwardUnsupportedContent(true);
+    //connect(ui->usgs_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
 
     //-------------------------------------------//
@@ -56,13 +52,9 @@ void MainWindow::setupMetOceanViewerUI()
     //Load the selected web page file from the resource
     ui->timeseries_map->load(QUrl("qrc:/rsc/html/timeseries_maps.html"));
 
-    //Turn off the scroll bars
-    ui->timeseries_map->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    ui->timeseries_map->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-
     //Catch unsupported content coming from highcharts to download images for the user
-    ui->timeseries_map->page()->setForwardUnsupportedContent(true);
-    connect(ui->timeseries_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    //ui->timeseries_map->page()->setForwardUnsupportedContent(true);
+    //connect(ui->timeseries_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Set the minimum and maximum times that can be selected
     ui->date_TimeseriesStartDate->setDateTime(ui->date_TimeseriesStartDate->minimumDateTime());
@@ -77,14 +69,14 @@ void MainWindow::setupMetOceanViewerUI()
     ui->map_regression->load(QUrl("qrc:/rsc/html/reg_plot.html"));
 
     //Turn off scroll bars
-    ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-    ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+    //ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
+    //ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+    //ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
+    //ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
 
     //Catch unsupported content coming from highcharts to download images for the user
-    ui->map_regression->page()->setForwardUnsupportedContent(true);
-    connect(ui->map_regression->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    //ui->map_regression->page()->setForwardUnsupportedContent(true);
+    //connect(ui->map_regression->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Set the colors that are being used on the display page for various
     //things that will be displayed
@@ -144,7 +136,7 @@ void MainWindow::setupMetOceanViewerUI()
 //If compiled with "-DEBUG", the QWebViews will have debugging enabled.
 #ifdef EBUG
     //Optional javascript/html debugging - disabled for release versions
-    QWebSettings::globalSettings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
+    //QWebEngineSettings::globalSettings()->setAttribute(QWebEngineSettings::DeveloperExtrasEnabled, true);
 #else
     //If not in debug mode, we turn off the right click options
     ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
