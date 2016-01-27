@@ -529,8 +529,10 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
     double units;
 
     //Get the marker ID from the page
-    QVariant eval;
+    QVariant eval = NULL;
     ui->timeseries_map->page()->runJavaScript("getMarker()",[&eval](const QVariant &v){eval = v;});
+    while(eval==NULL)
+        delayM(5);
     int markerID = eval.toInt();
 
     //Catch false marker number

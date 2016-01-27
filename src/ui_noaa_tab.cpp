@@ -48,8 +48,10 @@ void MainWindow::on_button_noaasavechart_clicked()
         return;
     }
 
-    QVariant eval;
+    QVariant eval = NULL;
     ui->noaa_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
+    while(eval==NULL)
+        delayM(5);
     QStringList evalList = eval.toString().split(";");
     int NOAAMarkerID2 = evalList.value(0).toInt();
     if(this->thisNOAA->NOAAMarkerID != NOAAMarkerID2)
@@ -92,8 +94,10 @@ void MainWindow::on_button_noaasavedata_clicked()
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
     }
-    QVariant eval;
+    QVariant eval = NULL;
     ui->noaa_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
+    while(eval==NULL)
+        delayM(5);
     QStringList evalList = eval.toString().split(";");
     int NOAAMarkerID2 = evalList.value(0).toInt();
     if(this->thisNOAA->NOAAMarkerID != NOAAMarkerID2)
@@ -218,8 +222,10 @@ void MainWindow::on_Button_FetchData_clicked()
     thisNOAA = new noaa(this);
 
     //...Grab the station from the javascript
-    QVariant eval;
+    QVariant eval = NULL;
     ui->noaa_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
+    while(eval==NULL)
+        delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     //...Grab the options from the UI
