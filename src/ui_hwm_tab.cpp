@@ -89,7 +89,7 @@ void MainWindow::on_button_processHWM_clicked()
     else
         unitString = "'m'";
 
-    ui->map_hwm->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
+    ui->map_hwm->page()->runJavaScript("clearMarkers()");
 
     //Sanity check on classes
     if(ui->check_manualHWM->isChecked())
@@ -140,7 +140,7 @@ void MainWindow::on_button_processHWM_clicked()
     MaximumValue = 0;
 
     //Make sure we are fresh for if this is a second round of plotting
-    ui->map_hwm->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
+    ui->map_hwm->page()->runJavaScript("clearMarkers()");
     ui->map_regression->reload();
 
     //Give the browsers a chance to catch up to us
@@ -168,7 +168,7 @@ void MainWindow::on_button_processHWM_clicked()
                 ","+QString::number(i)+","+QString::number(modeled)+","+QString::number(measurement)+
                 ","+QString::number(error)+","+QString::number(classification)+","+unitString+
                 ")";
-        ui->map_hwm->page()->mainFrame()->evaluateJavaScript(Marker);
+        ui->map_hwm->page()->runJavaScript(Marker);
         if(i==0)
         {
             ModeledString = QString::number(modeled);
@@ -216,13 +216,13 @@ void MainWindow::on_button_processHWM_clicked()
 
     RegressionGlobal = "setGlobal('"+RegressionTitle+"','"+XLabel+"','"+YLabel+"','"+
             HWMColor+"','"+RegColor+"','"+One21Color+"','"+BoundColor+"','"+ColorRegression+"')";
-    ui->map_regression->page()->mainFrame()->evaluateJavaScript(RegressionGlobal);
+    ui->map_regression->page()->runJavaScript(RegressionGlobal);
 
     MyClassList = "addLegend("+unitString+",'"+QString::number(classes[0],'f',2)+":"+QString::number(classes[1],'f',2)+":"+
             QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
             QString::number(classes[4],'f',2)+":"+QString::number(classes[5],'f',2)+":"+
             QString::number(classes[6],'f',2)+"')";
-    ui->map_hwm->page()->mainFrame()->evaluateJavaScript(MyClassList);
+    ui->map_hwm->page()->runJavaScript(MyClassList);
 
     Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
             unitString+","+QString::number(MaximumValue)+","+QString::number(M,'f',2)+
@@ -232,11 +232,11 @@ void MainWindow::on_button_processHWM_clicked()
             QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
             QString::number(classes[4],'f',2)+":"+QString::number(classes[5],'f',2)+":"+
             QString::number(classes[6],'f',2)+"')";
-    ui->map_regression->page()->mainFrame()->evaluateJavaScript(Regression);
+    ui->map_regression->page()->runJavaScript(Regression);
 
     ui->subtab_hwm->setCurrentIndex(1);
     delay(1);
-    ui->map_hwm->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    ui->map_hwm->page()->runJavaScript("fitMarkers()");
 
     return;
 
@@ -384,7 +384,7 @@ void MainWindow::on_button_boundlinecolor_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_fitHWM_clicked()
 {
-    ui->map_hwm->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    ui->map_hwm->page()->runJavaScript("fitMarkers()");
     return;
 }
 //-------------------------------------------//

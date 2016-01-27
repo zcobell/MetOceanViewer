@@ -379,7 +379,6 @@ void MainWindow::on_button_processTimeseriesData_clicked()
     QString PlotTitle,XLabel,YLabel,AutoY;
     QString AutoX,XMin,XMax,StationName;
     QString unit,plusX,plusY,checkStateString;
-    QVariant jsResponse;
     QVector<double> StationX,StationY;
     Qt::CheckState checkState;
 
@@ -387,7 +386,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //Start by clearing the markers
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("clearMarkers()");
+    ui->timeseries_map->page()->runJavaScript("clearMarkers()");
     delay(1);
 
     if(ui->table_TimeseriesData->rowCount()==0)
@@ -422,7 +421,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
             ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"','"+AutoX+"','"+
             XMin+"','"+XMax+"','"+QString::number(FLAG_NULL_TS)+"')";
 
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
+    ui->timeseries_map->page()->runJavaScript(javascript);
 
     //Build a new Timeseries Data variable
     // (1) Get list of unique stations
@@ -447,11 +446,11 @@ void MainWindow::on_button_processTimeseriesData_clicked()
         plusY = ui->table_TimeseriesData->item(i,5)->text();
         javascript = "SetSeriesOptions("+QString::number(i)+",'"+name+
                 "','"+color+"',"+unit+","+plusX+","+plusY+",'"+checkStateString+"')";
-        ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->timeseries_map->page()->runJavaScript(javascript);
     }
 
     //Inform HTML on the number of data series
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("allocateData("+
+    ui->timeseries_map->page()->runJavaScript("allocateData("+
                                                            QString::number(UniqueTimeseriesData.length())+")");
 
     //Send locations to HTML side
@@ -478,15 +477,15 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                 ","+QString::number(x)+","+
                 QString::number(y)+",'"+
                 StationName+"')";
-        jsResponse = ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->timeseries_map->page()->runJavaScript(javascript);
     }
 
     //Now, all data should be on the backend for plotting. Bombs away...
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("AddToMap()");
+    ui->timeseries_map->page()->runJavaScript("AddToMap()");
     ui->MainTabs->setCurrentIndex(1);
     ui->subtab_timeseries->setCurrentIndex(1);
     delay(1);
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    ui->timeseries_map->page()->runJavaScript("fitMarkers()");
 
     QApplication::restoreOverrideCursor();
 }
@@ -513,7 +512,7 @@ void MainWindow::on_check_TimeseriesAllData_toggled(bool checked)
 //-------------------------------------------//
 void MainWindow::on_button_fitTimeseries_clicked()
 {
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("fitMarkers()");
+    ui->timeseries_map->page()->runJavaScript("fitMarkers()");
     return;
 }
 //-------------------------------------------//
@@ -530,7 +529,9 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
     double units;
 
     //Get the marker ID from the page
-    int markerID = ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("getMarker()").toInt();
+    QVariant eval;
+    ui->timeseries_map->page()->runJavaScript("getMarker()",[&eval](const QVariant &v){eval = v;});
+    int markerID = eval.toInt();
 
     //Catch false marker number
     if(markerID==-1)return;
@@ -542,11 +543,11 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
         DataString = FormatTimeseriesString(UniqueTimeseriesData[j],markerID,units);
         javascript = "";
         javascript = "AddDataSeries("+QString::number(j)+",'"+DataString+"')";
-        ui->timeseries_map->page()->mainFrame()->evaluateJavaScript(javascript);
+        ui->timeseries_map->page()->runJavaScript(javascript);
     }
 
     //Call the plotting routine in HighCharts
-    ui->timeseries_map->page()->mainFrame()->evaluateJavaScript("PlotTimeseries()");
+    ui->timeseries_map->page()->runJavaScript("PlotTimeseries()");
     return;
 }
 //-------------------------------------------//

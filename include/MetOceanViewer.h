@@ -25,7 +25,7 @@
 #define METOCEANVIEWER_H
 
 #include <QMainWindow>
-#include <QtWebKitWidgets>
+#include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QtNetwork>

@@ -21,7 +21,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core gui webkitwidgets network xml
+QT       += core gui webenginewidgets network xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 

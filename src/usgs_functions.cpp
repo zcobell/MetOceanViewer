@@ -35,7 +35,8 @@ void MainWindow::on_button_usgssavemap_clicked()
         return;
     }
 
-    QVariant USGSMarkerID2 = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QVariant USGSMarkerID2;
+    ui->usgs_map->page()->runJavaScript("returnStationID()",[&USGSMarkerID2](const QVariant &v){USGSMarkerID2 = v;});
     if(thisUSGS->USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
@@ -78,7 +79,8 @@ void MainWindow::on_button_usgssavedata_clicked()
         return;
     }
 
-    QVariant USGSMarkerID2 = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
+    QVariant USGSMarkerID2;
+    ui->usgs_map->page()->runJavaScript("returnStationID()",[&USGSMarkerID2](const QVariant &v){USGSMarkerID2 = v;});
     if(thisUSGS->USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
