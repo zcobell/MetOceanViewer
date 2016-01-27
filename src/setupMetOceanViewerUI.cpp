@@ -7,9 +7,6 @@ void MainWindow::setupMetOceanViewerUI()
     //-------------------------------------------//
     //Setting up the NOAA tab for the user
 
-    //Turn plugins on
-    QWebEngineSettings::globalSettings()->setAttribute(QWebEngineSettings::PluginsEnabled, true);
-
     //Define which web page we will use from the resource included
     ui->noaa_map->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
