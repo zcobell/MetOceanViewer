@@ -66,9 +66,9 @@ void MainWindow::on_button_usgs_fetch_clicked()
     ui->combo_USGSProduct->clear();
 
     //...Retrieve info from google maps
-    QVariant eval = NULL;
+    QVariant eval = QVariant();
     ui->usgs_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
-    while(eval==NULL)
+    while(eval.isNull())
         delayM(5);
     QStringList evalList = eval.toString().split(";");
     thisUSGS->USGSMarkerString = evalList.value(0).mid(4);
