@@ -90,7 +90,7 @@ function initialize() {
             from: '1F53L-rdX5ObuZk-4vbzEs-cs-knucaitaJ7kmVfD'
         },
         options: {
-            styleId: 3,
+            styleId: 2,
             templateId: 2
         }
     });

@@ -25,6 +25,12 @@
 #include "ui_MetOceanViewer_main.h"
 #include "noaa.h"
 
+void readJavascriptResult(QVariant)
+{
+    qDebug() << "data";
+    return;
+}
+
 //-------------------------------------------//
 //Called when the pan to combo box is updated
 //-------------------------------------------//
@@ -48,9 +54,9 @@ void MainWindow::on_button_noaasavechart_clicked()
         return;
     }
 
-    QVariant eval = NULL;
+    QVariant eval = QVariant();
     ui->noaa_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
-    while(eval==NULL)
+    while(eval.isNull())
         delayM(5);
     QStringList evalList = eval.toString().split(";");
     int NOAAMarkerID2 = evalList.value(0).toInt();
@@ -94,9 +100,9 @@ void MainWindow::on_button_noaasavedata_clicked()
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
     }
-    QVariant eval = NULL;
+    QVariant eval = QVariant();
     ui->noaa_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
-    while(eval==NULL)
+    while(eval.isNull())
         delayM(5);
     QStringList evalList = eval.toString().split(";");
     int NOAAMarkerID2 = evalList.value(0).toInt();
@@ -222,9 +228,9 @@ void MainWindow::on_Button_FetchData_clicked()
     thisNOAA = new noaa(this);
 
     //...Grab the station from the javascript
-    QVariant eval = NULL;
+    QVariant eval = QVariant();
     ui->noaa_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
-    while(eval==NULL)
+    while(eval.isNull())
         delayM(5);
     QStringList evalList = eval.toString().split(";");
 
