@@ -55,5 +55,20 @@ int noaa::retrieveProduct(int type, QString &Product, QString &Product2)
             case(8):Product = "air_pressure"; break;
         }
     }
+    if(type==3)
+    {
+        switch(this->ProductIndex)
+        {
+            case(0):Product = "Observed"; Product2 = "Predicted"; break;
+            case(1):Product = "6 Min Observed Water Level"; break;
+            case(2):Product = "Hourly Observed Water Level"; break;
+            case(3):Product = "Predicted Water Level"; break;
+            case(4):Product = "Air Temperature"; break;
+            case(5):Product = "Water Temperature"; break;
+            case(6):Product = "Wind Speed"; break;
+            case(7):Product = "Relative Humidity"; break;
+            case(8):Product = "Air Pressure"; break;
+        }
+    }
     return 0;
 }

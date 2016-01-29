@@ -21,29 +21,22 @@
 //
 //-----------------------------------------------------------------------//
 #include <noaa.h>
-
-int noaa::plotNOAAResponse(QVector<QString> &javascript)
+int noaa::getDataBounds(double &ymin, double &ymax)
 {
-    QVector<QString> NOAAData,Error;
-    QString tempJava;
-    int i;
+    int i,j;
+
+    ymin =  999999999.0;
+    ymax = -999999999.0;
 
     for(i=0;i<this->CurrentNOAAStation.length();i++)
-        this->CurrentNOAAStation[i].clear();
-    this->CurrentNOAAStation.clear();
-
-    this->CurrentNOAAStation.resize(NOAAWebData.length());
-
-    NOAAData.resize(NOAAWebData.length());
-    Error.resize(NOAAWebData.length());
-    javascript.resize(NOAAWebData.length()+1);
-    for(i=0;i<NOAAWebData.length();i++)
     {
-        NOAAData[i] = this->formatNOAAResponse(this->NOAAWebData[i],Error[i],i);
-        Error[i].remove(QRegExp("[\\n\\t\\r]"));
-        tempJava="AddDataSeries("+QString::number(i)+","+NOAAData[i]+",'"+Error[i]+"')";
-        javascript[i] = tempJava;
+        for(j=0;j<this->CurrentNOAAStation[i].length();j++)
+        {
+            if(this->CurrentNOAAStation[i][j].value<ymin)
+                ymin = this->CurrentNOAAStation[i][j].value;
+            if(this->CurrentNOAAStation[i][j].value>ymax)
+                ymax = this->CurrentNOAAStation[i][j].value;
+        }
     }
-    javascript[NOAAWebData.length()] = "PlotTimeseries()";
     return 0;
 }

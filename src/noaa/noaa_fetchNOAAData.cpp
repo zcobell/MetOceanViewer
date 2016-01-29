@@ -22,17 +22,14 @@
 //-----------------------------------------------------------------------//
 #include <noaa.h>
 
-int noaa::fetchNOAAData(QVector<QString> &javascript)
+int noaa::fetchNOAAData()
 {
     QEventLoop loop;
     qint64 Duration;
-    QString PlotTitle,RequestURL,StartString,EndString,Product,Product2;
-    QString XLabel,YLabel;
+    QString RequestURL,StartString,EndString,Product,Product2;
     QDateTime StartDate,EndDate;
     int i,j,ierr,NumDownloads,NumData;
     QVector<QDateTime> StartDateList,EndDateList;
-
-    javascript.resize(5);
 
     if(this->StartDate==this->EndDate||this->EndDate<this->StartDate)
         return ERR_NOAA_INVALIDDATERANGE;
@@ -109,69 +106,6 @@ int noaa::fetchNOAAData(QVector<QString> &javascript)
 
         }
     }
-
-    if(this->ProductIndex == 0)
-    {
-        if(this->Units=="metric")
-            this->Units="m";
-        else
-            this->Units="ft";
-        YLabel = "Water Level ("+this->Units+", "+this->Datum+")";
-    }
-    else if(this->ProductIndex == 1 || this->ProductIndex == 2 || this->ProductIndex == 3)
-    {
-        if(this->Units=="metric")
-            this->Units="m";
-        else
-            this->Units="ft";
-        YLabel = Product+" ("+Units+", "+this->Datum+")";
-    }
-    else if(this->ProductIndex == 6)
-    {
-        if(this->Units=="metric")
-            this->Units="m/s";
-        else
-            this->Units="knots";
-        this->Datum = "Stnd";
-        YLabel = Product+" ("+this->Units+")";
-    }
-    else if(this->ProductIndex == 4 || this->ProductIndex == 5)
-    {
-        if(this->Units=="metric")
-            this->Units="Celcius";
-        else
-            this->Units="Fahrenheit";
-        this->Datum = "Stnd";
-        YLabel = Product+" ("+this->Units+")";
-    }
-    else if(this->ProductIndex == 7)
-    {
-        this->Units = "%";
-        this->Datum = "Stnd";
-        YLabel = Product+" ("+this->Units+")";
-    }
-    else if(this->ProductIndex == 8)
-    {
-        this->Units = "mb";
-        this->Datum = "Stnd";
-        YLabel = Product+" ("+this->Units+")";
-    }
-
-    XLabel = "Date";
-    PlotTitle = "Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName;
-    javascript[0] = "setGlobal('"+PlotTitle+"','"+XLabel+"','"+YLabel+"','"+QString::number(MOV_NULL_TS)+"')";
-
-    if(NumData==2)
-    {
-        javascript[1] = "SetSeriesOptions(0,'Observed Water Level','#0101DF')";
-        javascript[2] = "SetSeriesOptions(1,'Predicted Water Level','#00FF00')";
-    }
-    else
-    {
-        javascript[3] = "SetSeriesOptions(0,'"+Product+"','#0101DF')";
-    }
-
-    javascript[4] = "allocateData("+QString::number(NumData)+")";
 
     return 0;
 }

@@ -219,8 +219,7 @@ void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_Button_FetchData_clicked()
 {
-    int i,ierr;
-    QVector<QString> javascript;
+    int ierr;
 
     //...Create a new NOAA object
     if(!thisNOAA.isNull())
@@ -252,25 +251,25 @@ void MainWindow::on_Button_FetchData_clicked()
     ui->statusBar->showMessage("Downloading data from NOAA...",0);
 
     //...Generate the javascript calls in this array
-    ierr = thisNOAA->fetchNOAAData(javascript);
-
-    //...Execute the javascript
-    for(i=0;i<javascript.length();i++)
-        if(javascript[i]!=QString())
-            ui->noaa_map->page()->runJavaScript(javascript[i]);
-    javascript.clear();
+    ierr = thisNOAA->fetchNOAAData();
 
     //...Update the status bar
     ui->statusBar->showMessage("Plotting the data from NOAA...");
 
-    //...Generate the javascript to plot the data
-    ierr = thisNOAA->plotNOAAResponse(javascript);
+    //...Generate prep the data for plotting
+    ierr = thisNOAA->prepNOAAResponse();
 
-    //...Execute the javascript
-    for(i=0;i<javascript.length();i++)
-        if(javascript[i]!=QString())
-            ui->noaa_map->page()->runJavaScript(javascript[i]);
-    javascript.clear();
+    //...Check for valid data
+    if(thisNOAA->CurrentNOAAStation[0].length()<5)
+    {
+        ui->statusBar->clearMessage();
+        QApplication::restoreOverrideCursor();
+        QMessageBox::information(this,"ERROR",thisNOAA->ErrorString[0]);
+        return;
+    }
+
+    //...Plot the chart
+    ierr = thisNOAA->plotChart(ui->noaa_graphics);
 
     //...Clear messages and cursors
     ui->statusBar->clearMessage();

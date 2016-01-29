@@ -31,6 +31,10 @@
 #include <QUrl>
 #include <QtNetwork>
 #include <QVector>
+#include <QChartView>
+#include <QtCharts>
+
+using namespace QtCharts;
 
 class noaa : public QObject
 {
@@ -42,8 +46,12 @@ public:
     ~noaa();
 
     //...Public Functions
-    int fetchNOAAData(QVector<QString> &javascript);
-    int plotNOAAResponse(QVector<QString> &javascript);
+    int fetchNOAAData();
+    int prepNOAAResponse();
+    int retrieveProduct(int type, QString &Product, QString &Product2);
+    int getDataBounds(double &ymin, double &ymax);
+    int generateLabels();
+    int plotChart(QChartView *chartView);
 
     //...Structures
     struct NOAAStationData
@@ -63,18 +71,22 @@ public:
     QString CurrentNOAAStationName;
     QString Datum;
     QString Units;
+    QString yLabel;
+    QString plotTitle;
 
     QDateTime StartDate;
     QDateTime EndDate;
 
     QVector< QVector<NOAAStationData> > CurrentNOAAStation;
+    QVector<QString> ErrorString;
 
 private:
 
     //...Private Functions
     QString formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
     void readNOAAResponse(QNetworkReply *reply, int index, int index2);
-    int retrieveProduct(int type, QString &Product, QString &Product2);
+    double niceNumber(double number, bool round);
+    QVector<double> niceLabels(double inMin, double inMax, int nTicks, int &nFrac);
 
     //...Private Variables
     QVector< QVector<QByteArray> > NOAAWebData;

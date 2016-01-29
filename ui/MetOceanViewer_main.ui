@@ -559,25 +559,42 @@
                  </item>
                 </layout>
                </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_22">
+                 <item>
+                  <widget class="QWebEngineView" name="noaa_map" native="true">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>2</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="url" stdset="0">
+                    <url>
+                     <string>qrc:/rsc/html/noaa_maps.html</string>
+                    </url>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QChartView" name="noaa_graphics">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                     <horstretch>2</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="frameShadow">
+                    <enum>QFrame::Plain</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
               </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QWebEngineView" name="noaa_map">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="autoFillBackground">
-               <bool>false</bool>
-              </property>
-              <property name="url">
-               <url>
-                <string>qrc:/rsc/html/noaa_maps.html</string>
-               </url>
-              </property>
              </widget>
             </item>
             <item>
@@ -1202,7 +1219,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWebEngineView" name="usgs_map">
+             <widget class="QWebEngineView" name="usgs_map" native="true">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -1212,7 +1229,7 @@
               <property name="autoFillBackground">
                <bool>false</bool>
               </property>
-              <property name="url">
+              <property name="url" stdset="0">
                <url>
                 <string>qrc:/rsc/html/usgs_maps.html</string>
                </url>
@@ -2250,8 +2267,8 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QWebEngineView" name="timeseries_map">
-              <property name="url">
+             <widget class="QWebEngineView" name="timeseries_map" native="true">
+              <property name="url" stdset="0">
                <url>
                 <string>qrc:/rsc/html/timeseries_maps.html</string>
                </url>
@@ -3408,8 +3425,8 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
-             <widget class="QWebEngineView" name="map_hwm">
-              <property name="url">
+             <widget class="QWebEngineView" name="map_hwm" native="true">
+              <property name="url" stdset="0">
                <url>
                 <string>qrc:/rsc/html/hwm_map.html</string>
                </url>
@@ -3466,8 +3483,8 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
-             <widget class="QWebEngineView" name="map_regression">
-              <property name="url">
+             <widget class="QWebEngineView" name="map_regression" native="true">
+              <property name="url" stdset="0">
                <url>
                 <string>qrc:/rsc/html/reg_plot.html</string>
                </url>
@@ -3490,7 +3507,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
