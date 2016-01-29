@@ -27,7 +27,6 @@ int noaa::fetchNOAAData()
     QEventLoop loop;
     qint64 Duration;
     QString RequestURL,StartString,EndString,Product,Product2;
-    QDateTime StartDate,EndDate;
     int i,j,ierr,NumDownloads,NumData;
     QVector<QDateTime> StartDateList,EndDateList;
 
@@ -35,7 +34,7 @@ int noaa::fetchNOAAData()
         return ERR_NOAA_INVALIDDATERANGE;
 
     //Begin organizing the dates for download
-    Duration = StartDate.daysTo(EndDate);
+    Duration = this->StartDate.daysTo(this->EndDate);
     NumDownloads = (Duration / 30) + 1;
     StartDateList.resize(NumDownloads);
     EndDateList.resize(NumDownloads);
@@ -103,10 +102,8 @@ int noaa::fetchNOAAData()
             connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
             loop.exec();
             this->readNOAAResponse(reply,i,j);
-
         }
     }
-
     return 0;
 }
 
