@@ -26,14 +26,6 @@ var CurrentName;
 var CurrentLat;
 var CurrentLon;
 
-var Locations = [];
-var DataSeries = [];
-var SeriesOptions = [];
-var StationName = [];
-var ErrorList = [];
-var PlotTitle;
-var XLabel,YLabel;
-
 window.onresize = function()
 {
     $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
@@ -57,7 +49,6 @@ var geocoder = new google.maps.Geocoder();
           map.fitBounds(results[0].geometry.viewport);
         }
     });
-
 }
 
 ////////////////////////////////////////////////////////////
@@ -107,202 +98,13 @@ function initialize() {
         }
     });
 
-    $('#plot_area').highcharts({
-        title: {
-            text: ''
-        },
-        legend: {
-            enabled: false},
-        yAxis: {
-            labels: {format: '{value:.2f}'},
-            title: {
-                text: " "
-            },
-            alternateGridColor: '#EEEEEE'
-            },
-        exporting: {
-            sourceWidth: 800,
-            sourceHeight: 800,
-            scale: 2,
-            buttons: {
-                contextButton: {
-                    menuItems: [{
-                        text: 'Export to PNG',
-                        onclick: function() {
-                            this.exportChart();
-                        },
-                        separator: false
-                    }]
-                }
-            }
-        },
-        series: [{
-            type: 'line',
-            name: 'none',
-            data: []
-        }]
-    });
-
-    }
-
-    google.maps.event.addDomListener(window, "resize", function() {
-     var center = map.getCenter();
-     google.maps.event.trigger(map, "resize");
-     map.setCenter(center);
-    });
-
-//Build the data series
-function allocateData(NumSeries)
-{
-    DataSeries = [];
-    for(var i=0;i<NumSeries;i++)
-    {
-      DataSeries[i] = [];
-    }
-    return;
 }
 
-//Set the locations array
-function SetMarkerLocations(index,x,y,name)
-{
-    Locations[0][index] = x;
-    Locations[1][index] = y;
-    StationName[index]  = name;
-    return;
-}
-
-//Save the time series data into a single 3 dimensional array
-function AddDataSeries(SeriesIndex,ThisData,ThisError)
-{
-
-    DataSeries[SeriesIndex] = [];
-    ErrorList[SeriesIndex] = ThisError;
-
-    var ThisDataSplit = ThisData.split(";");
-    for(var i=0;i<ThisDataSplit.length;i++)
-    {
-        DataSeries[SeriesIndex][i] = [];
-        ThisDataSplit2 = ThisDataSplit[i].split(":");
-
-        DataSeries[SeriesIndex][i][0] = ThisDataSplit2[0];
-        DataSeries[SeriesIndex][i][1] = ThisDataSplit2[1];
-        DataSeries[SeriesIndex][i][2] = ThisDataSplit2[2];
-        DataSeries[SeriesIndex][i][3] = ThisDataSplit2[3];
-        DataSeries[SeriesIndex][i][4] = ThisDataSplit2[4];
-        DataSeries[SeriesIndex][i][5] = ThisDataSplit2[5];
-
-        if(Number(DataSeries[SeriesIndex][i][5])<-400)
-            DataSeries[SeriesIndex][i][5] = -9999;
-    }
-    return;
-}
-
-//Save the options for each data series
-function SetSeriesOptions(index,MyName,MyColor)
-{
-    SeriesOptions[index] = { name: MyName, color: MyColor };
-    return;
-}
-
-function setGlobal(InPlotTitle,InXLabel,InYLabel,InNullFlag)
-{
-    PlotTitle = InPlotTitle;
-    XLabel = InXLabel;
-    YLabel = InYLabel;
-    NullFlag = InNullFlag;
-    return;
-}
-
-function PlotTimeseries()
-{
-    var i,j,k;
-    var seriesList = [];
-    var Data = [];
-    var contentString;
-    var ThisData;
-    var ThisDate;
+google.maps.event.addDomListener(window, "resize", function() {
+    var center = map.getCenter();
+    google.maps.event.trigger(map, "resize");
+    map.setCenter(center);
+});
 
 
-    if(DataSeries[0].length<5)
-    {
-        jAlert('The following error was returned from the NOAA server: \n\n'+ErrorList[0],'NOAA Data Retreival Error');
-        return;
-    }
 
-    //Create the data tables
-    for(i=0;i<DataSeries.length;i++)
-    {
-        Data[i]    = [];
-
-        for(j=0;j<DataSeries[i].length-1;j++)
-        {
-            Data[i][j] = [];
-            ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
-                                Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3]),
-                                Number(DataSeries[i][j][4]),0,0);
-            Data[i][j][0] = ThisDate;
-            Data[i][j][1] = Number(DataSeries[i][j][5]);
-
-            //Null value check
-            if(Data[i][j][1]<-999)
-                Data[i][j][1] = null;
-        }
-    }
-
-    //Create the series
-    var LocalData;
-    for(i=0;i<DataSeries.length;i++)
-    {
-        LocalData = Data[i];
-        seriesList[i] = {name: SeriesOptions[i].name, color: SeriesOptions[i].color, data: LocalData };
-    }
-
-
-    //Start setting up the plot
-    var yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
-    var xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
-    var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
-    var plotToolTip = {
-            formatter: function() {
-                return '<b>'+ this.series.name +'</b><br/>'+
-                Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y.toFixed(2) +' ';
-                }
-            };
-
-    // Create the HighChart
-    $('#plot_area').highcharts({
-        chart: {
-            type: 'line',
-            zoomType: 'xy'
-        },
-        exporting: {
-            sourceWidth: 800,
-            sourceHeight: 800,
-            scale: 2,
-            buttons: {
-                contextButton: {
-                    menuItems: [{
-                        text: 'Export to PNG',
-                        onclick: function() {
-                            this.exportChart();
-                        },
-                        separator: false
-                    }]
-                }
-            }
-        },
-        title: {
-            text: 'NOAA Gage Data'
-        },
-        subtitle: {
-            text: PlotTitle
-        },
-        xAxis: xData,
-        yAxis: yData,
-        plotOptions: plotOption,
-        tooltip: plotToolTip,
-        series: seriesList
-    });
-
-    return;
-}

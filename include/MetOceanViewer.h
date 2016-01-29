@@ -35,6 +35,9 @@
 #include <noaa.h>
 #include <usgs.h>
 #include <timeseries.h>
+#include <QtCharts>
+
+using namespace QtCharts;
 
 
 //...Forward Declarations of classes

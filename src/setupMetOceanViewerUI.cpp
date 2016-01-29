@@ -143,4 +143,5 @@ void MainWindow::setupMetOceanViewerUI()
     ui->usgs_map->setContextMenuPolicy(Qt::CustomContextMenu);
 #endif
 
+
 }

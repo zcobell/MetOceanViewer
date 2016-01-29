@@ -21,7 +21,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core gui webenginewidgets network xml
+QT       += core gui webenginewidgets network xml charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -47,7 +47,6 @@ SOURCES += src/main.cpp\
     src/noaa/noaa.cpp \
     src/noaa/noaa_fetchNOAAData.cpp \
     src/noaa/noaa_formatNOAAResponse.cpp \
-    src/noaa/noaa_plotNOAAResponse.cpp \
     src/noaa/noaa_readNOAAResponse.cpp \
     src/noaa/noaa_retrieveproduct.cpp \
     src/usgs/usgs.cpp \
@@ -56,7 +55,11 @@ SOURCES += src/main.cpp\
     src/usgs/usgs_readUSGSDataFinished.cpp \
     src/usgs/usgs_formatUSGSDailyResponse.cpp \
     src/usgs/usgs_getTimezone.cpp \
-    src/usgs/usgs_plotUSGS.cpp
+    src/usgs/usgs_plotUSGS.cpp \
+    src/noaa/noaa_prepNOAAResponse.cpp \
+    src/noaa/noaa_getDataBounds.cpp \
+    src/noaa/noaa_generateLabels.cpp \
+    src/noaa/noaa_plotChart.cpp
 
 HEADERS  += \
     include/hwm.h \
