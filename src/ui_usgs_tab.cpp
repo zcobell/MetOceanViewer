@@ -42,8 +42,6 @@ void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 void MainWindow::on_button_usgs_fetch_clicked()
 {
     int i,ierr;
-    QString USGSMarkerString;
-    QString javascript;
 
     //...Create a new USGS object
     if(!thisUSGS.isNull())
@@ -83,7 +81,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
     }
 
     //...Store the station information
-    thisUSGS->USGSMarkerID = USGSMarkerString;
+    thisUSGS->USGSMarkerID = thisUSGS->USGSMarkerString;
     thisUSGS->CurrentUSGSStationName = evalList.value(1).simplified();
     thisUSGS->CurrentUSGSLon = evalList.value(2).toDouble();
     thisUSGS->CurrentUSGSLat = evalList.value(3).toDouble();
@@ -109,14 +107,12 @@ void MainWindow::on_button_usgs_fetch_clicked()
     thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
 
     //...Plot the first series
-    ierr = thisUSGS->plotUSGS(javascript);
-    if(ierr==0)
-        ui->usgs_map->page()->runJavaScript(javascript);
-    else
+    ierr = thisUSGS->plotUSGS(ui->usgs_graphics);
+    if(ierr!=0)
     {
         QApplication::restoreOverrideCursor();
         ui->statusBar->clearMessage();
-        QMessageBox::critical(this,"ERROR",thisUSGS->USGSErrorString);
+        QMessageBox::critical(this,"ERROR","No data available for this selection.");
         return;
     }
 
@@ -191,7 +187,7 @@ void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
     {
         thisUSGS->ProductIndex = index;
         thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
-        thisUSGS->plotUSGS(javascript);
+        thisUSGS->plotUSGS(ui->usgs_graphics);
         ui->usgs_map->page()->runJavaScript(javascript);
     }
     return;

@@ -32,6 +32,7 @@
 #include <QVector>
 #include <QChartView>
 #include <QtCharts>
+#include <general_functions.h>
 
 using namespace QtCharts;
 
@@ -85,8 +86,6 @@ private:
     //...Private Functions
     QString formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
     void readNOAAResponse(QNetworkReply *reply, int index, int index2);
-    double niceNumber(double number, bool round);
-    QVector<double> niceLabels(double inMin, double inMax, int nTicks, int &nFrac);
 
     //...Private Variables
     QVector< QVector<QByteArray> > NOAAWebData;

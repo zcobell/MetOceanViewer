@@ -15,5 +15,7 @@ QString MakeColorString(QColor InputColor);
 QColor GenerateRandomColor();
 int NETCDF_ERR(int status);
 bool isConnectedToNetwork();
+double niceNumber(double number, bool round);
+QVector<double> niceLabels(double inMin, double inMax, int nTicks, int &nFrac);
 
 #endif // GENERAL_FUNCTIONS_H

@@ -37,8 +37,10 @@ void MainWindow::on_button_usgssavemap_clicked()
         return;
     }
 
-    QVariant USGSMarkerID2;
+    QVariant USGSMarkerID2 = QVariant();
     ui->usgs_map->page()->runJavaScript("returnStationID()",[&USGSMarkerID2](const QVariant &v){USGSMarkerID2 = v;});
+    while(USGSMarkerID2.isNull())
+        delayM(5);
     if(thisUSGS->USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
@@ -50,21 +52,41 @@ void MainWindow::on_button_usgssavemap_clicked()
         return;
     }
 
-    QString filter = "JPG (*.jpg *.jpeg)";
-    QString DefaultFile = "/USGS_"+thisUSGS->USGSMarkerID+".jpg";
+    QString filter = "PDF (*.PDF)";
+    QString DefaultFile = "/USGS_"+thisUSGS->USGSMarkerID+".pdf";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory+DefaultFile,"PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     splitPath(TempString,filename,PreviousDirectory);
 
-    QFile USGSOutput(TempString);
-    QPixmap USGSImage(ui->usgs_map->size());
-    ui->usgs_map->render(&USGSImage);
-    USGSOutput.open(QIODevice::WriteOnly);
-    USGSImage.save(&USGSOutput,"JPG",100);
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPrinter::Letter);
+    printer.setResolution(400);
+    printer.setOrientation(QPrinter::Landscape);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(TempString);
+
+    QPainter painter(&printer);
+    painter.setRenderHint(QPainter::Antialiasing,true);
+    painter.begin(&printer);
+
+    //...Page 1 - Chart
+    ui->usgs_graphics->render(&painter);
+
+    //...Page 2 - Map
+    printer.newPage();
+    QPixmap map = ui->usgs_map->grab();
+    QPixmap mapScaled = map.scaledToWidth(printer.width());
+    if(mapScaled.height()>printer.height())
+        mapScaled = map.scaledToHeight(printer.height());
+    int cw = (printer.width()-mapScaled.width())/2;
+    int ch = (printer.height()-mapScaled.height())/2;
+    painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
+
+    painter.end();
     return;
 }
 //-------------------------------------------//
@@ -84,8 +106,10 @@ void MainWindow::on_button_usgssavedata_clicked()
         return;
     }
 
-    QVariant USGSMarkerID2;
+    QVariant USGSMarkerID2 = QVariant();
     ui->usgs_map->page()->runJavaScript("returnStationID()",[&USGSMarkerID2](const QVariant &v){USGSMarkerID2 = v;});
+    while(USGSMarkerID2.isNull())
+        delayM(5);
     if(thisUSGS->USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");

@@ -22,11 +22,17 @@
 //-----------------------------------------------------------------------//
 #include <usgs.h>
 
-int usgs::plotUSGS(QString &javascript)
+int usgs::plotUSGS(QChartView *chartView)
 {
-    QString PlotData;
 
-    PlotData="'";
+    int i,j,ierr,nFrac;
+    double ymin,ymax;
+    QVector<double> labels;
+    QString format;
+    QDateTime minDateTime,maxDateTime;
+
+    maxDateTime = QDateTime(QDate(1000,1,1),QTime(0,0,0));
+    minDateTime = QDateTime(QDate(3000,1,1),QTime(0,0,0));
 
     //Put the data into a plotting object
     this->USGSPlot.resize(this->CurrentUSGSStation[this->ProductIndex].Date.length());
@@ -35,13 +41,70 @@ int usgs::plotUSGS(QString &javascript)
         this->USGSPlot[i].Date = this->CurrentUSGSStation[this->ProductIndex].Date[i].date();
         this->USGSPlot[i].Time = this->CurrentUSGSStation[this->ProductIndex].Date[i].time();
         this->USGSPlot[i].value = this->CurrentUSGSStation[this->ProductIndex].Data[i];
-        PlotData=PlotData+this->USGSPlot[i].Date.toString("yyyy:MM:dd")+":"+
-                this->USGSPlot[i].Time.toString("hh:mm")+":"+QString::number(this->USGSPlot[i].value)+";";
     }
-    PlotData = PlotData+"'";
-    this->USGSErrorString = "none";
-    javascript="drawUSGSData("+PlotData+",'"+this->ProductName+"','"+this->ProductName.split(",").value(0)+"',"+
-            QString::number(CurrentUSGSStation[this->ProductIndex].NumDataPoints)+",'"+this->USGSErrorString+"')";
+
+    if(USGSPlot.length()<5)
+        return -1;
+
+    //...Create the line series
+    ierr = this->getDataBounds(ymin,ymax);
+    labels = niceLabels(ymin,ymax,5,nFrac);
+    for(i=0;i<labels.length();i++)
+    {
+        if(labels[i]>ymax)
+            ymax = labels[i];
+        if(labels[i]<ymin)
+            ymin = labels[i];
+    }
+
+    QLineSeries *series1 = new QLineSeries();
+    series1->setName(this->ProductName);
+    series1->setPen(QPen(QColor(0,0,255),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
+
+    //...Create the chart
+    QChart *chart = new QChart();
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    for(j=0;j<this->USGSPlot.length();j++)
+    {
+        series1->append(QDateTime(this->USGSPlot[j].Date,this->USGSPlot[j].Time).toMSecsSinceEpoch(),this->USGSPlot[j].value);
+        if(minDateTime>QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
+            minDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
+        if(maxDateTime<QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
+            maxDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
+    }
+    chart->addSeries(series1);
+
+    minDateTime = QDateTime(minDateTime.date(),QTime(minDateTime.time().hour()  ,0,0));
+    maxDateTime = QDateTime(maxDateTime.date(),QTime(maxDateTime.time().hour()+1,0,0));
+
+    qDebug() << minDateTime << maxDateTime;
+
+    QDateTimeAxis *axisX = new QDateTimeAxis;
+    axisX->setTickCount(5);
+    if(this->requestStartDate.daysTo(this->requestEndDate)>90)
+        axisX->setFormat("MM/yyyy");
+    else if(this->requestStartDate.daysTo(this->requestEndDate)>4)
+        axisX->setFormat("MM/dd/yyyy");
+    else
+        axisX->setFormat("MM/dd/yyyy hh:mm");
+    axisX->setTitleText("Date");
+    axisX->setMin(minDateTime);
+    axisX->setMax(maxDateTime);
+    chart->addAxis(axisX, Qt::AlignBottom);
+    series1->attachAxis(axisX);
+
+    QValueAxis *axisY = new QValueAxis;
+    axisY->setLabelFormat(format);
+    axisY->setTitleText(this->ProductName.split(",").value(0));
+    axisY->setMin(ymin);
+    axisY->setMax(ymax);
+    chart->addAxis(axisY, Qt::AlignLeft);
+    series1->attachAxis(axisY);
+
+    chart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
+    chartView->setRenderHint(QPainter::Antialiasing);
+    chartView->setChart(chart);
 
     this->USGSBeenPlotted = true;
 
