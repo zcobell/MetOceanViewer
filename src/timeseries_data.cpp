@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 
+#include <mov_flags.h>
 #include <timeseries.h>
 #include <netcdf.h>
 #include <qmath.h>
@@ -683,6 +684,8 @@ int BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, 
     int i,j,k;
     bool found;
 
+    QDateTime NullDate(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),QTime(MOV_NULL_HOUR,MOV_NULL_MINUTE,MOV_NULL_SECOND));
+
     DataOut.resize(Data.length());
     for(i=0;i<Data.length();i++)
     {
@@ -725,8 +728,8 @@ int BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, 
                 DataOut[i].station[j].data.resize(1);
                 DataOut[i].station[j].date.resize(1);
                 DataOut[i].station[j].StationName = "NONAME";
-                DataOut[i].station[j].data[0] = FLAG_NULL_TS;
-                DataOut[i].station[j].date[0] = FLAG_NULL_DATE;
+                DataOut[i].station[j].data[0] = MOV_NULL_TS;
+                DataOut[i].station[j].date[0] = NullDate;
                 DataOut[i].station[j].isNull = true;
             }
         }
