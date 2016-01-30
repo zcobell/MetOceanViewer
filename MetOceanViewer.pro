@@ -55,11 +55,12 @@ SOURCES += src/main.cpp\
     src/usgs/usgs_readUSGSDataFinished.cpp \
     src/usgs/usgs_formatUSGSDailyResponse.cpp \
     src/usgs/usgs_getTimezone.cpp \
-    src/usgs/usgs_plotUSGS.cpp \
     src/noaa/noaa_prepNOAAResponse.cpp \
     src/noaa/noaa_getDataBounds.cpp \
     src/noaa/noaa_generateLabels.cpp \
-    src/noaa/noaa_plotChart.cpp
+    src/noaa/noaa_plotChart.cpp \
+    src/usgs/usgs_plotUSGS.cpp \
+    src/usgs/usgs_getDataBounds.cpp
 
 HEADERS  += \
     include/hwm.h \
