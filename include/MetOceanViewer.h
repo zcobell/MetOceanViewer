@@ -38,6 +38,7 @@
 #include <usgs.h>
 #include <timeseries.h>
 #include <about_dialog.h>
+#include <QtPrintSupport/QPrinter>
 
 
 //-------------------------------------------//

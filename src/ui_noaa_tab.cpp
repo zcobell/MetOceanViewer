@@ -61,21 +61,41 @@ void MainWindow::on_button_noaasavechart_clicked()
         return;
     }
 
-    QString filter = "JPG (*.jpg *.jpeg)";
-    QString DefaultFile = "/NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+".jpg";
+    QString filter = "PDF (*.pdf)";
+    QString DefaultFile = "/NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+".pdf";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory+DefaultFile,"PDF(*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     splitPath(TempString,filename,PreviousDirectory);
 
-    QFile NOAAOutput(TempString);
-    QPixmap NOAAImage(ui->noaa_map->size());
-    ui->noaa_map->render(&NOAAImage);
-    NOAAOutput.open(QIODevice::WriteOnly);
-    NOAAImage.save(&NOAAOutput,"JPG",100);
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPrinter::Letter);
+    printer.setResolution(400);
+    printer.setOrientation(QPrinter::Landscape);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(TempString);
+
+    QPainter painter(&printer);
+    painter.setRenderHint(QPainter::Antialiasing,true);
+    painter.begin(&printer);
+
+    //...Page 1 - Chart
+    ui->noaa_graphics->render(&painter);
+
+    //...Page 2 - Map
+    printer.newPage();
+    QPixmap map = ui->noaa_map->grab();
+    QPixmap mapScaled = map.scaledToWidth(printer.width());
+    if(mapScaled.height()>printer.height())
+        mapScaled = map.scaledToHeight(printer.height());
+    int cw = (printer.width()-mapScaled.width())/2;
+    int ch = (printer.height()-mapScaled.height())/2;
+    painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
+
+    painter.end();
 
 }
 //-------------------------------------------//

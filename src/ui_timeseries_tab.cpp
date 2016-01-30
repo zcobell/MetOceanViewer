@@ -420,7 +420,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
 
     javascript = "setGlobal('"+PlotTitle+"','"+AutoY+"',"+QString::number(YMin)+
             ","+QString::number(YMax)+",'"+XLabel+"','"+YLabel+"','"+AutoX+"','"+
-            XMin+"','"+XMax+"','"+QString::number(FLAG_NULL_TS)+"')";
+            XMin+"','"+XMax+"','"+QString::number(MOV_NULL_TS)+"')";
 
     ui->timeseries_map->page()->runJavaScript(javascript);
 

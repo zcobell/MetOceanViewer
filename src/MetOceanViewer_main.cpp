@@ -36,13 +36,6 @@ QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 QColor LineColor121Line,LineColorBounds;
 QColor DotColorHWM,LineColorRegression;
 QDateTime IMEDSMinDate,IMEDSMaxDate;
-
-//Some flags that we'll use later. These are just
-//values we might need to search for at some point
-double FLAG_NULL_TS = -999991025;
-QDateTime FLAG_NULL_DATE = QDateTime::fromString(
-                              "01/01/1900 00:00",
-                              "MM/dd/yyyy hh:mm");
 //-------------------------------------------//
 
 
@@ -54,8 +47,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     ui->setupUi(this);
     setupMetOceanViewerUI();
 
-    //Initialize some things
-    this->thisNOAA = NULL;
 }
 
 //Main destructor routine
@@ -81,6 +72,7 @@ void MainWindow::on_actionQuit_triggered()
 }
 //-------------------------------------------//
 
+
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     if(confirmClose())
@@ -95,6 +87,7 @@ bool MainWindow::confirmClose()
     answer = QMessageBox::question(this,tr("Exit"),tr("Do you want to exit MetOcean Viewer?"),QMessageBox::Yes|QMessageBox::No);
     return (answer == QMessageBox::Yes);
 }
+
 
 //-------------------------------------------//
 //Handle the "enter" or "return" keypress
@@ -151,7 +144,6 @@ void MainWindow::keyPressEvent(QKeyEvent *key)
 }
 //-------------------------------------------//
 
-//-------------------------------------------//
 
 //-------------------------------------------//
 //Bring up the about dialog box

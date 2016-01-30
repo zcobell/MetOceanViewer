@@ -580,15 +580,15 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QChartView" name="noaa_graphics">
+                  <widget class="QChartView" name="noaa_graphics" native="true">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                      <horstretch>2</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
-                   <property name="frameShadow">
-                    <enum>QFrame::Plain</enum>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 255, 255);</string>
                    </property>
                   </widget>
                  </item>
@@ -3570,6 +3570,11 @@
    <class>QWebEngineView</class>
    <extends>QWidget</extends>
    <header>QtWebEngineWidgets/QWebEngineView</header>
+  </customwidget>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header>qchartview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
