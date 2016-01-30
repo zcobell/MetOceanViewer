@@ -3,6 +3,7 @@
 
 void MainWindow::setupMetOceanViewerUI()
 {
+    QString BaseFile;
 
     //-------------------------------------------//
     //Setting up the NOAA tab for the user
@@ -125,7 +126,7 @@ void MainWindow::setupMetOceanViewerUI()
     //If it was, load the session file
     if(SessionFile!=NULL)
     {
-        GetLeadingPath(SessionFile);
+        splitPath(SessionFile,BaseFile,PreviousDirectory);
         loadSession();
         ui->MainTabs->setCurrentIndex(1);
     }

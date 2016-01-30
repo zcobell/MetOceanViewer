@@ -71,7 +71,8 @@ HEADERS  += \
     include/noaa.h \
     include/mov_errors.h \
     include/mov_flags.h \ 
-    include/usgs.h
+    include/usgs.h \
+    include/general_functions.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

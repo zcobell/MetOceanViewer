@@ -26,7 +26,6 @@
 
 #include <mov_errors.h>
 #include <mov_flags.h>
-#include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QtNetwork>
@@ -38,9 +37,10 @@ using namespace QtCharts;
 
 class noaa : public QObject
 {
+    Q_OBJECT
 public:
     //...Constructor
-    noaa(QObject *parent = 0);
+    explicit noaa(QObject *parent = 0);
 
     //...Destructor
     ~noaa();

@@ -29,6 +29,8 @@
 //-------------------------------------------//
 void MainWindow::on_button_usgssavemap_clicked()
 {
+    QString filename;
+
     if(thisUSGS->USGSMarkerID=="none")
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
@@ -50,14 +52,15 @@ void MainWindow::on_button_usgssavemap_clicked()
 
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/USGS_"+thisUSGS->USGSMarkerID+".jpg";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
 
-    if(Filename==NULL)
+    if(TempString==NULL)
         return;
 
-    GetLeadingPath(Filename);
-    QFile USGSOutput(Filename);
+    splitPath(TempString,filename,PreviousDirectory);
+
+    QFile USGSOutput(TempString);
     QPixmap USGSImage(ui->usgs_map->size());
     ui->usgs_map->render(&USGSImage);
     USGSOutput.open(QIODevice::WriteOnly);
@@ -73,6 +76,8 @@ void MainWindow::on_button_usgssavemap_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_usgssavedata_clicked()
 {
+    QString filename;
+
     if(thisUSGS->USGSMarkerID=="none")
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
@@ -94,15 +99,16 @@ void MainWindow::on_button_usgssavedata_clicked()
 
     QString filter;
     QString DefaultFile = "/USGS_"+thisUSGS->USGSMarkerID+".imeds";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,"IMEDS (*.imeds);;CSV (*.csv)",&filter);
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,"IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
 
-    if(Filename == NULL)
+    if(TempString == NULL)
         return;
 
-    GetLeadingPath(Filename);
-    QFile USGSOutput(Filename);
+    splitPath(TempString,filename,PreviousDirectory);
+
+    QFile USGSOutput(TempString);
     QTextStream Output(&USGSOutput);
     USGSOutput.open(QIODevice::WriteOnly);
 

@@ -32,17 +32,13 @@
 #include <QVector>
 #include <QFileDialog>
 #include <QColorDialog>
+#include <QtCharts>
+#include <general_functions.h>
 #include <noaa.h>
 #include <usgs.h>
 #include <timeseries.h>
-#include <QtCharts>
+#include <about_dialog.h>
 
-using namespace QtCharts;
-
-
-//...Forward Declarations of classes
-class noaa;
-class usgs;
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -61,21 +57,9 @@ public:
 
     ~MainWindow();
 
-    static QString MakeColorString(QColor InputColor);
-
-    static void GetLeadingPath(QString Input);
-
-    static QString GetMyLeadingPath(QString Input);
-
-    static QColor GenerateRandomColor();
-
-    static QString RemoveLeadingPath(QString Input);
-
     int loadSession();
 
-    void delay(int delayTime);
-
-    void delayM(int delayTime);
+    QString PreviousDirectory;
 
 private slots:
 
@@ -124,8 +108,6 @@ private slots:
     void on_button_fitHWM_clicked();
 
     void on_button_fitTimeseries_clicked();
-
-    void unsupportedContent(QNetworkReply * reply);
 
     void on_button_plotTimeseriesStation_clicked();
 
@@ -192,25 +174,22 @@ private:
 
     int saveSession();
 
-    int NETCDF_ERR(int status);
+    bool confirmClose();
 
     QPointer<noaa> thisNOAA;
 
     QPointer<usgs> thisUSGS;
 
+protected:
+
+    void closeEvent(QCloseEvent *);
+
 };
-
-//-------------------------------------------//
-//Function prototypes not included in the class
-bool isConnectedToNetwork();
-//-------------------------------------------//
-
 
 //-------------------------------------------//
 //Some global variables used throughout the
 //code
 //-------------------------------------------//
-extern QString PreviousDirectory;
 extern QColor LineColor121Line,LineColorBounds;
 extern QColor DotColorHWM,LineColorRegression;
 extern QDateTime IMEDSMinDate,IMEDSMaxDate;
