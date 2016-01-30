@@ -25,12 +25,6 @@
 #include "ui_MetOceanViewer_main.h"
 #include "noaa.h"
 
-void readJavascriptResult(QVariant)
-{
-    qDebug() << "data";
-    return;
-}
-
 //-------------------------------------------//
 //Called when the pan to combo box is updated
 //-------------------------------------------//
@@ -47,6 +41,7 @@ void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_button_noaasavechart_clicked()
 {
+    QString filename;
 
     if(this->thisNOAA->NOAAMarkerID==-1)
     {
@@ -68,14 +63,15 @@ void MainWindow::on_button_noaasavechart_clicked()
 
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+".jpg";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg)",&filter);
 
-    if(Filename==NULL)
+    if(TempString==NULL)
         return;
 
-    GetLeadingPath(Filename);
-    QFile NOAAOutput(Filename);
+    splitPath(TempString,filename,PreviousDirectory);
+
+    QFile NOAAOutput(TempString);
     QPixmap NOAAImage(ui->noaa_map->size());
     ui->noaa_map->render(&NOAAImage);
     NOAAOutput.open(QIODevice::WriteOnly);
@@ -114,16 +110,15 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     QString filter;
     QString DefaultFile = "/NOAA_"+QString::number(this->thisNOAA->NOAAMarkerID)+".imeds";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,
                                                     "IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
 
-    if(Filename == NULL)
+    if(TempString == NULL)
         return;
 
-    GetLeadingPath(Filename);
-    Filename2 = RemoveLeadingPath(Filename);
+    splitPath(TempString,Filename2,PreviousDirectory);
 
     for(index=0;index<thisNOAA->CurrentNOAAStation.length();index++)
     {
@@ -135,7 +130,7 @@ void MainWindow::on_button_noaasavedata_clicked()
                 Filename3 = PreviousDirectory+"/Predictions_"+Filename2;
         }
         else
-            Filename3 = Filename;
+            Filename3 = TempString;
 
         QFile NOAAOutput(Filename3);
 

@@ -44,7 +44,7 @@ int MainWindow::saveSession()
     int varid_autodate,varid_autoy,varid_checkState;
     int dims_1d[1];
     int nTimeseries;
-    QString relFile,relPath;
+    QString relFile,relPath,TempFile,Directory;
     size_t start[1];
     size_t iu;
     double mydatadouble[1];
@@ -82,7 +82,8 @@ int MainWindow::saveSession()
         Session.remove();
 
     //Get the path of the session file so we can save a relative path later
-    QDir CurrentDir(GetMyLeadingPath(SessionFile));
+    splitPath(SessionFile,TempFile,Directory);
+    QDir CurrentDir(Directory);
 
     ierr = NETCDF_ERR(nc_create(SessionFile.toUtf8(),NC_NETCDF4,&ncid));
     if(ierr!=NC_NOERR)return 1;
@@ -285,7 +286,7 @@ int MainWindow::loadSession()
     QMessageBox::StandardButton reply;
     QString filelocation,filename,series_name,color,type;
     QString coldstartstring,stationfile,stationfilepath;
-    QString BaseFile,CurrentDirectory,NewFile;
+    QString BaseFile,CurrentDirectory,NewFile,TempFile,BaseDir;
     double unitconvert,xshift,yshift;
     size_t temp_size_t;
     size_t start[1];
@@ -437,7 +438,7 @@ int MainWindow::loadSession()
     nrow = 0;
 
     //Get the location we are currently working in
-    CurrentDirectory = GetMyLeadingPath(SessionFile);
+    splitPath(SessionFile,TempFile,CurrentDirectory);
 
     for(i=0;i<nTimeseries;i++)
     {
@@ -446,7 +447,7 @@ int MainWindow::loadSession()
         ierr = NETCDF_ERR(nc_get_var1(ncid,varid_filename,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         filelocation = QString(mydatachar[0]);
-        filename = RemoveLeadingPath(filelocation);
+        filename = TempFile;
 
         ierr = NETCDF_ERR(nc_get_var1(ncid,varid_names,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
@@ -479,7 +480,7 @@ int MainWindow::loadSession()
         ierr = NETCDF_ERR(nc_get_var1(ncid,varid_stationfile,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         stationfilepath = QString(mydatachar[0]);
-        stationfile = RemoveLeadingPath(stationfilepath);
+        splitPath(stationfilepath,stationfile,TempFile);
 
         if(hasCheckInfo)
         {
@@ -495,7 +496,7 @@ int MainWindow::loadSession()
         continueToLoad = false;
 
         filelocation = CurrentDirectory+"/"+filelocation;
-        BaseFile = RemoveLeadingPath(filelocation);
+        splitPath(filelocation,BaseFile,BaseDir);
 
         QFile myfile(filelocation);
         if(!myfile.exists())
@@ -573,7 +574,7 @@ int MainWindow::loadSession()
 
         if(type == "ADCIRC")
         {
-            BaseFile = RemoveLeadingPath(stationfilepath);
+            splitPath(stationfilepath,BaseFile,BaseDir);
             stationfilepath = CurrentDirectory+"/"+stationfilepath;
             QFile myfile(stationfilepath);
             if(!myfile.exists())

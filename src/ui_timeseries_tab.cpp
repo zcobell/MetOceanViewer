@@ -38,20 +38,21 @@ QVector<IMEDS> TimeseriesData,UniqueTimeseriesData;
 //-------------------------------------------//
 void MainWindow::on_button_saveTimeseriesImage_clicked()
 {
+    QString Filename;
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
                 PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
 
-    if(Filename==NULL)
+    if(TempString==NULL)
         return;
 
-    GetLeadingPath(Filename);
-    QFile TimeseriesOutput(Filename);
+    splitPath(TempString,Filename,PreviousDirectory);
+    QFile TimeseriesOutput(TempString);
     QPixmap TimeseriesImage(ui->timeseries_map->size());
     ui->timeseries_map->render(&TimeseriesImage);
     TimeseriesOutput.open(QIODevice::WriteOnly);
     TimeseriesImage.save(&TimeseriesOutput,"JPG",100);
-
+    TimeseriesOutput.close();
 }
 //-------------------------------------------//
 
@@ -75,7 +76,7 @@ void MainWindow::on_check_TimeseriesYauto_toggled(bool checked)
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesAddRow_clicked()
 {
-    add_imeds_data AddWindow;
+    add_imeds_data *AddWindow = new add_imeds_data(this);
     QColor CellColor;
     ADCNC NetCDFData;
     ADCASCII ADCData;
@@ -84,10 +85,10 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
     EditBox = false;
 
     int NumberOfRows = ui->table_TimeseriesData->rowCount();
-    AddWindow.setModal(false);
-    AddWindow.set_default_dialog_box_elements(NumberOfRows);
+    AddWindow->setModal(false);
+    AddWindow->set_default_dialog_box_elements(NumberOfRows);
 
-    int WindowStatus = AddWindow.exec();
+    int WindowStatus = AddWindow->exec();
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -163,7 +164,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
     }
 
     QApplication::restoreOverrideCursor();
-    AddWindow.close();
+    AddWindow->close();
     return;
 }
 //-------------------------------------------//

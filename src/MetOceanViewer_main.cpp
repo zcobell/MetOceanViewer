@@ -31,7 +31,6 @@
 //"Global" variables. Since I learned by
 //programming in FORTRAN, this makes me happy
 //-------------------------------------------//
-QString PreviousDirectory;
 QString SLASH;
 QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 QColor LineColor121Line,LineColorBounds;
@@ -71,3 +70,154 @@ void MainWindow::OpenExternalBrowser(const QUrl & url)
 {
     QDesktopServices::openUrl(url);
 }
+
+//-------------------------------------------//
+//Terminates the application when quit button clicked
+//-------------------------------------------//
+void MainWindow::on_actionQuit_triggered()
+{
+    if(confirmClose())
+        close();
+}
+//-------------------------------------------//
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if(confirmClose())
+        event->accept();
+    else
+        event->ignore();
+}
+
+bool MainWindow::confirmClose()
+{
+    QMessageBox::StandardButton answer;
+    answer = QMessageBox::question(this,tr("Exit"),tr("Do you want to exit MetOcean Viewer?"),QMessageBox::Yes|QMessageBox::No);
+    return (answer == QMessageBox::Yes);
+}
+
+//-------------------------------------------//
+//Handle the "enter" or "return" keypress
+//events on certain pages to automatically
+//draw plots
+//-------------------------------------------//
+void MainWindow::keyPressEvent(QKeyEvent *key)
+{
+
+    //Catch "ENTER" or "RETURN" Key
+    if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
+    {
+        //Events for "ENTER" on the Live Data tabs
+        if(ui->MainTabs->currentIndex()==0)
+        {
+            //NOAA Tab
+            if(ui->subtab_livedata->currentIndex()==0)
+            {
+                if(ui->Combo_NOAAPanTo->hasFocus())
+                    ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
+                else
+                    on_Button_FetchData_clicked();
+            }
+            //USGS Tab
+            else if(ui->subtab_livedata->currentIndex()==1)
+            {
+                if(ui->combo_usgs_panto->hasFocus())
+                    ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
+                else
+                    on_button_usgs_fetch_clicked();
+            }
+        }
+        //Events for "ENTER" on the timeseries tabs
+        else if(ui->MainTabs->currentIndex()==1)
+        {
+           if(ui->subtab_timeseries->currentIndex()==0)
+           {
+               on_button_processTimeseriesData_clicked();
+           }
+           else if(ui->subtab_timeseries->currentIndex()==1)
+           {
+               on_button_plotTimeseriesStation_clicked();
+           }
+        }
+        else if(ui->MainTabs->currentIndex()==2)
+        {
+            if(ui->subtab_hwm->currentIndex()==1)
+                on_button_processHWM_clicked();
+        }
+
+    }
+    return;
+
+}
+//-------------------------------------------//
+
+//-------------------------------------------//
+
+//-------------------------------------------//
+//Bring up the about dialog box
+//-------------------------------------------//
+void MainWindow::on_actionAbout_triggered()
+{
+    about_dialog aboutWindow;
+    aboutWindow.setModal(false);
+    aboutWindow.exec();
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Use of the load session button from the
+//menu is triggered here
+//-------------------------------------------//
+void MainWindow::on_actionLoad_Session_triggered()
+{
+    QString BaseFile;
+    QString LoadFile = QFileDialog::getOpenFileName(this,
+                            "Open Session...",
+                            PreviousDirectory,
+                            "MetOcean Viewer Sessions (*.mvs)");
+
+    if(LoadFile==NULL)
+        return;
+
+    splitPath(LoadFile,BaseFile,PreviousDirectory);
+
+    SessionFile = LoadFile;
+
+    loadSession();
+
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//The save session button from the file menu
+//is triggered here
+//-------------------------------------------//
+void MainWindow::on_actionSave_Session_triggered()
+{
+    saveSession();
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//The save as session button from the file
+//menu is triggered here
+//-------------------------------------------//
+void MainWindow::on_actionSave_Session_As_triggered()
+{
+    QString SaveFile = QFileDialog::getSaveFileName(this,
+                        "Save Session...",PreviousDirectory,
+                        "MetOcean Viewer Sessions (*.mvs)");
+    if(SaveFile!=NULL)
+    {
+        SessionFile = SaveFile;
+        saveSession();
+    }
+    return;
+}
+//-------------------------------------------//

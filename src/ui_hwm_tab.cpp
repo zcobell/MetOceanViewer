@@ -41,15 +41,15 @@ QVector<double> classes;
 //-------------------------------------------//
 void MainWindow::on_browse_hwm_clicked()
 {
+    QString filename;
     HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",
-                                    PreviousDirectory,
+                                    this->PreviousDirectory,
                                     "Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
     if(HighWaterMarkFile==NULL)
         return;
 
-    QString TempString = RemoveLeadingPath(HighWaterMarkFile);
-    GetLeadingPath(HighWaterMarkFile);
-    ui->Text_HWMFile->setText(TempString);
+    splitPath(HighWaterMarkFile,this->PreviousDirectory,filename);
+    ui->Text_HWMFile->setText(filename);
 }
 //-------------------------------------------//
 
@@ -268,15 +268,17 @@ void MainWindow::on_check_manualHWM_toggled(bool checked)
 //-------------------------------------------//
 void MainWindow::on_button_saveHWMMap_clicked()
 {
+    QString filename;
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                this->PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
 
-    if(Filename==NULL)
+    if(TempString==NULL)
         return;
 
-    GetLeadingPath(Filename);
-    QFile HWMOutput(Filename);
+    splitPath(TempString,filename,this->PreviousDirectory);
+
+    QFile HWMOutput(TempString);
     QPixmap HWMImage(ui->map_hwm->size());
     ui->map_hwm->render(&HWMImage);
     HWMOutput.open(QIODevice::WriteOnly);
