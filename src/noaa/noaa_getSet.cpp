@@ -20,25 +20,43 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include "noaa.h"
+#include <noaa.h>
 
-noaa::noaa(QWebEngineView *inMap, QChartView *inChart,
-           QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-           QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-           QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent)
+QString noaa::getNOAAErrorString()
 {
-    map = inMap;
-    chart = inChart;
-    startDateEdit = inStartDateEdit;
-    endDateEdit = inEndDateEdit;
-    noaaProduct = inNoaaProduct;
-    noaaDatum = inNoaaDatum;
-    noaaUnits = inNoaaUnits;
-    statusBar = inStatusBar;
+    return this->NOAAErrorString;
 }
 
-noaa::~noaa()
+int noaa::getLoadedNOAAStation()
 {
-
+    return this->NOAAMarkerID;
 }
 
+int noaa::getClickedNOAAStation()
+{
+    QString JunkString;
+    double JunkDouble1,JunkDouble2;
+    return getNOAAStation(JunkString,JunkDouble1,JunkDouble2);
+}
+
+int noaa::setNOAAStation()
+{
+    this->NOAAMarkerID = getNOAAStation(this->CurrentNOAAStationName,
+                                        this->CurrentNOAALon,this->CurrentNOAALat);
+    return 0;
+}
+
+int noaa::getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude)
+{
+    QVariant eval = QVariant();
+    this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
+    while(eval.isNull())
+        delayM(5);
+    QStringList evalList = eval.toString().split(";");
+
+    NOAAStationName = evalList.value(1).simplified();
+    latitude = evalList.value(3).toDouble();
+    longitude = evalList.value(2).toDouble();
+
+    return evalList.value(0).toInt();
+}

@@ -32,6 +32,9 @@
 #include <QVector>
 #include <QChartView>
 #include <QtCharts>
+#include <QtWebEngine>
+#include <QWebEngineView>
+#include <QPrinter>
 #include <general_functions.h>
 
 using namespace QtCharts;
@@ -41,18 +44,35 @@ class noaa : public QObject
     Q_OBJECT
 public:
     //...Constructor
-    explicit noaa(QObject *parent = 0);
+    explicit noaa(QWebEngineView *inMap, QChartView *inChart,
+                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                  QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
+                  QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent = 0);
 
     //...Destructor
     ~noaa();
 
     //...Public Functions
+    int plotNOAAStation();
+    int saveNOAAImage(QString filename);
+    int saveNOAAData(QString filename, QString PreviousDirectory, QString format);
+    int getLoadedNOAAStation();
+    int getClickedNOAAStation();
+    QString getNOAAErrorString();
+
+private:
+
+    //...Private Functions
+    QString formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
+    void readNOAAResponse(QNetworkReply *reply, int index, int index2);
     int fetchNOAAData();
     int prepNOAAResponse();
     int retrieveProduct(int type, QString &Product, QString &Product2);
     int getDataBounds(double &ymin, double &ymax);
     int generateLabels();
-    int plotChart(QChartView *chartView);
+    int plotChart();
+    int setNOAAStation();
+    int getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude);
 
     //...Structures
     struct NOAAStationData
@@ -62,7 +82,8 @@ public:
         double value;
     };
 
-    //...Public Variables
+    //...Private Variables
+    QVector< QVector<QByteArray> > NOAAWebData;
     int NOAAMarkerID;
     int ProductIndex;
 
@@ -74,6 +95,7 @@ public:
     QString Units;
     QString yLabel;
     QString plotTitle;
+    QString NOAAErrorString;
 
     QDateTime StartDate;
     QDateTime EndDate;
@@ -81,14 +103,12 @@ public:
     QVector< QVector<NOAAStationData> > CurrentNOAAStation;
     QVector<QString> ErrorString;
 
-private:
-
-    //...Private Functions
-    QString formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
-    void readNOAAResponse(QNetworkReply *reply, int index, int index2);
-
-    //...Private Variables
-    QVector< QVector<QByteArray> > NOAAWebData;
+    //...Pointers to GUI elements
+    QWebEngineView *map;
+    QChartView     *chart;
+    QDateEdit      *startDateEdit,*endDateEdit;
+    QComboBox      *noaaProduct,*noaaUnits,*noaaDatum;
+    QStatusBar     *statusBar;
 
 };
 

@@ -20,25 +20,45 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include "noaa.h"
+#include <noaa.h>
 
-noaa::noaa(QWebEngineView *inMap, QChartView *inChart,
-           QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-           QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-           QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent)
-{
-    map = inMap;
-    chart = inChart;
-    startDateEdit = inStartDateEdit;
-    endDateEdit = inEndDateEdit;
-    noaaProduct = inNoaaProduct;
-    noaaDatum = inNoaaDatum;
-    noaaUnits = inNoaaUnits;
-    statusBar = inStatusBar;
-}
-
-noaa::~noaa()
+int noaa::plotNOAAStation()
 {
 
-}
+    //...get the latest station
+    int ierr = this->setNOAAStation();
 
+    //...Grab the options from the UI
+    this->StartDate = this->startDateEdit->dateTime();
+    this->EndDate = this->endDateEdit->dateTime();
+    this->Units = this->noaaUnits->currentText();
+    this->Datum = this->noaaDatum->currentText();
+    this->ProductIndex = this->noaaProduct->currentIndex();
+
+    //Update status
+    statusBar->showMessage("Downloading data from NOAA...",0);
+
+    //...Generate the javascript calls in this array
+    ierr = this->fetchNOAAData();
+
+    //...Update the status bar
+    statusBar->showMessage("Plotting the data from NOAA...");
+
+    //...Generate prep the data for plotting
+    ierr = this->prepNOAAResponse();
+
+    //...Check for valid data
+    if(this->CurrentNOAAStation[0].length()<5)
+    {
+        this->NOAAErrorString = this->ErrorString[0];
+        return -1;
+    }
+
+    //...Plot the chart
+    ierr = this->plotChart();
+
+    statusBar->clearMessage();
+
+    return 0;
+
+}
