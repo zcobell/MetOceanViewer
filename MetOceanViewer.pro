@@ -62,7 +62,11 @@ SOURCES += src/main.cpp\
     src/usgs/usgs_plotUSGS.cpp \
     src/usgs/usgs_getDataBounds.cpp \
     src/usgs/usgs_saveData.cpp \
-    src/usgs/usgs_setGet.cpp
+    src/usgs/usgs_setGet.cpp \
+    src/noaa/noaa_getSet.cpp \
+    src/noaa/noaa_saveData.cpp \
+    src/usgs/usgs_plotting.cpp \
+    src/noaa/noaa_plotting.cpp
 
 HEADERS  += \
     include/hwm.h \
