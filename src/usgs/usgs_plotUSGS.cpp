@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------//
 #include <usgs.h>
 
-int usgs::plotUSGS(QChartView *chartView)
+int usgs::plotUSGS()
 {
 
     int i,j,ierr,nFrac;
@@ -62,9 +62,9 @@ int usgs::plotUSGS(QChartView *chartView)
     series1->setPen(QPen(QColor(0,0,255),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
 
     //...Create the chart
-    QChart *chart = new QChart();
-    chart->setAnimationOptions(QChart::SeriesAnimations);
-    chart->legend()->setAlignment(Qt::AlignBottom);
+    QChart *thisChart = new QChart();
+    thisChart->setAnimationOptions(QChart::SeriesAnimations);
+    thisChart->legend()->setAlignment(Qt::AlignBottom);
     for(j=0;j<this->USGSPlot.length();j++)
     {
         series1->append(QDateTime(this->USGSPlot[j].Date,this->USGSPlot[j].Time).toMSecsSinceEpoch(),this->USGSPlot[j].value);
@@ -73,12 +73,10 @@ int usgs::plotUSGS(QChartView *chartView)
         if(maxDateTime<QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
             maxDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
     }
-    chart->addSeries(series1);
+    thisChart->addSeries(series1);
 
     minDateTime = QDateTime(minDateTime.date(),QTime(minDateTime.time().hour()  ,0,0));
     maxDateTime = QDateTime(maxDateTime.date(),QTime(maxDateTime.time().hour()+1,0,0));
-
-    qDebug() << minDateTime << maxDateTime;
 
     QDateTimeAxis *axisX = new QDateTimeAxis;
     axisX->setTickCount(5);
@@ -91,7 +89,7 @@ int usgs::plotUSGS(QChartView *chartView)
     axisX->setTitleText("Date");
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
-    chart->addAxis(axisX, Qt::AlignBottom);
+    thisChart->addAxis(axisX, Qt::AlignBottom);
     series1->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis;
@@ -99,14 +97,18 @@ int usgs::plotUSGS(QChartView *chartView)
     axisY->setTitleText(this->ProductName.split(",").value(0));
     axisY->setMin(ymin);
     axisY->setMax(ymax);
-    chart->addAxis(axisY, Qt::AlignLeft);
+    thisChart->addAxis(axisY, Qt::AlignLeft);
     series1->attachAxis(axisY);
 
-    chart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
-    chartView->setRenderHint(QPainter::Antialiasing);
-    chartView->setChart(chart);
+    thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
+    chart->setRenderHint(QPainter::Antialiasing);
 
-    this->USGSBeenPlotted = true;
+    //...Set the hover
+    //connect(series1, SIGNAL(hovered(QPointF, bool)), this, SLOT(tooltip(QPointF,bool)));
+
+    chart->setChart(thisChart);
+
+    this->setUSGSBeenPlotted(true);
 
     return 0;
 }

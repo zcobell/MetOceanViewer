@@ -60,7 +60,9 @@ SOURCES += src/main.cpp\
     src/noaa/noaa_generateLabels.cpp \
     src/noaa/noaa_plotChart.cpp \
     src/usgs/usgs_plotUSGS.cpp \
-    src/usgs/usgs_getDataBounds.cpp
+    src/usgs/usgs_getDataBounds.cpp \
+    src/usgs/usgs_saveData.cpp \
+    src/usgs/usgs_setGet.cpp
 
 HEADERS  += \
     include/hwm.h \

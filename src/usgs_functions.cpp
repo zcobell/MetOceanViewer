@@ -31,29 +31,29 @@ void MainWindow::on_button_usgssavemap_clicked()
 {
     QString filename;
 
-    if(thisUSGS->USGSMarkerID=="none")
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
     }
 
-    QVariant USGSMarkerID2 = QVariant();
-    ui->usgs_map->page()->runJavaScript("returnStationID()",[&USGSMarkerID2](const QVariant &v){USGSMarkerID2 = v;});
-    while(USGSMarkerID2.isNull())
-        delayM(5);
-    if(thisUSGS->USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
+    if(MarkerID != MarkerID2)
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
         return;
     }
-    if(!thisUSGS->USGSBeenPlotted)
+
+    if(!thisUSGS->getUSGSBeenPlotted())
     {
         QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
         return;
     }
 
     QString filter = "PDF (*.PDF)";
-    QString DefaultFile = "/USGS_"+thisUSGS->USGSMarkerID+".pdf";
+    QString DefaultFile = "/USGS_"+MarkerID+".pdf";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
                 PreviousDirectory+DefaultFile,"PDF (*.pdf)",&filter);
 
@@ -62,32 +62,10 @@ void MainWindow::on_button_usgssavemap_clicked()
 
     splitPath(TempString,filename,PreviousDirectory);
 
-    QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
-    printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
-    printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(TempString);
+    thisUSGS->saveUSGSImage(TempString);
 
-    QPainter painter(&printer);
-    painter.setRenderHint(QPainter::Antialiasing,true);
-    painter.begin(&printer);
-
-    //...Page 1 - Chart
-    ui->usgs_graphics->render(&painter);
-
-    //...Page 2 - Map
-    printer.newPage();
-    QPixmap map = ui->usgs_map->grab();
-    QPixmap mapScaled = map.scaledToWidth(printer.width());
-    if(mapScaled.height()>printer.height())
-        mapScaled = map.scaledToHeight(printer.height());
-    int cw = (printer.width()-mapScaled.width())/2;
-    int ch = (printer.height()-mapScaled.height())/2;
-    painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
-
-    painter.end();
     return;
+
 }
 //-------------------------------------------//
 
@@ -100,30 +78,34 @@ void MainWindow::on_button_usgssavedata_clicked()
 {
     QString filename;
 
-    if(thisUSGS->USGSMarkerID=="none")
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
     {
         QMessageBox::critical(this,"ERROR","No Station has been selected.");
         return;
     }
 
-    QVariant USGSMarkerID2 = QVariant();
-    ui->usgs_map->page()->runJavaScript("returnStationID()",[&USGSMarkerID2](const QVariant &v){USGSMarkerID2 = v;});
-    while(USGSMarkerID2.isNull())
-        delayM(5);
-    if(thisUSGS->USGSMarkerID != USGSMarkerID2.toString().split(";").value(0).mid(4))
+    if(MarkerID != MarkerID2)
     {
         QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
         return;
     }
-    if(!thisUSGS->USGSBeenPlotted)
+
+    if(!thisUSGS->getUSGSBeenPlotted())
     {
         QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
         return;
     }
 
     QString filter;
-    QString DefaultFile = "/USGS_"+thisUSGS->USGSMarkerID+".imeds";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,"IMEDS (*.imeds);;CSV (*.csv)",&filter);
+    QString DefaultFile = "/USGS_"+MarkerID+".imeds";
+
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                                    PreviousDirectory+DefaultFile,
+                                    "IMEDS (*.imeds);;CSV (*.csv)",&filter);
+
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
 
@@ -132,46 +114,9 @@ void MainWindow::on_button_usgssavedata_clicked()
 
     splitPath(TempString,filename,PreviousDirectory);
 
-    QFile USGSOutput(TempString);
-    QTextStream Output(&USGSOutput);
-    USGSOutput.open(QIODevice::WriteOnly);
+    thisUSGS->saveUSGSData(TempString,format);
 
-    if(format.compare("CSV")==0)
-    {
-        Output << "Station: "+thisUSGS->USGSMarkerID+"\n";
-        Output << "Datum: N/A\n";
-        Output << "Units: N/A\n";
-        Output << "\n";
-        for(int i=0;i<thisUSGS->USGSPlot.length();i++)
-        {
-            Output << thisUSGS->USGSPlot[i].Date.toString("MM/dd/yyyy")+","+
-                      thisUSGS->USGSPlot[i].Time.toString("hh:mm")+","+
-                      QString::number(thisUSGS->USGSPlot[i].value)+"\n";
-        }
-    }
-    else if(format.compare("IMEDS")==0)
-    {
-        Output << "% IMEDS generic format - Water Level\n";
-        Output << "% year month day hour min sec value\n";
-        Output << "USGS   UTC    N/A\n";
-        Output << "USGS_"+thisUSGS->USGSMarkerID+"   "+QString::number(thisUSGS->CurrentUSGSLat)+
-                  "   "+QString::number(thisUSGS->CurrentUSGSLon)+"\n";
-        for(int i=0;i<thisUSGS->USGSPlot.length();i++)
-        {
-            Output << thisUSGS->USGSPlot[i].Date.toString("yyyy")+"    "+
-                        thisUSGS->USGSPlot[i].Date.toString("MM")+"    "+
-                        thisUSGS->USGSPlot[i].Date.toString("dd")+"    "+
-                        thisUSGS->USGSPlot[i].Time.toString("hh")+"    "+
-                        thisUSGS->USGSPlot[i].Time.toString("mm")+"    "+
-                                                        "00" +"    "+
-                        QString::number(thisUSGS->USGSPlot[i].value)+"\n";
-        }
-
-    }
-    USGSOutput.close();
     return;
 }
 //-------------------------------------------//
-
-
 

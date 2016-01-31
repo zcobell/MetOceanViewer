@@ -25,6 +25,7 @@
 
 #include <mov_errors.h>
 #include <mov_flags.h>
+#include <QtPrintSupport>
 #include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
@@ -38,9 +39,36 @@ using namespace QtCharts;
 class usgs : public QObject
 {
 public:
-    usgs(QObject *parent = 0);
+    usgs(QWebEngineView *inMap,
+               QChartView *inChart,QRadioButton *inDailyButton,
+               QRadioButton *inHistoricButton,QRadioButton *inInstantButton,
+               QComboBox *inProductBox, QDateEdit *inStartDateEdit,
+               QDateEdit *inEndDateEdit, QStatusBar *instatusBar,QObject *parent = 0);
 
     ~usgs();
+
+    //...Public functions
+    bool getUSGSBeenPlotted();
+    int plotNewUSGSStation();
+    int replotCurrentUSGSStation(int index);
+    int setUSGSBeenPlotted(bool input);
+    int saveUSGSImage(QString filename);
+    int saveUSGSData(QString filename,QString format);
+    QString getUSGSErrorString();
+    QString getLoadedUSGSStation();
+    QString getClickedUSGSStation();
+
+private:
+    //...Private functions
+    QString getMarkerSelection(QString &name, double &longitude, double &latitude);
+    int setMarkerSelection();
+    int getTimezoneOffset(QString timezone);
+    int fetchUSGSData();
+    int plotUSGS();
+    int readUSGSDataFinished(QNetworkReply*);
+    int formatUSGSInstantResponse(QByteArray Input);
+    int formatUSGSDailyResponse(QByteArray Input);
+    int getDataBounds(double &ymin, double &ymax);
 
     //...Data structures
     struct USGSData
@@ -50,6 +78,7 @@ public:
         QVector<QDateTime> Date;
         QVector<double> Data;
     };
+
     struct USGSStationData
     {
         QDate Date;
@@ -57,15 +86,15 @@ public:
         double value;
     };
 
-    //...Public functions
-    int fetchUSGSData();
-    int readUSGSDataFinished(QNetworkReply*);
-    int formatUSGSInstantResponse(QByteArray Input);
-    int formatUSGSDailyResponse(QByteArray Input);
-    int getDataBounds(double &ymin, double &ymax);
-    int plotUSGS(QChartView *chartView);
+    //...Pointers to variables
+    QWebEngineView *map;
+    QChartView     *chart;
+    QRadioButton   *dailyButton,*historicButton,*instantButton;
+    QComboBox      *productBox;
+    QDateEdit      *startDateEdit,*endDateEdit;
+    QStatusBar     *statusBar;
 
-    //...Public varibales
+    //...Private variables
     bool USGSDataReady;
     bool USGSBeenPlotted;
     int USGSdataMethod;
@@ -73,7 +102,6 @@ public:
     double CurrentUSGSLat;
     double CurrentUSGSLon;
     QString USGSMarkerID;
-    QString USGSMarkerString;
     QString CurrentUSGSStationName;
     QString USGSErrorString;
     QString ProductName;
@@ -83,10 +111,6 @@ public:
     QVector<QString> Parameters;
     QVector<USGSStationData> USGSPlot;
     QVector<USGSData> CurrentUSGSStation;
-
-private:
-    int getTimezoneOffset(QString timezone);
-
 
 };
 

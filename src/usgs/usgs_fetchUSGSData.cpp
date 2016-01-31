@@ -31,6 +31,9 @@ int usgs::fetchUSGSData()
     QEventLoop loop;
     int ierr;
 
+    //...Get the current marker
+    this->setMarkerSelection();
+
     //...Format the date strings
     endDateString1 = "&endDT="+this->requestEndDate.toString("yyyy-MM-dd");
     startDateString1 = "&startDT="+this->requestStartDate.toString("yyyy-MM-dd");
@@ -39,11 +42,11 @@ int usgs::fetchUSGSData()
 
     //...Construct the correct request URL
     if(this->USGSdataMethod==0)
-        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+this->USGSMarkerString+startDateString2+endDateString2;
+        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+this->USGSMarkerID+startDateString2+endDateString2;
     else if(this->USGSdataMethod==1)
-        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+this->USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
+        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+this->USGSMarkerID+startDateString1+endDateString1+"&format=rdb";
     else
-        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+this->USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
+        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+this->USGSMarkerID+startDateString1+endDateString1+"&format=rdb";
 
     //...Make the request to the server
     QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
