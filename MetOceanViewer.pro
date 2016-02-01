@@ -34,7 +34,6 @@ SOURCES += src/main.cpp\
     src/ui_usgs_tab.cpp \
     src/hwm_data.cpp \
     src/hwm_functions.cpp \
-    src/usgs_functions.cpp \
     src/general_functions.cpp \
     src/timeseries_data.cpp \
     src/timeseries_functions.cpp \

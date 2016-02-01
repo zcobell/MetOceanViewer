@@ -126,3 +126,100 @@ void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
     return;
 }
 //-------------------------------------------//
+
+
+//-------------------------------------------//
+//Function to save the map and chart as a jpg
+//-------------------------------------------//
+void MainWindow::on_button_usgssavemap_clicked()
+{
+    QString filename;
+
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+
+    if(MarkerID != MarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
+    if(!thisUSGS->getUSGSBeenPlotted())
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
+    QString filter = "PDF (*.PDF)";
+    QString DefaultFile = "/USGS_"+MarkerID+".pdf";
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                PreviousDirectory+DefaultFile,"PDF (*.pdf)",&filter);
+
+    if(TempString==NULL)
+        return;
+
+    splitPath(TempString,filename,PreviousDirectory);
+
+    thisUSGS->saveUSGSImage(TempString);
+
+    return;
+
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Saves the USGS data as an IMEDS formatted file
+//or a CSV
+//-------------------------------------------//
+void MainWindow::on_button_usgssavedata_clicked()
+{
+    QString filename;
+
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+
+    if(MarkerID != MarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
+    if(!thisUSGS->getUSGSBeenPlotted())
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
+    QString filter;
+    QString DefaultFile = "/USGS_"+MarkerID+".imeds";
+
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                                    PreviousDirectory+DefaultFile,
+                                    "IMEDS (*.imeds);;CSV (*.csv)",&filter);
+
+    QStringList filter2 = filter.split(" ");
+    QString format = filter2.value(0);
+
+    if(TempString == NULL)
+        return;
+
+    splitPath(TempString,filename,PreviousDirectory);
+
+    thisUSGS->saveUSGSData(TempString,format);
+
+    return;
+}
+//-------------------------------------------//
