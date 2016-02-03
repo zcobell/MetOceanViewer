@@ -1,4 +1,3 @@
-<!-- 
 //-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -21,32 +20,23 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
--->
-        
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map_canvas { height: 100% }
-    </style>
-    <script src="/rsc/js/jquery.js"></script>
-    <script src="/rsc/js/highcharts.js"></script>
-    <script src="/rsc/js/exporting.js"></script>
-    <script src="/rsc/js/offline-exporting.js"></script>
-    <script src="/rsc/js/no-data-to-display.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
-    <script src="/rsc/js/timeseries_maps.js"></script>
-  </head>
-  <body onload="initializeTimeseries()">
-      <div style="height:100%; width: 100%; display: table">
-          <div style="display: table-row">
-            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
-            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
-          </div>
-      </div>
-  </body>
-</html>
+#include <noaa.h>
+int noaa::getDataBounds(double &ymin, double &ymax)
+{
+    int i,j;
 
+    ymin =  999999999.0;
+    ymax = -999999999.0;
+
+    for(i=0;i<this->CurrentNOAAStation.length();i++)
+    {
+        for(j=0;j<this->CurrentNOAAStation[i].length();j++)
+        {
+            if(this->CurrentNOAAStation[i][j].value<ymin)
+                ymin = this->CurrentNOAAStation[i][j].value;
+            if(this->CurrentNOAAStation[i][j].value>ymax)
+                ymax = this->CurrentNOAAStation[i][j].value;
+        }
+    }
+    return 0;
+}

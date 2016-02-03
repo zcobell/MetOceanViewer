@@ -29,7 +29,7 @@
 //-------------------------------------------//
 void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 {
-    ui->usgs_map->page()->mainFrame()->evaluateJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
+    ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
     return;
 }
 //-------------------------------------------//
@@ -41,68 +41,19 @@ void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked()
 {
-    QEventLoop loop;
-    QString RequestURL,USGSMarkerString;
-    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
-    QDateTime startDate,endDate;
-    QString startDateString1,endDateString1;
-    QString startDateString2,endDateString2;
+    int ierr;
 
-    USGSbeenPlotted = false;
-    USGSdataReady = false;
-
-    //Display the wait cursor
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
-    ui->statusBar->showMessage("Downloading data from USGS...");
+    //...Create a new USGS object
+    if(!thisUSGS.isNull())
+        delete thisUSGS;
+    thisUSGS = new usgs(ui->usgs_map,ui->usgs_graphics,
+                        ui->radio_usgsDaily,ui->radio_usgshistoric,
+                        ui->radio_usgs_instant,ui->combo_USGSProduct,
+                        ui->Date_usgsStart,ui->Date_usgsEnd,ui->statusBar,this);
 
-    //Wipe out the combo box
-    ui->combo_USGSProduct->clear();
-
-    //Retrieve info from google maps
-    QVariant eval = ui->usgs_map->page()->mainFrame()->evaluateJavaScript("returnStationID()");
-    QStringList evalList = eval.toString().split(";");
-
-    //Sanity Check
-    if(evalList.value(0)=="none")
-    {
-        QMessageBox::warning(this,"Warning","No station has been selected.");
-        ui->statusBar->clearMessage();
-        QApplication::restoreOverrideCursor();
-        return;
-    }
-
-    //Get the station information
-    USGSMarkerString = evalList.value(0).mid(4);
-    USGSMarkerID = USGSMarkerString;
-    CurrentUSGSStationName = evalList.value(1).simplified();
-    CurrentUSGSLon = evalList.value(2).toDouble();
-    CurrentUSGSLat = evalList.value(3).toDouble();
-
-    //Get the time period for the data
-    endDate = ui->Date_usgsEnd->dateTime();
-    startDate = ui->Date_usgsStart->dateTime();
-    endDateString1 = "&endDT="+endDate.toString("yyyy-MM-dd");
-    startDateString1 = "&startDT="+startDate.toString("yyyy-MM-dd");
-    endDateString2 = "&end_date="+endDate.toString("yyyy-MM-dd");
-    startDateString2 = "&begin_date="+startDate.toString("yyyy-MM-dd");
-
-    //Construct the correct request URL
-    if(USGSdataMethod==0)
-        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+USGSMarkerString+startDateString2+endDateString2;
-    else if(USGSdataMethod==1)
-        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
-    else
-        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+USGSMarkerString+startDateString1+endDateString1+"&format=rdb";
-
-    //Make the request to the server
-    QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
-    connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
-    connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
-    loop.exec();
-    ReadUSGSDataFinished(reply);
-
-    //Restore the mouse pointer
+    ierr = thisUSGS->plotNewUSGSStation();
     QApplication::restoreOverrideCursor();
 
     return;
@@ -117,7 +68,7 @@ void MainWindow::on_button_usgs_fetch_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked()
 {
-    USGSdataMethod = 1;
+    thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
 
@@ -138,7 +89,7 @@ void MainWindow::on_radio_usgs_instant_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked()
 {
-    USGSdataMethod = 2;
+    thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
@@ -152,9 +103,123 @@ void MainWindow::on_radio_usgsDaily_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked()
 {
-    USGSdataMethod = 0;
+    thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Fires when the combo box is changed and
+//plots the data immediately
+//-------------------------------------------//
+void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
+{
+    int ierr;
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    ierr = thisUSGS->replotCurrentUSGSStation(index);
+    QApplication::restoreOverrideCursor();
+    if(ierr!=0)
+        QMessageBox::critical(this,"ERROR",thisUSGS->getUSGSErrorString());
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Function to save the map and chart as a jpg
+//-------------------------------------------//
+void MainWindow::on_button_usgssavemap_clicked()
+{
+    QString filename;
+
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+
+    if(MarkerID != MarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
+    if(!thisUSGS->getUSGSBeenPlotted())
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
+    QString filter = "PDF (*.PDF)";
+    QString DefaultFile = "/USGS_"+MarkerID+".pdf";
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                PreviousDirectory+DefaultFile,"PDF (*.pdf)",&filter);
+
+    if(TempString==NULL)
+        return;
+
+    splitPath(TempString,filename,PreviousDirectory);
+
+    thisUSGS->saveUSGSImage(TempString);
+
+    return;
+
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Saves the USGS data as an IMEDS formatted file
+//or a CSV
+//-------------------------------------------//
+void MainWindow::on_button_usgssavedata_clicked()
+{
+    QString filename;
+
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+
+    if(MarkerID != MarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
+    if(!thisUSGS->getUSGSBeenPlotted())
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
+    QString filter;
+    QString DefaultFile = "/USGS_"+MarkerID+".imeds";
+
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                                    PreviousDirectory+DefaultFile,
+                                    "IMEDS (*.imeds);;CSV (*.csv)",&filter);
+
+    QStringList filter2 = filter.split(" ");
+    QString format = filter2.value(0);
+
+    if(TempString == NULL)
+        return;
+
+    splitPath(TempString,filename,PreviousDirectory);
+
+    thisUSGS->saveUSGSData(TempString,format);
+
     return;
 }
 //-------------------------------------------//

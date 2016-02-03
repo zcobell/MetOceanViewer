@@ -26,6 +26,9 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 # Compiling
 To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.5.0 on Windows, Mac OSX, and Linux.
 
+##QtCharts
+This program requires the non-standard QtCharts library. This is packaged as part of the windows DLLs provided here, however, to compile this code for yourself you will need to manually generate this Qt module. The QtCharts module can be obtained [here](https://code.qt.io/cgit/qt/qtcharts.git). This module has taken over for the HighCharts plotting routines which, while extremely powerful, are not ideal for being embedded in a Qt C++ application with large amounts of data.
+
 # Credits
 The following external libraries/APIs are used in this software
 - NOAA CO-OPS API (http://tidesandcurrents.noaa.gov)

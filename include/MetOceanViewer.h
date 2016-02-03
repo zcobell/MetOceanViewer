@@ -21,45 +21,25 @@
 //
 //-----------------------------------------------------------------------//
         
-#ifndef ADCVALIDATOR_H
-#define ADCVALIDATOR_H
+#ifndef METOCEANVIEWER_H
+#define METOCEANVIEWER_H
 
 #include <QMainWindow>
-#include <QtWebKitWidgets>
+#include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QtNetwork>
 #include <QVector>
 #include <QFileDialog>
 #include <QColorDialog>
+#include <QtCharts>
+#include <general_functions.h>
+#include <noaa.h>
+#include <usgs.h>
 #include <timeseries.h>
+#include <about_dialog.h>
+#include <QtPrintSupport/QPrinter>
 
-//-------------------------------------------//
-//Data structures
-//-------------------------------------------//
-//Structure that holds data downloaded from
-//the NOAA website
-//-------------------------------------------//
-struct NOAAStationData
-{
-    QDate Date;
-    QTime Time;
-    double value;
-};
-//-------------------------------------------//
-
-//-------------------------------------------//
-//Structure that holds the data downloaded
-//from the USGS website
-//-------------------------------------------//
-struct USGSData
-{
-    int NumDataPoints;
-    QString Description;
-    QVector<QDateTime> Date;
-    QVector<double> Data;
-};
-//-------------------------------------------//
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -78,23 +58,13 @@ public:
 
     ~MainWindow();
 
-    static QString MakeColorString(QColor InputColor);
-
-    static void GetLeadingPath(QString Input);
-
-    static QString GetMyLeadingPath(QString Input);
-
-    static QColor GenerateRandomColor();
-
-    static QString RemoveLeadingPath(QString Input);
-
     int loadSession();
 
-    void delay(int delayTime);
-
-    void delayM(int delayTime);
+    QString PreviousDirectory;
 
 private slots:
+
+    void setupMetOceanViewerUI();
 
     void on_Button_FetchData_clicked();
 
@@ -140,8 +110,6 @@ private slots:
 
     void on_button_fitTimeseries_clicked();
 
-    void unsupportedContent(QNetworkReply * reply);
-
     void on_button_plotTimeseriesStation_clicked();
 
     void keyPressEvent(QKeyEvent* key);
@@ -159,8 +127,6 @@ private slots:
     void on_combo_usgs_panto_currentIndexChanged(int index);
 
     void on_button_usgs_fetch_clicked();
-
-    int GetTimezoneOffset(QString timezone);
 
     void on_button_usgssavemap_clicked();
 
@@ -193,19 +159,11 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    QString FormatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
-
-    void FormatUSGSInstantResponse(QByteArray Input);
-
-    void FormatUSGSDailyResponse(QByteArray Input);
-
     void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
 
     void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
 
     int ClassifyHWM(double diff);
-
-    int retrieveProduct(int type, QString &Product, QString &Product2);
 
     void SetupTimeseriesTable();
 
@@ -217,53 +175,30 @@ private:
 
     int saveSession();
 
-    int NETCDF_ERR(int status);
+    bool confirmClose();
 
-    void ReadNOAAResponse(QNetworkReply *reply, int index, int index2);
+    QPointer<noaa> thisNOAA;
 
-    void PlotNOAAResponse();
+    QPointer<usgs> thisUSGS;
 
-    void ReadUSGSDataFinished(QNetworkReply*);
+protected:
 
-    void PlotUSGS();
+    void closeEvent(QCloseEvent *);
+
 };
-
-//-------------------------------------------//
-//Function prototypes not included in the class
-bool isConnectedToNetwork();
-//-------------------------------------------//
-
 
 //-------------------------------------------//
 //Some global variables used throughout the
 //code
 //-------------------------------------------//
-extern QString PreviousDirectory;
-extern QColor ADCIRCIMEDSColor,OBSIMEDSColor;
 extern QColor LineColor121Line,LineColorBounds;
 extern QColor DotColorHWM,LineColorRegression;
 extern QDateTime IMEDSMinDate,IMEDSMaxDate;
-extern QVector<QVector<double> > NOAAStations;
-extern QVector<QString> NOAAStationNames;
-extern QVector<QString> panToLocations;
 extern bool ColorUpdated;
 extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
-extern int NOAAMarkerID;
-extern int NumNOAADataRead;
-extern double CurrentNOAALat,CurrentNOAALon;
-extern QString CurrentNOAAStationName;
-extern QString USGSMarkerID;
-extern double CurrentUSGSLat,CurrentUSGSLon;
-extern QString CurrentUSGSStationName,USGSErrorString;
-extern bool USGSbeenPlotted,USGSdataReady,USGSDataReadFinished;
-extern int USGSdataMethod;
-extern QVector< QVector<NOAAStationData> > CurrentNOAAStation;
-extern QVector<NOAAStationData> USGSPlot;
-extern QVector<USGSData> CurrentUSGSStation;
-extern QVector< QVector<QByteArray> > NOAAWebData;
 //-------------------------------------------//
 
 
-#endif // ADCVALIDATOR_H
+#endif // METOCEANVIEWER_H

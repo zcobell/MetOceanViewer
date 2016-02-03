@@ -72,6 +72,8 @@ public:
                                  double UnitConvert, double xmove, double ymove, QColor Color,
                                  QDateTime ColdStart, QString FileType, QString StationPath);
 
+    QString PreviousDirectory;
+
 private slots:
 
     void on_browse_filebrowse_clicked();

@@ -1,4 +1,3 @@
-<!-- 
 //-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -21,32 +20,28 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
--->
-        
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map_canvas { height: 100% }
-    </style>
-    <script src="/rsc/js/jquery.js"></script>
-    <script src="/rsc/js/highcharts.js"></script>
-    <script src="/rsc/js/exporting.js"></script>
-    <script src="/rsc/js/offline-exporting.js"></script>
-    <script src="/rsc/js/no-data-to-display.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
-    <script src="/rsc/js/timeseries_maps.js"></script>
-  </head>
-  <body onload="initializeTimeseries()">
-      <div style="height:100%; width: 100%; display: table">
-          <div style="display: table-row">
-            <div id="map_canvas" style="width: 50%; display: table-cell;"></div>
-            <div id="plot_area" style="width: 50%; display: table-cell;"></div>
-          </div>
-      </div>
-  </body>
-</html>
+#include <noaa.h>
 
+void noaa::readNOAAResponse(QNetworkReply *reply, int index, int index2)
+{
+    QByteArray Data;
+
+    //Catch some errors during the download
+    if(reply->error()!=0)
+    {
+        QMessageBox::information(0,"ERROR","ERROR: "+reply->errorString());
+        reply->deleteLater();
+        return;
+    }
+
+    //Read the data received from NOAA server
+    Data=reply->readAll();
+
+    //Save the data into an array and increment the counter
+    this->NOAAWebData[index2][index] = Data;
+
+    //Delete this response
+    reply->deleteLater();
+
+    return;
+}

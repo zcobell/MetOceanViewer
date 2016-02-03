@@ -21,7 +21,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core gui webkitwidgets network xml
+QT       += core gui webenginewidgets network xml charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -34,8 +34,6 @@ SOURCES += src/main.cpp\
     src/ui_usgs_tab.cpp \
     src/hwm_data.cpp \
     src/hwm_functions.cpp \
-    src/noaa_functions.cpp \
-    src/usgs_functions.cpp \
     src/general_functions.cpp \
     src/timeseries_data.cpp \
     src/timeseries_functions.cpp \
@@ -43,7 +41,31 @@ SOURCES += src/main.cpp\
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
     src/fileio.cpp \
-    src/MetOceanViewer_main.cpp
+    src/MetOceanViewer_main.cpp \
+    src/setupMetOceanViewerUI.cpp \
+    src/noaa/noaa.cpp \
+    src/noaa/noaa_fetchNOAAData.cpp \
+    src/noaa/noaa_formatNOAAResponse.cpp \
+    src/noaa/noaa_readNOAAResponse.cpp \
+    src/noaa/noaa_retrieveproduct.cpp \
+    src/usgs/usgs.cpp \
+    src/usgs/usgs_fetchUSGSData.cpp \
+    src/usgs/usgs_formastUSGSInstantResponse.cpp \
+    src/usgs/usgs_readUSGSDataFinished.cpp \
+    src/usgs/usgs_formatUSGSDailyResponse.cpp \
+    src/usgs/usgs_getTimezone.cpp \
+    src/noaa/noaa_prepNOAAResponse.cpp \
+    src/noaa/noaa_getDataBounds.cpp \
+    src/noaa/noaa_generateLabels.cpp \
+    src/noaa/noaa_plotChart.cpp \
+    src/usgs/usgs_plotUSGS.cpp \
+    src/usgs/usgs_getDataBounds.cpp \
+    src/usgs/usgs_saveData.cpp \
+    src/usgs/usgs_setGet.cpp \
+    src/noaa/noaa_getSet.cpp \
+    src/noaa/noaa_saveData.cpp \
+    src/usgs/usgs_plotting.cpp \
+    src/noaa/noaa_plotting.cpp
 
 HEADERS  += \
     include/hwm.h \
@@ -51,7 +73,12 @@ HEADERS  += \
     include/timeseries.h \
     include/about_dialog.h \
     version.h \
-    include/MetOceanViewer.h
+    include/MetOceanViewer.h \
+    include/noaa.h \
+    include/mov_errors.h \
+    include/mov_flags.h \ 
+    include/usgs.h \
+    include/general_functions.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
@@ -64,7 +91,7 @@ OTHER_FILES +=
 INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
 #...Compiler dependent options
-DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
+DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" EBUG
 
 #...Microsoft Visual C++ compilers
 *msvc* {

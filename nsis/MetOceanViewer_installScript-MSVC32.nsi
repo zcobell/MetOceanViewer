@@ -135,6 +135,7 @@ Section "Install"
     File ..\libs\msvc32\icuuc54.dll
     File ..\libs\msvc32\libEGL.dll
     File ..\libs\msvc32\Qt5Core.dll
+    File ..\libs\msvc32\Qt5Charts.dll
     File ..\libs\msvc32\Qt5Gui.dll
     File ..\libs\msvc32\Qt5Multimedia.dll
     File ..\libs\msvc32\Qt5MultimediaWidgets.dll
@@ -231,6 +232,7 @@ Section "Uninstall"
     Delete $INSTDIR\libssl32.dll
     Delete $INSTDIR\netcdf.dll
     Delete $INSTDIR\Qt5Core.dll
+    Delete $INSTDIR\Qt5Charts.dll
     Delete $INSTDIR\Qt5Gui.dll
     Delete $INSTDIR\Qt5Multimedia.dll
     Delete $INSTDIR\Qt5MultimediaWidgets.dll
