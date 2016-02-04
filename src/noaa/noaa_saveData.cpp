@@ -50,6 +50,8 @@ int noaa::saveNOAAImage(QString filename)
     painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
 
     painter.end();
+
+    return 0;
 }
 
 int noaa::saveNOAAData(QString filename, QString PreviousDirectory, QString format)
@@ -123,4 +125,6 @@ int noaa::saveNOAAData(QString filename, QString PreviousDirectory, QString form
         }
         NOAAOutput.close();
     }
+
+    return 0;
 }

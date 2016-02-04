@@ -38,8 +38,9 @@ using namespace QtCharts;
 
 class usgs : public QObject
 {
+    Q_OBJECT
 public:
-    usgs(QWebEngineView *inMap,
+    explicit usgs(QWebEngineView *inMap,
                QChartView *inChart,QRadioButton *inDailyButton,
                QRadioButton *inHistoricButton,QRadioButton *inInstantButton,
                QComboBox *inProductBox, QDateEdit *inStartDateEdit,

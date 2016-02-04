@@ -33,7 +33,7 @@ usgs::usgs(QWebEngineView *inMap,
            QChartView *inChart, QRadioButton *inDailyButton,
            QRadioButton *inHistoricButton, QRadioButton *inInstantButton,
            QComboBox *inProductBox, QDateEdit *inStartDateEdit,
-           QDateEdit *inEndDateEdit, QStatusBar *instatusBar, QObject *parent)
+           QDateEdit *inEndDateEdit, QStatusBar *instatusBar, QObject *parent) : QObject(parent)
 {
 
     //...Initialize variables

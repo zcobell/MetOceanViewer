@@ -50,6 +50,8 @@ int usgs::saveUSGSImage(QString filename)
     painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
 
     painter.end();
+
+    return 0;
 }
 
 
@@ -92,4 +94,6 @@ int usgs::saveUSGSData(QString filename, QString format)
 
     }
     USGSOutput.close();
+
+    return 0;
 }
