@@ -142,6 +142,7 @@ void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 void MainWindow::on_Button_FetchData_clicked()
 {
     int ierr;
+    QString error,TempString;
 
     //Display the wait cursor
     QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -156,7 +157,14 @@ void MainWindow::on_Button_FetchData_clicked()
     ierr = thisNOAA->plotNOAAStation();
     QApplication::restoreOverrideCursor();
     if(ierr!=0)
-        QMessageBox::critical(this,"ERROR",thisNOAA->getNOAAErrorString());
+    {
+        TempString = thisNOAA->getNOAAErrorString().split("Error: ").value(1);
+        if(TempString.length()>0)
+            error = TempString;
+        else
+            error = thisNOAA->getNOAAErrorString();
+        QMessageBox::critical(this,"ERROR",error);
+    }
 
     return;
 }

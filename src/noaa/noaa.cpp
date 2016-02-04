@@ -25,7 +25,7 @@
 noaa::noaa(QWebEngineView *inMap, QChartView *inChart,
            QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
            QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-           QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent)
+           QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent) : QObject(parent)
 {
     map = inMap;
     chart = inChart;
