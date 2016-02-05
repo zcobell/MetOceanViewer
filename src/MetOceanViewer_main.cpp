@@ -23,7 +23,6 @@
         
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
-#include <timeseries.h>
 
 //-------------------------------------------//
 //A whole load of variables we'll need at

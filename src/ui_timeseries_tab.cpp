@@ -23,7 +23,6 @@
 
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
-#include <timeseries.h>
 #include <timeseries_add_data.h>
 #include <user_timeseries.h>
 
@@ -199,6 +198,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
     }
 
     AddWindow->setModal(false);
+    AddWindow->EditBox = true;
     CurrentRow = ui->table_TimeseriesData->currentRow();
     Filename = ui->table_TimeseriesData->item(CurrentRow,0)->text();
     Filepath = ui->table_TimeseriesData->item(CurrentRow,6)->text();
@@ -259,6 +259,8 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_processTimeseriesData_clicked()
 {
+    int ierr;
+
     //Change the mouse pointer
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -278,6 +280,15 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                                            ui->timeseries_map,
                                            ui->timeseries_graphics);
 
+    ierr = thisTimeseries->processData();
+    if(ierr!=0)
+        QMessageBox::critical(this,"ERROR",thisTimeseries->getErrorString());
+    else
+    {
+        ui->MainTabs->setCurrentIndex(1);
+        ui->subtab_timeseries->setCurrentIndex(1);
+        ui->timeseries_map->page()->runJavaScript("fitMarkers()");
+    }
 
     QApplication::restoreOverrideCursor();
 }
@@ -323,6 +334,8 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
 
     //Catch false marker number
     if(markerID==-1)return;
+
+    thisTimeseries->plotData();
 
     return;
 }

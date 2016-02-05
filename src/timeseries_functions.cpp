@@ -23,7 +23,6 @@
 
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
-#include <timeseries.h>
 
 //-------------------------------------------//
 //Determines the start and end time in an
