@@ -20,13 +20,29 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#ifndef VERSION_H
-#define VERSION_H
+#include <user_timeseries.h>
 
-#define VER_FILEVERSION             2.5.0
-#define VER_FILEVERSION_STR         2.5.0
+int user_timeseries::getCurrentMarkerID()
+{
+    return this->markerID;
+}
 
-#define VER_PRODUCTVERSION          2.5.0
-#define VER_PRODUCTVERSION_STR      2.5.0
+int user_timeseries::setMarkerID()
+{
+    this->markerID = this->getMarkerIDFromMap();
+    return 0;
+}
 
-#endif // VERSION_H
+int user_timeseries::getClickedMarkerID()
+{
+    return this->getMarkerIDFromMap();
+}
+
+int user_timeseries::getMarkerIDFromMap()
+{
+    QVariant eval = QVariant();
+    this->map->page()->runJavaScript("getMarker()",[&eval](const QVariant &v){eval = v;});
+    while(eval.isNull())
+        delayM(5);
+    return eval.toInt();
+}

@@ -20,13 +20,40 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#ifndef VERSION_H
-#define VERSION_H
+#include "user_timeseries.h"
 
-#define VER_FILEVERSION             2.5.0
-#define VER_FILEVERSION_STR         2.5.0
+user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
+                                 QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
+                                 QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
+                                 QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
+                                 QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
+                                 QWebEngineView *inMap, QChartView *inChart,
+                                 QObject *parent) : QObject(parent)
+{
+    table      = inTable;
+    xAxisCheck = inXAxisCheck;
+    yAxisCheck = inYAxisCheck;
+    startDate  = inStartDate;
+    endDate    = inEndDate;
+    yMaxEdit   = inYMaxEdit;
+    yMinEdit   = inYMinEdit;
+    plotTitle  = inPlotTitle;
+    xLabelEdit = inXLabelEdit;
+    yLabelEdit = inYLabelEdit;
+    map        = inMap;
+    chart      = inChart;
+}
 
-#define VER_PRODUCTVERSION          2.5.0
-#define VER_PRODUCTVERSION_STR      2.5.0
 
-#endif // VERSION_H
+int user_timeseries::processData()
+{
+
+    return 0;
+}
+
+
+int user_timeseries::plotData()
+{
+
+    return 0;
+}

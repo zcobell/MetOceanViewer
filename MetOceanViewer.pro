@@ -65,7 +65,9 @@ SOURCES += src/main.cpp\
     src/noaa/noaa_getSet.cpp \
     src/noaa/noaa_saveData.cpp \
     src/usgs/usgs_plotting.cpp \
-    src/noaa/noaa_plotting.cpp
+    src/noaa/noaa_plotting.cpp \
+    src/user_timeseries/user_timeseries.cpp \
+    src/user_timeseries/user_timeseries_getSet.cpp
 
 HEADERS  += \
     include/hwm.h \
@@ -78,7 +80,8 @@ HEADERS  += \
     include/mov_errors.h \
     include/mov_flags.h \ 
     include/usgs.h \
-    include/general_functions.h
+    include/general_functions.h \
+    include/user_timeseries.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

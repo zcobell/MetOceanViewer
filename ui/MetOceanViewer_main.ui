@@ -2284,13 +2284,48 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QWebEngineView" name="timeseries_map" native="true">
-              <property name="url" stdset="0">
-               <url>
-                <string>qrc:/rsc/html/timeseries_maps.html</string>
-               </url>
-              </property>
-             </widget>
+             <layout class="QHBoxLayout" name="horizontalLayout_30">
+              <item>
+               <widget class="QWebEngineView" name="timeseries_map" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>2</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>2</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="url" stdset="0">
+                 <url>
+                  <string>qrc:/rsc/html/timeseries_maps.html</string>
+                 </url>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QChartView" name="timeseries_graphics" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>2</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -3524,7 +3559,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
