@@ -37,7 +37,7 @@ add_imeds_data::add_imeds_data(QWidget *parent) :
     ui->text_unitconvert->setValidator(new QDoubleValidator(this));
     ui->text_xadjust->setValidator(new QDoubleValidator(this));
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
-    PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
+    this->PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
 }
 //-------------------------------------------//
 
@@ -141,12 +141,12 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
-    QString Directory,filename,TempFile;
+    QString Directory,filename,TempFile,InputFileType;
 
-    if(EditBox)
-        splitPath(InputFilePath,filename,Directory);
+    if(this->EditBox)
+        splitPath(this->InputFilePath,filename,Directory);
     else
-        Directory = PreviousDirectory;
+        Directory = this->PreviousDirectory;
 
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
             Directory,
@@ -155,7 +155,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
     InputFilePath = TempPath;
-    if(TempPath!=NULL || (TempPath==NULL && CurrentFileName!=NULL) )
+    if(TempPath!=NULL || (TempPath==NULL && this->CurrentFileName!=NULL) )
     {
 
         if(TempPath==NULL)

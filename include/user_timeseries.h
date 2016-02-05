@@ -51,6 +51,7 @@ public:
     int plotData();
     int getCurrentMarkerID();
     int getClickedMarkerID();
+    QString getErrorString();
 
 signals:
 
@@ -111,10 +112,23 @@ private:
     //...Private functions
     int getMarkerIDFromMap();
     int setMarkerID();
+    int readADCIRCnetCDF(QString filename, ADCNC &MyData);
+    int GetUniqueStationList(QVector<IMEDS> Data,QVector<double> &X,QVector<double> &Y);
+    int BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X,QVector<double> Y,QVector<IMEDS> &DataOut);
+    int readIMEDS(QString filename, IMEDS &Output);
+    int readADCIRCascii(QString filename, QString stationfile, ADCASCII &MyData);
+    int ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, IMEDS &MyOutput);
+    int NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, IMEDS &Output);
+    int getUniqueStationList(QVector<IMEDS> Data, QVector<double> &X, QVector<double> &Y);
+    int buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut);
+    int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate);
 
     //...Private Variables
     int markerID;
-    QVector<IMEDS> fileData;
+    QString errorString;
+    QVector<IMEDS> fileData,fileDataUnique;
+    QVector<double> StationXLocs;
+    QVector<double> StationYLocs;
 
     //...Widgets we'll need
     QTableWidget   *table;

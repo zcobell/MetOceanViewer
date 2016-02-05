@@ -35,7 +35,6 @@ SOURCES += src/main.cpp\
     src/hwm_data.cpp \
     src/hwm_functions.cpp \
     src/general_functions.cpp \
-    src/timeseries_data.cpp \
     src/timeseries_functions.cpp \
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
@@ -67,12 +66,14 @@ SOURCES += src/main.cpp\
     src/usgs/usgs_plotting.cpp \
     src/noaa/noaa_plotting.cpp \
     src/user_timeseries/user_timeseries.cpp \
-    src/user_timeseries/user_timeseries_getSet.cpp
+    src/user_timeseries/user_timeseries_getSet.cpp \
+    src/user_timeseries/user_timeseries_readFile.cpp \
+    src/user_timeseries/user_timeseries_processData.cpp \
+    src/user_timeseries/user_timeseries_stationList.cpp
 
 HEADERS  += \
     include/hwm.h \
     include/timeseries_add_data.h \
-    include/timeseries.h \
     include/about_dialog.h \
     version.h \
     include/MetOceanViewer.h \

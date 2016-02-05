@@ -36,7 +36,6 @@
 #include <general_functions.h>
 #include <noaa.h>
 #include <usgs.h>
-#include <timeseries.h>
 #include <user_timeseries.h>
 #include <about_dialog.h>
 

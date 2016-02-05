@@ -46,3 +46,8 @@ int user_timeseries::getMarkerIDFromMap()
         delayM(5);
     return eval.toInt();
 }
+
+QString user_timeseries::getErrorString()
+{
+    return this->errorString;
+}
