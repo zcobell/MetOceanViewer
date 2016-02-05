@@ -37,8 +37,8 @@
 #include <noaa.h>
 #include <usgs.h>
 #include <timeseries.h>
+#include <user_timeseries.h>
 #include <about_dialog.h>
-#include <QtPrintSupport/QPrinter>
 
 
 //-------------------------------------------//
@@ -159,19 +159,19 @@ private:
 
     void initializeGoogleMaps(Ui::MainWindow *ui);
 
-    void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
+    //void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
 
-    void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
+    //void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
 
     int ClassifyHWM(double diff);
 
     void SetupTimeseriesTable();
 
-    void UpdateTimeseriesDateRange(IMEDS MyIMEDS);
+    //void UpdateTimeseriesDateRange(IMEDS MyIMEDS);
 
-    QString FormatTimeseriesString(IMEDS MyStation, int index, double unitConvert);
+    //QString FormatTimeseriesString(IMEDS MyStation, int index, double unitConvert);
 
-    int CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test);
+    //int CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test);
 
     int saveSession();
 
@@ -180,6 +180,8 @@ private:
     QPointer<noaa> thisNOAA;
 
     QPointer<usgs> thisUSGS;
+
+    QPointer<user_timeseries> thisTimeseries;
 
 protected:
 

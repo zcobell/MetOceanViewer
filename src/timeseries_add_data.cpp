@@ -26,26 +26,6 @@
 #include <MetOceanViewer.h>
 
 //-------------------------------------------//
-//A bunch of variables that we'll just
-//define here because it is easy for the
-//old FORTRAN programmer in me that likes
-//global variables
-//-------------------------------------------//
-int NumIMEDSFiles = 0;
-int CurrentRowsInTable = 0;
-bool ColorUpdated, FileReadError;
-bool EditBox;
-double UnitConversion, xadjust, yadjust;
-QColor RandomButtonColor;
-QString InputFileName,InputColorString;
-QString InputSeriesName,InputFilePath;
-QString StationFilePath,InputFileType;
-QString InputStationFile,CurrentFileName;
-QDateTime InputFileColdStart;
-//-------------------------------------------//
-
-
-//-------------------------------------------//
 //This brings up the dialog box used to add
 //a file to the table of files
 //-------------------------------------------//

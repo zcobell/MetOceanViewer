@@ -294,8 +294,8 @@ int MainWindow::loadSession()
     QString tempstring;
     QColor CellColor;
     QDateTime ColdStart;
-    ADCNC NetCDFData;
-    ADCASCII ADCData;
+    //ADCNC NetCDFData;
+    //ADCASCII ADCData;
     bool continueToLoad,hasCheckInfo;
     Qt::CheckState checkState;
 
@@ -425,11 +425,11 @@ int MainWindow::loadSession()
         ui->check_TimeseriesYauto->setChecked(true);
 
     //Now, before we begin building the table, we need to empty everything
-    for(i=TimeseriesData.length()-1;i>=0;i--)
-    {
-        TimeseriesData.remove(i);
-        ui->table_TimeseriesData->removeRow(i);
-    }
+//    for(i=TimeseriesData.length()-1;i>=0;i--)
+//    {
+//        TimeseriesData.remove(i);
+//        ui->table_TimeseriesData->removeRow(i);
+//    }
 
     //Next, read in the data and add rows to the table
     ierr = NETCDF_ERR(nc_inq_dimlen(ncid,dimid_ntimeseries,&temp_size_t));
@@ -674,34 +674,34 @@ int MainWindow::loadSession()
             ColdStart = QDateTime::fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
 
             //Read the data into the appropriate structure
-            TimeseriesData.resize(nrow);
+            //TimeseriesData.resize(nrow);
 
-            TimeseriesData[nrow-1].success = false;
+            //TimeseriesData[nrow-1].success = false;
 
-            if(type=="IMEDS")
-            {
-                TimeseriesData[nrow-1] = readIMEDS(filelocation);
-            }
-            else if(type=="NETCDF")
-            {
-                ierr = readADCIRCnetCDF(filelocation,NetCDFData);
-                if(!NetCDFData.success)
-                    TimeseriesData[nrow-1].success = false;
-                else
-                {
-                    TimeseriesData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
-                }
-            }
-            else if(type=="ADCIRC")
-            {
-                ADCData = readADCIRCascii(filelocation,stationfilepath);
-                if(!ADCData.success)
-                    TimeseriesData[nrow-1].success = false;
-                else
-                {
-                    TimeseriesData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
-                }
-            }
+//            if(type=="IMEDS")
+//            {
+//                TimeseriesData[nrow-1] = readIMEDS(filelocation);
+//            }
+//            else if(type=="NETCDF")
+//            {
+//                ierr = readADCIRCnetCDF(filelocation,NetCDFData);
+//                if(!NetCDFData.success)
+//                    TimeseriesData[nrow-1].success = false;
+//                else
+//                {
+//                    TimeseriesData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
+//                }
+//            }
+//            else if(type=="ADCIRC")
+//            {
+//                ADCData = readADCIRCascii(filelocation,stationfilepath);
+//                if(!ADCData.success)
+//                    TimeseriesData[nrow-1].success = false;
+//                else
+//                {
+//                    TimeseriesData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
+//                }
+//            }
 
         }
     }
