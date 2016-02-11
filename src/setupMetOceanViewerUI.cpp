@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include <MetOceanViewer.h>
+#include <myqwebengineview.h>
 #include <ui_MetOceanViewer_main.h>
 
 void MainWindow::setupMetOceanViewerUI()
@@ -31,16 +32,9 @@ void MainWindow::setupMetOceanViewerUI()
     //Setting up the NOAA tab for the user
 
     //Define which web page we will use from the resource included
-    ui->noaa_map->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
-
-    //Catch unsupported content coming from highcharts to download images for the user
-    //ui->noaa_map->page()->setForwardUnsupportedContent(true);
-    //connect(ui->noaa_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
-
-    //Tell Qt to delegate clicked links to the users dafault browser
-    //ui->noaa_map->page()->setLinkDelegationPolicy(QWebPage::DelegateAllLinks);
-    //connect( ui->noaa_map->page(), SIGNAL(linkClicked(const QUrl &)),
-    //                this, SLOT(OpenExternalBrowser(const QUrl &)));
+    this->noaa_page = new MyQWebEnginePage;
+    ui->noaa_map->setPage(this->noaa_page);
+    ui->noaa_map->page()->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
     //For NOAA, set the default date/time to today and today minus 1
     ui->Date_StartTime->setDateTime(QDateTime::currentDateTime().addDays(-1));
@@ -60,10 +54,9 @@ void MainWindow::setupMetOceanViewerUI()
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
     ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
-
-    //Catch unsupported content coming from highcharts to download images for the user
-    //ui->usgs_map->page()->setForwardUnsupportedContent(true);
-    //connect(ui->usgs_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
+    this->usgs_page = new MyQWebEnginePage;
+    ui->usgs_map->setPage(this->usgs_page);
+    ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
 
 
     //-------------------------------------------//
@@ -71,10 +64,6 @@ void MainWindow::setupMetOceanViewerUI()
 
     //Load the selected web page file from the resource
     ui->timeseries_map->load(QUrl("qrc:/rsc/html/timeseries_maps.html"));
-
-    //Catch unsupported content coming from highcharts to download images for the user
-    //ui->timeseries_map->page()->setForwardUnsupportedContent(true);
-    //connect(ui->timeseries_map->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Set the minimum and maximum times that can be selected
     ui->date_TimeseriesStartDate->setDateTime(ui->date_TimeseriesStartDate->minimumDateTime());

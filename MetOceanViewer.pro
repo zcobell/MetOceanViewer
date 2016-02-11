@@ -42,47 +42,48 @@ SOURCES += src/main.cpp\
     src/fileio.cpp \
     src/MetOceanViewer_main.cpp \
     src/setupMetOceanViewerUI.cpp \
-    src/noaa/noaa.cpp \
-    src/noaa/noaa_fetchNOAAData.cpp \
-    src/noaa/noaa_formatNOAAResponse.cpp \
-    src/noaa/noaa_readNOAAResponse.cpp \
-    src/noaa/noaa_retrieveproduct.cpp \
-    src/usgs/usgs.cpp \
-    src/usgs/usgs_fetchUSGSData.cpp \
-    src/usgs/usgs_formastUSGSInstantResponse.cpp \
-    src/usgs/usgs_readUSGSDataFinished.cpp \
-    src/usgs/usgs_formatUSGSDailyResponse.cpp \
-    src/usgs/usgs_getTimezone.cpp \
-    src/noaa/noaa_prepNOAAResponse.cpp \
-    src/noaa/noaa_getDataBounds.cpp \
-    src/noaa/noaa_generateLabels.cpp \
-    src/noaa/noaa_plotChart.cpp \
-    src/usgs/usgs_plotUSGS.cpp \
-    src/usgs/usgs_getDataBounds.cpp \
-    src/usgs/usgs_saveData.cpp \
-    src/usgs/usgs_setGet.cpp \
-    src/noaa/noaa_getSet.cpp \
-    src/noaa/noaa_saveData.cpp \
-    src/usgs/usgs_plotting.cpp \
-    src/noaa/noaa_plotting.cpp \
-    src/user_timeseries/user_timeseries.cpp \
-    src/user_timeseries/user_timeseries_getSet.cpp \
-    src/user_timeseries/user_timeseries_readFile.cpp \
-    src/user_timeseries/user_timeseries_processData.cpp \
-    src/user_timeseries/user_timeseries_stationList.cpp
+    src/noaa.cpp \
+    src/noaa_fetchNOAAData.cpp \
+    src/noaa_formatNOAAResponse.cpp \
+    src/noaa_readNOAAResponse.cpp \
+    src/noaa_retrieveproduct.cpp \
+    src/usgs.cpp \
+    src/usgs_fetchUSGSData.cpp \
+    src/usgs_formastUSGSInstantResponse.cpp \
+    src/usgs_readUSGSDataFinished.cpp \
+    src/usgs_formatUSGSDailyResponse.cpp \
+    src/usgs_getTimezone.cpp \
+    src/noaa_prepNOAAResponse.cpp \
+    src/noaa_getDataBounds.cpp \
+    src/noaa_generateLabels.cpp \
+    src/noaa_plotChart.cpp \
+    src/usgs_plotUSGS.cpp \
+    src/usgs_getDataBounds.cpp \
+    src/usgs_saveData.cpp \
+    src/usgs_setGet.cpp \
+    src/noaa_getSet.cpp \
+    src/noaa_saveData.cpp \
+    src/usgs_plotting.cpp \
+    src/noaa_plotting.cpp \
+    src/user_timeseries.cpp \
+    src/user_timeseries_getSet.cpp \
+    src/user_timeseries_readFile.cpp \
+    src/user_timeseries_processData.cpp \
+    src/user_timeseries_stationList.cpp
 
 HEADERS  += \
+    version.h \
     include/hwm.h \
     include/timeseries_add_data.h \
     include/about_dialog.h \
-    version.h \
     include/MetOceanViewer.h \
     include/noaa.h \
     include/mov_errors.h \
     include/mov_flags.h \ 
     include/usgs.h \
     include/general_functions.h \
-    include/user_timeseries.h
+    include/user_timeseries.h \
+    include/myqwebengineview.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
