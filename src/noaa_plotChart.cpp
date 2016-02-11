@@ -62,31 +62,26 @@ int noaa::plotChart()
         if(i==0)
         {
             for(j=0;j<this->CurrentNOAAStation[i].length();j++)
-            {
-                series1->append(QDateTime(this->CurrentNOAAStation[i][j].Date,this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),this->CurrentNOAAStation[i][j].value);
-                if(minDateTime>QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time))
-                    minDateTime = QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time);
-                if(maxDateTime<QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time))
-                    maxDateTime = QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time);
-            }
+                series1->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
+                                          this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
+                                          this->CurrentNOAAStation[i][j].value);
             thisChart->addSeries(series1);
         }
         else if(i==1)
         {
             for(j=0;j<this->CurrentNOAAStation[i].length();j++)
-            {
-                series2->append(QDateTime(this->CurrentNOAAStation[i][j].Date,this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),this->CurrentNOAAStation[i][j].value);
-                if(minDateTime>QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time))
-                    minDateTime = QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time);
-                if(maxDateTime<QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time))
-                    maxDateTime = QDateTime(CurrentNOAAStation[i][j].Date,CurrentNOAAStation[i][j].Time);
-            }
+                series2->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
+                                          this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
+                                          this->CurrentNOAAStation[i][j].value);
             thisChart->addSeries(series2);
         }
     }
 
-    minDateTime = QDateTime(minDateTime.date(),QTime(minDateTime.time().hour()  ,0,0));
-    maxDateTime = QDateTime(maxDateTime.date(),QTime(maxDateTime.time().hour()+1,0,0));
+    minDateTime = this->startDateEdit->dateTime();
+    maxDateTime = this->endDateEdit->dateTime().addDays(1);
+
+    minDateTime.setTime(QTime(0,0,0));
+    maxDateTime.setTime(QTime(0,0,0));
 
     QDateTimeAxis *axisX = new QDateTimeAxis;
     axisX->setTickCount(5);
@@ -96,7 +91,7 @@ int noaa::plotChart()
         axisX->setFormat("MM/dd/yyyy");
     else
         axisX->setFormat("MM/dd/yyyy hh:mm");
-    axisX->setTitleText("Date");
+    axisX->setTitleText("Date (GMT)");
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
     thisChart->addAxis(axisX, Qt::AlignBottom);

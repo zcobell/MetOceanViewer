@@ -86,7 +86,7 @@ int usgs::plotUSGS()
         axisX->setFormat("MM/dd/yyyy");
     else
         axisX->setFormat("MM/dd/yyyy hh:mm");
-    axisX->setTitleText("Date");
+    axisX->setTitleText("Date (GMT)");
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
     thisChart->addAxis(axisX, Qt::AlignBottom);
@@ -102,10 +102,6 @@ int usgs::plotUSGS()
 
     thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
     chart->setRenderHint(QPainter::Antialiasing);
-
-    //...Set the hover
-    //connect(series1, SIGNAL(hovered(QPointF, bool)), this, SLOT(tooltip(QPointF,bool)));
-
     chart->setChart(thisChart);
 
     this->setUSGSBeenPlotted(true);
