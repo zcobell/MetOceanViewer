@@ -38,7 +38,7 @@
 #include <usgs.h>
 #include <user_timeseries.h>
 #include <about_dialog.h>
-
+#include <myqwebengineview.h>
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -181,6 +181,10 @@ private:
     QPointer<usgs> thisUSGS;
 
     QPointer<user_timeseries> thisTimeseries;
+
+    QPointer<MyQWebEnginePage> noaa_page;
+
+    QPointer<MyQWebEnginePage> usgs_page;
 
 protected:
 

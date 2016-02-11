@@ -22,6 +22,8 @@
 //-----------------------------------------------------------------------//
 #include <general_functions.h>
 #include <netcdf.h>
+#include <QWebEnginePage>
+#include <QDesktopServices>
 
 //The name of the session file
 QString SessionFile;
@@ -227,3 +229,4 @@ QVector<double> niceLabels(double inMin, double inMax, int nTicks, int &nFrac)
     }
     return output;
 }
+
