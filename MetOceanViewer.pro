@@ -69,11 +69,11 @@ SOURCES += src/main.cpp\
     src/user_timeseries_getSet.cpp \
     src/user_timeseries_readFile.cpp \
     src/user_timeseries_processData.cpp \
-    src/user_timeseries_stationList.cpp
+    src/user_timeseries_stationList.cpp \
+    src/hwm.cpp
 
 HEADERS  += \
     version.h \
-    include/hwm.h \
     include/timeseries_add_data.h \
     include/about_dialog.h \
     include/MetOceanViewer.h \
@@ -83,7 +83,9 @@ HEADERS  += \
     include/usgs.h \
     include/general_functions.h \
     include/user_timeseries.h \
-    include/myqwebengineview.h
+    include/myqwebenginepage.h \
+    include/hwm_orig.h \
+    include/hwm.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
