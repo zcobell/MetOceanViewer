@@ -38,7 +38,7 @@
 #include <usgs.h>
 #include <user_timeseries.h>
 #include <about_dialog.h>
-#include <myqwebengineview.h>
+#include <myqwebenginepage.h>
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds

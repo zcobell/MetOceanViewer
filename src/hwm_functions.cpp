@@ -23,7 +23,7 @@
 
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
-#include <hwm.h>
+#include <hwm_orig.h>
 
 //-------------------------------------------//
 //Classifies high water marks into classes for coloring

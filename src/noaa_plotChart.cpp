@@ -46,36 +46,15 @@ int noaa::plotChart()
             ymin = labels[i];
     }
 
+    //...Create the chart
+    QChart *thisChart = new QChart();
+
     QLineSeries *series1 = new QLineSeries();
     QLineSeries *series2 = new QLineSeries();
     series1->setName(S1);
     series2->setName(S2);
     series1->setPen(QPen(QColor(0,0,255),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
     series2->setPen(QPen(QColor(0,255,0),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
-
-    //...Create the chart
-    QChart *thisChart = new QChart();
-    thisChart->setAnimationOptions(QChart::SeriesAnimations);
-    thisChart->legend()->setAlignment(Qt::AlignBottom);
-    for(i=0;i<this->CurrentNOAAStation.length();i++)
-    {
-        if(i==0)
-        {
-            for(j=0;j<this->CurrentNOAAStation[i].length();j++)
-                series1->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
-                                          this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
-                                          this->CurrentNOAAStation[i][j].value);
-            thisChart->addSeries(series1);
-        }
-        else if(i==1)
-        {
-            for(j=0;j<this->CurrentNOAAStation[i].length();j++)
-                series2->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
-                                          this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
-                                          this->CurrentNOAAStation[i][j].value);
-            thisChart->addSeries(series2);
-        }
-    }
 
     minDateTime = this->startDateEdit->dateTime();
     maxDateTime = this->endDateEdit->dateTime().addDays(1);
@@ -95,8 +74,6 @@ int noaa::plotChart()
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
     thisChart->addAxis(axisX, Qt::AlignBottom);
-    series1->attachAxis(axisX);
-    series2->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis;
     axisY->setLabelFormat(format);
@@ -104,9 +81,31 @@ int noaa::plotChart()
     axisY->setMin(ymin);
     axisY->setMax(ymax);
     thisChart->addAxis(axisY, Qt::AlignLeft);
-    series1->attachAxis(axisY);
-    series2->attachAxis(axisY);
 
+    for(i=0;i<this->CurrentNOAAStation.length();i++)
+    {
+        if(i==0)
+        {
+            for(j=0;j<this->CurrentNOAAStation[i].length();j++)
+                series1->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
+                                          this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
+                                          this->CurrentNOAAStation[i][j].value);
+            thisChart->addSeries(series1);
+            series1->attachAxis(axisX);
+        }
+        else if(i==1)
+        {
+            for(j=0;j<this->CurrentNOAAStation[i].length();j++)
+                series2->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
+                                          this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
+                                          this->CurrentNOAAStation[i][j].value);
+            thisChart->addSeries(series2);
+            series2->attachAxis(axisX);
+        }
+    }
+
+    thisChart->setAnimationOptions(QChart::SeriesAnimations);
+    thisChart->legend()->setAlignment(Qt::AlignBottom);
     thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName);
     chart->setRenderHint(QPainter::Antialiasing);
     chart->setChart(thisChart);

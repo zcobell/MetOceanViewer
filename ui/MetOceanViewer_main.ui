@@ -3535,13 +3535,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
-             <widget class="QWebEngineView" name="map_regression" native="true">
-              <property name="url" stdset="0">
-               <url>
-                <string>qrc:/rsc/html/reg_plot.html</string>
-               </url>
-              </property>
-             </widget>
+             <widget class="QGraphicsView" name="graphics_hwm"/>
             </item>
            </layout>
           </widget>

@@ -27,7 +27,7 @@
 
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
-#include "hwm.h"
+#include "hwm_orig.h"
 
 //Global variables
 QVector<hwm_data> HighWaterMarks;
@@ -141,7 +141,7 @@ void MainWindow::on_button_processHWM_clicked()
 
     //Make sure we are fresh for if this is a second round of plotting
     ui->map_hwm->page()->runJavaScript("clearMarkers()");
-    ui->map_regression->reload();
+    //ui->map_regression->reload();
 
     //Give the browsers a chance to catch up to us
     delay(1);
@@ -216,7 +216,7 @@ void MainWindow::on_button_processHWM_clicked()
 
     RegressionGlobal = "setGlobal('"+RegressionTitle+"','"+XLabel+"','"+YLabel+"','"+
             HWMColor+"','"+RegColor+"','"+One21Color+"','"+BoundColor+"','"+ColorRegression+"')";
-    ui->map_regression->page()->runJavaScript(RegressionGlobal);
+    //ui->map_regression->page()->runJavaScript(RegressionGlobal);
 
     MyClassList = "addLegend("+unitString+",'"+QString::number(classes[0],'f',2)+":"+QString::number(classes[1],'f',2)+":"+
             QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
@@ -232,7 +232,7 @@ void MainWindow::on_button_processHWM_clicked()
             QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
             QString::number(classes[4],'f',2)+":"+QString::number(classes[5],'f',2)+":"+
             QString::number(classes[6],'f',2)+"')";
-    ui->map_regression->page()->runJavaScript(Regression);
+    //ui->map_regression->page()->runJavaScript(Regression);
 
     ui->subtab_hwm->setCurrentIndex(1);
     delay(1);

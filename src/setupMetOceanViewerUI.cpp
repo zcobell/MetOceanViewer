@@ -21,7 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include <MetOceanViewer.h>
-#include <myqwebengineview.h>
+#include <myqwebenginepage.h>
 #include <ui_MetOceanViewer_main.h>
 
 void MainWindow::setupMetOceanViewerUI()
@@ -75,17 +75,6 @@ void MainWindow::setupMetOceanViewerUI()
 
     //Set the web pages used
     ui->map_hwm->load(QUrl("qrc:/rsc/html/hwm_map.html"));
-    ui->map_regression->load(QUrl("qrc:/rsc/html/reg_plot.html"));
-
-    //Turn off scroll bars
-    //ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    //ui->map_hwm->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-    //ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-    //ui->map_regression->page()->mainFrame()->setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
-
-    //Catch unsupported content coming from highcharts to download images for the user
-    //ui->map_regression->page()->setForwardUnsupportedContent(true);
-    //connect(ui->map_regression->page(),SIGNAL(unsupportedContent(QNetworkReply*)),this,SLOT(unsupportedContent(QNetworkReply*)));
 
     //Set the colors that are being used on the display page for various
     //things that will be displayed
@@ -127,9 +116,9 @@ void MainWindow::setupMetOceanViewerUI()
     //Get the directory path to start in
     //For Mac/Unix, use the user's home directory.
     //For Windows, use the user's desktop
-    PreviousDirectory = QDir::homePath();
+    this->PreviousDirectory = QDir::homePath();
 #ifdef Q_OS_WIN
-    PreviousDirectory = PreviousDirectory+"/Desktop";
+    this->PreviousDirectory = this->PreviousDirectory+"/Desktop";
 #endif
 
     //-------------------------------------------//
@@ -137,23 +126,14 @@ void MainWindow::setupMetOceanViewerUI()
     //If it was, load the session file
     if(SessionFile!=NULL)
     {
-        splitPath(SessionFile,BaseFile,PreviousDirectory);
+        splitPath(SessionFile,BaseFile,this->PreviousDirectory);
         loadSession();
         ui->MainTabs->setCurrentIndex(1);
     }
 
-//If compiled with "-DEBUG", the QWebViews will have debugging enabled.
-#ifdef EBUG
-    //Optional javascript/html debugging - disabled for release versions
-    //QWebEngineSettings::globalSettings()->setAttribute(QWebEngineSettings::DeveloperExtrasEnabled, true);
-#else
-    //If not in debug mode, we turn off the right click options
     ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->map_regression->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->timeseries_map->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->usgs_map->setContextMenuPolicy(Qt::CustomContextMenu);
-#endif
-
 
 }
