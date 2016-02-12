@@ -1,12 +1,16 @@
-(function (Highcharts, HighchartsAdapter) {
+(function (Highcharts) {
 
+// Highcharts helper methods
 var UNDEFINED,
         ALIGN_FACTOR,
         H = Highcharts,
         Chart = H.Chart,
         extend = H.extend,
         merge = H.merge,
-        each = H.each;
+        each = H.each,
+        inArray = (window.HighchartsAdapter && window.HighchartsAdapter.inArray) || H.inArray, // #52, since Highcharts 4.1.10 HighchartsAdapter is only provided by the Highcharts Standalone Framework
+        addEvent = H.addEvent,
+        isOldIE = H.VMLRenderer ? true : false;
 
 H.ALLOWED_SHAPES = ["path", "rect", "circle"];
 
@@ -26,10 +30,6 @@ H.SVGRenderer.prototype.symbols.line = function(x,y,w,h){
 		'M', x + p, y + p, 'L', x + w - p, y + h - p
 	];
 };
-// VML fallback
-if(H.VMLRenderer) {
-	H.VMLRenderer.prototype.symbols.line = H.SVGRenderer.prototype.symbols.line;
-}
 
 H.SVGRenderer.prototype.symbols.text = function(x,y,w,h){
 	var p = 1;
@@ -42,6 +42,7 @@ H.SVGRenderer.prototype.symbols.text = function(x,y,w,h){
 // VML fallback
 if(H.VMLRenderer) {
 	H.VMLRenderer.prototype.symbols.text = H.SVGRenderer.prototype.symbols.text;
+	H.VMLRenderer.prototype.symbols.line = H.SVGRenderer.prototype.symbols.line;
 }
 
 
@@ -60,20 +61,14 @@ H.wrap(H.Pointer.prototype, 'onContainerMouseDown', function(c, e) {
 		}
 });
 
-
-
-// Highcharts helper methods
-var inArray = HighchartsAdapter.inArray,
-        addEvent = H.addEvent,
-        isOldIE = H.VMLRenderer ? true : false;
-
 // utils for buttons   
 var utils = {
 	getRadius: function(e) {
 		var ann = this,
 			chart = ann.chart, 
-			x = e.pageX - chart.container.offsetLeft,
-			y = e.pageY - chart.container.offsetTop,
+			bbox = chart.container.getBoundingClientRect(),
+			x = e.clientX - bbox.left,
+			y = e.clientY - bbox.top,
 			xAxis = chart.xAxis[ann.options.xAxis],
 			yAxis = chart.yAxis[ann.options.yAxis],
 			dx = Math.abs(x - xAxis.toPixels(ann.options.xValue)),
@@ -99,8 +94,9 @@ var utils = {
 	getPath: function(e) {
 		var ann = this,
 			chart = ann.chart, 
-			x = e.pageX - chart.container.offsetLeft,
-			y = e.pageY - chart.container.offsetTop,
+			bbox = chart.container.getBoundingClientRect(),
+			x = e.clientX - bbox.left,
+			y = e.clientY - bbox.top,
 			xAxis = chart.xAxis[ann.options.xAxis],
 			yAxis = chart.yAxis[ann.options.yAxis],
 			dx = x - xAxis.toPixels(ann.options.xValue),
@@ -135,8 +131,9 @@ var utils = {
 	getRect: function(e) {
 		var ann = this,
 			chart = ann.chart, 
-			x = e.pageX - chart.container.offsetLeft,
-			y = e.pageY - chart.container.offsetTop,
+			bbox = chart.container.getBoundingClientRect(),
+			x = e.clientX - bbox.left,
+			y = e.clientY - bbox.top,
 			xAxis = chart.xAxis[ann.options.xAxis],
 			yAxis = chart.yAxis[ann.options.yAxis],
 			sx = xAxis.toPixels(ann.options.xValue),
@@ -298,8 +295,9 @@ function defatultMainOptions(){
 	});
 		
 	return {
-		enabledButtons: false,
-		buttons: buttons
+		enabledButtons: true,
+		buttons: buttons,
+		buttonsOffsets: [0, 0]
 	};
 }
 
@@ -357,8 +355,9 @@ function createClipPath(chart, y){
 
 function attachEvents(chart) {
 	function drag(e) {
-		var clickX = e.pageX - chart.container.offsetLeft,
-				clickY = e.pageY - chart.container.offsetTop;
+		var bbox = chart.container.getBoundingClientRect(),
+				clickX = e.clientX - bbox.left,
+				clickY = e.clientY - bbox.top;
 		
 		if (!chart.isInsidePlot(clickX - chart.plotLeft, clickY - chart.plotTop) || chart.annotations.allowZoom) {
 			return;
@@ -410,14 +409,15 @@ function renderButtons(chart) {
 }
 
 function renderButton(chart, button, i) {
-	var xOffset = chart.rangeSelector ? chart.rangeSelector.inputGroup.offset : 0,
+	var userOffset = chart.annotations.options.buttonsOffsets,
+		xOffset = chart.rangeSelector ? chart.rangeSelector.inputGroup.offset : 0,
 		renderer = chart.renderer,
 		symbol = button.symbol,
 		offset = 30,
 		symbolSize = symbol.size,
 		buttonSize = button.size,
-		x = chart.plotWidth + chart.plotLeft - ((i+1) * offset) - xOffset,
-		y = chart.plotTop - (chart.rangeSelector ? 23 + buttonSize : 0),
+		x = chart.plotWidth + chart.plotLeft - ((i+1) * offset) - xOffset - userOffset[0],
+		y = chart.plotTop - (chart.rangeSelector ? 23 + buttonSize : 0) + userOffset[1],
 		callback = button.events && button.events.click ? button.events.click : getButtonCallback(i, chart),
 		selected = button.states.selected,
 		hovered = button.states.hover;
@@ -575,18 +575,20 @@ Annotation.prototype = {
                                                 (linkedTo instanceof Highcharts.Series) ? 'series' : null;
 
                         if (linkType === 'point') {
-                                options.xValue = linkedTo.x;
-                                options.yValue = linkedTo.y;
-                                series = linkedTo.series;
+                            options.x = linkedTo.plotX + chart.plotLeft;
+                            options.y = linkedTo.plotY + chart.plotTop;
+                            series = linkedTo.series;
                         } else if (linkType === 'series') {
-                                series = linkedTo;
+                            series = linkedTo;
                         }
 
-                        if (group.visibility !== series.group.visibility) {
-                                group.attr({
-                                        visibility: series.group.visibility
-                                });
-                        }
+                        // #48 - series.grouping and series.stacking may reposition point.graphic
+                        if (series.pointXOffset) {
+                        	options.x += series.pointXOffset + (linkedTo.shapeArgs.width / 2 || 0);
+                    	}
+                        group.attr({
+                            visibility: series.group.attr("visibility")
+                        });
                 }
 
 
@@ -713,6 +715,7 @@ Annotation.prototype = {
                 
                 if (index > -1) {
                         allItems.splice(index, 1);
+                        chart.options.annotations.splice(index, 1); // #33
                 }
 
                 each(['title', 'shape', 'group'], function (element) {
@@ -729,10 +732,44 @@ Annotation.prototype = {
         },
 
         /*
+         * Show annotation, only for non-linked annotations
+         */
+        show: function () {
+			if (!this.linkedObject) {
+				this.visible = true;
+				this.group.attr({
+					visibility: "visible"
+				});
+			}
+        },
+
+        /*
+         * Hide annotation, only for non-linked annotations
+         */
+        hide: function () {
+			if (!this.linkedObject) {
+				this.visible = false;
+				this.group.attr({
+					visibility: "hidden"
+				});
+			}
+        },
+
+        /*
          * Update the annotation with a given options
          */
         update: function (options, redraw) {
-                this.options = merge(this.options, options);
+                var annotation = this,
+										chart = this.chart,
+										allItems = chart.annotations.allItems,
+										index = allItems.indexOf(annotation),
+										o = merge(this.options, options);
+                        
+								if(index >= 0) {
+										chart.options.annotations[index] = o; // #33
+								}
+										
+                this.options = o;
 
                 // update link to point or series
                 this.linkObjects();
@@ -798,16 +835,17 @@ Annotation.prototype = {
                 	event.preventDefault();
                 	var container = chart.container;
 					if(chart.activeAnnotation) {
-						var clickX = event.pageX - chart.container.offsetLeft,
-								clickY = event.pageY - chart.container.offsetTop;
+						var bbox = chart.container.getBoundingClientRect(),
+								clickX = event.clientX - bbox.left,
+								clickY = event.clientY - bbox.top;
 								
 						if (!chart.isInsidePlot(clickX - chart.plotLeft, clickY - chart.plotTop)) {
 							return;
 						}		
 						var note = chart.activeAnnotation;
 								
-						var x = note.options.allowDragX ? event.pageX - note.startX + note.group.translateX : note.group.translateX,
-							y = note.options.allowDragY ? event.pageY - note.startY + note.group.translateY : note.group.translateY;
+						var x = note.options.allowDragX ? event.clientX - note.startX + note.group.translateX : note.group.translateX,
+							y = note.options.allowDragY ? event.clientY - note.startY + note.group.translateY : note.group.translateY;
 					
 						note.transX = x;
 						note.transY = y;
@@ -823,8 +861,8 @@ Annotation.prototype = {
 						event.preventDefault();
 					}
 					if((!isOldIE && event.button === 0) || (isOldIE && event.button === 1)) {
-						var posX = event.pageX,
-								posY = event.pageY;
+						var posX = event.clientX,
+								posY = event.clientY;
 						chart.activeAnnotation = annotation;
 						chart.activeAnnotation.startX = posX;
 						chart.activeAnnotation.startY = posY;
@@ -905,6 +943,8 @@ extend(Chart.prototype, {
 								var chart = this,
 												annotations = chart.annotations.allItems,
 												item,
+												i,
+												iter,
 												len;
 
 								if (!isArray(options)) {
@@ -913,9 +953,12 @@ extend(Chart.prototype, {
 
 								len = options.length;
 
-								while (len--) {
-												item = new Annotation(chart, options[len]);
-												annotations.push(item);
+								for (iter = 0; iter < len; iter++) {
+												item = new Annotation(chart, options[iter]);
+												i = annotations.push(item);
+												if(i > chart.options.annotations.length) {
+														chart.options.annotations.push(options[iter]); // #33
+												}
 												item.render(redraw);
 								}
 				},
@@ -928,8 +971,10 @@ extend(Chart.prototype, {
 									yAxes = chart.yAxis,
 									yLen = yAxes.length,
 									ann = chart.annotations,
+									userOffset = ann.options.buttonsOffsets,
 									i = 0;
 
+									
 								for(; i < yLen; i++){
 									var y = yAxes[i],
 										clip = ann.clipPaths[i];
@@ -953,8 +998,8 @@ extend(Chart.prototype, {
 										annotation.redraw();
 								});
 								each(chart.annotations.buttons, function(button, i) {
-										var xOffset = chart.rangeSelector ? chart.rangeSelector.inputGroup.offset : 0,
-												x = chart.plotWidth + chart.plotLeft - ((i+1) * 30) - xOffset;
+										var	xOffset = chart.rangeSelector ? chart.rangeSelector.inputGroup.offset : 0,
+												x = chart.plotWidth + chart.plotLeft - ((i+1) * 30) - xOffset - userOffset[0];
 										button[0].attr({
 												x: x
 										});
@@ -985,6 +1030,8 @@ Chart.prototype.callbacks.push(function (chart) {
 
         if(!chart.annotations) chart.annotations = {};
         
+        if(!chart.options.annotations) chart.options.annotations = [];
+        
         // initialize empty array for annotations
         if(!chart.annotations.allItems) chart.annotations.allItems = [];
 
@@ -1006,8 +1053,8 @@ Chart.prototype.callbacks.push(function (chart) {
         chart.annotations.options = merge(defatultMainOptions(), chart.options.annotationsOptions ? chart.options.annotationsOptions : {});
         
         if(chart.annotations.options.enabledButtons) {
-        	renderButtons(chart);
-        	attachEvents(chart);
+        	//renderButtons(chart);
+        	//attachEvents(chart);
         } else {
 					 chart.annotations.buttons = [];
         }
@@ -1052,4 +1099,4 @@ if (!Array.prototype.indexOf) {
     };
 }
 
-}(Highcharts, HighchartsAdapter));
+}(Highcharts));

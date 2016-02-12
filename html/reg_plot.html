@@ -499,7 +499,7 @@
                         stroke: "#000000",
                         strokeWidth: 2
                     }
-                }
+                },
             }],
             title: { text: PlotTitle },
             subtitle: {
@@ -558,6 +558,12 @@
                     }
                 }
             },
+            annotations: [{
+                anchorX: 'left',
+                anchorY: 'top',
+                allowDragX: 'true',
+                allowDragY: 'true',
+            }],
             series: [{
                 type: 'line',
                 name: 'none',
