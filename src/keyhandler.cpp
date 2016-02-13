@@ -1,6 +1,5 @@
 #include "keyhandler.h"
 #include <QKeyEvent>
-#include <QDebug>
 
 bool keyhandler::eventFilter(QObject* obj, QEvent* event)
 {
