@@ -142,6 +142,13 @@ void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_Button_FetchData_clicked()
 {
+    this->plotNOAAStation();
+    return;
+}
+//-------------------------------------------//
+
+void MainWindow::plotNOAAStation()
+{
     int ierr;
     QString error,TempString;
 
@@ -149,25 +156,23 @@ void MainWindow::on_Button_FetchData_clicked()
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //...Create a new NOAA object
-    if(!thisNOAA.isNull())
-        delete thisNOAA;
-    thisNOAA = new noaa(ui->noaa_map,ui->noaa_graphics,ui->Date_StartTime,
+    if(!this->thisNOAA.isNull())
+        delete this->thisNOAA;
+    this->thisNOAA = new noaa(ui->noaa_map,ui->noaa_graphics,ui->Date_StartTime,
                         ui->Date_EndTime,ui->combo_NOAAProduct,ui->combo_noaaunits,
                         ui->combo_noaadatum,ui->statusBar,this);
 
-    ierr = thisNOAA->plotNOAAStation();
+    ierr = this->thisNOAA->plotNOAAStation();
+
     QApplication::restoreOverrideCursor();
     if(ierr!=0)
     {
-        TempString = thisNOAA->getNOAAErrorString().split("Error: ").value(1);
+        TempString = this->thisNOAA->getNOAAErrorString().split("Error: ").value(1);
         if(TempString.length()>0)
             error = TempString;
         else
-            error = thisNOAA->getNOAAErrorString();
+            error = this->thisNOAA->getNOAAErrorString();
         QMessageBox::critical(this,"ERROR",error);
     }
-
     return;
 }
-//-------------------------------------------//
-
