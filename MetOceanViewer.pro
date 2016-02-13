@@ -87,7 +87,6 @@ HEADERS  += \
     include/general_functions.h \
     include/user_timeseries.h \
     include/myqwebenginepage.h \
-    include/hwm_orig.h \
     include/hwm.h
 
 FORMS    += \
