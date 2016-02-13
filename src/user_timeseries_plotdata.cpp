@@ -51,6 +51,7 @@ int user_timeseries::plotData()
     axisX->setTitleText("Date");
     axisX->setMin(minDate);
     axisX->setMax(maxDate);
+    axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     thisChart->addAxis(axisX, Qt::AlignBottom);
 
     QValueAxis *axisY = new QValueAxis;
@@ -58,6 +59,7 @@ int user_timeseries::plotData()
     axisY->setTitleText(this->yLabelEdit->text());
     axisY->setMin(ymin);
     axisY->setMax(ymax);
+    axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     thisChart->addAxis(axisY, Qt::AlignLeft);
 
     series.resize(fileDataUnique.length());
@@ -80,6 +82,7 @@ int user_timeseries::plotData()
             series[i]->append(TempDate,TempValue);
       }
       thisChart->addSeries(series[i]);
+      thisChart->legend()->markers().at(i)->setFont(QFont("Helvetica",10,QFont::Bold));
       series[i]->attachAxis(axisX);
       series[i]->attachAxis(axisY);
     }
@@ -94,6 +97,7 @@ int user_timeseries::plotData()
     axisY->applyNiceNumbers();
 
     thisChart->setTitle(plotTitle->text());
+    thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     chart->setRenderHint(QPainter::Antialiasing);
     chart->setChart(thisChart);
 

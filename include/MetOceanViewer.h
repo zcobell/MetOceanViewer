@@ -43,6 +43,7 @@
 #include <user_timeseries.h>
 #include <about_dialog.h>
 #include <myqwebenginepage.h>
+#include <keyhandler.h>
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -113,8 +114,6 @@ private slots:
 
     void on_button_plotTimeseriesStation_clicked();
 
-    void keyPressEvent(QKeyEvent* key);
-
     void on_actionAbout_triggered();
 
     void on_actionLoad_Session_triggered();
@@ -147,6 +146,8 @@ private slots:
 
     void on_combo_NOAAProduct_currentIndexChanged(int index);
 
+    void handleEnterKey();
+
 private:
     Ui::MainWindow *ui;
 
@@ -161,6 +162,8 @@ private:
     bool confirmClose();
 
     int loadSession();
+
+    void plotNOAAStation();
 
     QPointer<noaa> thisNOAA;
 
@@ -179,6 +182,8 @@ private:
     int LocalTimezoneOffset;
 
     QDateTime LocalTimeUTC;
+
+    QString SessionFile;
 
 protected:
 

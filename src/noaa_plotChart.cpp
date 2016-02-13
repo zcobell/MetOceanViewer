@@ -62,6 +62,7 @@ int noaa::plotChart()
     else
         axisX->setFormat("MM/dd/yyyy hh:mm");
     axisX->setTitleText("Date (GMT)");
+    axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
@@ -69,6 +70,7 @@ int noaa::plotChart()
     QValueAxis *axisY = new QValueAxis;
     axisY->setLabelFormat(format);
     axisY->setTitleText(this->yLabel);
+    axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     axisY->setMin(ymin);
     axisY->setMax(ymax);
     this->thisChart->addAxis(axisY, Qt::AlignLeft);
@@ -83,6 +85,7 @@ int noaa::plotChart()
                                           this->CurrentNOAAStation[i][j].value);
             this->thisChart->addSeries(series1);
             series1->attachAxis(axisX);
+            this->thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
         }
         else if(i==1)
         {
@@ -92,6 +95,7 @@ int noaa::plotChart()
                                           this->CurrentNOAAStation[i][j].value);
             this->thisChart->addSeries(series2);
             series2->attachAxis(axisX);
+            this->thisChart->legend()->markers().at(1)->setFont(QFont("Helvetica",10,QFont::Bold));
         }
     }
 
@@ -106,6 +110,7 @@ int noaa::plotChart()
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     this->thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName);
+    this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     this->chart->setRenderHint(QPainter::Antialiasing);
     this->chart->setChart(this->thisChart);
 

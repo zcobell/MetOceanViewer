@@ -134,4 +134,9 @@ void MainWindow::setupMetOceanViewerUI()
     ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->usgs_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
+    keyhandler* key = new keyhandler();
+    this->centralWidget()->installEventFilter(key);
+
+    connect(key,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+
 }
