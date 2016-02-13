@@ -99,8 +99,12 @@ int usgs::plotUSGS()
     axisY->setShadesBrush(QBrush(QColor(240,240,240)));
     axisY->setShadesVisible(true);
     axisY->applyNiceNumbers();
+    axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
+    axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
+    thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
 
     thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
+    thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     chart->setRenderHint(QPainter::Antialiasing);
     chart->setChart(thisChart);
 

@@ -68,7 +68,8 @@ void MainWindow::on_button_usgs_fetch_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked()
 {
-    thisUSGS->setUSGSBeenPlotted(false);
+    if(!thisUSGS.isNull())
+        thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
 
@@ -89,7 +90,8 @@ void MainWindow::on_radio_usgs_instant_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked()
 {
-    thisUSGS->setUSGSBeenPlotted(false);
+    if(!thisUSGS.isNull())
+        thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
@@ -103,7 +105,8 @@ void MainWindow::on_radio_usgsDaily_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked()
 {
-    thisUSGS->setUSGSBeenPlotted(false);
+    if(!thisUSGS.isNull())
+        thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;

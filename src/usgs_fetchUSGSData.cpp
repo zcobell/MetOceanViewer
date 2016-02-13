@@ -35,9 +35,9 @@ int usgs::fetchUSGSData()
     this->setMarkerSelection();
 
     //...Format the date strings
-    endDateString1 = "&endDT="+this->requestEndDate.toString("yyyy-MM-dd");
+    endDateString1 = "&endDT="+this->requestEndDate.addDays(1).toString("yyyy-MM-dd");
     startDateString1 = "&startDT="+this->requestStartDate.toString("yyyy-MM-dd");
-    endDateString2 = "&end_date="+this->requestEndDate.toString("yyyy-MM-dd");
+    endDateString2 = "&end_date="+this->requestEndDate.addDays(1).toString("yyyy-MM-dd");
     startDateString2 = "&begin_date="+this->requestStartDate.toString("yyyy-MM-dd");
 
     //...Construct the correct request URL
