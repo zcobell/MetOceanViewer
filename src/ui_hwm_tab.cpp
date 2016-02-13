@@ -59,7 +59,10 @@ void MainWindow::on_browse_hwm_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_processHWM_clicked()
 {
+    int ierr;
     QVector<double> classes;
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     classes.resize(7);
     int units = ui->combo_hwmunits->currentIndex();
@@ -109,7 +112,15 @@ void MainWindow::on_button_processHWM_clicked()
                       ui->text_hwmplottitle,ui->spin_upperlowervalue,ui->map_hwm,ui->graphics_hwm,
                       classes,this);
 
-    thisHWM->processHWMData();
+    ierr = thisHWM->processHWMData();
+
+    QApplication::restoreOverrideCursor();
+
+    if(ierr!=0)
+    {
+        QMessageBox::critical(this,"ERROR",thisHWM->getErrorString());
+        return;
+    }
 
     ui->subtab_hwm->setCurrentIndex(1);
 
