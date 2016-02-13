@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------//
         
-#ifndef HWM_H
-#define HWM_H
+#ifndef HWMORIG_H
+#define HWMORIG_H
 
 #include <QMainWindow>
 #include <QVector>

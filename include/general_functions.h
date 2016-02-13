@@ -13,6 +13,7 @@ void delay(int delayTime);
 void delayM(int delayTime);
 QString MakeColorString(QColor InputColor);
 QColor GenerateRandomColor();
+QColor styleSheetToColor(QString stylesheet);
 int NETCDF_ERR(int status);
 bool isConnectedToNetwork();
 double niceNumber(double number, bool round);
