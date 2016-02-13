@@ -105,11 +105,6 @@ void MainWindow::setupMetOceanViewerUI()
 
 
     //-------------------------------------------//
-    //Some other initializations
-
-    IMEDSMinDate.setDate(QDate(2900,1,1));
-    IMEDSMaxDate.setDate(QDate(1820,1,1));
-
     //Setup the Table
     SetupTimeseriesTable();
 

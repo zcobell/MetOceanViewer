@@ -32,10 +32,7 @@ SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
     src/ui_usgs_tab.cpp \
-    src/hwm_data.cpp \
-    src/hwm_functions.cpp \
     src/general_functions.cpp \
-    src/timeseries_functions.cpp \
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
@@ -70,7 +67,10 @@ SOURCES += src/main.cpp\
     src/user_timeseries_readFile.cpp \
     src/user_timeseries_processData.cpp \
     src/user_timeseries_stationList.cpp \
-    src/hwm.cpp
+    src/hwm.cpp \
+    src/hwm_processhwm.cpp \
+    src/hwm_plotmap.cpp \
+    src/hwm_plotregression.cpp
 
 HEADERS  += \
     version.h \

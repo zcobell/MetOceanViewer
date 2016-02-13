@@ -24,6 +24,7 @@
 #ifndef METOCEANVIEWER_H
 #define METOCEANVIEWER_H
 
+//...QT Library Includes...//
 #include <QMainWindow>
 #include <QtWebEngineWidgets>
 #include <QNetworkInterface>
@@ -33,9 +34,12 @@
 #include <QFileDialog>
 #include <QColorDialog>
 #include <QtCharts>
+
+//...MetOcean Viewer Includes...//
 #include <general_functions.h>
 #include <noaa.h>
 #include <usgs.h>
+#include <hwm.h>
 #include <user_timeseries.h>
 #include <about_dialog.h>
 #include <myqwebenginepage.h>
@@ -113,8 +117,6 @@ private slots:
 
     void keyPressEvent(QKeyEvent* key);
 
-    void OpenExternalBrowser(const QUrl & url);
-
     void on_actionAbout_triggered();
 
     void on_actionLoad_Session_triggered();
@@ -145,32 +147,16 @@ private slots:
 
     void on_button_moveRowDown_clicked();
 
-    QList<QTableWidgetItem *> grabTableRow(int row);
-
-    void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
-
     void on_combo_NOAAProduct_currentIndexChanged(int index);
 
 private:
     Ui::MainWindow *ui;
 
-    void drawMarkers();
+    QList<QTableWidgetItem *> grabTableRow(int row);
 
-    void initializeGoogleMaps(Ui::MainWindow *ui);
-
-    //void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
-
-    //void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
-
-    int ClassifyHWM(double diff);
+    void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
 
     void SetupTimeseriesTable();
-
-    //void UpdateTimeseriesDateRange(IMEDS MyIMEDS);
-
-    //QString FormatTimeseriesString(IMEDS MyStation, int index, double unitConvert);
-
-    //int CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test);
 
     int saveSession();
 
@@ -180,11 +166,15 @@ private:
 
     QPointer<usgs> thisUSGS;
 
+    QPointer<hwm> thisHWM;
+
     QPointer<user_timeseries> thisTimeseries;
 
     QPointer<MyQWebEnginePage> noaa_page;
 
     QPointer<MyQWebEnginePage> usgs_page;
+
+    QColor DotColorHWM,LineColorRegression,LineColor121Line,LineColorBounds;
 
 protected:
 
@@ -196,11 +186,6 @@ protected:
 //Some global variables used throughout the
 //code
 //-------------------------------------------//
-extern QColor LineColor121Line,LineColorBounds;
-extern QColor DotColorHWM,LineColorRegression;
-extern QDateTime IMEDSMinDate,IMEDSMaxDate;
-extern bool ColorUpdated;
-extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
 //-------------------------------------------//

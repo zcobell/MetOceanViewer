@@ -2,7 +2,7 @@
 
 int usgs::getDataBounds(double &ymin, double &ymax)
 {
-    int i,j;
+    int j;
 
     ymin =  999999999.0;
     ymax = -999999999.0;

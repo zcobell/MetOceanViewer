@@ -2401,11 +2401,17 @@
                 <layout class="QHBoxLayout" name="horizontalLayout_9">
                  <item>
                   <widget class="QLineEdit" name="Text_HWMFile">
+                   <property name="enabled">
+                    <bool>true</bool>
+                   </property>
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
                      <height>21</height>
                     </size>
+                   </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -3535,7 +3541,11 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
-             <widget class="QGraphicsView" name="graphics_hwm"/>
+             <widget class="QChartView" name="graphics_hwm" native="true">
+              <property name="styleSheet">
+               <string notr="true">background-color: rgb(255, 255, 255);</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>

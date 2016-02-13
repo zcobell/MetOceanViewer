@@ -42,6 +42,7 @@ void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 void MainWindow::on_button_noaasavechart_clicked()
 {
     QString filename;
+    int ierr;
 
     int MarkerID = thisNOAA->getLoadedNOAAStation();
     int MarkerID2 = thisNOAA->getClickedNOAAStation();
@@ -66,9 +67,9 @@ void MainWindow::on_button_noaasavechart_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    splitPath(TempString,filename,this->PreviousDirectory);
 
-    int ierr = thisNOAA->saveNOAAImage(TempString);
+    ierr = thisNOAA->saveNOAAImage(TempString);
 
     return;
 
@@ -109,9 +110,9 @@ void MainWindow::on_button_noaasavedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    splitPath(TempString,filename,this->PreviousDirectory);
 
-    thisNOAA->saveNOAAData(TempString,PreviousDirectory,format);
+    thisNOAA->saveNOAAData(TempString,this->PreviousDirectory,format);
 
     return;
 }

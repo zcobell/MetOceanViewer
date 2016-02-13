@@ -87,6 +87,19 @@ QString MakeColorString(QColor InputColor)
 //-------------------------------------------//
 
 
+QColor styleSheetToColor(QString stylesheet)
+{
+    QColor thisColor;
+    QString colorString;
+
+    colorString = stylesheet.split(": ").value(1);
+    colorString = colorString.split(";").value(0);
+    thisColor.setNamedColor(colorString.simplified());
+
+    return thisColor;
+}
+
+
 //-------------------------------------------//
 //Generates a random color and optionally
 //mixes in white to make it a more pastel

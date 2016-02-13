@@ -48,8 +48,8 @@ void MainWindow::on_browse_hwm_clicked()
     if(HighWaterMarkFile==NULL)
         return;
 
-    splitPath(HighWaterMarkFile,this->PreviousDirectory,filename);
-    ui->Text_HWMFile->setText(filename);
+    splitPath(HighWaterMarkFile,filename,this->PreviousDirectory);
+    ui->Text_HWMFile->setText(HighWaterMarkFile);
 }
 //-------------------------------------------//
 
@@ -59,183 +59,60 @@ void MainWindow::on_browse_hwm_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_processHWM_clicked()
 {
-    QString Marker, unitString, Regression, MeasuredString, ModeledString;
-    QString HWMColor,One21Color,RegColor,BoundColor,RegressionTitle,XLabel,YLabel;
-    QString RegressionGlobal,MyClassList,ColorRegression;
-    double x,y,measurement,modeled,error,M,B,R,SD,MaximumValue;
-    double c0,c1,c2,c3,c4,c5,c6,BoundValue,Confidence;
-    int classification, unit, ierr, PlotUpperLower, NumSD;
-    bool ThroughZero;
+    QVector<double> classes;
 
-    ThroughZero = ui->check_forceregthroughzero->isChecked();
+    classes.resize(7);
+    int units = ui->combo_hwmunits->currentIndex();
 
-    ierr = ReadHWMData(HighWaterMarkFile, HighWaterMarks);
-    if(ierr!=0)
-    {
-        QMessageBox::critical(this,"ERROR","Could not read the high water mark file.");
-        return;
-    }
-
-    ierr = ComputeLinearRegression(ThroughZero, HighWaterMarks, M, B, R, SD);
-    if(ierr!=0)
-    {
-        QMessageBox::critical(this,"ERROR","Could not calculate the regression function.");
-        return;
-    }
-
-    unit = ui->combo_hwmunits->currentIndex();
-    if(unit==0)
-        unitString = "'ft'";
-    else
-        unitString = "'m'";
-
-    ui->map_hwm->page()->runJavaScript("clearMarkers()");
-
-    //Sanity check on classes
     if(ui->check_manualHWM->isChecked())
     {
-        c0 = ui->spin_class0->value();
-        c1 = ui->spin_class1->value();
-        c2 = ui->spin_class2->value();
-        c3 = ui->spin_class3->value();
-        c4 = ui->spin_class4->value();
-        c5 = ui->spin_class5->value();
-        c6 = ui->spin_class6->value();
-
-        if(c1<=c0)
-        {
-            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
-            return;
-        }
-        else if(c2<=c1)
-        {
-            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
-            return;
-        }
-        else if(c3<=c2)
-        {
-            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
-            return;
-        }
-        else if(c4<=c3)
-        {
-            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
-            return;
-        }
-        else if(c5<=c4)
-        {
-            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
-            return;
-        }
-        else if(c6<=c5)
-        {
-            QMessageBox::critical(this,"ERROR","Your classifications are invalid.");
-            return;
-        }
+        classes[0] = ui->spin_class0->value();
+        classes[1] = ui->spin_class1->value();
+        classes[2] = ui->spin_class2->value();
+        classes[3] = ui->spin_class3->value();
+        classes[4] = ui->spin_class4->value();
+        classes[5] = ui->spin_class5->value();
+        classes[6] = ui->spin_class6->value();
     }
-
-    //Plot the high water mark map
-    MeasuredString = "";
-    ModeledString = "";
-    MaximumValue = 0;
-
-    //Make sure we are fresh for if this is a second round of plotting
-    ui->map_hwm->page()->runJavaScript("clearMarkers()");
-    //ui->map_regression->reload();
-
-    //Give the browsers a chance to catch up to us
-    delay(1);
-
-    for(int i=0;i<HighWaterMarks.size();i++)
+    else
     {
-        x = HighWaterMarks[i].lon;
-        y = HighWaterMarks[i].lat;
-        measurement = HighWaterMarks[i].measured;
-        modeled = HighWaterMarks[i].modeled;
-        error = HighWaterMarks[i].error;
-
-        if(modeled < -9999)
-            classification = -1;
-        else
-            classification = ClassifyHWM(error);
-
-        if(measurement > MaximumValue)
-            MaximumValue = measurement + 1;
-        else if(modeled > MaximumValue)
-            MaximumValue = modeled + 1;
-
-        Marker = "addHWM("+QString::number(x)+","+QString::number(y)+
-                ","+QString::number(i)+","+QString::number(modeled)+","+QString::number(measurement)+
-                ","+QString::number(error)+","+QString::number(classification)+","+unitString+
-                ")";
-        ui->map_hwm->page()->runJavaScript(Marker);
-        if(i==0)
+        if(units==1)
         {
-            ModeledString = QString::number(modeled);
-            MeasuredString = QString::number(measurement);
+            classes[0] = -1.5;
+            classes[1] = -1.0;
+            classes[2] = -0.5;
+            classes[3] =  0.0;
+            classes[4] =  0.5;
+            classes[5] =  1.0;
+            classes[6] =  1.5;
         }
         else
         {
-            ModeledString = ModeledString+":"+QString::number(modeled);
-            MeasuredString = MeasuredString+":"+QString::number(measurement);
+            classes[0] = -5.0;
+            classes[1] = -3.5;
+            classes[2] = -1.5;
+            classes[3] =  0.0;
+            classes[4] =  1.5;
+            classes[5] =  3.5;
+            classes[6] =  5.0;
         }
     }
 
-    ui->subtab_hwm->setCurrentIndex(2);
+     if(!thisHWM.isNull())
+        delete thisHWM;
 
-    RegressionTitle = ui->text_hwmplottitle->text();
-    XLabel = ui->text_adchwmaxislabel->text();
-    YLabel = ui->text_measuredhwmaxislabel->text();
-    HWMColor = DotColorHWM.name();
-    One21Color = LineColor121Line.name();
-    BoundColor = LineColorBounds.name();
-    RegColor = LineColorRegression.name();
+    thisHWM = new hwm(ui->Text_HWMFile,ui->check_manualHWM,ui->combo_hwmunits,
+                      ui->check_forceregthroughzero,ui->check_dispupperlowerlines,
+                      ui->check_regressionColorMatch,ui->button_hwmcolor,ui->button_121linecolor,
+                      ui->button_boundlinecolor,ui->button_reglinecolor,
+                      ui->text_adchwmaxislabel,ui->text_measuredhwmaxislabel,
+                      ui->text_hwmplottitle,ui->spin_upperlowervalue,ui->map_hwm,ui->graphics_hwm,
+                      classes,this);
 
-    if(ui->check_dispupperlowerlines->isChecked())
-        PlotUpperLower = 1;
-    else
-        PlotUpperLower = 0;
-
-    BoundValue = static_cast<double>(ui->spin_upperlowervalue->value())*SD;
-    NumSD = ui->spin_upperlowervalue->value();
-
-    if(ui->check_regressionColorMatch->isChecked())
-        ColorRegression = "on";
-    else
-        ColorRegression = "off";
-
-
-    if(NumSD==1)
-        Confidence=68.0;
-    else if(NumSD==2)
-        Confidence=95.0;
-    else if(NumSD==3)
-        Confidence=99.7;
-    else
-        Confidence=0.0;
-
-    RegressionGlobal = "setGlobal('"+RegressionTitle+"','"+XLabel+"','"+YLabel+"','"+
-            HWMColor+"','"+RegColor+"','"+One21Color+"','"+BoundColor+"','"+ColorRegression+"')";
-    //ui->map_regression->page()->runJavaScript(RegressionGlobal);
-
-    MyClassList = "addLegend("+unitString+",'"+QString::number(classes[0],'f',2)+":"+QString::number(classes[1],'f',2)+":"+
-            QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
-            QString::number(classes[4],'f',2)+":"+QString::number(classes[5],'f',2)+":"+
-            QString::number(classes[6],'f',2)+"')";
-    ui->map_hwm->page()->runJavaScript(MyClassList);
-
-    Regression = "plotRegression('"+ModeledString+"','"+MeasuredString+"',"+
-            unitString+","+QString::number(MaximumValue)+","+QString::number(M,'f',2)+
-            ","+QString::number(B,'f',2)+","+QString::number(R,'f',2)+","+QString::number(PlotUpperLower)+
-            ","+QString::number(BoundValue)+","+QString::number(SD,'f',2)+","+QString::number(Confidence,'f',1)+",'"+
-            QString::number(classes[0],'f',2)+":"+QString::number(classes[1],'f',2)+":"+
-            QString::number(classes[2],'f',2)+":"+QString::number(classes[3],'f',2)+":"+
-            QString::number(classes[4],'f',2)+":"+QString::number(classes[5],'f',2)+":"+
-            QString::number(classes[6],'f',2)+"')";
-    //ui->map_regression->page()->runJavaScript(Regression);
+    thisHWM->processHWMData();
 
     ui->subtab_hwm->setCurrentIndex(1);
-    delay(1);
+
     ui->map_hwm->page()->runJavaScript("fitMarkers()");
 
     return;

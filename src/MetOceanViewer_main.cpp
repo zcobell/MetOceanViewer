@@ -25,20 +25,6 @@
 #include <ui_MetOceanViewer_main.h>
 
 //-------------------------------------------//
-//A whole load of variables we'll need at
-//some point or another. These are sort of
-//"Global" variables. Since I learned by
-//programming in FORTRAN, this makes me happy
-//-------------------------------------------//
-QString SLASH;
-QColor ADCIRCIMEDSColor,OBSIMEDSColor;
-QColor LineColor121Line,LineColorBounds;
-QColor DotColorHWM,LineColorRegression;
-QDateTime IMEDSMinDate,IMEDSMaxDate;
-//-------------------------------------------//
-
-
-//-------------------------------------------//
 //Main routine which will intialize all the tabs
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
@@ -52,13 +38,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-//Function to handle a clicked link and open in the user's
-//default browser.
-void MainWindow::OpenExternalBrowser(const QUrl & url)
-{
-    QDesktopServices::openUrl(url);
 }
 
 //-------------------------------------------//
@@ -149,9 +128,9 @@ void MainWindow::keyPressEvent(QKeyEvent *key)
 //-------------------------------------------//
 void MainWindow::on_actionAbout_triggered()
 {
-    about_dialog aboutWindow;
-    aboutWindow.setModal(false);
-    aboutWindow.exec();
+    QPointer<about_dialog> aboutWindow = new about_dialog(this);
+    aboutWindow->setModal(false);
+    aboutWindow->exec();
     return;
 }
 //-------------------------------------------//
@@ -166,13 +145,13 @@ void MainWindow::on_actionLoad_Session_triggered()
     QString BaseFile;
     QString LoadFile = QFileDialog::getOpenFileName(this,
                             "Open Session...",
-                            PreviousDirectory,
+                            this->PreviousDirectory,
                             "MetOcean Viewer Sessions (*.mvs)");
 
     if(LoadFile==NULL)
         return;
 
-    splitPath(LoadFile,BaseFile,PreviousDirectory);
+    splitPath(LoadFile,BaseFile,this->PreviousDirectory);
 
     SessionFile = LoadFile;
 
@@ -202,7 +181,7 @@ void MainWindow::on_actionSave_Session_triggered()
 void MainWindow::on_actionSave_Session_As_triggered()
 {
     QString SaveFile = QFileDialog::getSaveFileName(this,
-                        "Save Session...",PreviousDirectory,
+                        "Save Session...",this->PreviousDirectory,
                         "MetOcean Viewer Sessions (*.mvs)");
     if(SaveFile!=NULL)
     {

@@ -72,7 +72,6 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
 {
     QPointer<add_imeds_data> AddWindow = new add_imeds_data(this);
     QColor CellColor;
-    int ierr;
 
     int NumberOfRows = ui->table_TimeseriesData->rowCount();
     AddWindow->setModal(false);
@@ -177,7 +176,7 @@ void MainWindow::SetupTimeseriesTable()
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
-    int ierr, CurrentRow;
+    int CurrentRow;
     double xadjust,yadjust,UnitConversion;
     QColor CellColor;
     QString Filename,Filepath,SeriesName,FileType,StationFilePath;
