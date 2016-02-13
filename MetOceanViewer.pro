@@ -74,7 +74,7 @@ SOURCES += src/main.cpp\
     src/hwm_readhwms.cpp \
     src/hwm_linearregression.cpp \
     src/user_timeseries_plotdata.cpp \
-    keyhandler.cpp
+    src/keyhandler.cpp
 
 HEADERS  += \
     version.h \
@@ -89,7 +89,7 @@ HEADERS  += \
     include/user_timeseries.h \
     include/myqwebenginepage.h \
     include/hwm.h \
-    keyhandler.h
+    include/keyhandler.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
