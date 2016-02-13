@@ -25,9 +25,8 @@
 int usgs::plotUSGS()
 {
 
-    int i,j,ierr,nFrac;
+    int i,j,ierr;
     double ymin,ymax;
-    QVector<double> labels;
     QString format;
     QDateTime minDateTime,maxDateTime;
 
@@ -48,14 +47,6 @@ int usgs::plotUSGS()
 
     //...Create the line series
     ierr = this->getDataBounds(ymin,ymax);
-    labels = niceLabels(ymin,ymax,5,nFrac);
-    for(i=0;i<labels.length();i++)
-    {
-        if(labels[i]>ymax)
-            ymax = labels[i];
-        if(labels[i]<ymin)
-            ymin = labels[i];
-    }
 
     QLineSeries *series1 = new QLineSeries();
     series1->setName(this->ProductName);
@@ -99,6 +90,8 @@ int usgs::plotUSGS()
     axisY->setMax(ymax);
     thisChart->addAxis(axisY, Qt::AlignLeft);
     series1->attachAxis(axisY);
+
+    axisY->applyNiceNumbers();
 
     thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
     chart->setRenderHint(QPainter::Antialiasing);

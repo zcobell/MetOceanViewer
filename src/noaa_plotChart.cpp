@@ -24,9 +24,8 @@
 
 int noaa::plotChart()
 {
-    int i,j,ierr,nFrac;
+    int i,j,ierr;
     double ymin,ymax;
-    QVector<double> labels;
     QString S1,S2,format;
     QDateTime minDateTime,maxDateTime;
 
@@ -37,14 +36,6 @@ int noaa::plotChart()
     ierr = this->generateLabels();
     ierr = this->retrieveProduct(3,S1,S2);
     ierr = this->getDataBounds(ymin,ymax);
-    labels = niceLabels(ymin,ymax,5,nFrac);
-    for(i=0;i<labels.length();i++)
-    {
-        if(labels[i]>ymax)
-            ymax = labels[i];
-        if(labels[i]<ymin)
-            ymin = labels[i];
-    }
 
     //...Create the chart
     QChart *thisChart = new QChart();
@@ -103,6 +94,8 @@ int noaa::plotChart()
             series2->attachAxis(axisX);
         }
     }
+
+    axisY->applyNiceNumbers();
 
     thisChart->setAnimationOptions(QChart::SeriesAnimations);
     thisChart->legend()->setAlignment(Qt::AlignBottom);
