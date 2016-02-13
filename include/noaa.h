@@ -110,6 +110,9 @@ private:
     QComboBox      *noaaProduct,*noaaUnits,*noaaDatum;
     QStatusBar     *statusBar;
 
+    //...Keep the local chart here for reference
+    QChart         *thisChart;
+
 };
 
 #endif // NOAA_H

@@ -27,12 +27,6 @@
 
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
-#include "hwm_orig.h"
-
-//Global variables
-QVector<hwm_data> HighWaterMarks;
-QString HighWaterMarkFile;
-QVector<double> classes;
 
 
 //-------------------------------------------//
@@ -42,7 +36,7 @@ QVector<double> classes;
 void MainWindow::on_browse_hwm_clicked()
 {
     QString filename;
-    HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",
+    QString HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",
                                     this->PreviousDirectory,
                                     "Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
     if(HighWaterMarkFile==NULL)

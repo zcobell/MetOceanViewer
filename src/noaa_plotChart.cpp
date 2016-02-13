@@ -38,7 +38,7 @@ int noaa::plotChart()
     ierr = this->getDataBounds(ymin,ymax);
 
     //...Create the chart
-    QChart *thisChart = new QChart();
+    this->thisChart = new QChart();
 
     QLineSeries *series1 = new QLineSeries();
     QLineSeries *series2 = new QLineSeries();
@@ -64,14 +64,14 @@ int noaa::plotChart()
     axisX->setTitleText("Date (GMT)");
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
-    thisChart->addAxis(axisX, Qt::AlignBottom);
+    this->thisChart->addAxis(axisX, Qt::AlignBottom);
 
     QValueAxis *axisY = new QValueAxis;
     axisY->setLabelFormat(format);
     axisY->setTitleText(this->yLabel);
     axisY->setMin(ymin);
     axisY->setMax(ymax);
-    thisChart->addAxis(axisY, Qt::AlignLeft);
+    this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
     for(i=0;i<this->CurrentNOAAStation.length();i++)
     {
@@ -81,7 +81,7 @@ int noaa::plotChart()
                 series1->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
                                           this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
                                           this->CurrentNOAAStation[i][j].value);
-            thisChart->addSeries(series1);
+            this->thisChart->addSeries(series1);
             series1->attachAxis(axisX);
         }
         else if(i==1)
@@ -90,7 +90,7 @@ int noaa::plotChart()
                 series2->append(QDateTime(this->CurrentNOAAStation[i][j].Date,
                                           this->CurrentNOAAStation[i][j].Time).toMSecsSinceEpoch(),
                                           this->CurrentNOAAStation[i][j].value);
-            thisChart->addSeries(series2);
+            this->thisChart->addSeries(series2);
             series2->attachAxis(axisX);
         }
     }
@@ -103,11 +103,12 @@ int noaa::plotChart()
     axisY->setShadesBrush(QBrush(QColor(240,240,240)));
     axisY->setShadesVisible(true);
 
-    thisChart->setAnimationOptions(QChart::SeriesAnimations);
-    thisChart->legend()->setAlignment(Qt::AlignBottom);
-    thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName);
-    chart->setRenderHint(QPainter::Antialiasing);
-    chart->setChart(thisChart);
+    this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
+    this->thisChart->legend()->setAlignment(Qt::AlignBottom);
+    this->thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName);
+    this->chart->setRenderHint(QPainter::Antialiasing);
+    this->chart->setChart(this->thisChart);
 
     return 0;
 }
+
