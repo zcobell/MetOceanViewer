@@ -70,7 +70,9 @@ SOURCES += src/main.cpp\
     src/hwm.cpp \
     src/hwm_processhwm.cpp \
     src/hwm_plotmap.cpp \
-    src/hwm_plotregression.cpp
+    src/hwm_plotregression.cpp \
+    src/hwm_readhwms.cpp \
+    src/hwm_linearregression.cpp
 
 HEADERS  += \
     version.h \
