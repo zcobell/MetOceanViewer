@@ -120,7 +120,7 @@ void MainWindow::on_button_noaasavedata_clicked()
 
 void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 {
-    if(index==3)
+    if(index==3 || index==0)
     {
         ui->Date_StartTime->setMaximumDateTime(QDateTime::fromString("2100/01/01 00:00","yyyy/MM/dd hh:mm"));
         ui->Date_EndTime->setMaximumDateTime(QDateTime::fromString("2100/01/01 00:00","yyyy/MM/dd hh:mm"));

@@ -38,5 +38,6 @@ QColor GenerateRandomColor();
 QColor styleSheetToColor(QString stylesheet);
 int NETCDF_ERR(int status);
 bool isConnectedToNetwork();
+int getLocalTimzoneOffset();
 
 #endif // GENERAL_FUNCTIONS_H

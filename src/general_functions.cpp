@@ -194,3 +194,11 @@ bool isConnectedToNetwork(){
 
     return result;
 }
+
+int getLocalTimzoneOffset()
+{
+    QDateTime dt1 = QDateTime::currentDateTime();
+    QDateTime dt2 = dt1.toUTC();
+    dt1.setTimeSpec(Qt::UTC);
+    return dt2.secsTo(dt1) / 3600;
+}
