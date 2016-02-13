@@ -112,7 +112,7 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     splitPath(TempString,filename,this->PreviousDirectory);
 
-    thisNOAA->saveNOAAData(TempString,this->PreviousDirectory,format);
+    thisNOAA->saveNOAAData(filename,this->PreviousDirectory,format);
 
     return;
 }
