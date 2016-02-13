@@ -128,6 +128,8 @@ int hwm::plotRegression()
     axisY->setMax(max);
     axisX->setMin(min);
     axisX->setMax(max);
+    axisX->setTickCount(10);
+    axisY->setTickCount(10);
 
     axisX->applyNiceNumbers();
     axisY->applyNiceNumbers();
@@ -190,6 +192,12 @@ int hwm::plotRegression()
         thisChart->legend()->markers().at(10)->setVisible(false);
         thisChart->legend()->markers().at(11)->setVisible(false);
     }
+
+    axisX->setGridLineColor(QColor(200,200,200));
+    axisY->setGridLineColor(QColor(200,200,200));
+    axisY->setShadesPen(Qt::NoPen);
+    axisY->setShadesBrush(QBrush(QColor(240,240,240)));
+    axisY->setShadesVisible(true);
 
     thisChart->legend()->setAlignment(Qt::AlignBottom);
     thisChart->setTitle(RegressionTitle);

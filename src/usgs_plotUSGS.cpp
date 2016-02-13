@@ -91,6 +91,13 @@ int usgs::plotUSGS()
     thisChart->addAxis(axisY, Qt::AlignLeft);
     series1->attachAxis(axisY);
 
+    axisY->setTickCount(10);
+    axisY->applyNiceNumbers();
+    axisX->setGridLineColor(QColor(200,200,200));
+    axisY->setGridLineColor(QColor(200,200,200));
+    axisY->setShadesPen(Qt::NoPen);
+    axisY->setShadesBrush(QBrush(QColor(240,240,240)));
+    axisY->setShadesVisible(true);
     axisY->applyNiceNumbers();
 
     thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
