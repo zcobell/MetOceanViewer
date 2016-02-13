@@ -124,23 +124,13 @@ int hwm::plotRegression()
             min = this->highWaterMarks[i].measured;
     }
 
-    labels = niceLabels(min,max,5,nFrac);
-
-    min = DBL_MAX;
-    max = DBL_MIN;
-
-    for(i=0;i<labels.length();i++)
-    {
-        if(labels[i]>max)
-            max = labels[i];
-        if(labels[i]<min)
-            min = labels[i];
-    }
-
     axisY->setMin(min);
     axisY->setMax(max);
     axisX->setMin(min);
     axisX->setMax(max);
+
+    axisX->applyNiceNumbers();
+    axisY->applyNiceNumbers();
 
     for(i=0;i<8;i++)
     {

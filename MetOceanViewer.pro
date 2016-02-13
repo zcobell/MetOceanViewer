@@ -72,7 +72,8 @@ SOURCES += src/main.cpp\
     src/hwm_plotmap.cpp \
     src/hwm_plotregression.cpp \
     src/hwm_readhwms.cpp \
-    src/hwm_linearregression.cpp
+    src/hwm_linearregression.cpp \
+    src/user_timeseries_plotdata.cpp
 
 HEADERS  += \
     version.h \
