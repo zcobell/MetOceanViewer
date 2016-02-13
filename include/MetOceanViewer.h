@@ -61,8 +61,6 @@ public:
 
     ~MainWindow();
 
-    int loadSession();
-
     QString PreviousDirectory;
 
 private slots:
@@ -161,6 +159,8 @@ private:
     int saveSession();
 
     bool confirmClose();
+
+    int loadSession();
 
     QPointer<noaa> thisNOAA;
 

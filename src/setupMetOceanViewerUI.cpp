@@ -21,7 +21,6 @@
 //
 //-----------------------------------------------------------------------//
 #include <MetOceanViewer.h>
-#include <myqwebenginepage.h>
 #include <ui_MetOceanViewer_main.h>
 
 void MainWindow::setupMetOceanViewerUI()
@@ -82,28 +81,28 @@ void MainWindow::setupMetOceanViewerUI()
 
     //Set the colors that are being used on the display page for various
     //things that will be displayed
-    DotColorHWM.setRgb(11,84,255);
-    LineColorRegression.setRgb(7,145,0);
-    LineColor121Line.setRgb(255,0,0);
-    LineColorBounds.setRgb(0,0,0);
+    this->DotColorHWM.setRgb(11,84,255);
+    this->LineColorRegression.setRgb(7,145,0);
+    this->LineColor121Line.setRgb(255,0,0);
+    this->LineColorBounds.setRgb(0,0,0);
 
     //Set the button color for high water marks
-    QString ButtonStyle = MakeColorString(DotColorHWM);
+    QString ButtonStyle = MakeColorString(this->DotColorHWM);
     ui->button_hwmcolor->setStyleSheet(ButtonStyle);
     ui->button_hwmcolor->update();
 
     //Set the button color for the 1:1 line
-    ButtonStyle = MakeColorString(LineColor121Line);
+    ButtonStyle = MakeColorString(this->LineColor121Line);
     ui->button_121linecolor->setStyleSheet(ButtonStyle);
     ui->button_121linecolor->update();
 
     //Set the button color for the linear regression line
-    ButtonStyle = MakeColorString(LineColorRegression);
+    ButtonStyle = MakeColorString(this->LineColorRegression);
     ui->button_reglinecolor->setStyleSheet(ButtonStyle);
     ui->button_reglinecolor->update();
 
     //Set the button color for StdDev bounding lines
-    ButtonStyle = MakeColorString(LineColorBounds);
+    ButtonStyle = MakeColorString(this->LineColorBounds);
     ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
     ui->button_boundlinecolor->update();
 
