@@ -176,6 +176,10 @@ private:
 
     QColor DotColorHWM,LineColorRegression,LineColor121Line,LineColorBounds;
 
+    int LocalTimezoneOffset;
+
+    QDateTime LocalTimeUTC;
+
 protected:
 
     void closeEvent(QCloseEvent *);

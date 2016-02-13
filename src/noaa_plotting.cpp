@@ -30,7 +30,10 @@ int noaa::plotNOAAStation()
 
     //...Grab the options from the UI
     this->StartDate = this->startDateEdit->dateTime();
+    this->StartDate.setTime(QTime(0,0,0));
     this->EndDate = this->endDateEdit->dateTime();
+    this->EndDate = this->EndDate.addDays(1);
+    this->EndDate.setTime(QTime(0,0,0));
     this->Units = this->noaaUnits->currentText();
     this->Datum = this->noaaDatum->currentText();
     this->ProductIndex = this->noaaProduct->currentIndex();

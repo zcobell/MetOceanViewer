@@ -36,11 +36,15 @@ void MainWindow::setupMetOceanViewerUI()
     ui->noaa_map->setPage(this->noaa_page);
     ui->noaa_map->page()->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
+    //Get the local timezone offset
+    this->LocalTimezoneOffset = getLocalTimzoneOffset();
+    this->LocalTimeUTC = QDateTime::currentDateTimeUtc();
+
     //For NOAA, set the default date/time to today and today minus 1
-    ui->Date_StartTime->setDateTime(QDateTime::currentDateTime().addDays(-1));
-    ui->Date_EndTime->setDateTime(QDateTime::currentDateTime());
-    ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTime());
-    ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTime());
+    ui->Date_StartTime->setDateTime(QDateTime::currentDateTimeUtc().addDays(-1));
+    ui->Date_EndTime->setDateTime(QDateTime::currentDateTimeUtc());
+    ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
+    ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
 
 
     //-------------------------------------------//
