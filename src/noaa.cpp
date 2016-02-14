@@ -39,6 +39,58 @@ noaa::noaa(QWebEngineView *inMap, QChartView *inChart,
 
 noaa::~noaa()
 {
-
+    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
+        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleMarkerClicked()));
 }
 
+void noaa::handleLegendMarkerClicked()
+{
+    QLegendMarker* marker = qobject_cast<QLegendMarker*> (sender());
+
+    Q_ASSERT(marker);
+
+    switch (marker->type())
+    {
+        case QLegendMarker::LegendMarkerTypeXY:
+        {
+            // Toggle visibility of series
+            marker->series()->setVisible(!marker->series()->isVisible());
+
+            // Turn legend marker back to visible, since hiding series also hides the marker
+            // and we don't want it to happen now.
+            marker->setVisible(true);
+
+            // Dim the marker, if series is not visible
+            qreal alpha = 1.0;
+
+            if (!marker->series()->isVisible())
+                alpha = 0.5;
+
+            QColor color;
+            QBrush brush = marker->labelBrush();
+            color = brush.color();
+            color.setAlphaF(alpha);
+            brush.setColor(color);
+            marker->setLabelBrush(brush);
+
+            brush = marker->brush();
+            color = brush.color();
+            color.setAlphaF(alpha);
+            brush.setColor(color);
+            marker->setBrush(brush);
+
+            QPen pen = marker->pen();
+            color = pen.color();
+            color.setAlphaF(alpha);
+            pen.setColor(color);
+            marker->setPen(pen);
+
+            break;
+        }
+        default:
+        {
+            qDebug() << "Unknown marker type";
+            break;
+        }
+    }
+}

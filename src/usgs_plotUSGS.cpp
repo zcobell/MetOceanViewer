@@ -53,9 +53,9 @@ int usgs::plotUSGS()
     series1->setPen(QPen(QColor(0,0,255),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
 
     //...Create the chart
-    QChart *thisChart = new QChart();
-    thisChart->setAnimationOptions(QChart::SeriesAnimations);
-    thisChart->legend()->setAlignment(Qt::AlignBottom);
+    this->thisChart = new QChart();
+    this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
+    this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     for(j=0;j<this->USGSPlot.length();j++)
     {
         series1->append(QDateTime(this->USGSPlot[j].Date,this->USGSPlot[j].Time).toMSecsSinceEpoch(),this->USGSPlot[j].value);
@@ -64,7 +64,7 @@ int usgs::plotUSGS()
         if(maxDateTime<QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
             maxDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
     }
-    thisChart->addSeries(series1);
+    this->thisChart->addSeries(series1);
 
     minDateTime = QDateTime(minDateTime.date(),QTime(minDateTime.time().hour()  ,0,0));
     maxDateTime = QDateTime(maxDateTime.date(),QTime(maxDateTime.time().hour()+1,0,0));
@@ -80,7 +80,7 @@ int usgs::plotUSGS()
     axisX->setTitleText("Date (GMT)");
     axisX->setMin(minDateTime);
     axisX->setMax(maxDateTime);
-    thisChart->addAxis(axisX, Qt::AlignBottom);
+    this->thisChart->addAxis(axisX, Qt::AlignBottom);
     series1->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis;
@@ -88,7 +88,7 @@ int usgs::plotUSGS()
     axisY->setTitleText(this->ProductName.split(",").value(0));
     axisY->setMin(ymin);
     axisY->setMax(ymax);
-    thisChart->addAxis(axisY, Qt::AlignLeft);
+    this->thisChart->addAxis(axisY, Qt::AlignLeft);
     series1->attachAxis(axisY);
 
     axisY->setTickCount(10);
@@ -101,12 +101,19 @@ int usgs::plotUSGS()
     axisY->applyNiceNumbers();
     axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
-    thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
+    this->thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
 
-    thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
-    thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
+    this->thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
+    this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     chart->setRenderHint(QPainter::Antialiasing);
-    chart->setChart(thisChart);
+    chart->setChart(this->thisChart);
+
+    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
+    {
+        // Disconnect possible existing connection to avoid multiple connections
+        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+        QObject::connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+    }
 
     this->setUSGSBeenPlotted(true);
 

@@ -46,6 +46,8 @@ public:
                              QWebEngineView *inMap, QChartView *inChart,
                              QObject *parent = 0);
 
+    ~user_timeseries();
+
     //...Public functions
     int processData();
     int plotData();
@@ -53,10 +55,8 @@ public:
     int getClickedMarkerID();
     QString getErrorString();
 
-signals:
-
-public slots:
-
+private slots:
+    void handleLegendMarkerClicked();
 
 private:
 
@@ -143,6 +143,7 @@ private:
     QLineEdit      *yLabelEdit;
     QWebEngineView *map;
     QChartView     *chart;
+    QChart         *thisChart;
 
 };
 

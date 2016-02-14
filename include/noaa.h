@@ -60,6 +60,9 @@ public:
     int getClickedNOAAStation();
     QString getNOAAErrorString();
 
+private slots:
+    void handleLegendMarkerClicked();
+
 private:
 
     //...Private Functions

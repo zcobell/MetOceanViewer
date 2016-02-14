@@ -59,6 +59,9 @@ public:
     QString getLoadedUSGSStation();
     QString getClickedUSGSStation();
 
+private slots:
+    void handleLegendMarkerClicked();
+
 private:
     //...Private functions
     QString getMarkerSelection(QString &name, double &longitude, double &latitude);
@@ -94,6 +97,7 @@ private:
     QComboBox      *productBox;
     QDateEdit      *startDateEdit,*endDateEdit;
     QStatusBar     *statusBar;
+    QChart         *thisChart;
 
     //...Private variables
     bool USGSDataReady;
