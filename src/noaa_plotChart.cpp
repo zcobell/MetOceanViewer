@@ -121,6 +121,21 @@ int noaa::plotChart()
         QObject::connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
     }
 
+    m_coordX = new QGraphicsSimpleTextItem(thisChart);
+    m_coordX->setPos(thisChart->size().width()/2 - 50, thisChart->size().height());
+    m_coordX->setText("X: ");
+    m_coordY = new QGraphicsSimpleTextItem(thisChart);
+    m_coordY->setPos(thisChart->size().width()/2 + 50, thisChart->size().height());
+    m_coordY->setText("Y: ");
+
+    connect(series1, SIGNAL(clicked(QPointF)), this, SLOT(keepCallout()));
+    connect(series1, SIGNAL(hovered(QPointF, bool)), this, SLOT(tooltip(QPointF,bool)));
+
+    connect(series2, SIGNAL(clicked(QPointF)), this, SLOT(keepCallout()));
+    connect(series2, SIGNAL(hovered(QPointF, bool)), this, SLOT(tooltip(QPointF,bool)));
+
+    this->chart->setMouseTracking(true);
+
     return 0;
 }
 
