@@ -59,8 +59,7 @@ usgs::usgs(QWebEngineView *inMap,
 
 usgs::~usgs()
 {
-    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
-        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleMarkerClicked()));
+
 }
 
 void usgs::handleLegendMarkerClicked()

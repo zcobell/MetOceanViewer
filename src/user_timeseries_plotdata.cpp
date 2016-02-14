@@ -104,8 +104,8 @@ int user_timeseries::plotData()
     foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
     {
         // Disconnect possible existing connection to avoid multiple connections
-        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
-        QObject::connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+        disconnect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+        connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
     }
 
     return 0;
