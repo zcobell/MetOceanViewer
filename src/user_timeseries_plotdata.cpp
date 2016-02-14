@@ -36,9 +36,9 @@ int user_timeseries::plotData()
     ierr = this->setMarkerID();
     ierr = this->getDataBounds(ymin,ymax,minDate,maxDate);
 
-    QChart *thisChart = new QChart();
-    thisChart->setAnimationOptions(QChart::SeriesAnimations);
-    thisChart->legend()->setAlignment(Qt::AlignBottom);
+    this->thisChart = new QChart();
+    this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
+    this->thisChart->legend()->setAlignment(Qt::AlignBottom);
 
     QDateTimeAxis *axisX = new QDateTimeAxis;
     axisX->setTickCount(5);
@@ -52,7 +52,7 @@ int user_timeseries::plotData()
     axisX->setMin(minDate);
     axisX->setMax(maxDate);
     axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
-    thisChart->addAxis(axisX, Qt::AlignBottom);
+    this->thisChart->addAxis(axisX, Qt::AlignBottom);
 
     QValueAxis *axisY = new QValueAxis;
     axisY->setTickCount(5);
@@ -60,7 +60,7 @@ int user_timeseries::plotData()
     axisY->setMin(ymin);
     axisY->setMax(ymax);
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
-    thisChart->addAxis(axisY, Qt::AlignLeft);
+    this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
     series.resize(fileDataUnique.length());
 
@@ -81,8 +81,8 @@ int user_timeseries::plotData()
           if(TempValue>MOV_NULL_TS)
             series[i]->append(TempDate,TempValue);
       }
-      thisChart->addSeries(series[i]);
-      thisChart->legend()->markers().at(i)->setFont(QFont("Helvetica",10,QFont::Bold));
+      this->thisChart->addSeries(series[i]);
+      this->thisChart->legend()->markers().at(i)->setFont(QFont("Helvetica",10,QFont::Bold));
       series[i]->attachAxis(axisX);
       series[i]->attachAxis(axisY);
     }
@@ -96,10 +96,17 @@ int user_timeseries::plotData()
     axisY->setShadesVisible(true);
     axisY->applyNiceNumbers();
 
-    thisChart->setTitle(plotTitle->text());
-    thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
-    chart->setRenderHint(QPainter::Antialiasing);
-    chart->setChart(thisChart);
+    this->thisChart->setTitle(this->plotTitle->text());
+    this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
+    this->chart->setRenderHint(QPainter::Antialiasing);
+    this->chart->setChart(this->thisChart);
+
+    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
+    {
+        // Disconnect possible existing connection to avoid multiple connections
+        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+        QObject::connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+    }
 
     return 0;
 }
