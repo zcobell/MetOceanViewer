@@ -39,8 +39,7 @@ noaa::noaa(QWebEngineView *inMap, QChartView *inChart,
 
 noaa::~noaa()
 {
-    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
-        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleMarkerClicked()));
+
 }
 
 void noaa::handleLegendMarkerClicked()

@@ -48,8 +48,7 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
 
 user_timeseries::~user_timeseries()
 {
-    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
-        QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleMarkerClicked()));
+
 }
 
 int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate)
