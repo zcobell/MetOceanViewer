@@ -24,8 +24,6 @@
 #ifndef NOAA_H
 #define NOAA_H
 
-#include <mov_errors.h>
-#include <mov_flags.h>
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QtNetwork>
@@ -35,7 +33,11 @@
 #include <QtWebEngine>
 #include <QWebEngineView>
 #include <QPrinter>
+
+#include <mov_errors.h>
+#include <mov_flags.h>
 #include <general_functions.h>
+#include <callout.h>
 
 using namespace QtCharts;
 
@@ -62,6 +64,12 @@ public:
 
 private slots:
     void handleLegendMarkerClicked();
+    void keepCallout();
+    void tooltip(QPointF point, bool state);
+
+protected:
+    void resizeEvent(QResizeEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
 
 private:
 
@@ -114,7 +122,10 @@ private:
     QStatusBar     *statusBar;
 
     //...Keep the local chart here for reference
-    QChart         *thisChart;
+    QChart                  *thisChart;
+    Callout                 *m_tooltip;
+    QGraphicsSimpleTextItem *m_coordX;
+    QGraphicsSimpleTextItem *m_coordY;
 
 };
 
