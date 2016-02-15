@@ -232,7 +232,7 @@ int hwm::plotRegression()
     this->chartView->m_info->setHtml(this->chartView->m_infoString);
     this->chartView->m_info->setPos(10,this->chartView->m_chart->size().height()-50);
     this->chartView->initializeAxisLimits();
-
+    this->chartView->setStatusBar(this->statusBar);
 
     return 0;
 }

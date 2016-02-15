@@ -28,7 +28,7 @@ hwm::hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombob
          QPushButton *inButtonBoundingLineColor, QPushButton *inButtonRegLineColor,
          QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
          QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, mov_QChartView *inChartView,
-         QVector<double> &inClassValues, QObject *parent) : QObject(parent)
+         QStatusBar *inStatusBar, QVector<double> &inClassValues, QObject *parent) : QObject(parent)
 {
 
     this->fileBox = inFilebox;
@@ -47,6 +47,7 @@ hwm::hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombob
     this->plotTitleBox = inPlotTitle;
     this->chartView = inChartView;
     this->map = inMap;
+    this->statusBar = inStatusBar;
 
     this->classes.resize(inClassValues.length());
     for(int i=0;i<this->classes.length();i++)

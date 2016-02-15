@@ -118,6 +118,7 @@ int user_timeseries::plotData()
     this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
     this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
     this->chart->initializeAxisLimits();
+    this->chart->setStatusBar(this->statusBar);
 
     return 0;
 }

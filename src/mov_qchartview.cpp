@@ -38,10 +38,11 @@ mov_QChartView::mov_QChartView(QWidget *parent) : QChartView(parent)
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setMouseTracking(true);
 
-    m_chart  = NULL;
-    m_coord  = NULL;
-    m_info   = NULL;
-    m_style  = 0;
+    m_chart     = NULL;
+    m_coord     = NULL;
+    m_info      = NULL;
+    m_statusBar = NULL;
+    m_style     = 0;
     this->setRubberBand(QChartView::RectangleRubberBand);
 }
 
@@ -86,10 +87,15 @@ void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
             }
             else if(this->m_style==2)
                 this->m_coord->setText(QString("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
+
+            if(this->m_statusBar)
+                this->m_statusBar->showMessage("Left click and drag to zoom in, Right click to zoom out, Double click to reset zoom");
         }
         else
         {
             this->m_coord->setText("");
+            if(this->m_statusBar)
+                this->m_statusBar->clearMessage();
         }
     }
 
@@ -100,7 +106,7 @@ void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
 void mov_QChartView::mouseReleaseEvent(QMouseEvent *event)
 {
     QChartView::mouseReleaseEvent(event);
-    if(m_chart)
+    if(this->m_chart)
         this->resetAxisLimits();
     return;
 
@@ -108,15 +114,26 @@ void mov_QChartView::mouseReleaseEvent(QMouseEvent *event)
 
 void mov_QChartView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if(m_chart)
+    if(this->m_chart)
         this->resetZoom();
     QChartView::mouseDoubleClickEvent(event);
     return;
 }
 
+void mov_QChartView::wheelEvent(QWheelEvent *event)
+{
+    if(event->delta()>0)
+        this->m_chart->zoomIn();
+    else if(event->delta()<0)
+        this->m_chart->zoomOut();
+
+    QChartView::wheelEvent(event);
+    return;
+}
+
 void mov_QChartView::resetZoom()
 {
-    if(m_chart)
+    if(this->m_chart)
     {
         this->chart()->zoomReset();
         this->resetAxisLimits();
@@ -126,7 +143,7 @@ void mov_QChartView::resetZoom()
 
 void mov_QChartView::resetAxisLimits()
 {
-    if(m_chart)
+    if(this->m_chart)
     {
         qreal x1,x2,y1,y2;
 
@@ -165,5 +182,11 @@ void mov_QChartView::initializeAxisLimits()
     current_y_axis_max = y_axis_max;
     current_x_axis_min = x_axis_min;
     current_y_axis_min = y_axis_min;
+    return;
+}
+
+void mov_QChartView::setStatusBar(QStatusBar *inStatusBar)
+{
+    this->m_statusBar = inStatusBar;
     return;
 }

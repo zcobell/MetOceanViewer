@@ -42,7 +42,7 @@ public:
                  QPushButton *inButtonBoundingLineColor, QPushButton *inButtonRegLineColor,
                  QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
                  QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, mov_QChartView *inChartView,
-                 QVector<double> &inClassValues, QObject *parent = 0);
+                 QStatusBar *inStatusBar, QVector<double> &inClassValues, QObject *parent = 0);
 
     //...Public Functions
     int processHWMData();
@@ -88,6 +88,7 @@ private:
     mov_QChartView *chartView;
     QWebEngineView *map;
     QChart         *thisChart;
+    QStatusBar     *statusBar;
 
 };
 

@@ -23,6 +23,7 @@
 
 #ifndef MOV_QCHARTVIEW_H
 #define MOV_QCHARTVIEW_H
+#include <QtWidgets>
 #include <QChartView>
 #include <QtCharts/QChartGlobal>
 
@@ -47,6 +48,7 @@ public:
 
     void initializeAxisLimits();
     void resetZoom();
+    void setStatusBar(QStatusBar *inStatusBar);
 
     QGraphicsSimpleTextItem *m_coord;
     QGraphicsTextItem       *m_info;
@@ -59,13 +61,15 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *event);
 
 private:
-    void    resetAxisLimits();
-    qreal   x_axis_min,x_axis_max;
-    qreal   y_axis_min,y_axis_max;
-    qreal   current_x_axis_min,current_x_axis_max;
-    qreal   current_y_axis_min,current_y_axis_max;
+    void        resetAxisLimits();
+    qreal       x_axis_min,x_axis_max;
+    qreal       y_axis_min,y_axis_max;
+    qreal       current_x_axis_min,current_x_axis_max;
+    qreal       current_y_axis_min,current_y_axis_max;
+    QStatusBar *m_statusBar;
 
 };
 

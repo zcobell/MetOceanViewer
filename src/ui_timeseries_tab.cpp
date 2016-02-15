@@ -280,7 +280,8 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                                            ui->text_TimeseriesXaxisLabel,
                                            ui->text_TimeseriesYaxisLabel,
                                            ui->timeseries_map,
-                                           ui->timeseries_graphics);
+                                           ui->timeseries_graphics,
+                                           ui->statusBar,this);
 
     ierr = thisTimeseries->processData();
     if(ierr!=0)
