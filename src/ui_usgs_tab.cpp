@@ -41,88 +41,20 @@ void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked()
 {
-    int i,ierr;
-    QString USGSMarkerString;
-    QString javascript;
+    int ierr;
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //...Create a new USGS object
     if(!thisUSGS.isNull())
         delete thisUSGS;
-    thisUSGS = new usgs(this);
+    thisUSGS = new usgs(ui->usgs_map,ui->usgs_graphics,
+                        ui->radio_usgsDaily,ui->radio_usgshistoric,
+                        ui->radio_usgs_instant,ui->combo_USGSProduct,
+                        ui->Date_usgsStart,ui->Date_usgsEnd,ui->statusBar,this);
 
-    //...Check the data type
-    if(ui->radio_usgs_instant->isChecked())
-        thisUSGS->USGSdataMethod = 1;
-    else if(ui->radio_usgsDaily->isChecked())
-        thisUSGS->USGSdataMethod = 2;
-    else
-        thisUSGS->USGSdataMethod = 0;
-
-    //...Display the wait cursor
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-    ui->statusBar->showMessage("Downloading data from USGS...");
-
-    //...Wipe out the combo box
-    ui->combo_USGSProduct->clear();
-
-    //...Retrieve info from google maps
-    QVariant eval = QVariant();
-    ui->usgs_map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
-    while(eval.isNull())
-        delayM(5);
-    QStringList evalList = eval.toString().split(";");
-    thisUSGS->USGSMarkerString = evalList.value(0).mid(4);
-
-    //...Sanity Check
-    if(evalList.value(0)=="none")
-    {
-        QMessageBox::warning(this,"Warning","No station has been selected.");
-        ui->statusBar->clearMessage();
-        QApplication::restoreOverrideCursor();
-        return;
-    }
-
-    //...Store the station information
-    thisUSGS->USGSMarkerID = USGSMarkerString;
-    thisUSGS->CurrentUSGSStationName = evalList.value(1).simplified();
-    thisUSGS->CurrentUSGSLon = evalList.value(2).toDouble();
-    thisUSGS->CurrentUSGSLat = evalList.value(3).toDouble();
-
-    //...Get the time period for the data
-    thisUSGS->requestEndDate = ui->Date_usgsEnd->dateTime();
-    thisUSGS->requestStartDate = ui->Date_usgsStart->dateTime();
-
-    //...Grab the data from the server
-    ierr = thisUSGS->fetchUSGSData();
-    if(ierr!=0)
-    {
-        QApplication::restoreOverrideCursor();
-        ui->statusBar->clearMessage();
-        QMessageBox::critical(this,"ERROR",thisUSGS->USGSErrorString);
-        return;
-    }
-
-    //...Update the combo box
-    for(i=0;i<thisUSGS->Parameters.length();i++)
-        ui->combo_USGSProduct->addItem(thisUSGS->Parameters[i]);
-    ui->combo_USGSProduct->setCurrentIndex(0);
-    thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
-
-    //...Plot the first series
-    ierr = thisUSGS->plotUSGS(javascript);
-    if(ierr==0)
-        ui->usgs_map->page()->runJavaScript(javascript);
-    else
-    {
-        QApplication::restoreOverrideCursor();
-        ui->statusBar->clearMessage();
-        QMessageBox::critical(this,"ERROR",thisUSGS->USGSErrorString);
-        return;
-    }
-
-    //...Restore the mouse pointer
+    ierr = thisUSGS->plotNewUSGSStation();
     QApplication::restoreOverrideCursor();
-    ui->statusBar->clearMessage();
 
     return;
 }
@@ -136,7 +68,8 @@ void MainWindow::on_button_usgs_fetch_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked()
 {
-    thisUSGS->USGSBeenPlotted = false;
+    if(!thisUSGS.isNull())
+        thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime::currentDateTime().addDays(-120));
 
@@ -157,7 +90,8 @@ void MainWindow::on_radio_usgs_instant_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked()
 {
-    thisUSGS->USGSBeenPlotted = false;
+    if(!thisUSGS.isNull())
+        thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
@@ -171,7 +105,8 @@ void MainWindow::on_radio_usgsDaily_clicked()
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked()
 {
-    thisUSGS->USGSBeenPlotted = false;
+    if(!thisUSGS.isNull())
+        thisUSGS->setUSGSBeenPlotted(false);
     ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     return;
@@ -185,15 +120,109 @@ void MainWindow::on_radio_usgshistoric_clicked()
 //-------------------------------------------//
 void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
 {
-    QString javascript;
-    thisUSGS->USGSBeenPlotted = false;
-    if(thisUSGS->USGSDataReady)
+    int ierr;
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    ierr = thisUSGS->replotCurrentUSGSStation(index);
+    QApplication::restoreOverrideCursor();
+    if(ierr!=0)
+        QMessageBox::critical(this,"ERROR",thisUSGS->getUSGSErrorString());
+    return;
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Function to save the map and chart as a jpg
+//-------------------------------------------//
+void MainWindow::on_button_usgssavemap_clicked()
+{
+    QString filename;
+
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
     {
-        thisUSGS->ProductIndex = index;
-        thisUSGS->ProductName = ui->combo_USGSProduct->currentText();
-        thisUSGS->plotUSGS(javascript);
-        ui->usgs_map->page()->runJavaScript(javascript);
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
     }
+
+    if(MarkerID != MarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
+    if(!thisUSGS->getUSGSBeenPlotted())
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
+    QString filter = "PDF (*.PDF)";
+    QString DefaultFile = "/USGS_"+MarkerID+".pdf";
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                PreviousDirectory+DefaultFile,"PDF (*.pdf)",&filter);
+
+    if(TempString==NULL)
+        return;
+
+    splitPath(TempString,filename,PreviousDirectory);
+
+    thisUSGS->saveUSGSImage(TempString);
+
+    return;
+
+}
+//-------------------------------------------//
+
+
+//-------------------------------------------//
+//Saves the USGS data as an IMEDS formatted file
+//or a CSV
+//-------------------------------------------//
+void MainWindow::on_button_usgssavedata_clicked()
+{
+    QString filename;
+
+    QString MarkerID = thisUSGS->getLoadedUSGSStation();
+    QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+
+    if(MarkerID=="none")
+    {
+        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        return;
+    }
+
+    if(MarkerID != MarkerID2)
+    {
+        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        return;
+    }
+
+    if(!thisUSGS->getUSGSBeenPlotted())
+    {
+        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        return;
+    }
+
+    QString filter;
+    QString DefaultFile = "/USGS_"+MarkerID+".imeds";
+
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                                    PreviousDirectory+DefaultFile,
+                                    "IMEDS (*.imeds);;CSV (*.csv)",&filter);
+
+    QStringList filter2 = filter.split(" ");
+    QString format = filter2.value(0);
+
+    if(TempString == NULL)
+        return;
+
+    splitPath(TempString,filename,PreviousDirectory);
+
+    thisUSGS->saveUSGSData(TempString,format);
+
     return;
 }
 //-------------------------------------------//

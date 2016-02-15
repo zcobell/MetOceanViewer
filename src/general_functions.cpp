@@ -20,12 +20,10 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-
-#include <MetOceanViewer.h>
-#include <ui_MetOceanViewer_main.h>
-#include <about_dialog.h>
+#include <general_functions.h>
 #include <netcdf.h>
-
+#include <QWebEnginePage>
+#include <QDesktopServices>
 
 //The name of the session file
 QString SessionFile;
@@ -35,7 +33,7 @@ QString SessionFile;
 //Simple delay function which will pause
 //execution for a number of seconds
 //-------------------------------------------//
-void MainWindow::delay(int delayTime)
+void delay(int delayTime)
 {
     QTime dieTime= QTime::currentTime().addSecs(delayTime);
     while( QTime::currentTime() < dieTime )
@@ -49,7 +47,7 @@ void MainWindow::delay(int delayTime)
 //Simple delay function which will pause
 //execution for a number of milliseconds
 //-------------------------------------------//
-void MainWindow::delayM(int delayTime)
+void delayM(int delayTime)
 {
     QTime dieTime= QTime::currentTime().addMSecs(delayTime);
     while( QTime::currentTime() < dieTime )
@@ -59,75 +57,26 @@ void MainWindow::delayM(int delayTime)
 //-------------------------------------------//
 
 
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Routine to remove the leading path of a filename for a simpler
-//display in a text box
-//-------------------------------------------//
-QString MainWindow::RemoveLeadingPath(QString Input)
+void splitPath(QString input,QString &filename,QString &directory)
 {
     QRegExp rx("[/\\\\]");
-    QStringList parts = Input.split(rx);
-    QString Output = parts.value(parts.length()-1);
-    return Output;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Gets the leading path from the directory
-//that is worked in, used for staying
-//in the same directory for subsequent selections
-//-------------------------------------------//
-void MainWindow::GetLeadingPath(QString Input)
-{
-    QRegExp rx("[/\\\\]");
-    QStringList parts = Input.split(rx);
-    QString Directory = "";
+    QStringList parts = input.split(rx);
+    filename = parts.value(parts.length()-1);
+    directory = "";
     for(int i=0; i<parts.length()-1; i++)
-    {
         if(i>0)
-            Directory = Directory+"/"+parts.value(i);
+            directory = directory+"/"+parts.value(i);
         else
-            Directory = parts.value(i);
-
-    }
-    PreviousDirectory = Directory;
-
+            directory = parts.value(i);
     return;
 }
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//A routine that gets the leading path, aka
-//the folder, from a file path
-//-------------------------------------------//
-QString MainWindow::GetMyLeadingPath(QString Input)
-{
-    QRegExp rx("[/\\\\]");
-    QStringList parts = Input.split(rx);
-    QString Directory = "";
-    for(int i=0; i<parts.length()-1; i++)
-    {
-        if(i>0)
-            Directory = Directory+"/"+parts.value(i);
-        else
-            Directory = parts.value(i);
-
-    }
-    return Directory;
-}
-//-------------------------------------------//
 
 
 //-------------------------------------------//
 //Makes a string that sets the CSS style
 //according to the input color
 //-------------------------------------------//
-QString MainWindow::MakeColorString(QColor InputColor)
+QString MakeColorString(QColor InputColor)
 {
     QString S("background-color: #"
                 + QString(InputColor.red() < 16? "0" : "") + QString::number(InputColor.red(),16)
@@ -138,14 +87,17 @@ QString MainWindow::MakeColorString(QColor InputColor)
 //-------------------------------------------//
 
 
-//-------------------------------------------//
-//Terminates the application when quit button clicked
-//-------------------------------------------//
-void MainWindow::on_actionQuit_triggered()
+QColor styleSheetToColor(QString stylesheet)
 {
-    close();
+    QColor thisColor;
+    QString colorString;
+
+    colorString = stylesheet.split(": ").value(1);
+    colorString = colorString.split(";").value(0);
+    thisColor.setNamedColor(colorString.simplified());
+
+    return thisColor;
 }
-//-------------------------------------------//
 
 
 //-------------------------------------------//
@@ -153,7 +105,7 @@ void MainWindow::on_actionQuit_triggered()
 //mixes in white to make it a more pastel
 //type color. This is turned off by default
 //-------------------------------------------//
-QColor MainWindow::GenerateRandomColor()
+QColor GenerateRandomColor()
 {
     QColor MyColor, Mix;
     QTime SeedTime;
@@ -189,111 +141,15 @@ QColor MainWindow::GenerateRandomColor()
 //-------------------------------------------//
 //NetCDF Error function
 //-------------------------------------------//
-int MainWindow::NETCDF_ERR(int status)
+int NETCDF_ERR(int status)
 {
     if(status != NC_NOERR)
-        QMessageBox::critical(this,"Error Saving File",nc_strerror(status));
+        QMessageBox::critical(NULL,"Error Saving File",nc_strerror(status));
 
     return status;
 }
 //-------------------------------------------//
 
-
-//-------------------------------------------//
-//Handle the unsupported content, ie the image that comes back
-//from the highcharts export server as a png file. Save using
-//a file save dialog window to select the save location/filename
-//-------------------------------------------//
-void MainWindow::unsupportedContent(QNetworkReply * reply)
-{
-
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    //Wait until we've retrieved the entire image
-    while(!reply->isFinished())
-    {
-        delay(1);
-    }
-
-    //Make an image and load the reply from the web
-    QImage* highchart = new QImage();
-    highchart->loadFromData(reply->readAll());
-
-    QApplication::restoreOverrideCursor();
-
-    //Request the save location
-    QString Filename = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"Portable Network Graphics (*.png)");
-
-    //Make sure user didn't click 'Cancel'
-    if(Filename==NULL)
-        return;
-
-    //Get leading path and save so we open in same place next time
-    GetLeadingPath(Filename);
-
-    //Save to disk
-    highchart->save(Filename);
-
-    return;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Handle the "enter" or "return" keypress
-//events on certain pages to automatically
-//draw plots
-//-------------------------------------------//
-void MainWindow::keyPressEvent(QKeyEvent *key)
-{
-
-    //Catch "ENTER" or "RETURN" Key
-    if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
-    {
-        //Events for "ENTER" on the Live Data tabs
-        if(ui->MainTabs->currentIndex()==0)
-        {
-            //NOAA Tab
-            if(ui->subtab_livedata->currentIndex()==0)
-            {
-                if(ui->Combo_NOAAPanTo->hasFocus())
-                    ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
-                else
-                    on_Button_FetchData_clicked();
-            }
-            //USGS Tab
-            else if(ui->subtab_livedata->currentIndex()==1)
-            {
-                if(ui->combo_usgs_panto->hasFocus())
-                    ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
-                else
-                    on_button_usgs_fetch_clicked();
-            }
-        }
-        //Events for "ENTER" on the timeseries tabs
-        else if(ui->MainTabs->currentIndex()==1)
-        {
-           if(ui->subtab_timeseries->currentIndex()==0)
-           {
-               on_button_processTimeseriesData_clicked();
-           }
-           else if(ui->subtab_timeseries->currentIndex()==1)
-           {
-               on_button_plotTimeseriesStation_clicked();
-           }
-        }
-        else if(ui->MainTabs->currentIndex()==2)
-        {
-            if(ui->subtab_hwm->currentIndex()==1)
-                on_button_processHWM_clicked();
-        }
-
-    }
-    return;
-
-}
-//-------------------------------------------//
 
 
 //-------------------------------------------//
@@ -338,72 +194,11 @@ bool isConnectedToNetwork(){
 
     return result;
 }
-//-------------------------------------------//
 
-//-------------------------------------------//
-//Bring up the about dialog box
-//-------------------------------------------//
-void MainWindow::on_actionAbout_triggered()
+int getLocalTimzoneOffset()
 {
-    about_dialog aboutWindow;
-    aboutWindow.setModal(false);
-    aboutWindow.exec();
-    return;
+    QDateTime dt1 = QDateTime::currentDateTime();
+    QDateTime dt2 = dt1.toUTC();
+    dt1.setTimeSpec(Qt::UTC);
+    return dt2.secsTo(dt1) / 3600;
 }
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Use of the load session button from the
-//menu is triggered here
-//-------------------------------------------//
-void MainWindow::on_actionLoad_Session_triggered()
-{
-    QString LoadFile = QFileDialog::getOpenFileName(this,
-                            "Open Session...",
-                            PreviousDirectory,
-                            "MetOcean Viewer Sessions (*.mvs)");
-
-    if(LoadFile==NULL)
-        return;
-
-    GetLeadingPath(LoadFile);
-
-    SessionFile = LoadFile;
-
-    loadSession();
-
-    return;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//The save session button from the file menu
-//is triggered here
-//-------------------------------------------//
-void MainWindow::on_actionSave_Session_triggered()
-{
-    saveSession();
-    return;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//The save as session button from the file
-//menu is triggered here
-//-------------------------------------------//
-void MainWindow::on_actionSave_Session_As_triggered()
-{
-    QString SaveFile = QFileDialog::getSaveFileName(this,
-                        "Save Session...",PreviousDirectory,
-                        "MetOcean Viewer Sessions (*.mvs)");
-    if(SaveFile!=NULL)
-    {
-        SessionFile = SaveFile;
-        saveSession();
-    }
-    return;
-}
-//-------------------------------------------//
