@@ -87,7 +87,6 @@ int noaa::plotChart()
             this->thisChart->addSeries(series1);
             series1->attachAxis(axisX);
             series1->attachAxis(axisY);
-            this->thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
         }
         else if(i==1)
         {
@@ -98,9 +97,11 @@ int noaa::plotChart()
             this->thisChart->addSeries(series2);
             series2->attachAxis(axisX);
             series2->attachAxis(axisY);
-            this->thisChart->legend()->markers().at(1)->setFont(QFont("Helvetica",10,QFont::Bold));
         }
     }
+
+    for(i=0;i<this->thisChart->legend()->markers().length();i++)
+        this->thisChart->legend()->markers().at(i)->setFont(QFont("Helvetica",10,QFont::Bold));
 
     axisY->setTickCount(10);
     axisY->applyNiceNumbers();
