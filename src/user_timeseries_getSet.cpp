@@ -20,20 +20,34 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include "usgs.h"
+#include <user_timeseries.h>
 
-usgs::usgs(QObject *parent)
+int user_timeseries::getCurrentMarkerID()
 {
-    this->USGSDataReady = false;
-    this->USGSBeenPlotted = false;
-    this->CurrentUSGSStationName = "none";
-    this->USGSMarkerID = "none";
-    this->ProductIndex = 0;
-    this->ProductName = "none";
+    return this->markerID;
 }
 
-usgs::~usgs()
+int user_timeseries::setMarkerID()
 {
-
+    this->markerID = this->getMarkerIDFromMap();
+    return 0;
 }
 
+int user_timeseries::getClickedMarkerID()
+{
+    return this->getMarkerIDFromMap();
+}
+
+int user_timeseries::getMarkerIDFromMap()
+{
+    QVariant eval = QVariant();
+    this->map->page()->runJavaScript("getMarker()",[&eval](const QVariant &v){eval = v;});
+    while(eval.isNull())
+        delayM(5);
+    return eval.toInt();
+}
+
+QString user_timeseries::getErrorString()
+{
+    return this->errorString;
+}

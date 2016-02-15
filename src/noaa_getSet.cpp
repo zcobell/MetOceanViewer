@@ -1,4 +1,3 @@
-<!-- 
 //-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -21,29 +20,43 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
--->
-        
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map_canvas { height: 100% }
-    </style>
+#include <noaa.h>
 
-    <!-- Load the google maps api and the google visualization api -->
-    <script src="/rsc/js/jquery.js"></script>
-    <script src="/rsc/js/highcharts.js"></script>
-    <script src="/rsc/js/exporting.js"></script>
-    <script src="/rsc/js/annotations.js"></script>
-    <script src="/rsc/js/offline-exporting.js"></script>
-    <script src="/rsc/js/no-data-to-display.js"></script>
-    <script src="/rsc/js/reg_plot.js"></script>
-  </head>
-  <body onload="initializePlot()">
-    <div id="chart_div" style="width: 100%; height: 100%;"></div>
-  </body>
-</html>
+QString noaa::getNOAAErrorString()
+{
+    return this->NOAAErrorString;
+}
 
+int noaa::getLoadedNOAAStation()
+{
+    return this->NOAAMarkerID;
+}
+
+int noaa::getClickedNOAAStation()
+{
+    QString JunkString;
+    double JunkDouble1,JunkDouble2;
+    return getNOAAStation(JunkString,JunkDouble1,JunkDouble2);
+}
+
+int noaa::setNOAAStation()
+{
+    this->NOAAMarkerID = getNOAAStation(this->CurrentNOAAStationName,
+                                        this->CurrentNOAALon,this->CurrentNOAALat);
+    return 0;
+}
+
+int noaa::getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude)
+{
+    QVariant eval = QVariant();
+    this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
+    while(eval.isNull())
+        delayM(5);
+    QStringList evalList = eval.toString().split(";");
+
+    NOAAStationName = evalList.value(1).simplified();
+    latitude = evalList.value(3).toDouble();
+    longitude = evalList.value(2).toDouble();
+
+    return evalList.value(0).toInt();
+}

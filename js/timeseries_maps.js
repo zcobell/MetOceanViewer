@@ -21,18 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 var TimeseriesMarkers = [];
-var YMin,YMax;
-var PlotTitle;
-var XLabel,YLabel;
-var ADCLabel,OBSLabel;
-var ADCColorCode,OBSColorCode;
-var AutoY, AutoX;
-var XMin,XMax;
-var NullFlag;
-
 var Locations = [];
-var DataSeries = [];
-var SeriesOptions = [];
 var StationName = [];
 var map;
 var LastInfoWindow;
@@ -49,11 +38,6 @@ function allocateData(NumSeries)
 {
     Locations[0] = [];
     Locations[1] = [];
-
-    for(var i=0;i<NumSeries;i++)
-    {
-        DataSeries[i] = [];
-    }
     return;
 }
 
@@ -66,37 +50,6 @@ function SetMarkerLocations(index,x,y,name)
     return;
 }
 
-//Save the time series data into a single 3 dimensional array
-function AddDataSeries(SeriesIndex,ThisData)
-{
-
-    DataSeries[SeriesIndex] = [];
-
-    var ThisDataSplit = ThisData.split(";");
-    for(var i=0;i<ThisDataSplit.length;i++)
-    {
-        DataSeries[SeriesIndex][i] = [];
-        ThisDataSplit2 = ThisDataSplit[i].split(":");
-
-        DataSeries[SeriesIndex][i][0] = ThisDataSplit2[0];
-        DataSeries[SeriesIndex][i][1] = ThisDataSplit2[1];
-        DataSeries[SeriesIndex][i][2] = ThisDataSplit2[2];
-        DataSeries[SeriesIndex][i][3] = ThisDataSplit2[3];
-        DataSeries[SeriesIndex][i][4] = ThisDataSplit2[4];
-        DataSeries[SeriesIndex][i][5] = ThisDataSplit2[5];
-
-        if(Number(DataSeries[SeriesIndex][i][5])<-400)
-            DataSeries[SeriesIndex][i][5] = -9999;
-    }
-    return;
-}
-
-//Save the options for each data series
-function SetSeriesOptions(index,MyName,MyColor,MyUnit,MyXadjust,MyYadjust,MyDefaultOn)
-{
-    SeriesOptions[index] = { name: MyName, color: MyColor, unit: MyUnit, xadjust: MyXadjust, yadjust: MyYadjust, defaultOn: MyDefaultOn };
-    return;
-}
 
 function AddToMap()
 {
@@ -147,146 +100,6 @@ function getMarker()
     return LastMarker;
 }
 
-function PlotTimeseries()
-{
-    var i,j,k;
-    var seriesList = [];
-    var Data = [];
-    var contentString;
-    var ThisData;
-    var multiplier,plusX,plusY;
-
-    //Create the data tables
-    for(i=0;i<DataSeries.length;i++)
-    {
-        Data[i]    = [];
-        multiplier = SeriesOptions[i].unit;
-        plusX      = SeriesOptions[i].xadjust;
-        plusY      = SeriesOptions[i].yadjust;
-
-        for(j=0;j<DataSeries[i].length-1;j++)
-        {
-            Data[i][j] = [];
-            ThisDate = Date.UTC(Number(DataSeries[i][j][0]),Number(DataSeries[i][j][1])-1,
-                                Number(DataSeries[i][j][2]),Number(DataSeries[i][j][3])+plusX,
-                                Number(DataSeries[i][j][4]),0,0);
-            Data[i][j][0] = ThisDate;
-            Data[i][j][1] = Number(DataSeries[i][j][5])+plusY;
-
-            //Null value check
-            if(Data[i][j][1]<-999)
-                Data[i][j][1] = null;
-        }
-    }
-
-
-    //Create the series
-    var LocalData;
-    for(i=0;i<DataSeries.length;i++)
-    {
-        LocalData = Data[i];
-        seriesList[i] = {name: SeriesOptions[i].name, color: SeriesOptions[i].color, data: LocalData };
-
-        //For the data series that is not available at this station,
-        //turn it off in both the legend and the plot
-        if(seriesList[i].data.length < 2)
-        {
-            seriesList[i].visible = false;
-            seriesList[i].showInLegend = false;
-        }
-        else if(SeriesOptions[i].defaultOn==="off")
-        {
-            seriesList[i].visible = false;
-        }
-        else
-        {
-            seriesList[i].visible = true;
-            seriesList[i].showInLegend = true;
-        }
-    }
-
-    //Start setting up the plot
-
-    var yData, xData;
-
-    if(AutoY === "auto")
-        yData = { labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
-    else
-        yData = { min: YMin, max: YMax, labels: {format: '{value:.2f}'}, title: { text: YLabel }, gridLineWidth: 1, alternateGridColor: '#EEEEEE' };
-
-    if(AutoX === "auto")
-        xData = { type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
-    else
-        xData = { min: XMin, max: XMax, type: 'datetime', title: { text: XLabel }, dateTimeLabelFormats: { month: '%e. %b', year: '%b' }, gridLineWidth: 1 };
-
-    var plotOption = { series: { marker: { enabled: false }, animation: { enabled: true, duration: 1000, easing: 'linear' }, } };
-    var plotToolTip = {
-            formatter: function() {
-                return '<b>'+ this.series.name +'</b><br/>'+
-                Highcharts.dateFormat('%b %e, %Y %l:%M%p', this.x) +': '+ this.y.toFixed(2) +' ';
-                }
-            };
-
-    // Create the HighChart
-    $('#plot_area').highcharts({
-        chart: {
-            type: 'line',
-            zoomType: 'xy'
-        },
-        exporting: {
-            sourceWidth: 800,
-            sourceHeight: 800,
-            scale: 2,
-            buttons: {
-                contextButton: {
-                    menuItems: [{
-                        text: 'Export to PNG',
-                        onclick: function() {
-                            this.exportChart();
-                        },
-                        separator: false
-                    }]
-                }
-            }
-        },
-        title: {
-            text: PlotTitle
-        },
-        subtitle: {
-            text: 'Station '+StationName[LastMarker]
-        },
-        xAxis: xData,
-        yAxis: yData,
-        plotOptions: plotOption,
-        tooltip: plotToolTip,
-        series: seriesList
-    });
-
-    return;
-}
-
-
-function setGlobal(InPlotTitle,InAutoY,InYMin,InYMax,InXLabel,InYLabel,InAutoX,InXMin,InXMax,InNullFlag)
-{
-    PlotTitle = InPlotTitle;
-    YMin = InYMin;
-    YMax = InYMax;
-    XLabel = InXLabel;
-    YLabel = InYLabel;
-    AutoY = InAutoY;
-    AutoX = InAutoX;
-    NullFlag = InNullFlag;
-
-    if(AutoX=="none")
-    {
-        var Temp1 = InXMin.split("-");
-        var Temp2 = InXMax.split("-");
-        XMin      = Date.UTC(Number(Temp1[0]),Number(Temp1[1])-1,Number(Temp1[2]),0,0,0);
-        XMax      = Date.UTC(Number(Temp2[0]),Number(Temp2[1])-1,Number(Temp2[2]),0,0,0);
-    }
-    return;
-}
-
 
 //Old map Functions
 function clearMarkers()
@@ -308,12 +121,6 @@ function fitMarkers()
     map.fitBounds(extent);
 }
 
-
-////////////////////////////////////////////////////////////
-//   INITIALIZE FUNCTION                                  //
-//                                                        //
-//  Function to initialize the google maps area on load   //
-////////////////////////////////////////////////////////////
 function initializeTimeseries() {
 
     //Initialize the map
@@ -329,43 +136,6 @@ function initializeTimeseries() {
       zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
     };
     map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-
-    $('#plot_area').highcharts({
-        title: {
-            text: ''
-        },
-        legend: {
-            enabled: false},
-        yAxis: {
-            labels: {format: '{value:.2f}'},
-            title: {
-                text: " "
-            },
-            alternateGridColor: '#EEEEEE'
-            },
-        exporting: {
-            sourceWidth: 800,
-            sourceHeight: 800,
-            scale: 2,
-            buttons: {
-                contextButton: {
-                    menuItems: [{
-                        text: 'Export to PNG',
-                        onclick: function() {
-                            this.exportChart();
-                        },
-                        separator: false
-                    }]
-                }
-            }
-        },
-        series: [{
-            type: 'line',
-            name: 'none',
-            data: []
-        }]
-    });
-
 }
 
 google.maps.event.addDomListener(window, "resize", function() {

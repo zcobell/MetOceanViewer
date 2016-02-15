@@ -20,46 +20,76 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-        
 #ifndef HWM_H
 #define HWM_H
 
-#include <QMainWindow>
-#include <QVector>
+#include <QObject>
+#include <QtWidgets>
 #include <QFile>
-#include <QMessageBox>
-#include <qmath.h>
+#include <QtMath>
+#include <QWebEngineView>
+#include <QChartView>
+#include <QtCharts>
+#include <mov_qchartview.h>
 
-//-------------------------------------------//
-//Data structure for high water marks
-//-------------------------------------------//
-struct hwm_data
+class hwm : public QObject
 {
-    double lat;
-    double lon;
-    double bathy;
-    double measured;
-    double modeled;
-    double error;
+    Q_OBJECT
+public:
+    explicit hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombobox,
+                 QCheckBox *inForceThroughZero, QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,
+                 QPushButton *inHWMColor, QPushButton *inButton121LineColor,
+                 QPushButton *inButtonBoundingLineColor, QPushButton *inButtonRegLineColor,
+                 QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
+                 QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, mov_QChartView *inChartView,
+                 QVector<double> &inClassValues, QObject *parent = 0);
+
+    //...Public Functions
+    int processHWMData();
+    int saveHWMMap(QString filter, QString outputFile);
+    int saveRegressionPlot(QString filter, QString outputFile);
+    QString getErrorString();
+
+private:
+    //...High water mark structure
+    struct hwm_data
+    {
+        double lat;
+        double lon;
+        double bathy;
+        double measured;
+        double modeled;
+        double error;
+    };
+
+    //...Private Variables
+    double regLineSlope,regLineIntercept;
+    double regCorrelation,regStdDev;
+    QString hwmErrorString;
+    QVector<double> classes;
+    QVector<hwm_data> highWaterMarks;
+
+    //...Private Functions
+    int readHWMData();
+    int computeLinearRegression();
+    int classifyHWM(double diff);
+    int plotHWMMap();
+    int plotRegression();
+
+    //...Pointers to widgets
+    QLineEdit      *fileBox,*modeledAxisLabelBox;
+    QLineEdit      *measuredAxisLabelBox,*plotTitleBox;
+    QPushButton    *buttonHWMColor,*button121LineColor;
+    QPushButton    *buttonBoundingLinecolor,*buttonRegLineColor;
+    QCheckBox      *manualClassificationCheckbox,*forceThroughZeroCheckbox;
+    QCheckBox      *upperLowerLinesCheckbox,*colorHWMDotsCheckbox;
+    QSpinBox       *boundingLinesValue;
+    QComboBox      *unitComboBox;
+    mov_QChartView *chartView;
+    QWebEngineView *map;
+    QChart         *thisChart;
+
 };
-//-------------------------------------------//
 
-//-------------------------------------------//
-//Global variable used for the high water
-//marks
-//-------------------------------------------//
-extern QVector<double> classes;
-//-------------------------------------------//
-
-//-------------------------------------------//
-//Function prototypes
-//-------------------------------------------//
-int ReadHWMData(QString Filename, QVector<hwm_data> &HWM);
-
-int ComputeLinearRegression(bool ForceThroughZero,
-                            QVector<hwm_data> HWM,
-                            double &M, double &B,
-                            double &Y, double &StdDev);
-//-------------------------------------------//
 
 #endif // HWM_H

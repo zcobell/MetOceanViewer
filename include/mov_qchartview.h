@@ -1,4 +1,3 @@
-<!-- 
 //-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -21,26 +20,44 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
--->
-        
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map_canvas { height: 100% }
-    </style>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
-    <script src="/rsc/js/timeseries_maps.js"></script>
-  </head>
-  <body onload="initializeTimeseries()" style="overflow: hidden">
-      <div style="height:100%; width: 100%; display: table">
-          <div style="display: table-row">
-            <div id="map_canvas" style="width: 100%; display: table-cell;"></div>
-          </div>
-      </div>
-  </body>
-</html>
 
+#ifndef MOV_QCHARTVIEW_H
+#define MOV_QCHARTVIEW_H
+#include <QChartView>
+#include <QtCharts/QChartGlobal>
+
+QT_BEGIN_NAMESPACE
+class QGraphicsScene;
+class QMouseEvent;
+class QResizeEvent;
+QT_END_NAMESPACE
+
+QT_CHARTS_BEGIN_NAMESPACE
+class QChart;
+QT_CHARTS_END_NAMESPACE
+
+QT_CHARTS_USE_NAMESPACE
+
+class mov_QChartView: public QChartView
+{
+    Q_OBJECT
+
+public:
+    mov_QChartView(QWidget *parent = 0);
+
+    QGraphicsSimpleTextItem *m_coord;
+    QGraphicsTextItem *m_info;
+    QChart  *m_chart;
+
+    qreal   x_axis_min,x_axis_max;
+    qreal   y_axis_min,y_axis_max;
+    int     m_style;
+    QString m_infoString;
+
+protected:
+    void resizeEvent(QResizeEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+
+};
+
+#endif //MOVQCHARTVIEW_H

@@ -24,34 +24,9 @@
 #ifndef TIMESERIES_ADD_DATA_H
 #define TIMESERIES_ADD_DATA_H
 
+#include <QDateTime>
 #include <QDialog>
 #include <QVector>
-
-//-------------------------------------------//
-//Data structure used for a list of files
-//for time series plotting
-//-------------------------------------------//
-struct IMEDSList
-{
-    QString Filename;
-    QString Label;
-    QColor  Color;
-};
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Some variables that will be used throughout
-//-------------------------------------------//
-extern int NumIMEDSFiles;
-extern int CurrentRowsIntTable;
-extern QString InputFileName,InputStationFile;
-extern QString InputColorString,InputSeriesName;
-extern QString InputFilePath,StationFilePath,InputFileType;
-extern double UnitConversion,xadjust,yadjust;
-extern QDateTime InputFileColdStart;
-//-------------------------------------------//
-
 
 namespace Ui {
 class add_imeds_data;
@@ -72,6 +47,20 @@ public:
                                  double UnitConvert, double xmove, double ymove, QColor Color,
                                  QDateTime ColdStart, QString FileType, QString StationPath);
 
+    QString PreviousDirectory;
+
+    int NumIMEDSFiles;
+    int CurrentRowsInTable;
+    bool ColorUpdated, FileReadError;
+    bool EditBox;
+    double UnitConversion, xadjust, yadjust;
+    QColor RandomButtonColor;
+    QString InputFileName,InputColorString;
+    QString InputSeriesName,InputFilePath;
+    QString StationFilePath,InputFileType;
+    QString InputStationFile,CurrentFileName;
+    QDateTime InputFileColdStart;
+
 private slots:
 
     void on_browse_filebrowse_clicked();
@@ -84,6 +73,13 @@ private slots:
 
 private:
     Ui::add_imeds_data *ui;
+
+    struct IMEDSList
+    {
+        QString Filename;
+        QString Label;
+        QColor  Color;
+    };
 
 };
 

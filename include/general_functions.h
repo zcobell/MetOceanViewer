@@ -1,4 +1,3 @@
-<!-- 
 //-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -21,26 +20,24 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
--->
-        
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-    <style type="text/css">
-      html { height: 100% }
-      body { height: 100%; margin: 0; padding: 0 }
-      #map_canvas { height: 100% }
-    </style>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
-    <script src="/rsc/js/timeseries_maps.js"></script>
-  </head>
-  <body onload="initializeTimeseries()" style="overflow: hidden">
-      <div style="height:100%; width: 100%; display: table">
-          <div style="display: table-row">
-            <div id="map_canvas" style="width: 100%; display: table-cell;"></div>
-          </div>
-      </div>
-  </body>
-</html>
+#ifndef GENERAL_FUNCTIONS_H
+#define GENERAL_FUNCTIONS_H
 
+#include <QMessageBox>
+#include <QColor>
+#include <QtCore>
+#include <QString>
+#include <QDateTime>
+#include <QNetworkInterface>
+
+void splitPath(QString input,QString &filename,QString &directory);
+void delay(int delayTime);
+void delayM(int delayTime);
+QString MakeColorString(QColor InputColor);
+QColor GenerateRandomColor();
+QColor styleSheetToColor(QString stylesheet);
+int NETCDF_ERR(int status);
+bool isConnectedToNetwork();
+int getLocalTimzoneOffset();
+
+#endif // GENERAL_FUNCTIONS_H

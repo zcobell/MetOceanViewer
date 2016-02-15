@@ -24,6 +24,7 @@
 #ifndef METOCEANVIEWER_H
 #define METOCEANVIEWER_H
 
+//...QT Library Includes...//
 #include <QMainWindow>
 #include <QtWebEngineWidgets>
 #include <QNetworkInterface>
@@ -32,17 +33,17 @@
 #include <QVector>
 #include <QFileDialog>
 #include <QColorDialog>
-#include <noaa.h>
-#include <usgs.h>
-#include <timeseries.h>
 #include <QtCharts>
 
-using namespace QtCharts;
-
-
-//...Forward Declarations of classes
-class noaa;
-class usgs;
+//...MetOcean Viewer Includes...//
+#include <general_functions.h>
+#include <noaa.h>
+#include <usgs.h>
+#include <hwm.h>
+#include <user_timeseries.h>
+#include <about_dialog.h>
+#include <mov_qwebenginepage.h>
+#include <keyhandler.h>
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -61,21 +62,7 @@ public:
 
     ~MainWindow();
 
-    static QString MakeColorString(QColor InputColor);
-
-    static void GetLeadingPath(QString Input);
-
-    static QString GetMyLeadingPath(QString Input);
-
-    static QColor GenerateRandomColor();
-
-    static QString RemoveLeadingPath(QString Input);
-
-    int loadSession();
-
-    void delay(int delayTime);
-
-    void delayM(int delayTime);
+    QString PreviousDirectory;
 
 private slots:
 
@@ -125,13 +112,7 @@ private slots:
 
     void on_button_fitTimeseries_clicked();
 
-    void unsupportedContent(QNetworkReply * reply);
-
     void on_button_plotTimeseriesStation_clicked();
-
-    void keyPressEvent(QKeyEvent* key);
-
-    void OpenExternalBrowser(const QUrl & url);
 
     void on_actionAbout_triggered();
 
@@ -163,59 +144,59 @@ private slots:
 
     void on_button_moveRowDown_clicked();
 
-    QList<QTableWidgetItem *> grabTableRow(int row);
-
-    void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
-
     void on_combo_NOAAProduct_currentIndexChanged(int index);
+
+    void handleEnterKey();
+
+    void on_button_saveHWMScatter_clicked();
 
 private:
     Ui::MainWindow *ui;
 
-    void drawMarkers();
+    QList<QTableWidgetItem *> grabTableRow(int row);
 
-    void initializeGoogleMaps(Ui::MainWindow *ui);
-
-    void getStartEndTime(IMEDS Input,int index, QDateTime &Start, QDateTime &End);
-
-    void getGlobalStartEndTime(IMEDS Input, QDateTime &Start, QDateTime &End);
-
-    int ClassifyHWM(double diff);
+    void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
 
     void SetupTimeseriesTable();
 
-    void UpdateTimeseriesDateRange(IMEDS MyIMEDS);
-
-    QString FormatTimeseriesString(IMEDS MyStation, int index, double unitConvert);
-
-    int CheckStationLocationsTimeseries(IMEDS Control, IMEDS Test);
-
     int saveSession();
 
-    int NETCDF_ERR(int status);
+    bool confirmClose();
+
+    int loadSession();
+
+    void plotNOAAStation();
 
     QPointer<noaa> thisNOAA;
 
     QPointer<usgs> thisUSGS;
 
+    QPointer<hwm> thisHWM;
+
+    QPointer<user_timeseries> thisTimeseries;
+
+    QPointer<mov_QWebEnginePage> noaa_page;
+
+    QPointer<mov_QWebEnginePage> usgs_page;
+
+    QColor DotColorHWM,LineColorRegression,LineColor121Line,LineColorBounds;
+
+    int LocalTimezoneOffset;
+
+    QDateTime LocalTimeUTC;
+
+    QString SessionFile;
+
+protected:
+
+    void closeEvent(QCloseEvent *);
+
 };
-
-//-------------------------------------------//
-//Function prototypes not included in the class
-bool isConnectedToNetwork();
-//-------------------------------------------//
-
 
 //-------------------------------------------//
 //Some global variables used throughout the
 //code
 //-------------------------------------------//
-extern QString PreviousDirectory;
-extern QColor LineColor121Line,LineColorBounds;
-extern QColor DotColorHWM,LineColorRegression;
-extern QDateTime IMEDSMinDate,IMEDSMaxDate;
-extern bool ColorUpdated;
-extern bool EditBox;
 extern QString SessionFile;
 extern QString AlternateFolder;
 //-------------------------------------------//
