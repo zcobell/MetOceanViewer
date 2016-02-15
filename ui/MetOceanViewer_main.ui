@@ -580,7 +580,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QChartView" name="noaa_graphics" native="true">
+                  <widget class="mov_QChartView" name="noaa_graphics" native="true">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                      <horstretch>2</horstretch>
@@ -1239,7 +1239,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QChartView" name="usgs_graphics" native="true">
+               <widget class="mov_QChartView" name="usgs_graphics" native="true">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>2</horstretch>
@@ -2307,7 +2307,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QChartView" name="timeseries_graphics" native="true">
+               <widget class="mov_QChartView" name="timeseries_graphics" native="true">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>2</horstretch>
@@ -3541,7 +3541,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
-             <widget class="QChartView" name="graphics_hwm" native="true">
+             <widget class="mov_QChartView" name="graphics_hwm" native="true">
               <property name="styleSheet">
                <string notr="true">background-color: rgb(255, 255, 255);</string>
               </property>
@@ -3628,9 +3628,9 @@
    <header>QtWebEngineWidgets/QWebEngineView</header>
   </customwidget>
   <customwidget>
-   <class>QChartView</class>
+   <class>mov_QChartView</class>
    <extends>QWidget</extends>
-   <header>qchartview.h</header>
+   <header>mov_qchartview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

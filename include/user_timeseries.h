@@ -33,6 +33,7 @@
 #include <QTableWidget>
 #include <QDateTime>
 #include <general_functions.h>
+#include <mov_qchartview.h>
 
 class user_timeseries : public QObject
 {
@@ -43,7 +44,7 @@ public:
                              QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
                              QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                              QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
-                             QWebEngineView *inMap, QChartView *inChart,
+                             QWebEngineView *inMap, mov_QChartView *inChart,
                              QObject *parent = 0);
 
     ~user_timeseries();
@@ -142,7 +143,7 @@ private:
     QLineEdit      *xLabelEdit;
     QLineEdit      *yLabelEdit;
     QWebEngineView *map;
-    QChartView     *chart;
+    mov_QChartView *chart;
     QChart         *thisChart;
 
 };

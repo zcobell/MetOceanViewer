@@ -28,13 +28,13 @@ int hwm::plotRegression()
 
     QString RegressionTitle,XLabel,YLabel;
     QColor HWMColor,One2OneColor,BoundColor,RegColor;
-    int i,numSD,classification,nFrac;
+    int i,numSD,classification;
     double boundValue,confidence,min,max;
     bool displayBoundingLines,doColorDots;
-    QVector<double> labels;
     QVector<QColor> dotColors;
 
-    QChart *thisChart = new QChart();
+    this->thisChart = new QChart();
+    this->chartView->m_chart = this->thisChart;
 
     RegressionTitle = this->plotTitleBox->text();
     YLabel          = this->modeledAxisLabelBox->text();
@@ -204,6 +204,20 @@ int hwm::plotRegression()
     thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->setChart(thisChart);
+
+    this->chartView->x_axis_min = axisX->min();
+    this->chartView->y_axis_min = axisY->min();
+    this->chartView->x_axis_max = axisX->max();
+    this->chartView->y_axis_max = axisY->max();
+
+    this->chartView->m_style = 2;
+    this->chartView->m_coordX = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chartView->m_coordY = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chartView->m_coordZ = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chartView->m_coordX->setPos(this->chartView->size().width()/2 - 100, this->chartView->size().height() - 20);
+    this->chartView->m_coordY->setPos(this->chartView->size().width()/2 + 20, this->chartView->size().height() - 20);
+    this->chartView->m_coordZ->setPos(this->chartView->size().width()/2 + 120, this->chartView->size().height() - 20);
+
 
     return 0;
 }

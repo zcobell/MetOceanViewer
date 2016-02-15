@@ -42,7 +42,7 @@
 #include <hwm.h>
 #include <user_timeseries.h>
 #include <about_dialog.h>
-#include <myqwebenginepage.h>
+#include <mov_qwebenginepage.h>
 #include <keyhandler.h>
 
 //-------------------------------------------//
@@ -173,9 +173,9 @@ private:
 
     QPointer<user_timeseries> thisTimeseries;
 
-    QPointer<MyQWebEnginePage> noaa_page;
+    QPointer<mov_QWebEnginePage> noaa_page;
 
-    QPointer<MyQWebEnginePage> usgs_page;
+    QPointer<mov_QWebEnginePage> usgs_page;
 
     QColor DotColorHWM,LineColorRegression,LineColor121Line,LineColorBounds;
 

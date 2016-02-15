@@ -37,7 +37,7 @@
 #include <mov_errors.h>
 #include <mov_flags.h>
 #include <general_functions.h>
-#include <callout.h>
+#include <mov_qchartview.h>
 
 using namespace QtCharts;
 
@@ -46,7 +46,7 @@ class noaa : public QObject
     Q_OBJECT
 public:
     //...Constructor
-    explicit noaa(QWebEngineView *inMap, QChartView *inChart,
+    explicit noaa(QWebEngineView *inMap, mov_QChartView *inChart,
                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                   QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                   QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent = 0);
@@ -64,12 +64,6 @@ public:
 
 private slots:
     void handleLegendMarkerClicked();
-    void keepCallout();
-    void tooltip(QPointF point, bool state);
-
-protected:
-    void resizeEvent(QResizeEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
 
 private:
 
@@ -116,16 +110,13 @@ private:
 
     //...Pointers to GUI elements
     QWebEngineView *map;
-    QChartView     *chart;
+    mov_QChartView *chart;
     QDateEdit      *startDateEdit,*endDateEdit;
     QComboBox      *noaaProduct,*noaaUnits,*noaaDatum;
     QStatusBar     *statusBar;
 
     //...Keep the local chart here for reference
-    QChart                  *thisChart;
-    Callout                 *m_tooltip;
-    QGraphicsSimpleTextItem *m_coordX;
-    QGraphicsSimpleTextItem *m_coordY;
+    QChart         *thisChart;
 
 };
 

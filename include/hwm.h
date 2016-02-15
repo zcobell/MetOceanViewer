@@ -30,6 +30,7 @@
 #include <QWebEngineView>
 #include <QChartView>
 #include <QtCharts>
+#include <mov_qchartview.h>
 
 class hwm : public QObject
 {
@@ -40,7 +41,7 @@ public:
                  QPushButton *inHWMColor, QPushButton *inButton121LineColor,
                  QPushButton *inButtonBoundingLineColor, QPushButton *inButtonRegLineColor,
                  QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
-                 QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, QChartView *inChartView,
+                 QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, mov_QChartView *inChartView,
                  QVector<double> &inClassValues, QObject *parent = 0);
 
     //...Public Functions
@@ -82,8 +83,9 @@ private:
     QCheckBox      *upperLowerLinesCheckbox,*colorHWMDotsCheckbox;
     QSpinBox       *boundingLinesValue;
     QComboBox      *unitComboBox;
-    QChartView     *chartView;
+    mov_QChartView *chartView;
     QWebEngineView *map;
+    QChart         *thisChart;
 
 
 };

@@ -96,6 +96,11 @@ int user_timeseries::plotData()
     axisY->setShadesVisible(true);
     axisY->applyNiceNumbers();
 
+    this->chart->x_axis_min = axisX->min().toMSecsSinceEpoch();
+    this->chart->y_axis_min = axisY->min();
+    this->chart->x_axis_max = axisX->max().toMSecsSinceEpoch();
+    this->chart->y_axis_max = axisY->max();
+
     this->thisChart->setTitle(this->plotTitle->text());
     this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     this->chart->setRenderHint(QPainter::Antialiasing);

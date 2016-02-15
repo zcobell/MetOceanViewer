@@ -29,7 +29,7 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
                                  QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                                  QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
-                                 QWebEngineView *inMap, QChartView *inChart,
+                                 QWebEngineView *inMap, mov_QChartView *inChart,
                                  QObject *parent) : QObject(parent)
 {
     table      = inTable;

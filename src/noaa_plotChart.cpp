@@ -39,6 +39,7 @@ int noaa::plotChart()
 
     //...Create the chart
     this->thisChart = new QChart();
+    this->chart->m_chart = this->thisChart;
 
     QLineSeries *series1 = new QLineSeries();
     QLineSeries *series2 = new QLineSeries();
@@ -107,6 +108,11 @@ int noaa::plotChart()
     axisY->setShadesBrush(QBrush(QColor(240,240,240)));
     axisY->setShadesVisible(true);
 
+    this->chart->x_axis_min = axisX->min().toMSecsSinceEpoch();
+    this->chart->y_axis_min = axisY->min();
+    this->chart->x_axis_max = axisX->max().toMSecsSinceEpoch();
+    this->chart->y_axis_max = axisY->max();
+
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     this->thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName);
@@ -121,20 +127,11 @@ int noaa::plotChart()
         QObject::connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
     }
 
-    m_coordX = new QGraphicsSimpleTextItem(thisChart);
-    m_coordX->setPos(thisChart->size().width()/2 - 50, thisChart->size().height());
-    m_coordX->setText("X: ");
-    m_coordY = new QGraphicsSimpleTextItem(thisChart);
-    m_coordY->setPos(thisChart->size().width()/2 + 50, thisChart->size().height());
-    m_coordY->setText("Y: ");
-
-    connect(series1, SIGNAL(clicked(QPointF)), this, SLOT(keepCallout()));
-    connect(series1, SIGNAL(hovered(QPointF, bool)), this, SLOT(tooltip(QPointF,bool)));
-
-    connect(series2, SIGNAL(clicked(QPointF)), this, SLOT(keepCallout()));
-    connect(series2, SIGNAL(hovered(QPointF, bool)), this, SLOT(tooltip(QPointF,bool)));
-
-    this->chart->setMouseTracking(true);
+    this->chart->m_style = 1;
+    this->chart->m_coordX = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coordY = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coordX->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
+    this->chart->m_coordY->setPos(this->chart->size().width()/2 + 50, this->chart->size().height() - 20);
 
     return 0;
 }

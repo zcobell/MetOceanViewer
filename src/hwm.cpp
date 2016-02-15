@@ -27,7 +27,7 @@ hwm::hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombob
          QPushButton *inHWMColor, QPushButton *inButton121LineColor,
          QPushButton *inButtonBoundingLineColor, QPushButton *inButtonRegLineColor,
          QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
-         QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, QChartView *inChartView,
+         QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, mov_QChartView *inChartView,
          QVector<double> &inClassValues, QObject *parent) : QObject(parent)
 {
 
