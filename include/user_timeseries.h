@@ -45,7 +45,7 @@ public:
                              QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                              QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
                              QWebEngineView *inMap, mov_QChartView *inChart,
-                             QObject *parent = 0);
+                             QStatusBar *inStatusBar, QObject *parent = 0);
 
     ~user_timeseries();
 
@@ -145,6 +145,7 @@ private:
     QWebEngineView *map;
     mov_QChartView *chart;
     QChart         *thisChart;
+    QStatusBar     *statusBar;
 
 };
 

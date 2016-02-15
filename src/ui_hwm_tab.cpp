@@ -104,7 +104,7 @@ void MainWindow::on_button_processHWM_clicked()
                       ui->button_boundlinecolor,ui->button_reglinecolor,
                       ui->text_adchwmaxislabel,ui->text_measuredhwmaxislabel,
                       ui->text_hwmplottitle,ui->spin_upperlowervalue,ui->map_hwm,ui->graphics_hwm,
-                      classes,this);
+                      ui->statusBar,classes,this);
 
     ierr = thisHWM->processHWMData();
 
