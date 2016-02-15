@@ -86,6 +86,7 @@ int noaa::plotChart()
                                           this->CurrentNOAAStation[i][j].value);
             this->thisChart->addSeries(series1);
             series1->attachAxis(axisX);
+            series1->attachAxis(axisY);
             this->thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
         }
         else if(i==1)
@@ -96,6 +97,7 @@ int noaa::plotChart()
                                           this->CurrentNOAAStation[i][j].value);
             this->thisChart->addSeries(series2);
             series2->attachAxis(axisX);
+            series2->attachAxis(axisY);
             this->thisChart->legend()->markers().at(1)->setFont(QFont("Helvetica",10,QFont::Bold));
         }
     }
@@ -128,10 +130,8 @@ int noaa::plotChart()
     }
 
     this->chart->m_style = 1;
-    this->chart->m_coordX = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chart->m_coordY = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chart->m_coordX->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
-    this->chart->m_coordY->setPos(this->chart->size().width()/2 + 50, this->chart->size().height() - 20);
+    this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
 
     return 0;
 }

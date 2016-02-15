@@ -113,5 +113,9 @@ int user_timeseries::plotData()
         connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
     }
 
+    this->chart->m_style = 1;
+    this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
+
     return 0;
 }

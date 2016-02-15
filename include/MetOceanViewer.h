@@ -148,6 +148,8 @@ private slots:
 
     void handleEnterKey();
 
+    void on_button_saveHWMScatter_clicked();
+
 private:
     Ui::MainWindow *ui;
 
