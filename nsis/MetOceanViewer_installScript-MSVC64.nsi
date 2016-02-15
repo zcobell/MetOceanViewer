@@ -148,9 +148,9 @@ Section "Install"
     File ..\libs\msvc64\Qt5Sensors.dll
     File ..\libs\msvc64\Qt5Sql.dll
     File ..\libs\msvc64\Qt5WebChannel.dll
-    File ..\libs\msvc32\Qt5WebEngine.dll
-    File ..\libs\msvc32\Qt5WebEngineCore.dll
-    File ..\libs\msvc32\Qt5WebEngineWidgets.dll
+    File ..\libs\msvc64\Qt5WebEngine.dll
+    File ..\libs\msvc64\Qt5WebEngineCore.dll
+    File ..\libs\msvc64\Qt5WebEngineWidgets.dll
     File ..\libs\msvc64\Qt5Widgets.dll
     File ..\libs\msvc64\Qt5Xml.dll
     File ..\libs\msvc64\msvcp120.dll
