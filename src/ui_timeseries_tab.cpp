@@ -75,6 +75,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
 
     int NumberOfRows = ui->table_TimeseriesData->rowCount();
     AddWindow->setModal(false);
+    AddWindow->EditBox = false;
     AddWindow->set_default_dialog_box_elements(NumberOfRows);
 
     int WindowStatus = AddWindow->exec();

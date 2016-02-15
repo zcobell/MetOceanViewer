@@ -291,7 +291,7 @@ void MainWindow::on_button_saveHWMScatter_clicked()
     QString filename;
     QString filter = "PDF (*.pdf)";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"PDF (*.pdf)",&filter);
+                this->PreviousDirectory,"PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;

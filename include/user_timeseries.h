@@ -122,7 +122,7 @@ private:
     int NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, IMEDS &Output);
     int getUniqueStationList(QVector<IMEDS> Data, QVector<double> &X, QVector<double> &Y);
     int buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut);
-    int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate);
+    int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
 
     //...Private Variables
     int markerID;
