@@ -29,6 +29,7 @@
 #include <QtWidgets/QGraphicsTextItem>
 #include <QtGui/QMouseEvent>
 #include <QDateTime>
+#include <QDebug>
 
 mov_QChartView::mov_QChartView(QWidget *parent) : QChartView(parent)
 {
@@ -41,12 +42,14 @@ mov_QChartView::mov_QChartView(QWidget *parent) : QChartView(parent)
     m_coord  = NULL;
     m_info   = NULL;
     m_style  = 0;
-
+    this->setRubberBand(QChartView::RectangleRubberBand);
 }
 
 void mov_QChartView::resizeEvent(QResizeEvent *event)
 {
-    if (scene()) {
+    if (scene())
+    {
+
         scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
         if(m_chart)
         {
@@ -59,6 +62,7 @@ void mov_QChartView::resizeEvent(QResizeEvent *event)
         }
     }
     QChartView::resizeEvent(event);
+    return;
 }
 
 void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
@@ -71,7 +75,7 @@ void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
     {
         x = this->m_chart->mapToValue(event->pos()).x();
         y = this->m_chart->mapToValue(event->pos()).y();
-        if(x<this->x_axis_max && x>this->x_axis_min && y<this->y_axis_max && y>this->y_axis_min)
+        if(x<this->current_x_axis_max && x>this->current_x_axis_min && y<this->current_y_axis_max && y>this->current_y_axis_min)
         {
             if(this->m_style==1)
             {
@@ -88,6 +92,58 @@ void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
             this->m_coord->setText("");
         }
     }
+
     QChartView::mouseMoveEvent(event);
+    return;
 }
 
+void mov_QChartView::mouseReleaseEvent(QMouseEvent *event)
+{
+    QChartView::mouseReleaseEvent(event);
+
+    qreal x1,x2,y1,y2;
+
+    QRectF box = this->m_chart->plotArea();
+    x1 = m_chart->mapToValue(box.bottomLeft()).x();
+    x2 = m_chart->mapToValue(box.topRight()).x();
+    y1 = m_chart->mapToValue(box.bottomLeft()).y();
+    y2 = m_chart->mapToValue(box.topRight()).y();
+
+    current_x_axis_min = x1;
+    current_x_axis_max = x2;
+    current_y_axis_min = y1;
+    current_y_axis_max = y2;
+
+    return;
+
+}
+
+void mov_QChartView::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    this->chart()->zoomReset();
+    QChartView::mouseDoubleClickEvent(event);
+    return;
+}
+
+void mov_QChartView::initializeAxisLimits()
+{
+    qreal x1,x2,y1,y2;
+    QRectF box = this->m_chart->plotArea();
+    x1 = m_chart->mapToValue(box.bottomLeft()).x();
+    x2 = m_chart->mapToValue(box.topRight()).x();
+    y1 = m_chart->mapToValue(box.bottomLeft()).y();
+    y2 = m_chart->mapToValue(box.topRight()).y();
+    x_axis_min = x1;
+    y_axis_min = y1;
+    x_axis_max = x2;
+    y_axis_max = y2;
+    current_x_axis_min = x_axis_min;
+    current_x_axis_max = x_axis_max;
+    current_y_axis_min = y_axis_min;
+    current_y_axis_max = y_axis_max;
+    current_x_axis_max = x_axis_max;
+    current_y_axis_max = y_axis_max;
+    current_x_axis_min = x_axis_min;
+    current_y_axis_min = y_axis_min;
+    return;
+}

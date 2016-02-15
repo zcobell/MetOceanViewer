@@ -45,18 +45,25 @@ class mov_QChartView: public QChartView
 public:
     mov_QChartView(QWidget *parent = 0);
 
-    QGraphicsSimpleTextItem *m_coord;
-    QGraphicsTextItem *m_info;
-    QChart  *m_chart;
+    void initializeAxisLimits();
 
-    qreal   x_axis_min,x_axis_max;
-    qreal   y_axis_min,y_axis_max;
-    int     m_style;
-    QString m_infoString;
+    QGraphicsSimpleTextItem *m_coord;
+    QGraphicsTextItem       *m_info;
+    QChart                  *m_chart;
+    int                      m_style;
+    QString                  m_infoString;
 
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void mouseDoubleClickEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+
+private:
+    qreal   x_axis_min,x_axis_max;
+    qreal   y_axis_min,y_axis_max;
+    qreal   current_x_axis_min,current_x_axis_max;
+    qreal   current_y_axis_min,current_y_axis_max;
 
 };
 
