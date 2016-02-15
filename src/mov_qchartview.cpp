@@ -100,39 +100,47 @@ void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
 void mov_QChartView::mouseReleaseEvent(QMouseEvent *event)
 {
     QChartView::mouseReleaseEvent(event);
-    this->resetAxisLimits();
+    if(m_chart)
+        this->resetAxisLimits();
     return;
 
 }
 
 void mov_QChartView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    this->resetZoom();
+    if(m_chart)
+        this->resetZoom();
     QChartView::mouseDoubleClickEvent(event);
     return;
 }
 
 void mov_QChartView::resetZoom()
 {
-    this->chart()->zoomReset();
-    this->resetAxisLimits();
+    if(m_chart)
+    {
+        this->chart()->zoomReset();
+        this->resetAxisLimits();
+    }
     return;
 }
 
 void mov_QChartView::resetAxisLimits()
 {
-    qreal x1,x2,y1,y2;
+    if(m_chart)
+    {
+        qreal x1,x2,y1,y2;
 
-    QRectF box = this->m_chart->plotArea();
-    x1 = m_chart->mapToValue(box.bottomLeft()).x();
-    x2 = m_chart->mapToValue(box.topRight()).x();
-    y1 = m_chart->mapToValue(box.bottomLeft()).y();
-    y2 = m_chart->mapToValue(box.topRight()).y();
+        QRectF box = this->m_chart->plotArea();
+        x1 = m_chart->mapToValue(box.bottomLeft()).x();
+        x2 = m_chart->mapToValue(box.topRight()).x();
+        y1 = m_chart->mapToValue(box.bottomLeft()).y();
+        y2 = m_chart->mapToValue(box.topRight()).y();
 
-    current_x_axis_min = x1;
-    current_x_axis_max = x2;
-    current_y_axis_min = y1;
-    current_y_axis_max = y2;
+        current_x_axis_min = x1;
+        current_x_axis_max = x2;
+        current_y_axis_min = y1;
+        current_y_axis_max = y2;
+    }
 
     return;
 }
