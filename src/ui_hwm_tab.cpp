@@ -153,18 +153,17 @@ void MainWindow::on_button_saveHWMMap_clicked()
     QString filename;
     QString filter = "JPG (*.jpg *.jpeg)";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                this->PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
+                this->PreviousDirectory,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     splitPath(TempString,filename,this->PreviousDirectory);
 
-    QFile HWMOutput(TempString);
-    QPixmap HWMImage(ui->map_hwm->size());
-    ui->map_hwm->render(&HWMImage);
-    HWMOutput.open(QIODevice::WriteOnly);
-    HWMImage.save(&HWMOutput,"JPG",100);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    thisHWM->saveHWMMap(filter,TempString);
+    QApplication::restoreOverrideCursor();
+
     return;
 }
 //-------------------------------------------//
@@ -285,3 +284,23 @@ void MainWindow::on_check_regressionColorMatch_clicked(bool checked)
     return;
 }
 //-------------------------------------------//
+
+
+void MainWindow::on_button_saveHWMScatter_clicked()
+{
+    QString filename;
+    QString filter = "PDF (*.pdf)";
+    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+                PreviousDirectory,"PDF (*.pdf)",&filter);
+
+    if(TempString==NULL)
+        return;
+
+    splitPath(TempString,filename,this->PreviousDirectory);
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    thisHWM->saveRegressionPlot(filter,TempString);
+    QApplication::restoreOverrideCursor();
+
+    return;
+}

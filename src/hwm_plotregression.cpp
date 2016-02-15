@@ -27,6 +27,7 @@ int hwm::plotRegression()
 {
 
     QString RegressionTitle,XLabel,YLabel;
+    QString RegressionString,CorrelationString,StandardDeviationString;
     QColor HWMColor,One2OneColor,BoundColor,RegColor;
     int i,numSD,classification;
     double boundValue,confidence,min,max;
@@ -35,6 +36,14 @@ int hwm::plotRegression()
 
     this->thisChart = new QChart();
     this->chartView->m_chart = this->thisChart;
+
+    if(this->forceThroughZeroCheckbox->isChecked())
+        RegressionString = QString("y = %1x").arg(qRound(this->regLineSlope*100.0)/100.0);
+    else
+        RegressionString = QString("y = %1x + %2").arg(qRound(this->regLineSlope*100.0)/100.0).arg(qRound(this->regLineIntercept*100.0)/100.0);
+
+    CorrelationString = QString::number(qRound(this->regCorrelation*100.0)/100.0);
+    StandardDeviationString = QString::number(qRound(this->regStdDev*100.0)/100.0);
 
     RegressionTitle = this->plotTitleBox->text();
     YLabel          = this->modeledAxisLabelBox->text();
@@ -99,8 +108,8 @@ int hwm::plotRegression()
     QValueAxis *axisY = new QValueAxis;
     axisX->setTitleText(XLabel);
     axisY->setTitleText(YLabel);
-    thisChart->addAxis(axisX, Qt::AlignBottom);
-    thisChart->addAxis(axisY, Qt::AlignLeft);
+    this->thisChart->addAxis(axisX, Qt::AlignBottom);
+    this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
     min = DBL_MAX;
     max = DBL_MIN;
@@ -136,7 +145,7 @@ int hwm::plotRegression()
 
     for(i=0;i<8;i++)
     {
-        thisChart->addSeries(scatterSeries[i]);
+        this->thisChart->addSeries(scatterSeries[i]);
         scatterSeries[i]->attachAxis(axisX);
         scatterSeries[i]->attachAxis(axisY);
         scatterSeries[i]->setName("High Water Marks");
@@ -144,14 +153,14 @@ int hwm::plotRegression()
 
     //...Don't display all the HWM series
     for(i=0;i<8;i++)
-        thisChart->legend()->markers().at(i)->setVisible(false);
+        this->thisChart->legend()->markers().at(i)->setVisible(false);
 
     //...1:1 line
     QLineSeries *One2OneLine = new QLineSeries;
     One2OneLine->append(-1000,-1000);
     One2OneLine->append(1000,1000);
     One2OneLine->setPen(QPen(QBrush(One2OneColor),3));
-    thisChart->addSeries(One2OneLine);
+    this->thisChart->addSeries(One2OneLine);
     One2OneLine->attachAxis(axisX);
     One2OneLine->attachAxis(axisY);
     One2OneLine->setName("1:1 Line");
@@ -161,7 +170,7 @@ int hwm::plotRegression()
     RegressionLine->append(-1000,this->regLineSlope*-1000+this->regLineIntercept);
     RegressionLine->append(1000,this->regLineSlope*1000+this->regLineIntercept);
     RegressionLine->setPen(QPen(QBrush(RegColor),3));
-    thisChart->addSeries(RegressionLine);
+    this->thisChart->addSeries(RegressionLine);
     RegressionLine->attachAxis(axisX);
     RegressionLine->attachAxis(axisY);
     RegressionLine->setName("Regression Line");
@@ -174,7 +183,7 @@ int hwm::plotRegression()
         UpperBoundLine->append(-1000,-1000+boundValue);
         UpperBoundLine->append(1000,1000+boundValue);
         UpperBoundLine->setPen(QPen(QBrush(BoundColor),3));
-        thisChart->addSeries(UpperBoundLine);
+        this->thisChart->addSeries(UpperBoundLine);
         UpperBoundLine->attachAxis(axisX);
         UpperBoundLine->attachAxis(axisY);
         UpperBoundLine->setName("Standard Deviation Interval");
@@ -184,13 +193,13 @@ int hwm::plotRegression()
         LowerBoundLine->append(-1000,-1000-boundValue);
         LowerBoundLine->append(1000,1000-boundValue);
         LowerBoundLine->setPen(QPen(QBrush(BoundColor),3));
-        thisChart->addSeries(LowerBoundLine);
+        this->thisChart->addSeries(LowerBoundLine);
         LowerBoundLine->attachAxis(axisX);
         LowerBoundLine->attachAxis(axisY);
         LowerBoundLine->setName("Standard Deviation Interval");
 
-        thisChart->legend()->markers().at(10)->setVisible(false);
-        thisChart->legend()->markers().at(11)->setVisible(false);
+        this->thisChart->legend()->markers().at(10)->setVisible(false);
+        this->thisChart->legend()->markers().at(11)->setVisible(false);
     }
 
     axisX->setGridLineColor(QColor(200,200,200));
@@ -199,11 +208,15 @@ int hwm::plotRegression()
     axisY->setShadesBrush(QBrush(QColor(240,240,240)));
     axisY->setShadesVisible(true);
 
-    thisChart->legend()->setAlignment(Qt::AlignBottom);
-    thisChart->setTitle(RegressionTitle);
-    thisChart->setAnimationOptions(QChart::SeriesAnimations);
+    axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
+    axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
+
+    this->thisChart->legend()->setAlignment(Qt::AlignBottom);
+    this->thisChart->setTitle(RegressionTitle);
+    this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
+    this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->chartView->setRenderHint(QPainter::Antialiasing);
-    this->chartView->setChart(thisChart);
+    this->chartView->setChart(this->thisChart);
 
     this->chartView->x_axis_min = axisX->min();
     this->chartView->y_axis_min = axisY->min();
@@ -211,12 +224,15 @@ int hwm::plotRegression()
     this->chartView->y_axis_max = axisY->max();
 
     this->chartView->m_style = 2;
-    this->chartView->m_coordX = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chartView->m_coordY = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chartView->m_coordZ = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chartView->m_coordX->setPos(this->chartView->size().width()/2 - 100, this->chartView->size().height() - 20);
-    this->chartView->m_coordY->setPos(this->chartView->size().width()/2 + 20, this->chartView->size().height() - 20);
-    this->chartView->m_coordZ->setPos(this->chartView->size().width()/2 + 120, this->chartView->size().height() - 20);
+    this->chartView->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chartView->m_coord->setPos(this->chartView->size().width()/2 - 100, this->chartView->size().height() - 20);
+
+    this->chartView->m_info = new QGraphicsTextItem(this->thisChart);
+    this->chartView->m_infoString = "<table><tr><td align=\"right\"><b> Regression Line: </b></td><td>"+RegressionString+"</td></tr>"+
+                                     "<tr><td align=\"right\"><b> Correlation (R&sup2;): </b></td><td>"+CorrelationString+"</td></tr>"+
+                                     "<tr><td align=\"right\"><b> Standard Deviation: </b></td><td>"+StandardDeviationString+"</td></tr></table>";
+    this->chartView->m_info->setHtml(this->chartView->m_infoString);
+    this->chartView->m_info->setPos(10,this->chartView->m_chart->size().height()-50);
 
 
     return 0;

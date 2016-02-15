@@ -46,6 +46,8 @@ public:
 
     //...Public Functions
     int processHWMData();
+    int saveHWMMap(QString filter, QString outputFile);
+    int saveRegressionPlot(QString filter, QString outputFile);
     QString getErrorString();
 
 private:
@@ -86,7 +88,6 @@ private:
     mov_QChartView *chartView;
     QWebEngineView *map;
     QChart         *thisChart;
-
 
 };
 

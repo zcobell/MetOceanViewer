@@ -38,9 +38,8 @@ mov_QChartView::mov_QChartView(QWidget *parent) : QChartView(parent)
     this->setMouseTracking(true);
 
     m_chart  = NULL;
-    m_coordX = NULL;
-    m_coordY = NULL;
-    m_coordZ = NULL;
+    m_coord  = NULL;
+    m_info   = NULL;
     m_style  = 0;
 
 }
@@ -52,10 +51,11 @@ void mov_QChartView::resizeEvent(QResizeEvent *event)
         if(m_chart)
         {
             m_chart->resize(event->size());
-            m_coordX->setPos(m_chart->size().width()/2 - 100, m_chart->size().height() - 20);
-            m_coordY->setPos(m_chart->size().width()/2 + 20, m_chart->size().height() - 20);
-            if(m_style==2)
-                m_coordZ->setPos(m_chart->size().width()/2 + 120, m_chart->size().height() - 20);
+            m_coord->setPos(m_chart->size().width()/2 - 100, m_chart->size().height() - 20);
+        }
+        if(m_info)
+        {
+            m_info->setPos(10,m_chart->size().height() - 50);
         }
     }
     QChartView::resizeEvent(event);
@@ -63,37 +63,29 @@ void mov_QChartView::resizeEvent(QResizeEvent *event)
 
 void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
 {
-    QString dateString;
+    QString   dateString;
     QDateTime date;
     qreal     x,y;
 
-    if(m_coordX)
+    if(this->m_coord)
     {
-        x = m_chart->mapToValue(event->pos()).x();
-        y = m_chart->mapToValue(event->pos()).y();
-        if(x<x_axis_max && x>x_axis_min && y<y_axis_max && y>y_axis_min)
+        x = this->m_chart->mapToValue(event->pos()).x();
+        y = this->m_chart->mapToValue(event->pos()).y();
+        if(x<this->x_axis_max && x>this->x_axis_min && y<this->y_axis_max && y>this->y_axis_min)
         {
-            if(m_style==1)
+            if(this->m_style==1)
             {
                 date = QDateTime::fromMSecsSinceEpoch(x);
                 date.setTimeSpec(Qt::UTC);
                 dateString = QString("Date: ")+date.toString("MM/dd/yyyy hh:mm AP");
-                m_coordX->setText(dateString);
-                m_coordY->setText(QString("Value: %1").arg(y));
+                this->m_coord->setText(dateString+QString("     Value: %1").arg(y));
             }
-            else if(m_style==2)
-            {
-                m_coordX->setText(QString("Measured: %1").arg(x));
-                m_coordY->setText(QString("Modeled: %1").arg(y));
-                m_coordZ->setText(QString("Diff: %1").arg(y-x));
-            }
+            else if(this->m_style==2)
+                this->m_coord->setText(QString("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
         }
         else
         {
-            m_coordX->setText("");
-            m_coordY->setText("");
-            if(m_style==2)
-                m_coordZ->setText("");
+            this->m_coord->setText("");
         }
     }
     QChartView::mouseMoveEvent(event);

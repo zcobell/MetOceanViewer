@@ -66,63 +66,6 @@ bool MainWindow::confirmClose()
     return (answer == QMessageBox::Yes);
 }
 
-
-//-------------------------------------------//
-//Handle the "enter" or "return" keypress
-//events on certain pages to automatically
-//draw plots
-//-------------------------------------------//
-//void MainWindow::keyPressEvent(QKeyEvent *key)
-//{
-
-//    //Catch "ENTER" or "RETURN" Key
-//    if(key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return)
-//    {
-//        //Events for "ENTER" on the Live Data tabs
-//        if(ui->MainTabs->currentIndex()==0)
-//        {
-//            //NOAA Tab
-//            if(ui->subtab_livedata->currentIndex()==0)
-//            {
-//                if(ui->Combo_NOAAPanTo->hasFocus())
-//                    ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
-//                else
-//                    this->plotNOAAStation();
-//            }
-//            //USGS Tab
-//            else if(ui->subtab_livedata->currentIndex()==1)
-//            {
-//                if(ui->combo_usgs_panto->hasFocus())
-//                    ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
-//                else
-//                    on_button_usgs_fetch_clicked();
-//            }
-//        }
-//        //Events for "ENTER" on the timeseries tabs
-//        else if(ui->MainTabs->currentIndex()==1)
-//        {
-//           if(ui->subtab_timeseries->currentIndex()==0)
-//           {
-//               on_button_processTimeseriesData_clicked();
-//           }
-//           else if(ui->subtab_timeseries->currentIndex()==1)
-//           {
-//               on_button_plotTimeseriesStation_clicked();
-//           }
-//        }
-//        else if(ui->MainTabs->currentIndex()==2)
-//        {
-//            if(ui->subtab_hwm->currentIndex()==1)
-//                on_button_processHWM_clicked();
-//        }
-
-//    }
-//    return;
-
-//}
-//-------------------------------------------//
-
-
 //-------------------------------------------//
 //Bring up the about dialog box
 //-------------------------------------------//

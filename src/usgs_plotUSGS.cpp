@@ -122,10 +122,8 @@ int usgs::plotUSGS()
     }
 
     this->chart->m_style = 1;
-    this->chart->m_coordX = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chart->m_coordY = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chart->m_coordX->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
-    this->chart->m_coordY->setPos(this->chart->size().width()/2 + 50, this->chart->size().height() - 20);
+    this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
 
     this->setUSGSBeenPlotted(true);
 

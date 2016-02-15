@@ -45,14 +45,14 @@ class mov_QChartView: public QChartView
 public:
     mov_QChartView(QWidget *parent = 0);
 
-    QGraphicsSimpleTextItem *m_coordX;
-    QGraphicsSimpleTextItem *m_coordY;
-    QGraphicsSimpleTextItem *m_coordZ;
+    QGraphicsSimpleTextItem *m_coord;
+    QGraphicsTextItem *m_info;
     QChart  *m_chart;
 
     qreal   x_axis_min,x_axis_max;
     qreal   y_axis_min,y_axis_max;
     int     m_style;
+    QString m_infoString;
 
 protected:
     void resizeEvent(QResizeEvent *event);

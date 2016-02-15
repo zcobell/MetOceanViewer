@@ -75,7 +75,8 @@ SOURCES += src/main.cpp\
     src/hwm_linearregression.cpp \
     src/user_timeseries_plotdata.cpp \
     src/keyhandler.cpp \
-    src/mov_qchartview.cpp
+    src/mov_qchartview.cpp \
+    src/hwm_savedata.cpp
 
 HEADERS  += \
     version.h \
