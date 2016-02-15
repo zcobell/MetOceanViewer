@@ -31,7 +31,7 @@ void MainWindow::setupMetOceanViewerUI()
     //Setting up the NOAA tab for the user
 
     //Define which web page we will use from the resource included
-    this->noaa_page = new MyQWebEnginePage;
+    this->noaa_page = new mov_QWebEnginePage;
     ui->noaa_map->setPage(this->noaa_page);
     ui->noaa_map->page()->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
@@ -57,7 +57,7 @@ void MainWindow::setupMetOceanViewerUI()
     ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900,1,1)));
     ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
     ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
-    this->usgs_page = new MyQWebEnginePage;
+    this->usgs_page = new mov_QWebEnginePage;
     ui->usgs_map->setPage(this->usgs_page);
     ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
 

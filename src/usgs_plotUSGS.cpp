@@ -54,6 +54,7 @@ int usgs::plotUSGS()
 
     //...Create the chart
     this->thisChart = new QChart();
+    this->chart->m_chart = this->thisChart;
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     for(j=0;j<this->USGSPlot.length();j++)
@@ -108,12 +109,23 @@ int usgs::plotUSGS()
     chart->setRenderHint(QPainter::Antialiasing);
     chart->setChart(this->thisChart);
 
+    this->chart->x_axis_min = axisX->min().toMSecsSinceEpoch();
+    this->chart->y_axis_min = axisY->min();
+    this->chart->x_axis_max = axisX->max().toMSecsSinceEpoch();
+    this->chart->y_axis_max = axisY->max();
+
     foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
     {
         // Disconnect possible existing connection to avoid multiple connections
         QObject::disconnect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
         QObject::connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
     }
+
+    this->chart->m_style = 1;
+    this->chart->m_coordX = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coordY = new QGraphicsSimpleTextItem(this->thisChart);
+    this->chart->m_coordX->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
+    this->chart->m_coordY->setPos(this->chart->size().width()/2 + 50, this->chart->size().height() - 20);
 
     this->setUSGSBeenPlotted(true);
 

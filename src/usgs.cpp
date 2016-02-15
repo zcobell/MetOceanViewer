@@ -30,7 +30,7 @@
 #include <QtGui/QMouseEvent>
 
 usgs::usgs(QWebEngineView *inMap,
-           QChartView *inChart, QRadioButton *inDailyButton,
+           mov_QChartView *inChart, QRadioButton *inDailyButton,
            QRadioButton *inHistoricButton, QRadioButton *inInstantButton,
            QComboBox *inProductBox, QDateEdit *inStartDateEdit,
            QDateEdit *inEndDateEdit, QStatusBar *instatusBar, QObject *parent) : QObject(parent)

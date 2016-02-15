@@ -33,6 +33,7 @@
 #include <QVector>
 #include <QtCharts>
 #include <general_functions.h>
+#include <mov_qchartview.h>
 
 using namespace QtCharts;
 
@@ -41,7 +42,7 @@ class usgs : public QObject
     Q_OBJECT
 public:
     explicit usgs(QWebEngineView *inMap,
-               QChartView *inChart,QRadioButton *inDailyButton,
+               mov_QChartView *inChart,QRadioButton *inDailyButton,
                QRadioButton *inHistoricButton,QRadioButton *inInstantButton,
                QComboBox *inProductBox, QDateEdit *inStartDateEdit,
                QDateEdit *inEndDateEdit, QStatusBar *instatusBar,QObject *parent = 0);
@@ -92,7 +93,7 @@ private:
 
     //...Pointers to variables
     QWebEngineView *map;
-    QChartView     *chart;
+    mov_QChartView *chart;
     QRadioButton   *dailyButton,*historicButton,*instantButton;
     QComboBox      *productBox;
     QDateEdit      *startDateEdit,*endDateEdit;

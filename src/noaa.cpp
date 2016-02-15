@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------//
 #include "noaa.h"
 
-noaa::noaa(QWebEngineView *inMap, QChartView *inChart,
+noaa::noaa(QWebEngineView *inMap, mov_QChartView *inChart,
            QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
            QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
            QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent) : QObject(parent)
@@ -92,33 +92,4 @@ void noaa::handleLegendMarkerClicked()
             break;
         }
     }
-}
-
-void noaa::tooltip(QPointF point, bool state)
-{
-    if (m_tooltip == 0)
-        m_tooltip = new Callout(thisChart);
-
-    if (state) {
-        m_tooltip->setText(QString("X: %1 \nY: %2 ").arg(point.x()).arg(point.y()));
-        QXYSeries *series = qobject_cast<QXYSeries *>(sender());
-        m_tooltip->setAnchor(thisChart->mapToPosition(point, series));
-        m_tooltip->setPos(thisChart->mapToPosition(point, series) + QPoint(10, -50));
-        m_tooltip->setZValue(11);
-        m_tooltip->show();
-    } else {
-        m_tooltip->hide();
-    }
-}
-
-void noaa::keepCallout()
-{
-    m_tooltip = new Callout(thisChart);
-}
-
-void noaa::mouseMoveEvent(QMouseEvent *event)
-{
-    m_coordX->setText(QString("X: %1").arg(thisChart->mapToValue(event->pos()).x()));
-    m_coordY->setText(QString("Y: %1").arg(thisChart->mapToValue(event->pos()).y()));
-    //this->chart->mouseMoveEvent(event);
 }
