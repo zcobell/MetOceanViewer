@@ -67,8 +67,8 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
     RandomButtonColor = GenerateRandomColor();
     ButtonStyle = MakeColorString(RandomButtonColor);
-    ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
-    ui->button_IMEDSColor->update();
+    ui->button_seriesColor->setStyleSheet(ButtonStyle);
+    ui->button_seriesColor->update();
     CurrentFileName = QString();
     return;
 }
@@ -101,8 +101,8 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     StationFilePath = StationPath;
     ButtonStyle = MakeColorString(Color);
     RandomButtonColor = Color;
-    ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
-    ui->button_IMEDSColor->update();
+    ui->button_seriesColor->setStyleSheet(ButtonStyle);
+    ui->button_seriesColor->update();
 
     if(FileType == "IMEDS")
     {
@@ -215,7 +215,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 //Bring up a color palette and change the button color
 //in the dialog when return comes
 //-------------------------------------------//
-void add_imeds_data::on_button_IMEDSColor_clicked()
+void add_imeds_data::on_button_seriesColor_clicked()
 {
     QColor TempColor = QColorDialog::getColor(RandomButtonColor);
     QString ButtonStyle;
@@ -227,8 +227,8 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
         RandomButtonColor = TempColor;
         ColorUpdated = true;
         ButtonStyle = MakeColorString(RandomButtonColor);
-        ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
-        ui->button_IMEDSColor->update();
+        ui->button_seriesColor->setStyleSheet(ButtonStyle);
+        ui->button_seriesColor->update();
     }
 
     return;
@@ -321,3 +321,35 @@ void add_imeds_data::accept()
         QDialog::accept();
 }
 //-------------------------------------------//
+
+void add_imeds_data::on_button_presetColor1_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}
+
+void add_imeds_data::on_button_presetColor2_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}
+
+void add_imeds_data::on_button_presetColor3_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}
+
+void add_imeds_data::on_button_presetColor4_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}

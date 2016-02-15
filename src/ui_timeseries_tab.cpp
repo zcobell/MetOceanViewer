@@ -103,6 +103,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
         ui->table_TimeseriesData->setItem(NumberOfRows-1,10,new QTableWidgetItem(AddWindow->StationFilePath));
         CellColor.setNamedColor(AddWindow->InputColorString);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
+        ui->table_TimeseriesData->item(NumberOfRows-1,2)->setTextColor(CellColor);
         ui->table_TimeseriesData->item(NumberOfRows-1,0)->setCheckState(Qt::Checked);
 
         //Tooltips in table cells
@@ -244,6 +245,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
         ui->table_TimeseriesData->setItem(CurrentRow,2,new QTableWidgetItem(AddWindow->InputColorString));
         CellColor.setNamedColor(AddWindow->InputColorString);
         ui->table_TimeseriesData->item(CurrentRow,2)->setBackgroundColor(CellColor);
+        ui->table_TimeseriesData->item(CurrentRow,2)->setTextColor(CellColor);
 
     }
     AddWindow->close();
