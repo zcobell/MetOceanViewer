@@ -110,11 +110,6 @@ int noaa::plotChart()
     axisY->setShadesBrush(QBrush(QColor(240,240,240)));
     axisY->setShadesVisible(true);
 
-    this->chart->x_axis_min = axisX->min().toMSecsSinceEpoch();
-    this->chart->y_axis_min = axisY->min();
-    this->chart->x_axis_max = axisX->max().toMSecsSinceEpoch();
-    this->chart->y_axis_max = axisY->max();
-
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     this->thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStationName);
@@ -132,6 +127,7 @@ int noaa::plotChart()
     this->chart->m_style = 1;
     this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
     this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
+    this->chart->initializeAxisLimits();
 
     return 0;
 }

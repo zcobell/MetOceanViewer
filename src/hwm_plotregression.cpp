@@ -218,11 +218,6 @@ int hwm::plotRegression()
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->setChart(this->thisChart);
 
-    this->chartView->x_axis_min = axisX->min();
-    this->chartView->y_axis_min = axisY->min();
-    this->chartView->x_axis_max = axisX->max();
-    this->chartView->y_axis_max = axisY->max();
-
     this->chartView->m_style = 2;
     this->chartView->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
     this->chartView->m_coord->setPos(this->chartView->size().width()/2 - 100, this->chartView->size().height() - 20);
@@ -233,6 +228,7 @@ int hwm::plotRegression()
                                      "<tr><td align=\"right\"><b> Standard Deviation: </b></td><td>"+StandardDeviationString+"</td></tr></table>";
     this->chartView->m_info->setHtml(this->chartView->m_infoString);
     this->chartView->m_info->setPos(10,this->chartView->m_chart->size().height()-50);
+    this->chartView->initializeAxisLimits();
 
 
     return 0;
