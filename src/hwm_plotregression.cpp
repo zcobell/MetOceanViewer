@@ -211,6 +211,9 @@ int hwm::plotRegression()
     axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
 
+    for(i=0;i<this->thisChart->legend()->markers().length();i++)
+        this->thisChart->legend()->markers().at(i)->setFont(QFont("Helvetica",10,QFont::Bold));
+
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     this->thisChart->setTitle(RegressionTitle);
     this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
