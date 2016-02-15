@@ -150,6 +150,14 @@ private slots:
 
     void on_button_saveHWMScatter_clicked();
 
+    void on_button_noaaresetzoom_clicked();
+
+    void on_button_usgsresetzoom_clicked();
+
+    void on_button_usertimeseriesResetZoom_clicked();
+
+    void on_button_hwmResetZoom_clicked();
+
 private:
     Ui::MainWindow *ui;
 

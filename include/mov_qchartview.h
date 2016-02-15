@@ -46,6 +46,7 @@ public:
     mov_QChartView(QWidget *parent = 0);
 
     void initializeAxisLimits();
+    void resetZoom();
 
     QGraphicsSimpleTextItem *m_coord;
     QGraphicsTextItem       *m_info;
@@ -60,6 +61,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
 
 private:
+    void    resetAxisLimits();
     qreal   x_axis_min,x_axis_max;
     qreal   y_axis_min,y_axis_max;
     qreal   current_x_axis_min,current_x_axis_max;

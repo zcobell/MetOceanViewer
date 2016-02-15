@@ -304,3 +304,10 @@ void MainWindow::on_button_saveHWMScatter_clicked()
 
     return;
 }
+
+void MainWindow::on_button_hwmResetZoom_clicked()
+{
+    if(!this->thisHWM.isNull())
+        ui->graphics_hwm->resetZoom();
+    return;
+}

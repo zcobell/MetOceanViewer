@@ -420,3 +420,10 @@ void MainWindow::setTableRow(int row, const QList<QTableWidgetItem*>& rowItems)
     return;
 }
 //-------------------------------------------//
+
+void MainWindow::on_button_usertimeseriesResetZoom_clicked()
+{
+    if(!this->thisTimeseries.isNull())
+        ui->timeseries_graphics->resetZoom();
+    return;
+}

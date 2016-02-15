@@ -100,7 +100,27 @@ void mov_QChartView::mouseMoveEvent(QMouseEvent *event)
 void mov_QChartView::mouseReleaseEvent(QMouseEvent *event)
 {
     QChartView::mouseReleaseEvent(event);
+    this->resetAxisLimits();
+    return;
 
+}
+
+void mov_QChartView::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    this->resetZoom();
+    QChartView::mouseDoubleClickEvent(event);
+    return;
+}
+
+void mov_QChartView::resetZoom()
+{
+    this->chart()->zoomReset();
+    this->resetAxisLimits();
+    return;
+}
+
+void mov_QChartView::resetAxisLimits()
+{
     qreal x1,x2,y1,y2;
 
     QRectF box = this->m_chart->plotArea();
@@ -114,14 +134,6 @@ void mov_QChartView::mouseReleaseEvent(QMouseEvent *event)
     current_y_axis_min = y1;
     current_y_axis_max = y2;
 
-    return;
-
-}
-
-void mov_QChartView::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    this->chart()->zoomReset();
-    QChartView::mouseDoubleClickEvent(event);
     return;
 }
 

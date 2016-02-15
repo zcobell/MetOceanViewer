@@ -612,7 +612,7 @@
                </size>
               </property>
               <property name="title">
-               <string>Map Operations</string>
+               <string>Operations</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_19">
                <item>
@@ -949,6 +949,19 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="button_noaaresetzoom">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Reset Plot Zoom</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="horizontalSpacer">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
@@ -1268,7 +1281,7 @@
                </size>
               </property>
               <property name="title">
-               <string>Map Operations</string>
+               <string>Operations</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_18">
                <item>
@@ -1613,6 +1626,19 @@
                    </property>
                    <property name="text">
                     <string>Save Data</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_usgsresetzoom">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Reset Plot Zoom</string>
                    </property>
                   </widget>
                  </item>
@@ -2347,6 +2373,19 @@
                <widget class="QPushButton" name="button_saveTimeseriesImage">
                 <property name="text">
                  <string>Save Map and Chart</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_usertimeseriesResetZoom">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Reset Plot Zoom</string>
                 </property>
                </widget>
               </item>
@@ -3548,23 +3587,46 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_saveHWMScatter">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>23</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>23</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Save Scatter Plot</string>
-              </property>
-             </widget>
+             <layout class="QHBoxLayout" name="horizontalLayout_32">
+              <item>
+               <widget class="QPushButton" name="button_saveHWMScatter">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Save Scatter Plot</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_hwmResetZoom">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>23</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Reset Plot Zoom</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>
