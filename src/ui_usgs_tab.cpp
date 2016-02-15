@@ -226,3 +226,10 @@ void MainWindow::on_button_usgssavedata_clicked()
     return;
 }
 //-------------------------------------------//
+
+void MainWindow::on_button_usgsresetzoom_clicked()
+{
+    if(!this->thisUSGS.isNull())
+        ui->usgs_graphics->resetZoom();
+    return;
+}

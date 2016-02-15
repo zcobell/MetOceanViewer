@@ -176,3 +176,10 @@ void MainWindow::plotNOAAStation()
     }
     return;
 }
+
+void MainWindow::on_button_noaaresetzoom_clicked()
+{
+    if(!this->thisNOAA.isNull())
+        ui->noaa_graphics->resetZoom();
+    return;
+}
