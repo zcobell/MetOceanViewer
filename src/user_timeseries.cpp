@@ -51,7 +51,7 @@ user_timeseries::~user_timeseries()
 
 }
 
-int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate)
+int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList)
 {
     int i,j;
     double unitConversion,addY;
@@ -71,10 +71,10 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
                 ymin = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
             if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY>ymax && fileDataUnique[i].station[markerID].data[j]>MOV_NULL_TS)
                 ymax = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
-            if(fileDataUnique[i].station[markerID].date[j]<minDate)
-                minDate = fileDataUnique[i].station[markerID].date[j];
-            if(fileDataUnique[i].station[markerID].date[j]>maxDate)
-                maxDate = fileDataUnique[i].station[markerID].date[j];
+            if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)<minDate)
+                minDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
+            if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)>maxDate)
+                maxDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
         }
     }
     return 0;

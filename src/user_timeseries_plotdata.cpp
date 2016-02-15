@@ -28,15 +28,21 @@ int user_timeseries::plotData()
     int i,j,ierr;
     double TempValue,TempDate;
     double unitConversion,addX,addY;
+    QVector<double> addXList;
     double ymin,ymax;
     QVector<QLineSeries *> series;
     QColor seriesColor;
     QDateTime minDate,maxDate;
 
+    addXList.resize(fileDataUnique.length());
+    for(i=0;i<fileDataUnique.length();i++)
+        addXList[i] = table->item(i,4)->text().toDouble();
+
     ierr = this->setMarkerID();
-    ierr = this->getDataBounds(ymin,ymax,minDate,maxDate);
+    ierr = this->getDataBounds(ymin,ymax,minDate,maxDate,addXList);
 
     this->thisChart = new QChart();
+    this->chart->m_chart = this->thisChart;
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
 

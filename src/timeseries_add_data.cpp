@@ -283,6 +283,14 @@ void add_imeds_data::accept()
     else
         xadjust = TempString.toDouble();
 
+    //...Convert to other time units
+    if(ui->combo_timeSelect->currentText()=="seconds")
+        xadjust = xadjust / 3600;
+    else if(ui->combo_timeSelect->currentText()=="minutes")
+        xadjust = xadjust / 60;
+    else if(ui->combo_timeSelect->currentText()=="days")
+        xadjust = xadjust * 24;
+
     TempString = ui->text_yadjust->text();
     if(TempString==NULL)
         yadjust = 0.0;
