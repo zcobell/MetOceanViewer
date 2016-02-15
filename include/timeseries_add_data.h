@@ -65,11 +65,19 @@ private slots:
 
     void on_browse_filebrowse_clicked();
 
-    void on_button_IMEDSColor_clicked();
+    void on_button_seriesColor_clicked();
 
     void on_browse_stationfile_clicked();
 
     void accept();
+
+    void on_button_presetColor1_clicked();
+
+    void on_button_presetColor2_clicked();
+
+    void on_button_presetColor3_clicked();
+
+    void on_button_presetColor4_clicked();
 
 private:
     Ui::add_imeds_data *ui;
