@@ -51,7 +51,7 @@ int hwm::saveHWMMap(QString outputFile, QString filter)
     }
     else if(filter=="JPG (*.jpg *.jpeg)")
     {
-        QFile outputFile(outputFile);
+        QFile output(outputFile);
         QSize imageSize(this->map->size().width(),this->map->size().height());
 
         QImage pixmap(imageSize, QImage::Format_ARGB32);
@@ -60,8 +60,8 @@ int hwm::saveHWMMap(QString outputFile, QString filter)
         imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
         this->map->render(&imagePainter,QPoint(0,0));
 
-        outputFile.open(QIODevice::WriteOnly);
-        pixmap.save(&outputFile,"JPG",100);
+        output.open(QIODevice::WriteOnly);
+        pixmap.save(&output,"JPG",100);
     }
 
     return 0;
@@ -90,7 +90,7 @@ int hwm::saveRegressionPlot(QString outputFile, QString filter)
     }
     else if(filter == "JPG (*.jpg *.jpeg)")
     {
-        QFile outputFile(outputFile);
+        QFile output(outputFile);
         QSize imageSize(this->chartView->size().width(),this->chartView->size().height());
         QRect chartRect(0,0,this->chartView->size().width(),this->chartView->size().height());
 
@@ -100,8 +100,8 @@ int hwm::saveRegressionPlot(QString outputFile, QString filter)
         imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
         this->chartView->render(&imagePainter,chartRect);
 
-        outputFile.open(QIODevice::WriteOnly);
-        pixmap.save(&outputFile,"JPG",100);
+        output.open(QIODevice::WriteOnly);
+        pixmap.save(&output,"JPG",100);
     }
 
     return 0;
