@@ -1,8 +1,6 @@
 # MetOceanViewer
 Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gui interface. The code is written in Qt C++ and is designed to run on Windows, Mac OSX, and Linux systems.
 
-[ ![Codeship Status for zcobell/MetOceanViewer](https://codeship.com/projects/5706bdb0-a51d-0133-20a8-3ead92a16d22/status?branch=master)](https://codeship.com/projects/129517)
-
 # Feature List
 - [x] Access and view NOAA station data
 - [x] Access and view USGS station data
