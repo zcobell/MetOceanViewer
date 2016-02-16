@@ -1,0 +1,145 @@
+//-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2015  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// The name "MetOcean Viewer" is specific to this project and may not be
+// used for projects "forked" or derived from this work.
+//
+//-----------------------------------------------------------------------//
+var TimeseriesMarkers = [];
+var Locations = [];
+var StationName = [];
+var map;
+var LastInfoWindow;
+var LastMarker = -1;
+
+//Functions for the new version of the timeseries map
+window.onresize = function()
+{
+    $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
+}
+
+//Build the data series
+function allocateData(NumSeries)
+{
+    Locations[0] = [];
+    Locations[1] = [];
+    return;
+}
+
+//Set the locations array
+function SetMarkerLocations(index,x,y,name)
+{
+    Locations[0][index] = x;
+    Locations[1][index] = y;
+    StationName[index]  = name;
+    return;
+}
+
+
+function AddToMap()
+{
+    var i,x,y,NLocations,Latlng,contentString;
+
+    NLocations = Locations[1].length;
+
+    for(i=0;i<NLocations;i++)
+    {
+        x = Locations[0][i];
+        y = Locations[1][i];
+        Latlng = new google.maps.LatLng(y,x);
+        TimeseriesMarkers[i] = new google.maps.Marker({
+            position: Latlng,
+            map: map,
+            title: StationName[i],
+            LocalID: i
+        });
+        google.maps.event.addListener(TimeseriesMarkers[i], 'click', function() {
+            window.MarkerID = this.LocalID;
+            if(LastMarker!==-1)
+                LastInfoWindow.close();
+            LastMarker = this.LocalID;
+            var xLocal = Locations[0][this.LocalID];
+            var yLocal = Locations[1][this.LocalID];
+            contentString = "<table>"+
+                            "<tr>"+
+                                "<td align=\"right\"> <b>Station Name:</b> </td>"+
+                                "<td> "+StationName[this.LocalID]+
+                                "</td>"+
+                            "</tr>"+
+                            "<tr>"+
+                                "<td align=\"right\"> <b>Location:</b> </td>"+
+                                "<td> "+xLocal+"&deg, "+yLocal+"&deg"+
+                            "</tr>"+
+                            "</table>";
+
+            var InfoWindow = new google.maps.InfoWindow({content: contentString});
+            InfoWindow.open(map,this);
+            LastInfoWindow = InfoWindow;
+        });
+    }
+    return;
+}
+
+function getMarker()
+{
+    return LastMarker;
+}
+
+
+//Old map Functions
+function clearMarkers()
+{
+    while(TimeseriesMarkers[0])
+    {
+        TimeseriesMarkers.pop().setMap(null);
+    }
+}
+
+function fitMarkers()
+{
+    var extent = new google.maps.LatLngBounds();
+    var nMarker = TimeseriesMarkers.length;
+    for(i=0;i<nMarker;i++)
+    {
+        extent.extend(TimeseriesMarkers[i].getPosition());
+    }
+    map.fitBounds(extent);
+}
+
+function initializeTimeseries() {
+
+    //Initialize the map
+    window.LastInfo = -1;
+
+    var myOptions = {
+      center: new google.maps.LatLng(29.5, -91.5),
+      zoom: 8,
+      mapTypeId: google.maps.MapTypeId.ROADMAP,
+      panControl: true,
+      streetViewControl: false,
+      panControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+      zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
+    };
+    map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+}
+
+google.maps.event.addDomListener(window, "resize", function() {
+    var center = map.getCenter();
+    google.maps.event.trigger(map, "resize");
+    map.setCenter(center);
+});

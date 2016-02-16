@@ -44,7 +44,7 @@ int MainWindow::saveSession()
     int varid_autodate,varid_autoy,varid_checkState;
     int dims_1d[1];
     int nTimeseries;
-    QString relFile,relPath;
+    QString relFile,relPath,TempFile,Directory;
     size_t start[1];
     size_t iu;
     double mydatadouble[1];
@@ -82,7 +82,8 @@ int MainWindow::saveSession()
         Session.remove();
 
     //Get the path of the session file so we can save a relative path later
-    QDir CurrentDir(GetMyLeadingPath(SessionFile));
+    splitPath(SessionFile,TempFile,Directory);
+    QDir CurrentDir(Directory);
 
     ierr = NETCDF_ERR(nc_create(SessionFile.toUtf8(),NC_NETCDF4,&ncid));
     if(ierr!=NC_NOERR)return 1;
@@ -285,7 +286,7 @@ int MainWindow::loadSession()
     QMessageBox::StandardButton reply;
     QString filelocation,filename,series_name,color,type;
     QString coldstartstring,stationfile,stationfilepath;
-    QString BaseFile,CurrentDirectory,NewFile;
+    QString BaseFile,CurrentDirectory,NewFile,TempFile,BaseDir;
     double unitconvert,xshift,yshift;
     size_t temp_size_t;
     size_t start[1];
@@ -293,8 +294,8 @@ int MainWindow::loadSession()
     QString tempstring;
     QColor CellColor;
     QDateTime ColdStart;
-    ADCNC NetCDFData;
-    ADCASCII ADCData;
+    //ADCNC NetCDFData;
+    //ADCASCII ADCData;
     bool continueToLoad,hasCheckInfo;
     Qt::CheckState checkState;
 
@@ -424,11 +425,11 @@ int MainWindow::loadSession()
         ui->check_TimeseriesYauto->setChecked(true);
 
     //Now, before we begin building the table, we need to empty everything
-    for(i=TimeseriesData.length()-1;i>=0;i--)
-    {
-        TimeseriesData.remove(i);
-        ui->table_TimeseriesData->removeRow(i);
-    }
+//    for(i=TimeseriesData.length()-1;i>=0;i--)
+//    {
+//        TimeseriesData.remove(i);
+//        ui->table_TimeseriesData->removeRow(i);
+//    }
 
     //Next, read in the data and add rows to the table
     ierr = NETCDF_ERR(nc_inq_dimlen(ncid,dimid_ntimeseries,&temp_size_t));
@@ -437,7 +438,7 @@ int MainWindow::loadSession()
     nrow = 0;
 
     //Get the location we are currently working in
-    CurrentDirectory = GetMyLeadingPath(SessionFile);
+    splitPath(SessionFile,TempFile,CurrentDirectory);
 
     for(i=0;i<nTimeseries;i++)
     {
@@ -446,7 +447,7 @@ int MainWindow::loadSession()
         ierr = NETCDF_ERR(nc_get_var1(ncid,varid_filename,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         filelocation = QString(mydatachar[0]);
-        filename = RemoveLeadingPath(filelocation);
+        filename = TempFile;
 
         ierr = NETCDF_ERR(nc_get_var1(ncid,varid_names,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
@@ -479,7 +480,7 @@ int MainWindow::loadSession()
         ierr = NETCDF_ERR(nc_get_var1(ncid,varid_stationfile,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         stationfilepath = QString(mydatachar[0]);
-        stationfile = RemoveLeadingPath(stationfilepath);
+        splitPath(stationfilepath,stationfile,TempFile);
 
         if(hasCheckInfo)
         {
@@ -495,7 +496,7 @@ int MainWindow::loadSession()
         continueToLoad = false;
 
         filelocation = CurrentDirectory+"/"+filelocation;
-        BaseFile = RemoveLeadingPath(filelocation);
+        splitPath(filelocation,BaseFile,BaseDir);
 
         QFile myfile(filelocation);
         if(!myfile.exists())
@@ -573,7 +574,7 @@ int MainWindow::loadSession()
 
         if(type == "ADCIRC")
         {
-            BaseFile = RemoveLeadingPath(stationfilepath);
+            splitPath(stationfilepath,BaseFile,BaseDir);
             stationfilepath = CurrentDirectory+"/"+stationfilepath;
             QFile myfile(stationfilepath);
             if(!myfile.exists())
@@ -673,34 +674,34 @@ int MainWindow::loadSession()
             ColdStart = QDateTime::fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
 
             //Read the data into the appropriate structure
-            TimeseriesData.resize(nrow);
+            //TimeseriesData.resize(nrow);
 
-            TimeseriesData[nrow-1].success = false;
+            //TimeseriesData[nrow-1].success = false;
 
-            if(type=="IMEDS")
-            {
-                TimeseriesData[nrow-1] = readIMEDS(filelocation);
-            }
-            else if(type=="NETCDF")
-            {
-                ierr = readADCIRCnetCDF(filelocation,NetCDFData);
-                if(!NetCDFData.success)
-                    TimeseriesData[nrow-1].success = false;
-                else
-                {
-                    TimeseriesData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
-                }
-            }
-            else if(type=="ADCIRC")
-            {
-                ADCData = readADCIRCascii(filelocation,stationfilepath);
-                if(!ADCData.success)
-                    TimeseriesData[nrow-1].success = false;
-                else
-                {
-                    TimeseriesData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
-                }
-            }
+//            if(type=="IMEDS")
+//            {
+//                TimeseriesData[nrow-1] = readIMEDS(filelocation);
+//            }
+//            else if(type=="NETCDF")
+//            {
+//                ierr = readADCIRCnetCDF(filelocation,NetCDFData);
+//                if(!NetCDFData.success)
+//                    TimeseriesData[nrow-1].success = false;
+//                else
+//                {
+//                    TimeseriesData[nrow-1] = NetCDF_to_IMEDS(NetCDFData,ColdStart);
+//                }
+//            }
+//            else if(type=="ADCIRC")
+//            {
+//                ADCData = readADCIRCascii(filelocation,stationfilepath);
+//                if(!ADCData.success)
+//                    TimeseriesData[nrow-1].success = false;
+//                else
+//                {
+//                    TimeseriesData[nrow-1] = ADCIRC_to_IMEDS(ADCData,ColdStart);
+//                }
+//            }
 
         }
     }
