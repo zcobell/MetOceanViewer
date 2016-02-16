@@ -59,17 +59,17 @@ void MainWindow::on_button_noaasavechart_clicked()
         return;
     }
 
-    QString filter = "PDF (*.pdf)";
-    QString DefaultFile = "/NOAA_"+QString::number(MarkerID)+".pdf";
+    QString filter = "JPG (*.jpg *.jpeg)";
+    QString DefaultFile = "/NOAA_"+QString::number(MarkerID)+".jpg";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory+DefaultFile,"PDF(*.pdf)",&filter);
+                PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     splitPath(TempString,filename,this->PreviousDirectory);
 
-    ierr = thisNOAA->saveNOAAImage(TempString);
+    ierr = thisNOAA->saveNOAAImage(TempString,filter);
 
     return;
 

@@ -54,7 +54,7 @@ public:
     int plotNewUSGSStation();
     int replotCurrentUSGSStation(int index);
     int setUSGSBeenPlotted(bool input);
-    int saveUSGSImage(QString filename);
+    int saveUSGSImage(QString filename, QString filter);
     int saveUSGSData(QString filename,QString format);
     QString getUSGSErrorString();
     QString getLoadedUSGSStation();

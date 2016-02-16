@@ -159,17 +159,17 @@ void MainWindow::on_button_usgssavemap_clicked()
         return;
     }
 
-    QString filter = "PDF (*.PDF)";
-    QString DefaultFile = "/USGS_"+MarkerID+".pdf";
+    QString filter = "JPG (*.jpg *.jpeg)";
+    QString DefaultFile = "/USGS_"+MarkerID+".jpg";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory+DefaultFile,"PDF (*.pdf)",&filter);
+                PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     splitPath(TempString,filename,PreviousDirectory);
 
-    thisUSGS->saveUSGSImage(TempString);
+    thisUSGS->saveUSGSImage(TempString,filter);
 
     return;
 

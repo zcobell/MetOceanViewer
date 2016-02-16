@@ -46,8 +46,8 @@ public:
 
     //...Public Functions
     int processHWMData();
-    int saveHWMMap(QString filter, QString outputFile);
-    int saveRegressionPlot(QString filter, QString outputFile);
+    int saveHWMMap(QString outputFile, QString filter);
+    int saveRegressionPlot(QString outputFile, QString filter);
     QString getErrorString();
 
 private:

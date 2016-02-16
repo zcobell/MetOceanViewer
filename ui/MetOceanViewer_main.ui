@@ -560,7 +560,7 @@
                 </layout>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_22">
+                <layout class="QHBoxLayout" name="layout_noaagraphics">
                  <item>
                   <widget class="QWebEngineView" name="noaa_map" native="true">
                    <property name="sizePolicy">

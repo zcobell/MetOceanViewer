@@ -22,34 +22,53 @@
 //-----------------------------------------------------------------------//
 #include <noaa.h>
 
-int noaa::saveNOAAImage(QString filename)
+int noaa::saveNOAAImage(QString filename, QString filter)
 {
 
-    QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
-    printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
-    printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(filename);
+    if(filter == "PDF (*.pdf)")
+    {
+        QPrinter printer(QPrinter::HighResolution);
+        printer.setPageSize(QPrinter::Letter);
+        printer.setResolution(400);
+        printer.setOrientation(QPrinter::Landscape);
+        printer.setOutputFormat(QPrinter::PdfFormat);
+        printer.setOutputFileName(filename);
 
-    QPainter painter(&printer);
-    painter.setRenderHint(QPainter::Antialiasing,true);
-    painter.begin(&printer);
+        QPainter painter(&printer);
+        painter.setRenderHint(QPainter::Antialiasing,true);
+        painter.begin(&printer);
 
-    //...Page 1 - Chart
-    this->chart->render(&painter);
+        //...Page 1 - Chart
+        this->chart->render(&painter);
 
-    //...Page 2 - Map
-    printer.newPage();
-    QPixmap renderedMap = this->map->grab();
-    QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
-    if(mapScaled.height()>printer.height())
-        mapScaled = renderedMap.scaledToHeight(printer.height());
-    int cw = (printer.width()-mapScaled.width())/2;
-    int ch = (printer.height()-mapScaled.height())/2;
-    painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
+        //...Page 2 - Map
+        printer.newPage();
+        QPixmap renderedMap = this->map->grab();
+        QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
+        if(mapScaled.height()>printer.height())
+            mapScaled = renderedMap.scaledToHeight(printer.height());
+        int cw = (printer.width()-mapScaled.width())/2;
+        int ch = (printer.height()-mapScaled.height())/2;
+        painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
 
-    painter.end();
+        painter.end();
+    }
+    else if(filter == "JPG (*.jpg *.jpeg)")
+    {
+        QFile outputFile(filename);
+        QSize imageSize(this->map->size().width()+this->chart->size().width(),this->map->size().height());
+        QRect chartRect(this->map->size().width(),0,this->chart->size().width(),this->chart->size().height());
+
+        QImage pixmap(imageSize, QImage::Format_ARGB32);
+        pixmap.fill(Qt::white);
+        QPainter imagePainter(&pixmap);
+        imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+        this->map->render(&imagePainter,QPoint(0,0));
+        this->chart->render(&imagePainter,chartRect);
+
+        outputFile.open(QIODevice::WriteOnly);
+        pixmap.save(&outputFile,"JPG",100);
+    }
 
     return 0;
 }

@@ -161,7 +161,7 @@ void MainWindow::on_button_saveHWMMap_clicked()
     splitPath(TempString,filename,this->PreviousDirectory);
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    thisHWM->saveHWMMap(filter,TempString);
+    thisHWM->saveHWMMap(TempString,filter);
     QApplication::restoreOverrideCursor();
 
     return;
@@ -289,9 +289,9 @@ void MainWindow::on_check_regressionColorMatch_clicked(bool checked)
 void MainWindow::on_button_saveHWMScatter_clicked()
 {
     QString filename;
-    QString filter = "PDF (*.pdf)";
+    QString filter = "JPG (*.jpg *.jpeg)";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                this->PreviousDirectory,"PDF (*.pdf)",&filter);
+                this->PreviousDirectory,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
@@ -299,7 +299,7 @@ void MainWindow::on_button_saveHWMScatter_clicked()
     splitPath(TempString,filename,this->PreviousDirectory);
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    thisHWM->saveRegressionPlot(filter,TempString);
+    thisHWM->saveRegressionPlot(TempString,filter);
     QApplication::restoreOverrideCursor();
 
     return;
