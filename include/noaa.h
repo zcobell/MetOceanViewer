@@ -49,14 +49,15 @@ public:
     explicit noaa(QWebEngineView *inMap, mov_QChartView *inChart,
                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                   QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-                  QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent = 0);
+                  QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
+                  QObject *parent = 0);
 
     //...Destructor
     ~noaa();
 
     //...Public Functions
     int plotNOAAStation();
-    int saveNOAAImage(QString filename);
+    int saveNOAAImage(QString filename, QString filter);
     int saveNOAAData(QString filename, QString PreviousDirectory, QString format);
     int getLoadedNOAAStation();
     int getClickedNOAAStation();

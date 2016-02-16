@@ -24,7 +24,7 @@
 #include <hwm.h>
 #include <QPrinter>
 
-int hwm::saveHWMMap(QString filter, QString outputFile)
+int hwm::saveHWMMap(QString outputFile, QString filter)
 {
     if(filter=="PDF (*.pdf)")
     {
@@ -51,33 +51,58 @@ int hwm::saveHWMMap(QString filter, QString outputFile)
     }
     else if(filter=="JPG (*.jpg *.jpeg)")
     {
-        QFile HWMOutput(outputFile);
-        QPixmap HWMImage(this->map->size());
-        this->map->render(&HWMImage);
-        HWMOutput.open(QIODevice::WriteOnly);
-        HWMImage.save(&HWMOutput,"JPG",100);
+        QFile outputFile(outputFile);
+        QSize imageSize(this->map->size().width(),this->map->size().height());
+
+        QImage pixmap(imageSize, QImage::Format_ARGB32);
+        pixmap.fill(Qt::white);
+        QPainter imagePainter(&pixmap);
+        imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+        this->map->render(&imagePainter,QPoint(0,0));
+
+        outputFile.open(QIODevice::WriteOnly);
+        pixmap.save(&outputFile,"JPG",100);
     }
 
     return 0;
 }
 
 
-int hwm::saveRegressionPlot(QString filter, QString outputFile)
+int hwm::saveRegressionPlot(QString outputFile, QString filter)
 {
 
-    QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
-    printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
-    printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(outputFile);
+    if(filter == "PDF (*.pdf)")
+    {
+        QPrinter printer(QPrinter::HighResolution);
+        printer.setPageSize(QPrinter::Letter);
+        printer.setResolution(400);
+        printer.setOrientation(QPrinter::Landscape);
+        printer.setOutputFormat(QPrinter::PdfFormat);
+        printer.setOutputFileName(outputFile);
 
-    QPainter painter(&printer);
-    painter.setRenderHint(QPainter::Antialiasing,true);
-    painter.begin(&printer);
+        QPainter painter(&printer);
+        painter.setRenderHint(QPainter::Antialiasing,true);
+        painter.begin(&printer);
 
-    this->chartView->render(&painter);
-    painter.end();
+        this->chartView->render(&painter);
+
+        painter.end();
+    }
+    else if(filter == "JPG (*.jpg *.jpeg)")
+    {
+        QFile outputFile(outputFile);
+        QSize imageSize(this->chartView->size().width(),this->chartView->size().height());
+        QRect chartRect(0,0,this->chartView->size().width(),this->chartView->size().height());
+
+        QImage pixmap(imageSize, QImage::Format_ARGB32);
+        pixmap.fill(Qt::white);
+        QPainter imagePainter(&pixmap);
+        imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+        this->chartView->render(&imagePainter,chartRect);
+
+        outputFile.open(QIODevice::WriteOnly);
+        pixmap.save(&outputFile,"JPG",100);
+    }
 
     return 0;
 }

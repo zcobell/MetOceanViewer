@@ -54,6 +54,7 @@ public:
     int plotData();
     int getCurrentMarkerID();
     int getClickedMarkerID();
+    int saveImage(QString filename, QString filter);
     QString getErrorString();
 
 private slots:

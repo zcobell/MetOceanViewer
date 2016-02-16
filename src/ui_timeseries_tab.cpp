@@ -35,18 +35,15 @@ void MainWindow::on_button_saveTimeseriesImage_clicked()
     QString Filename;
     QString filter = "JPG (*.jpg *.jpeg)";
     QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
-                PreviousDirectory,"JPG (*.jpg *.jpeg)",&filter);
+                PreviousDirectory,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     splitPath(TempString,Filename,PreviousDirectory);
-    QFile TimeseriesOutput(TempString);
-    QPixmap TimeseriesImage(ui->timeseries_map->size());
-    ui->timeseries_map->render(&TimeseriesImage);
-    TimeseriesOutput.open(QIODevice::WriteOnly);
-    TimeseriesImage.save(&TimeseriesOutput,"JPG",100);
-    TimeseriesOutput.close();
+
+    int ierr = this->thisTimeseries->saveImage(TempString,filter);
+
 }
 //-------------------------------------------//
 
