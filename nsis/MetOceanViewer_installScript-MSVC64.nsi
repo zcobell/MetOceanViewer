@@ -135,6 +135,7 @@ Section "Install"
     File ..\libs\msvc64\icuuc54.dll
     File ..\libs\msvc64\libEGL.dll
     File ..\libs\msvc64\Qt5Core.dll
+    File ..\libs\msvc64\Qt5Charts.dll
     File ..\libs\msvc64\Qt5Gui.dll
     File ..\libs\msvc64\Qt5Multimedia.dll
     File ..\libs\msvc64\Qt5MultimediaWidgets.dll
@@ -147,8 +148,9 @@ Section "Install"
     File ..\libs\msvc64\Qt5Sensors.dll
     File ..\libs\msvc64\Qt5Sql.dll
     File ..\libs\msvc64\Qt5WebChannel.dll
-    File ..\libs\msvc64\Qt5WebKit.dll
-    File ..\libs\msvc64\Qt5WebKitWidgets.dll
+    File ..\libs\msvc64\Qt5WebEngine.dll
+    File ..\libs\msvc64\Qt5WebEngineCore.dll
+    File ..\libs\msvc64\Qt5WebEngineWidgets.dll
     File ..\libs\msvc64\Qt5Widgets.dll
     File ..\libs\msvc64\Qt5Xml.dll
     File ..\libs\msvc64\msvcp120.dll
@@ -226,6 +228,7 @@ Section "Uninstall"
     Delete $INSTDIR\libssl32.dll
     Delete $INSTDIR\netcdf.dll
     Delete $INSTDIR\Qt5Core.dll
+    Delete $INSTDIR\Qt5Charts.dll
     Delete $INSTDIR\Qt5Gui.dll
     Delete $INSTDIR\Qt5Multimedia.dll
     Delete $INSTDIR\Qt5MultimediaWidgets.dll
@@ -238,8 +241,9 @@ Section "Uninstall"
     Delete $INSTDIR\Qt5Sensors.dll
     Delete $INSTDIR\Qt5Sql.dll
     Delete $INSTDIR\Qt5WebChannel.dll
-    Delete $INSTDIR\Qt5WebKit.dll
-    Delete $INSTDIR\Qt5WebKitWidgets.dll
+    Delete $INSTDIR\Qt5WebEngine.dll
+    Delete $INSTDIR\Qt5WebEngineCore.dll
+    Delete $INSTDIR\Qt5WebEngineWidgets.dll
     Delete $INSTDIR\Qt5Widgets.dll
     Delete $INSTDIR\Qt5Xml.dll
     Delete $INSTDIR\ssleay32.dll

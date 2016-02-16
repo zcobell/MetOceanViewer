@@ -26,26 +26,6 @@
 #include <MetOceanViewer.h>
 
 //-------------------------------------------//
-//A bunch of variables that we'll just
-//define here because it is easy for the
-//old FORTRAN programmer in me that likes
-//global variables
-//-------------------------------------------//
-int NumIMEDSFiles = 0;
-int CurrentRowsInTable = 0;
-bool ColorUpdated, FileReadError;
-bool EditBox;
-double UnitConversion, xadjust, yadjust;
-QColor RandomButtonColor;
-QString InputFileName,InputColorString;
-QString InputSeriesName,InputFilePath;
-QString StationFilePath,InputFileType;
-QString InputStationFile,CurrentFileName;
-QDateTime InputFileColdStart;
-//-------------------------------------------//
-
-
-//-------------------------------------------//
 //This brings up the dialog box used to add
 //a file to the table of files
 //-------------------------------------------//
@@ -57,6 +37,7 @@ add_imeds_data::add_imeds_data(QWidget *parent) :
     ui->text_unitconvert->setValidator(new QDoubleValidator(this));
     ui->text_xadjust->setValidator(new QDoubleValidator(this));
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
+    this->PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
 }
 //-------------------------------------------//
 
@@ -84,10 +65,10 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->text_xadjust->setText("0.0");
     ui->text_yadjust->setText("0.0");
     ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
-    RandomButtonColor = MainWindow::GenerateRandomColor();
-    ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
-    ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
-    ui->button_IMEDSColor->update();
+    RandomButtonColor = GenerateRandomColor();
+    ButtonStyle = MakeColorString(RandomButtonColor);
+    ui->button_seriesColor->setStyleSheet(ButtonStyle);
+    ui->button_seriesColor->update();
     CurrentFileName = QString();
     return;
 }
@@ -106,7 +87,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 {
     QString ButtonStyle,StationFile;
     InputFileColdStart.setTimeSpec(Qt::UTC);
-    StationFile = MainWindow::RemoveLeadingPath(StationPath);
+    splitPath(StationPath,StationFile,PreviousDirectory);
     ui->text_seriesname->setText(SeriesName);
     ui->text_filename->setText(Filename);
     ui->text_unitconvert->setText(QString::number(UnitConvert));
@@ -118,10 +99,10 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     InputFilePath = Filepath;
     CurrentFileName = Filepath;
     StationFilePath = StationPath;
-    ButtonStyle = MainWindow::MakeColorString(Color);
+    ButtonStyle = MakeColorString(Color);
     RandomButtonColor = Color;
-    ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
-    ui->button_IMEDSColor->update();
+    ui->button_seriesColor->setStyleSheet(ButtonStyle);
+    ui->button_seriesColor->update();
 
     if(FileType == "IMEDS")
     {
@@ -160,12 +141,12 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
-    QString Directory;
+    QString Directory,filename,TempFile,InputFileType;
 
-    if(EditBox)
-        Directory = MainWindow::GetMyLeadingPath(InputFilePath);
+    if(this->EditBox)
+        splitPath(this->InputFilePath,filename,Directory);
     else
-        Directory = PreviousDirectory;
+        Directory = this->PreviousDirectory;
 
     QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
             Directory,
@@ -174,7 +155,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
     InputFilePath = TempPath;
-    if(TempPath!=NULL || (TempPath==NULL && CurrentFileName!=NULL) )
+    if(TempPath!=NULL || (TempPath==NULL && this->CurrentFileName!=NULL) )
     {
 
         if(TempPath==NULL)
@@ -185,8 +166,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
         else
             CurrentFileName = TempPath;
 
-        MainWindow::GetLeadingPath(TempPath);
-        QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
+        splitPath(TempPath,TempFile,PreviousDirectory);
         ui->text_filename->setText(TempFile);
 
         FileReadError = false;
@@ -235,7 +215,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 //Bring up a color palette and change the button color
 //in the dialog when return comes
 //-------------------------------------------//
-void add_imeds_data::on_button_IMEDSColor_clicked()
+void add_imeds_data::on_button_seriesColor_clicked()
 {
     QColor TempColor = QColorDialog::getColor(RandomButtonColor);
     QString ButtonStyle;
@@ -246,9 +226,9 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
     {
         RandomButtonColor = TempColor;
         ColorUpdated = true;
-        ButtonStyle = MainWindow::MakeColorString(RandomButtonColor);
-        ui->button_IMEDSColor->setStyleSheet(ButtonStyle);
-        ui->button_IMEDSColor->update();
+        ButtonStyle = MakeColorString(RandomButtonColor);
+        ui->button_seriesColor->setStyleSheet(ButtonStyle);
+        ui->button_seriesColor->update();
     }
 
     return;
@@ -261,6 +241,7 @@ void add_imeds_data::on_button_IMEDSColor_clicked()
 //-------------------------------------------//
 void add_imeds_data::on_browse_stationfile_clicked()
 {
+    QString TempFile;
     QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
             PreviousDirectory,
             QString("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )")+
@@ -268,8 +249,7 @@ void add_imeds_data::on_browse_stationfile_clicked()
     if(TempPath!=NULL)
     {
         StationFilePath = TempPath;
-        MainWindow::GetLeadingPath(TempPath);
-        QString TempFile = MainWindow::RemoveLeadingPath(TempPath);
+        splitPath(TempPath,TempFile,PreviousDirectory);
         ui->text_stationfile->setText(TempFile);
     }
     return;
@@ -303,6 +283,14 @@ void add_imeds_data::accept()
     else
         xadjust = TempString.toDouble();
 
+    //...Convert to other time units
+    if(ui->combo_timeSelect->currentText()=="seconds")
+        xadjust = xadjust / 3600;
+    else if(ui->combo_timeSelect->currentText()=="minutes")
+        xadjust = xadjust / 60;
+    else if(ui->combo_timeSelect->currentText()=="days")
+        xadjust = xadjust * 24;
+
     TempString = ui->text_yadjust->text();
     if(TempString==NULL)
         yadjust = 0.0;
@@ -333,3 +321,35 @@ void add_imeds_data::accept()
         QDialog::accept();
 }
 //-------------------------------------------//
+
+void add_imeds_data::on_button_presetColor1_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}
+
+void add_imeds_data::on_button_presetColor2_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}
+
+void add_imeds_data::on_button_presetColor3_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}
+
+void add_imeds_data::on_button_presetColor4_clicked()
+{
+    ColorUpdated = true;
+    ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
+    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    ui->button_seriesColor->update();
+}

@@ -21,7 +21,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core gui webkitwidgets network xml
+QT       += core gui webenginewidgets network xml charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -32,26 +32,67 @@ SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
     src/ui_usgs_tab.cpp \
-    src/hwm_data.cpp \
-    src/hwm_functions.cpp \
-    src/noaa_functions.cpp \
-    src/usgs_functions.cpp \
     src/general_functions.cpp \
-    src/timeseries_data.cpp \
-    src/timeseries_functions.cpp \
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
     src/fileio.cpp \
-    src/MetOceanViewer_main.cpp
+    src/MetOceanViewer_main.cpp \
+    src/setupMetOceanViewerUI.cpp \
+    src/noaa.cpp \
+    src/noaa_fetchNOAAData.cpp \
+    src/noaa_formatNOAAResponse.cpp \
+    src/noaa_readNOAAResponse.cpp \
+    src/noaa_retrieveproduct.cpp \
+    src/usgs.cpp \
+    src/usgs_fetchUSGSData.cpp \
+    src/usgs_formastUSGSInstantResponse.cpp \
+    src/usgs_readUSGSDataFinished.cpp \
+    src/usgs_formatUSGSDailyResponse.cpp \
+    src/usgs_getTimezone.cpp \
+    src/noaa_prepNOAAResponse.cpp \
+    src/noaa_getDataBounds.cpp \
+    src/noaa_generateLabels.cpp \
+    src/noaa_plotChart.cpp \
+    src/usgs_plotUSGS.cpp \
+    src/usgs_getDataBounds.cpp \
+    src/usgs_saveData.cpp \
+    src/usgs_setGet.cpp \
+    src/noaa_getSet.cpp \
+    src/noaa_saveData.cpp \
+    src/usgs_plotting.cpp \
+    src/noaa_plotting.cpp \
+    src/user_timeseries.cpp \
+    src/user_timeseries_getSet.cpp \
+    src/user_timeseries_readFile.cpp \
+    src/user_timeseries_processData.cpp \
+    src/user_timeseries_stationList.cpp \
+    src/hwm.cpp \
+    src/hwm_processhwm.cpp \
+    src/hwm_plotmap.cpp \
+    src/hwm_plotregression.cpp \
+    src/hwm_readhwms.cpp \
+    src/hwm_linearregression.cpp \
+    src/user_timeseries_plotdata.cpp \
+    src/keyhandler.cpp \
+    src/mov_qchartview.cpp \
+    src/hwm_savedata.cpp
 
 HEADERS  += \
-    include/hwm.h \
-    include/timeseries_add_data.h \
-    include/timeseries.h \
-    include/about_dialog.h \
     version.h \
-    include/MetOceanViewer.h
+    include/timeseries_add_data.h \
+    include/about_dialog.h \
+    include/MetOceanViewer.h \
+    include/noaa.h \
+    include/mov_errors.h \
+    include/mov_flags.h \ 
+    include/usgs.h \
+    include/general_functions.h \
+    include/user_timeseries.h \
+    include/hwm.h \
+    include/keyhandler.h \
+    include/mov_qchartview.h \
+    include/mov_qwebenginepage.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
@@ -64,7 +105,7 @@ OTHER_FILES +=
 INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
 #...Compiler dependent options
-DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
+DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" EBUG
 
 #...Microsoft Visual C++ compilers
 *msvc* {
