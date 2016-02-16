@@ -47,6 +47,7 @@ int usgs::plotNewUSGSStation()
     if(this->USGSMarkerID=="none")
     {
         this->USGSErrorString = "No station has been selected.";
+        this->statusBar->clearMessage();
         return -1;
     }
 
@@ -57,7 +58,10 @@ int usgs::plotNewUSGSStation()
     //...Grab the data from the server
     ierr = this->fetchUSGSData();
     if(ierr!=0)
+    {
+        this->statusBar->clearMessage();
         return -1;
+    }
 
     //...Update the combo box
     for(i=0;i<this->Parameters.length();i++)
@@ -70,6 +74,7 @@ int usgs::plotNewUSGSStation()
     if(ierr!=0)
     {
         this->USGSErrorString = "No data available for this station";
+        this->statusBar->clearMessage();
         return -1;
     }
 
