@@ -22,6 +22,7 @@
 //-----------------------------------------------------------------------//
 #include <hwm.h>
 #include <general_functions.h>
+#include <float.h>
 
 int hwm::plotRegression()
 {
