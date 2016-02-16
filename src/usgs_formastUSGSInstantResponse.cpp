@@ -111,7 +111,7 @@ int usgs::formatUSGSInstantResponse(QByteArray Input)
         CurrentDate = QDateTime::fromString(TempDateString,"yyyy-MM-dd hh:mm");
         CurrentDate.setTimeSpec(Qt::UTC);
         OffsetHours = getTimezoneOffset(TempTimeZoneString);
-        CurrentDate = CurrentDate.addSecs(3600*OffsetHours);
+        CurrentDate = CurrentDate.addSecs(-3600*OffsetHours);
         for(j=0;j<this->Parameters.length();j++)
         {
             TempData = TempList.value(2*j+4).toDouble(&doubleok);

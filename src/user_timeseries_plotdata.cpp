@@ -26,13 +26,21 @@
 int user_timeseries::plotData()
 {
     int i,j,ierr;
-    double TempValue,TempDate;
+    qint64 TempDate;
+    qreal TempValue;
     double unitConversion,addX,addY;
     QVector<double> addXList;
     double ymin,ymax;
     QVector<QLineSeries *> series;
     QColor seriesColor;
     QDateTime minDate,maxDate;
+
+    //...At some point this may no longer be
+    //   needed, but this defines an offset from UTC
+    //   For some reason, the qDatTime axis operate in local
+    //   time, which can show an offset when converting to mSecSinceEpoch
+    QDateTime now = QDateTime::currentDateTime();
+    qint64 offset = now.offsetFromUtc()*1000;
 
     addXList.resize(fileDataUnique.length());
     for(i=0;i<fileDataUnique.length();i++)
@@ -82,7 +90,7 @@ int user_timeseries::plotData()
 
       for(j=0;j<fileDataUnique[i].station[this->markerID].NumSnaps;j++)
       {
-          TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6;
+          TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
           TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
           if(TempValue>MOV_NULL_TS)
             series[i]->append(TempDate,TempValue);
