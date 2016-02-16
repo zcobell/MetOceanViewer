@@ -45,8 +45,7 @@ MainWindow::~MainWindow()
 //-------------------------------------------//
 void MainWindow::on_actionQuit_triggered()
 {
-    if(confirmClose())
-        close();
+    this->close();
 }
 //-------------------------------------------//
 
