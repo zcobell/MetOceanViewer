@@ -88,7 +88,7 @@
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="MetOceanViewer.qrc">:/rsc/img/logo_small.png</pixmap>
+        <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/logo_small.png</pixmap>
        </property>
        <property name="scaledContents">
         <bool>true</bool>
@@ -134,7 +134,7 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <resources>
-  <include location="MetOceanViewer.qrc"/>
+  <include location="../MetOceanViewer.qrc"/>
  </resources>
  <connections>
   <connection>

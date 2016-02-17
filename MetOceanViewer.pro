@@ -186,7 +186,7 @@ INCLUDEPATH += include
 
 RESOURCES += \
     MetOceanViewer.qrc
-
+    
 RC_FILE = resources.rc
 
 #...Ensure that git is in the system path. If not using GIT comment these two lines
