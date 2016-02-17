@@ -44,6 +44,11 @@ int user_timeseries::plotData()
 
     //...Get the current marker selections, multiple if user ctrl+click selects
     this->getMultipleMarkersFromMap();
+    if(this->selectedStations.length()>16)
+    {
+        this->errorString = "Too many markers are selected. A maximum of 16 is allowed.";
+        return -1;
+    }
 
     addXList.resize(fileDataUnique.length());
     for(i=0;i<fileDataUnique.length();i++)
