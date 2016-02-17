@@ -76,7 +76,8 @@ SOURCES += src/main.cpp\
     src/user_timeseries_plotdata.cpp \
     src/keyhandler.cpp \
     src/mov_qchartview.cpp \
-    src/hwm_savedata.cpp
+    src/hwm_savedata.cpp \
+    update_dialog.cpp
 
 HEADERS  += \
     version.h \
@@ -92,12 +93,14 @@ HEADERS  += \
     include/hwm.h \
     include/keyhandler.h \
     include/mov_qchartview.h \
-    include/mov_qwebenginepage.h
+    include/mov_qwebenginepage.h \
+    update_dialog.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
     ui/about_dialog.ui \
-    ui/MetOceanViewer_main.ui
+    ui/MetOceanViewer_main.ui \
+    update_dialog.ui
 
 OTHER_FILES +=
 

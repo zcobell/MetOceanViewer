@@ -73,7 +73,7 @@ int hwm::plotRegression()
     QVector<QScatterSeries*> scatterSeries;
     scatterSeries.resize(8);
     for(i=0;i<8;i++)
-        scatterSeries[i] = new QScatterSeries;
+        scatterSeries[i] = new QScatterSeries(this);
 
     if(doColorDots)
     {
@@ -105,8 +105,8 @@ int hwm::plotRegression()
     }
 
 
-    QValueAxis *axisX = new QValueAxis;
-    QValueAxis *axisY = new QValueAxis;
+    QValueAxis *axisX = new QValueAxis(this);
+    QValueAxis *axisY = new QValueAxis(this);
     axisX->setTitleText(XLabel);
     axisY->setTitleText(YLabel);
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
@@ -157,7 +157,7 @@ int hwm::plotRegression()
         this->thisChart->legend()->markers().at(i)->setVisible(false);
 
     //...1:1 line
-    QLineSeries *One2OneLine = new QLineSeries;
+    QLineSeries *One2OneLine = new QLineSeries(this);
     One2OneLine->append(-1000,-1000);
     One2OneLine->append(1000,1000);
     One2OneLine->setPen(QPen(QBrush(One2OneColor),3));
@@ -167,7 +167,7 @@ int hwm::plotRegression()
     One2OneLine->setName("1:1 Line");
 
     //...Regression Line
-    QLineSeries *RegressionLine = new QLineSeries;
+    QLineSeries *RegressionLine = new QLineSeries(this);
     RegressionLine->append(-1000,this->regLineSlope*-1000+this->regLineIntercept);
     RegressionLine->append(1000,this->regLineSlope*1000+this->regLineIntercept);
     RegressionLine->setPen(QPen(QBrush(RegColor),3));
@@ -180,7 +180,7 @@ int hwm::plotRegression()
     if(displayBoundingLines)
     {
         //...Upper Bound Line
-        QLineSeries *UpperBoundLine = new QLineSeries;
+        QLineSeries *UpperBoundLine = new QLineSeries(this);
         UpperBoundLine->append(-1000,-1000+boundValue);
         UpperBoundLine->append(1000,1000+boundValue);
         UpperBoundLine->setPen(QPen(QBrush(BoundColor),3));
@@ -190,7 +190,7 @@ int hwm::plotRegression()
         UpperBoundLine->setName("Standard Deviation Interval");
 
         //...Lower Bound Line
-        QLineSeries *LowerBoundLine = new QLineSeries;
+        QLineSeries *LowerBoundLine = new QLineSeries(this);
         LowerBoundLine->append(-1000,-1000-boundValue);
         LowerBoundLine->append(1000,1000-boundValue);
         LowerBoundLine->setPen(QPen(QBrush(BoundColor),3));
