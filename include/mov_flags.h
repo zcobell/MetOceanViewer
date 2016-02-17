@@ -23,7 +23,7 @@
 #ifndef MOV_FLAGS_H
 #define MOV_FLAGS_H
 
-#define MOV_NULL_TS    -8880
+#define MOV_NULL_TS    -99999
 #define MOV_NULL_DAY    1
 #define MOV_NULL_MONTH  1
 #define MOV_NULL_YEAR   1200
