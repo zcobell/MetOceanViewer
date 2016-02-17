@@ -56,7 +56,7 @@ user_timeseries::~user_timeseries()
 
 int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList)
 {
-    int i,j;
+    int i,j,k;
     double unitConversion,addY;
 
     ymin = DBL_MAX;
@@ -66,18 +66,23 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
 
     for(i=0;i<fileDataUnique.length();i++)
     {
-        unitConversion = table->item(i,3)->text().toDouble();
-        addY = table->item(i,5)->text().toDouble();
-        for(j=0;j<fileDataUnique[i].station[markerID].NumSnaps;j++)
+        for(k=0;k<this->selectedStations.length();k++)
         {
-            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY<ymin && fileDataUnique[i].station[markerID].data[j]!=MOV_NULL_TS)
-                ymin = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
-            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY>ymax && fileDataUnique[i].station[markerID].data[j]!=MOV_NULL_TS)
-                ymax = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
-            if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)<minDate)
-                minDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
-            if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)>maxDate)
-                maxDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
+            unitConversion = table->item(i,3)->text().toDouble();
+            addY = table->item(i,5)->text().toDouble();
+            for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].NumSnaps;j++)
+            {
+                if(fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY<ymin &&
+                        fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                    ymin = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
+                if(fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY>ymax &&
+                        fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                    ymax = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
+                if(fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0)<minDate)
+                    minDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0);
+                if(fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0)>maxDate)
+                    maxDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0);
+            }
         }
     }
     return 0;
