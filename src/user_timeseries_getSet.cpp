@@ -47,6 +47,35 @@ int user_timeseries::getMarkerIDFromMap()
     return eval.toInt();
 }
 
+int user_timeseries::getMultipleMarkersFromMap()
+{
+    QVariant eval = QVariant();
+    this->map->page()->runJavaScript("getMarkers()",[&eval](const QVariant &v){eval = v;});
+    while(eval.isNull())
+        delayM(5);
+
+    int i;
+    QString tempString;
+    QString data = eval.toString();
+    QStringList dataList = data.split(",");
+    tempString = dataList.value(0);
+    int nMarkers = tempString.toInt();
+
+    if(nMarkers>0)
+    {
+        this->selectedStations.resize(nMarkers);
+        for(i=1;i<=nMarkers;i++)
+        {
+            tempString = dataList.value(i);
+            this->selectedStations[i-1] = tempString.toInt();
+        }
+    }
+    else
+        return -1;
+
+    return 0;
+}
+
 QString user_timeseries::getErrorString()
 {
     return this->errorString;

@@ -74,6 +74,24 @@ void MainWindow::setupMetOceanViewerUI()
     ui->date_TimeseriesStartDate->setDateTime(ui->date_TimeseriesStartDate->minimumDateTime());
     ui->date_TimeseriesEndDate->setDateTime(ui->date_TimeseriesEndDate->maximumDateTime());
 
+    //...Build a table of random colors
+    this->randomColors.resize(16);
+    this->randomColors[0] = QColor(Qt::GlobalColor::green);
+    this->randomColors[1] = QColor(Qt::GlobalColor::red);
+    this->randomColors[2] = QColor(Qt::GlobalColor::blue);
+    this->randomColors[3] = QColor(Qt::GlobalColor::yellow);
+    this->randomColors[4] = QColor(Qt::GlobalColor::magenta);
+    this->randomColors[5] = QColor(Qt::GlobalColor::cyan);
+    this->randomColors[6] = QColor(Qt::GlobalColor::black);
+    this->randomColors[7] = QColor(Qt::GlobalColor::darkRed);
+    this->randomColors[8] = QColor(Qt::GlobalColor::darkGreen);
+    this->randomColors[9] = QColor(Qt::GlobalColor::darkBlue);
+    this->randomColors[10] = QColor(Qt::GlobalColor::darkCyan);
+    this->randomColors[11] = QColor(Qt::GlobalColor::darkMagenta);
+    this->randomColors[12] = QColor(Qt::GlobalColor::darkYellow);
+    this->randomColors[13] = QColor(Qt::GlobalColor::darkGray);
+    this->randomColors[14] = QColor(Qt::GlobalColor::lightGray);
+    this->randomColors[15] = QColor(Qt::GlobalColor::gray);
 
     //-------------------------------------------//
     //Load the High Water Mark Map and Regression Chart

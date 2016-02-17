@@ -45,7 +45,8 @@ public:
                              QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                              QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
                              QWebEngineView *inMap, mov_QChartView *inChart,
-                             QStatusBar *inStatusBar, QObject *parent = 0);
+                             QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
+                             QObject *parent = 0);
 
     ~user_timeseries();
 
@@ -124,6 +125,7 @@ private:
     int getUniqueStationList(QVector<IMEDS> Data, QVector<double> &X, QVector<double> &Y);
     int buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut);
     int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
+    int getMultipleMarkersFromMap();
 
     //...Private Variables
     int markerID;
@@ -131,6 +133,8 @@ private:
     QVector<IMEDS> fileData,fileDataUnique;
     QVector<double> StationXLocs;
     QVector<double> StationYLocs;
+    QVector<int>    selectedStations;
+    QVector<QColor> randomColorList;
 
     //...Widgets we'll need
     QTableWidget   *table;

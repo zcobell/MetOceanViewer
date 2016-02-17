@@ -282,7 +282,8 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                                            ui->text_TimeseriesYaxisLabel,
                                            ui->timeseries_map,
                                            ui->timeseries_graphics,
-                                           ui->statusBar,this);
+                                           ui->statusBar,
+                                           this->randomColors,this);
 
     ierr = thisTimeseries->processData();
     if(ierr!=0)
