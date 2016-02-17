@@ -108,7 +108,7 @@ OTHER_FILES +=
 INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
 #...Compiler dependent options
-DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" EBUG
+DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
 
 #...Microsoft Visual C++ compilers
 *msvc* {
@@ -121,7 +121,7 @@ LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG +=
+QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
 #...Define a variable for the about dialog
 DEFINES += MOV_COMPILER=\\\"msvc\\\"
@@ -134,7 +134,7 @@ LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG +=
+QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
 #...Define a variable for the about dialog
 DEFINES += MOV_COMPILER=\\\"msvc\\\"
@@ -159,7 +159,7 @@ unix:!macx{
 LIBS += -lnetcdf
 
 #...Optimization flags
-QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_RELEASE +=
 QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
 #...Define a variable for the about dialog
@@ -175,7 +175,7 @@ INCLUDEPATH += /Users/zcobell/Software/netCDF/include
 ICON = img/mov.icns
 
 #...Optimization flags
-QMAKE_CXXFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_RELEASE +=
 QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
 #...Define a variable for the about dialog
