@@ -1,1 +1,1 @@
-2/16/2016,v2.5.0-beta.1-14-g633dec7,https://github.com/zcobell/MetOceanViewer/releases/tag/v2.5.0-beta.1 
+2/16/2016,v2.5.0-beta.1-22-g633dec7,https://github.com/zcobell/MetOceanViewer/releases/tag/v2.5.0-beta.1 
