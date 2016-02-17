@@ -41,8 +41,8 @@ int noaa::plotChart()
     this->thisChart = new QChart();
     this->chart->m_chart = this->thisChart;
 
-    QLineSeries *series1 = new QLineSeries();
-    QLineSeries *series2 = new QLineSeries();
+    QLineSeries *series1 = new QLineSeries(this);
+    QLineSeries *series2 = new QLineSeries(this);
     series1->setName(S1);
     series2->setName(S2);
     series1->setPen(QPen(QColor(0,0,255),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
@@ -54,7 +54,7 @@ int noaa::plotChart()
     minDateTime.setTime(QTime(0,0,0));
     maxDateTime.setTime(QTime(0,0,0));
 
-    QDateTimeAxis *axisX = new QDateTimeAxis;
+    QDateTimeAxis *axisX = new QDateTimeAxis(this);
     axisX->setTickCount(5);
     if(this->StartDate.daysTo(this->EndDate)>90)
         axisX->setFormat("MM/yyyy");
@@ -68,7 +68,7 @@ int noaa::plotChart()
     axisX->setMax(maxDateTime);
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
 
-    QValueAxis *axisY = new QValueAxis;
+    QValueAxis *axisY = new QValueAxis(this);
     axisY->setLabelFormat(format);
     axisY->setTitleText(this->yLabel);
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));

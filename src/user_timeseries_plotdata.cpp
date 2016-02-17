@@ -54,7 +54,7 @@ int user_timeseries::plotData()
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
 
-    QDateTimeAxis *axisX = new QDateTimeAxis;
+    QDateTimeAxis *axisX = new QDateTimeAxis(this);
     axisX->setTickCount(5);
     if(minDate.daysTo(maxDate)>90)
         axisX->setFormat("MM/yyyy");
@@ -76,7 +76,7 @@ int user_timeseries::plotData()
     axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
 
-    QValueAxis *axisY = new QValueAxis;
+    QValueAxis *axisY = new QValueAxis(this);
     axisY->setTickCount(5);
     axisY->setTitleText(this->yLabelEdit->text());
     if(this->yAxisCheck->isChecked())
@@ -96,7 +96,7 @@ int user_timeseries::plotData()
 
     for(i=0;i<fileDataUnique.length();i++)
     {
-      series[i] = new QLineSeries();
+      series[i] = new QLineSeries(this);
       series[i]->setName(table->item(i,1)->text());
       seriesColor.setNamedColor(table->item(i,2)->text());
       series[i]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));

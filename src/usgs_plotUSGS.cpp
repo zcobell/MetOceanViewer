@@ -48,7 +48,7 @@ int usgs::plotUSGS()
     //...Create the line series
     ierr = this->getDataBounds(ymin,ymax);
 
-    QLineSeries *series1 = new QLineSeries();
+    QLineSeries *series1 = new QLineSeries(this);
     series1->setName(this->ProductName);
     series1->setPen(QPen(QColor(0,0,255),3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
 
@@ -70,7 +70,7 @@ int usgs::plotUSGS()
     minDateTime = QDateTime(minDateTime.date(),QTime(minDateTime.time().hour()  ,0,0));
     maxDateTime = QDateTime(maxDateTime.date(),QTime(maxDateTime.time().hour()+1,0,0));
 
-    QDateTimeAxis *axisX = new QDateTimeAxis;
+    QDateTimeAxis *axisX = new QDateTimeAxis(this);
     axisX->setTickCount(5);
     if(this->requestStartDate.daysTo(this->requestEndDate)>90)
         axisX->setFormat("MM/yyyy");
@@ -84,7 +84,7 @@ int usgs::plotUSGS()
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
     series1->attachAxis(axisX);
 
-    QValueAxis *axisY = new QValueAxis;
+    QValueAxis *axisY = new QValueAxis(this);
     axisY->setLabelFormat(format);
     axisY->setTitleText(this->ProductName.split(",").value(0));
     axisY->setMin(ymin);
