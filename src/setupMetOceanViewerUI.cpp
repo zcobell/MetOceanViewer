@@ -22,6 +22,8 @@
 //-----------------------------------------------------------------------//
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
+#include <keyhandler.h>
+#include <update_dialog.h>
 
 void MainWindow::setupMetOceanViewerUI()
 {
@@ -138,5 +140,14 @@ void MainWindow::setupMetOceanViewerUI()
     this->centralWidget()->installEventFilter(key);
 
     connect(key,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+
+    //...Check for updates and alert the user if there is a new version
+    QPointer<update_dialog> update = new update_dialog(this);
+    bool doUpdate = update->checkForUpdate();
+    if(doUpdate)
+    {
+        update->runUpdater();
+        update->exec();
+    }
 
 }
