@@ -20,8 +20,9 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include "update_dialog.h"
-#include "ui_update_dialog.h"
+#include <update_dialog.h>
+#include <ui_update_dialog.h>
+#include <version.h>
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -183,7 +184,12 @@ void update_dialog::runUpdater()
 
     this->hasNewVersion = false;
 
-    this->currentVersion = QString(GIT_VERSION);
+    //...Check if the version is available from Git,
+    //   if not, fall back on version.h
+    if(QString(GIT_VERSION)!=QString())
+        this->currentVersion = QString(GIT_VERSION);
+    else
+        this->currentVersion = QString(VER_FILEVERSION_STR);
 
     ierr = this->getLatestVersionData();
 
