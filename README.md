@@ -9,13 +9,6 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 - [x] Read/write IMEDS formatted data
 - [x] Read HWM comparisons, plot to map, and calculate statistics
 
-# Planned Upgrades
-- [ ] Read Delft3D native formatted NEFIS files
-- [x] Allow download of longer periods of data from NOAA interface
-- [x] Remove restriction on files having same locations
-- [ ] Add interface to NOAA Currents stations
-- [ ] Add data to session files upon request of user
-
 # Screenshots
 ![Screenshot 1](https://github.com/zcobell/MetOceanViewer/blob/master/screenshots/mov_ss1.JPG)
 ![Screenshot 2](https://github.com/zcobell/MetOceanViewer/blob/master/screenshots/mov_ss2.JPG)
@@ -29,6 +22,12 @@ This program requires the non-standard QtCharts library. This is packaged as par
 
 ##QtWebEngine
 This program requires a version of Qt with QtWebEngine available. The Qt development team has decided that it will discontinue support for QtWebKit in favor of QtWebEngine. This project has followed their lead in order to maintain access to updates and bug fixes. 
+
+##netCDF
+You will need to have netCDF version 4+ installed on your system with acccess to the headers and libraries. You may need to edit the netCDF path in MetOceanViewer.pro to correctly locate these files. When compiling for Windows, these libraries are already included in the package. However, Unix/Mac users will need to ensure they are in their LD_LIBRARY_PATH variable or configure the .pro file accordingly.
+
+##OpenSSL
+You will need a version of OpenSSL installed to correctly run this program. Note that the since these libraries are linked at execution time instead of compile time, the code will compile without OpenSSL. Windows libraries are automatically included when installing the program via NSIS. Unix/Mac users will need to ensure they have OpenSSL installed on their system. If there is an issue with the OpenSSL library, you likely will not be able to recieve web content (Google Maps, update notifications).
 
 # Credits
 The following external libraries/APIs are used in this software
