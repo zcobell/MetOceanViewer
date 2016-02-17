@@ -110,6 +110,8 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
         ui->table_TimeseriesData->item(NumberOfRows-1,4)->setToolTip(QString::number(AddWindow->xadjust));
         ui->table_TimeseriesData->item(NumberOfRows-1,5)->setToolTip(QString::number(AddWindow->yadjust));
 
+        this->PreviousDirectory = AddWindow->PreviousDirectory;
+
     }
 
     QApplication::restoreOverrideCursor();
@@ -243,6 +245,8 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
         CellColor.setNamedColor(AddWindow->InputColorString);
         ui->table_TimeseriesData->item(CurrentRow,2)->setBackgroundColor(CellColor);
         ui->table_TimeseriesData->item(CurrentRow,2)->setTextColor(CellColor);
+
+        this->PreviousDirectory = AddWindow->PreviousDirectory;
 
     }
     AddWindow->close();
