@@ -319,3 +319,8 @@ void update_dialog::setDialogText()
 
     return;
 }
+
+void update_dialog::on_button_ok_clicked()
+{
+    this->accept();
+}
