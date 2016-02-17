@@ -51,6 +51,9 @@ public:
     };
 
 
+private slots:
+    void on_button_ok_clicked();
+
 private:
     Ui::update_dialog *ui;
 
