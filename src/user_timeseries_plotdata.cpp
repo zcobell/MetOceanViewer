@@ -63,7 +63,7 @@ int user_timeseries::plotData()
     else
         axisX->setFormat("MM/dd/yyyy hh:mm");
     axisX->setTitleText("Date");
-    if(this->xAxisCheck->isChecked())
+    if(!this->xAxisCheck->isChecked())
     {
         axisX->setMin(this->startDate->dateTime());
         axisX->setMax(this->endDate->dateTime());
@@ -79,7 +79,7 @@ int user_timeseries::plotData()
     QValueAxis *axisY = new QValueAxis(this);
     axisY->setTickCount(5);
     axisY->setTitleText(this->yLabelEdit->text());
-    if(this->yAxisCheck->isChecked())
+    if(!this->yAxisCheck->isChecked())
     {
         axisY->setMin(this->yMinEdit->value());
         axisY->setMax(this->yMaxEdit->value());
