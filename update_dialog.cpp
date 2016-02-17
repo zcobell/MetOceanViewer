@@ -113,7 +113,7 @@ int update_dialog::getLatestVersionData()
     QString response;
 
     //...Get the update list
-    versionURL = QUrl("http://zachcobell.com/mov_version.html");
+    versionURL = QUrl("https://raw.githubusercontent.com/zcobell/MetOceanViewer/master/mov_release_revision.txt");
     QNetworkReply *reply = manager.get(QNetworkRequest(versionURL));
     connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
     connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
@@ -124,8 +124,6 @@ int update_dialog::getLatestVersionData()
     {
         responseBytes = reply->readAll();
         response = QString(responseBytes).simplified();
-
-        qDebug() << response;
 
         this->latestVersionDate = QDateTime(QDate::fromString(response.split(",").value(0),"MM/dd/yyyy"),QTime(0,0,0));
         this->latestVersion = response.split(",").value(1);
@@ -149,8 +147,10 @@ void update_dialog::parseUpdateData()
     ierr = parseGitVersion(this->currentVersion,versionMe);
     ierr = parseGitVersion(this->latestVersion,versionWeb);
 
-    if(versionMe>versionWeb)
+    if(versionMe<versionWeb)
         this->hasNewVersion = true;
+    else
+        this->hasNewVersion = false;
 
     return;
 }
@@ -158,6 +158,8 @@ void update_dialog::parseUpdateData()
 void update_dialog::runUpdater()
 {
     int ierr;
+
+    this->hasNewVersion = false;
 
     this->currentVersion = QString(GIT_VERSION);
 
@@ -169,7 +171,26 @@ void update_dialog::runUpdater()
         this->setDialogText();
     }
     else
-        return;
+        this->setDialogText();
+
+    return;
+
+}
+
+bool update_dialog::checkForUpdate()
+{
+    int ierr;
+
+    this->currentVersion = QString(GIT_VERSION);
+
+    ierr = this->getLatestVersionData();
+
+    this->hasNewVersion = false;
+
+    if(ierr==0)
+        this->parseUpdateData();
+
+    return this->hasNewVersion;
 
 }
 
@@ -209,6 +230,8 @@ int update_dialog::parseGitVersion(QString versionString, gitVersion &version)
             version.versionDev = 200+temp.toInt();
         else
             version.versionDev = -1;
+
+        version.versionGit = v3.toInt();
     }
     else if(versionStringList.length()==3)
     {
@@ -234,7 +257,11 @@ void update_dialog::setDialogText()
 
     if(!this->networkError)
     {
-        dialogHTML = QString("<br><br>")+
+        if(this->hasNewVersion)
+            dialogHTML = "A new version of MetOcean Viewer is available for download <a href=\""+this->latestVersionURL+"\">here</a><br><br>";
+        else
+            dialogHTML = dialogHTML + "Your version of MetOcean Viewer is up to date. <br><br>";
+        dialogHTML = dialogHTML +
                 QString("<table>")+
                     QString("<tr>")+
                         QString("<td align=\"right\"> <b>Current Revision:</b> </td><td align=\"right\">")+this->currentVersion+QString("</td>")+
@@ -247,11 +274,19 @@ void update_dialog::setDialogText()
     }
     else
     {
-
+        dialogHTML = QString("<br><br><table>")+
+                    QString("<tr>")+
+                        QString("<td align=\"right\"> <b>Current Revision:</b> </td><td align=\"right\">")+this->currentVersion+QString("</td>")+
+                    QString("</tr>")+
+                    QString("<tr>")+
+                        QString("<td align=\"right\"> <b>Latest Revision:</b> </td><td align=\"right\">")+"Unknown"+QString("</td>")+
+                    QString("</tr>")+
+                QString("</table>")+
+                QString("<br><br>")+
+                QString("<b>ERROR:</b> The update server could not be contacted successfully.");
     }
 
     ui->text_update->setHtml(dialogHTML);
-
 
     return;
 }
