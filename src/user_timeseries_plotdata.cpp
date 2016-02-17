@@ -63,16 +63,32 @@ int user_timeseries::plotData()
     else
         axisX->setFormat("MM/dd/yyyy hh:mm");
     axisX->setTitleText("Date");
-    axisX->setMin(minDate);
-    axisX->setMax(maxDate);
+    if(this->xAxisCheck->isChecked())
+    {
+        axisX->setMin(this->startDate->dateTime());
+        axisX->setMax(this->endDate->dateTime());
+    }
+    else
+    {
+        axisX->setMin(minDate);
+        axisX->setMax(maxDate);
+    }
     axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
 
     QValueAxis *axisY = new QValueAxis;
     axisY->setTickCount(5);
     axisY->setTitleText(this->yLabelEdit->text());
-    axisY->setMin(ymin);
-    axisY->setMax(ymax);
+    if(this->yAxisCheck->isChecked())
+    {
+        axisY->setMin(this->yMinEdit->value());
+        axisY->setMax(this->yMaxEdit->value());
+    }
+    else
+    {
+        axisY->setMin(ymin);
+        axisY->setMax(ymax);
+    }
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
@@ -92,7 +108,7 @@ int user_timeseries::plotData()
       {
           TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
           TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
-          if(TempValue>MOV_NULL_TS)
+          if(TempValue!=MOV_NULL_TS)
             series[i]->append(TempDate,TempValue);
       }
       this->thisChart->addSeries(series[i]);

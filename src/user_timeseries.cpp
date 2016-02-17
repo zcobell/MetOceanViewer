@@ -68,9 +68,9 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
         addY = table->item(i,5)->text().toDouble();
         for(j=0;j<fileDataUnique[i].station[markerID].NumSnaps;j++)
         {
-            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY<ymin && fileDataUnique[i].station[markerID].data[j]>MOV_NULL_TS)
+            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY<ymin && fileDataUnique[i].station[markerID].data[j]!=MOV_NULL_TS)
                 ymin = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
-            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY>ymax && fileDataUnique[i].station[markerID].data[j]>MOV_NULL_TS)
+            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY>ymax && fileDataUnique[i].station[markerID].data[j]!=MOV_NULL_TS)
                 ymax = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
             if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)<minDate)
                 minDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
