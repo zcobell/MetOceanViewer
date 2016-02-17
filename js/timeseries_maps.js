@@ -26,6 +26,8 @@ var StationName = [];
 var map;
 var LastInfoWindow;
 var LastMarker = -1;
+var selectedMarkers = [];
+var selecting = false;
 
 //Functions for the new version of the timeseries map
 window.onresize = function()
@@ -66,10 +68,28 @@ function AddToMap()
             position: Latlng,
             map: map,
             title: StationName[i],
-            LocalID: i
+            LocalID: i,
         });
-        google.maps.event.addListener(TimeseriesMarkers[i], 'click', function() {
+        TimeseriesMarkers[i].setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
+        google.maps.event.addListener(TimeseriesMarkers[i], 'click', function(event) {
             window.MarkerID = this.LocalID;
+
+            if(selecting===true)
+            {
+                //...Add to the selection list
+                selectedMarkers.push(this);
+                this.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+            }
+            else
+            {
+                //...Clear the icons in all previously selected markers
+                for(i=0;i<selectedMarkers.length;i++)
+                    selectedMarkers[i].setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
+                selectedMarkers = [];
+                this.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+                selectedMarkers.push(this);
+            }
+
             if(LastMarker!==-1)
                 LastInfoWindow.close();
             LastMarker = this.LocalID;
@@ -90,16 +110,29 @@ function AddToMap()
             var InfoWindow = new google.maps.InfoWindow({content: contentString});
             InfoWindow.open(map,this);
             LastInfoWindow = InfoWindow;
+
         });
     }
     return;
 }
 
+//...Return Just the last marker
 function getMarker()
 {
     return LastMarker;
 }
 
+//...Return all selected markers
+function getMarkers()
+{
+    var nMarkers = selectedMarkers.length;
+    var returnString = "";
+    returnString = String(nMarkers);
+    for(var i = 0;i<selectedMarkers.length;i++)
+        returnString = returnString+","+String(selectedMarkers[i].LocalID);
+
+    return returnString;
+}
 
 //Old map Functions
 function clearMarkers()
@@ -143,3 +176,10 @@ google.maps.event.addDomListener(window, "resize", function() {
     google.maps.event.trigger(map, "resize");
     map.setCenter(center);
 });
+
+window.onkeydown = function(e) {
+  selecting = ((e.keyIdentifier === 'Control') || (e.ctrlKey === true));
+}
+window.onkeyup = function(e) {
+  selecting = false;
+}

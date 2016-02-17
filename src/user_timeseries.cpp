@@ -30,7 +30,8 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                                  QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
                                  QWebEngineView *inMap, mov_QChartView *inChart,
-                                 QStatusBar *inStatusBar, QObject *parent) : QObject(parent)
+                                 QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
+                                 QObject *parent) : QObject(parent)
 {
     table      = inTable;
     xAxisCheck = inXAxisCheck;
@@ -45,6 +46,7 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
     map        = inMap;
     chart      = inChart;
     statusBar  = inStatusBar;
+    randomColorList = inRandomColorList;
 }
 
 user_timeseries::~user_timeseries()
