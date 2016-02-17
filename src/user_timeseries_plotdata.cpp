@@ -108,7 +108,7 @@ int user_timeseries::plotData()
       {
           TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
           TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
-          if(TempValue!=MOV_NULL_TS)
+          if(fileDataUnique[i].station[this->markerID].data[j]!=MOV_NULL_TS)
             series[i]->append(TempDate,TempValue);
       }
       this->thisChart->addSeries(series[i]);
