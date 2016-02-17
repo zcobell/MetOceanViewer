@@ -121,7 +121,7 @@ LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
 #...Define a variable for the about dialog
 DEFINES += MOV_COMPILER=\\\"msvc\\\"
@@ -134,7 +134,7 @@ LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
 #...Define a variable for the about dialog
 DEFINES += MOV_COMPILER=\\\"msvc\\\"
@@ -142,15 +142,9 @@ DEFINES += MOV_COMPILER=\\\"msvc\\\"
 
 }
 
-
-#...MinGW 32 bit compiler
+#...MinGW 32 bit compiler, throw error
 win32-g++{
-message("Using MinGW-32 bit compiler...")
-
-LIBS += -L$$PWD/thirdparty/netcdf/bin_32 -lnetcdf -lhdf5 -lz -lcurl
-
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"mingw\\\"
+error("MinGW not compatible with this project. See the Qt documentation for QtWebEngine.")
 }
 
 #...Unix - We assume static library for NetCDF installed
