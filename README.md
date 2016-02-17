@@ -27,13 +27,15 @@ To compile this program, please use the Qt suite of tools. The MetOceanViewer.pr
 ##QtCharts
 This program requires the non-standard QtCharts library. This is packaged as part of the windows DLLs provided here, however, to compile this code for yourself you will need to manually generate this Qt module. The QtCharts module can be obtained [here](https://code.qt.io/cgit/qt/qtcharts.git). This module has taken over for the HighCharts plotting routines which, while extremely powerful, are not ideal for being embedded in a Qt C++ application with large amounts of data.
 
+##QtWebEngine
+This program requires a version of Qt with QtWebEngine available. The Qt development team has decided that it will discontinue support for QtWebKit in favor of QtWebEngine. This project has followed their lead in order to maintain access to updates and bug fixes. 
+
 # Credits
 The following external libraries/APIs are used in this software
 - NOAA CO-OPS API (http://tidesandcurrents.noaa.gov)
 - USGS Waterdata API (http://waterdata.usgs.gov)
 - Google Maps v3.x API (http://maps.google.com)
 - Google Fusion Tables API (http://tables.googlelabs.com)
-- HighCharts v4.2.1 (http://www.highcharts.com)
 - netCDF v4.3.3 (http://www.unidata.ucar.edu/software/netcdf)
 - HDF5 v1.8.14 (http://www.hdfgroup.org/HDF5)
 - Curl v7.35.0 (http://curl.haxx.se)
