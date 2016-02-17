@@ -36,14 +36,11 @@
 #include <QtCharts>
 
 //...MetOcean Viewer Includes...//
-#include <general_functions.h>
 #include <noaa.h>
 #include <usgs.h>
 #include <hwm.h>
 #include <user_timeseries.h>
-#include <about_dialog.h>
 #include <mov_qwebenginepage.h>
-#include <keyhandler.h>
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -157,6 +154,8 @@ private slots:
     void on_button_usertimeseriesResetZoom_clicked();
 
     void on_button_hwmResetZoom_clicked();
+
+    void on_actionCheck_For_Updates_triggered();
 
 private:
     Ui::MainWindow *ui;

@@ -22,6 +22,7 @@
 //-----------------------------------------------------------------------//
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
+#include <keyhandler.h>
 
 void MainWindow::setupMetOceanViewerUI()
 {

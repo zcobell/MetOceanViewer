@@ -23,6 +23,9 @@
         
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
+#include <about_dialog.h>
+#include <update_dialog.h>
+#include <general_functions.h>
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
@@ -73,6 +76,19 @@ void MainWindow::on_actionAbout_triggered()
     QPointer<about_dialog> aboutWindow = new about_dialog(this);
     aboutWindow->setModal(false);
     aboutWindow->exec();
+    return;
+}
+//-------------------------------------------//
+
+//-------------------------------------------//
+//Bring up the update dialog
+//-------------------------------------------//
+void MainWindow::on_actionCheck_For_Updates_triggered()
+{
+    QPointer<update_dialog> updateWindow = new update_dialog(this);
+    updateWindow->setModal(false);
+    updateWindow->runUpdater();
+    updateWindow->exec();
     return;
 }
 //-------------------------------------------//
