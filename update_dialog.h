@@ -17,6 +17,7 @@ public:
     ~update_dialog();
 
     void runUpdater();
+    bool checkForUpdate();
 
     struct gitVersion
     {
