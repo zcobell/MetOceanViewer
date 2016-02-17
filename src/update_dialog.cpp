@@ -286,10 +286,11 @@ void update_dialog::setDialogText()
         dialogHTML = dialogHTML +
                 QString("<table>")+
                     QString("<tr>")+
-                        QString("<td align=\"right\"> <b>Current Revision:</b> </td><td align=\"right\">")+this->currentVersion+QString("</td>")+
+                        QString("<td align=\"right\"> <b>Current Revision:</b> </td><td align=\"left\">")+this->currentVersion+QString("</td>")+
                     QString("</tr>")+
                     QString("<tr>")+
-                        QString("<td align=\"right\"> <b>Latest Revision:</b> </td><td align=\"right\">")+this->latestVersion+QString("</td>")+
+                        QString("<td align=\"right\"> <b>Latest Release:</b> </td><td align=\"left\">")+this->latestVersion+
+                                " (Released: "+this->latestVersionDate.toString("MM/dd/yyyy)")+QString("</td>")+
                     QString("</tr>")+
                 QString("</table>")+
                 QString("<br><br>");
