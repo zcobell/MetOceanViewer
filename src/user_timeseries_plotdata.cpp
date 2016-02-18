@@ -116,7 +116,7 @@ int user_timeseries::plotData()
           unitConversion = table->item(seriesCounter-1,3)->text().toDouble();
           addX = table->item(seriesCounter-1,4)->text().toDouble();
           addY = table->item(seriesCounter-1,5)->text().toDouble();
-          for(j=0;j<fileDataUnique[i].station[this->markerID].NumSnaps;j++)
+          for(j=0;j<fileDataUnique[i].station[this->markerID].data.length();j++)
           {
               TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
               TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
@@ -133,27 +133,29 @@ int user_timeseries::plotData()
           //...Plot multiple stations. We use random colors and append the station number
           for(k=0;k<this->selectedStations.length();k++)
           {
-              seriesCounter = seriesCounter + 1;
-              series.resize(seriesCounter);
-              series[seriesCounter-1] = new QLineSeries(this);
-              series[seriesCounter-1]->setName(fileDataUnique[i].station[this->selectedStations[k]].StationName+": "+table->item(i,1)->text());
-              seriesColor = this->randomColorList[seriesCounter-1];
-              qDebug() << seriesColor;
-              series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
-              unitConversion = table->item(i,3)->text().toDouble();
-              addX = table->item(i,4)->text().toDouble();
-              addY = table->item(i,5)->text().toDouble();
-              for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].NumSnaps;j++)
+              if(!fileDataUnique[i].station[this->selectedStations[k]].isNull)
               {
-                  TempDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
-                  TempValue = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
-                  if(fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
-                    series[seriesCounter-1]->append(TempDate,TempValue);
+                  seriesCounter = seriesCounter + 1;
+                  series.resize(seriesCounter);
+                  series[seriesCounter-1] = new QLineSeries(this);
+                  series[seriesCounter-1]->setName(fileDataUnique[i].station[this->selectedStations[k]].StationName+": "+table->item(i,1)->text());
+                  seriesColor = this->randomColorList[seriesCounter-1];
+                  series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
+                  unitConversion = table->item(i,3)->text().toDouble();
+                  addX = table->item(i,4)->text().toDouble();
+                  addY = table->item(i,5)->text().toDouble();
+                  for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].data.length();j++)
+                  {
+                      TempDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+                      TempValue = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
+                      if(fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                        series[seriesCounter-1]->append(TempDate,TempValue);
+                  }
+                  this->thisChart->addSeries(series[seriesCounter-1]);
+                  this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
+                  series[seriesCounter-1]->attachAxis(axisX);
+                  series[seriesCounter-1]->attachAxis(axisY);
               }
-              this->thisChart->addSeries(series[seriesCounter-1]);
-              this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
-              series[seriesCounter-1]->attachAxis(axisX);
-              series[seriesCounter-1]->attachAxis(axisY);
           }
       }
 
