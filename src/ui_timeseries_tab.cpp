@@ -282,7 +282,8 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                                            ui->text_TimeseriesYaxisLabel,
                                            ui->timeseries_map,
                                            ui->timeseries_graphics,
-                                           ui->statusBar,this);
+                                           ui->statusBar,
+                                           this->randomColors,this);
 
     ierr = thisTimeseries->processData();
     if(ierr!=0)
@@ -339,7 +340,9 @@ void MainWindow::on_button_plotTimeseriesStation_clicked()
     //Catch false marker number
     if(markerID==-1)return;
 
-    thisTimeseries->plotData();
+    int ierr = thisTimeseries->plotData();
+    if(ierr!=0)
+        QMessageBox::critical(this,"ERROR",thisTimeseries->getErrorString());
 
     return;
 }

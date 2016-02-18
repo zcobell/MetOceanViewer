@@ -194,6 +194,8 @@ private:
 
     QString SessionFile;
 
+    QVector<QColor> randomColors;
+
 protected:
 
     void closeEvent(QCloseEvent *);

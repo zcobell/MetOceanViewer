@@ -2325,6 +2325,9 @@
                   <height>0</height>
                  </size>
                 </property>
+                <property name="statusTip">
+                 <string>Click markers to select a station, CTRL+Click to select multiple stations</string>
+                </property>
                 <property name="url" stdset="0">
                  <url>
                   <string>qrc:/rsc/html/timeseries_maps.html</string>

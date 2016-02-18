@@ -25,7 +25,7 @@
 
 int user_timeseries::plotData()
 {
-    int i,j,ierr;
+    int i,j,k,ierr,seriesCounter;
     qint64 TempDate;
     qreal TempValue;
     double unitConversion,addX,addY;
@@ -41,6 +41,14 @@ int user_timeseries::plotData()
     //   time, which can show an offset when converting to mSecSinceEpoch
     QDateTime now = QDateTime::currentDateTime();
     qint64 offset = now.offsetFromUtc()*1000;
+
+    //...Get the current marker selections, multiple if user ctrl+click selects
+    this->getMultipleMarkersFromMap();
+    if(this->selectedStations.length()>16)
+    {
+        this->errorString = "Too many markers are selected. A maximum of 16 is allowed.";
+        return -1;
+    }
 
     addXList.resize(fileDataUnique.length());
     for(i=0;i<fileDataUnique.length();i++)
@@ -92,29 +100,65 @@ int user_timeseries::plotData()
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
-    series.resize(fileDataUnique.length());
+    seriesCounter = 0;
 
     for(i=0;i<fileDataUnique.length();i++)
     {
-      series[i] = new QLineSeries(this);
-      series[i]->setName(table->item(i,1)->text());
-      seriesColor.setNamedColor(table->item(i,2)->text());
-      series[i]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
-      unitConversion = table->item(i,3)->text().toDouble();
-      addX = table->item(i,4)->text().toDouble();
-      addY = table->item(i,5)->text().toDouble();
 
-      for(j=0;j<fileDataUnique[i].station[this->markerID].NumSnaps;j++)
+      if(this->selectedStations.length()==1)
       {
-          TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
-          TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
-          if(fileDataUnique[i].station[this->markerID].data[j]!=MOV_NULL_TS)
-            series[i]->append(TempDate,TempValue);
+          seriesCounter = seriesCounter + 1;
+          series.resize(seriesCounter);
+          series[seriesCounter-1] = new QLineSeries(this);
+          series[seriesCounter-1]->setName(table->item(seriesCounter-1,1)->text());
+          seriesColor.setNamedColor(table->item(seriesCounter-1,2)->text());
+          series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
+          unitConversion = table->item(seriesCounter-1,3)->text().toDouble();
+          addX = table->item(seriesCounter-1,4)->text().toDouble();
+          addY = table->item(seriesCounter-1,5)->text().toDouble();
+          for(j=0;j<fileDataUnique[i].station[this->markerID].data.length();j++)
+          {
+              TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+              TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
+              if(fileDataUnique[i].station[this->markerID].data[j]!=MOV_NULL_TS)
+                series[seriesCounter-1]->append(TempDate,TempValue);
+          }
+          this->thisChart->addSeries(series[seriesCounter-1]);
+          this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
+          series[seriesCounter-1]->attachAxis(axisX);
+          series[seriesCounter-1]->attachAxis(axisY);
       }
-      this->thisChart->addSeries(series[i]);
-      this->thisChart->legend()->markers().at(i)->setFont(QFont("Helvetica",10,QFont::Bold));
-      series[i]->attachAxis(axisX);
-      series[i]->attachAxis(axisY);
+      else
+      {
+          //...Plot multiple stations. We use random colors and append the station number
+          for(k=0;k<this->selectedStations.length();k++)
+          {
+              if(!fileDataUnique[i].station[this->selectedStations[k]].isNull)
+              {
+                  seriesCounter = seriesCounter + 1;
+                  series.resize(seriesCounter);
+                  series[seriesCounter-1] = new QLineSeries(this);
+                  series[seriesCounter-1]->setName(fileDataUnique[i].station[this->selectedStations[k]].StationName+": "+table->item(i,1)->text());
+                  seriesColor = this->randomColorList[seriesCounter-1];
+                  series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
+                  unitConversion = table->item(i,3)->text().toDouble();
+                  addX = table->item(i,4)->text().toDouble();
+                  addY = table->item(i,5)->text().toDouble();
+                  for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].data.length();j++)
+                  {
+                      TempDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+                      TempValue = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
+                      if(fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                        series[seriesCounter-1]->append(TempDate,TempValue);
+                  }
+                  this->thisChart->addSeries(series[seriesCounter-1]);
+                  this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
+                  series[seriesCounter-1]->attachAxis(axisX);
+                  series[seriesCounter-1]->attachAxis(axisY);
+              }
+          }
+      }
+
     }
 
     axisY->setTickCount(10);

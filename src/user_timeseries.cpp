@@ -30,7 +30,8 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                                  QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
                                  QWebEngineView *inMap, mov_QChartView *inChart,
-                                 QStatusBar *inStatusBar, QObject *parent) : QObject(parent)
+                                 QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
+                                 QObject *parent) : QObject(parent)
 {
     table      = inTable;
     xAxisCheck = inXAxisCheck;
@@ -45,6 +46,7 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
     map        = inMap;
     chart      = inChart;
     statusBar  = inStatusBar;
+    randomColorList = inRandomColorList;
 }
 
 user_timeseries::~user_timeseries()
@@ -54,9 +56,10 @@ user_timeseries::~user_timeseries()
 
 int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList)
 {
-    int i,j;
+    int i,j,k;
     double unitConversion,addY;
 
+    QDateTime nullDate(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),QTime(MOV_NULL_HOUR,MOV_NULL_MINUTE,MOV_NULL_SECOND));
     ymin = DBL_MAX;
     ymax = DBL_MIN;
     minDate = QDateTime(QDate(3000,1,1),QTime(0,0,0));
@@ -66,16 +69,26 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
     {
         unitConversion = table->item(i,3)->text().toDouble();
         addY = table->item(i,5)->text().toDouble();
-        for(j=0;j<fileDataUnique[i].station[markerID].NumSnaps;j++)
+        for(k=0;k<this->selectedStations.length();k++)
         {
-            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY<ymin && fileDataUnique[i].station[markerID].data[j]!=MOV_NULL_TS)
-                ymin = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
-            if(fileDataUnique[i].station[markerID].data[j]*unitConversion+addY>ymax && fileDataUnique[i].station[markerID].data[j]!=MOV_NULL_TS)
-                ymax = fileDataUnique[i].station[markerID].data[j]*unitConversion+addY;
-            if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)<minDate)
-                minDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
-            if(fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0)>maxDate)
-                maxDate = fileDataUnique[i].station[markerID].date[j].addSecs(timeAddList[i]*3600.0);
+            if(!fileDataUnique[i].station[this->selectedStations[k]].isNull)
+            {
+                for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].data.length();j++)
+                {
+                    if(fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY<ymin &&
+                            fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                        ymin = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
+                    if(fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY>ymax &&
+                            fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                        ymax = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
+                    if(fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0)<minDate &&
+                            fileDataUnique[i].station[this->selectedStations[k]].date[j]!=nullDate)
+                        minDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0);
+                    if(fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0)>maxDate &&
+                            fileDataUnique[i].station[this->selectedStations[k]].date[j]!=nullDate)
+                        maxDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0);
+                }
+            }
         }
     }
     return 0;
