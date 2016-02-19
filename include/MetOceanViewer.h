@@ -157,6 +157,8 @@ private slots:
 
     void on_actionCheck_For_Updates_triggered();
 
+    void on_pushButton_hideInfoWindow_toggled(bool checked);
+
 private:
     Ui::MainWindow *ui;
 

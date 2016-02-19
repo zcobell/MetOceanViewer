@@ -432,3 +432,12 @@ void MainWindow::on_button_usertimeseriesResetZoom_clicked()
         ui->timeseries_graphics->resetZoom();
     return;
 }
+
+void MainWindow::on_pushButton_hideInfoWindow_toggled(bool checked)
+{
+    if(checked)
+        ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('false')");
+    else
+        ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('true')");
+    return;
+}

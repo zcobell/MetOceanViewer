@@ -28,6 +28,7 @@ var LastInfoWindow;
 var LastMarker = -1;
 var selectedMarkers = [];
 var selecting = false;
+var showInfoWindowDuringMulti = false;
 
 // check if an element exists in array using a comparer function
 // comparer : function(currentElement)
@@ -46,6 +47,14 @@ Array.prototype.pushIfNotExist = function(element, comparer) {
     }
 };
 
+function toggleInfoWindows(state)
+{
+    if(state==="true")
+        showInfoWindowDuringMulti = true;
+    else
+        showInfoWindowDuringMulti = false;
+    return;
+}
 
 //Functions for the new version of the timeseries map
 window.onresize = function()
@@ -128,7 +137,7 @@ function AddToMap()
 
             var InfoWindow = new google.maps.InfoWindow({content: contentString});
 
-            if(selecting===false)
+            if(selecting===false || showInfoWindowDuringMulti === true)
             {
                 InfoWindow.open(map,this);
                 LastInfoWindow = InfoWindow;
