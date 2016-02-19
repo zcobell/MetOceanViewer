@@ -25,7 +25,7 @@
 
 int user_timeseries::plotData()
 {
-    int i,j,k,ierr,seriesCounter;
+    int i,j,k,ierr,seriesCounter,colorCounter;
     qint64 TempDate;
     qreal TempValue;
     double unitConversion,addX,addY;
@@ -34,6 +34,8 @@ int user_timeseries::plotData()
     QVector<QLineSeries *> series;
     QColor seriesColor;
     QDateTime minDate,maxDate;
+
+    colorCounter = -1;
 
     //...At some point this may no longer be
     //   needed, but this defines an offset from UTC
@@ -136,10 +138,16 @@ int user_timeseries::plotData()
               if(!fileDataUnique[i].station[this->selectedStations[k]].isNull)
               {
                   seriesCounter = seriesCounter + 1;
+                  colorCounter = colorCounter + 1;
+
+                  //...Loop the colors
+                  if(colorCounter>=this->randomColorList.length())
+                      colorCounter = 0;
+
                   series.resize(seriesCounter);
                   series[seriesCounter-1] = new QLineSeries(this);
                   series[seriesCounter-1]->setName(fileDataUnique[i].station[this->selectedStations[k]].StationName+": "+table->item(i,1)->text());
-                  seriesColor = this->randomColorList[seriesCounter-1];
+                  seriesColor = this->randomColorList[colorCounter];
                   series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
                   unitConversion = table->item(i,3)->text().toDouble();
                   addX = table->item(i,4)->text().toDouble();

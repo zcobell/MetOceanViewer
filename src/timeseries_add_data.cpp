@@ -148,7 +148,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
     else
         Directory = this->PreviousDirectory;
 
-    QString TempPath = QFileDialog::getOpenFileName(this,"Select Observation IMEDS File",
+    QString TempPath = QFileDialog::getOpenFileName(this,"Select File",
             Directory,
             QString("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; ")+
             QString("IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ")+

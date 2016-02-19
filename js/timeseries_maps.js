@@ -29,6 +29,24 @@ var LastMarker = -1;
 var selectedMarkers = [];
 var selecting = false;
 
+// check if an element exists in array using a comparer function
+// comparer : function(currentElement)
+Array.prototype.inArray = function(comparer) {
+    for(var i=0; i < this.length; i++) {
+        if(comparer(this[i])) return true;
+    }
+    return false;
+};
+
+// adds an element to the array if it does not already exist using a comparer
+// function
+Array.prototype.pushIfNotExist = function(element, comparer) {
+    if (!this.inArray(comparer)) {
+        this.push(element);
+    }
+};
+
+
 //Functions for the new version of the timeseries map
 window.onresize = function()
 {
@@ -77,7 +95,8 @@ function AddToMap()
             if(selecting===true)
             {
                 //...Add to the selection list
-                selectedMarkers.push(this);
+                selectedMarkers.pushIfNotExist(this,function(e) {
+                    return e.LocalID === this.LocalID; });
                 this.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
             }
             else
@@ -108,8 +127,12 @@ function AddToMap()
                             "</table>";
 
             var InfoWindow = new google.maps.InfoWindow({content: contentString});
-            InfoWindow.open(map,this);
-            LastInfoWindow = InfoWindow;
+
+            if(selecting===false)
+            {
+                InfoWindow.open(map,this);
+                LastInfoWindow = InfoWindow;
+            }
 
         });
     }
