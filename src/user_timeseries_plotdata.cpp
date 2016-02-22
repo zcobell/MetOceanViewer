@@ -178,7 +178,12 @@ int user_timeseries::plotData()
     axisY->setShadesVisible(true);
     axisY->applyNiceNumbers();
 
-    this->thisChart->setTitle(this->plotTitle->text());
+
+    if(this->selectedStations.length()==1)
+        this->thisChart->setTitle(this->plotTitle->text()+": "+this->fileDataUnique[0].station[this->markerID].StationName);
+    else
+        this->thisChart->setTitle(this->plotTitle->text());
+
     this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     this->chart->setRenderHint(QPainter::Antialiasing);
     this->chart->setChart(this->thisChart);
