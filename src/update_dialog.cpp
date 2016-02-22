@@ -170,6 +170,9 @@ void update_dialog::parseUpdateData()
     ierr = parseGitVersion(this->currentVersion,versionMe);
     ierr = parseGitVersion(this->latestVersion,versionWeb);
 
+    qDebug() << versionMe.versionMajor << versionMe.versionMinor << versionMe.versionRev << versionMe.versionDev << versionMe.versionGit;
+    qDebug() << versionWeb.versionMajor << versionWeb.versionMinor << versionWeb.versionRev << versionWeb.versionDev << versionWeb.versionGit;
+
     if(versionMe<versionWeb)
         this->hasNewVersion = true;
     else
@@ -225,10 +228,16 @@ bool update_dialog::checkForUpdate()
 int update_dialog::parseGitVersion(QString versionString, gitVersion &version)
 {
     QString v1,v2,v3;
-    QStringList v1L,v2L,v3L;
+    QStringList v1L,v2L;
     QString temp,alphaBeta;
 
     QStringList versionStringList = versionString.split("-");
+
+    version.versionMajor = 0;
+    version.versionMinor = 0;
+    version.versionRev   = 0;
+    version.versionDev   = 0;
+    version.versionGit   = 0;
 
     //...Get the major revisions parsed
     v1 = versionStringList.value(0);
@@ -257,7 +266,7 @@ int update_dialog::parseGitVersion(QString versionString, gitVersion &version)
         else if(alphaBeta=="beta")
             version.versionDev = 200+temp.toInt();
         else
-            version.versionDev = -1;
+            version.versionDev = 1000;
 
         version.versionGit = v3.toInt();
     }
@@ -268,6 +277,26 @@ int update_dialog::parseGitVersion(QString versionString, gitVersion &version)
         v3 = versionStringList.value(1);
         version.versionGit = v3.toInt();
 
+    }
+    else if(versionStringList.length()==2)
+    {
+        //...This is a version with just a beta number and major revision
+        version.versionGit = 0;
+        //...This is a version with a beta number in it
+        //   set "alphas" to n+100 and "betas" to n+200
+        //   if no version number, make it a large number
+        //   to show it is newer than something with a beta tag
+        v2 = versionStringList.value(1);
+        v2L = v2.split(".");
+        temp = v2L.value(0);
+        alphaBeta = v2L.value(0);
+        temp = v2L.value(1);
+        if(alphaBeta=="alpha")
+            version.versionDev = 100+temp.toInt();
+        else if(alphaBeta=="beta")
+            version.versionDev = 200+temp.toInt();
+        else
+            version.versionDev = 1000;
     }
     else if(versionStringList.length()==1)
     {
