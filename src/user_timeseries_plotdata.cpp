@@ -66,12 +66,6 @@ int user_timeseries::plotData()
 
     QDateTimeAxis *axisX = new QDateTimeAxis(this);
     axisX->setTickCount(5);
-    if(minDate.daysTo(maxDate)>90)
-        axisX->setFormat("MM/yyyy");
-    else if(minDate.daysTo(maxDate)>4)
-        axisX->setFormat("MM/dd/yyyy");
-    else
-        axisX->setFormat("MM/dd/yyyy hh:mm");
     axisX->setTitleText("Date");
     if(!this->xAxisCheck->isChecked())
     {
@@ -101,6 +95,13 @@ int user_timeseries::plotData()
     }
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->addAxis(axisY, Qt::AlignLeft);
+
+    if(axisX->min().daysTo(axisX->max())>90)
+        axisX->setFormat("MM/yyyy");
+    else if(axisX->min().daysTo(axisX->max())>4)
+        axisX->setFormat("MM/dd/yyyy");
+    else
+        axisX->setFormat("MM/dd/yyyy hh:mm");
 
     seriesCounter = 0;
 

@@ -170,9 +170,6 @@ void update_dialog::parseUpdateData()
     ierr = parseGitVersion(this->currentVersion,versionMe);
     ierr = parseGitVersion(this->latestVersion,versionWeb);
 
-    qDebug() << versionMe.versionMajor << versionMe.versionMinor << versionMe.versionRev << versionMe.versionDev << versionMe.versionGit;
-    qDebug() << versionWeb.versionMajor << versionWeb.versionMinor << versionWeb.versionRev << versionWeb.versionDev << versionWeb.versionGit;
-
     if(versionMe<versionWeb)
         this->hasNewVersion = true;
     else
