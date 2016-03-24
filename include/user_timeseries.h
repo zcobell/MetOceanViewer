@@ -27,7 +27,7 @@
 #include <QVector>
 #include <QChartView>
 #include <QtCharts>
-#include <QtWebEngine>
+#include <QtWebEngine/QtWebEngine>
 #include <QWebEngineView>
 #include <QPrinter>
 #include <QTableWidget>
