@@ -155,6 +155,10 @@ Section "Install"
     File ..\libs\msvc64\Qt5Xml.dll
     File ..\libs\msvc64\msvcp120.dll
     File ..\libs\msvc64\msvcr120.dll
+    File ..\libs\msvc64\concrt140.dll
+    File ..\libs\msvc64\msvcp140.dll
+    File ..\libs\msvc64\vccorlib140.dll
+    File ..\libs\msvc64\vcruntime140.dll
 	
 	File /r ..\libs\msvc64\imageformats
     File /r ..\libs\msvc64\platforms
@@ -171,7 +175,7 @@ Section "Install"
 	
     File ..\img\mov.ico
 	
-    File ..\..\build-MetOceanViewer-Desktop_Qt_5_5_0_MSVC2013_64bit-Release\release\MetOcean_Viewer.exe
+    File ..\..\build-MetOceanViewer-Desktop_Qt_5_6_0_MSVC2015_64bit-Release\release\MetOcean_Viewer.exe
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
@@ -250,6 +254,11 @@ Section "Uninstall"
     Delete $INSTDIR\zlib1.dll
     Delete $INSTDIR\msvcp120.dll
     Delete $INSTDIR\msvcr120.dll
+    Delete $INSTDIR\concrt140.dll
+    Delete $INSTDIR\msvcp140.dll
+    Delete $INSTDIR\vccorlib140.dll
+    Delete $INSTDIR\vcruntime140.dll
+    
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\mov.ico
