@@ -123,59 +123,37 @@ FunctionEnd
 ;--------------------------------
 ;Installer Sections
 
+
+; Install MSVC-64bit Runtime
+Section "Microsoft Visual C++"
+  SetOutPath $INSTDIR
+  MessageBox MB_YESNO "Install Microsoft Visual C++ Redistributable?" /SD IDYES IDNO endMSVCRedist
+    File "deployment\vcredist_x64.exe"
+    ExecWait "$INSTDIR\vcredist_x64.exe"
+    Goto endMSVCRedist
+  endMSVCRedist:
+SectionEnd
+
+
 Section "Install"
  
     # define output path
     SetOutPath $INSTDIR
 
     # Output files in the main folder
-    File ..\libs\msvc64\d3dcompiler_47.dll
-    File ..\libs\msvc64\icudt54.dll
-    File ..\libs\msvc64\icuin54.dll
-    File ..\libs\msvc64\icuuc54.dll
-    File ..\libs\msvc64\libEGL.dll
-    File ..\libs\msvc64\Qt5Core.dll
-    File ..\libs\msvc64\Qt5Charts.dll
-    File ..\libs\msvc64\Qt5Gui.dll
-    File ..\libs\msvc64\Qt5Multimedia.dll
-    File ..\libs\msvc64\Qt5MultimediaWidgets.dll
-    File ..\libs\msvc64\Qt5Network.dll
-    File ..\libs\msvc64\Qt5OpenGL.dll
-    File ..\libs\msvc64\Qt5Positioning.dll
-    File ..\libs\msvc64\Qt5PrintSupport.dll
-    File ..\libs\msvc64\Qt5Qml.dll
-    File ..\libs\msvc64\Qt5Quick.dll
-    File ..\libs\msvc64\Qt5Sensors.dll
-    File ..\libs\msvc64\Qt5Sql.dll
-    File ..\libs\msvc64\Qt5WebChannel.dll
-    File ..\libs\msvc64\Qt5WebEngine.dll
-    File ..\libs\msvc64\Qt5WebEngineCore.dll
-    File ..\libs\msvc64\Qt5WebEngineWidgets.dll
-    File ..\libs\msvc64\Qt5Widgets.dll
-    File ..\libs\msvc64\Qt5Xml.dll
-    File ..\libs\msvc64\msvcp120.dll
-    File ..\libs\msvc64\msvcr120.dll
-    File ..\libs\msvc64\concrt140.dll
-    File ..\libs\msvc64\msvcp140.dll
-    File ..\libs\msvc64\vccorlib140.dll
-    File ..\libs\msvc64\vcruntime140.dll
-	
-	File /r ..\libs\msvc64\imageformats
-    File /r ..\libs\msvc64\platforms
-	
-	File ..\thirdparty\openssl\bin_64\libssl32.dll
-	File ..\thirdparty\openssl\bin_64\libeay32.dll
-    File ..\thirdparty\openssl\bin_64\ssleay32.dll
-	
-	File ..\thirdparty\netcdf\bin_64\netcdf.dll
-	File ..\thirdparty\netcdf\bin_64\libcurl.dll
-	File ..\thirdparty\netcdf\bin_64\hdf5.dll
-    File ..\thirdparty\netcdf\bin_64\hdf5_hl.dll
-    File ..\thirdparty\netcdf\bin_64\zlib1.dll
+    File deployment\*.dll
+    File /r deployment\bearer
+    File /r deployment\iconengines
+    File /r deployment\imageformats
+    File /r deployment\platforms
+    File /r deployment\printsupport
+    File /r deployment\resources
+    File /r deployment\translations
 	
     File ..\img\mov.ico
 	
-    File ..\..\build-MetOceanViewer-Desktop_Qt_5_6_0_MSVC2015_64bit-Release\release\MetOcean_Viewer.exe
+    File deployment\QtWebEngineProcess.exe
+    File deployment\MetOcean_Viewer.exe
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
@@ -220,49 +198,17 @@ Section "Uninstall"
 	RMDir "$SMPROGRAMS\${APPNAME}"
     
     # now delete installed files
-    Delete $INSTDIR\d3dcompiler_47.dll
-    Delete $INSTDIR\hdf5.dll
-    Delete $INSTDIR\hdf5_hl.dll
-    Delete $INSTDIR\icudt54.dll
-    Delete $INSTDIR\icuin54.dll
-    Delete $INSTDIR\icuuc54.dll
-    Delete $INSTDIR\libcurl.dll
-    Delete $INSTDIR\libeay32.dll
-    Delete $INSTDIR\libEGL.dll
-    Delete $INSTDIR\libssl32.dll
-    Delete $INSTDIR\netcdf.dll
-    Delete $INSTDIR\Qt5Core.dll
-    Delete $INSTDIR\Qt5Charts.dll
-    Delete $INSTDIR\Qt5Gui.dll
-    Delete $INSTDIR\Qt5Multimedia.dll
-    Delete $INSTDIR\Qt5MultimediaWidgets.dll
-    Delete $INSTDIR\Qt5Network.dll
-    Delete $INSTDIR\Qt5OpenGL.dll
-    Delete $INSTDIR\Qt5Positioning.dll
-    Delete $INSTDIR\Qt5PrintSupport.dll
-    Delete $INSTDIR\Qt5Qml.dll
-    Delete $INSTDIR\Qt5Quick.dll
-    Delete $INSTDIR\Qt5Sensors.dll
-    Delete $INSTDIR\Qt5Sql.dll
-    Delete $INSTDIR\Qt5WebChannel.dll
-    Delete $INSTDIR\Qt5WebEngine.dll
-    Delete $INSTDIR\Qt5WebEngineCore.dll
-    Delete $INSTDIR\Qt5WebEngineWidgets.dll
-    Delete $INSTDIR\Qt5Widgets.dll
-    Delete $INSTDIR\Qt5Xml.dll
-    Delete $INSTDIR\ssleay32.dll
-    Delete $INSTDIR\zlib1.dll
-    Delete $INSTDIR\msvcp120.dll
-    Delete $INSTDIR\msvcr120.dll
-    Delete $INSTDIR\concrt140.dll
-    Delete $INSTDIR\msvcp140.dll
-    Delete $INSTDIR\vccorlib140.dll
-    Delete $INSTDIR\vcruntime140.dll
-    
+    Delete $INSTDIR\*.dll
+    RMDir /r $INSTDIR\bearer
+    RMDir /r $INSTDIR\iconengines
+    RMDir /r $INSTDIR\printsupport
+    RMDir /r $INSTDIR\resources
+    RMDir /r $INSTDIR\translations
     RMDir /r $INSTDIR\imageformats
     RMDir /r $INSTDIR\platforms
     Delete $INSTDIR\mov.ico
     Delete $INSTDIR\MetOcean_Viewer.exe
+    Delete $INSTDIR\QtWebEngineProcess.exe
     Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
     
