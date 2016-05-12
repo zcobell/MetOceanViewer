@@ -22,8 +22,8 @@
 !define COMPANYNAME "Zach Cobell"
 !define DESCRIPTION "A simple GUI to view ADCIRC or other model data."
 !define VERSIONMAJOR 2
-!define VERSIONMINOR 1
-!define VERSIONBUILD 0
+!define VERSIONMINOR 5
+!define VERSIONBUILD 3
 !define HELPURL "https://github.com/zcobell/MetOceanViewer" # "Support Information" link
 !define UPDATEURL "https://github.com/zcobell/MetOceanViewer" # "Product Updates" link
 !define ABOUTURL "http://zachcobell.com/" # "Publisher" link
