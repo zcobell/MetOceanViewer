@@ -50,8 +50,8 @@
    <string>MetOcean Viewer</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>:/rsc/img/icon.png</normaloff>:/rsc/img/icon.png</iconset>
+   <iconset resource="../MetOceanViewer.qrc">
+    <normaloff>:/rsc/img/logo_small.png</normaloff>:/rsc/img/logo_small.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
@@ -3666,7 +3666,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
