@@ -1,0 +1,12 @@
+CFLAGS = -DHAVE_UNISTD_H=1 -I. -O2
+OBJS   = bit_pack.o tide_db.o
+
+libtcd.a: $(OBJS)
+	ar cru libtcd.a $(OBJS)
+	ranlib libtcd.a
+
+tcd.h: DOS\tcd.h
+	copy DOS\tcd.h .
+
+%.o : %.c tcd.h
+	gcc $(CFLAGS) -c $< -o $@

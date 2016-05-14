@@ -26,13 +26,8 @@ var CurrentName;
 var CurrentLat;
 var CurrentLon;
 
-window.onresize = function()
-{
-    $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
-}
-
 function returnStationID(){
-    var answer = String(CurrentID)+";"+CurrentName+";"+String(CurrentLon)+";"+String(CurrentLat);
+    var answer = CurrentName+";"+String(CurrentLon)+";"+String(CurrentLat);
     return answer;
 }
 
@@ -72,18 +67,15 @@ function initialize() {
     map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
 
     var layer = new google.maps.FusionTablesLayer({
-                      map: map,
-                      heatmap: { enabled: false },
-                      query: {
-                        select: "col2",
-                        from: "13FX5mgB5H3ET6XXh9MdyViJzO2XXFoJVw6frvh0V",
-                        where: ""
-                      },
-                      options: {
-                        styleId: 2,
-                        templateId: 2
-                      }
-                    });
+        query: {
+            select: '\'Geocodable address\'',
+            from: '13FX5mgB5H3ET6XXh9MdyViJzO2XXFoJVw6frvh0V'
+        },
+        options: {
+            styleId: 2,
+            templateId: 2
+        }
+    });
     layer.setMap(map);
 
     google.maps.event.addListener(layer, 'click', function(event) {
@@ -99,6 +91,7 @@ function initialize() {
             map.fitBounds(results[0].geometry.viewport);
         }
     });
+
 
 }
 

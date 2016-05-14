@@ -1,0 +1,10 @@
+2014-10-25
+
+DJGPP 2.04 versus 2.03:
+
+Only 2.04 has inttypes.h.  libtcd doesn't use the inttypes.h extras, so for
+maximum compatibility leave it with stdint.h.  DJGPP also has io.h but it
+adds no value here.
+
+XTide needs 2.04 for correct time zone handling and a format from inttypes.h,
+but libtcd itself is not so constrained.

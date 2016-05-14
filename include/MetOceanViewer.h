@@ -159,6 +159,8 @@ private slots:
 
     void on_pushButton_hideInfoWindow_toggled(bool checked);
 
+    void on_button_xtide_compute_clicked();
+
 private:
     Ui::MainWindow *ui;
 

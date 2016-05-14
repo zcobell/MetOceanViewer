@@ -1,0 +1,31 @@
+2016-01-25
+
+The pre-generated autoconf-defines.h resulted from running configure with
+Visual Studio Community 2015 with Update 1 and Cygwin as described below.
+
+1.  Do [Windows Logo Thingy Formerly Known as Start Menu] -> All Apps ->
+Visual Studio 2015 (folder) -> VS2015 x64 Native Tools Command Prompt.  To
+prevent file system permissions problems, right click it and run as
+Administrator.
+
+2.  Build zlib, libtcd, and libpng as in build.bat.
+
+3.  At the command prompt, execute C:\cygwin64\Cygwin.bat (or substitute the
+correct path to your Cygwin.bat file).
+
+4.  Run this, changing version numbers as appropriate:
+
+export LIB="${LIB}..\\zlib;..\\libtcd-2.2.7;..\\libpng-1.6.21;"
+export LIBPATH="${LIB}..\\zlib;..\\libtcd-2.2.7;..\\libpng-1.6.21;"
+export INCLUDE="${INCLUDE}..\\zlib;..\\libtcd-2.2.7;..\\libpng-1.6.21;"
+./configure CC="cl /O2 /MD" CXX="cl /O2 /MD" LD="cl /O2 /MD" CPP="cl /E" LDFLAGS="zlib.lib libpng.lib tcd.lib" --disable-dependency-tracking --disable-shared --enable-static --enable-semicolon-pathsep --enable-local-files
+
+5.  Copy out the resulting libxtide/autoconf-defines.h and edit as
+appropriate.
+
+Running 'make' at this point to attempt to complete the build fails at
+linking because of conflicting LDFLAGS needs for xtide.lib versus the tide
+executable and the tests in configure:
+
+ar: zlib.lib: No such file or directory
+Makefile:628: recipe for target 'libxtide.la' failed

@@ -77,7 +77,8 @@ SOURCES += src/main.cpp\
     src/keyhandler.cpp \
     src/mov_qchartview.cpp \
     src/hwm_savedata.cpp \
-    src/update_dialog.cpp
+    src/update_dialog.cpp \
+    src/ui_tab_xtide.cpp
 
 HEADERS  += \
     version.h \

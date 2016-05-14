@@ -1,0 +1,7 @@
+Libtcd itself is public domain.  However, the GNU automake, autoconf,
+libtool, etc. scripts bundled with it as part of its build process are
+not.  Please see their respective licenses.
+
+Libtcd is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.

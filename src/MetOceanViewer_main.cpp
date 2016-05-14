@@ -34,7 +34,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindo
     //Setup UI
     ui->setupUi(this);
     setupMetOceanViewerUI();
-
 }
 
 //Main destructor routine
