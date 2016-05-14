@@ -12,7 +12,7 @@ void MainWindow::on_button_xtide_compute_clicked()
 
     QEventLoop loop;
 
-    QString xTideExe = QString("/home/zcobell/Development/MetOceanViewer/mov_libs/bin/tide -l \""+evalList.value(0)+"\" -b \"2011-01-01 00:00\" -e \"2011-01-02 00:00\" -s \"00:30\" -m m");
+    QString xTideExe = QString("/home/zcobell/Development/MetOceanViewer/mov_libs/bin/tide -l \""+evalList.value(0)+"\" -b \"2011-01-01 00:00\" -e \"2011-01-02 00:00\" -s \"00:30\" -z -m m");
 
     qDebug() << "Running xTide...";
 
