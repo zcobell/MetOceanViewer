@@ -83,7 +83,7 @@
            </size>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="tab_noaa">
            <attribute name="title">
@@ -1009,7 +1009,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Start  Date:</string>
+                    <string>Start Date:</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1644,6 +1644,566 @@
                  </item>
                  <item>
                   <spacer name="horizontalSpacer_7">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_xtide">
+           <attribute name="title">
+            <string>XTide</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_22">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_22">
+              <item>
+               <widget class="QLabel" name="label_xtide_startdate">
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Start Date:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QDateEdit" name="date_xtide_start">
+                <property name="minimumSize">
+                 <size>
+                  <width>115</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>115</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="displayFormat">
+                 <string>M/d/yyyy</string>
+                </property>
+                <property name="calendarPopup">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_xtide_enddate">
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>End Date: </string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QDateEdit" name="date_xtide_end">
+                <property name="minimumSize">
+                 <size>
+                  <width>115</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>115</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="displayFormat">
+                 <string>M/d/yyyy</string>
+                </property>
+                <property name="calendarPopup">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_xtide_compute">
+                <property name="minimumSize">
+                 <size>
+                  <width>110</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>110</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Compute Tides</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_10">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>129</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_34">
+              <item>
+               <widget class="QWebEngineView" name="xtide_map" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>2</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>false</bool>
+                </property>
+                <property name="url" stdset="0">
+                 <url>
+                  <string>qrc:/rsc/html/xtide_maps.html</string>
+                 </url>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="mov_QChartView" name="xtide_graphics" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>2</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_4">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>65</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>65</height>
+               </size>
+              </property>
+              <property name="title">
+               <string>Operations</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_21">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_40">
+                 <item>
+                  <widget class="QComboBox" name="combo_xtide_panto">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>200</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>200</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>Type an address or location to go to that area</string>
+                   </property>
+                   <property name="statusTip">
+                    <string>Type an address or location to go to that area</string>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="editable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="currentIndex">
+                    <number>-1</number>
+                   </property>
+                   <property name="insertPolicy">
+                    <enum>QComboBox::NoInsert</enum>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>Alaska</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Alabama</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Arizona</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Arkansas</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Bermuda</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>California</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Colorado</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Connecticut</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Delaware</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Florida</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Georgia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Guam</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Hawaii</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Idaho</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Illinois</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Indiana</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Iowa</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Kansas</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Kentucky</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Louisiana</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Maine</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Maryland</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Massachusetts</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Michigan</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Minnesota</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Mississippi</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Missouri</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Montana</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Nebraska</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Nevada</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New Hampshire</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New Jersey</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New Mexico</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>New York</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>North Carolina</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>North Dakota</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Ohio</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Oklahoma</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Pago Pago</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Pennsylvania</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Puerto Rico</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Rhode Island</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>South Carolina</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>South Dakota</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Tennessee</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Texas</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Utah</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Vermont</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Virginia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Washington</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>West Virginia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Wisconsin</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Wyoming</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_xtide_savemap">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Save Map and Data</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_xtide_savedata">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Save Data</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_xtide_resetzoom">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Reset Plot Zoom</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_11">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
                    </property>
