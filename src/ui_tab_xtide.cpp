@@ -26,10 +26,17 @@ void MainWindow::plotXTideStation()
 
     //...Call the plotting routine
     ierr = this->thisXTide->plotXTideStation();
-
+    if(ierr!=0)
+    {
+        QApplication::restoreOverrideCursor();
+        QMessageBox::critical(this,"ERROR",this->thisXTide->getErrorString());
+        return;
+    }
 
     //...Clear the wait cursor
     QApplication::restoreOverrideCursor();
+
+    return;
 
 
 }

@@ -41,6 +41,11 @@ XTide::~XTide()
 
 }
 
+QString XTide::getErrorString()
+{
+    return this->xTideErrorString;
+}
+
 
 //...Overall routine for plotting XTide
 int XTide::plotXTideStation()
@@ -56,7 +61,10 @@ int XTide::plotXTideStation()
     //...Get the selected station
     ierr = this->getClickedXTideStation();
     if(ierr!=0)
+    {
+        this->xTideErrorString = "You must select a station";
         return -1;
+    }
 
     //...Calculate the tidal signal
     ierr = this->calculateXTides();
