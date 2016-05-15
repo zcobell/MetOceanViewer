@@ -122,6 +122,9 @@ void mov_QChartView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void mov_QChartView::wheelEvent(QWheelEvent *event)
 {
+    if(this->m_chart==NULL)
+        return;
+
     if(event->delta()>0)
         this->m_chart->zoomIn();
     else if(event->delta()<0)
