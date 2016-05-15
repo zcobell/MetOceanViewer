@@ -23,8 +23,7 @@
 #ifndef USGS_H
 #define USGS_H
 
-#include <mov_errors.h>
-#include <mov_flags.h>
+
 #include <QtPrintSupport>
 #include <QtWebEngineWidgets>
 #include <QNetworkInterface>
@@ -32,14 +31,19 @@
 #include <QtNetwork>
 #include <QVector>
 #include <QtCharts>
-#include <general_functions.h>
-#include <mov_qchartview.h>
+
+#include "general_functions.h"
+#include "mov_qchartview.h"
+#include "mov_errors.h"
+#include "mov_flags.h"
 
 using namespace QtCharts;
 
 class usgs : public QObject
 {
+
     Q_OBJECT
+
 public:
     explicit usgs(QWebEngineView *inMap,
                mov_QChartView *inChart,QRadioButton *inDailyButton,

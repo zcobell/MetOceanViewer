@@ -83,7 +83,7 @@
            </size>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="tab_noaa">
            <attribute name="title">
@@ -1758,6 +1758,30 @@
                </widget>
               </item>
               <item>
+               <widget class="QLabel" name="label_xtide_units">
+                <property name="text">
+                 <string>Units:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="combo_xtide_units">
+                <item>
+                 <property name="text">
+                  <string>meters</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>feet</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="button_xtide_compute">
                 <property name="minimumSize">
                  <size>
@@ -1783,7 +1807,7 @@
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
-                  <width>129</width>
+                  <width>38</width>
                   <height>24</height>
                  </size>
                 </property>

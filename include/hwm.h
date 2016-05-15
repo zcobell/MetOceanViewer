@@ -30,11 +30,12 @@
 #include <QWebEngineView>
 #include <QChartView>
 #include <QtCharts>
-#include <mov_qchartview.h>
+
+#include "mov_qchartview.h"
 
 class hwm : public QObject
 {
-    Q_OBJECT
+
 public:
     explicit hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombobox,
                  QCheckBox *inForceThroughZero, QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,

@@ -36,11 +36,12 @@
 #include <QtCharts>
 
 //...MetOcean Viewer Includes...//
-#include <noaa.h>
-#include <usgs.h>
-#include <hwm.h>
-#include <user_timeseries.h>
-#include <mov_qwebenginepage.h>
+#include "noaa.h"
+#include "usgs.h"
+#include "hwm.h"
+#include "xtide.h"
+#include "user_timeseries.h"
+#include "mov_qwebenginepage.h"
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -178,17 +179,23 @@ private:
 
     void plotNOAAStation();
 
+    void plotXTideStation();
+
     QPointer<noaa> thisNOAA;
 
     QPointer<usgs> thisUSGS;
 
     QPointer<hwm> thisHWM;
 
+    QPointer<XTide> thisXTide;
+
     QPointer<user_timeseries> thisTimeseries;
 
     QPointer<mov_QWebEnginePage> noaa_page;
 
     QPointer<mov_QWebEnginePage> usgs_page;
+
+    QPointer<mov_QWebEnginePage> xtide_page;
 
     QColor DotColorHWM,LineColorRegression,LineColor121Line,LineColorBounds;
 

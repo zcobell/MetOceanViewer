@@ -21,8 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 var map;
-var CurrentID = -1;
-var CurrentName;
+var CurrentName = "none";
 var CurrentLat;
 var CurrentLon;
 
