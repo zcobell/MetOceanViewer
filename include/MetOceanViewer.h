@@ -162,6 +162,10 @@ private slots:
 
     void on_button_xtide_compute_clicked();
 
+    void on_button_xtide_resetzoom_clicked();
+
+    void on_combo_xtide_panto_activated(const QString &arg1);
+
 private:
     Ui::MainWindow *ui;
 

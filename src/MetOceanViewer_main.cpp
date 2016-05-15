@@ -170,6 +170,15 @@ void MainWindow::handleEnterKey()
             //else
                 //on_button_usgs_fetch_clicked();
         }
+        //XTide Tab
+        else if(ui->subtab_livedata->currentIndex()==2)
+        {
+            if(ui->combo_xtide_panto->hasFocus())
+                ui->xtide_map->page()->runJavaScript("panTo('"+ui->combo_xtide_panto->currentText()+"')");
+            //else
+                //on_button_xtide_fetch_clicked();
+
+        }
     }
     //Events for "ENTER" on the timeseries tabs
     else if(ui->MainTabs->currentIndex()==1)

@@ -150,8 +150,6 @@ int XTide::calculateXTides()
     QString startDateString = startDate.toString("yyyy-MM-dd hh:mm");
     QString endDateString   = endDate.toString("yyyy-MM-dd hh:mm");
 
-    qDebug() << startDateString << endDateString;
-
     //...Build a calling string
     QString xTideCmd = this->xTideExe+
                        " -l \""+this->currentStationName+"\""+
