@@ -95,7 +95,7 @@ int XTide::findXTideExe()
 {
     QString installLocation       = QApplication::applicationDirPath();
     QString buildLocationLinux    = QApplication::applicationDirPath()+"/../MetOceanViewer/mov_libs/bin";
-    QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../MetOceanViewer/mov_libs/bin";
+    QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../MetOceanViewer/thirdparty/xtide-2.15.1";
 
     QFile location1(installLocation+"/tide");
     QFile location2(buildLocationLinux+"/tide");
