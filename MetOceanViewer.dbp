@@ -1,7 +1,7 @@
 [DEBREATE-0.7.10]
 <<CTRL>>
 Package: metoceanviewer
-Version: 2.5.3
+Version: 2.6.0
 Section: Science
 Maintainer: Zach Cobell <zcobell@gmail.com>
 Homepage: https://github.com/zcobell/MetOceanViewer
@@ -15,6 +15,10 @@ Description: Multipurpose tool for viewing hydrodynamic data
 <</CTRL>>
 <<FILES>>
 1
+/home/zcobell/Development/MetOceanViewer/mov_libs/lib/libtcd.so.1* -> libtcd.so.1 -> /opt/MetOceanViewer/lib
+/home/zcobell/Development/MetOceanViewer/mov_libs/lib/libxtide.so.1* -> libxtide.so.1 -> /opt/MetOceanViewer/lib
+/home/zcobell/Development/MetOceanViewer/mov_libs/bin/tide* -> tide -> /opt/MetOceanViewer/bin
+/home/zcobell/Development/MetOceanViewer/mov_libs/bin/harmonics.tcd -> harmonics.tcd -> /opt/MetOceanViewer/bin
 /home/zcobell/Development/MetOceanViewer/src/MetOceanViewer* -> MetOceanViewer -> /usr/local/bin
 /home/zcobell/Qt/5.6/gcc_64/lib/libicudata.so.56* -> libicudata.so.56 -> /opt/MetOceanViewer/lib
 /home/zcobell/Qt/5.6/gcc_64/lib/libicuuc.so.56* -> libicuuc.so.56 -> /opt/MetOceanViewer/lib
@@ -52,9 +56,10 @@ Description: Multipurpose tool for viewing hydrodynamic data
 <</SCRIPTS>>
 <<CHANGELOG>>
 <<DEST>>DEFAULT<</DEST>>
-metoceanviewer (2.5.3) ; urgency=low
+metoceanviewer (2.6.0) ; urgency=low
 
-  * 
+  * Add support for XTide
+  * Fix bug that caused crash when rolling mouse over a chart before it was loaded
 
  -- Zach Cobell <zcobell@gmail.com>  Thu, 12 May 2016 16:53:34 -0600
 

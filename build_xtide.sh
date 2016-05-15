@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#...Build script for MetOceanViewer
+#...Build script for libtcd and xTide
 
 #...Step zero: install paths for libraries
 mkdir mov_libs
