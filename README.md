@@ -6,6 +6,7 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 # Feature List
 - [x] Access and view NOAA station data
 - [x] Access and view USGS station data
+- [x] Create tide predictions using XTide
 - [x] Read ADCIRC fort.61 files (when accompanied by station file)
 - [x] Read ADCIRC netCDF formatted files
 - [x] Read/write IMEDS formatted data
@@ -42,6 +43,7 @@ The following external libraries/APIs are used in this software
 - Curl v7.35.0 (http://curl.haxx.se)
 - zlib v1.2.8 (http://www.zlib.net)
 - OpenSSL v1.0.2d (https://www.openssl.org/)
+- XTide (http://www.flaterco.com/xtide/)
 
 # License
 This program conforms to the GNU GPL, Version 3, with the caveat that the name MetOcean Viewer is specific to this project and derivative works should be named differently.
