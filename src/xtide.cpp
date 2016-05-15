@@ -186,10 +186,14 @@ int XTide::parseXTideResponse(QString xTideResponse)
     QStringList tempList;
     QStringList response = xTideResponse.split("\n");
     QDate date;
-    QTime time;
     XTideStationData thisData;
     int hour,minute;
-    double elevation;
+    double elevation,unitConvert;
+
+    if(this->unitSelect->currentIndex()==0)
+        unitConvert = 1.0/3.28084;
+    else
+        unitConvert = 1.0;
 
     this->currentXTideStation.clear();
 
@@ -224,12 +228,9 @@ int XTide::parseXTideResponse(QString xTideResponse)
         date      = QDate::fromString(tempDate,"yyyy-MM-dd");
         elevation = tempElev.toDouble();
 
-        //thisData.date.setTimeSpec(Qt::UTC);
         thisData.date.setDate(date);
         thisData.date.setTime(QTime(hour,minute));
-        thisData.value = elevation;
-
-        qDebug() << thisData.date;
+        thisData.value = elevation*unitConvert;
 
         this->currentXTideStation.push_back(thisData);
 
@@ -270,6 +271,11 @@ int XTide::plotChart()
     endDate   = this->endDateEdit->dateTime();
 
     ierr = this->getDataBounds(ymin,ymax);
+
+    if(this->unitSelect->currentIndex()==1)
+        this->yLabel = "Water Surface Elevation (ft, MLLW)";
+    else
+        this->yLabel = "Water Surface Elevation (m, MLLW)";
 
     //...Create the chart
     this->thisChart = new QChart();
