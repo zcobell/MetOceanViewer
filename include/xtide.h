@@ -53,8 +53,11 @@ public:
 
     //...Public Functions
     int plotXTideStation();
-    int getLoadedXTideStation();
+    QString getLoadedXTideStation();
+    QString getCurrentXTideStation();
     int getClickedXTideStation();
+    int saveXTideData(QString filename, QString format);
+    int saveXTidePlot(QString filename, QString filter);
     QString getErrorString();
 
 private:

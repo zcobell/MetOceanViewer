@@ -75,6 +75,23 @@ int XTide::plotXTideStation()
 }
 
 
+QString XTide::getCurrentXTideStation()
+{
+    QVariant eval = QVariant();
+    this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
+    while(eval.isNull())
+        delayM(5);
+    QStringList evalList = eval.toString().split(";");
+
+    return evalList.value(0);
+}
+
+
+QString XTide::getLoadedXTideStation()
+{
+    return this->currentStationName;
+}
+
 
 //...Get the XTide Station from the map
 int XTide::getClickedXTideStation()
@@ -97,6 +114,7 @@ int XTide::getClickedXTideStation()
 
     return 0;
 }
+
 
 //...Find the xTide executable
 int XTide::findXTideExe()
@@ -345,6 +363,101 @@ int XTide::plotChart()
     this->chart->initializeAxisLimits();
     this->chart->setStatusBar(this->statusBar);
 
+
+    return 0;
+}
+
+
+int XTide::saveXTideData(QString filename, QString format)
+{
+    QFile XTideOutput(filename);
+    QTextStream Output(&XTideOutput);
+    XTideOutput.open(QIODevice::WriteOnly);
+
+    if(format.compare("CSV")==0)
+    {
+        Output << "Station: "+this->currentStationName.replace(" ","_")+"\n";
+        Output << "Datum: MLLW\n";
+        Output << "Units: N/A\n";
+        Output << "\n";
+        for(int i=0;i<this->currentXTideStation.length();i++)
+        {
+            Output << this->currentXTideStation[i].date.toString("MM/dd/yyyy")+","+
+                      this->currentXTideStation[i].date.toString("hh:mm")+","+
+                      QString::number(this->currentXTideStation[i].value)+"\n";
+        }
+    }
+    else if(format.compare("IMEDS")==0)
+    {
+        Output << "% IMEDS generic format - Water Level\n";
+        Output << "% year month day hour min sec value\n";
+        Output << "XTide   UTC    MLLW\n";
+        Output << "XTide_"+this->currentStationName.replace(" ","_")+"   "+QString::number(this->currentXTideLat)+
+                  "   "+QString::number(this->currentXTideLon)+"\n";
+        for(int i=0;i<this->currentXTideStation.length();i++)
+        {
+            Output << this->currentXTideStation[i].date.toString("yyyy")+"    "+
+                        this->currentXTideStation[i].date.toString("MM")+"    "+
+                        this->currentXTideStation[i].date.toString("dd")+"    "+
+                        this->currentXTideStation[i].date.toString("hh")+"    "+
+                        this->currentXTideStation[i].date.toString("mm")+"    "+
+                                                        "00" +"    "+
+                        QString::number(this->currentXTideStation[i].value)+"\n";
+        }
+
+    }
+    XTideOutput.close();
+
+    return 0;
+}
+
+
+int XTide::saveXTidePlot(QString filename, QString filter)
+{
+    if(filter == "PDF (*.pdf)")
+    {
+        QPrinter printer(QPrinter::HighResolution);
+        printer.setPageSize(QPrinter::Letter);
+        printer.setResolution(400);
+        printer.setOrientation(QPrinter::Landscape);
+        printer.setOutputFormat(QPrinter::PdfFormat);
+        printer.setOutputFileName(filename);
+
+        QPainter painter(&printer);
+        painter.setRenderHint(QPainter::Antialiasing,true);
+        painter.begin(&printer);
+
+        //...Page 1 - Chart
+        this->chart->render(&painter);
+
+        //...Page 2 - Map
+        printer.newPage();
+        QPixmap renderedMap = this->map->grab();
+        QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
+        if(mapScaled.height()>printer.height())
+            mapScaled = renderedMap.scaledToHeight(printer.height());
+        int cw = (printer.width()-mapScaled.width())/2;
+        int ch = (printer.height()-mapScaled.height())/2;
+        painter.drawPixmap(cw,ch,mapScaled.width(),mapScaled.height(),mapScaled);
+
+        painter.end();
+    }
+    else if(filter == "JPG (*.jpg *.jpeg)")
+    {
+        QFile outputFile(filename);
+        QSize imageSize(this->map->size().width()+this->chart->size().width(),this->map->size().height());
+        QRect chartRect(this->map->size().width(),0,this->chart->size().width(),this->chart->size().height());
+
+        QImage pixmap(imageSize, QImage::Format_ARGB32);
+        pixmap.fill(Qt::white);
+        QPainter imagePainter(&pixmap);
+        imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+        this->map->render(&imagePainter,QPoint(0,0));
+        this->chart->render(&imagePainter,chartRect);
+
+        outputFile.open(QIODevice::WriteOnly);
+        pixmap.save(&outputFile,"JPG",100);
+    }
 
     return 0;
 }

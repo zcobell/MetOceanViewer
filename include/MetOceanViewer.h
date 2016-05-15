@@ -166,6 +166,10 @@ private slots:
 
     void on_combo_xtide_panto_activated(const QString &arg1);
 
+    void on_button_xtide_savemap_clicked();
+
+    void on_button_xtide_savedata_clicked();
+
 private:
     Ui::MainWindow *ui;
 
