@@ -19,6 +19,12 @@ cd deployment
 #...Grab the MetOceanViewer executable
 cp ../../../build-MetOceanViewer-Desktop_Qt_5_6_0_MSVC2015_64bit-Release/release/MetOcean_Viewer.exe .
 
+#...Grab the XTide executable
+cp ../../thirdparty/xtide-2.15.1/tide.exe .
+
+#...Grab the database
+cp ../../thirdparty/xtide-2.15.1/harmonics.tcd .
+
 #...Grab some of the third party libraries
 cp ../../thirdparty/netcdf/bin_64/*.dll .
 cp ../../thirdparty/openssl/bin_64/*.dll .

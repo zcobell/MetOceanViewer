@@ -68,10 +68,15 @@ int XTide::plotXTideStation()
 
     //...Calculate the tidal signal
     ierr = this->calculateXTides();
+    if(ierr!=0)
+        return -1;
 
     //...Plot the chart
     ierr = this->plotChart();
+    if(ierr!=0)
+        return -1;
 
+    return 0;
 }
 
 
@@ -119,7 +124,7 @@ int XTide::getClickedXTideStation()
 //...Find the xTide executable
 int XTide::findXTideExe()
 {
-    QString installLocation       = QApplication::applicationDirPath();
+    QString installLocation       = QApplication::applicationDirPath().replace(" ","\ ");
     QString buildLocationLinux    = QApplication::applicationDirPath()+"/../MetOceanViewer/mov_libs/bin";
     QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../MetOceanViewer/thirdparty/xtide-2.15.1";
 
@@ -127,6 +132,7 @@ int XTide::findXTideExe()
     QFile location2(buildLocationLinux+"/tide");
     QFile location3(buildLocationWindows+"/tide.exe");
     QFile location4(buildLocationLinux+"/tide.exe");
+    QFile location5(installLocation+"/tide.exe");
 
     if(location1.exists())
     {
@@ -156,6 +162,13 @@ int XTide::findXTideExe()
         return 0;
     }
 
+    if(location5.exists())
+    {
+        this->xTideExe = installLocation+"/tide.exe";
+        this->xTideHarmFile = installLocation+"/harmonics.tcd";
+        return 0;
+    }
+
     return -1;
 }
 
@@ -176,15 +189,26 @@ int XTide::calculateXTides()
     QString startDateString = startDate.toString("yyyy-MM-dd hh:mm");
     QString endDateString   = endDate.toString("yyyy-MM-dd hh:mm");
 
-    //...Build a calling string
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("HFILE_PATH",this->xTideHarmFile);
+
+    //...Build a calling string. For windows, quote the executable
+    //   to avoid issues with path names like "Program Files". We'll
+    //   assume Linux users aren't dumb enough to do such a thing
+#ifdef _WIN32
+    QString xTideCmd = "\""+this->xTideExe.replace(" ","\ ")+"\""
+                       " -l \""+this->currentStationName+"\""+
+                       " -b \""+startDateString+"\""+
+                       " -e \""+endDateString+"\""+
+                       " -s \"00:30\" -z -m m";
+#else
     QString xTideCmd = this->xTideExe+
                        " -l \""+this->currentStationName+"\""+
                        " -b \""+startDateString+"\""+
                        " -e \""+endDateString+"\""+
                        " -s \"00:30\" -z -m m";
+#endif
 
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert("HFILE_PATH",this->xTideHarmFile);
     QProcess xTideRun(this);
     xTideRun.setEnvironment(env.toStringList());
     xTideRun.start(xTideCmd);
@@ -194,7 +218,10 @@ int XTide::calculateXTides()
     //...Check the error code
     ierr = xTideRun.exitCode();
     if(ierr!=0)
+    {
+        this->xTideErrorString = "XTide did not run successfully";
         return -1;
+    }
 
     //...Grab the output from XTide and send to the parse routine
     ierr = this->parseXTideResponse(xTideRun.readAllStandardOutput());
