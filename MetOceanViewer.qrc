@@ -24,5 +24,7 @@
         <file>js/timeseries_maps.js</file>
         <file>js/hwm_map.js</file>
         <file>js/usgs_maps.js</file>
+        <file>html/xtide_maps.html</file>
+        <file>js/xtide_maps.js</file>
     </qresource>
 </RCC>

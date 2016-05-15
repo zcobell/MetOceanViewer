@@ -64,6 +64,17 @@ void MainWindow::setupMetOceanViewerUI()
     ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
 
 
+
+    //-------------------------------------------//
+    //Set up the XTide tab for the user
+    ui->date_xtide_start->setDateTime(QDateTime::currentDateTime().addDays(-7));
+    ui->date_xtide_end->setDateTime(QDateTime::currentDateTime());
+    this->xtide_page = new mov_QWebEnginePage;
+    ui->xtide_map->setPage(this->xtide_page);
+    ui->xtide_map->load(QUrl("qrc:/rsc/html/xtide_maps.html"));
+
+
+
     //-------------------------------------------//
     //Set up the time series tab for the user
 

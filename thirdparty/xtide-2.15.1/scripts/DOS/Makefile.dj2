@@ -1,0 +1,73 @@
+# $Id: Makefile.dj2 6280 2016-02-23 00:33:39Z flaterco $
+# Makefile for DOS + LFN + DJGPP 2.05
+
+# Point this to the dir containing libtcd.a and tcd.h.
+LIBTCDPATH = ../libtcd-2.2.7
+# libpng and libz come from djgpp/current/v2tk.
+
+# FIXME another version string to update every time.
+CFLAGS = -I$(LIBTCDPATH) -I. -Ilibxtide -O2 -std=gnu++0x  \
+         -DPACKAGE_STRING=\"XTide\ 2.15.1\ DOS\" \
+         -DCODESET=\"CP437\"
+
+LDFLAGS = -L$(LIBTCDPATH) -Llibxtide
+
+LOBJS = \
+  libxtide/Amplitude.o \
+  libxtide/Angle.o \
+  libxtide/Banner.o \
+  libxtide/Calendar.o \
+  libxtide/CalendarFormC.o \
+  libxtide/CalendarFormH.o \
+  libxtide/CalendarFormL.o \
+  libxtide/CalendarFormNotC.o \
+  libxtide/CalendarFormT.o \
+  libxtide/ClientSideFont.o \
+  libxtide/Colors.o \
+  libxtide/Constituent.o \
+  libxtide/ConstituentSet.o \
+  libxtide/Coordinates.o \
+  libxtide/CurrentBearing.o \
+  libxtide/Date.o \
+  libxtide/Global.o \
+  libxtide/Graph.o \
+  libxtide/HarmonicsFile.o \
+  libxtide/HarmonicsPath.o \
+  libxtide/Interval.o \
+  libxtide/MetaField.o \
+  libxtide/Nullable.o \
+  libxtide/NullableInterval.o \
+  libxtide/NullablePredictionValue.o \
+  libxtide/Offsets.o \
+  libxtide/PixelatedGraph.o \
+  libxtide/PredictionValue.o \
+  libxtide/RGBGraph.o \
+  libxtide/Settings.o \
+  libxtide/Skycal.o \
+  libxtide/Speed.o \
+  libxtide/Station.o \
+  libxtide/StationIndex.o \
+  libxtide/StationRef.o \
+  libxtide/SubordinateStation.o \
+  libxtide/SVGGraph.o \
+  libxtide/TTYGraph.o \
+  libxtide/TideEvent.o \
+  libxtide/TideEventsOrganizer.o \
+  libxtide/Timestamp.o \
+  libxtide/Units.o \
+  libxtide/Year.o \
+  libxtide/Dstr.o \
+  libxtide/xml_l.o \
+  libxtide/xml_y.o
+
+tide.exe: libxtide/libxtide.a tide.o
+	gpp $(LDFLAGS) -o tide.exe tide.o -lxtide -ltcd -lpng -lz -lm
+
+libxtide/libxtide.a: $(LOBJS)
+	ar scru libxtide/libxtide.a $(LOBJS)
+
+libxtide/autoconf-defines.h: scripts/DOS/autoconf-defines.h
+	copy scripts\DOS\autoconf-defines.h libxtide
+
+%.o : %.cc libxtide/autoconf-defines.h
+	gpp $(CFLAGS) -c $< -o $@

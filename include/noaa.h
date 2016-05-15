@@ -34,16 +34,18 @@
 #include <QWebEngineView>
 #include <QPrinter>
 
-#include <mov_errors.h>
-#include <mov_flags.h>
-#include <general_functions.h>
-#include <mov_qchartview.h>
+#include "mov_errors.h"
+#include "mov_flags.h"
+#include "general_functions.h"
+#include "mov_qchartview.h"
 
 using namespace QtCharts;
 
 class noaa : public QObject
 {
+
     Q_OBJECT
+
 public:
     //...Constructor
     explicit noaa(QWebEngineView *inMap, mov_QChartView *inChart,

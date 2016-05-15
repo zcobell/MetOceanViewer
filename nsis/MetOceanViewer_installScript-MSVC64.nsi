@@ -154,6 +154,8 @@ Section "Install"
 	
     File deployment\QtWebEngineProcess.exe
     File deployment\MetOcean_Viewer.exe
+    File deployment\tide.exe
+    File deployment\harmonics.tcd
      
     # define uninstaller name
     WriteUninstaller $INSTDIR\uninstaller.exe
@@ -209,6 +211,8 @@ Section "Uninstall"
     Delete $INSTDIR\mov.ico
     Delete $INSTDIR\MetOcean_Viewer.exe
     Delete $INSTDIR\QtWebEngineProcess.exe
+    Delete $INSTDIR\tide.exe
+    Delete $INSTDIR\harmonics.tcd
     Delete /REBOOTOK $INSTDIR\uninstaller.exe
     RMDir $INSTDIR
     

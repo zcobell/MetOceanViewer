@@ -1,0 +1,249 @@
+.TH xttpd 8 "2016-01-25"  "XTide 2"
+.SH NAME
+xttpd \- Harmonic tide clock and tide predictor (web server)
+.SH SYNOPSIS
+.B xttpd
+[\fBport\fP]
+[\fB-cf ``format-string''\fP]
+[\fB-dc color\fP]
+[\fB-Dc color\fP]
+[\fB-df ``format-string''\fP]
+[\fB-ec color\fP]
+[\fB-el y|n\fP]
+[\fB-em pSsMm\fP]
+[\fB-fc color\fP]
+[\fB-fg color\fP]
+[\fB-ga aspect\fP]
+[\fB-gh pixels\fP]
+[\fB-gs d|l|s\fP]
+[\fB-gt y|n\fP]
+[\fB-gw pixels\fP]
+[\fB-hf ``format-string''\fP]
+[\fB-in y|n\fP]
+[\fB-lb y|n\fP]
+[\fB-lw pixels\fP]
+[\fB-mc color\fP]
+[\fB-Mc color\fP]
+[\fB-nc color\fP]
+[\fB-ou y|n\fP]
+[\fB-pb y|n\fP]
+[\fB-pi days\fP]
+[\fB-tf ``format-string''\fP]
+[\fB-tl y|n\fP]
+[\fB-u ft|m\fP]
+[\fB-v\fP]
+[\fB-z y|n\fP]
+.SH DESCRIPTION
+XTide is a package that provides tide and current predictions in a wide
+variety of formats. Graphs, text listings, and calendars can be generated,
+or a tide clock can be provided on your desktop.
+.LP
+XTide can work with X-windows, plain text terminals, or the web. This is
+accomplished with three separate programs: the interactive interface
+(\fBxtide\fP), the non-interactive or command line interface
+(\fBtide\fP), and the web interface (\fBxttpd\fP).
+.LP
+.B xttpd
+is an XTide web server. It provides web-based access to XTide's tide
+predictions by allowing a web browser to speak directly to the XTide
+program in HTTP.
+.B xttpd
+can replace
+.B httpd
+or it can co-exist with one.
+.LP
+At installation time,
+.B xttpd
+can be configured to integrate with
+.B
+systemd
+or it can be used in conventional
+.B init
+mode.
+.LP
+In conventional mode, if you run
+.B xttpd
+with no command line arguments, it will assume that it is
+replacing
+.B httpd
+and try to bind port 80. If you want it to co-exist with an
+existing server, or if you do not have privilege to get port 80, give it
+the port number as the first command line argument:
+.RS
+% xttpd 8080
+.RE
+You will then need to link it up as http://www.wherever.org:8080/ instead
+of just http://www.wherever.org/, but otherwise, no damage done.
+Similarly, if you wish to bind a specific address, you can
+specify that as the first argument:
+.RS
+% xttpd 127.0.0.2
+.RE
+If you need to specify both address and port number, separate the two
+with a slash, like this:
+.RS
+% xttpd 127.0.0.2/8080
+.RE
+IPv6 addresses and hostnames are also accepted for the address.
+.LP
+When systemd is used, the port and address must instead be configured in
+systemd configuration files.
+.LP
+Once the port is established,
+.B xttpd
+will try to set its UID and GID to values that were specified at
+compile time.  If it is unable to do this, it will log failure
+messages to syslog and then exit.  Consequently, if it is to be
+started by someone other than root, that user's UID and GID must be
+configured at compile time.  Instructions for doing this are available
+at
+.BR http://www.flaterco.com/xtide/installation.html .
+.LP
+For a complete
+discussion of the command line options and a detailed explanation of the
+XTide package, please see the verbose documentation at
+.BR http://www.flaterco.com/xtide/ .
+.SH CONFIGURATION
+Unless a configuration file
+.B /etc/xtide.conf
+is supplied, you must set the environment variable
+.B HFILE_PATH
+to point to the harmonics
+files that should have been installed along with the
+.B xtide
+program.  Example:
+.RS
+export HFILE_PATH=/usr/local/share/xtide/harmonics.tcd
+.RE
+If a configuration file is used, the first line should consist of the
+colon-separated list of harmonics files (e.g. the
+.B HFILE_PATH
+line above without the "export HFILE_PATH=" part).
+The environment variable takes precedence over the configuration file.
+.LP
+Set the environment variable
+.B XTTPD_FEEDBACK 
+to change the mail feedback address for
+.B xttpd. 
+.SH OPTIONS
+.TP
+.B -cf ``format-string''
+.BR strftime (3)
+style format string for printing days in calendars (default %a %d).
+.TP
+.B -dc color
+Daytime background color in tide graphs (default SkyBlue).
+.TP
+.B -Dc color
+Color of datum line in tide graphs (default white).
+.TP
+.B -df ``format-string''
+.BR strftime (3)
+style format string for printing dates (default %Y-%m-%d).  For calendars see
+.BR -cf .
+.TP
+.B -ec color
+Foreground in tide graphs during outgoing tide (default SeaGreen).
+.TP
+.B -el y|n
+Select whether or not to draw datum and middle-level lines in tide graphs
+(default n).
+.IP
+The National Ocean Service (NOS) defines both Mean Sea Level (MSL) and Mean
+Tide Level (MTL) in terms of averages taken over observations.  The
+middle-level line is drawn at the midpoint of the theoretical tidal range,
+which usually corresponds to the mathematical mean level of the predictions.
+This approximates both MSL and MTL, but, strictly speaking, is equivalent to
+neither.  Moreover, subordinate station offsets may shift the actual mean so
+that it no longer falls at the midpoint of the tidal range.  The datum line
+is drawn at the zero level of the predictions, which usually corresponds to
+the station's benchmark, but this too can be rendered inaccurate by
+subordinate station offsets.
+.TP
+.B -em pSsMm
+Events to suppress (p = phase of moon, S = sunrise, s = sunset, M = moonrise, m
+= moonset), or x to suppress none.  E.g, to suppress all sun and moon events,
+set eventmask to the value pSsMm.
+.TP
+.B -fc color
+Foreground in tide graphs during incoming tide (default Blue).
+.TP
+.B -fg color
+Color of text and other notations (default black).
+.TP
+.B -ga aspect
+Aspect for tide graphs (default 1.0).  This
+controls not the width or height of the window but rather the relative scaling
+of the X and Y axes in the plot of the tide curve.
+.TP
+.B -gh pixels
+Height for tide graphs (default 312 pixels).
+.TP
+.B -gs d|l|s
+Style of graphs and clocks.  Valid values: d (default), l (line), s
+(semitransparent).
+.TP
+.B -gt y|n
+Select whether or not to label tenths of units in tide graphs
+(default n).
+.TP
+.B -gw pixels
+Width for tide graphs (default 960 pixels).
+.TP
+.B -hf ``format-string''
+.BR strftime (3)
+style format string for printing hour labels on time axis (default %l).
+.TP
+.B -in y|n
+Select whether or not to use inferred values for some constituents (default n).
+For expert use only.
+.TP
+.B -lb y|n
+Select whether or not calendar mode inserts a line break before prediction
+values (default n).
+.TP
+.B -lw pixels
+Width of line in graph styles l and s
+(default 2.5 pixels).
+.TP
+.B -mc color
+Color of mark line in graphs (default red).
+.TP
+.B -Mc color
+Color of middle-level line in tide graphs (default yellow).
+.TP
+.B -nc color
+Nighttime background color in tide graphs (default DeepSkyBlue).
+.TP
+.B -ou y|n
+Select whether or not to print numbers with no ft/m/kt
+(default n). Where possible, adds a header line stating the units and datum.
+.TP
+.B -pb y|n
+Select whether or not calendar mode inserts a page
+break and repeats the station header for each month (default y).
+.TP
+.B -pi days
+Number of days of predictions to generate when no end time is specified (default 4).
+.TP
+.B -tf ``format-string''
+.BR strftime (3)
+style format string for printing times (default %l:%M %p %Z).
+.TP
+.B -tl y|n
+Select whether or not to draw depth lines on top of the tide graph
+(default n).
+.TP
+.B -u ft|m
+Preferred units of length (default no preference).
+.TP
+.B -v
+Print version string and exit.
+.TP
+.B -z y|n
+Select whether or not to coerce all time zones to UTC (default n).
+.SH "SEE ALSO"
+.BR tide (1),
+.BR xtide (1),
+.BR http://www.flaterco.com/xtide/ .
+.sp

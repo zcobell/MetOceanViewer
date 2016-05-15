@@ -1,0 +1,96 @@
+#! /bin/sh
+#
+# xttpd        Startup script for the XTTPD Server
+#
+# chkconfig: - 85 15
+# description: Harmonic tide clock and tide predictor server
+# processname: xttpd
+# config: /etc/sysconfig/xttpd
+# pidfile: /var/run/xttpd.pid
+#
+
+PATH=/usr/local/sbin:/sbin:/bin:/usr/sbin:/usr/bin
+CONFIG=/etc/sysconfig/xttpd
+
+LOCK=/var/lock/subsys/xttpd
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+[ -f $CONFIG ] && . $CONFIG
+
+DAEMON=/usr/sbin/xttpd
+PROG=xttpd
+RETVAL=0
+
+start(){
+    echo -n $"Starting $PROG: "
+    if ! test -f "$DAEMON" ; then 
+	echo -n $"$DAEMON is not set."
+	failure
+	echo
+	RETVAL=1
+	return $RETVAL
+    fi
+    if test -z "$PORT" ; then
+	echo -n $"PORT environment is not set."
+	failure
+	echo
+	RETVAL=1
+	return $RETVAL
+    fi
+
+    if test "$XTTPD_FEEDBACK"; then
+	daemon $DAEMON $PORT XTTPD_FEEDBACK=$XTTPD_FEEDBACK HOME=$HOME
+	RETVAL=$?
+    else
+	daemon $DAEMON $PORT HOME=$HOME
+	RETVAL=$?
+    fi
+    [ $RETVAL -eq 0 ] && touch $LOCK
+    echo
+    return $RETVAL
+}
+
+stop(){
+    echo -n $"Stopping $PROG: "
+    killproc $DAEMON
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && rm -f $LOCK
+    echo
+    return $RETVAL
+}
+
+restart(){
+    stop
+    start
+}
+
+status_xttpd(){
+    status $PROG
+}
+
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    force-reload|restart)
+	restart
+	;;
+    condrestart)
+	[ -f $LOCK ] && restart
+	;;
+    status)
+	status_xttpd
+	;;
+    *)
+	echo "Usage: /etc/init.d/$PROG {start|stop|restart|force-reload}"
+	exit 1
+    ;;
+esac
+
+exit $?
+

@@ -1,0 +1,459 @@
+$Id: CodingConventions.txt 6199 2016-01-14 23:39:45Z flaterco $
+
+Warning
+-------
+
+As of 2012, particularly with the issuance of C++11, these coding conventions
+have become problematically obsolete in some areas.  Annotations are
+indicated with >>.
+
+Preface
+-------
+
+These coding conventions exist in the following context, the world as
+it is in late 2006:
+
+1.  The current version of standard C++ is ISO/IEC 14882:2003.
+      >> Now it's ISO/IEC 14882:2011.
+
+2.  Slackware Linux is shipping GCC 3.4.6 as its default compiler.
+The current version of GCC is 4.1.1.  GCC 4.1 includes most or all of
+the nonbinding TR1 ("Technical Report 1") extensions to ISO/IEC
+14882:2003.  GCC 3.4.6 doesn't.
+      >> XTide 2.13 requires GCC version 4.4 or newer.
+      >> Older versions might work again with 2.13.1 but not tested.
+
+3.  TR1 adds shared_ptr, tuples, and unordered associative containers
+(a.k.a. hash-maps), but nothing else of particular relevance to XTide
+2.9.  The only significant use of shared_ptr in XTide would be as a
+workaround for the inability to store auto_ptrs in STL containers.
+This application of shared_ptr would in turn be obsoleted by the Boost
+pointer container library, which solves the problem more elegantly.
+      >> Fixed in C++11.
+
+4.  The current version of the Boost C++ Libraries is 1.33.1 (December
+2005).  The Boost libraries contain many extensions not included in
+TR1.  The pointer container library would be applicable in XTide 2.9
+to eliminate most remaining cases of explicit memory management.
+Boost's date_time library has some overlap with XTide's temporal
+classes but is not a substitute for them.
+
+As much as practical, XTide deliberately refrains from depending upon
+any extensions to ISO/IEC 14882:2003 (even those built into GCC) and
+minimizes its dependencies on external packages that would need to be
+installed.  Following are the only extensions known to be used in the
+default configuration.
+
+- The long long int data type, without which it is impractical to
+handle times outside of the 1970-2037 epoch.
+      >> No longer an extension in C++11.
+
+- The #warning preprocessor directive.  If not supported, the warnings
+become errors, which is OK.
+      >> Not OK; had to work around for Visual C++.
+
+- The SCNx8 (probably "hhx") scanf format macro, without which the
+code for parsing RGB color specifications is intolerably obfuscated.
+      >> Not OK; caused a memory corruption error in Visual C++.
+
+>> XTide 2.13 uses extended initializer lists, which are new in C++11.
+>> Made optional in XTide 2.13.1 due to continued Visual C++ non-support.
+
+
+XTide Cleanup2006 coding conventions
+------------------------------------
+
+I.  Conformance
+
+  1.  Adherence to coding conventions is more important for public
+  methods, functions and variables than for protected methods and
+  variables.
+
+  2.  Adherence to coding conventions is more important for protected
+  methods and variables than for functions and variables with static
+  or local visibility.
+
+  3.  Adherence to coding conventions is least important for the
+  internals of third-party code and incorporated legacy code.
+
+II.  Naming
+
+  1.  The names of classes, namespaces, and enums begin with a capital
+  letter.  The names of methods, functions, variables, and enum values
+  begin with a lowercase letter.  To distinguish words within names,
+  CamelCase is preferred.
+
+    1a.  Exception:  If a name contains within it a proper name or
+    acronym, fudge as needed to preserve the correct capitalization
+    (e.g., print_iCalendar instead of printIcalendar).
+
+    1b.  Exception:  To avoid clashes with names defined by X11, all
+    X11-related classes shall be prefixed by "xx" in lieu of "X".
+
+  2.  If a public name clashes with a protected name, the protected
+  name shall be prefixed by an underscore.
+
+  3.  If a public parameter name clashes with a public variable, the
+  parameter name shall be suffixed by an underscore.
+
+  4.  If a parameter is used only to contain a return value and its
+  value on invocation is irrelevant, its name may be suffixed by _out
+  to clarify this behavior.
+
+  5.  Scalar typedefs either shall be named something_t consistent
+  with the libc convention or shall begin with a lowercase letter and
+  use CamelCase.  Typedefs of classes shall begin with a capital
+  letter and use CamelCase.
+
+  6.  Where XTide code interfaces with third-party and/or legacy code
+  that does not adhere to these conventions, naming shall adhere to
+  the principle of least astonishment.
+
+III.  Parameter passing protocol
+
+  1.  Instances of simple structs and classes that behave like scalar
+  values may be passed by value.  Examples include Amplitude, Angle,
+  CurrentBearing, Date, Interval, NullableInterval,
+  NullablePredictionValue, PredictionValue, Speed, Timestamp and Year.
+
+  2.  Other structs and classes should be passed by const reference or
+  pointer unless a value is specifically needed.
+
+  3.  When there are multiple returns and no particular reason to
+  choose any one of them over any other to be the return value,
+  declare the method void and use _out parameters for all returns.  If
+  there is one that deserves to be the return value above all others
+  it is probably a status indicator (success or failure).
+
+  4.  _out parameters should be at the beginning or end of the
+  parameter list, not buried in the middle.
+
+IV.  Visibility
+
+  1.  XTide is largely maintained by a single author.  Consequently,
+  it is not necessary to prevent every possible misuse of a class.
+  Full accessorization to protect class variables from external
+  modification is done where convenient and where extra protection is
+  warranted, but need not be done in cases where it would merely
+  produce more code.
+
+  2.  Methods that do not depend on the state of an instance in any
+  way should instead be functions, preferably static functions.
+
+  3.  Global variables, functions, and enums should be declared within
+  a namespace.
+
+    3a.  Exception:  Data type operators like < and ==.
+      >> And similar overloaded operations like stringWidth.
+
+    3b.  Exception:  Variables and functions that must be in the
+    default namespace for integration with third-party and legacy
+    code.
+
+      >> When libxtide was split off in XTide 2.14 it took ownership of the
+      >> Global namespace and it no longer made sense for the few things in
+      >> xxGlobal to be merged into that.
+
+  4.  Do not define meaningless classes just to avoid having global
+  variables and functions.  It just creates extra code to always have
+  an instance of that class around.
+
+V.  Choice of scalar data types
+
+  1.  Float is considered harmful because problems caused by
+  inadequate precision are difficult to diagnose.  Always use double.
+
+  2.  For general use, default word length integers (int and unsigned
+  int) are preferred, even if a shorter integer type would suffice.
+  (Note:  At some point in the future, this usage might migrate to
+  int_fastX_t.  For now, it is assumed that plain old ints are more
+  portable.)
+
+  3.  In contexts where 16 bits might be insufficient, long ints
+  should be used.  (Note:  At some point in the future, this usage
+  might migrate to int_fast32_t.  For now, it is assumed that plain
+  old long ints are more portable.)
+
+  4.  Variables that should never hold a negative value (i.e., most
+  counters and indices) should be declared unsigned if possible.
+
+    4a.  Exception:  Unsigned values should not be used in cases where
+    losing the sign would mask a failure.
+
+    4b.  Exception:  Unsigned values should not be used if it would
+    necessitate a special case for 0 (e.g., if logic within a loop
+    refers to element i-1).
+
+    4c.  Exception:  When interfacing with external functions that use
+    signed values for no apparent reason, signed values may be used
+    consistently to avoid mixed-mode computation.
+
+  5.  For consistency with libc, char is preferred to either signed or
+  unsigned char when working with text.
+      >> Mistake!  char should be unsigned.
+
+VI.  Choice of nonscalar data types
+
+  1.  All homebrew data structures that involve some kind of
+  self-referential node (linked lists, trees, and every possible
+  variant) should be reimplemented using standard templates.
+
+  2.  "Spaghetti monster" data structures for which there is no
+  standard substitute should be refactored.  Usually they are trying
+  to do several jobs at once that would be more cleanly performed by
+  several separate data structures.
+
+  3.  Use of the Standard Template Library is encouraged in general,
+  but exceptions are noted below.
+
+  4.  std::vector implements dangerous, unchecked C-language semantics
+  on operator [].  Use SafeVector instead.
+
+     The at() method throws std::out_of_range if index >= size().  It
+     does not appear in the venerable and freely available SGI
+     Standard Template Library Programmer's Guide (1994?), but it's
+     there in ISO/IEC 14882:1998, supplementing rather than replacing
+     the dangerous unchecked operator[].
+
+     IMO there is no good reason for operator[] to be unsafe and thus
+     no reason for at().  If you want C, you know where to find it.
+
+      >> SafeVector should delegate to at().
+
+  5.  Never use std::string.  Always use Dstr, or (in rare cases)
+  SafeVector<char>.
+
+  6.  std::map is problematic because there is no const [] operator.
+  Use BetterMap instead.
+
+     The STL included with g++ 4.1.0 provides an at() method in both
+     const and non-const versions that throws std::out_of_range if the
+     key is not matched.  However, at() is not in ISO/IEC 14882:2003
+     and it's not in the STL provided with g++ 3.4.6.
+
+VII.  #defines
+
+  1.  #defines are a fact of life in a C/C++ environment.  Standard
+  headers are already full of them.  Nevertheless, the addition of new
+  #defines should be approached with caution.
+
+  2.  #defines do have their uses.
+
+    2a.  #defines are an appropriate mechanism to receive input from
+    the configure script, including versioning information and
+    --enable-X and --with-X configure options.
+
+    2b.  #defines of actual code macros, as opposed to constant
+    values, are occasionally useful to condense overly wordy or
+    repetitive code.
+
+    2c.  It is sometimes necessary to use a #define instead of a const
+    variable because the value is needed at compile time.  Const
+    variables can't be initialized in a header file unless they are of
+    integral or enumeration type.  #defines can expand to literals of
+    any type and can even be stringified (turned into string literals)
+    at compile time.
+
+    2d.  The typelessness of #defines is occasionally useful when it
+    is desirable to apply the default literal typing rules in
+    different contexts.
+
+  3.  In other cases, const variables are generally preferable.
+
+  4.  Global #defines should not use short names that are liable to
+  collide with other names throughout the program.
+
+VIII.  Coding practices
+
+  1.  Use const.
+
+    1a.  For input parameters, err or the side of constness.
+
+    1b.  For return values that are pointers or references, err on the
+    side of mutability.  Returning const references everywhere
+    complicates integration with standard library functions whose
+    parameters should be declared const but aren't.  As XTide is
+    largely maintained by a single author, the risk of improper access
+    to private class variables is not worrisome.
+
+    1c.  For return values that are just values, use const.  This rule
+    requires extended explanation; see the Appendix below.
+
+    1d.  A method that changes the state of an instance is not const,
+    even if said changes are completely invisible outside of the
+    instance.
+
+    1e.  Be aware that each level of indirection might require another
+    const.  E.g., char const * const * const argv is not unreasonable.
+
+  2.  Never cast away const.
+      >> Except when passing character strings to legacy libraries that are
+      >> never going to fix their APIs.  The compiler warnings have nagged me
+      >> to death.
+
+  3.  Namespaces should be specified explicitly, never "use"d, because
+  qualifiers like Global:: and Error:: are an aid to understanding.
+      >> Impractical not to use namespace libxtide.
+
+  4.  Prefix ++ and -- are preferred to postfix ++ and -- because the
+  postfix operators are believed to create unnecessary temporaries.
+
+  5.  Explicit memory management (especially the need to free and
+  delete things) should be avoided as much as possible.
+
+    5a.  Never new or malloc an array when you can use an auto
+    SafeVector instead.  ISO 14882:2003 Section 23.2.4 states that the
+    elements of a vector are stored contiguously, so in a pinch they
+    are convertible to C arrays.
+
+    5b.  Use std::auto_ptr where appropriate to handle deletion of
+    objects that are allocated with "new."  (It's no good for arrays.)
+      >> auto_ptr is now deprecated, but is not going to disappear from XTide
+      >> any time soon.
+
+    5c.  Exception:  Currently there is no good way to manage
+    collections of non-assignable objects.  Standardization of
+    something equivalent to the Boost pointer container library will
+    solve this issue.
+      >> Fixed in C++11.
+
+    5d.  Exception:  Currently there is no good way to manage char**
+    constructs expected by legacy library functions.
+
+  6.  Don't make all operators return a reference to "this" just
+  because that's what everyone always does.  If the references are
+  never used, let the operators return void.
+
+  7.  Parameters for which the supplied value is always the same
+  global variable should be eliminated.
+
+  8.  Temporaries and implicit conversions are not necessarily evil;
+  i.e., it is not always necessary to provide a method that works on
+  const char* if you already have a reasonably efficient one that
+  takes const Dstr&.
+
+  9.  Where there is the temptation to create an improper inheritance
+  relationship, implicit conversion should be used instead.
+
+  10.  Never use C++ streams.  Use only C I/O.  (This rule would be
+  inappropriate for many applications, but XTide has been implemented
+  with streams and without, and it was simpler to get the desired
+  results from printf than from <<.  Moreover, the original streams
+  library got deprecated soon after I built to it.)
+
+  11.  Use of "friend" should be minimized.
+
+  12.  STL algorithms and the associated infrastructure of functors,
+  adaptors, and so on have many productive uses, but replacing every
+  simple for-loop with an algorithm call isn't one of them.  Function
+  objects are obfuscatory--a price worth paying in those cases where
+  an STL algorithm is really needed, but needless overhead where a
+  simple for-loop would do.  This issue goes away when you add lambda
+  functions, but standard C++ doesn't have those yet.  (Boost does.)
+
+IX.  Formatting
+
+  1.  Styling and formatting shall be automated as soon as somebody
+  writes a version of GNU indent that does something reasonable with
+  C++.
+
+  2.  Until then,
+    2a.  Brace style is K&R with the exception that opening function
+         braces are not placed on a separate line.
+    2b.  Indentation is by 2 characters.
+    2c.  Nominal line length is 80 characters.
+    2d.  Two blank lines between function and method definitions.
+
+X.  Grandfathered legacy code
+
+  1.  Values of Error::TideError are all capital letters with
+  underscores between words.  (These were originally patterned after
+  VAX/VMS error codes.)
+
+  2.  The XML parser uses nonstandard data structures.  In fact the
+  XML parser has no right to exist since XML parsing libraries are now
+  ubiquitous.
+
+  3.  Dstr is shared by many projects and it will not be changing just
+  for XTide's coding conventions.
+
+  4.  Skycal and wvsrtv are large chunks of third-party code and I'm
+  not going to rewrite them.
+
+XI.  Optimization
+
+  1.  Optimization comes last.
+
+  2.  Do not create inline methods during development.  Wait until the
+  end, do a performance profile, and then (and only then) inline
+  *only* those methods that are truly getting hammered.  (N.B., in
+  some cases, circular header file dependencies can make inlining
+  impossible.)
+      >> Link-time optimization is a game-changer.
+
+  3.  Optimizing header file inclusions to speed up compiles is a nice
+  concept, but if you have more than a few circular dependencies it's
+  a waste of time to even try.
+
+
+Appendix:  Why Return Values Are Const
+--------------------------------------
+
+Rule VIII.1c papers over an astonishing inconsistency in the C++
+language.  Consider the following program, which gets its result
+through the dubious process of modifying a temporary.
+
+  Year currentYear () { return 2007; }
+
+  int main (int argc, char **argv) {
+    printf ("Next year is %u\n", unsigned(++currentYear()));
+    return 0;
+  }
+
+If Year is defined as a builtin type (as below), the program will not
+compile.
+
+  typedef unsigned Year;
+  // Results in "error: non-lvalue in increment"
+
+However, if Year is instead a class with equivalent behavior (as
+below), the program will compile, run, and give the expected output of
+2008.
+
+  class Year {
+  public:
+    Year (unsigned year): _year(year)  {}
+    operator unsigned ()               { return _year; }
+    Year operator++ ()                 { ++_year; return *this; }
+  protected:
+    unsigned _year;
+  };
+
+It hardly ever makes sense to modify a temporary.  Declaring return
+values const prevents it.  Unfortunately, consting return values is
+sure to confuse the reader regardless how it is implemented.
+
+If return values are made const only when the underlying type is a
+class, the resulting interface looks wrong.
+
+  typedef double Multiplier;
+  [...]
+
+  const Interval        timeAdd()       const;
+  const PredictionValue levelAdd()      const;
+  Multiplier            levelMultiply() const;
+  // ^^^  Multipliers are mutable, but the others are not???
+
+OTOH, consting returns that use builtin types causes astonishment in
+those cases where there are no object-returning methods nearby for
+comparison.
+
+  virtual const bool isBanner() const;
+  //      ^^^^^   Pointless!  What idiot wrote this?
+
+XTide 2.9 follows the liberal approach and uses const even in those
+cases where it is redundant.  The consting of builtin return types
+will initially astonish the reader, but a consistent rule simplifies
+maintenance.  E.g., one need not change the signatures of methods all
+over the place when the underlying representation of Year changes from
+object to unsigned or vice-versa.

@@ -26,11 +26,6 @@ var CurrentName;
 var CurrentLat;
 var CurrentLon;
 
-window.onresize = function()
-{
-    $('#plot_area').highcharts().setSize($(window).width()/2,$(window).height(), false);
-}
-
 function returnStationID(){
     var answer = String(CurrentID)+";"+CurrentName+";"+String(CurrentLon)+";"+String(CurrentLat);
     return answer;

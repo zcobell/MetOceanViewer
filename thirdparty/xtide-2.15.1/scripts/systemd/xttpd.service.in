@@ -1,0 +1,15 @@
+[Unit]
+Description=Harmonic tide clock and tide predictor (web server)
+Documentation=man:xttpd(8)
+Wants=xttpd.socket
+
+[Service]
+User=@SYSTEMD_USER@
+Group=@SYSTEMD_GROUP@
+Type=simple
+EnvironmentFile=-/etc/sysconfig/xttpd
+ExecStart=@SBINDIR@/xttpd
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target

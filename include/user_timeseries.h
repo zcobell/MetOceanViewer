@@ -32,12 +32,13 @@
 #include <QPrinter>
 #include <QTableWidget>
 #include <QDateTime>
-#include <general_functions.h>
-#include <mov_qchartview.h>
+
+#include "general_functions.h"
+#include "mov_qchartview.h"
 
 class user_timeseries : public QObject
 {
-    Q_OBJECT
+
 public:
     explicit user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                              QCheckBox *inYAxisCheck, QDateEdit *inStartDate,

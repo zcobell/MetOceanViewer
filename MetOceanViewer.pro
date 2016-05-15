@@ -40,44 +40,14 @@ SOURCES += src/main.cpp\
     src/MetOceanViewer_main.cpp \
     src/setupMetOceanViewerUI.cpp \
     src/noaa.cpp \
-    src/noaa_fetchNOAAData.cpp \
-    src/noaa_formatNOAAResponse.cpp \
-    src/noaa_readNOAAResponse.cpp \
-    src/noaa_retrieveproduct.cpp \
     src/usgs.cpp \
-    src/usgs_fetchUSGSData.cpp \
-    src/usgs_formastUSGSInstantResponse.cpp \
-    src/usgs_readUSGSDataFinished.cpp \
-    src/usgs_formatUSGSDailyResponse.cpp \
-    src/usgs_getTimezone.cpp \
-    src/noaa_prepNOAAResponse.cpp \
-    src/noaa_getDataBounds.cpp \
-    src/noaa_generateLabels.cpp \
-    src/noaa_plotChart.cpp \
-    src/usgs_plotUSGS.cpp \
-    src/usgs_getDataBounds.cpp \
-    src/usgs_saveData.cpp \
-    src/usgs_setGet.cpp \
-    src/noaa_getSet.cpp \
-    src/noaa_saveData.cpp \
-    src/usgs_plotting.cpp \
-    src/noaa_plotting.cpp \
     src/user_timeseries.cpp \
-    src/user_timeseries_getSet.cpp \
-    src/user_timeseries_readFile.cpp \
-    src/user_timeseries_processData.cpp \
-    src/user_timeseries_stationList.cpp \
     src/hwm.cpp \
-    src/hwm_processhwm.cpp \
-    src/hwm_plotmap.cpp \
-    src/hwm_plotregression.cpp \
-    src/hwm_readhwms.cpp \
-    src/hwm_linearregression.cpp \
-    src/user_timeseries_plotdata.cpp \
     src/keyhandler.cpp \
     src/mov_qchartview.cpp \
-    src/hwm_savedata.cpp \
-    src/update_dialog.cpp
+    src/update_dialog.cpp \
+    src/ui_tab_xtide.cpp \
+    src/xtide.cpp
 
 HEADERS  += \
     version.h \
@@ -94,7 +64,8 @@ HEADERS  += \
     include/keyhandler.h \
     include/mov_qchartview.h \
     include/mov_qwebenginepage.h \
-    include/update_dialog.h
+    include/update_dialog.h \
+    include/xtide.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
