@@ -1785,13 +1785,13 @@
                <widget class="QPushButton" name="button_xtide_compute">
                 <property name="minimumSize">
                  <size>
-                  <width>110</width>
+                  <width>130</width>
                   <height>27</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>110</width>
+                  <width>130</width>
                   <height>27</height>
                  </size>
                 </property>
@@ -4250,7 +4250,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
