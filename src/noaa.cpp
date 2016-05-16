@@ -245,7 +245,7 @@ int noaa::getDataBounds(double &ymin, double &ymax)
     int i,j;
 
     ymin = DBL_MAX;
-    ymax = DBL_MIN;
+    ymax = -DBL_MAX;
 
     for(i=0;i<this->CurrentNOAAStation.length();i++)
     {
