@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include "xtide.h"
+#include <float.h>
 
 //...Constructor
 XTide::XTide(QWebEngineView *inMap, mov_QChartView *inChart, QDateEdit *inStartDateEdit,
@@ -300,12 +301,12 @@ int XTide::parseXTideResponse(QString xTideResponse)
     return 0;
 }
 
-int XTide::getDataBounds(double min, double max)
+int XTide::getDataBounds(double &min, double &max)
 {
     int j;
 
     min =  DBL_MAX;
-    max =  DBL_MIN;
+    max =  -DBL_MAX;
 
     for(j=0;j<this->currentXTideStation.length();j++)
     {

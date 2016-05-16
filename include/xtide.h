@@ -64,7 +64,7 @@ private:
     int findXTideExe();
     int calculateXTides();
     int plotChart();
-    int getDataBounds(double min, double max);
+    int getDataBounds(double &min, double &max);
     int parseXTideResponse(QString xTideResponse);
 
     //Structures
