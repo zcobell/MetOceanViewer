@@ -55,8 +55,8 @@ function initialize() {
 
     window.LastInfo = -1;
     var myOptions = {
-      center: new google.maps.LatLng(29.5, -91.5),
-      zoom: 4,
+      center: new google.maps.LatLng(45.0, -100.0),
+      zoom: 3,
       mapTypeId: google.maps.MapTypeId.ROADMAP,
       panControl: true,
       streetViewControl: false,
@@ -82,15 +82,6 @@ function initialize() {
         CurrentLat = event.row.Latitude.value;
         CurrentLon = event.row.Longitude.value;
     });
-
-    var geocoder = new google.maps.Geocoder();
-    geocoder.geocode( { 'address': "United States"}, function(results, status) {
-        if (status == google.maps.GeocoderStatus.OK) {
-            map.setCenter(results[0].geometry.location);
-            map.fitBounds(results[0].geometry.viewport);
-        }
-    });
-
 
 }
 
