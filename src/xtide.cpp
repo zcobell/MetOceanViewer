@@ -127,12 +127,14 @@ int XTide::findXTideExe()
     QString installLocation       = QApplication::applicationDirPath().replace(" ","\ ");
     QString buildLocationLinux    = QApplication::applicationDirPath()+"/../MetOceanViewer/mov_libs/bin";
     QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../MetOceanViewer/thirdparty/xtide-2.15.1";
+    QString appLocationMacOSX     = QApplication::applicationDirPath();
 
     QFile location1(installLocation+"/tide");
     QFile location2(buildLocationLinux+"/tide");
     QFile location3(buildLocationWindows+"/tide.exe");
     QFile location4(buildLocationLinux+"/tide.exe");
     QFile location5(installLocation+"/tide.exe");
+    QFile location6(appLocationMacOSX+"/XTide/bin/tide");
 
     if(location1.exists())
     {
@@ -169,6 +171,14 @@ int XTide::findXTideExe()
         return 0;
     }
 
+    if(location6.exists())
+    {
+        this->xTideExe = appLocationMacOSX+"/XTide/bin/tide";
+        this->xTideHarmFile = appLocationMacOSX+"/XTide/bin/harmonics.tcd";
+        return 0;
+    }
+
+    this->xTideErrorString = "Could not find the XTide executable";
     return -1;
 }
 

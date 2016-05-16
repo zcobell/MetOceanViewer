@@ -139,6 +139,17 @@ LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
 INCLUDEPATH += /Users/zcobell/Software/netCDF/include
 ICON = img/mov.icns
 
+#...Files to be included in the bundle
+XTIDEBIN.files = $$PWD/mov_libs/bin/tide \
+                 $$PWD/mov_libs/bin/harmonics.tcd
+XTIDEBIN.path  = Contents/MacOS/XTide/bin
+
+XTIDELIB.files = $$PWD/mov_libs/lib/libtcd.dylib \
+                 $$PWD/mov_libs/lib/libxtide.dylib
+XTIDELIB.path  = Contents/MacOS/XTide/lib
+
+QMAKE_BUNDLE_DATA += XTIDEBIN XTIDELIB
+
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
 QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
