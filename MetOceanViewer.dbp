@@ -7,7 +7,7 @@ Maintainer: Zach Cobell <zcobell@gmail.com>
 Homepage: https://github.com/zcobell/MetOceanViewer
 Priority: optional
 Architecture: amd64
-Depends: libgl1-mesa-dev, libglapi-mesa, libglu1-mesa, libmysqlclient18, libpq5, unixodbc, libsqlite3-0, netcdf-bin
+Depends: openssl, libgl1-mesa-dev, libglapi-mesa, libglu1-mesa, libmysqlclient18, libpq5, unixodbc, libsqlite3-0, netcdf-bin
 Description: Multipurpose tool for viewing hydrodynamic data
  MetOceanViewer provides an interface for viewing hydrodynamic data and downloading data from NOAA and USGS. The interface is mostly geared toward ADCIRC, however, the generic IMEDS format is available.
  .
