@@ -159,8 +159,8 @@ void MainWindow::handleEnterKey()
         {
             if(ui->Combo_NOAAPanTo->hasFocus())
                 ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
-            //else
-                //this->plotNOAAStation();
+            else
+                this->plotNOAAStation();
         }
         //USGS Tab
         else if(ui->subtab_livedata->currentIndex()==1)

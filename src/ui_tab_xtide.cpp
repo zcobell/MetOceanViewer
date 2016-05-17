@@ -12,11 +12,6 @@ void MainWindow::on_button_xtide_compute_clicked()
 void MainWindow::plotXTideStation()
 {
     int ierr;
-    QString error;
-
-
-    //...Display wait cursor
-    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //...Create an xTide object
     if(!this->thisXTide.isNull())
@@ -27,18 +22,8 @@ void MainWindow::plotXTideStation()
 
     //...Call the plotting routine
     ierr = this->thisXTide->plotXTideStation();
-    if(ierr!=0)
-    {
-        QApplication::restoreOverrideCursor();
-        QMessageBox::critical(this,"ERROR",this->thisXTide->getErrorString());
-        return;
-    }
-
-    //...Clear the wait cursor
-    QApplication::restoreOverrideCursor();
 
     return;
-
 
 }
 

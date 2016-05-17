@@ -43,8 +43,6 @@ void MainWindow::on_button_usgs_fetch_clicked()
 {
     int ierr;
 
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
     //...Create a new USGS object
     if(!thisUSGS.isNull())
         delete thisUSGS;
@@ -55,7 +53,6 @@ void MainWindow::on_button_usgs_fetch_clicked()
     connect(thisUSGS,SIGNAL(usgsError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     ierr = thisUSGS->plotNewUSGSStation();
-    QApplication::restoreOverrideCursor();
 
     return;
 }

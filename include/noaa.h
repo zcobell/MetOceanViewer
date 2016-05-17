@@ -67,6 +67,10 @@ public:
 
 private slots:
     void handleLegendMarkerClicked();
+    void javascriptDataReturned(QString);
+
+signals:
+    void noaaError(QString);
 
 private:
 
@@ -80,6 +84,7 @@ private:
     int generateLabels();
     int plotChart();
     int setNOAAStation();
+    int setAsyncNOAAStation();
     int getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude);
 
     //...Structures

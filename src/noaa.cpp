@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include "noaa.h"
+#include "javascriptAsyncReturn.h"
 
 noaa::noaa(QWebEngineView *inMap, mov_QChartView *inChart,
            QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
@@ -360,6 +361,68 @@ int noaa::getNOAAStation(QString &NOAAStationName, double &longitude, double &la
     return evalList.value(0).toInt();
 }
 
+int noaa::setAsyncNOAAStation()
+{
+    javascriptAsyncReturn *javaReturn = new javascriptAsyncReturn(this);
+    connect(javaReturn,SIGNAL(valueChanged(QString)),this,SLOT(javascriptDataReturned(QString)));
+    this->map->page()->runJavaScript("returnStationID()",[javaReturn](const QVariant &v){javaReturn->setValue(v);});
+    return 0;
+}
+
+void noaa::javascriptDataReturned(QString data)
+{
+    int ierr;
+    QStringList evalList;
+
+    evalList = data.split(";");
+
+    this->CurrentNOAAStationName = evalList.value(1).simplified();
+    this->CurrentNOAALat = evalList.value(3).toDouble();
+    this->CurrentNOAALon = evalList.value(2).toDouble();
+    this->NOAAMarkerID = evalList.value(0).toInt();
+
+    if(this->NOAAMarkerID==-1)
+    {
+        emit noaaError("You must select a station");
+        return;
+    }
+
+    //...Grab the options from the UI
+    this->StartDate = this->startDateEdit->dateTime();
+    this->StartDate.setTime(QTime(0,0,0));
+    this->EndDate = this->endDateEdit->dateTime();
+    this->EndDate = this->EndDate.addDays(1);
+    this->EndDate.setTime(QTime(0,0,0));
+    this->Units = this->noaaUnits->currentText();
+    this->Datum = this->noaaDatum->currentText();
+    this->ProductIndex = this->noaaProduct->currentIndex();
+
+    //Update status
+    statusBar->showMessage("Downloading data from NOAA...",0);
+
+    //...Generate the javascript calls in this array
+    ierr = this->fetchNOAAData();
+
+    //...Update the status bar
+    statusBar->showMessage("Plotting the data from NOAA...");
+
+    //...Generate prep the data for plotting
+    ierr = this->prepNOAAResponse();
+
+    //...Check for valid data
+    if(this->CurrentNOAAStation[0].length()<5)
+    {
+        emit noaaError(this->ErrorString[0]);
+        return;
+    }
+
+    //...Plot the chart
+    ierr = this->plotChart();
+
+    statusBar->clearMessage();
+
+    return;
+}
 
 int noaa::plotChart()
 {
@@ -478,44 +541,8 @@ int noaa::plotNOAAStation()
 {
 
     //...get the latest station
-    int ierr = this->setNOAAStation();
-
-    //...Grab the options from the UI
-    this->StartDate = this->startDateEdit->dateTime();
-    this->StartDate.setTime(QTime(0,0,0));
-    this->EndDate = this->endDateEdit->dateTime();
-    this->EndDate = this->EndDate.addDays(1);
-    this->EndDate.setTime(QTime(0,0,0));
-    this->Units = this->noaaUnits->currentText();
-    this->Datum = this->noaaDatum->currentText();
-    this->ProductIndex = this->noaaProduct->currentIndex();
-
-    //Update status
-    statusBar->showMessage("Downloading data from NOAA...",0);
-
-    //...Generate the javascript calls in this array
-    ierr = this->fetchNOAAData();
-
-    //...Update the status bar
-    statusBar->showMessage("Plotting the data from NOAA...");
-
-    //...Generate prep the data for plotting
-    ierr = this->prepNOAAResponse();
-
-    //...Check for valid data
-    if(this->CurrentNOAAStation[0].length()<5)
-    {
-        this->NOAAErrorString = this->ErrorString[0];
-        return -1;
-    }
-
-    //...Plot the chart
-    ierr = this->plotChart();
-
-    statusBar->clearMessage();
-
+    int ierr = this->setAsyncNOAAStation();
     return 0;
-
 }
 
 
