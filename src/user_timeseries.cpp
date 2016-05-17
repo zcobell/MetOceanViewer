@@ -20,9 +20,10 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <user_timeseries.h>
-#include <general_functions.h>
-#include <mov_flags.h>
+#include "user_timeseries.h"
+#include "general_functions.h"
+#include "mov_flags.h"
+#include "javascriptAsyncReturn.h"
 #include <netcdf.h>
 
 user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
@@ -252,142 +253,25 @@ int user_timeseries::getMultipleMarkersFromMap()
     return 0;
 }
 
-QString user_timeseries::getErrorString()
+
+int user_timeseries::getAsyncClickedMarkerID()
 {
-    return this->errorString;
-}
-
-
-int user_timeseries::processData()
-{
-    int ierr,i,j,nRow;
-    double x,y;
-    QStringList TempList;
-    QString javascript,StationName,TempFile,TempStationFile,InputFileType;
-    ADCNC TempAdcircNC;
-    ADCASCII TempAdcircAscii;
-    QDateTime ColdStart;
-
-    nRow = table->rowCount();
-    map->reload();
-
-    j = 0;
-
-    for(i=0;i<nRow;i++)
-    {
-        TempFile = table->item(i,6)->text();
-        TempList = TempFile.split(".");
-        InputFileType = TempList.value(TempList.length()-1).toUpper();
-        this->fileData.resize(j+1);
-        if(InputFileType=="IMEDS")
-        {
-            ierr = this->readIMEDS(TempFile,this->fileData[j]);
-            if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
-                return -1;
-            }
-        }
-        else if(InputFileType=="NC")
-        {
-            ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
-            ierr = this->readADCIRCnetCDF(TempFile,TempAdcircNC);
-            if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
-                return -1;
-            }
-            ierr = this->NetCDF_to_IMEDS(TempAdcircNC,ColdStart,this->fileData[j]);
-            if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
-                return -1;
-            }
-        }
-        else if(InputFileType=="61"||InputFileType=="62"||InputFileType=="71"||InputFileType=="72")
-        {
-            ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
-            TempStationFile = table->item(i,9)->text();
-            ierr = this->readADCIRCascii(TempFile,TempStationFile,TempAdcircAscii);
-            if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
-                return -1;
-            }
-            ierr = this->ADCIRC_to_IMEDS(TempAdcircAscii,ColdStart,this->fileData[j]);
-            if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
-                return -1;
-            }
-        }
-        else
-        {
-            this->errorString = "Invalid file format";
-            return -1;
-        }
-
-        if(fileData[j].success)
-            j = j + 1;
-        else
-            return -1;
-
-    }
-
-    //...Build a unique set of timeseries data
-    ierr = this->getUniqueStationList(fileData,StationXLocs,StationYLocs);
-    if(ierr!=0)
-    {
-        this->errorString = "Error building the station list";
-        return -1;
-    }
-    ierr = this->buildRevisedIMEDS(fileData,StationXLocs,StationYLocs,fileDataUnique);
-    if(ierr!=0)
-    {
-        this->errorString = "Error building the unique dataset";
-        return -1;
-    }
-
-    //...Check that the page is finished loading
-    QEventLoop loop;
-    connect(map->page(),SIGNAL(loadFinished(bool)),&loop,SLOT(quit()));
-    loop.exec();
-
-    //...Add the markers to the map
-    map->page()->runJavaScript("allocateData("+QString::number(fileDataUnique.length())+")");
-    for(i=0;i<fileDataUnique[0].nstations;i++)
-    {
-        x=-1.0;
-        y=-1.0;
-        StationName = "NONAME";
-
-        //Check that we aren't sending a null location to
-        //the backend
-        for(j=0;j<fileDataUnique.length();j++)
-        {
-            if(!fileDataUnique[j].station[i].isNull)
-            {
-                StationName = fileDataUnique[j].station[i].StationName;
-                x = fileDataUnique[j].station[i].longitude;
-                y = fileDataUnique[j].station[i].latitude;
-                break;
-            }
-        }
-
-        javascript = "SetMarkerLocations("+QString::number(i)+
-                ","+QString::number(x)+","+
-                QString::number(y)+",'"+
-                StationName+"')";
-        map->page()->runJavaScript(javascript);
-    }
-    map->page()->runJavaScript("AddToMap()");
 
     return 0;
 }
 
 
-int user_timeseries::plotData()
+int user_timeseries::getAsyncMultipleMarkersFromMap()
 {
+    javascriptAsyncReturn *javaReturn = new javascriptAsyncReturn(this);
+    connect(javaReturn,SIGNAL(valueChanged(QString)),this,SLOT(javascriptDataReturned(QString)));
+    this->map->page()->runJavaScript("getMarkers()",[javaReturn](const QVariant &v){javaReturn->setValue(v);});
+    return 0;
+}
+
+void user_timeseries::javascriptDataReturned(QString data)
+{
+
     int i,j,k,ierr,seriesCounter,colorCounter;
     qint64 TempDate;
     qreal TempValue;
@@ -407,19 +291,31 @@ int user_timeseries::plotData()
     QDateTime now = QDateTime::currentDateTime();
     qint64 offset = now.offsetFromUtc()*1000;
 
-    //...Get the current marker selections, multiple if user ctrl+click selects
-    this->getMultipleMarkersFromMap();
-    if(this->selectedStations.length()>16)
+    QString tempString;
+    QStringList dataList = data.split(",");
+    tempString = dataList.value(0);
+    int nMarkers = tempString.toInt();
+
+    if(nMarkers>0)
     {
-        this->errorString = "Too many markers are selected. A maximum of 16 is allowed.";
-        return -1;
+        this->selectedStations.resize(nMarkers);
+        for(i=1;i<=nMarkers;i++)
+        {
+            tempString = dataList.value(i);
+            this->selectedStations[i-1] = tempString.toInt();
+        }
+    }
+    else
+    {
+        emit timeseriesError("No stations selected");
+        return;
     }
 
     addXList.resize(fileDataUnique.length());
     for(i=0;i<fileDataUnique.length();i++)
         addXList[i] = table->item(i,4)->text().toDouble();
 
-    ierr = this->setMarkerID();
+    this->markerID = this->selectedStations[0];
     ierr = this->getDataBounds(ymin,ymax,minDate,maxDate,addXList);
 
     this->thisChart = new QChart();
@@ -564,6 +460,149 @@ int user_timeseries::plotData()
     this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
     this->chart->initializeAxisLimits();
     this->chart->setStatusBar(this->statusBar);
+
+    return;
+}
+
+QString user_timeseries::getErrorString()
+{
+    return this->errorString;
+}
+
+
+int user_timeseries::processData()
+{
+    int ierr,i,j,nRow;
+    double x,y;
+    QStringList TempList;
+    QString javascript,StationName,TempFile,TempStationFile,InputFileType;
+    ADCNC TempAdcircNC;
+    ADCASCII TempAdcircAscii;
+    QDateTime ColdStart;
+
+    nRow = table->rowCount();
+    map->reload();
+
+    j = 0;
+
+    for(i=0;i<nRow;i++)
+    {
+        TempFile = table->item(i,6)->text();
+        TempList = TempFile.split(".");
+        InputFileType = TempList.value(TempList.length()-1).toUpper();
+        this->fileData.resize(j+1);
+        if(InputFileType=="IMEDS")
+        {
+            ierr = this->readIMEDS(TempFile,this->fileData[j]);
+            if(ierr!=0)
+            {
+                this->errorString = "Error reading file: "+TempFile;
+                return -1;
+            }
+        }
+        else if(InputFileType=="NC")
+        {
+            ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
+            ierr = this->readADCIRCnetCDF(TempFile,TempAdcircNC);
+            if(ierr!=0)
+            {
+                this->errorString = "Error reading file: "+TempFile;
+                return -1;
+            }
+            ierr = this->NetCDF_to_IMEDS(TempAdcircNC,ColdStart,this->fileData[j]);
+            if(ierr!=0)
+            {
+                this->errorString = "Error reading file: "+TempFile;
+                return -1;
+            }
+        }
+        else if(InputFileType=="61"||InputFileType=="62"||InputFileType=="71"||InputFileType=="72")
+        {
+            ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
+            TempStationFile = table->item(i,9)->text();
+            ierr = this->readADCIRCascii(TempFile,TempStationFile,TempAdcircAscii);
+            if(ierr!=0)
+            {
+                this->errorString = "Error reading file: "+TempFile;
+                return -1;
+            }
+            ierr = this->ADCIRC_to_IMEDS(TempAdcircAscii,ColdStart,this->fileData[j]);
+            if(ierr!=0)
+            {
+                this->errorString = "Error reading file: "+TempFile;
+                return -1;
+            }
+        }
+        else
+        {
+            this->errorString = "Invalid file format";
+            return -1;
+        }
+
+        if(fileData[j].success)
+            j = j + 1;
+        else
+            return -1;
+
+    }
+
+    //...Build a unique set of timeseries data
+    ierr = this->getUniqueStationList(fileData,StationXLocs,StationYLocs);
+    if(ierr!=0)
+    {
+        this->errorString = "Error building the station list";
+        return -1;
+    }
+    ierr = this->buildRevisedIMEDS(fileData,StationXLocs,StationYLocs,fileDataUnique);
+    if(ierr!=0)
+    {
+        this->errorString = "Error building the unique dataset";
+        return -1;
+    }
+
+    //...Check that the page is finished loading
+    QEventLoop loop;
+    connect(map->page(),SIGNAL(loadFinished(bool)),&loop,SLOT(quit()));
+    loop.exec();
+
+    //...Add the markers to the map
+    map->page()->runJavaScript("allocateData("+QString::number(fileDataUnique.length())+")");
+    for(i=0;i<fileDataUnique[0].nstations;i++)
+    {
+        x=-1.0;
+        y=-1.0;
+        StationName = "NONAME";
+
+        //Check that we aren't sending a null location to
+        //the backend
+        for(j=0;j<fileDataUnique.length();j++)
+        {
+            if(!fileDataUnique[j].station[i].isNull)
+            {
+                StationName = fileDataUnique[j].station[i].StationName;
+                x = fileDataUnique[j].station[i].longitude;
+                y = fileDataUnique[j].station[i].latitude;
+                break;
+            }
+        }
+
+        javascript = "SetMarkerLocations("+QString::number(i)+
+                ","+QString::number(x)+","+
+                QString::number(y)+",'"+
+                StationName+"')";
+        map->page()->runJavaScript(javascript);
+    }
+    map->page()->runJavaScript("AddToMap()");
+
+    return 0;
+}
+
+
+int user_timeseries::plotData()
+{
+
+    //...Get the current marker selections, multiple if user ctrl+click selects
+    this->getAsyncMultipleMarkersFromMap();
 
     return 0;
 }

@@ -189,7 +189,7 @@ void MainWindow::handleEnterKey()
        }
        else if(ui->subtab_timeseries->currentIndex()==1)
        {
-           //on_button_plotTimeseriesStation_clicked();
+           on_button_plotTimeseriesStation_clicked();
        }
     }
     else if(ui->MainTabs->currentIndex()==2)

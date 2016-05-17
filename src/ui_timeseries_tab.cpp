@@ -284,6 +284,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                                            ui->timeseries_graphics,
                                            ui->statusBar,
                                            this->randomColors,this);
+    connect(thisTimeseries,SIGNAL(timeseriesError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     ierr = thisTimeseries->processData();
     if(ierr!=0)
@@ -333,17 +334,7 @@ void MainWindow::on_button_fitTimeseries_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_plotTimeseriesStation_clicked()
 {
-
-    //Get the marker ID from the page
-    int markerID = thisTimeseries->getClickedMarkerID();
-
-    //Catch false marker number
-    if(markerID==-1)return;
-
     int ierr = thisTimeseries->plotData();
-    if(ierr!=0)
-        QMessageBox::critical(this,"ERROR",thisTimeseries->getErrorString());
-
     return;
 }
 //-------------------------------------------//

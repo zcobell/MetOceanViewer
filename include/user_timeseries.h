@@ -39,6 +39,8 @@
 class user_timeseries : public QObject
 {
 
+    Q_OBJECT
+
 public:
     explicit user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                              QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
@@ -56,11 +58,16 @@ public:
     int plotData();
     int getCurrentMarkerID();
     int getClickedMarkerID();
+    int getAsyncClickedMarkerID();
     int saveImage(QString filename, QString filter);
     QString getErrorString();
 
 private slots:
     void handleLegendMarkerClicked();
+    void javascriptDataReturned(QString);
+
+signals:
+    void timeseriesError(QString);
 
 private:
 
@@ -127,6 +134,7 @@ private:
     int buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut);
     int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
     int getMultipleMarkersFromMap();
+    int getAsyncMultipleMarkersFromMap();
 
     //...Private Variables
     int markerID;
