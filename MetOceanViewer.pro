@@ -47,7 +47,8 @@ SOURCES += src/main.cpp\
     src/mov_qchartview.cpp \
     src/update_dialog.cpp \
     src/ui_tab_xtide.cpp \
-    src/xtide.cpp
+    src/xtide.cpp \
+    src/javascriptAsyncReturn.cpp
 
 HEADERS  += \
     version.h \
@@ -65,7 +66,8 @@ HEADERS  += \
     include/mov_qchartview.h \
     include/mov_qwebenginepage.h \
     include/update_dialog.h \
-    include/xtide.h
+    include/xtide.h \
+    include/javascriptAsyncReturn.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

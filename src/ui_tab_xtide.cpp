@@ -23,6 +23,7 @@ void MainWindow::plotXTideStation()
         delete this->thisXTide;
     this->thisXTide = new XTide(ui->xtide_map,ui->xtide_graphics,ui->date_xtide_start,
                                 ui->date_xtide_end,ui->combo_xtide_units,ui->statusBar,this);
+    connect(thisXTide,SIGNAL(xTideError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     //...Call the plotting routine
     ierr = this->thisXTide->plotXTideStation();

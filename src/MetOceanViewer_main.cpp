@@ -167,16 +167,16 @@ void MainWindow::handleEnterKey()
         {
             if(ui->combo_usgs_panto->hasFocus())
                 ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
-            //else
-                //on_button_usgs_fetch_clicked();
+            else
+                on_button_usgs_fetch_clicked();
         }
         //XTide Tab
         else if(ui->subtab_livedata->currentIndex()==2)
         {
             if(ui->combo_xtide_panto->hasFocus())
                 ui->xtide_map->page()->runJavaScript("panTo('"+ui->combo_xtide_panto->currentText()+"')");
-            //else
-                //on_button_xtide_fetch_clicked();
+            else
+                on_button_xtide_compute_clicked();
 
         }
     }
@@ -197,5 +197,12 @@ void MainWindow::handleEnterKey()
         if(ui->subtab_hwm->currentIndex()==1)
             on_button_processHWM_clicked();
     }
+    return;
+}
+
+
+void MainWindow::throwErrorMessageBox(QString errorString)
+{
+    QMessageBox::critical(this,"ERROR",errorString);
     return;
 }

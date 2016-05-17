@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include "usgs.h"
+#include "javascriptAsyncReturn.h"
 
 usgs::usgs(QWebEngineView *inMap,
            mov_QChartView *inChart, QRadioButton *inDailyButton,
@@ -110,15 +111,30 @@ void usgs::handleLegendMarkerClicked()
 
 int usgs::fetchUSGSData()
 {
+
+    //...Get the current marker
+    this->setAsyncMarkerSelection();
+
+    return 0;
+}
+
+void usgs::javascriptDataReturned(QString data)
+{
+
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QString endDateString1,startDateString1;
     QString endDateString2,startDateString2;
     QString RequestURL;
+    QStringList evalList;
     QEventLoop loop;
-    int ierr;
+    int i,ierr;
 
-    //...Get the current marker
-    this->setMarkerSelection();
+    //...Station information
+    evalList = data.split(";");
+    this->USGSMarkerID = evalList.value(0).mid(4);
+    this->CurrentUSGSStationName = evalList.value(1).simplified();
+    this->CurrentUSGSLon = evalList.value(2).toDouble();
+    this->CurrentUSGSLat = evalList.value(3).toDouble();
 
     //...Format the date strings
     endDateString1 = "&endDT="+this->requestEndDate.addDays(1).toString("yyyy-MM-dd");
@@ -143,9 +159,29 @@ int usgs::fetchUSGSData()
     //...Read the response
     ierr = this->readUSGSDataFinished(reply);
     if(ierr!=0)
-        return ERR_USGS_READDATA;
+    {
+        emit usgsError("Error reading the USGS data");
+        return;
+    }
 
-    return 0;
+    //...Update the combo box
+    for(i=0;i<this->Parameters.length();i++)
+        productBox->addItem(this->Parameters[i]);
+    productBox->setCurrentIndex(0);
+    this->ProductName = productBox->currentText();
+
+    //...Plot the first series
+    ierr = this->plotUSGS();
+    if(ierr!=0)
+    {
+        emit usgsError("No data available for this station");
+        return;
+    }
+
+    //...Restore the status bar
+    statusBar->clearMessage();
+
+    return;
 }
 
 
@@ -451,46 +487,12 @@ int usgs::plotNewUSGSStation()
     //...Wipe out the combo box
     productBox->clear();
 
-    //...Retrieve info from google maps
-    this->setMarkerSelection();
-
-    //...Sanity Check
-    if(this->USGSMarkerID=="none")
-    {
-        this->USGSErrorString = "No station has been selected.";
-        this->statusBar->clearMessage();
-        return -1;
-    }
-
     //...Get the time period for the data
     this->requestEndDate = endDateEdit->dateTime();
     this->requestStartDate = startDateEdit->dateTime();
 
     //...Grab the data from the server
     ierr = this->fetchUSGSData();
-    if(ierr!=0)
-    {
-        this->statusBar->clearMessage();
-        return -1;
-    }
-
-    //...Update the combo box
-    for(i=0;i<this->Parameters.length();i++)
-        productBox->addItem(this->Parameters[i]);
-    productBox->setCurrentIndex(0);
-    this->ProductName = productBox->currentText();
-
-    //...Plot the first series
-    ierr = this->plotUSGS();
-    if(ierr!=0)
-    {
-        this->USGSErrorString = "No data available for this station";
-        this->statusBar->clearMessage();
-        return -1;
-    }
-
-    //...Restore the status bar
-    statusBar->clearMessage();
 
     return 0;
 }
@@ -766,6 +768,16 @@ QString usgs::getLoadedUSGSStation()
     return this->USGSMarkerID;
 }
 
+
+void usgs::setAsyncMarkerSelection()
+{
+    javascriptAsyncReturn *javaReturn = new javascriptAsyncReturn(this);
+    connect(javaReturn,SIGNAL(valueChanged(QString)),this,SLOT(javascriptDataReturned(QString)));
+    this->map->page()->runJavaScript("returnStationID()",[javaReturn](const QVariant &v){javaReturn->setValue(v);});
+    return;
+}
+
+
 QString usgs::getMarkerSelection(QString &name, double &longitude, double &latitude)
 {
     QVariant eval = QVariant();
@@ -798,3 +810,4 @@ QString usgs::getUSGSErrorString()
 {
     return this->USGSErrorString;
 }
+

@@ -42,6 +42,8 @@ using namespace QtCharts;
 class XTide : public QObject
 {
 
+    Q_OBJECT
+
 public:
     //...Constructor
     explicit XTide(QWebEngineView *inMap, mov_QChartView *inChart,
@@ -56,9 +58,16 @@ public:
     QString getLoadedXTideStation();
     QString getCurrentXTideStation();
     int getClickedXTideStation();
+    int getAsyncClickedXTideStation();
     int saveXTideData(QString filename, QString format);
     int saveXTidePlot(QString filename, QString filter);
     QString getErrorString();
+
+private slots:
+    void javascriptDataReturned(QString);
+
+signals:
+    void xTideError(QString);
 
 private:
     int findXTideExe();

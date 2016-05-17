@@ -64,6 +64,8 @@ public:
 
 private slots:
 
+    void throwErrorMessageBox(QString);
+
     void setupMetOceanViewerUI();
 
     void on_Button_FetchData_clicked();

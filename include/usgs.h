@@ -66,11 +66,17 @@ public:
 
 private slots:
     void handleLegendMarkerClicked();
+    void javascriptDataReturned(QString data);
+
+
+signals:
+    void usgsError(QString);
 
 private:
     //...Private functions
     QString getMarkerSelection(QString &name, double &longitude, double &latitude);
     int setMarkerSelection();
+    void setAsyncMarkerSelection();
     int getTimezoneOffset(QString timezone);
     int fetchUSGSData();
     int plotUSGS();
