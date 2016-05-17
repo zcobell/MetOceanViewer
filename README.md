@@ -34,16 +34,19 @@ You will need a version of OpenSSL installed to correctly run this program. Note
 
 # Credits
 The following external libraries/APIs are used in this software
-- NOAA CO-OPS API (http://tidesandcurrents.noaa.gov)
-- USGS Waterdata API (http://waterdata.usgs.gov)
-- Google Maps v3.x API (http://maps.google.com)
-- Google Fusion Tables API (http://tables.googlelabs.com)
-- netCDF v4.3.3 (http://www.unidata.ucar.edu/software/netcdf)
-- HDF5 v1.8.14 (http://www.hdfgroup.org/HDF5)
-- Curl v7.35.0 (http://curl.haxx.se)
-- zlib v1.2.8 (http://www.zlib.net)
-- OpenSSL v1.0.2d (https://www.openssl.org/)
-- XTide (http://www.flaterco.com/xtide/)
+
+|Package|Source|
+|-------|------|
+| NOAA CO-OPS API | http://tidesandcurrents.noaa.gov|
+| USGS Waterdata API | http://waterdata.usgs.gov|
+| Google Maps v3.x API | http://maps.google.com|
+| Google Fusion Tables API | http://tables.googlelabs.com|
+| netCDF v4.3.3 | http://www.unidata.ucar.edu/software/netcdf)
+| HDF5 v1.8.14 | http://www.hdfgroup.org/HDF5 |
+| Curl v7.35.0 |http://curl.haxx.se |
+| zlib v1.2.8 |http://www.zlib.net|
+| OpenSSL v1.0.2d |https://www.openssl.org/|
+| XTide |http://www.flaterco.com/xtide/|
 
 # License
 This program conforms to the GNU GPL, Version 3, with the caveat that the name MetOcean Viewer is specific to this project and derivative works should be named differently.
