@@ -37,6 +37,7 @@ The following external libraries/APIs are used in this software
 
 |Package|Source|
 |-------|------|
+| Qt | http://www.qt.io |
 | NOAA CO-OPS API | http://tidesandcurrents.noaa.gov|
 | USGS Waterdata API | http://waterdata.usgs.gov|
 | Google Maps v3.x API | http://maps.google.com|
