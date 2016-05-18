@@ -711,12 +711,16 @@ int noaa::saveNOAAData(QString filename, QString PreviousDirectory, QString form
                 filename2 = PreviousDirectory+"/Predictions_"+filename;
         }
         else
-            filename2 = filename;
+            filename2 = PreviousDirectory+"/"+filename;
 
         QFile NOAAOutput(filename2);
 
         QTextStream Output(&NOAAOutput);
-        NOAAOutput.open(QIODevice::WriteOnly);
+        if(!NOAAOutput.open(QIODevice::WriteOnly))
+        {
+            emit noaaError("Error opening output file.");
+            return -1;
+        }
 
         if(format.compare("CSV")==0)
         {
