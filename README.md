@@ -18,7 +18,7 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 ![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/screenshots/mov_ss3.JPG)
 
 # Compiling
-To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.5.0 on Windows, Mac OSX, and Linux.
+To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.6.0 on Windows, Mac OSX, and Linux.
 
 ##QtCharts
 This program requires the non-standard QtCharts library. This is packaged as part of the windows DLLs provided here, however, to compile this code for yourself you will need to manually generate this Qt module. The QtCharts module can be obtained [here](https://code.qt.io/cgit/qt/qtcharts.git). This module has taken over for the HighCharts plotting routines which, while extremely powerful, are not ideal for being embedded in a Qt C++ application with large amounts of data.
@@ -34,16 +34,20 @@ You will need a version of OpenSSL installed to correctly run this program. Note
 
 # Credits
 The following external libraries/APIs are used in this software
-- NOAA CO-OPS API (http://tidesandcurrents.noaa.gov)
-- USGS Waterdata API (http://waterdata.usgs.gov)
-- Google Maps v3.x API (http://maps.google.com)
-- Google Fusion Tables API (http://tables.googlelabs.com)
-- netCDF v4.3.3 (http://www.unidata.ucar.edu/software/netcdf)
-- HDF5 v1.8.14 (http://www.hdfgroup.org/HDF5)
-- Curl v7.35.0 (http://curl.haxx.se)
-- zlib v1.2.8 (http://www.zlib.net)
-- OpenSSL v1.0.2d (https://www.openssl.org/)
-- XTide (http://www.flaterco.com/xtide/)
+
+|Package|Source|
+|-------|------|
+| Qt | http://www.qt.io |
+| NOAA CO-OPS API | http://tidesandcurrents.noaa.gov|
+| USGS Waterdata API | http://waterdata.usgs.gov|
+| Google Maps v3.x API | http://maps.google.com|
+| Google Fusion Tables API | http://tables.googlelabs.com|
+| netCDF v4.3.3 | http://www.unidata.ucar.edu/software/netcdf)
+| HDF5 v1.8.14 | http://www.hdfgroup.org/HDF5 |
+| Curl v7.35.0 |http://curl.haxx.se |
+| zlib v1.2.8 |http://www.zlib.net|
+| OpenSSL v1.0.2d |https://www.openssl.org/|
+| XTide |http://www.flaterco.com/xtide/|
 
 # License
 This program conforms to the GNU GPL, Version 3, with the caveat that the name MetOcean Viewer is specific to this project and derivative works should be named differently.

@@ -77,6 +77,7 @@ function initialize() {
       panControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
       zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
     };
+
     map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
     var zoomDiv        = document.createElement('DIV');
     zoomDiv.id         = "zoomText";
@@ -94,32 +95,16 @@ function initialize() {
             templateId: 2
         }
     });
-
-    google.maps.event.addListener(map, 'zoom_changed', function() {
-        var zoomLevel = map.getZoom();
-        if(zoomLevel>5)
-        {
-            if(layer.map === null)
-            {
-                layer.setMap(map);
-                layer.setOptions({options: {suppressInfoWindows: false}});
-                map.controls[google.maps.ControlPosition.BOTTOM_LEFT].clear();
-                listenerHandle = google.maps.event.addListener(layer, 'click', function(event) {
-                    CurrentID = event.row.SiteNumber2.value;
-                    CurrentName = event.row.SiteName.value;
-                    CurrentLat = event.row.Latitude.value;
-                    CurrentLon = event.row.Longitude.value;
-                });
-            }
-        }
-        else
-        {
-            layer.setMap(null);
-            map.controls[google.maps.ControlPosition.BOTTOM_LEFT].clear();
-            map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(zoomDiv);
-            google.maps.event.removeListener(listenerHandle);
-        }
-      });
+    layer.setMap(map);
+    layer.setMap(map);
+    layer.setOptions({options: {suppressInfoWindows: false}});
+    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].clear();
+    listenerHandle = google.maps.event.addListener(layer, 'click', function(event) {
+        CurrentID = event.row.SiteNumber2.value;
+        CurrentName = event.row.SiteName.value;
+        CurrentLat = event.row.Latitude.value;
+        CurrentLon = event.row.Longitude.value;
+    });
 
 }
 
