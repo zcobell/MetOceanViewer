@@ -156,6 +156,12 @@ void usgs::javascriptDataReturned(QString data)
     connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
     loop.exec();
 
+    if(reply->error()!=QNetworkReply::NoError)
+    {
+        emit usgsError("There was an error contacting the USGS data server");
+        return;
+    }
+
     //...Read the response
     ierr = this->readUSGSDataFinished(reply);
     if(ierr!=0)
@@ -259,6 +265,13 @@ int usgs::formatUSGSInstantResponse(QByteArray Input)
 
     //...Initialize the array
     this->CurrentUSGSStation.resize(this->Parameters.length());
+
+    //...Sanity check
+    if(this->CurrentUSGSStation.length()==0)
+    {
+        emit usgsError("Error reading USGS data");
+        return -1;
+    }
 
     //...Zero counters
     for(i=0;i<this->CurrentUSGSStation.length();i++)
@@ -628,7 +641,7 @@ int usgs::readUSGSDataFinished(QNetworkReply *reply)
 {
     int ierr;
 
-    if(reply->error()!=0)
+    if(reply->error()!=QNetworkReply::NoError)
     {
         this->USGSErrorString = reply->errorString();
         return ERR_USGS_SERVERREADERROR;
