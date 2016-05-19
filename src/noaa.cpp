@@ -197,7 +197,7 @@ int noaa::formatNOAAResponse(QVector<QByteArray> Input,QString &ErrorString,int 
 {
     int i,j,k;
     int dataCount;
-    QString Output,TempData,DateS,YearS,MonthS,DayS,HourMinS,HourS,MinS,WLS;
+    QString TempData,DateS,YearS,MonthS,DayS,HourMinS,HourS,MinS,WLS;
     QStringList TimeSnap;
     QVector<QString> InputData;
     QVector<QStringList> DataList;
@@ -359,6 +359,8 @@ int noaa::setNOAAStation()
     this->CurrentNOAAStation[1]->station[0]->StationName = name;
     this->CurrentNOAAStation[1]->station[0]->latitude = lat;
     this->CurrentNOAAStation[1]->station[0]->longitude = lon;
+    this->CurrentNOAAStation[0]->station[0]->StationID = "NOAA_"+QString::number(this->NOAAMarkerID);
+    this->CurrentNOAAStation[1]->station[0]->StationID = "NOAA_"+QString::number(this->NOAAMarkerID);
 
     return 0;
 }
