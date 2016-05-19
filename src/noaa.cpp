@@ -720,7 +720,7 @@ int noaa::saveNOAAImage(QString filename, QString filter)
 int noaa::saveNOAAData(QString filename, QString PreviousDirectory, QString format)
 {
     int ierr,index;
-    QString value,filename2;
+    QString filename2;
 
     for(index=0;index<this->CurrentNOAAStation.length();index++)
     {
@@ -736,24 +736,9 @@ int noaa::saveNOAAData(QString filename, QString PreviousDirectory, QString form
 
         if(format.compare("CSV")==0)
         {
-            QFile NOAAOutput(filename2);
-
-            QTextStream Output(&NOAAOutput);
-            if(!NOAAOutput.open(QIODevice::WriteOnly))
-            {
-                emit noaaError("Error opening output file.");
-                return -1;
-            }
-            Output << "Station: "+QString::number(this->NOAAMarkerID)+"\n";
-            Output << "Datum: "+this->noaaDatum->currentText()+"\n";
-            Output << "Units: "+this->noaaUnits->currentText()+"\n";
-            Output << "\n";
-            for(int i=0;i<this->CurrentNOAAStation.length();i++)
-            {
-                value.sprintf("%10.4e",this->CurrentNOAAStation[index]->station[0]->data[i]);
-                Output << this->CurrentNOAAStation[index]->station[0]->date[i].toString("MM/dd/yyyy,hh:mm")+value+"\n";
-            }
-            NOAAOutput.close();
+            ierr = this->CurrentNOAAStation[index]->writeCSV(filename2);
+            if(ierr!=0)
+                emit noaaError("Error writing CSV file");
         }
         else if(format.compare("IMEDS")==0)
         {

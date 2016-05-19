@@ -36,6 +36,7 @@ public:
     //...Methods
     int read(QString filename);
     int write(QString filename);
+    int writeCSV(QString filename);
 
     //...Variables
     int nstations;

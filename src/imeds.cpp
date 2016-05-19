@@ -252,3 +252,30 @@ int imeds::write(QString filename)
     outputFile.close();
     return 0;
 }
+
+
+int imeds::writeCSV(QString filename)
+{
+    int i,s;
+    QString value;
+    QFile output(filename);
+
+    if(!output.open(QIODevice::WriteOnly))
+        return -1;
+
+    for(s=0;s<this->nstations;s++)
+    {
+        output.write(QString("Station: "+this->station[s]->StationID+"\n").toUtf8());
+        output.write(QString("Datum: "+this->datum+"\n").toUtf8());
+        output.write(QString("Units: "+this->units+"\n").toUtf8());
+        output.write(QString("\n").toUtf8());
+        for(i=0;i<this->station[s]->data.length();i++)
+        {
+            value.sprintf("%10.4e",this->station[s]->data[i]);
+            output.write(QString(this->station[s]->date[i].toString("MM/dd/yyyy,hh:mm")+value+"\n").toUtf8());
+        }
+        output.write(QString("\n\n\n").toUtf8());
+    }
+    output.close();
+    return 0;
+}
