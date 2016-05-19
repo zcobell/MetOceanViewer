@@ -48,7 +48,9 @@ SOURCES += src/main.cpp\
     src/update_dialog.cpp \
     src/ui_tab_xtide.cpp \
     src/xtide.cpp \
-    src/javascriptAsyncReturn.cpp
+    src/javascriptAsyncReturn.cpp \
+    src/imeds.cpp \
+    src/imeds_station.cpp
 
 HEADERS  += \
     version.h \
@@ -67,7 +69,9 @@ HEADERS  += \
     include/mov_qwebenginepage.h \
     include/update_dialog.h \
     include/xtide.h \
-    include/javascriptAsyncReturn.h
+    include/javascriptAsyncReturn.h \
+    include/imeds.h \
+    include/imeds_station.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

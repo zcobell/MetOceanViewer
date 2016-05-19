@@ -73,22 +73,22 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
         addY = table->item(i,5)->text().toDouble();
         for(k=0;k<this->selectedStations.length();k++)
         {
-            if(!fileDataUnique[i].station[this->selectedStations[k]].isNull)
+            if(!fileDataUnique[i]->station[this->selectedStations[k]]->isNull)
             {
-                for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].data.length();j++)
+                for(j=0;j<fileDataUnique[i]->station[this->selectedStations[k]]->data.length();j++)
                 {
-                    if(fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY<ymin &&
-                            fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
-                        ymin = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
-                    if(fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY>ymax &&
-                            fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
-                        ymax = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
-                    if(fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0)<minDate &&
-                            fileDataUnique[i].station[this->selectedStations[k]].date[j]!=nullDate)
-                        minDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0);
-                    if(fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0)>maxDate &&
-                            fileDataUnique[i].station[this->selectedStations[k]].date[j]!=nullDate)
-                        maxDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].addSecs(timeAddList[i]*3600.0);
+                    if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY<ymin &&
+                            fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
+                        ymin = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
+                    if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY>ymax &&
+                            fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
+                        ymax = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
+                    if(fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0)<minDate &&
+                            fileDataUnique[i]->station[this->selectedStations[k]]->date[j]!=nullDate)
+                        minDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0);
+                    if(fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0)>maxDate &&
+                            fileDataUnique[i]->station[this->selectedStations[k]]->date[j]!=nullDate)
+                        maxDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0);
                 }
             }
         }
@@ -378,11 +378,11 @@ void user_timeseries::javascriptDataReturned(QString data)
           unitConversion = table->item(seriesCounter-1,3)->text().toDouble();
           addX = table->item(seriesCounter-1,4)->text().toDouble();
           addY = table->item(seriesCounter-1,5)->text().toDouble();
-          for(j=0;j<fileDataUnique[i].station[this->markerID].data.length();j++)
+          for(j=0;j<fileDataUnique[i]->station[this->markerID]->data.length();j++)
           {
-              TempDate = fileDataUnique[i].station[this->markerID].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
-              TempValue = fileDataUnique[i].station[this->markerID].data[j]*unitConversion+addY;
-              if(fileDataUnique[i].station[this->markerID].data[j]!=MOV_NULL_TS)
+              TempDate = fileDataUnique[i]->station[this->markerID]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+              TempValue = fileDataUnique[i]->station[this->markerID]->data[j]*unitConversion+addY;
+              if(fileDataUnique[i]->station[this->markerID]->data[j]!=MOV_NULL_TS)
                 series[seriesCounter-1]->append(TempDate,TempValue);
           }
           this->thisChart->addSeries(series[seriesCounter-1]);
@@ -395,7 +395,7 @@ void user_timeseries::javascriptDataReturned(QString data)
           //...Plot multiple stations. We use random colors and append the station number
           for(k=0;k<this->selectedStations.length();k++)
           {
-              if(!fileDataUnique[i].station[this->selectedStations[k]].isNull)
+              if(!fileDataUnique[i]->station[this->selectedStations[k]]->isNull)
               {
                   seriesCounter = seriesCounter + 1;
                   colorCounter = colorCounter + 1;
@@ -406,17 +406,17 @@ void user_timeseries::javascriptDataReturned(QString data)
 
                   series.resize(seriesCounter);
                   series[seriesCounter-1] = new QLineSeries(this);
-                  series[seriesCounter-1]->setName(fileDataUnique[i].station[this->selectedStations[k]].StationName+": "+table->item(i,1)->text());
+                  series[seriesCounter-1]->setName(fileDataUnique[i]->station[this->selectedStations[k]]->StationName+": "+table->item(i,1)->text());
                   seriesColor = this->randomColorList[colorCounter];
                   series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
                   unitConversion = table->item(i,3)->text().toDouble();
                   addX = table->item(i,4)->text().toDouble();
                   addY = table->item(i,5)->text().toDouble();
-                  for(j=0;j<fileDataUnique[i].station[this->selectedStations[k]].data.length();j++)
+                  for(j=0;j<fileDataUnique[i]->station[this->selectedStations[k]]->data.length();j++)
                   {
-                      TempDate = fileDataUnique[i].station[this->selectedStations[k]].date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
-                      TempValue = fileDataUnique[i].station[this->selectedStations[k]].data[j]*unitConversion+addY;
-                      if(fileDataUnique[i].station[this->selectedStations[k]].data[j]!=MOV_NULL_TS)
+                      TempDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+                      TempValue = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
+                      if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
                         series[seriesCounter-1]->append(TempDate,TempValue);
                   }
                   this->thisChart->addSeries(series[seriesCounter-1]);
@@ -440,7 +440,7 @@ void user_timeseries::javascriptDataReturned(QString data)
 
 
     if(this->selectedStations.length()==1)
-        this->thisChart->setTitle(this->plotTitle->text()+": "+this->fileDataUnique[0].station[this->markerID].StationName);
+        this->thisChart->setTitle(this->plotTitle->text()+": "+this->fileDataUnique[0]->station[this->markerID]->StationName);
     else
         this->thisChart->setTitle(this->plotTitle->text());
 
@@ -491,9 +491,11 @@ int user_timeseries::processData()
         TempList = TempFile.split(".");
         InputFileType = TempList.value(TempList.length()-1).toUpper();
         this->fileData.resize(j+1);
+        this->fileData[j] = new imeds(this);
+
         if(InputFileType=="IMEDS")
         {
-            ierr = this->readIMEDS(TempFile,this->fileData[j]);
+            ierr = this->fileData[j]->read(TempFile);
             if(ierr!=0)
             {
                 this->errorString = "Error reading file: "+TempFile;
@@ -539,7 +541,7 @@ int user_timeseries::processData()
             return -1;
         }
 
-        if(fileData[j].success)
+        if(fileData[j]->success)
             j = j + 1;
         else
             return -1;
@@ -567,7 +569,7 @@ int user_timeseries::processData()
 
     //...Add the markers to the map
     map->page()->runJavaScript("allocateData("+QString::number(fileDataUnique.length())+")");
-    for(i=0;i<fileDataUnique[0].nstations;i++)
+    for(i=0;i<fileDataUnique[0]->nstations;i++)
     {
         x=-1.0;
         y=-1.0;
@@ -577,11 +579,11 @@ int user_timeseries::processData()
         //the backend
         for(j=0;j<fileDataUnique.length();j++)
         {
-            if(!fileDataUnique[j].station[i].isNull)
+            if(!fileDataUnique[j]->station[i]->isNull)
             {
-                StationName = fileDataUnique[j].station[i].StationName;
-                x = fileDataUnique[j].station[i].longitude;
-                y = fileDataUnique[j].station[i].latitude;
+                StationName = fileDataUnique[j]->station[i]->StationName;
+                x = fileDataUnique[j]->station[i]->longitude;
+                y = fileDataUnique[j]->station[i]->latitude;
                 break;
             }
         }
@@ -606,204 +608,6 @@ int user_timeseries::plotData()
 
     return 0;
 }
-
-
-int user_timeseries::readIMEDS(QString filename,IMEDS &Output)
-{
-
-    //Variables
-    QString year;
-    QString month;
-    QString day;
-    QString hour;
-    QString minute;
-    QString second;
-    QStringList TempList;
-    QVector<QString> FileData;
-    int nLine;
-    int nStation;
-    int i;
-    int j;
-    int k;
-    int expectedLength;
-    double value;
-    QFile MyFile(filename);
-
-    //Default to an unsuccessful read
-    Output.success = false;
-
-    //Check if we can open the file
-    if(!MyFile.open(QIODevice::ReadOnly|QIODevice::Text))
-    {
-        QMessageBox::information(NULL,"ERROR","ERROR:"+MyFile.errorString());
-        return -1;
-    }
-
-    //Read the header to output variable
-
-    Output.header1 = MyFile.readLine().simplified();
-    Output.header2 = MyFile.readLine().simplified();
-    Output.header3 = MyFile.readLine().simplified();
-
-    //Read in the data portion of the file
-    nLine = 0;
-    while(!MyFile.atEnd())
-    {
-       nLine = nLine + 1;
-       FileData.resize(nLine);
-       FileData[nLine-1] = MyFile.readLine().simplified();
-    }
-    MyFile.close();
-
-    //Count the number of stations in the file
-    nStation = 0;
-    for(i=0;i<nLine;i++)
-    {
-        TempList = FileData[i].split(" ");
-        if(TempList.length()==3)
-        {
-            nStation = nStation + 1;
-        }
-    }
-
-    //Size the station vector and read the datasets
-    Output.station.resize(nStation);
-    Output.nstations = nStation;
-
-    //Zero out the incremented variable
-    for(i=0;i<nStation;i++)
-        Output.station[i].NumSnaps = 0;
-
-    //Organize the data into the variable
-    j=-1;
-    for(i=0;i<nLine;i++)
-    {
-        TempList = FileData[i].split(" ");
-        if(TempList.length()==3)
-        {
-            j=j+1;
-            Output.station[j].longitude = TempList[2].toDouble();
-            Output.station[j].latitude = TempList[1].toDouble();
-            Output.station[j].StationName = TempList[0];
-            Output.station[j].StationIndex = j;
-        }
-        else
-        {
-            Output.station[j].NumSnaps = Output.station[j].NumSnaps + 1;
-        }
-
-    }
-    //Preallocate arrays for data and dates
-
-    for(i=0;i<nStation;i++)
-    {
-        Output.station[i].data.resize(Output.station[i].NumSnaps);
-        Output.station[i].date.resize(Output.station[i].NumSnaps);
-    }
-
-    //Now, loop over the data section and save to vectors
-    j=-1;
-    k=-1;
-    expectedLength = 0;
-    for(i=0;i<nLine;i++)
-    {
-        TempList = FileData[i].split(" ");
-        if(TempList.length()==3)
-        {
-            j=j+1;
-            k=-1;
-        }
-        else
-        {
-            if(k==-1)
-            {
-                if(TempList.length()==6)
-                {
-                    expectedLength=6;
-                    k=k+1;
-                    year = TempList.value(0);
-                    month = TempList.value(1);
-                    day = TempList.value(2);
-                    hour = TempList.value(3);
-                    minute = TempList.value(4);
-                    second = "0";
-                    value = TempList.value(5).toDouble();
-                    Output.station[j].date[k] =
-                            QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
-                                      QTime(hour.toInt(),minute.toInt(),second.toInt()));
-                    Output.station[j].date[k].setTimeSpec(Qt::UTC);
-                    Output.station[j].data[k] = value;
-                    Output.success = true;
-                }
-                else if(TempList.length()==7)
-                {
-                    expectedLength=7;
-                    k=k+1;
-                    year = TempList.value(0);
-                    month = TempList.value(1);
-                    day = TempList.value(2);
-                    hour = TempList.value(3);
-                    minute = TempList.value(4);
-                    second = TempList.value(5);
-                    value = TempList.value(6).toDouble();
-                    Output.station[j].date[k] =
-                            QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
-                                      QTime(hour.toInt(),minute.toInt(),second.toInt()));
-                    Output.station[j].date[k].setTimeSpec(Qt::UTC);
-                    Output.station[j].data[k] = value;
-                    Output.success = true;
-                }
-            }
-            else
-            {
-                if(expectedLength!=TempList.length())
-                {
-                    Output.success = false;
-                    return -1;
-                }
-
-                if(expectedLength==6)
-                {
-                    k=k+1;
-                    year = TempList.value(0);
-                    month = TempList.value(1);
-                    day = TempList.value(2);
-                    hour = TempList.value(3);
-                    minute = TempList.value(4);
-                    second = "0";
-                    value = TempList.value(5).toDouble();
-                    Output.station[j].date[k] =
-                            QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
-                                      QTime(hour.toInt(),minute.toInt(),second.toInt()));
-                    Output.station[j].date[k].setTimeSpec(Qt::UTC);
-                    Output.station[j].data[k] = value;
-                    Output.success = true;
-                }
-                else if(expectedLength==7)
-                {
-                    expectedLength=7;
-                    k=k+1;
-                    year = TempList.value(0);
-                    month = TempList.value(1);
-                    day = TempList.value(2);
-                    hour = TempList.value(3);
-                    minute = TempList.value(4);
-                    second = TempList.value(5);
-                    value = TempList.value(6).toDouble();
-                    Output.station[j].date[k] =
-                            QDateTime(QDate(year.toInt(),month.toInt(),day.toInt()),
-                                      QTime(hour.toInt(),minute.toInt(),second.toInt()));
-                    Output.station[j].date[k].setTimeSpec(Qt::UTC);
-                    Output.station[j].data[k] = value;
-                    Output.success = true;
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-//-------------------------------------------//
 
 
 //-------------------------------------------//
@@ -1053,27 +857,27 @@ int user_timeseries::readADCIRCnetCDF(QString filename, ADCNC &MyData)
 //Convert the netCDF ADCIRC variable to an
 //IMEDS style variable
 //-------------------------------------------//
-int user_timeseries::NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, IMEDS &Output)
+int user_timeseries::NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, imeds *Output)
 {
 
-    Output.nstations = netcdf.nstations;
-    Output.station.resize(netcdf.nstations);
-    for(int i=0;i<Output.nstations;++i)
+    Output->nstations = netcdf.nstations;
+    Output->station.resize(netcdf.nstations);
+    for(int i=0;i<Output->nstations;++i)
     {
-        Output.station[i].latitude = netcdf.latitude[i];
-        Output.station[i].longitude = netcdf.longitude[i];
-        Output.station[i].NumSnaps = netcdf.NumSnaps;
-        Output.station[i].StationIndex = i;
-        Output.station[i].StationName = netcdf.station_name[i];
-        Output.station[i].data.resize(Output.station[i].NumSnaps);
-        Output.station[i].date.resize(Output.station[i].NumSnaps);
-        for(int j=0;j<Output.station[i].NumSnaps;++j)
+        Output->station[i]->latitude = netcdf.latitude[i];
+        Output->station[i]->longitude = netcdf.longitude[i];
+        Output->station[i]->NumSnaps = netcdf.NumSnaps;
+        Output->station[i]->StationIndex = i;
+        Output->station[i]->StationName = netcdf.station_name[i];
+        Output->station[i]->data.resize(Output->station[i]->NumSnaps);
+        Output->station[i]->date.resize(Output->station[i]->NumSnaps);
+        for(int j=0;j<Output->station[i]->NumSnaps;++j)
         {
-            Output.station[i].data[j] = netcdf.data[i][j];
-            Output.station[i].date[j] = Cold.addSecs(netcdf.time[j]);
+            Output->station[i]->data[j] = netcdf.data[i][j];
+            Output->station[i]->date[j] = Cold.addSecs(netcdf.time[j]);
         }
     }
-    Output.success = true;
+    Output->success = true;
     return -1;
 
 }
@@ -1183,28 +987,30 @@ int user_timeseries::readADCIRCascii(QString filename, QString stationfile, ADCA
 //Convert an ADCIRC ASCII file to an IMEDS
 //style file
 //-------------------------------------------//
-int user_timeseries::ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, IMEDS &MyOutput)
+int user_timeseries::ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, imeds *MyOutput)
 {
 
-    MyOutput.nstations = ASCII.nstations;
-    MyOutput.station.resize(MyOutput.nstations);
+    MyOutput->nstations = ASCII.nstations;
+    MyOutput = new imeds(this);
+    MyOutput->station.resize(MyOutput->nstations);
 
-    for(int i=0;i<MyOutput.nstations;++i)
+    for(int i=0;i<MyOutput->nstations;++i)
     {
-        MyOutput.station[i].data.resize(ASCII.NumSnaps);
-        MyOutput.station[i].date.resize(ASCII.NumSnaps);
-        MyOutput.station[i].StationName = ASCII.station_name[i];
-        MyOutput.station[i].NumSnaps = ASCII.NumSnaps;
-        MyOutput.station[i].longitude = ASCII.longitude[i];
-        MyOutput.station[i].latitude = ASCII.latitude[i];
-        MyOutput.station[i].StationIndex = i;
+        MyOutput->station[i] = new imeds_station(this);
+        MyOutput->station[i]->data.resize(ASCII.NumSnaps);
+        MyOutput->station[i]->date.resize(ASCII.NumSnaps);
+        MyOutput->station[i]->StationName = ASCII.station_name[i];
+        MyOutput->station[i]->NumSnaps = ASCII.NumSnaps;
+        MyOutput->station[i]->longitude = ASCII.longitude[i];
+        MyOutput->station[i]->latitude = ASCII.latitude[i];
+        MyOutput->station[i]->StationIndex = i;
         for(int j=0;j<ASCII.NumSnaps;++j)
         {
-            MyOutput.station[i].date[j] = Cold.addSecs(ASCII.time[j]);
-            MyOutput.station[i].data[j] = ASCII.data[i][j];
+            MyOutput->station[i]->date[j] = Cold.addSecs(ASCII.time[j]);
+            MyOutput->station[i]->data[j] = ASCII.data[i][j];
         }
     }
-    MyOutput.success = true;
+    MyOutput->success = true;
     return -1;
 }
 //-------------------------------------------//
@@ -1216,19 +1022,19 @@ int user_timeseries::ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, IMEDS &MyOu
 //and not show data where it doesn't exist for
 //certain files
 //-------------------------------------------//
-int user_timeseries::GetUniqueStationList(QVector<IMEDS> Data, QVector<double> &X, QVector<double> &Y)
+int user_timeseries::GetUniqueStationList(QVector<imeds *> Data, QVector<double> &X, QVector<double> &Y)
 {
     int i,j,k;
     bool found;
     for(i=0;i<Data.length();i++)
     {
-        for(j=0;j<Data[i].nstations;j++)
+        for(j=0;j<Data[i]->nstations;j++)
         {
             found = false;
             for(k=0;k<X.length();k++)
             {
-                if(Data[i].station[j].longitude == X[k] &&
-                        Data[i].station[j].latitude == Y[k] )
+                if(Data[i]->station[j]->longitude == X[k] &&
+                        Data[i]->station[j]->latitude == Y[k] )
                 {
                     found = true;
                     break;
@@ -1238,8 +1044,8 @@ int user_timeseries::GetUniqueStationList(QVector<IMEDS> Data, QVector<double> &
             {
                 X.resize(X.length()+1);
                 Y.resize(Y.length()+1);
-                X[X.length()-1] = Data[i].station[j].longitude;
-                Y[Y.length()-1] = Data[i].station[j].latitude;
+                X[X.length()-1] = Data[i]->station[j]->longitude;
+                Y[Y.length()-1] = Data[i]->station[j]->latitude;
             }
 
         }
@@ -1254,78 +1060,78 @@ int user_timeseries::GetUniqueStationList(QVector<IMEDS> Data, QVector<double> &
 //which will have null data where there was
 //not data in the file
 //-------------------------------------------//
-int user_timeseries::BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut)
+//int user_timeseries::BuildRevisedIMEDS(QVector<imeds *> Data, QVector<double> X, QVector<double> Y, QVector<imeds *> &DataOut)
+//{
+//    int i,j,k;
+//    bool found;
+
+//    QDateTime NullDate(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),QTime(MOV_NULL_HOUR,MOV_NULL_MINUTE,MOV_NULL_SECOND));
+
+//    DataOut.resize(Data.length());
+//    for(i=0;i<Data.length();i++)
+//    {
+//        DataOut[i]->nstations = X.length();
+//        DataOut[i]->header1 = Data[i]->header1;
+//        DataOut[i]->header2 = Data[i]->header2;
+//        DataOut[i]->header3 = Data[i]->header3;
+//        DataOut[i]->station.resize(X.length());
+//        for(j=0;j<X.length();j++)
+//        {
+//            DataOut[i]->station[j]->longitude = X[j];
+//            DataOut[i]->station[j]->latitude = Y[j];
+//        }
+//    }
+
+//    for(i=0;i<Data.length();i++)
+//    {
+//        for(j=0;j<DataOut[i]->nstations;j++)
+//        {
+//            found = false;
+//            for(k=0;k<Data[i]->nstations;k++)
+//            {
+//                if(Data[i]->station[k]->longitude == DataOut[i]->station[j]->longitude &&
+//                   Data[i]->station[k]->latitude == DataOut[i]->station[j]->latitude)
+//                {
+//                    DataOut[i]->station[j]->data.resize(Data[i]->station[k]->data.length());
+//                    DataOut[i]->station[j]->date.resize(Data[i]->station[k]->date.length());
+//                    DataOut[i]->station[j]->NumSnaps = Data[i]->station[k]->NumSnaps;
+//                    DataOut[i]->station[j]->StationName = Data[i]->station[k]->StationName;
+//                    DataOut[i]->station[j]->data = Data[i]->station[k]->data;
+//                    DataOut[i]->station[j]->date = Data[i]->station[k]->date;
+//                    DataOut[i]->station[j]->isNull = false;
+//                    found = true;
+//                    break;
+//                }
+//            }
+//            if(!found)
+//            {
+//                //Build a station with a null dataset we can find later
+//                DataOut[i]->station[j]->data.resize(1);
+//                DataOut[i]->station[j]->date.resize(1);
+//                DataOut[i]->station[j]->StationName = "NONAME";
+//                DataOut[i]->station[j]->data[0] = MOV_NULL_TS;
+//                DataOut[i]->station[j]->date[0] = NullDate;
+//                DataOut[i]->station[j]->isNull = true;
+//            }
+//        }
+//    }
+//    return 0;
+//}
+
+
+int user_timeseries::getUniqueStationList(QVector<imeds *> Data, QVector<double> &X, QVector<double> &Y)
 {
     int i,j,k;
     bool found;
-
-    QDateTime NullDate(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),QTime(MOV_NULL_HOUR,MOV_NULL_MINUTE,MOV_NULL_SECOND));
-
-    DataOut.resize(Data.length());
     for(i=0;i<Data.length();i++)
     {
-        DataOut[i].nstations = X.length();
-        DataOut[i].header1 = Data[i].header1;
-        DataOut[i].header2 = Data[i].header2;
-        DataOut[i].header3 = Data[i].header3;
-        DataOut[i].station.resize(X.length());
-        for(j=0;j<X.length();j++)
-        {
-            DataOut[i].station[j].longitude = X[j];
-            DataOut[i].station[j].latitude = Y[j];
-        }
-    }
-
-    for(i=0;i<Data.length();i++)
-    {
-        for(j=0;j<DataOut[i].nstations;j++)
-        {
-            found = false;
-            for(k=0;k<Data[i].nstations;k++)
-            {
-                if(Data[i].station[k].longitude == DataOut[i].station[j].longitude &&
-                   Data[i].station[k].latitude == DataOut[i].station[j].latitude)
-                {
-                    DataOut[i].station[j].data.resize(Data[i].station[k].data.length());
-                    DataOut[i].station[j].date.resize(Data[i].station[k].date.length());
-                    DataOut[i].station[j].NumSnaps = Data[i].station[k].NumSnaps;
-                    DataOut[i].station[j].StationName = Data[i].station[k].StationName;
-                    DataOut[i].station[j].data = Data[i].station[k].data;
-                    DataOut[i].station[j].date = Data[i].station[k].date;
-                    DataOut[i].station[j].isNull = false;
-                    found = true;
-                    break;
-                }
-            }
-            if(!found)
-            {
-                //Build a station with a null dataset we can find later
-                DataOut[i].station[j].data.resize(1);
-                DataOut[i].station[j].date.resize(1);
-                DataOut[i].station[j].StationName = "NONAME";
-                DataOut[i].station[j].data[0] = MOV_NULL_TS;
-                DataOut[i].station[j].date[0] = NullDate;
-                DataOut[i].station[j].isNull = true;
-            }
-        }
-    }
-    return 0;
-}
-
-
-int user_timeseries::getUniqueStationList(QVector<IMEDS> Data, QVector<double> &X, QVector<double> &Y)
-{
-    int i,j,k;
-    bool found;
-    for(i=0;i<Data.length();i++)
-    {
-        for(j=0;j<Data[i].nstations;j++)
+        for(j=0;j<Data[i]->nstations;j++)
         {
             found = false;
             for(k=0;k<X.length();k++)
             {
-                if(Data[i].station[j].longitude == X[k] &&
-                        Data[i].station[j].latitude == Y[k] )
+                if(Data[i]->station[j]->longitude == X[k] &&
+                        Data[i]->station[j]->latitude == Y[k] )
                 {
                     found = true;
                     break;
@@ -1335,8 +1141,8 @@ int user_timeseries::getUniqueStationList(QVector<IMEDS> Data, QVector<double> &
             {
                 X.resize(X.length()+1);
                 Y.resize(Y.length()+1);
-                X[X.length()-1] = Data[i].station[j].longitude;
-                Y[Y.length()-1] = Data[i].station[j].latitude;
+                X[X.length()-1] = Data[i]->station[j]->longitude;
+                Y[Y.length()-1] = Data[i]->station[j]->latitude;
             }
 
         }
@@ -1351,43 +1157,49 @@ int user_timeseries::getUniqueStationList(QVector<IMEDS> Data, QVector<double> &
 //which will have null data where there was
 //not data in the file
 //-------------------------------------------//
-int user_timeseries::buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut)
+int user_timeseries::buildRevisedIMEDS(QVector<imeds*> &Data,QVector<double> X, QVector<double> Y, QVector<imeds*> &DataOut)
 {
     int i,j,k;
     bool found;
 
     DataOut.resize(Data.length());
+
     for(i=0;i<Data.length();i++)
     {
-        DataOut[i].nstations = X.length();
-        DataOut[i].header1 = Data[i].header1;
-        DataOut[i].header2 = Data[i].header2;
-        DataOut[i].header3 = Data[i].header3;
-        DataOut[i].station.resize(X.length());
+        DataOut[i] = new imeds(this);
+
+        DataOut[i]->nstations = X.length();
+        DataOut[i]->header1 = Data[i]->header1;
+        DataOut[i]->header2 = Data[i]->header2;
+        DataOut[i]->header3 = Data[i]->header3;
+        DataOut[i]->station.resize(X.length());
         for(j=0;j<X.length();j++)
         {
-            DataOut[i].station[j].longitude = X[j];
-            DataOut[i].station[j].latitude = Y[j];
+
+            DataOut[i]->station[j] = new imeds_station(this);
+
+            DataOut[i]->station[j]->longitude = X[j];
+            DataOut[i]->station[j]->latitude = Y[j];
         }
     }
 
     for(i=0;i<Data.length();i++)
     {
-        for(j=0;j<DataOut[i].nstations;j++)
+        for(j=0;j<DataOut[i]->nstations;j++)
         {
             found = false;
-            for(k=0;k<Data[i].nstations;k++)
+            for(k=0;k<Data[i]->nstations;k++)
             {
-                if(Data[i].station[k].longitude == DataOut[i].station[j].longitude &&
-                   Data[i].station[k].latitude == DataOut[i].station[j].latitude)
+                if(Data[i]->station[k]->longitude == DataOut[i]->station[j]->longitude &&
+                   Data[i]->station[k]->latitude == DataOut[i]->station[j]->latitude)
                 {
-                    DataOut[i].station[j].data.resize(Data[i].station[k].data.length());
-                    DataOut[i].station[j].date.resize(Data[i].station[k].date.length());
-                    DataOut[i].station[j].NumSnaps = Data[i].station[k].NumSnaps;
-                    DataOut[i].station[j].StationName = Data[i].station[k].StationName;
-                    DataOut[i].station[j].data = Data[i].station[k].data;
-                    DataOut[i].station[j].date = Data[i].station[k].date;
-                    DataOut[i].station[j].isNull = false;
+                    DataOut[i]->station[j]->data.resize(Data[i]->station[k]->data.length());
+                    DataOut[i]->station[j]->date.resize(Data[i]->station[k]->date.length());
+                    DataOut[i]->station[j]->NumSnaps = Data[i]->station[k]->NumSnaps;
+                    DataOut[i]->station[j]->StationName = Data[i]->station[k]->StationName;
+                    DataOut[i]->station[j]->data = Data[i]->station[k]->data;
+                    DataOut[i]->station[j]->date = Data[i]->station[k]->date;
+                    DataOut[i]->station[j]->isNull = false;
                     found = true;
                     break;
                 }
@@ -1395,13 +1207,13 @@ int user_timeseries::buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QV
             if(!found)
             {
                 //Build a station with a null dataset we can find later
-                DataOut[i].station[j].data.resize(1);
-                DataOut[i].station[j].date.resize(1);
-                DataOut[i].station[j].StationName = "NONAME";
-                DataOut[i].station[j].data[0] = MOV_NULL_TS;
-                DataOut[i].station[j].date[0] = QDateTime(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),
+                DataOut[i]->station[j]->data.resize(1);
+                DataOut[i]->station[j]->date.resize(1);
+                DataOut[i]->station[j]->StationName = "NONAME";
+                DataOut[i]->station[j]->data[0] = MOV_NULL_TS;
+                DataOut[i]->station[j]->date[0] = QDateTime(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),
                                                           QTime(MOV_NULL_HOUR,MOV_NULL_MINUTE,MOV_NULL_SECOND));
-                DataOut[i].station[j].isNull = true;
+                DataOut[i]->station[j]->isNull = true;
             }
         }
     }

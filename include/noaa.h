@@ -38,6 +38,7 @@
 #include "mov_flags.h"
 #include "general_functions.h"
 #include "mov_qchartview.h"
+#include "imeds.h"
 
 using namespace QtCharts;
 
@@ -75,7 +76,7 @@ signals:
 private:
 
     //...Private Functions
-    QString formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
+    int formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
     void readNOAAResponse(QNetworkReply *reply, int index, int index2);
     int fetchNOAAData();
     int prepNOAAResponse();
@@ -87,23 +88,11 @@ private:
     int setAsyncNOAAStation();
     int getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude);
 
-    //...Structures
-    struct NOAAStationData
-    {
-        QDate Date;
-        QTime Time;
-        double value;
-    };
-
     //...Private Variables
     QVector< QVector<QByteArray> > NOAAWebData;
     int NOAAMarkerID;
     int ProductIndex;
 
-    double CurrentNOAALat;
-    double CurrentNOAALon;
-
-    QString CurrentNOAAStationName;
     QString Datum;
     QString Units;
     QString yLabel;
@@ -113,7 +102,7 @@ private:
     QDateTime StartDate;
     QDateTime EndDate;
 
-    QVector< QVector<NOAAStationData> > CurrentNOAAStation;
+    QVector<imeds*>  CurrentNOAAStation;
     QVector<QString> ErrorString;
 
     //...Pointers to GUI elements

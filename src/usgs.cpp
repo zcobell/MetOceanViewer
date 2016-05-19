@@ -268,10 +268,7 @@ int usgs::formatUSGSInstantResponse(QByteArray Input)
 
     //...Sanity check
     if(this->CurrentUSGSStation.length()==0)
-    {
-        emit usgsError("Error reading USGS data");
         return -1;
-    }
 
     //...Zero counters
     for(i=0;i<this->CurrentUSGSStation.length();i++)
@@ -484,7 +481,7 @@ int usgs::getTimezoneOffset(QString timezone)
 
 int usgs::plotNewUSGSStation()
 {
-    int i,ierr;
+    int ierr;
 
     //...Check the data type
     if(instantButton->isChecked())
