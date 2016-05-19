@@ -20,10 +20,11 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <MetOceanViewer.h>
-#include <ui_MetOceanViewer_main.h>
-#include <keyhandler.h>
-#include <update_dialog.h>
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
+#include "keyhandler.h"
+#include "update_dialog.h"
+#include "mov_colors.h"
 
 void MainWindow::setupMetOceanViewerUI()
 {
@@ -118,22 +119,22 @@ void MainWindow::setupMetOceanViewerUI()
     this->LineColorBounds.setRgb(0,0,0);
 
     //Set the button color for high water marks
-    QString ButtonStyle = mov_generic::MakeColorString(this->DotColorHWM);
+    QString ButtonStyle = mov_colors::MakeColorString(this->DotColorHWM);
     ui->button_hwmcolor->setStyleSheet(ButtonStyle);
     ui->button_hwmcolor->update();
 
     //Set the button color for the 1:1 line
-    ButtonStyle = mov_generic::MakeColorString(this->LineColor121Line);
+    ButtonStyle = mov_colors::MakeColorString(this->LineColor121Line);
     ui->button_121linecolor->setStyleSheet(ButtonStyle);
     ui->button_121linecolor->update();
 
     //Set the button color for the linear regression line
-    ButtonStyle = mov_generic::MakeColorString(this->LineColorRegression);
+    ButtonStyle = mov_colors::MakeColorString(this->LineColorRegression);
     ui->button_reglinecolor->setStyleSheet(ButtonStyle);
     ui->button_reglinecolor->update();
 
     //Set the button color for StdDev bounding lines
-    ButtonStyle = mov_generic::MakeColorString(this->LineColorBounds);
+    ButtonStyle = mov_colors::MakeColorString(this->LineColorBounds);
     ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
     ui->button_boundlinecolor->update();
 

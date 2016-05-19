@@ -21,9 +21,10 @@
 //
 //-----------------------------------------------------------------------//
 
-#include <timeseries_add_data.h>
-#include <ui_timeseries_add_data.h>
-#include <MetOceanViewer.h>
+#include "timeseries_add_data.h"
+#include "ui_timeseries_add_data.h"
+#include "MetOceanViewer.h"
+#include "mov_colors.h"
 
 //-------------------------------------------//
 //This brings up the dialog box used to add
@@ -65,8 +66,8 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->text_xadjust->setText("0.0");
     ui->text_yadjust->setText("0.0");
     ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
-    RandomButtonColor = mov_generic::GenerateRandomColor();
-    ButtonStyle = mov_generic::MakeColorString(RandomButtonColor);
+    RandomButtonColor = mov_colors::GenerateRandomColor();
+    ButtonStyle = mov_colors::MakeColorString(RandomButtonColor);
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
     CurrentFileName = QString();
@@ -99,7 +100,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     InputFilePath = Filepath;
     CurrentFileName = Filepath;
     StationFilePath = StationPath;
-    ButtonStyle = mov_generic::MakeColorString(Color);
+    ButtonStyle = mov_colors::MakeColorString(Color);
     RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
@@ -226,7 +227,7 @@ void add_imeds_data::on_button_seriesColor_clicked()
     {
         RandomButtonColor = TempColor;
         ColorUpdated = true;
-        ButtonStyle = mov_generic::MakeColorString(RandomButtonColor);
+        ButtonStyle = mov_colors::MakeColorString(RandomButtonColor);
         ui->button_seriesColor->setStyleSheet(ButtonStyle);
         ui->button_seriesColor->update();
     }
@@ -326,7 +327,7 @@ void add_imeds_data::on_button_presetColor1_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
-    RandomButtonColor = mov_generic::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
@@ -334,7 +335,7 @@ void add_imeds_data::on_button_presetColor2_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
-    RandomButtonColor = mov_generic::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
@@ -342,7 +343,7 @@ void add_imeds_data::on_button_presetColor3_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
-    RandomButtonColor = mov_generic::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
@@ -350,6 +351,6 @@ void add_imeds_data::on_button_presetColor4_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
-    RandomButtonColor = mov_generic::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }

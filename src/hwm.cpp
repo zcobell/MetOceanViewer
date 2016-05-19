@@ -22,6 +22,7 @@
 //-----------------------------------------------------------------------//
 #include "hwm.h"
 #include "mov_generic.h"
+#include "mov_colors.h"
 #include <QPrinter>
 #include <float.h>
 
@@ -291,10 +292,10 @@ int hwm::plotRegression()
     XLabel          = this->measuredAxisLabelBox->text();
     displayBoundingLines = this->upperLowerLinesCheckbox->isChecked();
 
-    HWMColor = mov_generic::styleSheetToColor(this->buttonHWMColor->styleSheet());
-    One2OneColor = mov_generic::styleSheetToColor(this->button121LineColor->styleSheet());
-    BoundColor = mov_generic::styleSheetToColor(this->buttonBoundingLinecolor->styleSheet());
-    RegColor = mov_generic::styleSheetToColor(this->buttonRegLineColor->styleSheet());
+    HWMColor = mov_colors::styleSheetToColor(this->buttonHWMColor->styleSheet());
+    One2OneColor = mov_colors::styleSheetToColor(this->button121LineColor->styleSheet());
+    BoundColor = mov_colors::styleSheetToColor(this->buttonBoundingLinecolor->styleSheet());
+    RegColor = mov_colors::styleSheetToColor(this->buttonRegLineColor->styleSheet());
 
     boundValue = this->boundingLinesValue->value()*this->regStdDev;
     numSD      = this->boundingLinesValue->value();

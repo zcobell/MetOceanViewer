@@ -27,6 +27,7 @@
 
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
+#include "mov_colors.h"
 
 
 //-------------------------------------------//
@@ -184,7 +185,7 @@ void MainWindow::on_button_hwmcolor_clicked()
     else
         return;
 
-    ButtonStyle = mov_generic::MakeColorString(DotColorHWM);
+    ButtonStyle = mov_colors::MakeColorString(DotColorHWM);
     ui->button_hwmcolor->setStyleSheet(ButtonStyle);
     ui->button_hwmcolor->update();
     return;
@@ -207,7 +208,7 @@ void MainWindow::on_button_121linecolor_clicked()
     else
         return;
 
-    ButtonStyle = mov_generic::MakeColorString(LineColor121Line);
+    ButtonStyle = mov_colors::MakeColorString(LineColor121Line);
     ui->button_121linecolor->setStyleSheet(ButtonStyle);
     ui->button_121linecolor->update();
     return;
@@ -230,7 +231,7 @@ void MainWindow::on_button_reglinecolor_clicked()
     else
         return;
 
-    ButtonStyle = mov_generic::MakeColorString(LineColorRegression);
+    ButtonStyle = mov_colors::MakeColorString(LineColorRegression);
     ui->button_reglinecolor->setStyleSheet(ButtonStyle);
     ui->button_reglinecolor->update();
     return;
@@ -253,7 +254,7 @@ void MainWindow::on_button_boundlinecolor_clicked()
     else
         return;
 
-    ButtonStyle = mov_generic::MakeColorString(LineColorBounds);
+    ButtonStyle = mov_colors::MakeColorString(LineColorBounds);
     ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
     ui->button_boundlinecolor->update();
     return;

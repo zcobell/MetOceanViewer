@@ -37,9 +37,6 @@ public:
     static void splitPath(QString input,QString &filename,QString &directory);
     static void delay(int delayTime);
     static void delayM(int delayTime);
-    static QString MakeColorString(QColor InputColor);
-    static QColor GenerateRandomColor();
-    static QColor styleSheetToColor(QString stylesheet);
     static int NETCDF_ERR(int status);
     static bool isConnectedToNetwork();
     static int getLocalTimzoneOffset();
