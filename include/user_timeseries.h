@@ -33,7 +33,7 @@
 #include <QTableWidget>
 #include <QDateTime>
 
-#include "general_functions.h"
+#include "mov_generic.h"
 #include "mov_qchartview.h"
 #include "imeds.h"
 

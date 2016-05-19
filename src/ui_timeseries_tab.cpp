@@ -40,7 +40,7 @@ void MainWindow::on_button_saveTimeseriesImage_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,Filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,Filename,PreviousDirectory);
 
     int ierr = this->thisTimeseries->saveImage(TempString,filter);
 

@@ -72,7 +72,7 @@ QString XTide::getCurrentXTideStation()
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     return evalList.value(0);
@@ -92,7 +92,7 @@ int XTide::getClickedXTideStation()
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     this->currentStationName = evalList.value(0);

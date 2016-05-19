@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    if(!isConnectedToNetwork())
+    if(!mov_generic::isConnectedToNetwork())
     {
         QMessageBox::critical(0,"Internet Connection Not Detected",
                               "No internet connection was detected.\n "

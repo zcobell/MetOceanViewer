@@ -25,7 +25,7 @@
 #include <ui_MetOceanViewer_main.h>
 #include <about_dialog.h>
 #include <update_dialog.h>
-#include <general_functions.h>
+#include <mov_generic.h>
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
@@ -108,7 +108,7 @@ void MainWindow::on_actionLoad_Session_triggered()
     if(LoadFile==NULL)
         return;
 
-    splitPath(LoadFile,BaseFile,this->PreviousDirectory);
+    mov_generic::splitPath(LoadFile,BaseFile,this->PreviousDirectory);
 
     this->SessionFile = LoadFile;
 

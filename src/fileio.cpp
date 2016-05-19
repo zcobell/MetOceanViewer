@@ -82,10 +82,10 @@ int MainWindow::saveSession()
         Session.remove();
 
     //Get the path of the session file so we can save a relative path later
-    splitPath(SessionFile,TempFile,Directory);
+    mov_generic::splitPath(SessionFile,TempFile,Directory);
     QDir CurrentDir(Directory);
 
-    ierr = NETCDF_ERR(nc_create(SessionFile.toUtf8(),NC_NETCDF4,&ncid));
+    ierr = mov_generic::NETCDF_ERR(nc_create(SessionFile.toUtf8(),NC_NETCDF4,&ncid));
     if(ierr!=NC_NOERR)return 1;
 
     //Start setting up the definitions
@@ -119,96 +119,96 @@ int MainWindow::saveSession()
             checkStates_ts[i] = 0;
     }
 
-    ierr = NETCDF_ERR(nc_def_dim(ncid,"ntimeseries",static_cast<size_t>(nTimeseries),&dimid_ntimeseries));
+    ierr = mov_generic::NETCDF_ERR(nc_def_dim(ncid,"ntimeseries",static_cast<size_t>(nTimeseries),&dimid_ntimeseries));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_dim(ncid,"one",1,&dimid_one));
+    ierr = mov_generic::NETCDF_ERR(nc_def_dim(ncid,"one",1,&dimid_one));
     if(ierr!=NC_NOERR)return 1;
 
     //Arrays
     dims_1d[0] = dimid_ntimeseries;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_filename",NC_STRING,1,dims_1d,&varid_filename));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_filename",NC_STRING,1,dims_1d,&varid_filename));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_colors",NC_STRING,1,dims_1d,&varid_colors));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_colors",NC_STRING,1,dims_1d,&varid_colors));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_names",NC_STRING,1,dims_1d,&varid_names));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_names",NC_STRING,1,dims_1d,&varid_names));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_filetype",NC_STRING,1,dims_1d,&varid_type));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_filetype",NC_STRING,1,dims_1d,&varid_type));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_coldstartdate",NC_STRING,1,dims_1d,&varid_coldstart));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_coldstartdate",NC_STRING,1,dims_1d,&varid_coldstart));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_stationfile",NC_STRING,1,dims_1d,&varid_stationfile));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_stationfile",NC_STRING,1,dims_1d,&varid_stationfile));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_xshift",NC_DOUBLE,1,dims_1d,&varid_xshift));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_xshift",NC_DOUBLE,1,dims_1d,&varid_xshift));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_yshift",NC_DOUBLE,1,dims_1d,&varid_yshift));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_yshift",NC_DOUBLE,1,dims_1d,&varid_yshift));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_units",NC_DOUBLE,1,dims_1d,&varid_units));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_units",NC_DOUBLE,1,dims_1d,&varid_units));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_checkState",NC_INT,1,dims_1d,&varid_checkState));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_checkState",NC_INT,1,dims_1d,&varid_checkState));
     if(ierr!=NC_NOERR)return 1;
 
     //Scalars
     dims_1d[0] = dimid_one;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_plottitle",NC_STRING,1,dims_1d,&varid_plottitle));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_plottitle",NC_STRING,1,dims_1d,&varid_plottitle));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_xlabel",NC_STRING,1,dims_1d,&varid_xlabel));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_xlabel",NC_STRING,1,dims_1d,&varid_xlabel));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_ylabel",NC_STRING,1,dims_1d,&varid_ylabel));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_ylabel",NC_STRING,1,dims_1d,&varid_ylabel));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_precision",NC_INT,1,dims_1d,&varid_precision));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_precision",NC_INT,1,dims_1d,&varid_precision));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_startdate",NC_STRING,1,dims_1d,&varid_startdate));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_startdate",NC_STRING,1,dims_1d,&varid_startdate));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_enddate",NC_STRING,1,dims_1d,&varid_enddate));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_enddate",NC_STRING,1,dims_1d,&varid_enddate));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_ymin",NC_DOUBLE,1,dims_1d,&varid_ymin));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_ymin",NC_DOUBLE,1,dims_1d,&varid_ymin));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_ymax",NC_DOUBLE,1,dims_1d,&varid_ymax));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_ymax",NC_DOUBLE,1,dims_1d,&varid_ymax));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_autodate",NC_INT,1,dims_1d,&varid_autodate));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_autodate",NC_INT,1,dims_1d,&varid_autodate));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_def_var(ncid,"timeseries_autoy",NC_INT,1,dims_1d,&varid_autoy));
+    ierr = mov_generic::NETCDF_ERR(nc_def_var(ncid,"timeseries_autoy",NC_INT,1,dims_1d,&varid_autoy));
     if(ierr!=NC_NOERR)return 1;
-    ierr = NETCDF_ERR(nc_enddef(ncid));
+    ierr = mov_generic::NETCDF_ERR(nc_enddef(ncid));
     if(ierr!=NC_NOERR)return 1;
 
     mydatastring[0] = ui->text_TimeseriesPlotTitle->text().toUtf8();
-    ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_plottitle,mydatastring));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_plottitle,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydatastring[0] = ui->text_TimeseriesXaxisLabel->text().toUtf8();
-    ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_xlabel,mydatastring));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_xlabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydatastring[0] = ui->text_TimeseriesYaxisLabel->text().toUtf8();
-    ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_ylabel,mydatastring));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_ylabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydatastring[0] = ui->date_TimeseriesStartDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
-    ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_startdate,mydatastring));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_startdate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydatastring[0] = ui->date_TimeseriesEndDate->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
-    ierr = NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
     mydataint[0] = 3;
-    ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_precision,mydataint));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_int(ncid,varid_precision,mydataint));
     if(ierr!=NC_NOERR)return 1;
     mydatadouble[0] = ui->spin_TimeseriesYmin->value();
-    ierr = NETCDF_ERR(nc_put_var_double(ncid,varid_ymin,mydatadouble));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_double(ncid,varid_ymin,mydatadouble));
     if(ierr!=NC_NOERR)return 1;
     mydatadouble[0] = ui->spin_TimeseriesYmax->value();
-    ierr = NETCDF_ERR(nc_put_var_double(ncid,varid_ymax,mydatadouble));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_double(ncid,varid_ymax,mydatadouble));
     if(ierr!=NC_NOERR)return 1;
 
     if(ui->check_TimeseriesAllData->isChecked())
         mydataint[0] = 1;
     else
         mydataint[0] = 0;
-    ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_autodate,mydataint));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_int(ncid,varid_autodate,mydataint));
     if(ierr!=NC_NOERR)return 1;
 
     if(ui->check_TimeseriesYauto->isChecked())
         mydataint[0] = 1;
     else
         mydataint[0] = 0;
-    ierr = NETCDF_ERR(nc_put_var_int(ncid,varid_autoy,mydataint));
+    ierr = mov_generic::NETCDF_ERR(nc_put_var_int(ncid,varid_autoy,mydataint));
     if(ierr!=NC_NOERR)return 1;
 
     for(iu=0;iu<static_cast<unsigned int>(nTimeseries);iu++)
@@ -217,49 +217,49 @@ int MainWindow::saveSession()
 
         relPath = CurrentDir.relativeFilePath(filenames_ts[iu]);
         mydatastring[0]  = relPath.toUtf8();
-        ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_filename,start,mydatastring));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_filename,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         mydatastring[0]  = seriesname_ts[iu].toUtf8();
-        ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_names,start,mydatastring));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_names,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         mydatastring[0]  = colors_ts[iu].toUtf8();
-        ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_colors,start,mydatastring));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_colors,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         mydatastring[0]  = date_ts[iu].toUtf8();
-        ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_coldstart,start,mydatastring));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_coldstart,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         relPath = CurrentDir.relativeFilePath(stationfile_ts[iu]);
         mydatastring[0]  = relPath.toUtf8();
-        ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_stationfile,start,mydatastring));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_stationfile,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         mydatastring[0]  = filetype_ts[iu].toUtf8();
-        ierr  = NETCDF_ERR(nc_put_var1_string(ncid,varid_type,start,mydatastring));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_type,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
 
         mydatadouble[0]  = xshift_ts[iu];
-        ierr  = NETCDF_ERR(nc_put_var1_double(ncid,varid_xshift,start,mydatadouble));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_double(ncid,varid_xshift,start,mydatadouble));
         if(ierr!=NC_NOERR)return 1;
 
         mydatadouble[0]  = yshift_ts[iu];
-        ierr  = NETCDF_ERR(nc_put_var1_double(ncid,varid_yshift,start,mydatadouble));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_double(ncid,varid_yshift,start,mydatadouble));
         if(ierr!=NC_NOERR)return 1;
 
         mydatadouble[0]  = units_ts[iu];
-        ierr  = NETCDF_ERR(nc_put_var1_double(ncid,varid_units,start,mydatadouble));
+        ierr  = mov_generic::NETCDF_ERR(nc_put_var1_double(ncid,varid_units,start,mydatadouble));
         if(ierr!=NC_NOERR)return 1;
 
         mydataint[0] = checkStates_ts[iu];
-        ierr = NETCDF_ERR(nc_put_var1_int(ncid,varid_checkState,start,mydataint));
+        ierr = mov_generic::NETCDF_ERR(nc_put_var1_int(ncid,varid_checkState,start,mydataint));
         if(ierr!=NC_NOERR)return 1;
 
     }
 
-    ierr = NETCDF_ERR(nc_close(ncid));
+    ierr = mov_generic::NETCDF_ERR(nc_close(ncid));
     if(ierr!=NC_NOERR)return 1;
 
     return 0;
@@ -307,68 +307,68 @@ int MainWindow::loadSession()
     }
 
     //Open the netCDF file
-    ierr = NETCDF_ERR(nc_open(SessionFile.toUtf8(),NC_NOWRITE,&ncid));
+    ierr = mov_generic::NETCDF_ERR(nc_open(SessionFile.toUtf8(),NC_NOWRITE,&ncid));
     if(ierr!=NC_NOERR)return 1;
 
     //Read some of the basics from the file (dimensions, variable IDs)
-    ierr = NETCDF_ERR(nc_inq_dimid(ncid,"ntimeseries",&dimid_ntimeseries));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_dimid(ncid,"ntimeseries",&dimid_ntimeseries));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_filename",&varid_filename));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_filename",&varid_filename));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_colors",&varid_colors));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_colors",&varid_colors));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_names",&varid_names));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_names",&varid_names));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_filetype",&varid_type));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_filetype",&varid_type));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_units",&varid_units));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_units",&varid_units));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_xshift",&varid_xshift));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_xshift",&varid_xshift));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_yshift",&varid_yshift));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_yshift",&varid_yshift));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_coldstartdate",&varid_coldstart));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_coldstartdate",&varid_coldstart));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_stationfile",&varid_stationfile));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_stationfile",&varid_stationfile));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_plottitle",&varid_plottitle));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_plottitle",&varid_plottitle));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_xlabel",&varid_xlabel));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_xlabel",&varid_xlabel));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_ylabel",&varid_ylabel));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_ylabel",&varid_ylabel));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_precision",&varid_precision));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_precision",&varid_precision));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_startdate",&varid_startdate));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_startdate",&varid_startdate));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_enddate",&varid_enddate));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_enddate",&varid_enddate));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_ymin",&varid_ymin));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_ymin",&varid_ymin));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_ymax",&varid_ymax));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_ymax",&varid_ymax));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_autodate",&varid_autodate));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_autodate",&varid_autodate));
     if(ierr!=NC_NOERR)return 1;
 
-    ierr = NETCDF_ERR(nc_inq_varid(ncid,"timeseries_autoy",&varid_autoy));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_autoy",&varid_autoy));
     if(ierr!=NC_NOERR)return 1;
 
     ierr = nc_inq_varid(ncid,"timeseries_checkState",&varid_checkState);
@@ -378,46 +378,46 @@ int MainWindow::loadSession()
         hasCheckInfo = true;
 
     //Read the scalar variables
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_plottitle,&mydatachar));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_plottitle,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     ui->text_TimeseriesPlotTitle->setText(QString(mydatachar[0]));
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_xlabel,&mydatachar));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_xlabel,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     ui->text_TimeseriesXaxisLabel->setText(QString(mydatachar[0]));
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_ylabel,&mydatachar));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_ylabel,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     ui->text_TimeseriesYaxisLabel->setText(QString(mydatachar[0]));
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_startdate,&mydatachar));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_startdate,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     tempstring = QString(mydatachar[0]);
     tempstartdate = QDateTime::fromString(tempstring,"yyyy-MM-dd hh:mm:ss").date();
     ui->date_TimeseriesStartDate->setDate(tempstartdate);
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_enddate,&mydatachar));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_enddate,&mydatachar));
     if(ierr!=NC_NOERR)return 1;
     tempstring = QString(mydatachar[0]);
     tempenddate = QDateTime::fromString(tempstring,"yyyy-MM-dd hh:mm:ss").date();
     ui->date_TimeseriesEndDate->setDate(tempenddate);
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_ymin,&mydatadouble));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_ymin,&mydatadouble));
     if(ierr!=NC_NOERR)return 1;
     ui->spin_TimeseriesYmin->setValue(mydatadouble[0]);
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_ymax,&mydatadouble));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_ymax,&mydatadouble));
     if(ierr!=NC_NOERR)return 1;
     ui->spin_TimeseriesYmax->setValue(mydatadouble[0]);
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_autodate,&mydataint));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_autodate,&mydataint));
     if(ierr!=NC_NOERR)return 1;
     if(mydataint[0]==0)
         ui->check_TimeseriesAllData->setChecked(false);
     else
         ui->check_TimeseriesAllData->setChecked(true);
 
-    ierr = NETCDF_ERR(nc_get_var(ncid,varid_autoy,&mydataint));
+    ierr = mov_generic::NETCDF_ERR(nc_get_var(ncid,varid_autoy,&mydataint));
     if(ierr!=NC_NOERR)return 1;
     if(mydataint[0]==0)
         ui->check_TimeseriesYauto->setChecked(false);
@@ -432,59 +432,59 @@ int MainWindow::loadSession()
 //    }
 
     //Next, read in the data and add rows to the table
-    ierr = NETCDF_ERR(nc_inq_dimlen(ncid,dimid_ntimeseries,&temp_size_t));
+    ierr = mov_generic::NETCDF_ERR(nc_inq_dimlen(ncid,dimid_ntimeseries,&temp_size_t));
     if(ierr!=NC_NOERR)return 1;
     nTimeseries = static_cast<int>(temp_size_t);
     nrow = 0;
 
     //Get the location we are currently working in
-    splitPath(SessionFile,TempFile,CurrentDirectory);
+    mov_generic::splitPath(SessionFile,TempFile,CurrentDirectory);
 
     for(i=0;i<nTimeseries;i++)
     {
         start[0] = static_cast<size_t>(i);
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_filename,start,&mydatachar));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_filename,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         filelocation = QString(mydatachar[0]);
         filename = TempFile;
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_names,start,&mydatachar));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_names,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         series_name = QString(mydatachar[0]);
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_type,start,&mydatachar));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_type,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         type = QString(mydatachar[0]);
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_colors,start,&mydatachar));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_colors,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         color = QString(mydatachar[0]);
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_units,start,&mydatadouble));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_units,start,&mydatadouble));
         if(ierr!=NC_NOERR)return 1;
         unitconvert = mydatadouble[0];
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_coldstart,start,&mydatachar));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_coldstart,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         coldstartstring = QString(mydatachar[0]);
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_xshift,start,&mydatadouble));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_xshift,start,&mydatadouble));
         if(ierr!=NC_NOERR)return 1;
         xshift = mydatadouble[0];
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_yshift,start,&mydatadouble));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_yshift,start,&mydatadouble));
         if(ierr!=NC_NOERR)return 1;
         yshift = mydatadouble[0];
 
-        ierr = NETCDF_ERR(nc_get_var1(ncid,varid_stationfile,start,&mydatachar));
+        ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_stationfile,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
         stationfilepath = QString(mydatachar[0]);
-        splitPath(stationfilepath,stationfile,TempFile);
+        mov_generic::splitPath(stationfilepath,stationfile,TempFile);
 
         if(hasCheckInfo)
         {
-            ierr = NETCDF_ERR(nc_get_var1(ncid,varid_checkState,start,&mydataint));
+            ierr = mov_generic::NETCDF_ERR(nc_get_var1(ncid,varid_checkState,start,&mydataint));
             if(mydataint[0]==1)
                 checkState = Qt::Checked;
             else
@@ -496,7 +496,7 @@ int MainWindow::loadSession()
         continueToLoad = false;
 
         filelocation = CurrentDirectory+"/"+filelocation;
-        splitPath(filelocation,BaseFile,BaseDir);
+        mov_generic::splitPath(filelocation,BaseFile,BaseDir);
 
         QFile myfile(filelocation);
         if(!myfile.exists())
@@ -574,7 +574,7 @@ int MainWindow::loadSession()
 
         if(type == "ADCIRC")
         {
-            splitPath(stationfilepath,BaseFile,BaseDir);
+            mov_generic::splitPath(stationfilepath,BaseFile,BaseDir);
             stationfilepath = CurrentDirectory+"/"+stationfilepath;
             QFile myfile(stationfilepath);
             if(!myfile.exists())
@@ -705,7 +705,7 @@ int MainWindow::loadSession()
 
         }
     }
-    ierr = NETCDF_ERR(nc_close(ncid));
+    ierr = mov_generic::NETCDF_ERR(nc_close(ncid));
     if(ierr!=NC_NOERR)return 1;
 
     //Change to the time series data screen

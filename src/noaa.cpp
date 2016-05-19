@@ -370,7 +370,7 @@ int noaa::getNOAAStation(QString &NOAAStationName, double &longitude, double &la
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     NOAAStationName = evalList.value(1).simplified();

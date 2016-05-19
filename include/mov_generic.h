@@ -20,8 +20,8 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#ifndef GENERAL_FUNCTIONS_H
-#define GENERAL_FUNCTIONS_H
+#ifndef MOV_GENERIC_H
+#define MOV_GENERIC_H
 
 #include <QMessageBox>
 #include <QColor>
@@ -30,14 +30,20 @@
 #include <QDateTime>
 #include <QNetworkInterface>
 
-void splitPath(QString input,QString &filename,QString &directory);
-void delay(int delayTime);
-void delayM(int delayTime);
-QString MakeColorString(QColor InputColor);
-QColor GenerateRandomColor();
-QColor styleSheetToColor(QString stylesheet);
-int NETCDF_ERR(int status);
-bool isConnectedToNetwork();
-int getLocalTimzoneOffset();
+class mov_generic : public QObject
+{
 
-#endif // GENERAL_FUNCTIONS_H
+public:
+    static void splitPath(QString input,QString &filename,QString &directory);
+    static void delay(int delayTime);
+    static void delayM(int delayTime);
+    static QString MakeColorString(QColor InputColor);
+    static QColor GenerateRandomColor();
+    static QColor styleSheetToColor(QString stylesheet);
+    static int NETCDF_ERR(int status);
+    static bool isConnectedToNetwork();
+    static int getLocalTimzoneOffset();
+
+};
+
+#endif // MOV_GENERIC_H

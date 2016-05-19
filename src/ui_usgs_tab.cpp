@@ -163,7 +163,7 @@ void MainWindow::on_button_usgssavemap_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisUSGS->saveUSGSImage(TempString,filter);
 
@@ -215,7 +215,7 @@ void MainWindow::on_button_usgssavedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisUSGS->saveUSGSData(TempString,format);
 

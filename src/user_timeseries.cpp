@@ -21,7 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include "user_timeseries.h"
-#include "general_functions.h"
+#include "mov_generic.h"
 #include "mov_flags.h"
 #include "javascriptAsyncReturn.h"
 #include <netcdf.h>
@@ -220,7 +220,7 @@ int user_timeseries::getMarkerIDFromMap()
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("getMarker()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     return eval.toInt();
 }
 
@@ -229,7 +229,7 @@ int user_timeseries::getMultipleMarkersFromMap()
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("getMarkers()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
 
     int i;
     QString tempString;

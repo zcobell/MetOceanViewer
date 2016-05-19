@@ -36,7 +36,7 @@
 
 #include "mov_errors.h"
 #include "mov_flags.h"
-#include "general_functions.h"
+#include "mov_generic.h"
 #include "mov_qchartview.h"
 #include "imeds.h"
 

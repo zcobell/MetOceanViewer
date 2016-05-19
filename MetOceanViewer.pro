@@ -32,7 +32,6 @@ SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
     src/ui_usgs_tab.cpp \
-    src/general_functions.cpp \
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
@@ -50,7 +49,8 @@ SOURCES += src/main.cpp\
     src/xtide.cpp \
     src/javascriptAsyncReturn.cpp \
     src/imeds.cpp \
-    src/imeds_station.cpp
+    src/imeds_station.cpp \
+    src/mov_generic.cpp
 
 HEADERS  += \
     version.h \
@@ -61,7 +61,6 @@ HEADERS  += \
     include/mov_errors.h \
     include/mov_flags.h \ 
     include/usgs.h \
-    include/general_functions.h \
     include/user_timeseries.h \
     include/hwm.h \
     include/keyhandler.h \
@@ -71,7 +70,8 @@ HEADERS  += \
     include/xtide.h \
     include/javascriptAsyncReturn.h \
     include/imeds.h \
-    include/imeds_station.h
+    include/imeds_station.h \
+    include/mov_generic.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

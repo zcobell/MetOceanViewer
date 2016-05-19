@@ -67,7 +67,7 @@ void MainWindow::on_button_noaasavechart_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,this->PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,this->PreviousDirectory);
 
     ierr = thisNOAA->saveNOAAImage(TempString,filter);
 
@@ -110,7 +110,7 @@ void MainWindow::on_button_noaasavedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,this->PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,this->PreviousDirectory);
 
     thisNOAA->saveNOAAData(filename,this->PreviousDirectory,format);
 

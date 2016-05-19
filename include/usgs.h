@@ -32,7 +32,7 @@
 #include <QVector>
 #include <QtCharts>
 
-#include "general_functions.h"
+#include "mov_generic.h"
 #include "mov_qchartview.h"
 #include "mov_errors.h"
 #include "mov_flags.h"

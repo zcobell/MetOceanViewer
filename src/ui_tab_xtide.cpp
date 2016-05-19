@@ -69,7 +69,7 @@ void MainWindow::on_button_xtide_savemap_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisXTide->saveXTidePlot(TempString,filter);
 
@@ -108,7 +108,7 @@ void MainWindow::on_button_xtide_savedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisXTide->saveXTideData(TempString,format);
 

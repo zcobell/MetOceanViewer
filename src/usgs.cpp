@@ -793,7 +793,7 @@ QString usgs::getMarkerSelection(QString &name, double &longitude, double &latit
     QVariant eval = QVariant();
     map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     //...Station information
