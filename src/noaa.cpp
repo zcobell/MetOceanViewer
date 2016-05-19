@@ -402,6 +402,8 @@ void noaa::javascriptDataReturned(QString data)
     this->CurrentNOAAStation[1]->station[0]->latitude = evalList.value(3).toDouble();
     this->CurrentNOAAStation[1]->station[0]->longitude = evalList.value(2).toDouble();
     this->CurrentNOAAStation[1]->station[0]->StationName = evalList.value(1).simplified();
+    this->CurrentNOAAStation[0]->station[0]->StationID = "NOAA_"+QString::number(this->NOAAMarkerID);
+    this->CurrentNOAAStation[1]->station[0]->StationID = "NOAA_"+QString::number(this->NOAAMarkerID);
 
     if(this->NOAAMarkerID==-1)
     {

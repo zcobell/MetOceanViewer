@@ -254,13 +254,6 @@ int user_timeseries::getMultipleMarkersFromMap()
 }
 
 
-int user_timeseries::getAsyncClickedMarkerID()
-{
-
-    return 0;
-}
-
-
 int user_timeseries::getAsyncMultipleMarkersFromMap()
 {
     javascriptAsyncReturn *javaReturn = new javascriptAsyncReturn(this);
@@ -333,9 +326,12 @@ void user_timeseries::javascriptDataReturned(QString data)
     }
     else
     {
+        minDate = minDate.addSecs(-offset/1000);
+        maxDate = maxDate.addSecs(-offset/1000);
         axisX->setMin(minDate);
         axisX->setMax(maxDate);
     }
+
     axisX->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->addAxis(axisX, Qt::AlignBottom);
 

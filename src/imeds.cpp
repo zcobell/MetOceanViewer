@@ -211,7 +211,7 @@ int imeds::write(QString filename)
         return -1;
 
     outputFile.write(QString("% IMEDS generic format - Water Level\n").toUtf8());
-    outputFile.write(QString("% year month day hour min sec watlev("+this->units+"\n").toUtf8());
+    outputFile.write(QString("% year month day hour min sec watlev("+this->units+")\n").toUtf8());
     outputFile.write(QString("MetOceanViewer    UTC    "+this->datum+"\n").toUtf8());
 
     for(int s=0;s<this->nstations;s++)
@@ -220,7 +220,7 @@ int imeds::write(QString filename)
                   "   "+QString::number(this->station[s]->latitude)+
                   "   "+QString::number(this->station[s]->longitude)+"\n").toUtf8());
 
-        for(int i=0;i<this->station[i]->data.length();i++)
+        for(int i=0;i<this->station[s]->data.length();i++)
         {
             value.sprintf("%10.4e",this->station[s]->data[i]);
             outputFile.write(QString(this->station[s]->date[i].toString("yyyy    MM    dd    hh    mm    ss")+"    "+value+"\n").toUtf8());
