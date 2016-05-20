@@ -67,7 +67,7 @@ void MainWindow::on_button_noaasavechart_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,this->PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,this->PreviousDirectory);
 
     ierr = thisNOAA->saveNOAAImage(TempString,filter);
 
@@ -110,7 +110,7 @@ void MainWindow::on_button_noaasavedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,this->PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,this->PreviousDirectory);
 
     thisNOAA->saveNOAAData(filename,this->PreviousDirectory,format);
 
@@ -150,10 +150,6 @@ void MainWindow::on_Button_FetchData_clicked()
 void MainWindow::plotNOAAStation()
 {
     int ierr;
-    QString error,TempString;
-
-    //Display the wait cursor
-    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //...Create a new NOAA object
     if(!this->thisNOAA.isNull())
@@ -161,19 +157,9 @@ void MainWindow::plotNOAAStation()
     this->thisNOAA = new noaa(ui->noaa_map,ui->noaa_graphics,ui->Date_StartTime,
                         ui->Date_EndTime,ui->combo_NOAAProduct,ui->combo_noaaunits,
                         ui->combo_noaadatum,ui->statusBar,this);
+    connect(thisNOAA,SIGNAL(noaaError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     ierr = this->thisNOAA->plotNOAAStation();
-
-    QApplication::restoreOverrideCursor();
-    if(ierr!=0)
-    {
-        TempString = this->thisNOAA->getNOAAErrorString().split("Error: ").value(1);
-        if(TempString.length()>0)
-            error = TempString;
-        else
-            error = this->thisNOAA->getNOAAErrorString();
-        QMessageBox::critical(this,"ERROR",error);
-    }
     return;
 }
 

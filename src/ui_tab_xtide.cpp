@@ -1,4 +1,25 @@
-
+//-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2015  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// The name "MetOcean Viewer" is specific to this project and may not be
+// used for projects "forked" or derived from this work.
+//
+//-----------------------------------------------------------------------//
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 
@@ -12,32 +33,18 @@ void MainWindow::on_button_xtide_compute_clicked()
 void MainWindow::plotXTideStation()
 {
     int ierr;
-    QString error;
-
-
-    //...Display wait cursor
-    QApplication::setOverrideCursor(Qt::WaitCursor);
 
     //...Create an xTide object
     if(!this->thisXTide.isNull())
         delete this->thisXTide;
     this->thisXTide = new XTide(ui->xtide_map,ui->xtide_graphics,ui->date_xtide_start,
                                 ui->date_xtide_end,ui->combo_xtide_units,ui->statusBar,this);
+    connect(thisXTide,SIGNAL(xTideError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     //...Call the plotting routine
     ierr = this->thisXTide->plotXTideStation();
-    if(ierr!=0)
-    {
-        QApplication::restoreOverrideCursor();
-        QMessageBox::critical(this,"ERROR",this->thisXTide->getErrorString());
-        return;
-    }
-
-    //...Clear the wait cursor
-    QApplication::restoreOverrideCursor();
 
     return;
-
 
 }
 
@@ -83,7 +90,7 @@ void MainWindow::on_button_xtide_savemap_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisXTide->saveXTidePlot(TempString,filter);
 
@@ -122,7 +129,7 @@ void MainWindow::on_button_xtide_savedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisXTide->saveXTideData(TempString,format);
 

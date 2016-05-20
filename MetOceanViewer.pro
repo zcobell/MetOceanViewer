@@ -32,11 +32,9 @@ SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
     src/ui_usgs_tab.cpp \
-    src/general_functions.cpp \
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
-    src/fileio.cpp \
     src/MetOceanViewer_main.cpp \
     src/setupMetOceanViewerUI.cpp \
     src/noaa.cpp \
@@ -47,7 +45,13 @@ SOURCES += src/main.cpp\
     src/mov_qchartview.cpp \
     src/update_dialog.cpp \
     src/ui_tab_xtide.cpp \
-    src/xtide.cpp
+    src/xtide.cpp \
+    src/javascriptAsyncReturn.cpp \
+    src/imeds.cpp \
+    src/imeds_station.cpp \
+    src/mov_generic.cpp \
+    src/mov_colors.cpp \
+    src/mov_session.cpp
 
 HEADERS  += \
     version.h \
@@ -58,14 +62,19 @@ HEADERS  += \
     include/mov_errors.h \
     include/mov_flags.h \ 
     include/usgs.h \
-    include/general_functions.h \
     include/user_timeseries.h \
     include/hwm.h \
     include/keyhandler.h \
     include/mov_qchartview.h \
     include/mov_qwebenginepage.h \
     include/update_dialog.h \
-    include/xtide.h
+    include/xtide.h \
+    include/javascriptAsyncReturn.h \
+    include/imeds.h \
+    include/imeds_station.h \
+    include/mov_generic.h \
+    include/mov_colors.h \
+    include/mov_session.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

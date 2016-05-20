@@ -35,12 +35,14 @@
 #include "mov_qchartview.h"
 #include "mov_errors.h"
 #include "mov_flags.h"
-#include "general_functions.h"
+#include "mov_generic.h"
 
 using namespace QtCharts;
 
 class XTide : public QObject
 {
+
+    Q_OBJECT
 
 public:
     //...Constructor
@@ -56,9 +58,16 @@ public:
     QString getLoadedXTideStation();
     QString getCurrentXTideStation();
     int getClickedXTideStation();
+    int getAsyncClickedXTideStation();
     int saveXTideData(QString filename, QString format);
     int saveXTidePlot(QString filename, QString filter);
     QString getErrorString();
+
+private slots:
+    void javascriptDataReturned(QString);
+
+signals:
+    void xTideError(QString);
 
 private:
     int findXTideExe();

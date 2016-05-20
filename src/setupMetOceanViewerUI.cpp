@@ -20,10 +20,11 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <MetOceanViewer.h>
-#include <ui_MetOceanViewer_main.h>
-#include <keyhandler.h>
-#include <update_dialog.h>
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
+#include "keyhandler.h"
+#include "update_dialog.h"
+#include "mov_colors.h"
 
 void MainWindow::setupMetOceanViewerUI()
 {
@@ -38,7 +39,7 @@ void MainWindow::setupMetOceanViewerUI()
     ui->noaa_map->page()->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
     //Get the local timezone offset
-    this->LocalTimezoneOffset = getLocalTimzoneOffset();
+    this->LocalTimezoneOffset = mov_generic::getLocalTimzoneOffset();
     this->LocalTimeUTC = QDateTime::currentDateTimeUtc();
 
     //For NOAA, set the default date/time to today and today minus 1
@@ -118,22 +119,22 @@ void MainWindow::setupMetOceanViewerUI()
     this->LineColorBounds.setRgb(0,0,0);
 
     //Set the button color for high water marks
-    QString ButtonStyle = MakeColorString(this->DotColorHWM);
+    QString ButtonStyle = mov_colors::MakeColorString(this->DotColorHWM);
     ui->button_hwmcolor->setStyleSheet(ButtonStyle);
     ui->button_hwmcolor->update();
 
     //Set the button color for the 1:1 line
-    ButtonStyle = MakeColorString(this->LineColor121Line);
+    ButtonStyle = mov_colors::MakeColorString(this->LineColor121Line);
     ui->button_121linecolor->setStyleSheet(ButtonStyle);
     ui->button_121linecolor->update();
 
     //Set the button color for the linear regression line
-    ButtonStyle = MakeColorString(this->LineColorRegression);
+    ButtonStyle = mov_colors::MakeColorString(this->LineColorRegression);
     ui->button_reglinecolor->setStyleSheet(ButtonStyle);
     ui->button_reglinecolor->update();
 
     //Set the button color for StdDev bounding lines
-    ButtonStyle = MakeColorString(this->LineColorBounds);
+    ButtonStyle = mov_colors::MakeColorString(this->LineColorBounds);
     ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
     ui->button_boundlinecolor->update();
 
@@ -150,16 +151,6 @@ void MainWindow::setupMetOceanViewerUI()
     this->PreviousDirectory = this->PreviousDirectory+"/Desktop";
 #endif
 
-    //-------------------------------------------//
-    //Check if the command line argument was passed
-    //If it was, load the session file
-    if(SessionFile!=NULL)
-    {
-        splitPath(SessionFile,BaseFile,this->PreviousDirectory);
-        loadSession();
-        ui->MainTabs->setCurrentIndex(1);
-    }
-
     ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->timeseries_map->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -167,7 +158,6 @@ void MainWindow::setupMetOceanViewerUI()
 
     keyhandler* key = new keyhandler();
     this->centralWidget()->installEventFilter(key);
-
     connect(key,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
 
     //...Check for updates and alert the user if there is a new version
@@ -178,5 +168,32 @@ void MainWindow::setupMetOceanViewerUI()
         update->runUpdater();
         update->exec();
     }
+
+    //...Build the session object
+    this->sessionState = new mov_session(ui->table_TimeseriesData,
+                                         ui->text_TimeseriesPlotTitle,
+                                         ui->text_TimeseriesXaxisLabel,
+                                         ui->text_TimeseriesYaxisLabel,
+                                         ui->date_TimeseriesStartDate,
+                                         ui->date_TimeseriesEndDate,
+                                         ui->spin_TimeseriesYmin,
+                                         ui->spin_TimeseriesYmax,
+                                         ui->check_TimeseriesAllData,
+                                         ui->check_TimeseriesYauto,
+                                         this->PreviousDirectory,this);
+
+    connect(this->sessionState,SIGNAL(sessionError(QString)),this,SLOT(throwErrorMessageBox(QString)));
+
+    if(this->processCommandLine)
+    {
+        int ierr = this->sessionState->open(this->commandLineFile);
+        if(ierr==0)
+        {
+            ui->MainTabs->setCurrentIndex(1);
+            ui->subtab_timeseries->setCurrentIndex(0);
+        }
+    }
+
+    return;
 
 }

@@ -36,8 +36,9 @@
 
 #include "mov_errors.h"
 #include "mov_flags.h"
-#include "general_functions.h"
+#include "mov_generic.h"
 #include "mov_qchartview.h"
+#include "imeds.h"
 
 using namespace QtCharts;
 
@@ -67,11 +68,15 @@ public:
 
 private slots:
     void handleLegendMarkerClicked();
+    void javascriptDataReturned(QString);
+
+signals:
+    void noaaError(QString);
 
 private:
 
     //...Private Functions
-    QString formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
+    int formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
     void readNOAAResponse(QNetworkReply *reply, int index, int index2);
     int fetchNOAAData();
     int prepNOAAResponse();
@@ -80,25 +85,14 @@ private:
     int generateLabels();
     int plotChart();
     int setNOAAStation();
+    int setAsyncNOAAStation();
     int getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude);
-
-    //...Structures
-    struct NOAAStationData
-    {
-        QDate Date;
-        QTime Time;
-        double value;
-    };
 
     //...Private Variables
     QVector< QVector<QByteArray> > NOAAWebData;
     int NOAAMarkerID;
     int ProductIndex;
 
-    double CurrentNOAALat;
-    double CurrentNOAALon;
-
-    QString CurrentNOAAStationName;
     QString Datum;
     QString Units;
     QString yLabel;
@@ -108,7 +102,7 @@ private:
     QDateTime StartDate;
     QDateTime EndDate;
 
-    QVector< QVector<NOAAStationData> > CurrentNOAAStation;
+    QVector<imeds*>  CurrentNOAAStation;
     QVector<QString> ErrorString;
 
     //...Pointers to GUI elements

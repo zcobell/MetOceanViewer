@@ -42,6 +42,7 @@
 #include "xtide.h"
 #include "user_timeseries.h"
 #include "mov_qwebenginepage.h"
+#include "mov_session.h"
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds
@@ -56,13 +57,17 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent = 0);
 
     ~MainWindow();
+
+    void setLoadSessionFile(bool toggle,QString sessionFile = QString());
 
     QString PreviousDirectory;
 
 private slots:
+
+    void throwErrorMessageBox(QString);
 
     void setupMetOceanViewerUI();
 
@@ -179,11 +184,7 @@ private:
 
     void SetupTimeseriesTable();
 
-    int saveSession();
-
     bool confirmClose();
-
-    int loadSession();
 
     void plotNOAAStation();
 
@@ -196,6 +197,8 @@ private:
     QPointer<hwm> thisHWM;
 
     QPointer<XTide> thisXTide;
+
+    mov_session* sessionState;
 
     QPointer<user_timeseries> thisTimeseries;
 
@@ -215,19 +218,15 @@ private:
 
     QVector<QColor> randomColors;
 
+    QString commandLineFile;
+
+    bool processCommandLine;
+
 protected:
 
     void closeEvent(QCloseEvent *);
 
 };
-
-//-------------------------------------------//
-//Some global variables used throughout the
-//code
-//-------------------------------------------//
-extern QString SessionFile;
-extern QString AlternateFolder;
-//-------------------------------------------//
 
 
 #endif // METOCEANVIEWER_H

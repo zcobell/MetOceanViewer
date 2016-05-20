@@ -43,8 +43,6 @@ void MainWindow::on_button_usgs_fetch_clicked()
 {
     int ierr;
 
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
     //...Create a new USGS object
     if(!thisUSGS.isNull())
         delete thisUSGS;
@@ -52,9 +50,9 @@ void MainWindow::on_button_usgs_fetch_clicked()
                         ui->radio_usgsDaily,ui->radio_usgshistoric,
                         ui->radio_usgs_instant,ui->combo_USGSProduct,
                         ui->Date_usgsStart,ui->Date_usgsEnd,ui->statusBar,this);
+    connect(thisUSGS,SIGNAL(usgsError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     ierr = thisUSGS->plotNewUSGSStation();
-    QApplication::restoreOverrideCursor();
 
     return;
 }
@@ -124,8 +122,6 @@ void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
     QApplication::setOverrideCursor(Qt::WaitCursor);
     ierr = thisUSGS->replotCurrentUSGSStation(index);
     QApplication::restoreOverrideCursor();
-    if(ierr!=0)
-        QMessageBox::critical(this,"ERROR",thisUSGS->getUSGSErrorString());
     return;
 }
 //-------------------------------------------//
@@ -167,7 +163,7 @@ void MainWindow::on_button_usgssavemap_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisUSGS->saveUSGSImage(TempString,filter);
 
@@ -219,7 +215,7 @@ void MainWindow::on_button_usgssavedata_clicked()
     if(TempString == NULL)
         return;
 
-    splitPath(TempString,filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,filename,PreviousDirectory);
 
     thisUSGS->saveUSGSData(TempString,format);
 

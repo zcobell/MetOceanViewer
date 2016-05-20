@@ -20,10 +20,10 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <general_functions.h>
 #include <netcdf.h>
 #include <QWebEnginePage>
 #include <QDesktopServices>
+#include "mov_generic.h"
 
 //The name of the session file
 QString SessionFile;
@@ -33,7 +33,7 @@ QString SessionFile;
 //Simple delay function which will pause
 //execution for a number of seconds
 //-------------------------------------------//
-void delay(int delayTime)
+void mov_generic::delay(int delayTime)
 {
     QTime dieTime= QTime::currentTime().addSecs(delayTime);
     while( QTime::currentTime() < dieTime )
@@ -47,7 +47,7 @@ void delay(int delayTime)
 //Simple delay function which will pause
 //execution for a number of milliseconds
 //-------------------------------------------//
-void delayM(int delayTime)
+void mov_generic::delayM(int delayTime)
 {
     QTime dieTime= QTime::currentTime().addMSecs(delayTime);
     while( QTime::currentTime() < dieTime )
@@ -57,7 +57,7 @@ void delayM(int delayTime)
 //-------------------------------------------//
 
 
-void splitPath(QString input,QString &filename,QString &directory)
+void mov_generic::splitPath(QString input,QString &filename,QString &directory)
 {
     QRegExp rx("[/\\\\]");
     QStringList parts = input.split(rx);
@@ -73,75 +73,9 @@ void splitPath(QString input,QString &filename,QString &directory)
 
 
 //-------------------------------------------//
-//Makes a string that sets the CSS style
-//according to the input color
-//-------------------------------------------//
-QString MakeColorString(QColor InputColor)
-{
-    QString S("background-color: #"
-                + QString(InputColor.red() < 16? "0" : "") + QString::number(InputColor.red(),16)
-                + QString(InputColor.green() < 16? "0" : "") + QString::number(InputColor.green(),16)
-                + QString(InputColor.blue() < 16? "0" : "") + QString::number(InputColor.blue(),16) + ";");
-    return S;
-}
-//-------------------------------------------//
-
-
-QColor styleSheetToColor(QString stylesheet)
-{
-    QColor thisColor;
-    QString colorString;
-
-    colorString = stylesheet.split(": ").value(1);
-    colorString = colorString.split(";").value(0);
-    thisColor.setNamedColor(colorString.simplified());
-
-    return thisColor;
-}
-
-
-//-------------------------------------------//
-//Generates a random color and optionally
-//mixes in white to make it a more pastel
-//type color. This is turned off by default
-//-------------------------------------------//
-QColor GenerateRandomColor()
-{
-    QColor MyColor, Mix;
-    QTime SeedTime;
-    bool DoMix;
-
-    DoMix = false;
-
-    SeedTime = QTime::currentTime();
-    qsrand((uint)SeedTime.msec());
-
-    if(DoMix)
-    {
-        Mix.setRed(255);
-        Mix.setGreen(255);
-        Mix.setBlue(255);
-
-        MyColor.setRed((qrand()%255 + Mix.red()) / 2);
-        MyColor.setGreen((qrand()%255 + Mix.green()) / 2);
-        MyColor.setBlue((qrand()%255 + Mix.blue()) / 2);
-    }
-    else
-    {
-        MyColor.setRed(qrand()%255);
-        MyColor.setGreen(qrand()%255);
-        MyColor.setBlue(qrand()%255);
-    }
-
-    return MyColor;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
 //NetCDF Error function
 //-------------------------------------------//
-int NETCDF_ERR(int status)
+int mov_generic::NETCDF_ERR(int status)
 {
     if(status != NC_NOERR)
         QMessageBox::critical(NULL,"Error Saving File",nc_strerror(status));
@@ -159,7 +93,7 @@ int NETCDF_ERR(int status)
 //every page is Google Maps based, and requires
 //a connection to the internet
 //-------------------------------------------//
-bool isConnectedToNetwork(){
+bool mov_generic::isConnectedToNetwork(){
 
     QList<QNetworkInterface> ifaces = QNetworkInterface::allInterfaces();
     bool result = false;
@@ -195,7 +129,7 @@ bool isConnectedToNetwork(){
     return result;
 }
 
-int getLocalTimzoneOffset()
+int mov_generic::getLocalTimzoneOffset()
 {
     QDateTime dt1 = QDateTime::currentDateTime();
     QDateTime dt2 = dt1.toUTC();

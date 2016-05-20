@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include "xtide.h"
+#include "javascriptAsyncReturn.h"
 #include <float.h>
 
 //...Constructor
@@ -60,22 +61,7 @@ int XTide::plotXTideStation()
         return -1;
 
     //...Get the selected station
-    ierr = this->getClickedXTideStation();
-    if(ierr!=0)
-    {
-        this->xTideErrorString = "You must select a station";
-        return -1;
-    }
-
-    //...Calculate the tidal signal
-    ierr = this->calculateXTides();
-    if(ierr!=0)
-        return -1;
-
-    //...Plot the chart
-    ierr = this->plotChart();
-    if(ierr!=0)
-        return -1;
+    ierr = this->getAsyncClickedXTideStation();
 
     return 0;
 }
@@ -86,7 +72,7 @@ QString XTide::getCurrentXTideStation()
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     return evalList.value(0);
@@ -106,7 +92,7 @@ int XTide::getClickedXTideStation()
     QVariant eval = QVariant();
     this->map->page()->runJavaScript("returnStationID()",[&eval](const QVariant &v){eval = v;});
     while(eval.isNull())
-        delayM(5);
+        mov_generic::delayM(5);
     QStringList evalList = eval.toString().split(";");
 
     this->currentStationName = evalList.value(0);
@@ -118,6 +104,15 @@ int XTide::getClickedXTideStation()
     if(this->currentStationName=="none")
         return -1;
 
+    return 0;
+}
+
+//...In the case of the plotting routine, we handle the asynchronous behavior more gracefully
+int XTide::getAsyncClickedXTideStation()
+{
+    javascriptAsyncReturn *javaReturn = new javascriptAsyncReturn(this);
+    connect(javaReturn,SIGNAL(valueChanged(QString)),this,SLOT(javascriptDataReturned(QString)));
+    this->map->page()->runJavaScript("returnStationID()",[javaReturn](const QVariant &v){javaReturn->setValue(v);});
     return 0;
 }
 
@@ -179,7 +174,7 @@ int XTide::findXTideExe()
         return 0;
     }
 
-    this->xTideErrorString = "Could not find the XTide executable";
+    emit xTideError("The XTide executable was not found");
     return -1;
 }
 
@@ -229,10 +224,7 @@ int XTide::calculateXTides()
     //...Check the error code
     ierr = xTideRun.exitCode();
     if(ierr!=0)
-    {
-        this->xTideErrorString = "XTide did not run successfully";
         return -1;
-    }
 
     //...Grab the output from XTide and send to the parse routine
     ierr = this->parseXTideResponse(xTideRun.readAllStandardOutput());
@@ -498,4 +490,44 @@ int XTide::saveXTidePlot(QString filename, QString filter)
     }
 
     return 0;
+}
+
+void XTide::javascriptDataReturned(QString data)
+{
+
+    int ierr;
+    QString tempString;
+    QStringList dataList;
+
+    dataList = data.split(";");
+
+    this->currentStationName = dataList.value(0);
+    tempString               = dataList.value(1);
+    this->currentXTideLon    = tempString.toDouble();
+    tempString               = dataList.value(2);
+    this->currentXTideLat    = tempString.toDouble();
+
+    //...Sanity check on data
+    if(this->currentStationName==QString() || this->currentStationName=="none")
+    {
+        emit xTideError("You must select a station");
+        return;
+    }
+
+
+    //...Calculate the tidal signal
+    ierr = this->calculateXTides();
+    if(ierr!=0)
+    {
+        emit xTideError("There was an error calculation tides");
+        return;
+    }
+
+    //...Plot the chart
+    ierr = this->plotChart();
+    if(ierr!=0)
+    {
+        emit xTideError("There was an error drawing the chart");
+        return;
+    }
 }

@@ -20,24 +20,25 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#ifndef GENERAL_FUNCTIONS_H
-#define GENERAL_FUNCTIONS_H
+#ifndef JAVASCRIPTASYNCRETURN_H
+#define JAVASCRIPTASYNCRETURN_H
 
-#include <QMessageBox>
-#include <QColor>
-#include <QtCore>
-#include <QString>
-#include <QDateTime>
-#include <QNetworkInterface>
+#include <QObject>
+#include <QVariant>
 
-void splitPath(QString input,QString &filename,QString &directory);
-void delay(int delayTime);
-void delayM(int delayTime);
-QString MakeColorString(QColor InputColor);
-QColor GenerateRandomColor();
-QColor styleSheetToColor(QString stylesheet);
-int NETCDF_ERR(int status);
-bool isConnectedToNetwork();
-int getLocalTimzoneOffset();
+class javascriptAsyncReturn : public QObject
+{
+    Q_OBJECT
+public:
+    explicit javascriptAsyncReturn(QObject *parent = 0);
+    void setValue(QVariant value);
+    QString getValue();
 
-#endif // GENERAL_FUNCTIONS_H
+signals:
+    void valueChanged(QString);
+
+private:
+    QString javaVariable;
+};
+
+#endif // JAVASCRIPTASYNCRETURN_H

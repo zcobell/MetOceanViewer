@@ -21,7 +21,7 @@
 //
 //-----------------------------------------------------------------------//
         
-#include <MetOceanViewer.h>
+#include "MetOceanViewer.h"
 #include <QApplication>
 
 //-------------------------------------------//
@@ -30,22 +30,33 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    QString sessionFile;
+    bool doSession;
 
-    if(!isConnectedToNetwork())
+    if(!mov_generic::isConnectedToNetwork())
     {
         QMessageBox::critical(0,"Internet Connection Not Detected",
                               "No internet connection was detected.\n "
                               "The program will now be terminated.");
-        return 1;
+        return -1;
     }
+
 
     //If the session file was dropped onto the executable,
     //try to load it.
     if(argc==2)
-        SessionFile = QCoreApplication::arguments().at(1);
+    {
+        sessionFile = QCoreApplication::arguments().at(1);
+        doSession = true;
+    }
+    else
+    {
+        doSession = false;
+        sessionFile = QString();
+    }
 
     //Create the window
-    MainWindow w;
+    MainWindow w(doSession,sessionFile);
 
     //Splash Screen
     QPixmap pixmap(":/rsc/img/logo_full.png");
@@ -62,7 +73,7 @@ int main(int argc, char *argv[])
         splash.show();
         a.processEvents();
 
-        QTime dieTime= QTime::currentTime().addSecs(2);
+        QTime dieTime= QTime::currentTime().addSecs(1);
         while( QTime::currentTime() < dieTime )
             QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 
@@ -71,7 +82,6 @@ int main(int argc, char *argv[])
 
     //Show the user the window
     w.show();
-
 
     return a.exec();
 }

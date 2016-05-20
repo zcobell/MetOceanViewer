@@ -40,7 +40,7 @@ void MainWindow::on_button_saveTimeseriesImage_clicked()
     if(TempString==NULL)
         return;
 
-    splitPath(TempString,Filename,PreviousDirectory);
+    mov_generic::splitPath(TempString,Filename,PreviousDirectory);
 
     int ierr = this->thisTimeseries->saveImage(TempString,filter);
 
@@ -100,7 +100,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
         ui->table_TimeseriesData->setItem(NumberOfRows-1,10,new QTableWidgetItem(AddWindow->StationFilePath));
         CellColor.setNamedColor(AddWindow->InputColorString);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
-        ui->table_TimeseriesData->item(NumberOfRows-1,2)->setTextColor(CellColor);
+        //ui->table_TimeseriesData->item(NumberOfRows-1,2)->setTextColor(CellColor);
         ui->table_TimeseriesData->item(NumberOfRows-1,0)->setCheckState(Qt::Checked);
 
         //Tooltips in table cells
@@ -284,6 +284,7 @@ void MainWindow::on_button_processTimeseriesData_clicked()
                                            ui->timeseries_graphics,
                                            ui->statusBar,
                                            this->randomColors,this);
+    connect(thisTimeseries,SIGNAL(timeseriesError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     ierr = thisTimeseries->processData();
     if(ierr!=0)
@@ -333,17 +334,7 @@ void MainWindow::on_button_fitTimeseries_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_plotTimeseriesStation_clicked()
 {
-
-    //Get the marker ID from the page
-    int markerID = thisTimeseries->getClickedMarkerID();
-
-    //Catch false marker number
-    if(markerID==-1)return;
-
     int ierr = thisTimeseries->plotData();
-    if(ierr!=0)
-        QMessageBox::critical(this,"ERROR",thisTimeseries->getErrorString());
-
     return;
 }
 //-------------------------------------------//

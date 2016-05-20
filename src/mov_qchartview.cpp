@@ -20,7 +20,6 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <mov_qchartview.h>
 #include <QtGui/QResizeEvent>
 #include <QtWidgets/QGraphicsScene>
 #include <QtCharts/QChart>
@@ -30,6 +29,8 @@
 #include <QtGui/QMouseEvent>
 #include <QDateTime>
 #include <QDebug>
+#include "mov_qchartview.h"
+
 
 mov_QChartView::mov_QChartView(QWidget *parent) : QChartView(parent)
 {

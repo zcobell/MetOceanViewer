@@ -33,11 +33,14 @@
 #include <QTableWidget>
 #include <QDateTime>
 
-#include "general_functions.h"
+#include "mov_generic.h"
 #include "mov_qchartview.h"
+#include "imeds.h"
 
 class user_timeseries : public QObject
 {
+
+    Q_OBJECT
 
 public:
     explicit user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
@@ -56,35 +59,40 @@ public:
     int plotData();
     int getCurrentMarkerID();
     int getClickedMarkerID();
+    int getAsyncClickedMarkerID();
     int saveImage(QString filename, QString filter);
     QString getErrorString();
 
 private slots:
     void handleLegendMarkerClicked();
+    void javascriptDataReturned(QString);
+
+signals:
+    void timeseriesError(QString);
 
 private:
 
     //...Variable Structures
-    struct IMEDS_DATA
-    {
-        double              latitude;
-        double              longitude;
-        QString             StationName;
-        int                 NumSnaps;
-        int                 StationIndex;
-        QVector<QDateTime>  date;
-        QVector<double>     data;
-        bool                isNull;
-    };
+//    struct IMEDS_DATA
+//    {
+//        double              latitude;
+//        double              longitude;
+//        QString             StationName;
+//        int                 NumSnaps;
+//        int                 StationIndex;
+//        QVector<QDateTime>  date;
+//        QVector<double>     data;
+//        bool                isNull;
+//    };
 
-    struct IMEDS{
-        int nstations;
-        QString header1;
-        QString header2;
-        QString header3;
-        QVector<IMEDS_DATA> station;
-        bool success;
-    };
+//    struct IMEDS{
+//        int nstations;
+//        QString header1;
+//        QString header2;
+//        QString header3;
+//        QVector<IMEDS_DATA> station;
+//        bool success;
+//    };
 
     struct ADCNC{
         int nstations;
@@ -117,21 +125,21 @@ private:
     int getMarkerIDFromMap();
     int setMarkerID();
     int readADCIRCnetCDF(QString filename, ADCNC &MyData);
-    int GetUniqueStationList(QVector<IMEDS> Data,QVector<double> &X,QVector<double> &Y);
-    int BuildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X,QVector<double> Y,QVector<IMEDS> &DataOut);
-    int readIMEDS(QString filename, IMEDS &Output);
+    int GetUniqueStationList(QVector<imeds*> Data,QVector<double> &X,QVector<double> &Y);
+    //int BuildRevisedIMEDS(QVector<imeds*> Data,QVector<double> X,QVector<double> Y,QVector<imeds*> &DataOut);
     int readADCIRCascii(QString filename, QString stationfile, ADCASCII &MyData);
-    int ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, IMEDS &MyOutput);
-    int NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, IMEDS &Output);
-    int getUniqueStationList(QVector<IMEDS> Data, QVector<double> &X, QVector<double> &Y);
-    int buildRevisedIMEDS(QVector<IMEDS> Data,QVector<double> X, QVector<double> Y, QVector<IMEDS> &DataOut);
+    int ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, imeds *MyOutput);
+    int NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, imeds *Output);
+    int getUniqueStationList(QVector<imeds*> Data, QVector<double> &X, QVector<double> &Y);
+    int buildRevisedIMEDS(QVector<imeds *> &Data, QVector<double> X, QVector<double> Y, QVector<imeds*> &DataOut);
     int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
     int getMultipleMarkersFromMap();
+    int getAsyncMultipleMarkersFromMap();
 
     //...Private Variables
     int markerID;
     QString errorString;
-    QVector<IMEDS> fileData,fileDataUnique;
+    QVector<imeds*> fileData,fileDataUnique;
     QVector<double> StationXLocs;
     QVector<double> StationYLocs;
     QVector<int>    selectedStations;

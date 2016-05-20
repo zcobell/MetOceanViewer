@@ -21,9 +21,10 @@
 //
 //-----------------------------------------------------------------------//
 
-#include <timeseries_add_data.h>
-#include <ui_timeseries_add_data.h>
-#include <MetOceanViewer.h>
+#include "timeseries_add_data.h"
+#include "ui_timeseries_add_data.h"
+#include "MetOceanViewer.h"
+#include "mov_colors.h"
 
 //-------------------------------------------//
 //This brings up the dialog box used to add
@@ -65,11 +66,13 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->text_xadjust->setText("0.0");
     ui->text_yadjust->setText("0.0");
     ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
-    RandomButtonColor = GenerateRandomColor();
-    ButtonStyle = MakeColorString(RandomButtonColor);
+    this->InputFileColdStart = ui->date_coldstart->dateTime();
+    this->RandomButtonColor = mov_colors::GenerateRandomColor();
+    this->InputColorString = mov_colors::getHexColor(this->RandomButtonColor);
+    ButtonStyle = mov_colors::MakeColorString(this->RandomButtonColor);
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
-    CurrentFileName = QString();
+    this->CurrentFileName = QString();
     return;
 }
 //-------------------------------------------//
@@ -87,7 +90,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 {
     QString ButtonStyle,StationFile;
     InputFileColdStart.setTimeSpec(Qt::UTC);
-    splitPath(StationPath,StationFile,PreviousDirectory);
+    mov_generic::splitPath(StationPath,StationFile,PreviousDirectory);
     ui->text_seriesname->setText(SeriesName);
     ui->text_filename->setText(Filename);
     ui->text_unitconvert->setText(QString::number(UnitConvert));
@@ -99,7 +102,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     InputFilePath = Filepath;
     CurrentFileName = Filepath;
     StationFilePath = StationPath;
-    ButtonStyle = MakeColorString(Color);
+    ButtonStyle = mov_colors::MakeColorString(Color);
     RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
@@ -141,10 +144,10 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
-    QString Directory,filename,TempFile,InputFileType;
+    QString Directory,filename,TempFile;
 
     if(this->EditBox)
-        splitPath(this->InputFilePath,filename,Directory);
+        mov_generic::splitPath(this->InputFilePath,filename,Directory);
     else
         Directory = this->PreviousDirectory;
 
@@ -166,7 +169,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
         else
             CurrentFileName = TempPath;
 
-        splitPath(TempPath,TempFile,PreviousDirectory);
+        mov_generic::splitPath(TempPath,TempFile,PreviousDirectory);
         ui->text_filename->setText(TempFile);
 
         FileReadError = false;
@@ -226,7 +229,7 @@ void add_imeds_data::on_button_seriesColor_clicked()
     {
         RandomButtonColor = TempColor;
         ColorUpdated = true;
-        ButtonStyle = MakeColorString(RandomButtonColor);
+        ButtonStyle = mov_colors::MakeColorString(RandomButtonColor);
         ui->button_seriesColor->setStyleSheet(ButtonStyle);
         ui->button_seriesColor->update();
     }
@@ -249,7 +252,7 @@ void add_imeds_data::on_browse_stationfile_clicked()
     if(TempPath!=NULL)
     {
         StationFilePath = TempPath;
-        splitPath(TempPath,TempFile,PreviousDirectory);
+        mov_generic::splitPath(TempPath,TempFile,PreviousDirectory);
         ui->text_stationfile->setText(TempFile);
     }
     return;
@@ -326,7 +329,7 @@ void add_imeds_data::on_button_presetColor1_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
-    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
@@ -334,7 +337,7 @@ void add_imeds_data::on_button_presetColor2_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
-    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
@@ -342,7 +345,7 @@ void add_imeds_data::on_button_presetColor3_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
-    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
@@ -350,6 +353,6 @@ void add_imeds_data::on_button_presetColor4_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
-    RandomButtonColor = styleSheetToColor(ui->button_seriesColor->styleSheet());
+    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }

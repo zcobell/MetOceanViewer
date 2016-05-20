@@ -21,18 +21,20 @@
 //
 //-----------------------------------------------------------------------//
         
-#include <MetOceanViewer.h>
-#include <ui_MetOceanViewer_main.h>
-#include <about_dialog.h>
-#include <update_dialog.h>
-#include <general_functions.h>
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
+#include "about_dialog.h"
+#include "update_dialog.h"
+#include "mov_generic.h"
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
-MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
+MainWindow::MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
     //Setup UI
     ui->setupUi(this);
+    this->processCommandLine = processCommandLine;
+    this->commandLineFile = commandLineFile;
     setupMetOceanViewerUI();
 }
 
@@ -108,11 +110,14 @@ void MainWindow::on_actionLoad_Session_triggered()
     if(LoadFile==NULL)
         return;
 
-    splitPath(LoadFile,BaseFile,this->PreviousDirectory);
+    mov_generic::splitPath(LoadFile,BaseFile,this->PreviousDirectory);
+    int ierr = this->sessionState->open(LoadFile);
 
-    this->SessionFile = LoadFile;
-
-    this->loadSession();
+    if(ierr==0)
+    {
+        ui->MainTabs->setCurrentIndex(1);
+        ui->subtab_timeseries->setCurrentIndex(0);
+    }
 
     return;
 }
@@ -125,7 +130,10 @@ void MainWindow::on_actionLoad_Session_triggered()
 //-------------------------------------------//
 void MainWindow::on_actionSave_Session_triggered()
 {
-    saveSession();
+    if(this->sessionState->getSessionFilename()!=QString())
+        this->sessionState->save();
+    else
+        on_actionSave_Session_As_triggered();
     return;
 }
 //-------------------------------------------//
@@ -142,8 +150,8 @@ void MainWindow::on_actionSave_Session_As_triggered()
                         "MetOcean Viewer Sessions (*.mvs)");
     if(SaveFile!=NULL)
     {
-        SessionFile = SaveFile;
-        saveSession();
+        this->sessionState->setSessionFilename(SaveFile);
+        this->sessionState->save();
     }
     return;
 }
@@ -159,24 +167,24 @@ void MainWindow::handleEnterKey()
         {
             if(ui->Combo_NOAAPanTo->hasFocus())
                 ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
-            //else
-                //this->plotNOAAStation();
+            else
+                this->plotNOAAStation();
         }
         //USGS Tab
         else if(ui->subtab_livedata->currentIndex()==1)
         {
             if(ui->combo_usgs_panto->hasFocus())
                 ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
-            //else
-                //on_button_usgs_fetch_clicked();
+            else
+                on_button_usgs_fetch_clicked();
         }
         //XTide Tab
         else if(ui->subtab_livedata->currentIndex()==2)
         {
             if(ui->combo_xtide_panto->hasFocus())
                 ui->xtide_map->page()->runJavaScript("panTo('"+ui->combo_xtide_panto->currentText()+"')");
-            //else
-                //on_button_xtide_fetch_clicked();
+            else
+                on_button_xtide_compute_clicked();
 
         }
     }
@@ -189,7 +197,7 @@ void MainWindow::handleEnterKey()
        }
        else if(ui->subtab_timeseries->currentIndex()==1)
        {
-           //on_button_plotTimeseriesStation_clicked();
+           on_button_plotTimeseriesStation_clicked();
        }
     }
     else if(ui->MainTabs->currentIndex()==2)
@@ -197,5 +205,20 @@ void MainWindow::handleEnterKey()
         if(ui->subtab_hwm->currentIndex()==1)
             on_button_processHWM_clicked();
     }
+    return;
+}
+
+
+void MainWindow::throwErrorMessageBox(QString errorString)
+{
+    QMessageBox::critical(this,"ERROR",errorString);
+    return;
+}
+
+
+void MainWindow::setLoadSessionFile(bool toggle, QString sessionFile)
+{
+    this->processCommandLine = toggle;
+    this->commandLineFile = sessionFile;
     return;
 }

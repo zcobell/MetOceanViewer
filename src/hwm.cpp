@@ -21,7 +21,8 @@
 //
 //-----------------------------------------------------------------------//
 #include "hwm.h"
-#include "general_functions.h"
+#include "mov_generic.h"
+#include "mov_colors.h"
 #include <QPrinter>
 #include <float.h>
 
@@ -218,7 +219,7 @@ int hwm::plotHWMMap()
     this->map->page()->runJavaScript("clearMarkers()");
 
     //Give the browsers a chance to catch up to us
-    delay(1);
+    mov_generic::delay(1);
 
     for(i=0;i<this->highWaterMarks.length();i++)
     {
@@ -291,10 +292,10 @@ int hwm::plotRegression()
     XLabel          = this->measuredAxisLabelBox->text();
     displayBoundingLines = this->upperLowerLinesCheckbox->isChecked();
 
-    HWMColor = styleSheetToColor(this->buttonHWMColor->styleSheet());
-    One2OneColor = styleSheetToColor(this->button121LineColor->styleSheet());
-    BoundColor = styleSheetToColor(this->buttonBoundingLinecolor->styleSheet());
-    RegColor = styleSheetToColor(this->buttonRegLineColor->styleSheet());
+    HWMColor = mov_colors::styleSheetToColor(this->buttonHWMColor->styleSheet());
+    One2OneColor = mov_colors::styleSheetToColor(this->button121LineColor->styleSheet());
+    BoundColor = mov_colors::styleSheetToColor(this->buttonBoundingLinecolor->styleSheet());
+    RegColor = mov_colors::styleSheetToColor(this->buttonRegLineColor->styleSheet());
 
     boundValue = this->boundingLinesValue->value()*this->regStdDev;
     numSD      = this->boundingLinesValue->value();
