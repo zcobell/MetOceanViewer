@@ -89,7 +89,8 @@ QString about_dialog::generateAboutText()
 #endif
 
            "<b>Compiler: </b>" + compiler + "<br>" +
-           "<b>Architecture: </b>" + architecture +  "<br><br>" +
+           "<b>Architecture: </b>" + architecture +  "<br>" +
+           "<b>Qt Version:  </b>" + QString(QT_VERSION_STR) + "<br><br>"
 
            "<b>External Libraries</b> <br><br>" +
            "NOAA CO-OPS API - <a href=\"http://tidesandcurrents.noaa.gov\">http://tidesandcurrents.noaa.gov</a><br>" +
