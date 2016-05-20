@@ -102,10 +102,12 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     InputFilePath = Filepath;
     CurrentFileName = Filepath;
     StationFilePath = StationPath;
+    InputFileType = FileType;
     ButtonStyle = mov_colors::MakeColorString(Color);
     RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
+
 
     if(FileType == "IMEDS")
     {
@@ -119,7 +121,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     else if(FileType == "NETCDF")
     {
         FileType = "NETCDF";
-        ui->text_filetype->setText("NetCDF");
+        ui->text_filetype->setText("netCDF");
         ui->date_coldstart->setEnabled(true);
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
@@ -189,7 +191,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
         else if(InputFileType == "NC")
         {
             InputFileType = "NETCDF";
-            ui->text_filetype->setText("NetCDF");
+            ui->text_filetype->setText("netCDF");
             ui->date_coldstart->setEnabled(true);
             ui->text_stationfile->setEnabled(false);
             ui->browse_stationfile->setEnabled(false);

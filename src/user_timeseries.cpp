@@ -517,7 +517,7 @@ int user_timeseries::processData()
         else if(InputFileType=="61"||InputFileType=="62"||InputFileType=="71"||InputFileType=="72")
         {
             ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
-            TempStationFile = table->item(i,9)->text();
+            TempStationFile = table->item(i,10)->text();
             ierr = this->readADCIRCascii(TempFile,TempStationFile,TempAdcircAscii);
             if(ierr!=0)
             {
@@ -855,11 +855,11 @@ int user_timeseries::readADCIRCnetCDF(QString filename, ADCNC &MyData)
 //-------------------------------------------//
 int user_timeseries::NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, imeds *Output)
 {
-
     Output->nstations = netcdf.nstations;
     Output->station.resize(netcdf.nstations);
     for(int i=0;i<Output->nstations;++i)
     {
+        Output->station[i] = new imeds_station(this);
         Output->station[i]->latitude = netcdf.latitude[i];
         Output->station[i]->longitude = netcdf.longitude[i];
         Output->station[i]->NumSnaps = netcdf.NumSnaps;
@@ -874,7 +874,7 @@ int user_timeseries::NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, imeds *Output
         }
     }
     Output->success = true;
-    return -1;
+    return 0;
 
 }
 //-------------------------------------------//
@@ -887,7 +887,7 @@ int user_timeseries::readADCIRCascii(QString filename, QString stationfile, ADCA
 {
     QFile MyFile(filename), StationFile(stationfile);
     QString header1, header2, TempLine;
-    QStringList headerData, TempList, TempList2;
+    QStringList headerData, TempList;
 
     MyData.success = false;
 
@@ -898,10 +898,11 @@ int user_timeseries::readADCIRCascii(QString filename, QString stationfile, ADCA
         MyFile.close();
         return -1;
     }
+
     if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
     {
         QMessageBox::information(NULL,"ERROR","ERROR:"+StationFile.errorString());
-        StationFile.close();
+        MyFile.close();
         return -1;
     }
 
@@ -974,7 +975,7 @@ int user_timeseries::readADCIRCascii(QString filename, QString stationfile, ADCA
     StationFile.close();
 
     MyData.success = true;
-    return -1;
+    return 0;
 }
 //-------------------------------------------//
 
@@ -987,7 +988,6 @@ int user_timeseries::ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, imeds *MyOu
 {
 
     MyOutput->nstations = ASCII.nstations;
-    MyOutput = new imeds(this);
     MyOutput->station.resize(MyOutput->nstations);
 
     for(int i=0;i<MyOutput->nstations;++i)
@@ -1007,7 +1007,7 @@ int user_timeseries::ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, imeds *MyOu
         }
     }
     MyOutput->success = true;
-    return -1;
+    return 0;
 }
 //-------------------------------------------//
 
@@ -1050,69 +1050,6 @@ int user_timeseries::GetUniqueStationList(QVector<imeds *> Data, QVector<double>
 }
 //-------------------------------------------//
 
-
-//-------------------------------------------//
-//Build a revised set of IMEDS data series
-//which will have null data where there was
-//not data in the file
-//-------------------------------------------//
-//int user_timeseries::BuildRevisedIMEDS(QVector<imeds *> Data, QVector<double> X, QVector<double> Y, QVector<imeds *> &DataOut)
-//{
-//    int i,j,k;
-//    bool found;
-
-//    QDateTime NullDate(QDate(MOV_NULL_YEAR,MOV_NULL_MONTH,MOV_NULL_DAY),QTime(MOV_NULL_HOUR,MOV_NULL_MINUTE,MOV_NULL_SECOND));
-
-//    DataOut.resize(Data.length());
-//    for(i=0;i<Data.length();i++)
-//    {
-//        DataOut[i]->nstations = X.length();
-//        DataOut[i]->header1 = Data[i]->header1;
-//        DataOut[i]->header2 = Data[i]->header2;
-//        DataOut[i]->header3 = Data[i]->header3;
-//        DataOut[i]->station.resize(X.length());
-//        for(j=0;j<X.length();j++)
-//        {
-//            DataOut[i]->station[j]->longitude = X[j];
-//            DataOut[i]->station[j]->latitude = Y[j];
-//        }
-//    }
-
-//    for(i=0;i<Data.length();i++)
-//    {
-//        for(j=0;j<DataOut[i]->nstations;j++)
-//        {
-//            found = false;
-//            for(k=0;k<Data[i]->nstations;k++)
-//            {
-//                if(Data[i]->station[k]->longitude == DataOut[i]->station[j]->longitude &&
-//                   Data[i]->station[k]->latitude == DataOut[i]->station[j]->latitude)
-//                {
-//                    DataOut[i]->station[j]->data.resize(Data[i]->station[k]->data.length());
-//                    DataOut[i]->station[j]->date.resize(Data[i]->station[k]->date.length());
-//                    DataOut[i]->station[j]->NumSnaps = Data[i]->station[k]->NumSnaps;
-//                    DataOut[i]->station[j]->StationName = Data[i]->station[k]->StationName;
-//                    DataOut[i]->station[j]->data = Data[i]->station[k]->data;
-//                    DataOut[i]->station[j]->date = Data[i]->station[k]->date;
-//                    DataOut[i]->station[j]->isNull = false;
-//                    found = true;
-//                    break;
-//                }
-//            }
-//            if(!found)
-//            {
-//                //Build a station with a null dataset we can find later
-//                DataOut[i]->station[j]->data.resize(1);
-//                DataOut[i]->station[j]->date.resize(1);
-//                DataOut[i]->station[j]->StationName = "NONAME";
-//                DataOut[i]->station[j]->data[0] = MOV_NULL_TS;
-//                DataOut[i]->station[j]->date[0] = NullDate;
-//                DataOut[i]->station[j]->isNull = true;
-//            }
-//        }
-//    }
-//    return 0;
-//}
 
 
 int user_timeseries::getUniqueStationList(QVector<imeds *> Data, QVector<double> &X, QVector<double> &Y)
