@@ -21,7 +21,7 @@
 //
 //-----------------------------------------------------------------------//
         
-#include <MetOceanViewer.h>
+#include "MetOceanViewer.h"
 #include <QApplication>
 
 //-------------------------------------------//
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         QMessageBox::critical(0,"Internet Connection Not Detected",
                               "No internet connection was detected.\n "
                               "The program will now be terminated.");
-        return 1;
+        return -1;
     }
 
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
         splash.show();
         a.processEvents();
 
-        QTime dieTime= QTime::currentTime().addSecs(2);
+        QTime dieTime= QTime::currentTime().addSecs(1);
         while( QTime::currentTime() < dieTime )
             QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 
@@ -82,7 +82,6 @@ int main(int argc, char *argv[])
 
     //Show the user the window
     w.show();
-
 
     return a.exec();
 }

@@ -186,8 +186,6 @@ private:
 
     bool confirmClose();
 
-    int loadSession();
-
     void plotNOAAStation();
 
     void plotXTideStation();

@@ -35,7 +35,6 @@ SOURCES += src/main.cpp\
     src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
-    src/fileio.cpp \
     src/MetOceanViewer_main.cpp \
     src/setupMetOceanViewerUI.cpp \
     src/noaa.cpp \

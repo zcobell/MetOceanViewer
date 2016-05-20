@@ -20,10 +20,10 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <mov_generic.h>
 #include <netcdf.h>
 #include <QWebEnginePage>
 #include <QDesktopServices>
+#include "mov_generic.h"
 
 //The name of the session file
 QString SessionFile;

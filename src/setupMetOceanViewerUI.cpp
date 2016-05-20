@@ -151,16 +151,6 @@ void MainWindow::setupMetOceanViewerUI()
     this->PreviousDirectory = this->PreviousDirectory+"/Desktop";
 #endif
 
-    //-------------------------------------------//
-    //Check if the command line argument was passed
-    //If it was, load the session file
-    if(SessionFile!=NULL)
-    {
-        mov_generic::splitPath(SessionFile,BaseFile,this->PreviousDirectory);
-        loadSession();
-        ui->MainTabs->setCurrentIndex(1);
-    }
-
     ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->timeseries_map->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);

@@ -20,12 +20,12 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include <update_dialog.h>
-#include <ui_update_dialog.h>
-#include <version.h>
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include "update_dialog.h"
+#include "ui_update_dialog.h"
+#include "version.h"
 
 bool operator>(const update_dialog::gitVersion version1, const update_dialog::gitVersion version2)
 {
