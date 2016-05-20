@@ -51,7 +51,8 @@ SOURCES += src/main.cpp\
     src/imeds.cpp \
     src/imeds_station.cpp \
     src/mov_generic.cpp \
-    src/mov_colors.cpp
+    src/mov_colors.cpp \
+    src/mov_session.cpp
 
 HEADERS  += \
     version.h \
@@ -73,7 +74,8 @@ HEADERS  += \
     include/imeds.h \
     include/imeds_station.h \
     include/mov_generic.h \
-    include/mov_colors.h
+    include/mov_colors.h \
+    include/mov_session.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

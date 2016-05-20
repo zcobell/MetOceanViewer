@@ -21,11 +21,11 @@
 //
 //-----------------------------------------------------------------------//
         
-#include <MetOceanViewer.h>
-#include <ui_MetOceanViewer_main.h>
-#include <about_dialog.h>
-#include <update_dialog.h>
-#include <mov_generic.h>
+#include "MetOceanViewer.h"
+#include "ui_MetOceanViewer_main.h"
+#include "about_dialog.h"
+#include "update_dialog.h"
+#include "mov_generic.h"
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
@@ -109,10 +109,7 @@ void MainWindow::on_actionLoad_Session_triggered()
         return;
 
     mov_generic::splitPath(LoadFile,BaseFile,this->PreviousDirectory);
-
-    this->SessionFile = LoadFile;
-
-    this->loadSession();
+    this->sessionState->open(LoadFile);
 
     return;
 }
@@ -125,7 +122,10 @@ void MainWindow::on_actionLoad_Session_triggered()
 //-------------------------------------------//
 void MainWindow::on_actionSave_Session_triggered()
 {
-    saveSession();
+    if(this->sessionState->getSessionFilename()!=QString())
+        this->sessionState->save();
+    else
+        on_actionSave_Session_As_triggered();
     return;
 }
 //-------------------------------------------//
@@ -142,8 +142,8 @@ void MainWindow::on_actionSave_Session_As_triggered()
                         "MetOcean Viewer Sessions (*.mvs)");
     if(SaveFile!=NULL)
     {
-        SessionFile = SaveFile;
-        saveSession();
+        this->sessionState->setSessionFilename(SaveFile);
+        this->sessionState->save();
     }
     return;
 }
@@ -204,5 +204,12 @@ void MainWindow::handleEnterKey()
 void MainWindow::throwErrorMessageBox(QString errorString)
 {
     QMessageBox::critical(this,"ERROR",errorString);
+    return;
+}
+
+
+void MainWindow::setLoadSessionFile(QString sessionFile)
+{
+    this->commandLineFile = sessionFile;
     return;
 }

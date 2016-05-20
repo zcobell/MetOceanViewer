@@ -39,13 +39,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    //Create the window
+    MainWindow w;
+
     //If the session file was dropped onto the executable,
     //try to load it.
     if(argc==2)
-        SessionFile = QCoreApplication::arguments().at(1);
-
-    //Create the window
-    MainWindow w;
+    {
+        QString sessionFile = QCoreApplication::arguments().at(1);
+        w.setLoadSessionFile(sessionFile);
+    }
 
     //Splash Screen
     QPixmap pixmap(":/rsc/img/logo_full.png");

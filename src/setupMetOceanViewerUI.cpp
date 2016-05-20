@@ -168,7 +168,6 @@ void MainWindow::setupMetOceanViewerUI()
 
     keyhandler* key = new keyhandler();
     this->centralWidget()->installEventFilter(key);
-
     connect(key,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
 
     //...Check for updates and alert the user if there is a new version
@@ -179,5 +178,23 @@ void MainWindow::setupMetOceanViewerUI()
         update->runUpdater();
         update->exec();
     }
+
+    //...Build the session object
+    this->sessionState = new mov_session(ui->table_TimeseriesData,
+                                         ui->text_TimeseriesPlotTitle,
+                                         ui->text_TimeseriesXaxisLabel,
+                                         ui->text_TimeseriesYaxisLabel,
+                                         ui->date_TimeseriesStartDate,
+                                         ui->date_TimeseriesEndDate,
+                                         ui->spin_TimeseriesYmin,
+                                         ui->spin_TimeseriesYmax,
+                                         ui->check_TimeseriesAllData,
+                                         ui->check_TimeseriesYauto,
+                                         this->PreviousDirectory,this);
+
+    if(this->commandLineFile!=QString())
+        this->sessionState->open(this->commandLineFile);
+
+    return;
 
 }
