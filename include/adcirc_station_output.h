@@ -20,34 +20,41 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#ifndef IMEDS_STATION_H
-#define IMEDS_STATION_H
+#ifndef ADCIRC_STATION_OUTPUT_H
+#define ADCIRC_STATION_OUTPUT_H
 
 #include <QObject>
-#include <QVector>
-#include <QDateTime>
+#include "imeds.h"
 
-class imeds_station : public QObject
+class adcirc_station_output : public QObject
 {
     Q_OBJECT
 public:
+    explicit adcirc_station_output(QObject *parent = 0);
 
-    explicit imeds_station(QObject *parent = 0);
+    int read(QString AdcircFile,QDateTime coldStart);
+    int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
+    imeds* toIMEDS();
 
-    double              latitude;
-    double              longitude;
+private:
 
-    QString             StationName;
-    QString             StationID;
+    int readAscii(QString AdcircOutputFile, QString AdcircStationFile);
 
-    int                 NumSnaps;
-    int                 StationIndex;
+    int readNetCDF(QString AdicrcOutputFile);
 
-    QVector<QDateTime>  date;
-    QVector<double>     data;
+    int nStations;
+    int nSnaps;
 
-    bool                isNull;
+    QDateTime coldStartTime;
+
+    QVector<double> latitude;
+    QVector<double> longitude;
+    QVector<double> time;
+
+    QVector< QVector<double> > data;
+
+    QVector<QString> station_name;
 
 };
 
-#endif // IMEDS_STATION_H
+#endif // ADCIRC_STATION_OUTPUT_H

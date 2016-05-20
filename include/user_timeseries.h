@@ -72,64 +72,10 @@ signals:
 
 private:
 
-    //...Variable Structures
-//    struct IMEDS_DATA
-//    {
-//        double              latitude;
-//        double              longitude;
-//        QString             StationName;
-//        int                 NumSnaps;
-//        int                 StationIndex;
-//        QVector<QDateTime>  date;
-//        QVector<double>     data;
-//        bool                isNull;
-//    };
-
-//    struct IMEDS{
-//        int nstations;
-//        QString header1;
-//        QString header2;
-//        QString header3;
-//        QVector<IMEDS_DATA> station;
-//        bool success;
-//    };
-
-    struct ADCNC{
-        int nstations;
-        int NumSnaps;
-        QString DataType;
-        QVector<double> time;
-        QVector< QVector<double> > data;
-        QVector<double> latitude;
-        QVector<double> longitude;
-        QVector<QString> station_name;
-        bool success;
-        int err;
-    };
-
-    struct ADCASCII{
-        int nstations;
-        int NumSnaps;
-        int OutputTSFreq;
-        int NumColumns;
-        double OutputTimeFreq;
-        QVector<double> time;
-        QVector< QVector<double> > data;
-        QVector<double> latitude;
-        QVector<double> longitude;
-        QVector<QString> station_name;
-        bool success;
-    };
-
     //...Private functions
     int getMarkerIDFromMap();
     int setMarkerID();
-    int readADCIRCnetCDF(QString filename, ADCNC &MyData);
     int GetUniqueStationList(QVector<imeds*> Data,QVector<double> &X,QVector<double> &Y);
-    //int BuildRevisedIMEDS(QVector<imeds*> Data,QVector<double> X,QVector<double> Y,QVector<imeds*> &DataOut);
-    int readADCIRCascii(QString filename, QString stationfile, ADCASCII &MyData);
-    int ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, imeds *MyOutput);
-    int NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, imeds *Output);
     int getUniqueStationList(QVector<imeds*> Data, QVector<double> &X, QVector<double> &Y);
     int buildRevisedIMEDS(QVector<imeds *> &Data, QVector<double> X, QVector<double> Y, QVector<imeds*> &DataOut);
     int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);

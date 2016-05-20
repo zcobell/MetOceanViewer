@@ -35,7 +35,7 @@
 
 class hwm : public QObject
 {
-
+    Q_OBJECT
 public:
     explicit hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombobox,
                  QCheckBox *inForceThroughZero, QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,

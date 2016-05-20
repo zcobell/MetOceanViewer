@@ -24,6 +24,7 @@
 #include "mov_generic.h"
 #include "mov_flags.h"
 #include "javascriptAsyncReturn.h"
+#include "adcirc_station_output.h"
 #include <netcdf.h>
 
 user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
@@ -472,9 +473,8 @@ int user_timeseries::processData()
     double x,y;
     QStringList TempList;
     QString javascript,StationName,TempFile,TempStationFile,InputFileType;
-    ADCNC TempAdcircNC;
-    ADCASCII TempAdcircAscii;
     QDateTime ColdStart;
+    adcirc_station_output *adcircData;
 
     nRow = table->rowCount();
     map->reload();
@@ -487,49 +487,51 @@ int user_timeseries::processData()
         TempList = TempFile.split(".");
         InputFileType = TempList.value(TempList.length()-1).toUpper();
         this->fileData.resize(j+1);
-        this->fileData[j] = new imeds(this);
 
         if(InputFileType=="IMEDS")
         {
+            this->fileData[j] = new imeds(this);
             ierr = this->fileData[j]->read(TempFile);
             if(ierr!=0)
             {
                 this->errorString = "Error reading file: "+TempFile;
                 return -1;
             }
+            this->fileData[j]->success = true;
         }
         else if(InputFileType=="NC")
         {
             ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
-            ierr = this->readADCIRCnetCDF(TempFile,TempAdcircNC);
+            adcircData = new adcirc_station_output(this);
+            ierr = adcircData->read(TempFile,ColdStart);
             if(ierr!=0)
             {
                 this->errorString = "Error reading file: "+TempFile;
                 return -1;
             }
-            ierr = this->NetCDF_to_IMEDS(TempAdcircNC,ColdStart,this->fileData[j]);
+
+            this->fileData[j] = adcircData->toIMEDS();
             if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
                 return -1;
-            }
+            this->fileData[j]->success = true;
+
         }
         else if(InputFileType=="61"||InputFileType=="62"||InputFileType=="71"||InputFileType=="72")
         {
             ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
             TempStationFile = table->item(i,10)->text();
-            ierr = this->readADCIRCascii(TempFile,TempStationFile,TempAdcircAscii);
+            adcircData = new adcirc_station_output(this);
+            ierr = adcircData->read(TempFile,TempStationFile,ColdStart);
             if(ierr!=0)
             {
                 this->errorString = "Error reading file: "+TempFile;
                 return -1;
             }
-            ierr = this->ADCIRC_to_IMEDS(TempAdcircAscii,ColdStart,this->fileData[j]);
+            this->fileData[j] = adcircData->toIMEDS();
             if(ierr!=0)
-            {
-                this->errorString = "Error reading file: "+TempFile;
                 return -1;
-            }
+            this->fileData[j]->success = true;
+
         }
         else
         {
@@ -604,412 +606,6 @@ int user_timeseries::plotData()
 
     return 0;
 }
-
-
-//-------------------------------------------//
-//Read an ADCIRC netCDF file
-//-------------------------------------------//
-int user_timeseries::readADCIRCnetCDF(QString filename, ADCNC &MyData)
-{
-
-    size_t station_size,time_size,startIndex;
-    int i,j,time_size_int,station_size_int;
-    int ierr, ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
-    int dimid_time,dimid_station;
-    bool isVector;
-    double Temp;
-    QVector<double> readData1;
-    QVector<double> readData2;
-
-    //Size the location array
-    size_t start[2];
-
-    QVector<QString> netcdf_types;
-    netcdf_types.resize(6);
-    netcdf_types[0] = "zeta";
-    netcdf_types[1] = "u-vel";
-    netcdf_types[2] = "v-vel";
-    netcdf_types[3] = "pressure";
-    netcdf_types[4] = "windx";
-    netcdf_types[5] = "windy";
-
-    //Open the file
-    ierr = nc_open(filename.toUtf8(),NC_NOWRITE,&ncid);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-
-    //Get the dimension ids
-    ierr = nc_inq_dimid(ncid,"time",&dimid_time);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-    ierr = nc_inq_dimid(ncid,"station",&dimid_station);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-
-    //Find out the dimension size
-    ierr = nc_inq_dimlen(ncid,dimid_time,&time_size);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-    ierr = nc_inq_dimlen(ncid,dimid_station,&station_size);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-    station_size_int = static_cast<unsigned int>(station_size);
-    time_size_int = static_cast<unsigned int>(time_size);
-
-    //Find the variable in the NetCDF file
-    for(i=0;i<6;i++)
-    {
-        ierr = nc_inq_varid(ncid,netcdf_types[i].toUtf8(),&varid_zeta);
-
-        //If we found the variable, we're done
-        if(ierr==NC_NOERR)
-        {
-            if(i==1)
-            {
-                isVector = true;
-                ierr = nc_inq_varid(ncid,netcdf_types[i+1].toUtf8(),&varid_zeta2);
-                if(ierr!=NC_NOERR)
-                {
-                    MyData.err = ierr;
-                    MyData.success = false;
-                    return -1;
-                }
-            }
-            else
-                isVector = false;
-
-            MyData.DataType=netcdf_types[i];
-            break;
-        }
-
-        //If we're at the end of the array
-        //and haven't quit yet, that's a problem
-        if(i==5)
-        {
-            MyData.err = ierr;
-            MyData.success = false;
-            return -1;
-        }
-    }
-
-    //Size the output variables
-    MyData.latitude.resize(station_size_int);
-    MyData.longitude.resize(station_size_int);
-    MyData.nstations = station_size_int;
-    MyData.NumSnaps = time_size_int;
-    MyData.time.resize(time_size_int);
-    MyData.data.resize(station_size_int);
-    for(i=0;i<station_size_int;++i)
-        MyData.data[i].resize(time_size_int);
-
-    //Read the station locations and times
-    ierr = nc_inq_varid(ncid,"time",&varid_time);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-    ierr = nc_inq_varid(ncid,"x",&varid_lon);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-    ierr = nc_inq_varid(ncid,"y",&varid_lat);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-
-    for(j=0;j<time_size_int;j++)
-    {
-        startIndex = static_cast<size_t>(j);
-        ierr = nc_get_var1(ncid,varid_time,&startIndex,&Temp);
-        if(ierr!=NC_NOERR)
-        {
-            MyData.success = false;
-            MyData.err = ierr;
-            return -1;
-        }
-        MyData.time[j] = Temp;
-    }
-
-    for(j=0;j<station_size_int;j++)
-    {
-        startIndex = static_cast<size_t>(j);
-        ierr = nc_get_var1(ncid,varid_lon,&startIndex,&Temp);
-        if(ierr!=NC_NOERR)
-        {
-            MyData.success = false;
-            MyData.err = ierr;
-            return -1;
-        }
-        MyData.longitude[j] = Temp;
-
-        ierr = nc_get_var1(ncid,varid_lat,&startIndex,&Temp);
-        if(ierr!=NC_NOERR)
-        {
-            MyData.success = false;
-            MyData.err = ierr;
-            return -1;
-        }
-        MyData.latitude[j] = Temp;
-    }
-
-    readData1.resize(time_size_int);
-    readData2.resize(time_size_int);
-
-    //Loop over the stations, reading the data into memory
-    for(i=0;i<station_size_int;++i)
-    {
-
-
-        //Read from NetCDF
-        for(j=0;j<time_size_int;j++)
-        {
-            start[0] = static_cast<size_t>(j);
-            start[1] = static_cast<size_t>(i);
-            ierr = nc_get_var1(ncid,varid_zeta,start,&Temp);
-            if(ierr!=NC_NOERR)
-            {
-                MyData.success = false;
-                MyData.err = ierr;
-                return -1;
-            }
-            readData1[j] = Temp;
-        }
-
-        if(isVector)
-        {
-            for(j=0;j<time_size_int;j++)
-            {
-                start[0] = static_cast<size_t>(j);
-                start[1] = static_cast<size_t>(i);
-                ierr = nc_get_var1(ncid,varid_zeta2,start,&Temp);
-                if(ierr!=NC_NOERR)
-                {
-                    MyData.success = false;
-                    MyData.err = ierr;
-                    return -1;
-                }
-                readData2[j] = Temp;
-                MyData.data[i][j] = qSqrt(qPow(readData1[j],2.0)+qPow(readData2[j],2.0));
-            }
-        }
-        else
-        {
-            //Place in the output variable
-            for(j=0;j<time_size_int;++j)
-                MyData.data[i][j] = readData1[j];
-        }
-    }
-    ierr = nc_close(ncid);
-    if(ierr!=NC_NOERR)
-    {
-        MyData.success = false;
-        MyData.err = ierr;
-        return -1;
-    }
-
-    //Finally, name the stations the default names for now. Later
-    //we can get fancy and try to get the ADCIRC written names in
-    //the NetCDF file
-    MyData.station_name.resize(station_size_int);
-    for(i=0;i<station_size_int;++i)
-        MyData.station_name[i] = "Station "+QString::number(i);
-
-    MyData.success = true;
-
-    return 0;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Convert the netCDF ADCIRC variable to an
-//IMEDS style variable
-//-------------------------------------------//
-int user_timeseries::NetCDF_to_IMEDS(ADCNC netcdf, QDateTime Cold, imeds *Output)
-{
-    Output->nstations = netcdf.nstations;
-    Output->station.resize(netcdf.nstations);
-    for(int i=0;i<Output->nstations;++i)
-    {
-        Output->station[i] = new imeds_station(this);
-        Output->station[i]->latitude = netcdf.latitude[i];
-        Output->station[i]->longitude = netcdf.longitude[i];
-        Output->station[i]->NumSnaps = netcdf.NumSnaps;
-        Output->station[i]->StationIndex = i;
-        Output->station[i]->StationName = netcdf.station_name[i];
-        Output->station[i]->data.resize(Output->station[i]->NumSnaps);
-        Output->station[i]->date.resize(Output->station[i]->NumSnaps);
-        for(int j=0;j<Output->station[i]->NumSnaps;++j)
-        {
-            Output->station[i]->data[j] = netcdf.data[i][j];
-            Output->station[i]->date[j] = Cold.addSecs(netcdf.time[j]);
-        }
-    }
-    Output->success = true;
-    return 0;
-
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Read an ADCIRC ASCII file
-//-------------------------------------------//
-int user_timeseries::readADCIRCascii(QString filename, QString stationfile, ADCASCII &MyData)
-{
-    QFile MyFile(filename), StationFile(stationfile);
-    QString header1, header2, TempLine;
-    QStringList headerData, TempList;
-
-    MyData.success = false;
-
-    //Check if we can open the file
-    if(!MyFile.open(QIODevice::ReadOnly|QIODevice::Text))
-    {
-        QMessageBox::information(NULL,"ERROR","ERROR:"+MyFile.errorString());
-        MyFile.close();
-        return -1;
-    }
-
-    if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
-    {
-        QMessageBox::information(NULL,"ERROR","ERROR:"+StationFile.errorString());
-        MyFile.close();
-        return -1;
-    }
-
-
-    //Read the 61/62 style file
-    header1 = MyFile.readLine();
-    header2 = MyFile.readLine().simplified();
-    headerData = header2.split(" ");
-
-    MyData.NumSnaps = headerData.value(0).toInt();
-    MyData.nstations = headerData.value(1).toInt();
-    MyData.OutputTimeFreq = headerData.value(2).toDouble();
-    MyData.OutputTSFreq = headerData.value(3).toInt();
-    MyData.NumColumns = headerData.value(4).toInt();
-
-    MyData.time.resize(MyData.NumSnaps);
-    MyData.data.resize(MyData.nstations);
-
-    for(int i=0;i<MyData.nstations;++i)
-        MyData.data[i].resize(MyData.NumSnaps);
-
-    for(int i=0;i<MyData.NumSnaps;++i)
-    {
-        TempLine = MyFile.readLine().simplified();
-        TempList = TempLine.split(" ");
-        MyData.time[i] = TempList.value(1).toDouble();
-        for(int j=0;j<MyData.nstations;++j)
-        {
-            TempLine = MyFile.readLine().simplified();
-            TempList = TempLine.split(" ");
-            MyData.data[j][i] = TempList.value(1).toDouble();
-            if(MyData.NumColumns==2)
-                MyData.data[j][i] = qPow(qPow(MyData.data[j][i],2) +
-                                         qPow(TempList.value(2).toDouble(),2),2);
-        }
-    }
-    MyFile.close();
-
-    //Now read the station location file
-    TempLine = StationFile.readLine().simplified();
-    TempList = TempLine.split(" ");
-    int TempStations = TempList.value(0).toInt();
-    if(TempStations!=MyData.nstations)
-    {
-        QMessageBox::information(NULL,"ERROR","The number of stations do not match in both files");
-        return -1;
-    }
-
-    MyData.longitude.resize(MyData.nstations);
-    MyData.latitude.resize(MyData.nstations);
-    MyData.station_name.resize(MyData.nstations);
-
-    for(int i=0;i<TempStations;++i)
-    {
-        TempLine = StationFile.readLine().simplified();
-        TempList = TempLine.split(QRegExp(",| "));
-        MyData.longitude[i] = TempList.value(0).toDouble();
-        MyData.latitude[i] = TempList.value(1).toDouble();
-
-        if(TempList.length()>2)
-        {
-            MyData.station_name[i] = "";
-            for(int j=2;j<TempList.length();++j)
-                MyData.station_name[i] = MyData.station_name[i]+" "+TempList.value(j);
-        }
-        else
-            MyData.station_name[i] = "Station_"+QString::number(i);
-
-    }
-    StationFile.close();
-
-    MyData.success = true;
-    return 0;
-}
-//-------------------------------------------//
-
-
-//-------------------------------------------//
-//Convert an ADCIRC ASCII file to an IMEDS
-//style file
-//-------------------------------------------//
-int user_timeseries::ADCIRC_to_IMEDS(ADCASCII ASCII, QDateTime Cold, imeds *MyOutput)
-{
-
-    MyOutput->nstations = ASCII.nstations;
-    MyOutput->station.resize(MyOutput->nstations);
-
-    for(int i=0;i<MyOutput->nstations;++i)
-    {
-        MyOutput->station[i] = new imeds_station(this);
-        MyOutput->station[i]->data.resize(ASCII.NumSnaps);
-        MyOutput->station[i]->date.resize(ASCII.NumSnaps);
-        MyOutput->station[i]->StationName = ASCII.station_name[i];
-        MyOutput->station[i]->NumSnaps = ASCII.NumSnaps;
-        MyOutput->station[i]->longitude = ASCII.longitude[i];
-        MyOutput->station[i]->latitude = ASCII.latitude[i];
-        MyOutput->station[i]->StationIndex = i;
-        for(int j=0;j<ASCII.NumSnaps;++j)
-        {
-            MyOutput->station[i]->date[j] = Cold.addSecs(ASCII.time[j]);
-            MyOutput->station[i]->data[j] = ASCII.data[i][j];
-        }
-    }
-    MyOutput->success = true;
-    return 0;
-}
-//-------------------------------------------//
 
 
 //-------------------------------------------//

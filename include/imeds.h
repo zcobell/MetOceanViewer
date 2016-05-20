@@ -29,7 +29,7 @@
 
 class imeds : public QObject
 {
-
+    Q_OBJECT
 public:
     explicit imeds(QObject *parent = 0);
 

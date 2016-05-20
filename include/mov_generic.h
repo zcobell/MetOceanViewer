@@ -32,7 +32,7 @@
 
 class mov_generic : public QObject
 {
-
+    Q_OBJECT
 public:
     static void splitPath(QString input,QString &filename,QString &directory);
     static void delay(int delayTime);

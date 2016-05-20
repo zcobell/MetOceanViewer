@@ -29,7 +29,7 @@
 
 class mov_colors : public QObject
 {
-
+    Q_OBJECT
 public:
     explicit mov_colors(QObject *parent = 0);
 
