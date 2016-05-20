@@ -29,10 +29,12 @@
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
-MainWindow::MainWindow(QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
+MainWindow::MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
     //Setup UI
     ui->setupUi(this);
+    this->processCommandLine = processCommandLine;
+    this->commandLineFile = commandLineFile;
     setupMetOceanViewerUI();
 }
 
@@ -109,7 +111,13 @@ void MainWindow::on_actionLoad_Session_triggered()
         return;
 
     mov_generic::splitPath(LoadFile,BaseFile,this->PreviousDirectory);
-    this->sessionState->open(LoadFile);
+    int ierr = this->sessionState->open(LoadFile);
+
+    if(ierr==0)
+    {
+        ui->MainTabs->setCurrentIndex(1);
+        ui->subtab_timeseries->setCurrentIndex(0);
+    }
 
     return;
 }
@@ -208,8 +216,9 @@ void MainWindow::throwErrorMessageBox(QString errorString)
 }
 
 
-void MainWindow::setLoadSessionFile(QString sessionFile)
+void MainWindow::setLoadSessionFile(bool toggle, QString sessionFile)
 {
+    this->processCommandLine = toggle;
     this->commandLineFile = sessionFile;
     return;
 }

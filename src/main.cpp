@@ -30,6 +30,8 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    QString sessionFile;
+    bool doSession;
 
     if(!mov_generic::isConnectedToNetwork())
     {
@@ -39,16 +41,22 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    //Create the window
-    MainWindow w;
 
     //If the session file was dropped onto the executable,
     //try to load it.
     if(argc==2)
     {
-        QString sessionFile = QCoreApplication::arguments().at(1);
-        w.setLoadSessionFile(sessionFile);
+        sessionFile = QCoreApplication::arguments().at(1);
+        doSession = true;
     }
+    else
+    {
+        doSession = false;
+        sessionFile = QString();
+    }
+
+    //Create the window
+    MainWindow w(doSession,sessionFile);
 
     //Splash Screen
     QPixmap pixmap(":/rsc/img/logo_full.png");

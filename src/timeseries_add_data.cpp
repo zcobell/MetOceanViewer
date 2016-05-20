@@ -66,11 +66,13 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->text_xadjust->setText("0.0");
     ui->text_yadjust->setText("0.0");
     ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
-    RandomButtonColor = mov_colors::GenerateRandomColor();
-    ButtonStyle = mov_colors::MakeColorString(RandomButtonColor);
+    this->InputFileColdStart = ui->date_coldstart->dateTime();
+    this->RandomButtonColor = mov_colors::GenerateRandomColor();
+    this->InputColorString = mov_colors::getHexColor(this->RandomButtonColor);
+    ButtonStyle = mov_colors::MakeColorString(this->RandomButtonColor);
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
-    CurrentFileName = QString();
+    this->CurrentFileName = QString();
     return;
 }
 //-------------------------------------------//
@@ -142,7 +144,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 void add_imeds_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
-    QString Directory,filename,TempFile,InputFileType;
+    QString Directory,filename,TempFile;
 
     if(this->EditBox)
         mov_generic::splitPath(this->InputFilePath,filename,Directory);

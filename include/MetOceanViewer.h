@@ -57,11 +57,11 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent = 0);
 
     ~MainWindow();
 
-    void setLoadSessionFile(QString sessionFile);
+    void setLoadSessionFile(bool toggle,QString sessionFile = QString());
 
     QString PreviousDirectory;
 
@@ -221,6 +221,8 @@ private:
     QVector<QColor> randomColors;
 
     QString commandLineFile;
+
+    bool processCommandLine;
 
 protected:
 

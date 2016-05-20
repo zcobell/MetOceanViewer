@@ -192,8 +192,17 @@ void MainWindow::setupMetOceanViewerUI()
                                          ui->check_TimeseriesYauto,
                                          this->PreviousDirectory,this);
 
-    if(this->commandLineFile!=QString())
-        this->sessionState->open(this->commandLineFile);
+    connect(this->sessionState,SIGNAL(sessionError(QString)),this,SLOT(throwErrorMessageBox(QString)));
+
+    if(this->processCommandLine)
+    {
+        int ierr = this->sessionState->open(this->commandLineFile);
+        if(ierr==0)
+        {
+            ui->MainTabs->setCurrentIndex(1);
+            ui->subtab_timeseries->setCurrentIndex(0);
+        }
+    }
 
     return;
 

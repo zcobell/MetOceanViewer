@@ -1,3 +1,25 @@
+//-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2015  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// The name "MetOcean Viewer" is specific to this project and may not be
+// used for projects "forked" or derived from this work.
+//
+//-----------------------------------------------------------------------//
 #include "mov_session.h"
 
 mov_session::mov_session(QTableWidget *inTableWidget,
@@ -51,7 +73,8 @@ int mov_session::save()
     int varid_autodate,varid_autoy,varid_checkState;
     int dims_1d[1];
     int nTimeseries;
-    QString relPath,TempFile,Directory;
+    QString relPath,TempFile,Directory,tempString;
+    QByteArray tempByte;
     size_t start[1];
     size_t iu;
     double mydatadouble[1];
@@ -166,21 +189,36 @@ int mov_session::save()
     ierr = mov_generic::NETCDF_ERR(nc_enddef(ncid));
     if(ierr!=NC_NOERR)return 1;
 
-    mydatastring[0] = this->plotTitleWidget->text().toUtf8();
+    tempByte = this->plotTitleWidget->text().toUtf8();
+    mydatastring[0] = tempByte.data();
     ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_plottitle,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = this->xLabelWidget->text().toUtf8();
+
+
+    tempByte = this->xLabelWidget->text().toUtf8();
+    mydatastring[0] = tempByte.data();
     ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_xlabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = this->yLabelWidget->text().toUtf8();
+
+
+    tempByte = this->yLabelWidget->text().toUtf8();
+    mydatastring[0] = tempByte.data();
     ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_ylabel,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = this->startDateEdit->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
+
+
+    tempByte = this->startDateEdit->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
+    mydatastring[0] = tempByte.data();
     ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_startdate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
-    mydatastring[0] = this->endDateEdit->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
+
+
+    tempByte = this->endDateEdit->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
+    mydatastring[0] = tempByte.data();
     ierr = mov_generic::NETCDF_ERR(nc_put_var_string(ncid,varid_enddate,mydatastring));
     if(ierr!=NC_NOERR)return 1;
+
+
     mydataint[0] = 3;
     ierr = mov_generic::NETCDF_ERR(nc_put_var_int(ncid,varid_precision,mydataint));
     if(ierr!=NC_NOERR)return 1;
@@ -210,30 +248,43 @@ int mov_session::save()
         start[0] = iu;
 
         relPath = CurrentDir.relativeFilePath(filenames_ts[iu]);
-        mydatastring[0]  = relPath.toUtf8();
+        tempByte = relPath.toUtf8();
+        mydatastring[0] = tempByte.data();
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_filename,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
 
-        mydatastring[0]  = seriesname_ts[iu].toUtf8();
+        tempString = seriesname_ts[iu];
+        tempByte  = tempString.toUtf8();
+        mydatastring[0] = tempByte.data();
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_names,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
 
-        mydatastring[0]  = colors_ts[iu].toUtf8();
+        tempByte = colors_ts[iu].toUtf8();
+        mydatastring[0] = tempByte.data();
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_colors,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
 
-        mydatastring[0]  = date_ts[iu].toUtf8();
+        tempByte = date_ts[iu].toUtf8();
+        mydatastring[0] = tempByte.data();
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_coldstart,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
 
         relPath = CurrentDir.relativeFilePath(stationfile_ts[iu]);
-        mydatastring[0]  = relPath.toUtf8();
+        tempByte  = relPath.toUtf8();
+        mydatastring[0] = tempByte.data();
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_stationfile,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
 
-        mydatastring[0]  = filetype_ts[iu].toUtf8();
+        tempByte = filetype_ts[iu].toUtf8();
+        mydatastring[0] = tempByte.data();
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_string(ncid,varid_type,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
 
         mydatadouble[0]  = xshift_ts[iu];
         ierr  = mov_generic::NETCDF_ERR(nc_put_var1_double(ncid,varid_xshift,start,mydatadouble));

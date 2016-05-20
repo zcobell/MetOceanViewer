@@ -42,6 +42,15 @@ QString mov_colors::MakeColorString(QColor InputColor)
 //-------------------------------------------//
 
 
+QString mov_colors::getHexColor(QColor InputColor)
+{
+    QString S(QString(InputColor.red() < 16? "0" : "") + QString::number(InputColor.red(),16)
+                + QString(InputColor.green() < 16? "0" : "") + QString::number(InputColor.green(),16)
+                + QString(InputColor.blue() < 16? "0" : "") + QString::number(InputColor.blue(),16) + ";");
+    return S;
+}
+
+
 QColor mov_colors::styleSheetToColor(QString stylesheet)
 {
     QColor thisColor;

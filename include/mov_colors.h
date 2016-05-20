@@ -39,6 +39,8 @@ public:
 
     static QColor styleSheetToColor(QString stylesheet);
 
+    static QString getHexColor(QColor InputColor);
+
 };
 
 #endif // MOV_COLORS_H
