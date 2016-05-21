@@ -1,7 +1,7 @@
 [DEBREATE-0.7.10]
 <<CTRL>>
 Package: metoceanviewer
-Version: 2.6.0
+Version: 2.6.1
 Section: Science
 Maintainer: Zach Cobell <zcobell@gmail.com>
 Homepage: https://github.com/zcobell/MetOceanViewer
@@ -56,12 +56,17 @@ Description: Multipurpose tool for viewing hydrodynamic data
 <</SCRIPTS>>
 <<CHANGELOG>>
 <<DEST>>DEFAULT<</DEST>>
-metoceanviewer (2.6.0) ; urgency=low
+metoceanviewer (2.6.1) ; urgency=low
 
-  * Add support for XTide
-  * Fix bug that caused crash when rolling mouse over a chart before it was loaded
+  * Add ability for users to plot selected station using Enter key
+  * Fix crash when USGS server does not correctly return parameter names
+  * Fix bug when writing .mvs file on Linux
+  * Fix bug for USGS data when no station is selected but user starts plotting routines
+  * Create class for session files
+  * Create class for colors
+  * Move legend marker click handling into mov_qchartview
 
- -- Zach Cobell <zcobell@gmail.com>  Thu, 12 May 2016 16:53:34 -0600
+ -- Zach Cobell <zcobell@gmail.com>  Fri, 20 May 2016 20:20:30 -0600
 
 
 <</CHANGELOG>>
@@ -709,5 +714,5 @@ Categories=Application;
 <<BUILD>>
 0
 1
-1
+0
 <</BUILD>>
