@@ -25,6 +25,7 @@
 #include "ui_timeseries_add_data.h"
 #include "MetOceanViewer.h"
 #include "mov_colors.h"
+#include "mov_generic.h"
 
 //-------------------------------------------//
 //This brings up the dialog box used to add

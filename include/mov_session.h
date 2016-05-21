@@ -27,7 +27,6 @@
 #include <netcdf.h>
 #include <QtWidgets>
 #include <QFileDialog>
-#include "mov_generic.h"
 
 class mov_session : public QObject
 {

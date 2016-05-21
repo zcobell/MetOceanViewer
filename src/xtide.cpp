@@ -393,6 +393,13 @@ int XTide::plotChart()
     this->chart->initializeAxisLimits();
     this->chart->setStatusBar(this->statusBar);
 
+    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
+    {
+        // Disconnect possible existing connection to avoid multiple connections
+        QObject::disconnect(marker, SIGNAL(clicked()), this->chart, SLOT(handleLegendMarkerClicked()));
+        QObject::connect(marker, SIGNAL(clicked()), this->chart, SLOT(handleLegendMarkerClicked()));
+    }
+
 
     return 0;
 }

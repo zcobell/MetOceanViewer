@@ -36,9 +36,10 @@
 
 #include "mov_errors.h"
 #include "mov_flags.h"
-#include "mov_generic.h"
-#include "mov_qchartview.h"
-#include "imeds.h"
+
+//...Forward declare classes
+class mov_QChartView;
+class imeds;
 
 using namespace QtCharts;
 
@@ -67,7 +68,6 @@ public:
     QString getNOAAErrorString();
 
 private slots:
-    void handleLegendMarkerClicked();
     void javascriptDataReturned(QString);
 
 signals:

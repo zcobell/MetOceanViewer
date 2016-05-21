@@ -25,6 +25,9 @@
 #include "keyhandler.h"
 #include "update_dialog.h"
 #include "mov_colors.h"
+#include "mov_qwebenginepage.h"
+#include "mov_generic.h"
+#include "mov_session.h"
 
 void MainWindow::setupMetOceanViewerUI()
 {

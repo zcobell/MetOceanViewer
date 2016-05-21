@@ -28,6 +28,8 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 #include "mov_colors.h"
+#include "mov_generic.h"
+#include "hwm.h"
 
 
 //-------------------------------------------//

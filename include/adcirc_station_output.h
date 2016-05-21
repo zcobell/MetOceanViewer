@@ -24,7 +24,10 @@
 #define ADCIRC_STATION_OUTPUT_H
 
 #include <QObject>
-#include "imeds.h"
+#include <QDateTime>
+#include <QVector>
+
+class imeds;
 
 class adcirc_station_output : public QObject
 {

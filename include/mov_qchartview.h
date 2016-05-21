@@ -71,6 +71,9 @@ private:
     qreal       current_y_axis_min,current_y_axis_max;
     QStatusBar *m_statusBar;
 
+public slots:
+    void handleLegendMarkerClicked();
+
 };
 
 #endif //MOVQCHARTVIEW_H

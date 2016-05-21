@@ -476,6 +476,13 @@ int hwm::plotRegression()
     this->chartView->initializeAxisLimits();
     this->chartView->setStatusBar(this->statusBar);
 
+    foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
+    {
+        // Disconnect possible existing connection to avoid multiple connections
+        QObject::disconnect(marker, SIGNAL(clicked()), this->chartView, SLOT(handleLegendMarkerClicked()));
+        QObject::connect(marker, SIGNAL(clicked()), this->chartView, SLOT(handleLegendMarkerClicked()));
+    }
+
     return 0;
 }
 

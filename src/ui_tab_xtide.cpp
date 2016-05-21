@@ -22,6 +22,7 @@
 //-----------------------------------------------------------------------//
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
+#include "xtide.h"
 
 void MainWindow::on_button_xtide_compute_clicked()
 {

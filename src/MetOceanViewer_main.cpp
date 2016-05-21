@@ -26,6 +26,7 @@
 #include "about_dialog.h"
 #include "update_dialog.h"
 #include "mov_generic.h"
+#include "mov_session.h"
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs

@@ -97,57 +97,7 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
     return 0;
 }
 
-void user_timeseries::handleLegendMarkerClicked()
-{
-    QLegendMarker* marker = qobject_cast<QLegendMarker*> (sender());
 
-    Q_ASSERT(marker);
-
-    switch (marker->type())
-    {
-        case QLegendMarker::LegendMarkerTypeXY:
-        {
-            // Toggle visibility of series
-            marker->series()->setVisible(!marker->series()->isVisible());
-
-            // Turn legend marker back to visible, since hiding series also hides the marker
-            // and we don't want it to happen now.
-            marker->setVisible(true);
-
-            // Dim the marker, if series is not visible
-            qreal alpha = 1.0;
-
-            if (!marker->series()->isVisible())
-                alpha = 0.5;
-
-            QColor color;
-            QBrush brush = marker->labelBrush();
-            color = brush.color();
-            color.setAlphaF(alpha);
-            brush.setColor(color);
-            marker->setLabelBrush(brush);
-
-            brush = marker->brush();
-            color = brush.color();
-            color.setAlphaF(alpha);
-            brush.setColor(color);
-            marker->setBrush(brush);
-
-            QPen pen = marker->pen();
-            color = pen.color();
-            color.setAlphaF(alpha);
-            pen.setColor(color);
-            marker->setPen(pen);
-
-            break;
-        }
-        default:
-        {
-            qDebug() << "Unknown marker type";
-            break;
-        }
-    }
-}
 
 int user_timeseries::saveImage(QString filename, QString filter)
 {
@@ -448,8 +398,8 @@ void user_timeseries::javascriptDataReturned(QString data)
     foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
     {
         // Disconnect possible existing connection to avoid multiple connections
-        disconnect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
-        connect(marker, SIGNAL(clicked()), this, SLOT(handleLegendMarkerClicked()));
+        disconnect(marker, SIGNAL(clicked()), this->chart, SLOT(handleLegendMarkerClicked()));
+        connect(marker, SIGNAL(clicked()), this->chart, SLOT(handleLegendMarkerClicked()));
     }
 
     this->chart->m_style = 1;

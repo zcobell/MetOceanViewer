@@ -23,6 +23,7 @@
 
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
+#include "usgs.h"
 
 //-------------------------------------------//
 //Send the data to the panTo function

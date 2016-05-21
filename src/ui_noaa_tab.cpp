@@ -24,6 +24,7 @@
 #include "MetOceanViewer.h"
 #include "ui_MetOceanViewer_main.h"
 #include "noaa.h"
+#include "mov_generic.h"
 
 //-------------------------------------------//
 //Called when the pan to combo box is updated

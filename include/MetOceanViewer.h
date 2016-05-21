@@ -35,14 +35,14 @@
 #include <QColorDialog>
 #include <QtCharts>
 
-//...MetOcean Viewer Includes...//
-#include "noaa.h"
-#include "usgs.h"
-#include "hwm.h"
-#include "xtide.h"
-#include "user_timeseries.h"
-#include "mov_qwebenginepage.h"
-#include "mov_session.h"
+//...Forward declarations of classes
+class noaa;
+class usgs;
+class hwm;
+class XTide;
+class user_timeseries;
+class mov_QWebEnginePage;
+class mov_session;
 
 //-------------------------------------------//
 //Main class used by the Qt program that holds

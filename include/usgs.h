@@ -65,7 +65,6 @@ public:
     QString getClickedUSGSStation();
 
 private slots:
-    void handleLegendMarkerClicked();
     void javascriptDataReturned(QString data);
 
 

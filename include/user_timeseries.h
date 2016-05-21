@@ -64,7 +64,6 @@ public:
     QString getErrorString();
 
 private slots:
-    void handleLegendMarkerClicked();
     void javascriptDataReturned(QString);
 
 signals:

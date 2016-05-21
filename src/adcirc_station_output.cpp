@@ -20,9 +20,11 @@
 // used for projects "forked" or derived from this work.
 //
 //-----------------------------------------------------------------------//
-#include "adcirc_station_output.h"
 #include <netcdf.h>
 #include <QtMath>
+#include <QFile>
+#include "adcirc_station_output.h"
+#include "imeds.h"
 
 adcirc_station_output::adcirc_station_output(QObject *parent) : QObject(parent)
 {

@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 #include "mov_session.h"
+#include "mov_generic.h"
 
 mov_session::mov_session(QTableWidget *inTableWidget,
                          QLineEdit *inPlotTitleWidget,
