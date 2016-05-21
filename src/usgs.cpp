@@ -81,6 +81,12 @@ void usgs::javascriptDataReturned(QString data)
     this->CurrentUSGSLon = evalList.value(2).toDouble();
     this->CurrentUSGSLat = evalList.value(3).toDouble();
 
+    if(this->USGSMarkerID==QString())
+    {
+        emit usgsError("You must select a station");
+        return;
+    }
+
     //...Format the date strings
     endDateString1 = "&endDT="+this->requestEndDate.addDays(1).toString("yyyy-MM-dd");
     startDateString1 = "&startDT="+this->requestStartDate.toString("yyyy-MM-dd");
