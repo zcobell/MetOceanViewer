@@ -1,4 +1,4 @@
-//-------------------------------GPL-------------------------------------//
+/*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
 // Copyright (C) 2015  Zach Cobell
@@ -16,10 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-// The name "MetOcean Viewer" is specific to this project and may not be
-// used for projects "forked" or derived from this work.
-//
-//-----------------------------------------------------------------------//
+//-----------------------------------------------------------------------*/
 #ifndef VERSION_H
 #define VERSION_H
 
