@@ -28,6 +28,13 @@
 
 export LD_LIBRARY_PATH=/opt/MetOceanViewer/lib:$LD_LIBRARY_PATH
 
-/opt/MetOceanViewer/bin/MetOcean_Viewer
+mov_exe=/opt/MetOceanViewer/bin/MetOcean_Viewer
+
+if [ -e $mov_exe ] ; then
+    $mov_exe
+else
+    echo "ERROR: The MetOceanViewer executable does not exist."
+    exit 1
+fi
 
 exit $?
