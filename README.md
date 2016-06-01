@@ -50,4 +50,4 @@ The following external libraries/APIs are used in this software
 | XTide |http://www.flaterco.com/xtide/|
 
 # License
-This program conforms to the GNU GPL, Version 3, with the caveat that the name MetOcean Viewer is specific to this project and derivative works should be named differently.
+This program conforms to the GNU GPL, Version 3.
