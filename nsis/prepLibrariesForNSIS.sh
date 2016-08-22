@@ -17,7 +17,7 @@ mkdir deployment
 cd deployment
 
 #...Grab the MetOceanViewer executable
-cp ../../../build-MetOceanViewer-Desktop_Qt_5_6_0_MSVC2015_64bit-Release/release/MetOcean_Viewer.exe .
+cp ../../../build-MetOceanViewer-Desktop_Qt_5_7_0_MSVC2015_64bit-Release/release/MetOcean_Viewer.exe .
 
 #...Grab the XTide executable
 cp ../../thirdparty/xtide-2.15.1/tide.exe .
