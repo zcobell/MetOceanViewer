@@ -7,7 +7,7 @@ language: cpp
 compiler: gcc
 
 before_install:
-- sudo add-apt-repository --yes ppa:beineri/opt-qt57-beta-trusty
+- sudo add-apt-repository --yes ppa:beineri/opt-qt57-trusty
 - sudo apt-get update  -qq
 - sudo apt-get install -qq libsqlite3-dev libnetcdf-dev
 - sudo apt-cache search qt57
