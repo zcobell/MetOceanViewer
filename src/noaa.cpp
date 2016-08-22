@@ -461,8 +461,11 @@ int noaa::plotChart()
         if(i==0)
         {
             for(j=0;j<this->CurrentNOAAStation[i]->station[0]->data.length();j++)
-                series1->append(this->CurrentNOAAStation[i]->station[0]->date[j].toMSecsSinceEpoch(),
+                if(this->CurrentNOAAStation[i]->station[0]->date[j].isValid())
+                {
+                    series1->append(this->CurrentNOAAStation[i]->station[0]->date[j].toMSecsSinceEpoch(),
                                 this->CurrentNOAAStation[i]->station[0]->data[j]);
+                }
             this->thisChart->addSeries(series1);
             series1->attachAxis(axisX);
             series1->attachAxis(axisY);
@@ -470,8 +473,11 @@ int noaa::plotChart()
         else if(i==1)
         {
             for(j=0;j<this->CurrentNOAAStation[i]->station[0]->data.length();j++)
-                series2->append(this->CurrentNOAAStation[i]->station[0]->date[j].toMSecsSinceEpoch(),
+                if(this->CurrentNOAAStation[i]->station[0]->date[j].isValid())
+                {
+                    series2->append(this->CurrentNOAAStation[i]->station[0]->date[j].toMSecsSinceEpoch(),
                                 this->CurrentNOAAStation[i]->station[0]->data[j]);
+                }
             this->thisChart->addSeries(series2);
             series2->attachAxis(axisX);
             series2->attachAxis(axisY);

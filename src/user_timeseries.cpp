@@ -326,8 +326,11 @@ void user_timeseries::javascriptDataReturned(QString data)
           {
               TempDate = fileDataUnique[i]->station[this->markerID]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
               TempValue = fileDataUnique[i]->station[this->markerID]->data[j]*unitConversion+addY;
-              if(fileDataUnique[i]->station[this->markerID]->data[j]!=MOV_NULL_TS)
+              if(fileDataUnique[i]->station[this->markerID]->data[j]!=MOV_NULL_TS &&
+                 fileDataUnique[i]->station[this->markerID]->date[j].isValid())
+              {
                 series[seriesCounter-1]->append(TempDate,TempValue);
+              }
           }
           this->thisChart->addSeries(series[seriesCounter-1]);
           this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
@@ -360,8 +363,11 @@ void user_timeseries::javascriptDataReturned(QString data)
                   {
                       TempDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
                       TempValue = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
-                      if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
-                        series[seriesCounter-1]->append(TempDate,TempValue);
+                      if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS  &&
+                         fileDataUnique[i]->station[this->selectedStations[k]]->date[j].isValid())
+                      {
+                            series[seriesCounter-1]->append(TempDate,TempValue);
+                      }
                   }
                   this->thisChart->addSeries(series[seriesCounter-1]);
                   this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));

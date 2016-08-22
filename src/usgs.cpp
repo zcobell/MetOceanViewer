@@ -516,11 +516,14 @@ int usgs::plotUSGS()
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
     for(j=0;j<this->USGSPlot.length();j++)
     {
-        series1->append(QDateTime(this->USGSPlot[j].Date,this->USGSPlot[j].Time).toMSecsSinceEpoch(),this->USGSPlot[j].value);
-        if(minDateTime>QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
-            minDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
-        if(maxDateTime<QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
-            maxDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
+        if(QDateTime(this->USGSPlot[j].Date,this->USGSPlot[j].Time).isValid())
+        {
+            series1->append(QDateTime(this->USGSPlot[j].Date,this->USGSPlot[j].Time).toMSecsSinceEpoch(),this->USGSPlot[j].value);
+            if(minDateTime>QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
+                minDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
+            if(maxDateTime<QDateTime(USGSPlot[j].Date,USGSPlot[j].Time))
+                maxDateTime = QDateTime(USGSPlot[j].Date,USGSPlot[j].Time);
+        }
     }
     this->thisChart->addSeries(series1);
 
