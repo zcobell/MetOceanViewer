@@ -1,7 +1,30 @@
 #!/bin/bash
 
+QtHome=/home/zcobell/Qt
+executable=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/MetOceanViewer_GUI/MetOcean_Viewer
+xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
+harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
+version=$(git describe --always --tags)
 
-executable=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/MetOcean_Viewer
+if [ ! -s $executable ] ; then
+    echo "ERROR: executable not found."
+    exit 1
+fi
+
+if [ ! -s $xtide ] ; then
+    echo "ERROR: XTide executable not found."
+    exit 1
+fi
+
+if [ ! -s $harmonics ] ; then
+    echo "ERROR: Tidal database not found."
+    exit 1
+fi
+
+if [ ! -s $QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator ] ; then
+    echo "ERROR: Qt Installer Framework not found"
+    exit 1
+fi
 
 echo "Gathering libraries..."
 ldd $executable > liblist.txt
@@ -11,8 +34,8 @@ mkdir -p ./packages/com.qt.qtsharedlibraries/data
 mkdir -p ./packages/com.unidata.netcdf/data 
 
 cp $executable ./packages/com.zachcobell.metoceanviewer/data/.
-cp ../mov_libs/bin/tide ./packages/com.zachcobell.metoceanviewer/data/.
-cp ../mov_libs/bin/harmonics.tcd ./packages/com.zachcobell.metoceanviewer/data/.
+cp $xtide ./packages/com.zachcobell.metoceanviewer/data/.
+cp $harmonics ./packages/com.zachcobell.metoceanviewer/data/.
 
 while read LIB
 do
@@ -36,4 +59,4 @@ done < liblist.txt
 rm liblist.txt
 
 echo "Building Installer..."
-../../../Qt/Tools/QtInstallerFramework/2.0/bin/binarycreator -c config/config.xml -p packages MetOceanInstaller
+$QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator -c config/config.xml -p packages MetOceanInstaller_$version

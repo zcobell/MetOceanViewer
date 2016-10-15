@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>MetOceanViewer</Name>
+    <Version>2.6.1</Version>
+    <Title>MetOceanViewer</Title>
+    <Publisher>Zach Cobell</Publisher>
+    <ProductUrl>https://github.com/zcobell/MetOceanViewer</ProductUrl>
+    <StartMenuDir>MetOceanViewer</StartMenuDir>
+    <TargetDir>@HomeDir@/MetOceanViewer</TargetDir>
+    <MaintenanceToolName>MetOceanViewer_MaintenanceTool</MaintenanceToolName>
+    <RunProgramDescription>MetOceanViewer: Multipurpose tool for viewing hydrodynamic model data</RunProgramDescription>
+    <WizardDefaultWidth>600</WizardDefaultWidth>
+</Installer>
