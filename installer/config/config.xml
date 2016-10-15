@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>MetOceanViewer</Name>
+    <Version>2.6.0</Version>
+    <Title>MetOceanViewer</Title>
+    <Publisher>Zach Cobell</Publisher>
+    <StartMenuDir>MetOceanViewer</StartMenuDir>
+    <TargetDir>@HomeDir@/MetOceanViewer</TargetDir>
+</Installer>
