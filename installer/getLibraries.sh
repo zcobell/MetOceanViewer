@@ -1,8 +1,14 @@
 #!/bin/bash
 
+
 executable=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/MetOcean_Viewer
 
+echo "Gathering libraries..."
 ldd $executable > liblist.txt
+
+mkdir -p ./packages/com.zachcobell.metoceanviewer/data
+mkdir -p ./packages/com.qt.qtsharedlibraries/data
+mkdir -p ./packages/com.unidata.netcdf/data 
 
 cp $executable ./packages/com.zachcobell.metoceanviewer/data/.
 cp ../mov_libs/bin/tide ./packages/com.zachcobell.metoceanviewer/data/.
@@ -27,5 +33,7 @@ do
 
 done < liblist.txt
 
-
 rm liblist.txt
+
+echo "Building Installer..."
+../../../Qt/Tools/QtInstallerFramework/2.0/bin/binarycreator -c config/config.xml -p packages MetOceanInstaller
