@@ -53,27 +53,27 @@ SOURCES += src/main.cpp\
 
 HEADERS  += \
     version.h \
-    include/timeseries_add_data.h \
-    include/about_dialog.h \
-    include/MetOceanViewer.h \
-    include/noaa.h \
-    include/mov_errors.h \
-    include/mov_flags.h \ 
-    include/usgs.h \
-    include/user_timeseries.h \
-    include/hwm.h \
-    include/keyhandler.h \
-    include/mov_qchartview.h \
-    include/mov_qwebenginepage.h \
-    include/update_dialog.h \
-    include/xtide.h \
-    include/javascriptAsyncReturn.h \
-    include/imeds.h \
-    include/imeds_station.h \
-    include/mov_generic.h \
-    include/mov_colors.h \
-    include/mov_session.h \
-    include/adcirc_station_output.h
+    src/timeseries_add_data.h \
+    src/about_dialog.h \
+    src/MetOceanViewer.h \
+    src/noaa.h \
+    src/mov_errors.h \
+    src/mov_flags.h \ 
+    src/usgs.h \
+    src/user_timeseries.h \
+    src/hwm.h \
+    src/keyhandler.h \
+    src/mov_qchartview.h \
+    src/mov_qwebenginepage.h \
+    src/update_dialog.h \
+    src/xtide.h \
+    src/javascriptAsyncReturn.h \
+    src/imeds.h \
+    src/imeds_station.h \
+    src/mov_generic.h \
+    src/mov_colors.h \
+    src/mov_session.h \
+    src/adcirc_station_output.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
@@ -83,8 +83,8 @@ FORMS    += \
 
 OTHER_FILES +=
 
-#...Location of the netCDF includes
-INCLUDEPATH += $$PWD/thirdparty/netcdf/include
+#...Location of the netCDF srcs
+INCLUDEPATH += $$PWD/thirdparty/netcdf/src
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
@@ -144,10 +144,10 @@ DEFINES += MOV_COMPILER=\\\"gpp\\\"
 #         the code is built on
 macx{
 LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
-INCLUDEPATH += /Users/zcobell/Software/netCDF/include
+INCLUDEPATH += /Users/zcobell/Software/netCDF/src
 ICON = img/mov.icns
 
-#...Files to be included in the bundle
+#...Files to be srcd in the bundle
 XTIDEBIN.files = $$PWD/mov_libs/bin/tide \
                  $$PWD/mov_libs/bin/harmonics.tcd
 XTIDEBIN.path  = Contents/MacOS/XTide/bin
@@ -166,7 +166,7 @@ QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 DEFINES += MOV_COMPILER=\\\"xcode\\\"
 }
 
-INCLUDEPATH += include
+INCLUDEPATH += src
 
 RESOURCES += \
     MetOceanViewer.qrc
