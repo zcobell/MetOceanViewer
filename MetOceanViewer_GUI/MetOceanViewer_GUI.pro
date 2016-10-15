@@ -83,14 +83,14 @@ FORMS    += \
 
 OTHER_FILES +=
 
-#...Location of the netCDF srcs
-INCLUDEPATH += $$PWD/thirdparty/netcdf/src
-
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
 
 #...Microsoft Visual C++ compilers
 *msvc* {
+
+#...Location of the netCDF srcs
+INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
 contains(QT_ARCH, i386){
 
@@ -174,5 +174,5 @@ RESOURCES += \
 RC_FILE = resources.rc
 
 #...Ensure that git is in the system path. If not using GIT comment these two lines
-GIT_VERSION = $$system(git --git-dir $$PWD/.git --work-tree $$PWD describe --always --tags)
+GIT_VERSION = $$system(git --git-dir $$PWD/../.git --work-tree $$PWD/.. describe --always --tags)
 DEFINES += GIT_VERSION=\\\"$$GIT_VERSION\\\"
