@@ -6,6 +6,7 @@ xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
 version=$(git describe --always --tags)
 
+
 if [ ! -s $executable ] ; then
     echo "ERROR: executable not found."
     exit 1
@@ -26,16 +27,18 @@ if [ ! -s $QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator ] ; then
     exit 1
 fi
 
+cd unix
+
 echo "Gathering libraries..."
 ldd $executable > liblist.txt
 
-mkdir -p ./packages/com.zachcobell.metoceanviewer/data
-mkdir -p ./packages/com.qt.qtsharedlibraries/data
-mkdir -p ./packages/com.unidata.netcdf/data 
+mkdir -p ./packages_unix/com.zachcobell.metoceanviewer/data
+mkdir -p ./packages_unix/com.qt.qtsharedlibraries/data
+mkdir -p ./packages_unix/com.unidata.netcdf/data 
 
-cp $executable ./packages/com.zachcobell.metoceanviewer/data/.
-cp $xtide ./packages/com.zachcobell.metoceanviewer/data/.
-cp $harmonics ./packages/com.zachcobell.metoceanviewer/data/.
+cp $executable ./packages_unix/com.zachcobell.metoceanviewer/data/.
+cp $xtide ./packages_unix/com.zachcobell.metoceanviewer/data/.
+cp $harmonics ./packages_unix/com.zachcobell.metoceanviewer/data/.
 
 while read LIB
 do
@@ -47,11 +50,11 @@ do
     LOCATION=$(echo $LIB | cut -d">" -f2 | cut -d"(" -f1)
     
     if [ $SHORTNAME == "libQt" ] ; then
-        cp $LOCATION ./packages/com.qt.qtsharedlibraries/data/.
+        cp $LOCATION ./packages_unix/com.qt.qtsharedlibraries/data/.
     elif [ $SHORTNAME2 == "libnetcdf" ] ; then
-        cp $LOCATION ./packages/com.unidata.netcdf/data/.
+        cp $LOCATION ./packages_unix/com.unidata.netcdf/data/.
     elif [ $SHORTNAME3 == "libhdf5" ] ; then
-        cp $LOCATION ./packages/com.unidata.netcdf/data/.
+        cp $LOCATION ./packages_unix/com.unidata.netcdf/data/.
     fi
 
 done < liblist.txt
@@ -59,4 +62,4 @@ done < liblist.txt
 rm liblist.txt
 
 echo "Building Installer..."
-$QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator -c config/config.xml -p packages MetOceanInstaller_$version
+$QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator -c config/config.xml -p packages_unix MetOceanViewer_Unix_Installer_$version.bin
