@@ -10,4 +10,5 @@
     <MaintenanceToolName>MetOceanViewer_MaintenanceTool</MaintenanceToolName>
     <RunProgramDescription>MetOceanViewer: Multipurpose tool for viewing hydrodynamic model data</RunProgramDescription>
     <WizardDefaultWidth>600</WizardDefaultWidth>
+    <AllowSpaceInPath>true</AllowSpaceInPath>
 </Installer>

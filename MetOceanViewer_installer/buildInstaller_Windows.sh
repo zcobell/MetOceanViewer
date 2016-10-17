@@ -5,6 +5,7 @@ windDeployQtBinary=/cygdrive/c/Qt/Qt5.7.0/5.7/msvc2015_64/bin/windeployqt.exe
 binaryCreator=/cygdrive/c/Qt/Qt5.7.0/5.7-static/qt-everywhere-opensource-src-5.7.0/installer-framework/bin/binarycreator.exe
 version=$(git describe --always --tags)
 
+
 #...Check for WindDeployQt
 if [ ! -s $windDeployQtBinary ] ; then
     echo "ERROR: Missing winddeployqt.exe"
@@ -28,6 +29,9 @@ cp ../MetOceanViewer_GUI/mov_libs/bin/tide.exe packages_windows/com.zachcobell.m
 
 #...Grab the database
 cp ../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
+
+#...Grab the icon
+cp ../MetOceanViewer_GUI/img/mov.ico packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab some of the third party libraries
 cp ../MetOceanViewer_GUI/thirdparty/netcdf/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
