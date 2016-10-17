@@ -27,8 +27,6 @@ if [ ! -s $QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator ] ; then
     exit 1
 fi
 
-cd unix
-
 echo "Gathering libraries..."
 ldd $executable > liblist.txt
 
