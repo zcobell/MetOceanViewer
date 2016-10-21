@@ -24,6 +24,7 @@
 #include "update_dialog.h"
 #include "mov_generic.h"
 #include "mov_session.h"
+#include "mov_nefis.h"
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
@@ -34,6 +35,13 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile, QWidget
     this->processCommandLine = processCommandLine;
     this->commandLineFile = commandLineFile;
     setupMetOceanViewerUI();
+
+    mov_nefis *nefis = new mov_nefis("/home/zcobell/Development/MetOceanViewer/trih-newark_v05a.def","/home/zcobell/Development/MetOceanViewer/trih-newark_v05a.dat",this);
+
+    nefis->open();
+    nefis->getStationData();
+    nefis->close();
+
 }
 
 //Main destructor routine

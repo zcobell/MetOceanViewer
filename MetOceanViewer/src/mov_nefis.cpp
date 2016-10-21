@@ -18,7 +18,8 @@
 //
 //-----------------------------------------------------------------------*/
 #include "mov_nefis.h"
-
+#include <QDebug>
+#include <iostream>
 
 mov_nefis::mov_nefis(QString defFilename, QString datFilename, QObject *parent) : QObject(parent)
 {
@@ -29,22 +30,41 @@ mov_nefis::mov_nefis(QString defFilename, QString datFilename, QObject *parent) 
 
 int mov_nefis::open()
 {
-    int ierr;
+    BInt4 ierr;
     BText datFile;
     BText defFile;
 
-    datFile = (char*)this->mDatFilename.toStdString().c_str();
-    defFile = (char*)this->mDefFilename.toStdString().c_str();
+    datFile = strdup(this->mDatFilename.toStdString().c_str());
+    defFile = strdup(this->mDefFilename.toStdString().c_str());
 
-    ierr = Crenef(this->fd,datFile,defFile,'M','r');
+    ierr = Crenef(&this->fd,datFile,defFile,'M','r');
 
-    return 0;
+    if(ierr==0)
+    {
+        this->isOpen = true;
+        return 0;
+    }
+    else
+    {
+        this->isOpen = false;
+        return ierr;
+    }
 }
 
 
 int mov_nefis::close()
+{      
+    if(this->isOpen)
+        return Clsnef(&this->fd);
+    else
+        return 0;
+}
+
+
+int mov_nefis::getStationData()
 {
+    BInt4 ierr;
+
 
     return 0;
 }
-

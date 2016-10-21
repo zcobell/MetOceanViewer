@@ -36,6 +36,7 @@ public:
 
     int open();
     int close();
+    int getStationData();
 
 signals:
 
@@ -44,7 +45,8 @@ public slots:
 private:
     QString mDatFilename;
     QString mDefFilename;
-    int *fd;
+    bool isOpen;
+    int fd;
 };
 
 #endif // MOV_NEFIS_H
