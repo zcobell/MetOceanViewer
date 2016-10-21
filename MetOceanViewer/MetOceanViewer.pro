@@ -121,7 +121,7 @@ FORMS    += \
 
 OTHER_FILES +=
 
-LIBS += -L$$OUT_PWD/../thirdparty/nefis -lnefis
+LIBS += $$OUT_PWD/../thirdparty/nefis/libnefis.a
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 

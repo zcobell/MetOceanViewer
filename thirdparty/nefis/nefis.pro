@@ -23,7 +23,7 @@ QT       -= core gui
 
 TARGET = nefis
 TEMPLATE = lib
-CONFIG += lib
+CONFIG += staticlib
 
 QMAKE_CFLAGS = -D_GNU_SOURCE -DSTR_LEN_AT_END -DFTN_UNDERSCORE \
                -D_FILE_OFFSET_BITS=64 -DPTR8 -DHAVE_CONFIG_H \
