@@ -24,8 +24,8 @@ mkdir -p packages_windows/com.zachcobell.metoceanviewer/data
 #...Grab the MetOceanViewer executable
 cp ../../build-MetOceanViewer-Desktop_Qt_5_7_0_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOcean_Viewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
-#...Grab the XTide executable
-cp ../MetOceanViewer_GUI/mov_libs/bin/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
+#...Grab the Windows XTide executable
+cp ../MetOceanViewer_GUI/thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the database
 cp ../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
