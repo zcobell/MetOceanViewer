@@ -23,11 +23,15 @@ QT       -= core gui
 
 TARGET = nefis
 TEMPLATE = lib
-CONFIG += staticlib
+CONFIG += lib
 
-QMAKE_CFLAGS = -D_GNU_SOURCE -DSTR_LEN_AT_END \
-               -D_FILE_OFFSET_BITS=64 \
-               -DPTR8 -DHAVE_CONFIG_H
+QMAKE_CFLAGS = -D_GNU_SOURCE -DSTR_LEN_AT_END -DFTN_UNDERSCORE \
+               -D_FILE_OFFSET_BITS=64 -DPTR8 -DHAVE_CONFIG_H \
+               -DLINUX64 -w
+
+QMAKE_CXXFLAGS = -D_GNU_SOURCE -DSTR_LEN_AT_END -DFTN_UNDERSCORE \
+               -D_FILE_OFFSET_BITS=64 -DPTR8 -DHAVE_CONFIG_H \
+               -DLINUX64 -w
 
 INCLUDEPATH += include
 
@@ -44,21 +48,21 @@ SOURCES += src/c2c.c \
            src/rt.c  \
            src/wl-xdr.c
 
-HEADERS += include/btps.h
-           include/c2c.h
-           include/config.h
-           include/df.h  
-           include/f2c.h
-           include/gp.h 
-           include/gt.h 
-           include/hs.h 
-           include/nef-def.h
-           include/nef-tag.h
-           include/nef-xdf.h
-           include/nefis.h
-           include/nefis_version.h
-           include/oc.h
-           include/pt.h
-           include/resource.h
-           include/rt.h
+HEADERS += include/btps.h \
+           include/c2c.h \
+           include/config.h \
+           include/df.h \
+           include/f2c.h \
+           include/gp.h \
+           include/gt.h \
+           include/hs.h \
+           include/nef-def.h \
+           include/nef-tag.h \
+           include/nef-xdf.h \
+           include/nefis.h \
+           include/nefis_version.h \
+           include/oc.h \
+           include/pt.h \
+           include/resource.h \
+           include/rt.h \
            include/wl-xdr.h
