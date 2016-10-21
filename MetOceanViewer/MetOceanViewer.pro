@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
-# MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-# Copyright (C) 2015  Zach Cobell
+# MetOceanViewer - A library for working with ADCIRC models
+# Copyright (C) 2016  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #-----------------------------------------------------------------------#
+
 
 QT       += core gui webenginewidgets network xml charts printsupport
 
@@ -86,17 +87,20 @@ OTHER_FILES +=
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
 
+#...Nefis Library
+LIBS += -L$OUT_PWD/thirdparty/nefis/libnefis.a
+
 #...Microsoft Visual C++ compilers
 *msvc* {
 
 #...Location of the netCDF srcs
-INCLUDEPATH += $$PWD/thirdparty/netcdf/include
+INCLUDEPATH += $$PWD/../thirdparty/netcdf/include $$PWD/../thirdparty/nefis/include
 
 contains(QT_ARCH, i386){
 
 #...Microsoft Visual C++ 32-bit compiler
 message("Using MSVC-32 bit compiler...")
-LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
@@ -109,7 +113,7 @@ DEFINES += MOV_COMPILER=\\\"msvc\\\"
 
 #...Microsoft Visual C++ 64-bit compiler
 message("Using MSVC-64 bit compiler...")
-LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=

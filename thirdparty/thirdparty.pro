@@ -18,8 +18,7 @@
 #
 #-----------------------------------------------------------------------#
 
-
 TEMPLATE = subdirs
 
-SUBDIRS  = thirdparty MetOceanViewer
+SUBDIRS  = nefis
 CONFIG += ordered           
