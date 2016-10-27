@@ -21,6 +21,15 @@
 #define MOV_NEFIS_H
 
 #include <QObject>
+#include <QList>
+#include <QVector>
+#include <QPointF>
+
+#define MAX_NEFIS_CEL_DIM 100
+#define MAX_NEFIS_DESC     64
+#define MAX_NEFIS_DIM       5
+#define MAX_NEFIS_NAME     16
+#define MAX_NEFIS_TYPE      8
 
 extern "C" {
 #include "nefis_defines.h"
@@ -47,6 +56,10 @@ private:
     QString mDefFilename;
     bool isOpen;
     int fd;
+    int mNumStations;
+    QVector<QPointF> mStationLocations;
+    QVector<QString> mStationNames;
+
 };
 
 #endif // MOV_NEFIS_H
