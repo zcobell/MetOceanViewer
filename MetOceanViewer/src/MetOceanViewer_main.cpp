@@ -39,7 +39,6 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile, QWidget
     mov_nefis *nefis = new mov_nefis("/home/zcobell/Development/MetOceanViewer/trih-newark_v05a.def","/home/zcobell/Development/MetOceanViewer/trih-newark_v05a.dat",this);
 
     nefis->open();
-    nefis->getStationData();
     nefis->close();
 
 }

@@ -24,6 +24,7 @@
 #include <QList>
 #include <QVector>
 #include <QPointF>
+#include <QDateTime>
 
 #define MAX_NEFIS_CEL_DIM 100
 #define MAX_NEFIS_DESC     64
@@ -45,20 +46,32 @@ public:
 
     int open();
     int close();
-    int getStationData();
+
 
 signals:
 
 public slots:
 
 private:
+
+    int _init();
+    int _getStationLocations();
+    int _getSeriesList();
+    int _getTimes();
+    int _getSeriesNames(QString seriesGroup, QVector<QString> &seriesNames, QVector<QString> &seriesDescriptions);
+
+
     QString mDatFilename;
     QString mDefFilename;
     bool isOpen;
     int fd;
     int mNumStations;
-    QVector<QPointF> mStationLocations;
-    QVector<QString> mStationNames;
+    QVector<QPointF>   mStationLocations;
+    QVector<QString>   mStationNames;
+    QVector<QString>   mSeriesNames;
+    QVector<QString>   mSeriesDescriptions;
+    QVector<QString>   mSeriesSource;
+    QVector<QDateTime> mOutputTimes;
 
 };
 
