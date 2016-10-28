@@ -34,20 +34,20 @@ user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
                                  QObject *parent) : QObject(parent)
 {
-    table      = inTable;
-    xAxisCheck = inXAxisCheck;
-    yAxisCheck = inYAxisCheck;
-    startDate  = inStartDate;
-    endDate    = inEndDate;
-    yMaxEdit   = inYMaxEdit;
-    yMinEdit   = inYMinEdit;
-    plotTitle  = inPlotTitle;
-    xLabelEdit = inXLabelEdit;
-    yLabelEdit = inYLabelEdit;
-    map        = inMap;
-    chart      = inChart;
-    statusBar  = inStatusBar;
-    randomColorList = inRandomColorList;
+    this->table      = inTable;
+    this->xAxisCheck = inXAxisCheck;
+    this->yAxisCheck = inYAxisCheck;
+    this->startDate  = inStartDate;
+    this->endDate    = inEndDate;
+    this->yMaxEdit   = inYMaxEdit;
+    this->yMinEdit   = inYMinEdit;
+    this->plotTitle  = inPlotTitle;
+    this->xLabelEdit = inXLabelEdit;
+    this->yLabelEdit = inYLabelEdit;
+    this->map        = inMap;
+    this->chart      = inChart;
+    this->statusBar  = inStatusBar;
+    this->randomColorList = inRandomColorList;
 }
 
 user_timeseries::~user_timeseries()
@@ -66,28 +66,28 @@ int user_timeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minDat
     minDate = QDateTime(QDate(3000,1,1),QTime(0,0,0));
     maxDate = QDateTime(QDate(1500,1,1),QTime(0,0,0));
 
-    for(i=0;i<fileDataUnique.length();i++)
+    for(i=0;i<this->fileDataUnique.length();i++)
     {
-        unitConversion = table->item(i,3)->text().toDouble();
-        addY = table->item(i,5)->text().toDouble();
+        unitConversion = this->table->item(i,3)->text().toDouble();
+        addY = this->table->item(i,5)->text().toDouble();
         for(k=0;k<this->selectedStations.length();k++)
         {
-            if(!fileDataUnique[i]->station[this->selectedStations[k]]->isNull)
+            if(!this->fileDataUnique[i]->station[this->selectedStations[k]]->isNull)
             {
-                for(j=0;j<fileDataUnique[i]->station[this->selectedStations[k]]->data.length();j++)
+                for(j=0;j<this->fileDataUnique[i]->station[this->selectedStations[k]]->data.length();j++)
                 {
-                    if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY<ymin &&
-                            fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
-                        ymin = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
-                    if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY>ymax &&
-                            fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
-                        ymax = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
-                    if(fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0)<minDate &&
-                            fileDataUnique[i]->station[this->selectedStations[k]]->date[j]!=nullDate)
-                        minDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0);
-                    if(fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0)>maxDate &&
-                            fileDataUnique[i]->station[this->selectedStations[k]]->date[j]!=nullDate)
-                        maxDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0);
+                    if(this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY<ymin &&
+                            this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
+                        ymin = this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
+                    if(this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY>ymax &&
+                            this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS)
+                        ymax = this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
+                    if(this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0)<minDate &&
+                            this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j]!=nullDate)
+                        minDate = this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0);
+                    if(this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0)>maxDate &&
+                            this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j]!=nullDate)
+                        maxDate = this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j].addSecs(timeAddList[i]*3600.0);
                 }
             }
         }
@@ -253,8 +253,8 @@ void user_timeseries::javascriptDataReturned(QString data)
         return;
     }
 
-    addXList.resize(fileDataUnique.length());
-    for(i=0;i<fileDataUnique.length();i++)
+    addXList.resize(this->fileDataUnique.length());
+    for(i=0;i<this->fileDataUnique.length();i++)
         addXList[i] = table->item(i,4)->text().toDouble();
 
     this->markerID = this->selectedStations[0];
@@ -309,7 +309,7 @@ void user_timeseries::javascriptDataReturned(QString data)
 
     seriesCounter = 0;
 
-    for(i=0;i<fileDataUnique.length();i++)
+    for(i=0;i<this->fileDataUnique.length();i++)
     {
 
       if(this->selectedStations.length()==1)
@@ -321,14 +321,14 @@ void user_timeseries::javascriptDataReturned(QString data)
           seriesColor.setNamedColor(table->item(seriesCounter-1,2)->text());
           series[seriesCounter-1]->setPen(QPen(seriesColor,3,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
           unitConversion = table->item(seriesCounter-1,3)->text().toDouble();
-          addX = table->item(seriesCounter-1,4)->text().toDouble();
-          addY = table->item(seriesCounter-1,5)->text().toDouble();
-          for(j=0;j<fileDataUnique[i]->station[this->markerID]->data.length();j++)
+          addX = this->table->item(seriesCounter-1,4)->text().toDouble();
+          addY = this->table->item(seriesCounter-1,5)->text().toDouble();
+          for(j=0;j<this->fileDataUnique[i]->station[this->markerID]->data.length();j++)
           {
-              TempDate = fileDataUnique[i]->station[this->markerID]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
-              TempValue = fileDataUnique[i]->station[this->markerID]->data[j]*unitConversion+addY;
-              if(fileDataUnique[i]->station[this->markerID]->data[j]!=MOV_NULL_TS &&
-                 fileDataUnique[i]->station[this->markerID]->date[j].isValid())
+              TempDate = this->fileDataUnique[i]->station[this->markerID]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+              TempValue = this->fileDataUnique[i]->station[this->markerID]->data[j]*unitConversion+addY;
+              if(this->fileDataUnique[i]->station[this->markerID]->data[j]!=MOV_NULL_TS &&
+                 this->fileDataUnique[i]->station[this->markerID]->date[j].isValid())
               {
                 series[seriesCounter-1]->append(TempDate,TempValue);
               }
@@ -343,7 +343,7 @@ void user_timeseries::javascriptDataReturned(QString data)
           //...Plot multiple stations. We use random colors and append the station number
           for(k=0;k<this->selectedStations.length();k++)
           {
-              if(!fileDataUnique[i]->station[this->selectedStations[k]]->isNull)
+              if(!this->fileDataUnique[i]->station[this->selectedStations[k]]->isNull)
               {
                   seriesCounter = seriesCounter + 1;
                   colorCounter = colorCounter + 1;
@@ -362,10 +362,10 @@ void user_timeseries::javascriptDataReturned(QString data)
                   addY = table->item(i,5)->text().toDouble();
                   for(j=0;j<fileDataUnique[i]->station[this->selectedStations[k]]->data.length();j++)
                   {
-                      TempDate = fileDataUnique[i]->station[this->selectedStations[k]]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
-                      TempValue = fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
-                      if(fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS  &&
-                         fileDataUnique[i]->station[this->selectedStations[k]]->date[j].isValid())
+                      TempDate = this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j].toMSecsSinceEpoch()+addX*3.6e+6-offset;
+                      TempValue = this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]*unitConversion+addY;
+                      if(this->fileDataUnique[i]->station[this->selectedStations[k]]->data[j]!=MOV_NULL_TS  &&
+                         this->fileDataUnique[i]->station[this->selectedStations[k]]->date[j].isValid())
                       {
                             series[seriesCounter-1]->append(TempDate,TempValue);
                       }
@@ -432,13 +432,13 @@ int user_timeseries::processData()
     adcirc_station_output *adcircData;
 
     nRow = table->rowCount();
-    map->reload();
+    this->map->reload();
 
     j = 0;
 
     for(i=0;i<nRow;i++)
     {
-        TempFile = table->item(i,6)->text();
+        TempFile = this->table->item(i,6)->text();
         TempList = TempFile.split(".");
         InputFileType = TempList.value(TempList.length()-1).toUpper();
         this->fileData.resize(j+1);
@@ -456,7 +456,7 @@ int user_timeseries::processData()
         }
         else if(InputFileType=="NC")
         {
-            ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
+            ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
             adcircData = new adcirc_station_output(this);
             ierr = adcircData->read(TempFile,ColdStart);
             if(ierr!=0)
@@ -473,8 +473,8 @@ int user_timeseries::processData()
         }
         else if(InputFileType=="61"||InputFileType=="62"||InputFileType=="71"||InputFileType=="72")
         {
-            ColdStart = QDateTime::fromString(table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
-            TempStationFile = table->item(i,10)->text();
+            ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
+            TempStationFile = this->table->item(i,10)->text();
             adcircData = new adcirc_station_output(this);
             ierr = adcircData->read(TempFile,TempStationFile,ColdStart);
             if(ierr!=0)
@@ -506,7 +506,7 @@ int user_timeseries::processData()
             return -1;
         }
 
-        if(fileData[j]->success)
+        if(this->fileData[j]->success)
             j = j + 1;
         else
             return -1;
@@ -514,13 +514,13 @@ int user_timeseries::processData()
     }
 
     //...Build a unique set of timeseries data
-    ierr = this->getUniqueStationList(fileData,StationXLocs,StationYLocs);
+    ierr = this->getUniqueStationList(this->fileData,this->StationXLocs,this->StationYLocs);
     if(ierr!=0)
     {
         this->errorString = "Error building the station list";
         return -1;
     }
-    ierr = this->buildRevisedIMEDS(fileData,StationXLocs,StationYLocs,fileDataUnique);
+    ierr = this->buildRevisedIMEDS(this->fileData,this->StationXLocs,this->StationYLocs,this->fileDataUnique);
     if(ierr!=0)
     {
         this->errorString = "Error building the unique dataset";
@@ -529,12 +529,12 @@ int user_timeseries::processData()
 
     //...Check that the page is finished loading
     QEventLoop loop;
-    connect(map->page(),SIGNAL(loadFinished(bool)),&loop,SLOT(quit()));
+    connect(this->map->page(),SIGNAL(loadFinished(bool)),&loop,SLOT(quit()));
     loop.exec();
 
     //...Add the markers to the map
-    map->page()->runJavaScript("allocateData("+QString::number(fileDataUnique.length())+")");
-    for(i=0;i<fileDataUnique[0]->nstations;i++)
+    this->map->page()->runJavaScript("allocateData("+QString::number(this->fileDataUnique.length())+")");
+    for(i=0;i<this->fileDataUnique[0]->nstations;i++)
     {
         x=-1.0;
         y=-1.0;
@@ -542,13 +542,13 @@ int user_timeseries::processData()
 
         //Check that we aren't sending a null location to
         //the backend
-        for(j=0;j<fileDataUnique.length();j++)
+        for(j=0;j<this->fileDataUnique.length();j++)
         {
-            if(!fileDataUnique[j]->station[i]->isNull)
+            if(!this->fileDataUnique[j]->station[i]->isNull)
             {
-                StationName = fileDataUnique[j]->station[i]->StationName;
-                x = fileDataUnique[j]->station[i]->longitude;
-                y = fileDataUnique[j]->station[i]->latitude;
+                StationName = this->fileDataUnique[j]->station[i]->StationName;
+                x = this->fileDataUnique[j]->station[i]->longitude;
+                y = this->fileDataUnique[j]->station[i]->latitude;
                 break;
             }
         }
@@ -557,9 +557,9 @@ int user_timeseries::processData()
                 ","+QString::number(x)+","+
                 QString::number(y)+",'"+
                 StationName+"')";
-        map->page()->runJavaScript(javascript);
+        this->map->page()->runJavaScript(javascript);
     }
-    map->page()->runJavaScript("AddToMap()");
+    this->map->page()->runJavaScript("AddToMap()");
 
     return 0;
 }
