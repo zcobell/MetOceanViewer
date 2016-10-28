@@ -245,8 +245,8 @@ int mov_nefis::_getStationLocations()
 
     //...Malloc the character arrays
     elmtyp = (BChar*)malloc(sizeof(BChar)*MAX_NEFIS_TYPE );
-    elmqty = (BChar*)malloc(sizeof(BChar)*MAX_NAME);
-    elmunt = (BChar*)malloc(sizeof(BChar)*MAX_NAME);
+    elmqty = (BChar*)malloc(sizeof(BChar)*MAX_NEFIS_NAME);
+    elmunt = (BChar*)malloc(sizeof(BChar)*MAX_NEFIS_NAME);
     elmdes = (BChar*)malloc(sizeof(BChar)*MAX_NEFIS_DESC);
 
     //...Get the number of stations contained within the NEFIS file
@@ -289,10 +289,6 @@ int mov_nefis::_getStationLocations()
 
     //...Free memory
     free(realDataBuffer);
-    free(elmtyp);
-    free(elmqty);
-    free(elmunt);
-    free(elmdes);
 
     return 0;
 }
@@ -315,7 +311,7 @@ int mov_nefis::_getSeriesList()
     tempNames.clear();
 
     //...Read the his-wave-series list
-    ierr = this->_getSeriesNames(QStringLiteral("his-wave-series"),tempNames,tempDesc,type);
+    ierr = this->_getSeriesNames(QStringLiteral("his-wav-series"),tempNames,tempDesc,type);
     for(i=0;i<tempNames.size();i++)
     {
         this->_mSeriesNames.push_back(tempNames[i]);
@@ -340,62 +336,32 @@ int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesName
     BInt4 grpDim = MAX_NEFIS_DIM;
     BInt4 celDim = MAX_NEFIS_CEL_DIM;
     BChar * hisseries = strdup(seriesGroup.toStdString().c_str());
-    BChar elmNames[MAX_NEFIS_CEL_DIM][MAX_NAME+1];
+    BChar elmNames[MAX_NEFIS_CEL_DIM][MAX_NEFIS_NAME+1];
 
     //...Allocate memory for variables read
     BInt4 * grpDms        = (BInt4  *) malloc( sizeof(BInt4) *  MAX_NEFIS_DIM );
     BInt4 * grpOrd        = (BInt4  *) malloc( sizeof(BInt4) *  MAX_NEFIS_DIM );
     BInt4 * elmDimensions = (BInt4  *) malloc( sizeof(BInt4) *  MAX_NEFIS_DIM );
-    BText   celname       = (BText   ) malloc( sizeof(BChar) * (MAX_NAME + 1) );
+    BText   celname       = (BText   ) malloc( sizeof(BChar) * (MAX_NEFIS_NAME + 1) );
     BText   type          = (BText   ) malloc( sizeof(BChar) * (MAX_NEFIS_TYPE + 1) );
-    BText   quantity      = (BText   ) malloc( sizeof(BChar) * (MAX_NAME + 1) );
-    BText   units         = (BText   ) malloc( sizeof(BChar) * (MAX_NAME + 1) );
+    BText   quantity      = (BText   ) malloc( sizeof(BChar) * (MAX_NEFIS_NAME + 1) );
+    BText   units         = (BText   ) malloc( sizeof(BChar) * (MAX_NEFIS_NAME + 1) );
     BText   description   = (BText   ) malloc( sizeof(BChar) * (MAX_NEFIS_DESC + 1) );
 
     //...Get the number of steps written to a station series
     ierr = Inqmxi(&this->_fd,hisseries,&nSteps);
     if(ierr!=0)
-    {
-        free(grpDms);
-        free(grpOrd);
-        free(elmDimensions);
-        free(celname);
-        free(type);
-        free(quantity);
-        free(units);
-        free(description);
         return -1;
-    }
 
     //...Get the name of the cell containing the his-series data
     ierr = Inqgrp(&this->_fd,hisseries,celname,&grpDim,grpDms,grpOrd);
     if(ierr!=0)
-    {
-        free(grpDms);
-        free(grpOrd);
-        free(elmDimensions);
-        free(celname);
-        free(type);
-        free(quantity);
-        free(units);
-        free(description);
         return -1;
-    }
 
     //...Get the list of elements inside the cell
     ierr = Inqcel(&this->_fd,celname,&celDim,elmNames);
     if(ierr!=0)
-    {
-        free(grpDms);
-        free(grpOrd);
-        free(elmDimensions);
-        free(celname);
-        free(type);
-        free(quantity);
-        free(units);
-        free(description);
         return -1;
-    }
 
     //...Resize the output vectors
     seriesNames.resize(celDim);
@@ -412,17 +378,7 @@ int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesName
         nDimensions = MAX_NEFIS_DIM;
         ierr = Inqelm(&this->_fd,elmNames[i],type,&nByteSing,quantity,units,description,&nDimensions,elmDimensions);
         if(ierr!=0)
-        {
-            free(grpDms);
-            free(grpOrd);
-            free(elmDimensions);
-            free(celname);
-            free(type);
-            free(quantity);
-            free(units);
-            free(description);
             return -1;
-        }
 
         //...Save the element descriptions
         seriesDescriptions[i] = QString(description).simplified();
@@ -430,15 +386,6 @@ int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesName
         //...Save the type (Integer or Real)
         seriesTypes[i] = QString(type).simplified();
     }
-
-    free(grpDms);
-    free(grpOrd);
-    free(elmDimensions);
-    free(celname);
-    free(type);
-    free(quantity);
-    free(units);
-    free(description);
 
     return 0;
 }
@@ -448,6 +395,7 @@ int mov_nefis::_get(QString seriesName)
 {
     int i,j,ierr;
     char * src;
+    BChar error_string[LENGTH_ERROR_MESSAGE];
 
     //...Allocate the variables used to retrieve from NEFIS
     BInt4   uindex[MAX_NEFIS_DIM][3];
@@ -461,7 +409,7 @@ int mov_nefis::_get(QString seriesName)
     if(this->_mSourceMap[seriesName]==QStringLiteral("Delft3D-FLOW"))
         src = strdup("his-series");
     else if(this->_mSourceMap[seriesName]==QStringLiteral("Delft3D-WAVE"))
-        src = strdup("his-wave-series");
+        src = strdup("his-wav-series");
     else
     {
         free(realBuffer);
@@ -500,6 +448,7 @@ int mov_nefis::_get(QString seriesName)
         {
             free(realBuffer);
             free(intBuffer);
+            return -1;
         }
         //...Put the data in the output array
         for(i=0;i<this->_mNumSteps;i++)
@@ -513,6 +462,8 @@ int mov_nefis::_get(QString seriesName)
         {
             free(realBuffer);
             free(intBuffer);
+            qDebug() << Neferr(2,error_string);
+            return -1;
         }
         //...Put the data in the output array
         for(i=0;i<this->_mNumSteps;i++)

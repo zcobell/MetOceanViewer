@@ -26,8 +26,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = MetOcean_Viewer
 TEMPLATE = app
 
-NEFISHOME=$$PWD/../thirdparty/nefis/
-
 SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
@@ -89,7 +87,6 @@ FORMS    += \
 
 OTHER_FILES +=
 
-LIBS += $$OUT_PWD/../thirdparty/nefis/libnefis.a
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
@@ -100,6 +97,9 @@ INCLUDEPATH += $$PWD/src
 
 #...Microsoft Visual C++ compilers
 *msvc* {
+
+debug:LIBS += -L$$OUT_PWD/../thirdparty/nefis/debug -lnefis
+release:LIBS += -L$$OUT_PWD/../thirdparty/nefis/release -lnefis
 
 #...Location of the netCDF srcs
 INCLUDEPATH += $$PWD/../thirdparty/netcdf/include
@@ -112,7 +112,7 @@ LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -DEBUG
+QMAKE_CXXFLAGS_DEBUG   += -DEBUG
 
 #...Define a variable for the about dialog
 DEFINES += MOV_COMPILER=\\\"msvc\\\"
@@ -125,7 +125,7 @@ LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -DEBUG
+QMAKE_CXXFLAGS_DEBUG   += -DEBUG
 
 #...Define a variable for the about dialog
 DEFINES += MOV_COMPILER=\\\"msvc\\\"
@@ -142,6 +142,7 @@ error("MinGW not compatible with this project. See the Qt documentation for QtWe
 #          in the system path already
 unix:!macx{
 LIBS += -lnetcdf
+LIBS += $$OUT_PWD/../thirdparty/nefis/libnefis.a
 
 #...Optimization flags
 QMAKE_CXXFLAGS_RELEASE +=
