@@ -26,7 +26,6 @@
 #include <QLegendMarker>
 #include <QtGui/QMouseEvent>
 #include <QDateTime>
-#include <QDebug>
 #include "mov_qchartview.h"
 
 
@@ -238,9 +237,6 @@ void mov_QChartView::handleLegendMarkerClicked()
             break;
         }
         default:
-        {
-            qDebug() << "Unknown marker type";
             break;
-        }
     }
 }

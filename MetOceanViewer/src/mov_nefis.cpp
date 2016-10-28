@@ -18,7 +18,6 @@
 //
 //-----------------------------------------------------------------------*/
 #include "mov_nefis.h"
-#include <QDebug>
 
 extern "C" {
 #include "nefis_defines.h"
@@ -462,7 +461,6 @@ int mov_nefis::_get(QString seriesName)
         {
             free(realBuffer);
             free(intBuffer);
-            qDebug() << Neferr(2,error_string);
             return -1;
         }
         //...Put the data in the output array
