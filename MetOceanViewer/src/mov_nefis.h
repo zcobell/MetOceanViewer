@@ -25,6 +25,9 @@
 #include <QVector>
 #include <QPointF>
 #include <QDateTime>
+#include <QMap>
+
+#include "imeds.h"
 
 #define MAX_NEFIS_CEL_DIM 100
 #define MAX_NEFIS_DESC     64
@@ -47,6 +50,11 @@ public:
     int open();
     int close();
 
+    QVector<QPointF> getStationLocations();
+    QVector<QString> getSeriesNames();
+    QString          getSeriesDescription(QString seriesName);
+    int generateIMEDS(QString seriesName, imeds &stationData);
+
 
 signals:
 
@@ -58,20 +66,27 @@ private:
     int _getStationLocations();
     int _getSeriesList();
     int _getTimes();
-    int _getSeriesNames(QString seriesGroup, QVector<QString> &seriesNames, QVector<QString> &seriesDescriptions);
+    int _getSeriesNames(QString seriesGroup, QVector<QString> &seriesNames,
+                        QVector<QString> &seriesDescriptions, QVector<QString> &seriesTypes);
+    int _get(QString seriesName);
 
 
-    QString mDatFilename;
-    QString mDefFilename;
-    bool isOpen;
-    int fd;
-    int mNumStations;
-    QVector<QPointF>   mStationLocations;
-    QVector<QString>   mStationNames;
-    QVector<QString>   mSeriesNames;
-    QVector<QString>   mSeriesDescriptions;
-    QVector<QString>   mSeriesSource;
-    QVector<QDateTime> mOutputTimes;
+    QString _mDatFilename;
+    QString _mDefFilename;
+    bool    _isOpen;
+    int     _fd;
+    int     _mNumStations;
+    int     _mNumSteps;
+
+    QVector<QDateTime>         _mOutputTimes;
+    QVector< QVector<double> > _mOutputData;
+    QVector<QPointF>           _mStationLocations;
+    QVector<QString>           _mStationNames;
+    QVector<QString>           _mSeriesNames;
+    QMap<QString,QString>      _mSeriesDescriptionsMap;
+    QMap<QString,QString>      _mSourceMap;
+    QMap<QString,QString>      _mTypeMap;
+
 
 };
 

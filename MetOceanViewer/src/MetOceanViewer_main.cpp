@@ -36,11 +36,6 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile, QWidget
     this->commandLineFile = commandLineFile;
     setupMetOceanViewerUI();
 
-    mov_nefis *nefis = new mov_nefis("/home/zcobell/Development/MetOceanViewer/trih-newark_v05a.def","/home/zcobell/Development/MetOceanViewer/trih-newark_v05a.dat",this);
-
-    nefis->open();
-    nefis->close();
-
 }
 
 //Main destructor routine
