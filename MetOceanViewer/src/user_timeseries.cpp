@@ -22,6 +22,7 @@
 #include "mov_flags.h"
 #include "javascriptAsyncReturn.h"
 #include "adcirc_station_output.h"
+#include "mov_nefis.h"
 #include <netcdf.h>
 
 user_timeseries::user_timeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
@@ -426,6 +427,7 @@ int user_timeseries::processData()
     double x,y;
     QStringList TempList;
     QString javascript,StationName,TempFile,TempStationFile,InputFileType;
+    QString nefisVar;
     QDateTime ColdStart;
     adcirc_station_output *adcircData;
 
@@ -485,6 +487,18 @@ int user_timeseries::processData()
                 return -1;
             this->fileData[j]->success = true;
 
+        }
+        else if(InputFileType=="DAT")
+        {
+            nefisVar = this->table->item(i,11)->text();
+            this->fileData[j] = new imeds(this);
+            mov_nefis *nefis = new mov_nefis(mov_nefis::getNefisDefFilename(TempFile),TempFile,this);
+            nefis->open();
+            ierr = nefis->generateIMEDS(nefisVar,this->fileData[j]);
+            nefis->close();
+            if(ierr!=0)
+                return -1;
+            this->fileData[j]->success = true;
         }
         else
         {

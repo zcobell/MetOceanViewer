@@ -24,6 +24,7 @@
 #include <QDateTime>
 #include <QDialog>
 #include <QVector>
+#include "mov_nefis.h"
 
 namespace Ui {
 class add_imeds_data;
@@ -42,7 +43,8 @@ public:
 
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, QString FileType, QString StationPath);
+                                 QDateTime ColdStart, QString FileType, QString StationPath,
+                                 QString nefisVar);
 
     QString PreviousDirectory;
 
@@ -56,6 +58,7 @@ public:
     QString InputSeriesName,InputFilePath;
     QString StationFilePath,InputFileType;
     QString InputStationFile,CurrentFileName;
+    QString nefisVariable;
     QDateTime InputFileColdStart;
 
 private slots:
@@ -76,6 +79,10 @@ private slots:
 
     void on_button_presetColor4_clicked();
 
+    void on_button_nefisDescription_clicked();
+
+    void on_combo_nefisVariable_currentIndexChanged(const QString &arg1);
+
 private:
     Ui::add_imeds_data *ui;
 
@@ -85,6 +92,9 @@ private:
         QString Label;
         QColor  Color;
     };
+
+
+    mov_nefis *nefis;
 
 };
 

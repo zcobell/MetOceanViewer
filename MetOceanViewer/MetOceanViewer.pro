@@ -28,38 +28,6 @@ TEMPLATE = app
 
 NEFISHOME=$$PWD/../thirdparty/nefis/
 
-NEFISSOURCES += $$NEFISHOME/src/c2c.c \
-                $$NEFISHOME/src/df.c  \
-                $$NEFISHOME/src/er.c  \
-                $$NEFISHOME/src/f2c.c \
-                $$NEFISHOME/src/gp.c  \
-                $$NEFISHOME/src/gt.c  \
-                $$NEFISHOME/src/hs.c  \
-                $$NEFISHOME/src/nefis_version.cpp \
-                $$NEFISHOME/src/oc.c  \
-                $$NEFISHOME/src/pt.c  \
-                $$NEFISHOME/src/rt.c  \
-                $$NEFISHOME/src/wl-xdr.c
-
-NEFISHEADERS += $$NEFISHOME/include/btps.h \
-                $$NEFISHOME/include/c2c.h \
-                $$NEFISHOME/include/config.h \
-                $$NEFISHOME/include/df.h \
-                $$NEFISHOME/include/f2c.h \
-                $$NEFISHOME/include/gp.h \
-                $$NEFISHOME/include/gt.h \
-                $$NEFISHOME/include/hs.h \
-                $$NEFISHOME/include/nef-def.h \
-                $$NEFISHOME/include/nef-tag.h \
-                $$NEFISHOME/include/nef-xdf.h \
-                $$NEFISHOME/include/nefis.h \
-                $$NEFISHOME/include/nefis_version.h \
-                $$NEFISHOME/include/oc.h \
-                $$NEFISHOME/include/pt.h \
-                $$NEFISHOME/include/resource.h \
-                $$NEFISHOME/include/rt.h \
-                $$NEFISHOME/include/wl-xdr.h
-
 SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
@@ -85,7 +53,7 @@ SOURCES += src/main.cpp\
     src/mov_colors.cpp \
     src/mov_session.cpp \
     src/adcirc_station_output.cpp \
-    src/mov_nefis.cpp 
+    src/mov_nefis.cpp
 
 HEADERS  += \
     version.h \
@@ -111,7 +79,7 @@ HEADERS  += \
     src/mov_session.h \
     src/adcirc_station_output.h \
     src/mov_nefis.h \
-    src/nefis_defines.h 
+    src/nefis_defines.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \

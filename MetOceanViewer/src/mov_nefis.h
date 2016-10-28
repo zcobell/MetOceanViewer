@@ -35,12 +35,6 @@
 #define MAX_NEFIS_NAME     16
 #define MAX_NEFIS_TYPE      8
 
-extern "C" {
-#include "nefis_defines.h"
-#include "btps.h"
-#include "nefis.h"
-}
-
 class mov_nefis : public QObject
 {
     Q_OBJECT
@@ -51,10 +45,12 @@ public:
     int close();
 
     QVector<QPointF> getStationLocations();
-    QVector<QString> getSeriesNames();
+    QStringList      getSeriesNames();
     QString          getSeriesDescription(QString seriesName);
-    int generateIMEDS(QString seriesName, imeds &stationData);
+    int              generateIMEDS(QString seriesName, imeds *stationData);
 
+    static QString   getNefisDefFilename(QString datFilename);
+    static QString   getNefisDatFilename(QString defFilename);
 
 signals:
 
@@ -81,8 +77,8 @@ private:
     QVector<QDateTime>         _mOutputTimes;
     QVector< QVector<double> > _mOutputData;
     QVector<QPointF>           _mStationLocations;
-    QVector<QString>           _mStationNames;
-    QVector<QString>           _mSeriesNames;
+    QStringList                _mStationNames;
+    QStringList                _mSeriesNames;
     QMap<QString,QString>      _mSeriesDescriptionsMap;
     QMap<QString,QString>      _mSourceMap;
     QMap<QString,QString>      _mTypeMap;

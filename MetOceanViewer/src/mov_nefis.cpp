@@ -20,10 +20,28 @@
 #include "mov_nefis.h"
 #include <QDebug>
 
+extern "C" {
+#include "nefis_defines.h"
+#include "btps.h"
+#include "nefis.h"
+}
+
 mov_nefis::mov_nefis(QString defFilename, QString datFilename, QObject *parent) : QObject(parent)
 {
     this->_mDefFilename = defFilename;
     this->_mDatFilename = datFilename;
+}
+
+
+QStringList mov_nefis::getSeriesNames()
+{
+    return this->_mSeriesNames;
+}
+
+
+QString mov_nefis::getSeriesDescription(QString seriesName)
+{
+    return this->_mSeriesDescriptionsMap[seriesName];
 }
 
 
@@ -262,12 +280,11 @@ int mov_nefis::_getStationLocations()
     //...Save the stations into a vector for use later
     this->_mNumStations = nSta;
     this->_mStationLocations.resize(nSta);
-    this->_mStationNames.resize(nSta);
     for(i=0;i<nSta;i++)
     {
         this->_mStationLocations[i] = QPointF(realDataBuffer[i*2],realDataBuffer[i*2+1]);
         tempString = QString::fromLocal8Bit(charDataBuffer[i]);
-        this->_mStationNames[i] = tempString.mid(0,20).simplified();
+        this->_mStationNames.append(tempString.mid(0,20).simplified());
     }
 
     //...Free memory
@@ -290,6 +307,7 @@ int mov_nefis::_getSeriesList()
     ierr = this->_getSeriesNames(QStringLiteral("his-series"),tempNames,tempDesc,type);
     for(i=0;i<tempNames.size();i++)
     {
+        this->_mSeriesNames.push_back(tempNames[i]);
         this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
         this->_mTypeMap[tempNames[i]] = type[i];
         this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-FLOW");
@@ -300,6 +318,7 @@ int mov_nefis::_getSeriesList()
     ierr = this->_getSeriesNames(QStringLiteral("his-wave-series"),tempNames,tempDesc,type);
     for(i=0;i<tempNames.size();i++)
     {
+        this->_mSeriesNames.push_back(tempNames[i]);
         this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
         this->_mTypeMap[tempNames[i]] = type[i];
         this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-WAVE");
@@ -509,12 +528,12 @@ int mov_nefis::_get(QString seriesName)
 }
 
 
-int mov_nefis::generateIMEDS(QString seriesName, imeds &stationData)
+int mov_nefis::generateIMEDS(QString seriesName, imeds *stationData)
 {
     int i,ierr;
 
     //...Check if the data exists
-    if(this->_mSeriesNames.contains(seriesName))
+    if(!this->_mSeriesNames.contains(seriesName))
         return -1;
 
     //...Retrieve the data from NEFIS
@@ -523,27 +542,40 @@ int mov_nefis::generateIMEDS(QString seriesName, imeds &stationData)
         return -1;
 
     //...Start constructing the IMEDS structure
-    stationData.nstations = this->_mNumStations;
-    stationData.station.resize(this->_mNumStations);
-    stationData.header1 = this->_mSourceMap[seriesName];
-    stationData.header2 = QStringLiteral("NEFIS");
-    stationData.header3 = QStringLiteral("NEFIS");
-    stationData.units   = QStringLiteral("metric");
-    stationData.datum   = QStringLiteral("modelDatum");
+    stationData->nstations = this->_mNumStations;
+    stationData->station.resize(this->_mNumStations);
+    stationData->header1 = this->_mSourceMap[seriesName];
+    stationData->header2 = QStringLiteral("NEFIS");
+    stationData->header3 = QStringLiteral("NEFIS");
+    stationData->units   = QStringLiteral("metric");
+    stationData->datum   = QStringLiteral("modelDatum");
 
     //...Loop over each station adding the data
     for(i=0;i<this->_mNumStations;i++)
     {
-        stationData.station[i]->date = this->_mOutputTimes;
-        stationData.station[i]->data = this->_mOutputData[i];
-        stationData.station[i]->longitude = this->_mStationLocations[i].x();
-        stationData.station[i]->latitude = this->_mStationLocations[i].y();
-        stationData.station[i]->NumSnaps = this->_mNumSteps;
-        stationData.station[i]->StationIndex = i+1;
-        stationData.station[i]->StationName = this->_mStationNames[i];
-        stationData.station[i]->StationID = QString::number(i+1);
-        stationData.station[i]->isNull = false;
+        stationData->station[i] = new imeds_station(this);
+        stationData->station[i]->date = this->_mOutputTimes;
+        stationData->station[i]->data = this->_mOutputData[i];
+        stationData->station[i]->longitude = this->_mStationLocations[i].x();
+        stationData->station[i]->latitude = this->_mStationLocations[i].y();
+        stationData->station[i]->NumSnaps = this->_mNumSteps;
+        stationData->station[i]->StationIndex = i+1;
+        stationData->station[i]->StationName = this->_mStationNames[i];
+        stationData->station[i]->StationID = QString::number(i+1);
+        stationData->station[i]->isNull = false;
     }
 
     return 0;
+}
+
+
+QString mov_nefis::getNefisDatFilename(QString defFilename)
+{
+    return defFilename.mid(0,defFilename.length()-3)+"dat";
+}
+
+
+QString mov_nefis::getNefisDefFilename(QString datFilename)
+{
+    return datFilename.mid(0,datFilename.length()-3)+"def";
 }

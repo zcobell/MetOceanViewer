@@ -84,7 +84,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, QString FileType,
-                                             QString StationPath)
+                                             QString StationPath, QString nefisVar)
 {
     QString ButtonStyle,StationFile;
     InputFileColdStart.setTimeSpec(Qt::UTC);
@@ -101,6 +101,8 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     CurrentFileName = Filepath;
     StationFilePath = StationPath;
     InputFileType = FileType;
+    nefisVariable = nefisVar;
+
     ButtonStyle = mov_colors::MakeColorString(Color);
     RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
@@ -114,6 +116,8 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
         ui->date_coldstart->setEnabled(false);
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
+        ui->button_nefisDescription->setEnabled(false);
+        ui->combo_nefisVariable->setEnabled(false);
         FileReadError = false;
     }
     else if(FileType == "NETCDF")
@@ -123,6 +127,8 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
         ui->date_coldstart->setEnabled(true);
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
+        ui->button_nefisDescription->setEnabled(false);
+        ui->combo_nefisVariable->setEnabled(false);
         FileReadError = false;
     }
     else if(FileType == "ADCIRC")
@@ -131,6 +137,25 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
         ui->date_coldstart->setEnabled(true);
         ui->text_stationfile->setEnabled(true);
         ui->browse_stationfile->setEnabled(true);
+        ui->button_nefisDescription->setEnabled(false);
+        ui->combo_nefisVariable->setEnabled(false);
+        FileReadError = false;
+    }
+    else if(FileType == "NEFIS")
+    {
+        ui->text_filetype->setText("NEFIS");
+        ui->date_coldstart->setEnabled(false);
+        ui->text_stationfile->setEnabled(false);
+        ui->browse_stationfile->setEnabled(false);
+        ui->button_nefisDescription->setEnabled(true);
+        ui->combo_nefisVariable->setEnabled(true);
+        QString nefisDefFile = mov_nefis::getNefisDefFilename(InputFilePath);
+        this->nefis = new mov_nefis(nefisDefFile,InputFilePath,this);
+        this->nefis->open();
+        this->nefis->close();
+        ui->combo_nefisVariable->clear();
+        ui->combo_nefisVariable->addItems(this->nefis->getSeriesNames());
+        ui->combo_nefisVariable->setCurrentText(nefisVar);
         FileReadError = false;
     }
     return;
@@ -153,9 +178,10 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 
     QString TempPath = QFileDialog::getOpenFileName(this,"Select File",
             Directory,
-            QString("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; ")+
+            QString("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc, *.dat) ;; ")+
             QString("IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ")+
-            QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
+            QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; Delft3D NEFIS Files (*.dat) ;; ")+
+            QString("All Files (*.*)"));
 
     InputFilePath = TempPath;
     if(TempPath!=NULL || (TempPath==NULL && this->CurrentFileName!=NULL) )
@@ -203,6 +229,22 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             ui->text_stationfile->setEnabled(true);
             ui->browse_stationfile->setEnabled(true);
             FileReadError = false;
+        }
+        else if(InputFileType == "DAT")
+        {
+            InputFileType = "NEFIS";
+            ui->date_coldstart->setEnabled(false);
+            ui->text_stationfile->setEnabled(false);
+            ui->browse_stationfile->setEnabled(false);
+            ui->button_nefisDescription->setEnabled(true);
+            ui->combo_nefisVariable->setEnabled(true);
+            FileReadError = false;
+            QString nefisDefFile = mov_nefis::getNefisDefFilename(InputFilePath);
+            this->nefis = new mov_nefis(nefisDefFile,InputFilePath,this);
+            this->nefis->open();
+            this->nefis->close();
+            ui->combo_nefisVariable->clear();
+            ui->combo_nefisVariable->addItems(this->nefis->getSeriesNames());
         }
         else
         {
@@ -325,6 +367,7 @@ void add_imeds_data::accept()
 }
 //-------------------------------------------//
 
+
 void add_imeds_data::on_button_presetColor1_clicked()
 {
     ColorUpdated = true;
@@ -332,6 +375,7 @@ void add_imeds_data::on_button_presetColor1_clicked()
     RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
+
 
 void add_imeds_data::on_button_presetColor2_clicked()
 {
@@ -341,6 +385,7 @@ void add_imeds_data::on_button_presetColor2_clicked()
     ui->button_seriesColor->update();
 }
 
+
 void add_imeds_data::on_button_presetColor3_clicked()
 {
     ColorUpdated = true;
@@ -349,10 +394,25 @@ void add_imeds_data::on_button_presetColor3_clicked()
     ui->button_seriesColor->update();
 }
 
+
 void add_imeds_data::on_button_presetColor4_clicked()
 {
     ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
     RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
+}
+
+
+void add_imeds_data::on_button_nefisDescription_clicked()
+{
+    QMessageBox::information(this,"Delft3D Variable Description",this->nefis->getSeriesDescription(ui->combo_nefisVariable->currentText()));
+    return;
+}
+
+
+void add_imeds_data::on_combo_nefisVariable_currentIndexChanged(const QString &arg1)
+{
+    this->nefisVariable = arg1;
+    return;
 }
