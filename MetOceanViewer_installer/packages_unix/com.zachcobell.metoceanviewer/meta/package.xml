@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+    <DisplayName>MetOceanViewer</DisplayName>
+    <Description>MetOceanViewer component</Description>
+    <Version>2.6.0</Version>
+    <ReleaseDate>2016-10-15</ReleaseDate>
+    <Default>true</Default>
+    <Licenses>
+        <License name="GNU Generic Public License, Version 3" file="LICENSE" />
+    </Licenses>
+</Package>
