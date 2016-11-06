@@ -151,7 +151,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
         ui->combo_nefisVariable->setEnabled(true);
         QString nefisDefFile = mov_nefis::getNefisDefFilename(InputFilePath);
         this->nefis = new mov_nefis(nefisDefFile,InputFilePath,this);
-        this->nefis->open();
+        this->nefis->open(false);
         this->nefis->close();
         ui->combo_nefisVariable->clear();
         ui->combo_nefisVariable->addItems(this->nefis->getSeriesNames());
@@ -241,7 +241,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             this->FileReadError = false;
             QString nefisDefFile = mov_nefis::getNefisDefFilename(this->InputFilePath);
             this->nefis = new mov_nefis(nefisDefFile,this->InputFilePath,this);
-            this->nefis->open();
+            this->nefis->open(false);
             this->nefis->close();
             ui->combo_nefisVariable->clear();
             ui->combo_nefisVariable->addItems(this->nefis->getSeriesNames());

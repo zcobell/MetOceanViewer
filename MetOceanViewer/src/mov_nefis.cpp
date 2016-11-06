@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "mov_nefis.h"
+#include <QDebug>
 
 extern "C" {
 #include "nefis_defines.h"
@@ -29,6 +30,19 @@ mov_nefis::mov_nefis(QString defFilename, QString datFilename, QObject *parent) 
 {
     this->_mDefFilename = defFilename;
     this->_mDatFilename = datFilename;
+    this->_generatePlotVariableList();
+}
+
+int mov_nefis::_generatePlotVariableList()
+{
+    this->_mPlotEligibleVariables << QStringLiteral("ZWL")     << QStringLiteral("ZCURU")
+                                  << QStringLiteral("ZCURV")   << QStringLiteral("ZQXK")
+                                  << QStringLiteral("ZQYK")    << QStringLiteral("ZTAUKS")
+                                  << QStringLiteral("ZTAUET")  << QStringLiteral("ZWNDSPD")
+                                  << QStringLiteral("ZWNDDIR") << QStringLiteral("ZHS")
+                                  << QStringLiteral("ZTP")     << QStringLiteral("ZDIR")
+                                  << QStringLiteral("ZRLABD")  << QStringLiteral("ZUWB");
+    return 0;
 }
 
 
@@ -44,7 +58,7 @@ QString mov_nefis::getSeriesDescription(QString seriesName)
 }
 
 
-int mov_nefis::open()
+int mov_nefis::open(bool fullInit)
 {
     BInt4 ierr;
     BText datFile;
@@ -66,7 +80,7 @@ int mov_nefis::open()
         //...Grab the initialization data
         //   e.g. station locations, series contained,
         //   and output times
-        ierr = this->_init();
+        ierr = this->_init(fullInit);
         return ierr;
     }
     else
@@ -92,13 +106,61 @@ int mov_nefis::close()
 }
 
 
-int mov_nefis::_init()
+int mov_nefis::_init(bool fullInit)
 {
     this->_getStationLocations();
     this->_getSeriesList();
-    this->_getTimes();
+    this->_getLayers();
+    if(fullInit)
+        this->_getTimes();
 
     return 0;
+}
+
+
+int mov_nefis::_getLayers()
+{
+    int       i,j,ierr;
+    char  *   hisconst      = strdup("his-const");
+    char  *   kmax          = strdup("KMAX");
+    char  *   layermodel    = strdup("LAYER_MODEL");
+
+    BInt4   intBuffSize,charBuffSize;
+    BInt4   uindex[MAX_NEFIS_DIM][3];
+    BInt4   uorder[2];
+    BInt4   intDataBuffer[1];
+    BChar   charDataBuffer[16];
+
+    //...Set up the indexing request, just default values here
+    for(i=0;i<5;i++)
+        for(j=0;j<3;j++)
+            uindex[i][j] = 1;
+
+    //...Ordering for reads
+    uorder[0]  = 1;
+    uorder[1]  = 2;
+
+    //...Buffer sizes
+    intBuffSize =sizeof(BInt4);
+    charBuffSize = 16*sizeof(BChar);
+
+    //...Get the KMAX (number of layers)
+    ierr = Getelt(&this->_fd,hisconst,kmax,(BInt4 *)uindex,uorder,&intBuffSize,&intDataBuffer);
+    this->_mNumLayers = intDataBuffer[0];
+
+    //...Get the 3d model type
+    ierr = Getelt(&this->_fd,hisconst,layermodel,(BInt4 *)uindex,uorder,&charBuffSize,&charDataBuffer);
+    if(charDataBuffer=="SIGMA-MODEL")
+        this->_mLayerModel = 0;
+    else
+        this->_mLayerModel = 1;
+
+    //...If there are more than one layer, get that list
+
+
+
+    return 0;
+
 }
 
 
@@ -302,10 +364,13 @@ int mov_nefis::_getSeriesList()
     ierr = this->_getSeriesNames(QStringLiteral("his-series"),tempNames,tempDesc,type);
     for(i=0;i<tempNames.size();i++)
     {
-        this->_mSeriesNames.push_back(tempNames[i]);
-        this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
-        this->_mTypeMap[tempNames[i]] = type[i];
-        this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-FLOW");
+        if(this->_mPlotEligibleVariables.contains(tempNames[i]))
+        {
+            this->_mSeriesNames.push_back(tempNames[i]);
+            this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
+            this->_mTypeMap[tempNames[i]] = type[i];
+            this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-FLOW");
+        }
     }
     tempNames.clear();
 
@@ -313,10 +378,13 @@ int mov_nefis::_getSeriesList()
     ierr = this->_getSeriesNames(QStringLiteral("his-wav-series"),tempNames,tempDesc,type);
     for(i=0;i<tempNames.size();i++)
     {
-        this->_mSeriesNames.push_back(tempNames[i]);
-        this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
-        this->_mTypeMap[tempNames[i]] = type[i];
-        this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-WAVE");
+        if(this->_mPlotEligibleVariables.contains(tempNames[i]))
+        {
+            this->_mSeriesNames.push_back(tempNames[i]);
+            this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
+            this->_mTypeMap[tempNames[i]] = type[i];
+            this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-WAVE");
+        }
     }
     tempNames.clear();
 
@@ -520,11 +588,11 @@ int mov_nefis::generateIMEDS(QString seriesName, imeds *stationData)
 
 QString mov_nefis::getNefisDatFilename(QString defFilename)
 {
-    return defFilename.mid(0,defFilename.length()-3)+"dat";
+    return defFilename.mid(0,defFilename.length()-3)+QStringLiteral("dat");
 }
 
 
 QString mov_nefis::getNefisDefFilename(QString datFilename)
 {
-    return datFilename.mid(0,datFilename.length()-3)+"def";
+    return datFilename.mid(0,datFilename.length()-3)+QStringLiteral("def");
 }

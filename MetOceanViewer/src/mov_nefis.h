@@ -41,7 +41,7 @@ class mov_nefis : public QObject
 public:
     explicit mov_nefis(QString defFilename, QString datFilename, QObject *parent = 0);
 
-    int open();
+    int open(bool fullInit = true);
     int close();
 
     QVector<QPointF> getStationLocations();
@@ -58,13 +58,15 @@ public slots:
 
 private:
 
-    int _init();
+    int _init(bool fullInit = true);
     int _getStationLocations();
     int _getSeriesList();
     int _getTimes();
     int _getSeriesNames(QString seriesGroup, QVector<QString> &seriesNames,
                         QVector<QString> &seriesDescriptions, QVector<QString> &seriesTypes);
     int _get(QString seriesName);
+    int _getLayers();
+    int _generatePlotVariableList();
 
 
     QString _mDatFilename;
@@ -73,7 +75,10 @@ private:
     int     _fd;
     int     _mNumStations;
     int     _mNumSteps;
+    int     _mNumLayers;
+    int     _mLayerModel; //...0=Sigma, 1=Zeta
 
+    QVector<double>            _mLayerDepths;
     QVector<QDateTime>         _mOutputTimes;
     QVector< QVector<double> > _mOutputData;
     QVector<QPointF>           _mStationLocations;
@@ -82,6 +87,7 @@ private:
     QMap<QString,QString>      _mSeriesDescriptionsMap;
     QMap<QString,QString>      _mSourceMap;
     QMap<QString,QString>      _mTypeMap;
+    QStringList                _mPlotEligibleVariables;
 
 
 };
