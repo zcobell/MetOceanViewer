@@ -2,7 +2,7 @@
 
 
 windDeployQtBinary=/cygdrive/c/Qt/Qt5.7.0/5.7/msvc2015_64/bin/windeployqt.exe
-binaryCreator=/cygdrive/c/Qt/Qt5.7.0/5.7-static/qt-everywhere-opensource-src-5.7.0/installer-framework/bin/binarycreator.exe
+binaryCreator=/cygdrive/c/Qt/QtIFW2.0.3/bin/binarycreator.exe
 version=$(git describe --always --tags)
 
 

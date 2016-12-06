@@ -118,8 +118,8 @@ int XTide::getAsyncClickedXTideStation()
 int XTide::findXTideExe()
 {
     QString installLocation       = QApplication::applicationDirPath().replace(" ","\ ");
-    QString buildLocationLinux    = QApplication::applicationDirPath()+"/../MetOceanViewer/mov_libs/bin";
-    QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../MetOceanViewer/thirdparty/xtide-2.15.1";
+    QString buildLocationLinux    = QApplication::applicationDirPath()+"/../../MetOceanViewer/MetOceanViewer_GUI/mov_libs/bin";
+    QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../MetOceanViewer/MetOceanViewer_GUI/thirdparty/xtide-2.15.1";
     QString appLocationMacOSX     = QApplication::applicationDirPath();
 
     QFile location1(installLocation+"/tide");
