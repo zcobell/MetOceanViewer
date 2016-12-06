@@ -135,7 +135,20 @@ int noaa::fetchNOAAData()
             connect(reply,SIGNAL(finished()),&loop,SLOT(quit()));
             connect(reply,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
             loop.exec();
-            this->readNOAAResponse(reply,i,j);
+            //...Check for a redirect from NOAA. This fixes bug #26
+            QVariant redirectionTargetURL = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
+            if(!redirectionTargetURL.isNull())
+            {
+                QNetworkReply *reply2 = manager->get(QNetworkRequest(redirectionTargetURL.toUrl()));
+                connect(reply2,SIGNAL(finished()),&loop,SLOT(quit()));
+                connect(reply2,SIGNAL(error(QNetworkReply::NetworkError)),&loop,SLOT(quit()));
+                loop.exec();
+                reply->deleteLater();
+                this->readNOAAResponse(reply2,i,j);
+            }
+            else
+                this->readNOAAResponse(reply,i,j);
+
         }
     }
     return 0;
