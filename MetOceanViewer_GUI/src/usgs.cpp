@@ -95,11 +95,11 @@ void usgs::javascriptDataReturned(QString data)
 
     //...Construct the correct request URL
     if(this->USGSdataMethod==0)
-        RequestURL = "http://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+this->USGSMarkerID+startDateString2+endDateString2;
+        RequestURL = "https://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no="+this->USGSMarkerID+startDateString2+endDateString2;
     else if(this->USGSdataMethod==1)
-        RequestURL = "http://waterservices.usgs.gov/nwis/iv/?sites="+this->USGSMarkerID+startDateString1+endDateString1+"&format=rdb";
+        RequestURL = "https://waterservices.usgs.gov/nwis/iv/?sites="+this->USGSMarkerID+startDateString1+endDateString1+"&format=rdb";
     else
-        RequestURL = "http://waterservices.usgs.gov/nwis/dv/?sites="+this->USGSMarkerID+startDateString1+endDateString1+"&format=rdb";
+        RequestURL = "https://waterservices.usgs.gov/nwis/dv/?sites="+this->USGSMarkerID+startDateString1+endDateString1+"&format=rdb";
 
     //...Make the request to the server
     QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
