@@ -28,7 +28,7 @@ cp ../../build-MetOceanViewer-Desktop_Qt_5_7_0_MSVC2015_64bit-Release/MetOceanVi
 cp ../MetOceanViewer_GUI/thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the database
-cp ../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../MetOceanViewer_GUI/thirdparty/xtide-2.15.1/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the icon
 cp ../MetOceanViewer_GUI/img/mov.ico packages_windows/com.zachcobell.metoceanviewer/data/.
