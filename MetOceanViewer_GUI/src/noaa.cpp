@@ -222,10 +222,13 @@ int noaa::getDataBounds(double &ymin, double &ymax)
     {
         for(j=0;j<this->CurrentNOAAStation[i]->station[0]->data.length();j++)
         {
-            if(this->CurrentNOAAStation[i]->station[0]->data[j]<ymin)
-                ymin = this->CurrentNOAAStation[i]->station[0]->data[j];
-            if(this->CurrentNOAAStation[i]->station[0]->data[j]>ymax)
-                ymax = this->CurrentNOAAStation[i]->station[0]->data[j];
+            if(this->CurrentNOAAStation[i]->station[0]->data[j]!=0.0)
+            {
+                if(this->CurrentNOAAStation[i]->station[0]->data[j]<ymin)
+                    ymin = this->CurrentNOAAStation[i]->station[0]->data[j];
+                if(this->CurrentNOAAStation[i]->station[0]->data[j]>ymax)
+                    ymax = this->CurrentNOAAStation[i]->station[0]->data[j];
+            }
         }
     }
     return 0;
@@ -469,32 +472,29 @@ int noaa::plotChart()
     axisY->setMax(ymax);
     this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
-    for(i=0;i<this->CurrentNOAAStation.length();i++)
+    for(j=0;j<this->CurrentNOAAStation[0]->station[0]->data.length();j++)
+        if(this->CurrentNOAAStation[0]->station[0]->date[j].isValid())
+        {
+            if(this->CurrentNOAAStation[0]->station[0]->data[j]!=0.0)
+                series1->append(this->CurrentNOAAStation[0]->station[0]->date[j].toMSecsSinceEpoch(),
+                        this->CurrentNOAAStation[0]->station[0]->data[j]);
+        }
+    this->thisChart->addSeries(series1);
+    series1->attachAxis(axisX);
+    series1->attachAxis(axisY);
+
+    if(this->ProductIndex==0)
     {
-        if(i==0)
-        {
-            for(j=0;j<this->CurrentNOAAStation[i]->station[0]->data.length();j++)
-                if(this->CurrentNOAAStation[i]->station[0]->date[j].isValid())
-                {
-                    series1->append(this->CurrentNOAAStation[i]->station[0]->date[j].toMSecsSinceEpoch(),
-                                this->CurrentNOAAStation[i]->station[0]->data[j]);
-                }
-            this->thisChart->addSeries(series1);
-            series1->attachAxis(axisX);
-            series1->attachAxis(axisY);
-        }
-        else if(i==1)
-        {
-            for(j=0;j<this->CurrentNOAAStation[i]->station[0]->data.length();j++)
-                if(this->CurrentNOAAStation[i]->station[0]->date[j].isValid())
-                {
-                    series2->append(this->CurrentNOAAStation[i]->station[0]->date[j].toMSecsSinceEpoch(),
-                                this->CurrentNOAAStation[i]->station[0]->data[j]);
-                }
-            this->thisChart->addSeries(series2);
-            series2->attachAxis(axisX);
-            series2->attachAxis(axisY);
-        }
+        for(j=0;j<this->CurrentNOAAStation[1]->station[0]->data.length();j++)
+            if(this->CurrentNOAAStation[1]->station[0]->date[j].isValid())
+            {
+                if(this->CurrentNOAAStation[1]->station[0]->data[j]!=0.0)
+                    series2->append(this->CurrentNOAAStation[1]->station[0]->date[j].toMSecsSinceEpoch(),
+                                this->CurrentNOAAStation[1]->station[0]->data[j]);
+            }
+        this->thisChart->addSeries(series2);
+        series2->attachAxis(axisX);
+        series2->attachAxis(axisY);
     }
 
     for(i=0;i<this->thisChart->legend()->markers().length();i++)
