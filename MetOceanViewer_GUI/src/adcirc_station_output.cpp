@@ -130,11 +130,10 @@ int adcirc_station_output::readNetCDF(QString AdcircOutputFile)
     int dimid_time,dimid_station;
     bool isVector;
     double Temp;
-    QVector<double> readData1;
-    QVector<double> readData2;
 
     //Size the location array
     size_t start[2];
+    size_t count[2];
 
     QVector<QString> netcdf_types;
     netcdf_types.resize(6);
@@ -179,7 +178,7 @@ int adcirc_station_output::readNetCDF(QString AdcircOutputFile)
         //If we found the variable, we're done
         if(ierr==NC_NOERR)
         {
-            if(i==1)
+            if(i==1||i==4)
             {
                 isVector = true;
                 ierr = nc_inq_varid(ncid,netcdf_types[i+1].toUtf8(),&varid_zeta2);
@@ -247,45 +246,35 @@ int adcirc_station_output::readNetCDF(QString AdcircOutputFile)
         this->latitude[j] = Temp;
     }
 
-    readData1.resize(time_size_int);
-    readData2.resize(time_size_int);
+    double *tempVar1 = (double*)malloc(sizeof(double)*time_size_int);
+    double *tempVar2 = (double*)malloc(sizeof(double)*time_size_int);
 
     //Loop over the stations, reading the data into memory
     for(i=0;i<station_size_int;++i)
     {
 
-
-        //Read from NetCDF
-        for(j=0;j<time_size_int;j++)
-        {
-            start[0] = static_cast<size_t>(j);
-            start[1] = static_cast<size_t>(i);
-            ierr = nc_get_var1(ncid,varid_zeta,start,&Temp);
-            if(ierr!=NC_NOERR)
-                return -1;
-
-            readData1[j] = Temp;
-        }
+        //Read from netCDF
+        start[0] = static_cast<size_t>(0);
+        start[1] = static_cast<size_t>(i);
+        count[0] = static_cast<size_t>(time_size_int);
+        count[1] = static_cast<size_t>(1);
+        ierr = nc_get_vara(ncid,varid_zeta,start,count,tempVar1);
+        if(ierr!=NC_NOERR)
+            return -1;
 
         if(isVector)
         {
+            ierr = nc_get_vara(ncid,varid_zeta2,start,count,tempVar2);
+            if(ierr!=NC_NOERR)
+                return -1;
             for(j=0;j<time_size_int;j++)
-            {
-                start[0] = static_cast<size_t>(j);
-                start[1] = static_cast<size_t>(i);
-                ierr = nc_get_var1(ncid,varid_zeta2,start,&Temp);
-                if(ierr!=NC_NOERR)
-                    return -1;
-
-                readData2[j] = Temp;
-                this->data[i][j] = qSqrt(qPow(readData1[j],2.0)+qPow(readData2[j],2.0));
-            }
+                this->data[i][j] = qSqrt(qPow(tempVar1[j],2.0)+qPow(tempVar2[j],2.0));
         }
         else
         {
             //Place in the output variable
             for(j=0;j<time_size_int;++j)
-                this->data[i][j] = readData1[j];
+                this->data[i][j] = tempVar1[j];
         }
     }
     ierr = nc_close(ncid);
@@ -298,6 +287,9 @@ int adcirc_station_output::readNetCDF(QString AdcircOutputFile)
     this->station_name.resize(station_size_int);
     for(i=0;i<station_size_int;++i)
         this->station_name[i] = "Station "+QString::number(i);
+
+    free(tempVar1);
+    free(tempVar2);
 
     return 0;
 }
