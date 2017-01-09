@@ -3,14 +3,14 @@
 #include <QMap>
 #include <QFileInfo>
 
-QMap<QString,int> filetypeMapString = {
+static QMap<QString,int> filetypeMapString = {
     {QStringLiteral("NETCDF-ADCIRC"),FILETYPE_NETCDF_ADCIRC},
     {QStringLiteral("NETCDF-DFLOW"),FILETYPE_NETCDF_DFLOW},
     {QStringLiteral("ASCII-ADCIRC"),FILETYPE_ASCII_ADCIRC},
     {QStringLiteral("ASCII-IMEDS"),FILETYPE_ASCII_IMEDS}
 };
 
-QMap<int,QString> filetypeMapInt = {
+static QMap<int,QString> filetypeMapInt = {
     {FILETYPE_NETCDF_ADCIRC,QStringLiteral("NETCDF-ADCIRC")},
     {FILETYPE_NETCDF_DFLOW,QStringLiteral("NETCDF-DFLOW")},
     {FILETYPE_ASCII_ADCIRC,QStringLiteral("ASCII-ADCIRC")},

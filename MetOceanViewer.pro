@@ -20,5 +20,6 @@
 
 TEMPLATE = subdirs
 
-SUBDIRS  = MetOceanViewer_GUI
+SUBDIRS  = libproj4 \
+           MetOceanViewer_GUI
 CONFIG += ordered           

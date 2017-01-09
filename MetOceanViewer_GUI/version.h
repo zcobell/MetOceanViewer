@@ -20,10 +20,10 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define VER_FILEVERSION             2.6.0
-#define VER_FILEVERSION_STR         "v2.6.0"
+#define VER_FILEVERSION             3.0.0
+#define VER_FILEVERSION_STR         "v3.0.0"
 
-#define VER_PRODUCTVERSION          2.6.0
-#define VER_PRODUCTVERSION_STR      "v2.6.0"
+#define VER_PRODUCTVERSION          3.0.0
+#define VER_PRODUCTVERSION_STR      "v3.0.0"
 
 #endif // VERSION_H

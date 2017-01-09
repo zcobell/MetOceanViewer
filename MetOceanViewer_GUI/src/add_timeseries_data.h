@@ -24,19 +24,20 @@
 #include <QDateTime>
 #include <QDialog>
 #include <QVector>
+#include "proj4.h"
 
 namespace Ui {
-class add_imeds_data;
+class add_timeseries_data;
 }
 
-class add_imeds_data : public QDialog
+class add_timeseries_data : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit add_imeds_data(QWidget *parent = 0);
+    explicit add_timeseries_data(QWidget *parent = 0);
 
-    ~add_imeds_data();
+    ~add_timeseries_data();
 
     void set_default_dialog_box_elements(int NumberOfRows);
 
@@ -58,6 +59,9 @@ public:
     QString InputStationFile,CurrentFileName;
     QDateTime InputFileColdStart;
     int InputFileType;
+    int epsg;
+    proj4 *proj;
+    QMap<int,QString> epsgmap;
 
 private slots:
 
@@ -78,7 +82,7 @@ private slots:
     void on_button_presetColor4_clicked();
 
 private:
-    Ui::add_imeds_data *ui;
+    Ui::add_timeseries_data *ui;
 
     struct IMEDSList
     {

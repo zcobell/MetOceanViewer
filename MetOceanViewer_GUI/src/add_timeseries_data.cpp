@@ -18,7 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "timeseries_add_data.h"
+#include "add_timeseries_data.h"
 #include "ui_timeseries_add_data.h"
 #include "MetOceanViewer.h"
 #include "mov_colors.h"
@@ -29,9 +29,9 @@
 //This brings up the dialog box used to add
 //a file to the table of files
 //-------------------------------------------//
-add_imeds_data::add_imeds_data(QWidget *parent) :
+add_timeseries_data::add_timeseries_data(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::add_imeds_data)
+    ui(new Ui::add_timeseries_data)
 {
     ui->setupUi(this);
     ui->text_unitconvert->setValidator(new QDoubleValidator(this));
@@ -45,7 +45,7 @@ add_imeds_data::add_imeds_data(QWidget *parent) :
 //-------------------------------------------//
 //Destructor routine for the add imeds window
 //-------------------------------------------//
-add_imeds_data::~add_imeds_data()
+add_timeseries_data::~add_timeseries_data()
 {
     delete ui;
 }
@@ -56,7 +56,7 @@ add_imeds_data::~add_imeds_data()
 //Set the default elements with a series name,
 //a blank filename, and a randomly generated color
 //-------------------------------------------//
-void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
+void add_timeseries_data::set_default_dialog_box_elements(int NumRowsInTable)
 {
     QString ButtonStyle;
     this->InputFileColdStart.setTimeSpec(Qt::UTC);
@@ -72,6 +72,9 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
     this->CurrentFileName = QString();
+    this->epsg = 4326;
+    this->proj = new proj4(this);
+    this->epsgmap = this->proj->getMap();
     return;
 }
 //-------------------------------------------//
@@ -81,7 +84,7 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 //When editing an existing row, set the dialog
 //box elements that we're bringing up for the user
 //-------------------------------------------//
-void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
+void add_timeseries_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, int FileType,
@@ -151,7 +154,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
 //-------------------------------------------//
 //Bring up the browse for file dialog
 //-------------------------------------------//
-void add_imeds_data::on_browse_filebrowse_clicked()
+void add_timeseries_data::on_browse_filebrowse_clicked()
 {
     QStringList List;
     QString Directory,filename,TempFile;
@@ -231,7 +234,7 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 //Bring up a color palette and change the button color
 //in the dialog when return comes
 //-------------------------------------------//
-void add_imeds_data::on_button_seriesColor_clicked()
+void add_timeseries_data::on_button_seriesColor_clicked()
 {
     QColor TempColor = QColorDialog::getColor(this->RandomButtonColor);
     QString ButtonStyle;
@@ -255,7 +258,7 @@ void add_imeds_data::on_button_seriesColor_clicked()
 //-------------------------------------------//
 //Browse dialog for a station file
 //-------------------------------------------//
-void add_imeds_data::on_browse_stationfile_clicked()
+void add_timeseries_data::on_browse_stationfile_clicked()
 {
     QString TempFile;
     QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
@@ -277,7 +280,7 @@ void add_imeds_data::on_browse_stationfile_clicked()
 //Redefine the local accept event with some validation
 //of the dialog box
 //-------------------------------------------//
-void add_imeds_data::accept()
+void add_timeseries_data::accept()
 {
 
     QString TempString;
@@ -338,7 +341,7 @@ void add_imeds_data::accept()
 }
 //-------------------------------------------//
 
-void add_imeds_data::on_button_presetColor1_clicked()
+void add_timeseries_data::on_button_presetColor1_clicked()
 {
     this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
@@ -346,7 +349,7 @@ void add_imeds_data::on_button_presetColor1_clicked()
     ui->button_seriesColor->update();
 }
 
-void add_imeds_data::on_button_presetColor2_clicked()
+void add_timeseries_data::on_button_presetColor2_clicked()
 {
     this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
@@ -354,7 +357,7 @@ void add_imeds_data::on_button_presetColor2_clicked()
     ui->button_seriesColor->update();
 }
 
-void add_imeds_data::on_button_presetColor3_clicked()
+void add_timeseries_data::on_button_presetColor3_clicked()
 {
     this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
@@ -362,7 +365,7 @@ void add_imeds_data::on_button_presetColor3_clicked()
     ui->button_seriesColor->update();
 }
 
-void add_imeds_data::on_button_presetColor4_clicked()
+void add_timeseries_data::on_button_presetColor4_clicked()
 {
     this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());

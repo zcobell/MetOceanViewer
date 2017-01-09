@@ -20,7 +20,7 @@
 
 #include <MetOceanViewer.h>
 #include <ui_MetOceanViewer_main.h>
-#include <timeseries_add_data.h>
+#include <add_timeseries_data.h>
 #include <user_timeseries.h>
 
 //-------------------------------------------//
@@ -64,7 +64,7 @@ void MainWindow::on_check_TimeseriesYauto_toggled(bool checked)
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesAddRow_clicked()
 {
-    QPointer<add_imeds_data> AddWindow = new add_imeds_data(this);
+    QPointer<add_timeseries_data> AddWindow = new add_timeseries_data(this);
     QColor CellColor;
 
     int NumberOfRows = ui->table_TimeseriesData->rowCount();
@@ -180,7 +180,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
     QString Filename,Filepath,SeriesName,StationFilePath;
     QDateTime ColdStart;
     Qt::CheckState CheckState;
-    QPointer<add_imeds_data> AddWindow = new add_imeds_data(this);
+    QPointer<add_timeseries_data> AddWindow = new add_timeseries_data(this);
 
     if(ui->table_TimeseriesData->rowCount() == 0)
     {

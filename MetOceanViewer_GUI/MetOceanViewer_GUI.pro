@@ -29,7 +29,6 @@ SOURCES += src/main.cpp\
     src/ui_hwm_tab.cpp \
     src/ui_noaa_tab.cpp \
     src/ui_usgs_tab.cpp \
-    src/timeseries_add_data.cpp \
     src/ui_timeseries_tab.cpp \
     src/about_dialog.cpp \
     src/MetOceanViewer_main.cpp \
@@ -50,11 +49,11 @@ SOURCES += src/main.cpp\
     src/mov_colors.cpp \
     src/mov_session.cpp \
     src/adcirc_station_output.cpp \
-    src/filetypes.cpp
+    src/filetypes.cpp \
+    src/add_timeseries_data.cpp
 
 HEADERS  += \
     version.h \
-    src/timeseries_add_data.h \
     src/about_dialog.h \
     src/MetOceanViewer.h \
     src/noaa.h \
@@ -75,7 +74,8 @@ HEADERS  += \
     src/mov_colors.h \
     src/mov_session.h \
     src/adcirc_station_output.h \
-    src/filetypes.h
+    src/filetypes.h \
+    src/add_timeseries_data.h
 
 FORMS    += \
     ui/timeseries_add_data.ui \
@@ -85,87 +85,96 @@ FORMS    += \
 
 OTHER_FILES +=
 
+#...Include the PROJ4 library
+INCLUDEPATH += $$PWD/../libproj4
+win32{
+    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libproj4/debug -lproj4
+    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libproj4/release -lproj4
+}
+unix{
+    LIBS += -L$$OUT_PWD/../libproj4 -lproj4
+}
+
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
 
 #...Microsoft Visual C++ compilers
 *msvc* {
 
-#...Location of the netCDF srcs
-INCLUDEPATH += $$PWD/thirdparty/netcdf/include
+    #...Location of the netCDF srcs
+    INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
-contains(QT_ARCH, i386){
+    contains(QT_ARCH, i386){
 
-#...Microsoft Visual C++ 32-bit compiler
-message("Using MSVC-32 bit compiler...")
-LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+        #...Microsoft Visual C++ 32-bit compiler
+        message("Using MSVC-32 bit compiler...")
+        LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -DEBUG
+        #...Optimization flags
+        QMAKE_CXXFLAGS_RELEASE +=
+        QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"msvc\\\"
+        #...Define a variable for the about dialog
+        DEFINES += MOV_COMPILER=\\\"msvc\\\"
+    }else{
 
-} else {
+        #...Microsoft Visual C++ 64-bit compiler
+        message("Using MSVC-64 bit compiler...")
+        LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
-#...Microsoft Visual C++ 64-bit compiler
-message("Using MSVC-64 bit compiler...")
-LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+        #...Optimization flags
+        QMAKE_CXXFLAGS_RELEASE +=
+        QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -DEBUG
-
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"msvc\\\"
-}
+        #...Define a variable for the about dialog
+        DEFINES += MOV_COMPILER=\\\"msvc\\\"
+    }
 
 }
 
 #...MinGW 32 bit compiler, throw error
 win32-g++{
-error("MinGW not compatible with this project. See the Qt documentation for QtWebEngine.")
+    error("MinGW not compatible with this project. See the Qt documentation for QtWebEngine.")
 }
 
 #...Unix - We assume static library for NetCDF installed
 #          in the system path already
 unix:!macx{
-LIBS += -lnetcdf
+    LIBS += -lnetcdf
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+    #...Optimization flags
+    QMAKE_CXXFLAGS_RELEASE +=
+    QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"gpp\\\"
+    #...Define a variable for the about dialog
+    DEFINES += MOV_COMPILER=\\\"gpp\\\"
 }
 
 #...Mac - Assume static libs for netCDF in this path
 #         This, obviously, will vary by the machine
 #         the code is built on
 macx{
-LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
-INCLUDEPATH += /Users/zcobell/Software/netCDF/src
-ICON = img/mov.icns
+    LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
+    INCLUDEPATH += /Users/zcobell/Software/netCDF/src
+    ICON = img/mov.icns
 
-#...Files to be srcd in the bundle
-XTIDEBIN.files = $$PWD/mov_libs/bin/tide \
-                 $$PWD/mov_libs/bin/harmonics.tcd
-XTIDEBIN.path  = Contents/MacOS/XTide/bin
+    #...Files to be srcd in the bundle
+    XTIDEBIN.files = $$PWD/mov_libs/bin/tide \
+                     $$PWD/mov_libs/bin/harmonics.tcd
+    XTIDEBIN.path  = Contents/MacOS/XTide/bin
 
-XTIDELIB.files = $$PWD/mov_libs/lib/libtcd.dylib \
-                 $$PWD/mov_libs/lib/libxtide.dylib
-XTIDELIB.path  = Contents/MacOS/XTide/lib
+    XTIDELIB.files = $$PWD/mov_libs/lib/libtcd.dylib \
+                     $$PWD/mov_libs/lib/libxtide.dylib
+    XTIDELIB.path  = Contents/MacOS/XTide/lib
 
-QMAKE_BUNDLE_DATA += XTIDEBIN XTIDELIB
+    QMAKE_BUNDLE_DATA += XTIDEBIN XTIDELIB
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+    #...Optimization flags
+    QMAKE_CXXFLAGS_RELEASE +=
+    QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"xcode\\\"
+    #...Define a variable for the about dialog
+    DEFINES += MOV_COMPILER=\\\"xcode\\\"
 }
 
 INCLUDEPATH += src
