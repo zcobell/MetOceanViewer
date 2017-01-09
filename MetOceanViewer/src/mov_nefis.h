@@ -47,7 +47,8 @@ public:
     QVector<QPointF> getStationLocations();
     QStringList      getSeriesNames();
     QString          getSeriesDescription(QString seriesName);
-    int              generateIMEDS(QString seriesName, imeds *stationData);
+    int              generateIMEDS(QString seriesName, imeds *stationData, int layer);
+    int              getNumLayers();
 
     static QString   getNefisDefFilename(QString datFilename);
     static QString   getNefisDatFilename(QString defFilename);
@@ -63,11 +64,13 @@ private:
     int _getSeriesList();
     int _getTimes();
     int _getSeriesNames(QString seriesGroup, QVector<QString> &seriesNames,
-                        QVector<QString> &seriesDescriptions, QVector<QString> &seriesTypes);
+                        QVector<QString> &seriesDescriptions,
+                        QVector<QString> &seriesTypes,
+                        QVector<bool> &seriesIs3d,
+                        QVector<QVector<int> > &seriesDimensions);
     int _get(QString seriesName);
     int _getLayers();
     int _generatePlotVariableList();
-
 
     QString _mDatFilename;
     QString _mDefFilename;
@@ -78,16 +81,18 @@ private:
     int     _mNumLayers;
     int     _mLayerModel; //...0=Sigma, 1=Zeta
 
-    QVector<double>            _mLayerDepths;
-    QVector<QDateTime>         _mOutputTimes;
-    QVector< QVector<double> > _mOutputData;
-    QVector<QPointF>           _mStationLocations;
-    QStringList                _mStationNames;
-    QStringList                _mSeriesNames;
-    QMap<QString,QString>      _mSeriesDescriptionsMap;
-    QMap<QString,QString>      _mSourceMap;
-    QMap<QString,QString>      _mTypeMap;
-    QStringList                _mPlotEligibleVariables;
+    QVector<double>                       _mLayerDepths;
+    QVector<QDateTime>                    _mOutputTimes;
+    QVector< QVector< QVector<double> > > _mOutputData;
+    QVector<QPointF>                      _mStationLocations;
+    QStringList                           _mStationNames;
+    QStringList                           _mSeriesNames;
+    QMap<QString,QString>                 _mSeriesDescriptionsMap;
+    QMap<QString,QString>                 _mSourceMap;
+    QMap<QString,QString>                 _mTypeMap;
+    QMap<QString,bool>                    _mIs3d;
+    QMap<QString,QVector<int>>            _mSeriesDimensions;
+    QStringList                           _mPlotEligibleVariables;
 
 
 };

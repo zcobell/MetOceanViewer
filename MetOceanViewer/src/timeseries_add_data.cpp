@@ -84,7 +84,8 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, QString FileType,
-                                             QString StationPath, QString nefisVar)
+                                             QString StationPath, QString nefisVar,
+                                             int nefisLayer)
 {
     QString ButtonStyle,StationFile;
     this->InputFileColdStart.setTimeSpec(Qt::UTC);
@@ -102,6 +103,7 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
     this->StationFilePath = StationPath;
     this->InputFileType = FileType;
     this->nefisVariable = nefisVar;
+    ui->spin_nefisLayer->setValue(nefisLayer);
 
     ButtonStyle = mov_colors::MakeColorString(Color);
     this->RandomButtonColor = Color;
@@ -149,14 +151,24 @@ void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
         ui->browse_stationfile->setEnabled(false);
         ui->button_nefisDescription->setEnabled(true);
         ui->combo_nefisVariable->setEnabled(true);
-        QString nefisDefFile = mov_nefis::getNefisDefFilename(InputFilePath);
-        this->nefis = new mov_nefis(nefisDefFile,InputFilePath,this);
+        QString nefisDefFile = mov_nefis::getNefisDefFilename(this->InputFilePath);
+        this->nefis = new mov_nefis(nefisDefFile,this->InputFilePath,this);
         this->nefis->open(false);
         this->nefis->close();
         ui->combo_nefisVariable->clear();
         ui->combo_nefisVariable->addItems(this->nefis->getSeriesNames());
-        ui->combo_nefisVariable->setCurrentText(nefisVar);
-        this->FileReadError = false;
+        if(this->nefis->getNumLayers()>1)
+        {
+            ui->spin_nefisLayer->setEnabled(true);
+            ui->spin_nefisLayer->setMinimum(0);
+            ui->spin_nefisLayer->setMaximum(this->nefis->getNumLayers());
+        }
+        else
+        {
+            ui->spin_nefisLayer->setEnabled(false);
+            ui->spin_nefisLayer->setMinimum(0);
+            ui->spin_nefisLayer->setMaximum(0);
+        }
     }
     return;
 }
@@ -245,6 +257,18 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             this->nefis->close();
             ui->combo_nefisVariable->clear();
             ui->combo_nefisVariable->addItems(this->nefis->getSeriesNames());
+            if(this->nefis->getNumLayers()>1)
+            {
+                ui->spin_nefisLayer->setEnabled(true);
+                ui->spin_nefisLayer->setMinimum(0);
+                ui->spin_nefisLayer->setMaximum(this->nefis->getNumLayers());
+            }
+            else
+            {
+                ui->spin_nefisLayer->setEnabled(false);
+                ui->spin_nefisLayer->setMinimum(0);
+                ui->spin_nefisLayer->setMaximum(0);
+            }
         }
         else
         {
@@ -317,6 +341,7 @@ void add_imeds_data::accept()
     this->InputFileColdStart = ui->date_coldstart->dateTime();
     TempString = ui->text_unitconvert->text();
     this->InputStationFile = ui->text_stationfile->text();
+    this->nefisLayer = ui->spin_nefisLayer->value();
     if(TempString==NULL)
         this->UnitConversion = 1.0;
     else

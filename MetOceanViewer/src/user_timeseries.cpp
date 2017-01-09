@@ -423,7 +423,7 @@ QString user_timeseries::getErrorString()
 
 int user_timeseries::processData()
 {
-    int ierr,i,j,nRow;
+    int ierr,i,j,nRow,nefisLayer;
     double x,y;
     QStringList TempList;
     QString javascript,StationName,TempFile,TempStationFile,InputFileType;
@@ -491,10 +491,13 @@ int user_timeseries::processData()
         else if(InputFileType=="DAT")
         {
             nefisVar = this->table->item(i,11)->text();
+            nefisLayer = this->table->item(i,11)->text().toInt();
             this->fileData[j] = new imeds(this);
             mov_nefis *nefis = new mov_nefis(mov_nefis::getNefisDefFilename(TempFile),TempFile,this);
-            nefis->open();
-            ierr = nefis->generateIMEDS(nefisVar,this->fileData[j]);
+            ierr = nefis->open();
+            if(ierr!=0)
+                return -1;
+            ierr = nefis->generateIMEDS(nefisVar,this->fileData[j],nefisLayer);
             nefis->close();
             if(ierr!=0)
                 return -1;

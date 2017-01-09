@@ -44,7 +44,7 @@ public:
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
                                  QDateTime ColdStart, QString FileType, QString StationPath,
-                                 QString nefisVar);
+                                 QString nefisVar, int nefisLayer);
 
     QString PreviousDirectory;
 
@@ -60,6 +60,7 @@ public:
     QString InputStationFile,CurrentFileName;
     QString nefisVariable;
     QDateTime InputFileColdStart;
+    int nefisLayer;
 
 private slots:
 

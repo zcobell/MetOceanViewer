@@ -155,10 +155,6 @@ int mov_nefis::_getLayers()
     else
         this->_mLayerModel = 1;
 
-    //...If there are more than one layer, get that list
-
-
-
     return 0;
 
 }
@@ -359,9 +355,11 @@ int mov_nefis::_getSeriesList()
 {
     int i,ierr;
     QVector<QString> tempNames,tempDesc,type;
+    QVector<bool> is3d;
+    QVector< QVector<int> > dimensions;
 
     //...Read the his-series list
-    ierr = this->_getSeriesNames(QStringLiteral("his-series"),tempNames,tempDesc,type);
+    ierr = this->_getSeriesNames(QStringLiteral("his-series"),tempNames,tempDesc,type,is3d,dimensions);
     for(i=0;i<tempNames.size();i++)
     {
         if(this->_mPlotEligibleVariables.contains(tempNames[i]))
@@ -370,12 +368,17 @@ int mov_nefis::_getSeriesList()
             this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
             this->_mTypeMap[tempNames[i]] = type[i];
             this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-FLOW");
+            this->_mIs3d[tempNames[i]] = is3d[i];
+            this->_mSeriesDimensions[tempNames[i]] = dimensions[i];
         }
     }
     tempNames.clear();
+    tempDesc.clear();
+    type.clear();
+    is3d.clear();
 
     //...Read the his-wave-series list
-    ierr = this->_getSeriesNames(QStringLiteral("his-wav-series"),tempNames,tempDesc,type);
+    ierr = this->_getSeriesNames(QStringLiteral("his-wav-series"),tempNames,tempDesc,type,is3d,dimensions);
     for(i=0;i<tempNames.size();i++)
     {
         if(this->_mPlotEligibleVariables.contains(tempNames[i]))
@@ -384,6 +387,7 @@ int mov_nefis::_getSeriesList()
             this->_mSeriesDescriptionsMap[tempNames[i]] = tempDesc[i];
             this->_mTypeMap[tempNames[i]] = type[i];
             this->_mSourceMap[tempNames[i]] = QStringLiteral("Delft3D-WAVE");
+            this->_mIs3d[tempNames[i]] = is3d[i];
         }
     }
     tempNames.clear();
@@ -393,7 +397,8 @@ int mov_nefis::_getSeriesList()
 
 
 int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesNames,
-                               QVector<QString> &seriesDescriptions, QVector<QString> &seriesTypes)
+                               QVector<QString> &seriesDescriptions, QVector<QString> &seriesTypes,
+                               QVector<bool> &seriesIs3d, QVector<QVector<int> > &seriesDimensions)
 {
     int i;
     BInt4 ierr;
@@ -434,6 +439,8 @@ int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesName
     seriesNames.resize(celDim);
     seriesDescriptions.resize(celDim);
     seriesTypes.resize(celDim);
+    seriesIs3d.resize(celDim);
+    seriesDimensions.resize(celDim);
 
     //...Get the descriptions of each element
     for(i=0;i<celDim;i++)
@@ -452,6 +459,18 @@ int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesName
 
         //...Save the type (Integer or Real)
         seriesTypes[i] = QString(type).simplified();
+
+        //...Look for 3d series
+        if(nDimensions==2)
+            seriesIs3d[i] = true;
+        else
+            seriesIs3d[i] = false;
+
+        //...Save dimensions of the variable
+        seriesDimensions[i].resize(nDimensions);
+        for(int j=0;j<nDimensions;j++)
+            seriesDimensions[i][j] = elmDimensions[j];
+
     }
 
     return 0;
@@ -460,13 +479,18 @@ int mov_nefis::_getSeriesNames(QString seriesGroup, QVector<QString> &seriesName
 
 int mov_nefis::_get(QString seriesName)
 {
-    int i,j,ierr;
+    int i,j,k,l,m,ierr,nlayers;
     char * src;
     BChar error_string[LENGTH_ERROR_MESSAGE];
 
+    if(this->_mIs3d[seriesName])
+        nlayers = this->_mNumLayers;
+    else
+        nlayers = 1;
+
     //...Allocate the variables used to retrieve from NEFIS
     BInt4   uindex[MAX_NEFIS_DIM][3];
-    BInt4   uorder[2];
+    BInt4   uorder[3];
     BRea4 * realBuffer = (BRea4  *) malloc( sizeof(BRea4) * this->_mNumSteps * this->_mNumStations);
     BInt4 * intBuffer  = (BInt4  *) malloc( sizeof(BInt4) * this->_mNumSteps * this->_mNumStations);
     BInt4   realBufLen = sizeof(BRea4) * this->_mNumSteps * this->_mNumStations;
@@ -487,54 +511,70 @@ int mov_nefis::_get(QString seriesName)
 
     //...Clear the output container in case it was in use previously
     for(i=0;i<this->_mOutputData.size();i++)
+    {
+        for(j=0;j<this->_mOutputData[i].size();j++)
+            this->_mOutputData[i][j].clear();
         this->_mOutputData[i].clear();
+    }
     this->_mOutputData.clear();
 
     //...Reallocate the output container
     this->_mOutputData.resize(this->_mNumStations);
     for(i=0;i<this->_mOutputData.size();i++)
-        this->_mOutputData[i].resize(this->_mNumSteps);
-
-
-    //...Set up the indicies
-    uorder[0] = 1;
-    uorder[1] = 2;
-    uorder[2] = 3;
-    uindex[0][0] = 1;
-    uindex[0][1] = this->_mNumSteps;
-    uindex[0][2] = 1;
-    uindex[1][0] = 1;
-    uindex[1][1] = this->_mNumStations;
-    uindex[1][2] = 1;
-
-    //...Read the data from the file using the correct buffer style
-    if(this->_mTypeMap[seriesName]==QStringLiteral("INTEGER"))
     {
-        ierr = Getelt(&this->_fd,src,series,(BInt4 *)uindex,uorder,&intBufLen,intBuffer);
-        if(ierr!=0)
-        {
-            free(realBuffer);
-            free(intBuffer);
-            return -1;
-        }
-        //...Put the data in the output array
-        for(i=0;i<this->_mNumSteps;i++)
-            for(j=0;j<this->_mNumStations;j++)
-                this->_mOutputData[j][i] = (double)intBuffer[j+i*this->_mNumStations];
+        this->_mOutputData[i].resize(nlayers);
+        for(j=0;j<nlayers;j++)
+            this->_mOutputData[i][j].resize(this->_mNumSteps);
     }
-    else if(this->_mTypeMap[seriesName]==QStringLiteral("REAL"))
+
+    for(m=0;m<this->_mNumStations;m++)
     {
-        ierr = Getelt(&this->_fd,src,series,(BInt4 *)uindex,uorder,&realBufLen,realBuffer);
-        if(ierr!=0)
+        for(l=0;l<nlayers;l++)
         {
-            free(realBuffer);
-            free(intBuffer);
-            return -1;
+            //...Set up the indicies
+            uorder[0]    = 1;
+            uorder[1]    = 2;
+            uorder[2]    = 3;
+            uindex[0][0] = 1;
+            uindex[0][1] = this->_mNumSteps;
+            uindex[0][2] = 1;
+            uindex[1][0] = m;
+            uindex[1][1] = m;
+            uindex[1][2] = 1;
+            uindex[2][0] = l;
+            uindex[2][1] = l;
+            uindex[2][2] = 1;
+
+            //...Read the data from the file using the correct buffer style
+            if(this->_mTypeMap[seriesName]==QStringLiteral("INTEGER"))
+            {
+                ierr = Getelt(&this->_fd,src,series,(BInt4 *)uindex,uorder,&intBufLen,intBuffer);
+                if(ierr!=0)
+                {
+                    free(realBuffer);
+                    free(intBuffer);
+                    return -1;
+                }
+                //...Put the data in the output array
+                for(i=0;i<this->_mNumSteps;i++)
+                    for(j=0;j<this->_mNumStations;j++)
+                        this->_mOutputData[j][l][i] = (double)intBuffer[j+i*this->_mNumStations];
+            }
+            else if(this->_mTypeMap[seriesName]==QStringLiteral("REAL"))
+            {
+                ierr = Getelt(&this->_fd,src,series,(BInt4 *)uindex,uorder,&realBufLen,realBuffer);
+                if(ierr!=0)
+                {
+                    free(realBuffer);
+                    free(intBuffer);
+                    return -1;
+                }
+                //...Put the data in the output array
+                for(i=0;i<this->_mNumSteps;i++)
+                    this->_mOutputData[m][l][i] = realBuffer[i];
+
+            }
         }
-        //...Put the data in the output array
-        for(i=0;i<this->_mNumSteps;i++)
-            for(j=0;j<this->_mNumStations;j++)
-                this->_mOutputData[j][i] = realBuffer[j+i*this->_mNumStations];
     }
 
     //...Free memory
@@ -545,9 +585,14 @@ int mov_nefis::_get(QString seriesName)
 }
 
 
-int mov_nefis::generateIMEDS(QString seriesName, imeds *stationData)
+int mov_nefis::generateIMEDS(QString seriesName, imeds *stationData, int layer)
 {
-    int i,ierr;
+    int i,ierr,_layer;
+
+    if(this->_mIs3d[seriesName])
+        _layer = layer;
+    else
+        _layer = 0;
 
     //...Check if the data exists
     if(!this->_mSeriesNames.contains(seriesName))
@@ -572,7 +617,7 @@ int mov_nefis::generateIMEDS(QString seriesName, imeds *stationData)
     {
         stationData->station[i] = new imeds_station(this);
         stationData->station[i]->date = this->_mOutputTimes;
-        stationData->station[i]->data = this->_mOutputData[i];
+        stationData->station[i]->data = this->_mOutputData[i][_layer];
         stationData->station[i]->longitude = this->_mStationLocations[i].x();
         stationData->station[i]->latitude = this->_mStationLocations[i].y();
         stationData->station[i]->NumSnaps = this->_mNumSteps;
@@ -595,4 +640,9 @@ QString mov_nefis::getNefisDatFilename(QString defFilename)
 QString mov_nefis::getNefisDefFilename(QString datFilename)
 {
     return datFilename.mid(0,datFilename.length()-3)+QStringLiteral("def");
+}
+
+int mov_nefis::getNumLayers()
+{
+    return this->_mNumLayers;
 }

@@ -96,6 +96,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked()
         ui->table_TimeseriesData->setItem(NumberOfRows-1,9,new QTableWidgetItem(AddWindow->InputStationFile));
         ui->table_TimeseriesData->setItem(NumberOfRows-1,10,new QTableWidgetItem(AddWindow->StationFilePath));
         ui->table_TimeseriesData->setItem(NumberOfRows-1,11,new QTableWidgetItem(AddWindow->nefisVariable));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,12,new QTableWidgetItem(AddWindow->nefisLayer));
         CellColor.setNamedColor(AddWindow->InputColorString);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setTextColor(CellColor);
@@ -150,17 +151,18 @@ void MainWindow::SetupTimeseriesTable()
 {
     QString HeaderString = QString("Filename;Series Name;Color;Unit Conversion;")+
                            QString("x-shift;y-shift;FullPathToFile;Cold Start;")+
-                           QString("FileType;StationFile;StationFilePath,nefisVariable");
+                           QString("FileType;StationFile;StationFilePath,nefisVariable,nefisLayer");
     QStringList Header = HeaderString.split(";");
 
     ui->table_TimeseriesData->setRowCount(0);
-    ui->table_TimeseriesData->setColumnCount(12);
+    ui->table_TimeseriesData->setColumnCount(13);
     ui->table_TimeseriesData->setColumnHidden(6,true);
     ui->table_TimeseriesData->setColumnHidden(7,true);
     ui->table_TimeseriesData->setColumnHidden(8,true);
     ui->table_TimeseriesData->setColumnHidden(9,true);
     ui->table_TimeseriesData->setColumnHidden(10,true);
     ui->table_TimeseriesData->setColumnHidden(11,true);
+    ui->table_TimeseriesData->setColumnHidden(12,true);
     ui->table_TimeseriesData->setHorizontalHeaderLabels(Header);
     ui->table_TimeseriesData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->table_TimeseriesData->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -176,7 +178,7 @@ void MainWindow::SetupTimeseriesTable()
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
-    int CurrentRow;
+    int CurrentRow,nefisLayer;
     double xadjust,yadjust,UnitConversion;
     QColor CellColor;
     QString Filename,Filepath,SeriesName,FileType,StationFilePath,nefisVariable;
@@ -212,11 +214,12 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
     StationFilePath = ui->table_TimeseriesData->item(CurrentRow,10)->text();
     CheckState = ui->table_TimeseriesData->item(CurrentRow,0)->checkState();
     nefisVariable = ui->table_TimeseriesData->item(CurrentRow,11)->text();
+    nefisLayer = ui->table_TimeseriesData->item(CurrentRow,12)->text().toInt();
 
     AddWindow->set_dialog_box_elements(Filename,Filepath,SeriesName,
                                        UnitConversion,xadjust,yadjust,
                                        CellColor,ColdStart,FileType,
-                                       StationFilePath,nefisVariable);
+                                       StationFilePath,nefisVariable,nefisLayer);
 
     int WindowStatus = AddWindow->exec();
 
@@ -234,6 +237,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
         ui->table_TimeseriesData->setItem(CurrentRow,9,new QTableWidgetItem(AddWindow->InputStationFile));
         ui->table_TimeseriesData->setItem(CurrentRow,10,new QTableWidgetItem(AddWindow->StationFilePath));
         ui->table_TimeseriesData->setItem(CurrentRow,11,new QTableWidgetItem(AddWindow->nefisVariable));
+        ui->table_TimeseriesData->setItem(CurrentRow,12,new QTableWidgetItem(AddWindow->nefisLayer));
 
         //Tooltips in table cells
         ui->table_TimeseriesData->item(CurrentRow,0)->setToolTip(AddWindow->InputFilePath);
