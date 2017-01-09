@@ -23,6 +23,7 @@
 #include "MetOceanViewer.h"
 #include "mov_colors.h"
 #include "mov_generic.h"
+#include "filetypes.h"
 
 //-------------------------------------------//
 //This brings up the dialog box used to add
@@ -58,7 +59,7 @@ add_imeds_data::~add_imeds_data()
 void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 {
     QString ButtonStyle;
-    InputFileColdStart.setTimeSpec(Qt::UTC);
+    this->InputFileColdStart.setTimeSpec(Qt::UTC);
     ui->text_seriesname->setText("Series "+QString::number(NumRowsInTable+1));
     ui->text_unitconvert->setText("1.0");
     ui->text_xadjust->setText("0.0");
@@ -83,55 +84,64 @@ void add_imeds_data::set_default_dialog_box_elements(int NumRowsInTable)
 void add_imeds_data::set_dialog_box_elements(QString Filename, QString Filepath,
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
-                                             QDateTime ColdStart, QString FileType,
+                                             QDateTime ColdStart, int FileType,
                                              QString StationPath)
 {
     QString ButtonStyle,StationFile;
-    InputFileColdStart.setTimeSpec(Qt::UTC);
-    mov_generic::splitPath(StationPath,StationFile,PreviousDirectory);
+    this->InputFileColdStart.setTimeSpec(Qt::UTC);
+    mov_generic::splitPath(StationPath,StationFile,this->PreviousDirectory);
     ui->text_seriesname->setText(SeriesName);
     ui->text_filename->setText(Filename);
     ui->text_unitconvert->setText(QString::number(UnitConvert));
     ui->text_xadjust->setText(QString::number(xmove));
     ui->text_yadjust->setText(QString::number(ymove));
-    ui->text_filetype->setText(FileType);
+    ui->text_filetype->setText(filetypes::integerFiletypeToString(FileType));
     ui->date_coldstart->setDateTime(ColdStart);
     ui->text_stationfile->setText(StationFile);
-    InputFilePath = Filepath;
-    CurrentFileName = Filepath;
-    StationFilePath = StationPath;
-    InputFileType = FileType;
+    this->InputFilePath = Filepath;
+    this->CurrentFileName = Filepath;
+    this->StationFilePath = StationPath;
+    this->InputFileType = FileType;
     ButtonStyle = mov_colors::MakeColorString(Color);
-    RandomButtonColor = Color;
+    this->RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
 
-
-    if(FileType == "IMEDS")
+    if(FileType == FILETYPE_ASCII_IMEDS)
     {
-        InputFileType = "IMEDS";
+        this->InputFileType = FileType;
         ui->text_filetype->setText("IMEDS");
         ui->date_coldstart->setEnabled(false);
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
-        FileReadError = false;
+        this->FileReadError = false;
     }
-    else if(FileType == "NETCDF")
+    else if(FileType == FILETYPE_NETCDF_ADCIRC)
     {
-        FileType = "NETCDF";
+        this->InputFileType = FileType;
         ui->text_filetype->setText("netCDF");
         ui->date_coldstart->setEnabled(true);
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
-        FileReadError = false;
+        this->FileReadError = false;
     }
-    else if(FileType == "ADCIRC")
+    else if(FileType == FILETYPE_ASCII_ADCIRC)
     {
+        this->InputFileType = FileType;
         ui->text_filetype->setText("ADCIRC");
         ui->date_coldstart->setEnabled(true);
         ui->text_stationfile->setEnabled(true);
         ui->browse_stationfile->setEnabled(true);
-        FileReadError = false;
+        this->FileReadError = false;
+    }
+    else if(FileType == FILETYPE_NETCDF_DFLOW)
+    {
+        this->InputFileType = FileType;
+        ui->text_filetype->setText("DFlow");
+        ui->date_coldstart->setEnabled(false);
+        ui->text_stationfile->setEnabled(false);
+        ui->browse_stationfile->setEnabled(false);
+        this->FileReadError = false;
     }
     return;
 }
@@ -157,56 +167,59 @@ void add_imeds_data::on_browse_filebrowse_clicked()
             QString("IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ")+
             QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
-    InputFilePath = TempPath;
+    this->InputFilePath = TempPath;
     if(TempPath!=NULL || (TempPath==NULL && this->CurrentFileName!=NULL) )
     {
 
         if(TempPath==NULL)
         {
-            TempPath = CurrentFileName;
-            InputFilePath = CurrentFileName;
+            TempPath = this->CurrentFileName;
+            this->InputFilePath = this->CurrentFileName;
         }
         else
-            CurrentFileName = TempPath;
+            this->CurrentFileName = TempPath;
 
-        mov_generic::splitPath(TempPath,TempFile,PreviousDirectory);
+        mov_generic::splitPath(TempPath,TempFile,this->PreviousDirectory);
         ui->text_filename->setText(TempFile);
 
-        FileReadError = false;
+        this->FileReadError = false;
+        this->InputFileType = filetypes::getIntegerFiletype(this->CurrentFileName);
 
-        List = TempFile.split(".");
-        InputFileType = List.value(List.length()-1).toUpper();
-
-        if(InputFileType == "IMEDS")
+        if(this->InputFileType == FILETYPE_ASCII_IMEDS)
         {
-            InputFileType = "IMEDS";
             ui->text_filetype->setText("IMEDS");
             ui->date_coldstart->setEnabled(false);
             ui->text_stationfile->setEnabled(false);
             ui->browse_stationfile->setEnabled(false);
-            FileReadError = false;
+            this->FileReadError = false;
         }
-        else if(InputFileType == "NC")
+        else if(this->InputFileType == FILETYPE_NETCDF_ADCIRC)
         {
-            InputFileType = "NETCDF";
             ui->text_filetype->setText("netCDF");
             ui->date_coldstart->setEnabled(true);
             ui->text_stationfile->setEnabled(false);
             ui->browse_stationfile->setEnabled(false);
-            FileReadError = false;
+            this->FileReadError = false;
         }
-        else if(InputFileType == "61" || InputFileType == "62" || InputFileType == "71" || InputFileType == "72")
+        else if(this->InputFileType == FILETYPE_ASCII_ADCIRC)
         {
-            InputFileType = "ADCIRC";
             ui->text_filetype->setText("ADCIRC");
             ui->date_coldstart->setEnabled(true);
             ui->text_stationfile->setEnabled(true);
             ui->browse_stationfile->setEnabled(true);
-            FileReadError = false;
+            this->FileReadError = false;
+        }
+        else if(this->InputFileType == FILETYPE_NETCDF_DFLOW)
+        {
+            ui->text_filetype->setText("DFlow");
+            ui->date_coldstart->setEnabled(false);
+            ui->text_stationfile->setEnabled(false);
+            ui->browse_stationfile->setEnabled(false);
+            this->FileReadError = false;
         }
         else
         {
-            FileReadError = true;
+            this->FileReadError = true;
         }
     }
     return;
@@ -220,16 +233,16 @@ void add_imeds_data::on_browse_filebrowse_clicked()
 //-------------------------------------------//
 void add_imeds_data::on_button_seriesColor_clicked()
 {
-    QColor TempColor = QColorDialog::getColor(RandomButtonColor);
+    QColor TempColor = QColorDialog::getColor(this->RandomButtonColor);
     QString ButtonStyle;
 
-    ColorUpdated = false;
+    this->ColorUpdated = false;
 
     if(TempColor.isValid())
     {
-        RandomButtonColor = TempColor;
-        ColorUpdated = true;
-        ButtonStyle = mov_colors::MakeColorString(RandomButtonColor);
+        this->RandomButtonColor = TempColor;
+        this->ColorUpdated = true;
+        ButtonStyle = mov_colors::MakeColorString(this->RandomButtonColor);
         ui->button_seriesColor->setStyleSheet(ButtonStyle);
         ui->button_seriesColor->update();
     }
@@ -246,13 +259,13 @@ void add_imeds_data::on_browse_stationfile_clicked()
 {
     QString TempFile;
     QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
-            PreviousDirectory,
+            this->PreviousDirectory,
             QString("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )")+
             QString("Comma Separated File (*.csv) ;; All Files (*.*)"));
     if(TempPath!=NULL)
     {
-        StationFilePath = TempPath;
-        mov_generic::splitPath(TempPath,TempFile,PreviousDirectory);
+        this->StationFilePath = TempPath;
+        mov_generic::splitPath(TempPath,TempFile,this->PreviousDirectory);
         ui->text_stationfile->setText(TempFile);
     }
     return;
@@ -269,53 +282,53 @@ void add_imeds_data::accept()
 
     QString TempString;
 
-    InputFileName = ui->text_filename->text();
-    InputColorString = RandomButtonColor.name();
-    InputSeriesName = ui->text_seriesname->text();
-    InputFileColdStart = ui->date_coldstart->dateTime();
+    this->InputFileName = ui->text_filename->text();
+    this->InputColorString = this->RandomButtonColor.name();
+    this->InputSeriesName = ui->text_seriesname->text();
+    this->InputFileColdStart = ui->date_coldstart->dateTime();
     TempString = ui->text_unitconvert->text();
-    InputStationFile = ui->text_stationfile->text();
+    this->InputStationFile = ui->text_stationfile->text();
     if(TempString==NULL)
-        UnitConversion = 1.0;
+        this->UnitConversion = 1.0;
     else
-        UnitConversion = TempString.toDouble();
+        this->UnitConversion = TempString.toDouble();
 
     TempString = ui->text_xadjust->text();
     if(TempString==NULL)
-        xadjust = 0.0;
+        this->xadjust = 0.0;
     else
-        xadjust = TempString.toDouble();
+        this->xadjust = TempString.toDouble();
 
     //...Convert to other time units
     if(ui->combo_timeSelect->currentText()=="seconds")
-        xadjust = xadjust / 3600;
+        this->xadjust = this->xadjust / 3600;
     else if(ui->combo_timeSelect->currentText()=="minutes")
-        xadjust = xadjust / 60;
+        this->xadjust = this->xadjust / 60;
     else if(ui->combo_timeSelect->currentText()=="days")
-        xadjust = xadjust * 24;
+        this->xadjust = this->xadjust * 24;
 
     TempString = ui->text_yadjust->text();
     if(TempString==NULL)
-        yadjust = 0.0;
+        this->yadjust = 0.0;
     else
-        yadjust = TempString.toDouble();
+        this->yadjust = TempString.toDouble();
 
-    if(InputFileName==NULL)
+    if(this->InputFileName==NULL)
     {
         QMessageBox::critical(this,"ERROR","Please select an input file.");
         return;
     }
-    else if(InputSeriesName==NULL)
+    else if(this->InputSeriesName==NULL)
     {
         QMessageBox::critical(this,"ERROR","Please input a series name.");
         return;
     }
-    else if(InputColorString==NULL)
+    else if(this->InputColorString==NULL)
     {
         QMessageBox::critical(this,"ERROR","Please select a valid color for this series.");
         return;
     }
-    else if(InputStationFile==NULL && InputFileType=="ADCIRC")
+    else if(this->InputStationFile==NULL && this->InputFileType==FILETYPE_ASCII_ADCIRC)
     {
         QMessageBox::critical(this,"ERROR","You did not select a station file.");
         return;
@@ -327,32 +340,32 @@ void add_imeds_data::accept()
 
 void add_imeds_data::on_button_presetColor1_clicked()
 {
-    ColorUpdated = true;
+    this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
-    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    this->RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
 void add_imeds_data::on_button_presetColor2_clicked()
 {
-    ColorUpdated = true;
+    this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
-    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    this->RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
 void add_imeds_data::on_button_presetColor3_clicked()
 {
-    ColorUpdated = true;
+    this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
-    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    this->RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
 
 void add_imeds_data::on_button_presetColor4_clicked()
 {
-    ColorUpdated = true;
+    this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
-    RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
+    this->RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }

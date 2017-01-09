@@ -174,10 +174,10 @@ void MainWindow::SetupTimeseriesTable()
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
-    int CurrentRow;
+    int CurrentRow,FileType;
     double xadjust,yadjust,UnitConversion;
     QColor CellColor;
-    QString Filename,Filepath,SeriesName,FileType,StationFilePath;
+    QString Filename,Filepath,SeriesName,StationFilePath;
     QDateTime ColdStart;
     Qt::CheckState CheckState;
     QPointer<add_imeds_data> AddWindow = new add_imeds_data(this);
@@ -203,7 +203,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked()
     UnitConversion = ui->table_TimeseriesData->item(CurrentRow,3)->text().toDouble();
     xadjust = ui->table_TimeseriesData->item(CurrentRow,4)->text().toDouble();
     yadjust = ui->table_TimeseriesData->item(CurrentRow,5)->text().toDouble();
-    FileType = ui->table_TimeseriesData->item(CurrentRow,8)->text();
+    FileType = ui->table_TimeseriesData->item(CurrentRow,8)->text().toInt();
     ColdStart = QDateTime::fromString(ui->table_TimeseriesData->
                                       item(CurrentRow,7)->text().simplified(),"yyyy-MM-dd hh:mm:ss");
     CellColor.setNamedColor(ui->table_TimeseriesData->item(CurrentRow,2)->text());

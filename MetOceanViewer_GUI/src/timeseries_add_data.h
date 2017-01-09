@@ -42,7 +42,7 @@ public:
 
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, QString FileType, QString StationPath);
+                                 QDateTime ColdStart, int FileType, QString StationPath);
 
     QString PreviousDirectory;
 
@@ -54,9 +54,10 @@ public:
     QColor RandomButtonColor;
     QString InputFileName,InputColorString;
     QString InputSeriesName,InputFilePath;
-    QString StationFilePath,InputFileType;
+    QString StationFilePath;
     QString InputStationFile,CurrentFileName;
     QDateTime InputFileColdStart;
+    int InputFileType;
 
 private slots:
 
