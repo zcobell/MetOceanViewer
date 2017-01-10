@@ -18,8 +18,9 @@
 //
 //-----------------------------------------------------------------------*/
 
+#include <QMessageBox>
 #include "add_timeseries_data.h"
-#include "ui_timeseries_add_data.h"
+#include "ui_add_timeseries_data.h"
 #include "MetOceanViewer.h"
 #include "mov_colors.h"
 #include "mov_generic.h"
@@ -38,6 +39,7 @@ add_timeseries_data::add_timeseries_data(QWidget *parent) :
     ui->text_xadjust->setValidator(new QDoubleValidator(this));
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
     this->PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
+    this->epsgmap = this->proj->getMap();
 }
 //-------------------------------------------//
 
@@ -74,7 +76,6 @@ void add_timeseries_data::set_default_dialog_box_elements(int NumRowsInTable)
     this->CurrentFileName = QString();
     this->epsg = 4326;
     this->proj = new proj4(this);
-    this->epsgmap = this->proj->getMap();
     return;
 }
 //-------------------------------------------//
@@ -88,7 +89,7 @@ void add_timeseries_data::set_dialog_box_elements(QString Filename, QString File
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, int FileType,
-                                             QString StationPath)
+                                             QString StationPath, int epsg)
 {
     QString ButtonStyle,StationFile;
     this->InputFileColdStart.setTimeSpec(Qt::UTC);
@@ -105,6 +106,7 @@ void add_timeseries_data::set_dialog_box_elements(QString Filename, QString File
     this->CurrentFileName = Filepath;
     this->StationFilePath = StationPath;
     this->InputFileType = FileType;
+    this->epsg = epsg;
     ButtonStyle = mov_colors::MakeColorString(Color);
     this->RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
@@ -289,6 +291,7 @@ void add_timeseries_data::accept()
     this->InputColorString = this->RandomButtonColor.name();
     this->InputSeriesName = ui->text_seriesname->text();
     this->InputFileColdStart = ui->date_coldstart->dateTime();
+    this->epsg = ui->spin_epsg->value();
     TempString = ui->text_unitconvert->text();
     this->InputStationFile = ui->text_stationfile->text();
     if(TempString==NULL)
@@ -336,10 +339,15 @@ void add_timeseries_data::accept()
         QMessageBox::critical(this,"ERROR","You did not select a station file.");
         return;
     }
+    else if(!this->epsgmap->contains(this->epsg))
+    {
+        QMessageBox::critical(this,"ERROR","You did not enter a valid EPSG coordinate system.");
+    }
     else
         QDialog::accept();
 }
 //-------------------------------------------//
+
 
 void add_timeseries_data::on_button_presetColor1_clicked()
 {
@@ -349,6 +357,7 @@ void add_timeseries_data::on_button_presetColor1_clicked()
     ui->button_seriesColor->update();
 }
 
+
 void add_timeseries_data::on_button_presetColor2_clicked()
 {
     this->ColorUpdated = true;
@@ -356,6 +365,7 @@ void add_timeseries_data::on_button_presetColor2_clicked()
     this->RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
 }
+
 
 void add_timeseries_data::on_button_presetColor3_clicked()
 {
@@ -365,10 +375,33 @@ void add_timeseries_data::on_button_presetColor3_clicked()
     ui->button_seriesColor->update();
 }
 
+
 void add_timeseries_data::on_button_presetColor4_clicked()
 {
     this->ColorUpdated = true;
     ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
     this->RandomButtonColor = mov_colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
     ui->button_seriesColor->update();
+}
+
+
+void add_timeseries_data::on_button_describeepsg_clicked()
+{
+    if(this->epsgmap->contains(ui->spin_epsg->value()))
+    {
+        QString description = QString::fromStdString(this->epsgmap->value(ui->spin_epsg->value()));
+        QMessageBox::information(this,"Coordinate System Description",description);
+    }
+    else
+        QMessageBox::information(this,"Coordinate System Description","ERROR: Invalid EPSG");
+}
+
+
+void add_timeseries_data::on_spin_epsg_valueChanged(int arg1)
+{
+    if(this->epsgmap->contains(arg1))
+        ui->spin_epsg->setStyleSheet("background-color: rgb(255, 255, 255);");
+    else
+        ui->spin_epsg->setStyleSheet("background-color: rgb(255, 0, 0);");
+    return;
 }

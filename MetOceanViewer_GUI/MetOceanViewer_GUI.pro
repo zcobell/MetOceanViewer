@@ -78,10 +78,10 @@ HEADERS  += \
     src/add_timeseries_data.h
 
 FORMS    += \
-    ui/timeseries_add_data.ui \
     ui/about_dialog.ui \
     ui/MetOceanViewer_main.ui \
-    ui/update_dialog.ui
+    ui/update_dialog.ui \
+    ui/add_timeseries_data.ui
 
 OTHER_FILES +=
 

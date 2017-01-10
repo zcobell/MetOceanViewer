@@ -22,7 +22,7 @@
 //-----------------------------------------------------------------------//
 </comment>
  <class>add_timeseries_data</class>
- <widget class="QDialog" name="add_imeds_data">
+ <widget class="QDialog" name="add_timeseries_data">
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
   </property>
@@ -827,6 +827,9 @@
          <height>25</height>
         </size>
        </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <property name="buttonSymbols">
         <enum>QAbstractSpinBox::NoButtons</enum>
        </property>
@@ -893,7 +896,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>add_imeds_data</receiver>
+   <receiver>add_timeseries_data</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -909,7 +912,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>add_imeds_data</receiver>
+   <receiver>add_timeseries_data</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

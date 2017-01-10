@@ -77,6 +77,7 @@ private:
     int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
     int getMultipleMarkersFromMap();
     int getAsyncMultipleMarkersFromMap();
+    int projectStations(QVector<int> epsg, QVector<imeds*> &projectedStations);
 
     //...Private Variables
     int markerID;
@@ -86,6 +87,7 @@ private:
     QVector<double> StationYLocs;
     QVector<int>    selectedStations;
     QVector<QColor> randomColorList;
+    QVector<int>    epsg;
 
     //...Widgets we'll need
     QTableWidget   *table;

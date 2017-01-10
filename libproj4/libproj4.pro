@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
 # MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-# Copyright (C) 2015  Zach Cobell
+# Copyright (C) 2015-2017  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ SOURCES_PROJ4 = \
 
 SOURCES += proj4.cpp $$SOURCES_PROJ4
 
-HEADERS  += proj4.h \
-            proj4_global.h
+HEADERS += proj4.h \
+           proj4_global.h \
+    epsg.h
 

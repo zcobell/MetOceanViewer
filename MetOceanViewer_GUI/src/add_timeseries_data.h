@@ -18,8 +18,8 @@
 //
 //-----------------------------------------------------------------------*/
 
-#ifndef TIMESERIES_ADD_DATA_H
-#define TIMESERIES_ADD_DATA_H
+#ifndef ADD_TIMESERIES_DATA_H
+#define ADD_TIMESERIES_DATA_H
 
 #include <QDateTime>
 #include <QDialog>
@@ -43,7 +43,7 @@ public:
 
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, int FileType, QString StationPath);
+                                 QDateTime ColdStart, int FileType, QString StationPath, int epsg);
 
     QString PreviousDirectory;
 
@@ -61,7 +61,7 @@ public:
     int InputFileType;
     int epsg;
     proj4 *proj;
-    QMap<int,QString> epsgmap;
+    QMap<int,std::string> *epsgmap;
 
 private slots:
 
@@ -81,6 +81,10 @@ private slots:
 
     void on_button_presetColor4_clicked();
 
+    void on_button_describeepsg_clicked();
+
+    void on_spin_epsg_valueChanged(int arg1);
+
 private:
     Ui::add_timeseries_data *ui;
 
@@ -93,4 +97,4 @@ private:
 
 };
 
-#endif // TIMESERIES_ADD_DATA_H
+#endif // ADD_TIMESERIES_DATA_H
