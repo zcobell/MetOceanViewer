@@ -98,6 +98,7 @@ QString about_dialog::generateAboutText()
            "HDF5 v1.8.14 - <a href=\"http://www.hdfgroup.org/HDF5/\">http://www.hdfgroup.org/HDF5/</a> <br>" +
            "Curl v7.35.0 - <a href=\"http://curl.haxx.se/\">http://curl.haxx.se/</a><br>" +
            "zlib v1.2.8 - <a href=\"http://www.zlib.net/\">http://www.zlib.net/</a><br>" +
+           "proj.4 v4.9.2 - <a href=\"http://proj4.org/\">http://proj4.org/</a><br>" +
            "OpenSSL v1.0.2d - <a href=\"https://www.openssl.org\">https://www.openssl.org</a><br>" +
            "XTide - <a href=\"http://www.flaterco.com/xtide/\">http://www.flaterco.com/xtide/</a>" +
 

@@ -46,6 +46,7 @@ The following external libraries/APIs are used in this software
 | netCDF v4.3.3 | http://www.unidata.ucar.edu/software/netcdf)
 | HDF5 v1.8.14 | http://www.hdfgroup.org/HDF5 |
 | Curl v7.35.0 |http://curl.haxx.se |
+| Proj.4 v4.9.2 | http://proj4.org |
 | zlib v1.2.8 |http://www.zlib.net|
 | OpenSSL v1.0.2d |https://www.openssl.org/|
 | XTide |http://www.flaterco.com/xtide/|
