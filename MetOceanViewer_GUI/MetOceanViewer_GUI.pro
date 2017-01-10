@@ -25,63 +25,66 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = MetOcean_Viewer
 TEMPLATE = app
 
-SOURCES += src/main.cpp\
-    src/ui_hwm_tab.cpp \
-    src/ui_noaa_tab.cpp \
-    src/ui_usgs_tab.cpp \
-    src/ui_timeseries_tab.cpp \
-    src/about_dialog.cpp \
-    src/MetOceanViewer_main.cpp \
-    src/setupMetOceanViewerUI.cpp \
-    src/noaa.cpp \
-    src/usgs.cpp \
-    src/user_timeseries.cpp \
-    src/hwm.cpp \
-    src/keyhandler.cpp \
-    src/mov_qchartview.cpp \
-    src/update_dialog.cpp \
-    src/ui_tab_xtide.cpp \
-    src/xtide.cpp \
-    src/javascriptAsyncReturn.cpp \
-    src/imeds.cpp \
-    src/imeds_station.cpp \
-    src/mov_generic.cpp \
-    src/mov_colors.cpp \
-    src/mov_session.cpp \
-    src/adcirc_station_output.cpp \
-    src/filetypes.cpp \
-    src/add_timeseries_data.cpp
+SOURCES +=\
+    src/movAboutDialog.cpp \
+    src/movAdcircStationOutput.cpp \
+    src/movAddTimeseriesData.cpp \
+    src/movColors.cpp \
+    src/movDflow.cpp \
+    src/movFiletypes.cpp \
+    src/movGeneric.cpp \
+    src/movHwm.cpp \
+    src/movImeds.cpp \
+    src/movImedsStation.cpp \
+    src/movInitUI.cpp \
+    src/movJavascriptAsyncReturn.cpp \
+    src/movKeyhandler.cpp \
+    src/movMain.cpp \
+    src/movNoaa.cpp \
+    src/movQChartView.cpp \
+    src/movSession.cpp \
+    src/movStartup.cpp \
+    src/movUserTimeseries.cpp \
+    src/movUiHwmTab.cpp \
+    src/movUiNoaaTab.cpp \
+    src/movUiTimeseriesTab.cpp \
+    src/movUiUsgsTab.cpp \
+    src/movUiXTideTab.cpp \
+    src/movUpdateDialog.cpp \
+    src/movUsgs.cpp \
+    src/movXtide.cpp
 
 HEADERS  += \
-    version.h \
-    src/about_dialog.h \
-    src/MetOceanViewer.h \
-    src/noaa.h \
-    src/mov_errors.h \
-    src/mov_flags.h \ 
-    src/usgs.h \
-    src/user_timeseries.h \
-    src/hwm.h \
-    src/keyhandler.h \
-    src/mov_qchartview.h \
-    src/mov_qwebenginepage.h \
-    src/update_dialog.h \
-    src/xtide.h \
-    src/javascriptAsyncReturn.h \
-    src/imeds.h \
-    src/imeds_station.h \
-    src/mov_generic.h \
-    src/mov_colors.h \
-    src/mov_session.h \
-    src/adcirc_station_output.h \
-    src/filetypes.h \
-    src/add_timeseries_data.h
+    src/movAdcircStationOutput.h \
+    src/movColors.h \
+    src/movDflow.h \
+    src/movErrors.h \
+    src/movFiletypes.h \
+    src/movFlags.h \
+    src/movGeneric.h \
+    src/movHwm.h \
+    src/movImeds.h \
+    src/movImedsStation.h \
+    src/movJavascriptAsyncReturn.h \
+    src/movKeyhandler.h \
+    src/movNoaa.h \
+    src/movQChartView.h \
+    src/movQWebEnginePage.h \
+    src/movSession.h \
+    src/movUserTimeseries.h \
+    src/movUsgs.h \
+    src/movXtide.h \
+    movVersion.h \
+    src/mov_dialog_addtimeseriesdata.h \
+    src/mov_dialog_about.h \
+    src/mov_dialog_update.h \
+    src/mov_window_main.h
 
 FORMS    += \
-    ui/about_dialog.ui \
-    ui/MetOceanViewer_main.ui \
-    ui/update_dialog.ui \
-    ui/add_timeseries_data.ui
+    ui/mov_dialog_about.ui \
+    ui/mov_dialog_addtimeseries.ui \
+    ui/mov_window_main.ui \
+    ui/mov_dialog_update.ui
 
 OTHER_FILES +=
 
@@ -180,7 +183,7 @@ macx{
 INCLUDEPATH += src
 
 RESOURCES += \
-    MetOceanViewer.qrc
+    movResource.qrc
     
 RC_FILE = resources.rc
 
