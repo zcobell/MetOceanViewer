@@ -2,6 +2,7 @@
 
 QtHome=/opt/Qt
 executable=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/MetOceanViewer_GUI/MetOcean_Viewer
+proj4lib=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/libproj4/libproj4.so
 xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
 version=$(git describe --always --tags)
@@ -35,6 +36,7 @@ mkdir -p ./packages_unix/com.qt.qtsharedlibraries/data
 mkdir -p ./packages_unix/com.unidata.netcdf/data 
 
 cp $executable ./packages_unix/com.zachcobell.metoceanviewer/data/.
+cp $proj4lib ./packages_unix/com.zachcobell.metoceanviewer/data/.
 cp $xtide ./packages_unix/com.zachcobell.metoceanviewer/data/.
 cp $harmonics ./packages_unix/com.zachcobell.metoceanviewer/data/.
 
