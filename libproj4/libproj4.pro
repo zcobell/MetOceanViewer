@@ -24,11 +24,11 @@ TARGET       = proj4
 
 TEMPLATE     = lib
 
+PROJ4PATH    = $$PWD/../thirdparty/proj4/src
+
 INCLUDEPATH += $$PROJ4PATH
 
 DEFINES      = PROJ4_LIBRARY
-
-PROJ4PATH    = $$PWD/../thirdparty/proj4/src
 
 #...PROJ Sources
 SOURCES_PROJ4 = \
