@@ -36,7 +36,7 @@
 
 //...Forward declare classes
 class MovQChartView;
-class movImeds;
+class MovImeds;
 
 using namespace QtCharts;
 
@@ -99,7 +99,7 @@ private:
     QDateTime StartDate;
     QDateTime EndDate;
 
-    QVector<movImeds*>  CurrentNOAAStation;
+    QVector<MovImeds*>  CurrentNOAAStation;
     QVector<QString> ErrorString;
 
     //...Pointers to GUI elements

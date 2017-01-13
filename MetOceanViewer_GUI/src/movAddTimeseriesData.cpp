@@ -25,6 +25,7 @@
 #include "movColors.h"
 #include "movGeneric.h"
 #include "movFiletypes.h"
+#include "movDflow.h"
 
 //-------------------------------------------//
 //This brings up the dialog box used to add
@@ -75,6 +76,7 @@ void mov_dialog_addtimeseries::set_default_dialog_box_elements(int NumRowsInTabl
     ui->button_seriesColor->update();
     this->CurrentFileName = QString();
     this->epsg = 4326;
+    this->dFlowVariable = QString();
     this->proj = new proj4(this);
     return;
 }
@@ -89,7 +91,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, int FileType,
-                                             QString StationPath, int epsg)
+                                             QString StationPath, int epsg, QString varname)
 {
     QString ButtonStyle,StationFile;
     this->InputFileColdStart.setTimeSpec(Qt::UTC);
@@ -106,6 +108,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
     this->CurrentFileName = Filepath;
     this->StationFilePath = StationPath;
     this->InputFileType = FileType;
+    this->dFlowVariable = varname;
     this->epsg = epsg;
     ButtonStyle = MovColors::MakeColorString(Color);
     this->RandomButtonColor = Color;
@@ -129,6 +132,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
         this->FileReadError = false;
+        ui->combo_variableSelect->setEnabled(false);
     }
     else if(FileType == FILETYPE_ASCII_ADCIRC)
     {
@@ -138,6 +142,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
         ui->text_stationfile->setEnabled(true);
         ui->browse_stationfile->setEnabled(true);
         this->FileReadError = false;
+        ui->combo_variableSelect->setEnabled(false);
     }
     else if(FileType == FILETYPE_NETCDF_DFLOW)
     {
@@ -147,6 +152,11 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
         ui->text_stationfile->setEnabled(false);
         ui->browse_stationfile->setEnabled(false);
         this->FileReadError = false;
+        MovDflow *dflow = new MovDflow(Filepath,this);
+        qDebug() << dflow->getVaribleList();
+        ui->combo_variableSelect->addItems(dflow->getVaribleList());
+        ui->combo_variableSelect->setCurrentIndex(dflow->getVaribleList().indexOf(this->dFlowVariable));
+        ui->combo_variableSelect->setEnabled(true);
     }
     return;
 }
@@ -221,6 +231,8 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
             ui->text_stationfile->setEnabled(false);
             ui->browse_stationfile->setEnabled(false);
             this->FileReadError = false;
+            MovDflow *dflow = new MovDflow(this->CurrentFileName,this);
+            ui->combo_variableSelect->addItems(dflow->getVaribleList());
         }
         else
         {
@@ -389,7 +401,7 @@ void mov_dialog_addtimeseries::on_button_describeepsg_clicked()
 {
     if(this->epsgmap->contains(ui->spin_epsg->value()))
     {
-        QString description = QString::fromStdString(this->epsgmap->value(ui->spin_epsg->value()));
+        QString description = this->epsgmap->value(ui->spin_epsg->value());
         QMessageBox::information(this,"Coordinate System Description",description);
     }
     else
@@ -403,5 +415,12 @@ void mov_dialog_addtimeseries::on_spin_epsg_valueChanged(int arg1)
         ui->spin_epsg->setStyleSheet("background-color: rgb(255, 255, 255);");
     else
         ui->spin_epsg->setStyleSheet("background-color: rgb(255, 0, 0);");
+    return;
+}
+
+
+void mov_dialog_addtimeseries::on_combo_variableSelect_currentIndexChanged(const QString &arg1)
+{
+    this->dFlowVariable = arg1;
     return;
 }

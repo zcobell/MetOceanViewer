@@ -80,6 +80,7 @@ bool movFiletypes::_checkNetcdfAdcirc(QString filename)
     ierr = nc_close(ncid);
 
     models = QString(model).mid(0,attlen);
+    free(model);
 
     if(models==QStringLiteral("ADCIRC"))
         return true;

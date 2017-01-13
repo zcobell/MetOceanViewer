@@ -19,13 +19,13 @@
 //-----------------------------------------------------------------------*/
 #include "movImeds.h"
 
-movImeds::movImeds(QObject *parent) : QObject(parent)
+MovImeds::MovImeds(QObject *parent) : QObject(parent)
 {
 
 }
 
 
-int movImeds::read(QString filename)
+int MovImeds::read(QString filename)
 {
 
     //Variables
@@ -221,7 +221,7 @@ int movImeds::read(QString filename)
     return 0;
 }
 
-int movImeds::write(QString filename)
+int MovImeds::write(QString filename)
 {
     QString value;
     QFile outputFile(filename);
@@ -254,7 +254,7 @@ int movImeds::write(QString filename)
 }
 
 
-int movImeds::writeCSV(QString filename)
+int MovImeds::writeCSV(QString filename)
 {
     int i,s;
     QString value;

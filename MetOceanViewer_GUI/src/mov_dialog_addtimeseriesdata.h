@@ -43,7 +43,8 @@ public:
 
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, int FileType, QString StationPath, int epsg);
+                                 QDateTime ColdStart, int FileType, QString StationPath, int epsg,
+                                 QString varname);
 
     QString PreviousDirectory;
 
@@ -55,13 +56,13 @@ public:
     QColor RandomButtonColor;
     QString InputFileName,InputColorString;
     QString InputSeriesName,InputFilePath;
-    QString StationFilePath;
+    QString StationFilePath,dFlowVariable;
     QString InputStationFile,CurrentFileName;
     QDateTime InputFileColdStart;
     int InputFileType;
     int epsg;
     proj4 *proj;
-    QMap<int,std::string> *epsgmap;
+    QMap<int,QString> *epsgmap;
 
 private slots:
 
@@ -84,6 +85,8 @@ private slots:
     void on_button_describeepsg_clicked();
 
     void on_spin_epsg_valueChanged(int arg1);
+
+    void on_combo_variableSelect_currentIndexChanged(const QString &arg1);
 
 private:
     Ui::mov_dialog_addtimeseries *ui;

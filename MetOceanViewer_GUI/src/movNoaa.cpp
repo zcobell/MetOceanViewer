@@ -39,8 +39,8 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
 
     //...Initialize the IMEDS object
     this->CurrentNOAAStation.resize(2);
-    this->CurrentNOAAStation[0] = new movImeds(this);
-    this->CurrentNOAAStation[1] = new movImeds(this);
+    this->CurrentNOAAStation[0] = new MovImeds(this);
+    this->CurrentNOAAStation[1] = new MovImeds(this);
     this->CurrentNOAAStation[0]->station.resize(1);
     this->CurrentNOAAStation[1]->station.resize(1);
     this->CurrentNOAAStation[0]->station[0] = new MovImedsStation(this);

@@ -98,6 +98,16 @@ unix{
     LIBS += -L$$OUT_PWD/../libproj4 -lproj4
 }
 
+#...Include the netCDF4-CXX library
+INCLUDEPATH += $$PWD/../thirdparty/netcdf-cxx/cxx4
+win32{
+    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libnetcdfcxx/debug -lnetcdfcxx
+    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libnetcdfcxx/release -lnetcdfcxx
+}
+unix{
+    LIBS += -L$$OUT_PWD/../libnetcdfcxx -lnetcdfcxx
+}
+
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
 

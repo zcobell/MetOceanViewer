@@ -71,18 +71,18 @@ private:
     //...Private functions
     int getMarkerIDFromMap();
     int setMarkerID();
-    int GetUniqueStationList(QVector<movImeds*> Data,QVector<double> &X,QVector<double> &Y);
-    int getUniqueStationList(QVector<movImeds*> Data, QVector<double> &X, QVector<double> &Y);
-    int buildRevisedIMEDS(QVector<movImeds *> &Data, QVector<double> X, QVector<double> Y, QVector<movImeds*> &DataOut);
+    int GetUniqueStationList(QVector<MovImeds*> Data,QVector<double> &X,QVector<double> &Y);
+    int getUniqueStationList(QVector<MovImeds*> Data, QVector<double> &X, QVector<double> &Y);
+    int buildRevisedIMEDS(QVector<MovImeds *> &Data, QVector<double> X, QVector<double> Y, QVector<MovImeds*> &DataOut);
     int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
     int getMultipleMarkersFromMap();
     int getAsyncMultipleMarkersFromMap();
-    int projectStations(QVector<int> epsg, QVector<movImeds*> &projectedStations);
+    int projectStations(QVector<int> epsg, QVector<MovImeds*> &projectedStations);
 
     //...Private Variables
     int markerID;
     QString errorString;
-    QVector<movImeds*> fileData,fileDataUnique;
+    QVector<MovImeds*> fileData,fileDataUnique;
     QVector<double> StationXLocs;
     QVector<double> StationYLocs;
     QVector<int>    selectedStations;

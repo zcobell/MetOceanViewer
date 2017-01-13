@@ -24,11 +24,11 @@
 #include <QFile>
 #include "movImedsStation.h"
 
-class movImeds : public QObject
+class MovImeds : public QObject
 {
     Q_OBJECT
 public:
-    explicit movImeds(QObject *parent = 0);
+    explicit MovImeds(QObject *parent = 0);
 
     //...Methods
     int read(QString filename);

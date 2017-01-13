@@ -25,6 +25,7 @@
 #include "movQWebEnginePage.h"
 #include "movGeneric.h"
 #include "movSession.h"
+#include "movDflow.h"
 
 void mov_window_main::setupMetOceanViewerUI()
 {

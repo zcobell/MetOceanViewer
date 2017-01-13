@@ -56,7 +56,7 @@ public:
 
     int transform(int inputEPSG, int outputEPSG, double x_in, double y_in, double &x_out, double &y_out, bool &isLatLon);
 
-    QMap<int, std::string> *getMap();
+    QMap<int,QString> *getMap();
 
 };
 

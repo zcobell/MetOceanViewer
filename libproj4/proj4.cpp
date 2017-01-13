@@ -64,13 +64,13 @@ int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in, do
     if(!epsgMapping.contains(outputEPSG))
         return ERROR_PROJ4_NOSUCHPROJECTION;
 
-    std::string currentInitialization = epsgMapping[inputEPSG];
-    std::string outputInitialization  = epsgMapping[outputEPSG];
+    QString currentInitialization = epsgMapping[inputEPSG];
+    QString outputInitialization  = epsgMapping[outputEPSG];
 
-    if(!(inputPJ = pj_init_plus(currentInitialization.c_str())))
+    if(!(inputPJ = pj_init_plus(currentInitialization.toStdString().c_str())))
         return ERROR_PROJ4_INTERNAL;
 
-    if(!(outputPJ = pj_init_plus(outputInitialization.c_str())))
+    if(!(outputPJ = pj_init_plus(outputInitialization.toStdString().c_str())))
         return ERROR_PROJ4_INTERNAL;
 
     if(pj_is_latlong(inputPJ))
@@ -116,7 +116,7 @@ int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in, do
  *
  **/
 //-----------------------------------------------------------------------------------------//
-QMap<int, std::string> *proj4::getMap()
+QMap<int, QString> *proj4::getMap()
 {
     return &epsgMapping;
 }

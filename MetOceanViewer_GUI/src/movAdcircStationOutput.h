@@ -24,7 +24,7 @@
 #include <QDateTime>
 #include <QVector>
 
-class movImeds;
+class MovImeds;
 
 class MovAdcircStationOutput : public QObject
 {
@@ -34,7 +34,7 @@ public:
 
     int read(QString AdcircFile,QDateTime coldStart);
     int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
-    movImeds* toIMEDS();
+    MovImeds* toIMEDS();
 
 private:
 

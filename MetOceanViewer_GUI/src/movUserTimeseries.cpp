@@ -24,7 +24,8 @@
 #include "movAdcircStationOutput.h"
 #include "movFiletypes.h"
 #include "proj4.h"
-#include <netcdf.h>
+#include "netcdf.h"
+#include "movDflow.h"
 
 MovUserTimeseries::MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
@@ -427,7 +428,7 @@ int MovUserTimeseries::processData()
 {
     int ierr,i,j,nRow,InputFileType;
     double x,y;
-    QString javascript,StationName,TempFile,TempStationFile;
+    QString javascript,StationName,TempFile,TempStationFile,dflowVar;
     QDateTime ColdStart;
     MovAdcircStationOutput *adcircData;
 
@@ -446,7 +447,7 @@ int MovUserTimeseries::processData()
 
         if(InputFileType==FILETYPE_ASCII_IMEDS)
         {
-            this->fileData[j] = new movImeds(this);
+            this->fileData[j] = new MovImeds(this);
             ierr = this->fileData[j]->read(TempFile);
             if(ierr!=0)
             {
@@ -491,7 +492,12 @@ int MovUserTimeseries::processData()
         }
         else if(FILETYPE_NETCDF_DFLOW)
         {
-            return -1;
+            this->fileData[j] = new MovImeds(this);
+            MovDflow *dflow = new MovDflow(TempFile,this);
+            dflowVar = this->table->item(i,12)->text();
+            ierr = dflow->getVariable(dflowVar,this->fileData[j]);
+            if(ierr!=0)
+                return -1;
         }
         else
         {
@@ -505,6 +511,9 @@ int MovUserTimeseries::processData()
             return -1;
 
     }
+
+    //...Project the data to WGS84
+    ierr = this->projectStations(this->epsg,this->fileData);
 
     //...Build a unique set of timeseries data
     ierr = this->getUniqueStationList(this->fileData,this->StationXLocs,this->StationYLocs);
@@ -520,8 +529,6 @@ int MovUserTimeseries::processData()
         return -1;
     }
 
-    //...Project the new file to the final coordinate system
-    ierr = this->projectStations(this->epsg,this->fileDataUnique);
     if(ierr!=0)
     {
         this->errorString = "Error projecting the station locations";
@@ -582,7 +589,7 @@ int MovUserTimeseries::plotData()
 //and not show data where it doesn't exist for
 //certain files
 //-------------------------------------------//
-int MovUserTimeseries::GetUniqueStationList(QVector<movImeds *> Data, QVector<double> &X, QVector<double> &Y)
+int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X, QVector<double> &Y)
 {
     int i,j,k;
     bool found;
@@ -616,7 +623,7 @@ int MovUserTimeseries::GetUniqueStationList(QVector<movImeds *> Data, QVector<do
 
 
 
-int MovUserTimeseries::getUniqueStationList(QVector<movImeds *> Data, QVector<double> &X, QVector<double> &Y)
+int MovUserTimeseries::getUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X, QVector<double> &Y)
 {
     int i,j,k;
     bool found;
@@ -654,7 +661,7 @@ int MovUserTimeseries::getUniqueStationList(QVector<movImeds *> Data, QVector<do
 //which will have null data where there was
 //not data in the file
 //-------------------------------------------//
-int MovUserTimeseries::buildRevisedIMEDS(QVector<movImeds*> &Data,QVector<double> X, QVector<double> Y, QVector<movImeds*> &DataOut)
+int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds*> &Data,QVector<double> X, QVector<double> Y, QVector<MovImeds*> &DataOut)
 {
     int i,j,k;
     bool found;
@@ -663,7 +670,7 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<movImeds*> &Data,QVector<double
 
     for(i=0;i<Data.length();i++)
     {
-        DataOut[i] = new movImeds(this);
+        DataOut[i] = new MovImeds(this);
 
         DataOut[i]->nstations = X.length();
         DataOut[i]->header1 = Data[i]->header1;
@@ -717,7 +724,7 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<movImeds*> &Data,QVector<double
     return 0;
 }
 
-int MovUserTimeseries::projectStations(QVector<int> epsg, QVector<movImeds *> &projectedStations)
+int MovUserTimeseries::projectStations(QVector<int> epsg, QVector<MovImeds *> &projectedStations)
 {
     int i,j,ierr;
     double x,y,x2,y2;

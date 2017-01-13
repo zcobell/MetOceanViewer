@@ -294,9 +294,9 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
     return 0;
 }
 
-movImeds *MovAdcircStationOutput::toIMEDS()
+MovImeds *MovAdcircStationOutput::toIMEDS()
 {
-    movImeds *outputIMEDS = new movImeds(this);
+    MovImeds *outputIMEDS = new MovImeds(this);
 
     outputIMEDS->nstations = this->nStations;
     outputIMEDS->station.resize(outputIMEDS->nstations);
