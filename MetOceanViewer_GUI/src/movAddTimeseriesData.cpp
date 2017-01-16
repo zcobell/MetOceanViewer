@@ -153,7 +153,8 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
         ui->browse_stationfile->setEnabled(false);
         this->FileReadError = false;
         MovDflow *dflow = new MovDflow(Filepath,this);
-        qDebug() << dflow->getVaribleList();
+        if(dflow->isError())
+            return;
         ui->combo_variableSelect->addItems(dflow->getVaribleList());
         ui->combo_variableSelect->setCurrentIndex(dflow->getVaribleList().indexOf(this->dFlowVariable));
         ui->combo_variableSelect->setEnabled(true);
@@ -232,7 +233,9 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
             ui->browse_stationfile->setEnabled(false);
             this->FileReadError = false;
             MovDflow *dflow = new MovDflow(this->CurrentFileName,this);
-            ui->combo_variableSelect->addItems(dflow->getVaribleList());
+            this->FileReadError = !dflow->isError();
+            if(this->FileReadError)
+                ui->combo_variableSelect->addItems(dflow->getVaribleList());
         }
         else
         {

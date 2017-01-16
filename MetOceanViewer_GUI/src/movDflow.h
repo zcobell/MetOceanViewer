@@ -22,6 +22,8 @@ public:
 
     int getVariable(QString variable, MovImeds *imeds);
 
+    bool isError();
+
 private:
 
     int _init();

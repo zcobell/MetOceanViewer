@@ -1,7 +1,7 @@
 #include "movDflow.h"
 #include "netcdf"
 #include "movImeds.h"
-#include <QDebug>
+#include <QtMath>
 
 using namespace netCDF;
 using namespace netCDF::exceptions;
@@ -21,6 +21,12 @@ MovDflow::MovDflow(QString filename, QObject *parent) : QObject(parent)
 }
 
 
+bool MovDflow::isError()
+{
+    return this->_readError;
+}
+
+
 QStringList MovDflow::getVaribleList()
 {
     return QStringList(this->_plotvarnames);
@@ -29,16 +35,38 @@ QStringList MovDflow::getVaribleList()
 
 int MovDflow::getVariable(QString variable, MovImeds *imeds)
 {
-    int i,ierr;
+    int i,j,ierr;
     QVector<QDateTime> time;
-    QVector<QVector<double> > data;
+    QVector<QVector<double> > data,x_data,y_data;
 
     ierr = this->_getTime(time);
     if(ierr!=0)
         return -1;
-    ierr = this->_getVar(variable,data);
-    if(ierr!=0)
-        return -1;
+
+    if(variable=="velocity_magnitude")
+    {
+        ierr = this->_getVar("x_velocity",x_data);
+        if(ierr!=0)
+            return -1;
+        ierr = this->_getVar("y_velocity",y_data);
+        if(ierr!=0)
+            return -1;
+        data.resize(this->_nStations);
+        for(i=0;i<this->_nStations;i++)
+        {
+            data[i].resize(this->_nSteps);
+            for(j=0;j<this->_nSteps;j++)
+            {
+                data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+            }
+        }
+    }
+    else
+    {
+        ierr = this->_getVar(variable,data);
+        if(ierr!=0)
+            return -1;
+    }
 
     imeds->nstations = this->_nStations;
     imeds->datum = "dflowfm_datum";
@@ -171,6 +199,9 @@ int MovDflow::_getPlottingVariables()
     free(dims);
 
     ierr = nc_close(ncid);
+
+    if(this->_plotvarnames.contains("x_velocity") && this->_plotvarnames.contains("y_velocity"))
+        this->_plotvarnames.append("velocity_magnitude");
 
     return 0;
 
