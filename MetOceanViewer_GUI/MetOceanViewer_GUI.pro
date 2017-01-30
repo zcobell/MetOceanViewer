@@ -115,13 +115,13 @@ DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
 *msvc* {
 
     #...Location of the netCDF srcs
-    INCLUDEPATH += $$PWD/thirdparty/netcdf/include
+    INCLUDEPATH += $$PWD/../thirdparty/netcdf/include
 
     contains(QT_ARCH, i386){
 
         #...Microsoft Visual C++ 32-bit compiler
         message("Using MSVC-32 bit compiler...")
-        LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+        LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
         #...Optimization flags
         QMAKE_CXXFLAGS_RELEASE +=
@@ -133,7 +133,7 @@ DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
 
         #...Microsoft Visual C++ 64-bit compiler
         message("Using MSVC-64 bit compiler...")
-        LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+        LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
         #...Optimization flags
         QMAKE_CXXFLAGS_RELEASE +=
