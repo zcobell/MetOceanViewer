@@ -29,7 +29,7 @@ CONFIG      += staticlib
 NETCDFCXXPATH    = $$PWD/../thirdparty/netcdf-cxx/cxx4
 
 INCLUDEPATH += $$NETCDFCXXPATH
-INCLUDEPATH += $$PWD/../MetOceanViewer_GUI/thirdparty/netcdf/include
+INCLUDEPATH += $$PWD/../thirdparty/netcdf/include
 LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
 DEFINES      = NETCDFCXX_LIBRARY
