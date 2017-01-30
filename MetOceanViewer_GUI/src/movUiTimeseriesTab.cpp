@@ -361,8 +361,8 @@ void mov_window_main::on_button_moveRowUp_clicked()
     QList<QTableWidgetItem*> row2 = grabTableRow(currentRow-1);
 
     //...Move the rows
-    setTableRow(currentRow,row2);
-    setTableRow(currentRow-1,row1);
+    this->setTableRow(currentRow,row2);
+    this->setTableRow(currentRow-1,row1);
 
     //...Set the selection
     ui->table_TimeseriesData->selectRow(currentRow-1);
@@ -387,8 +387,8 @@ void mov_window_main::on_button_moveRowDown_clicked()
     QList<QTableWidgetItem*> row2 = grabTableRow(currentRow+1);
 
     //...Move the rows
-    setTableRow(currentRow,row2);
-    setTableRow(currentRow+1,row1);
+    this->setTableRow(currentRow,row2);
+    this->setTableRow(currentRow+1,row1);
 
     //...Set the selection
     ui->table_TimeseriesData->selectRow(currentRow+1);

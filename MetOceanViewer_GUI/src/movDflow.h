@@ -29,13 +29,16 @@ private:
     int _init();
     int _getPlottingVariables();
     int _getStations();
+    int _get3d();
     int _getTime(QVector<QDateTime> &timeList);
     int _getVar(QString variable, QVector<QVector<double> > &data);
 
     bool              _isInitialized;
     bool              _readError;
+    bool              _is3d;
     int               _nStations;
     int               _nSteps;
+    int               _nLayers;
     QString           _filename;
     QMap<QString,int> _varnames;
     QMap<QString,int> _dimnames;

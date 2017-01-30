@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-winDeployQtBinary=/cygdrive/c/Qt/Qt5.7.0/5.7/msvc2015_64/bin/windeployqt.exe
+winDeployQtBinary=/cygdrive/c/Qt/Qt5.8.0/5.8/msvc2015_64/bin/windeployqt.exe
 binaryCreator=/cygdrive/c/Qt/QtIFW2.0.3/bin/binarycreator.exe
 version=$(git describe --always --tags)
 
@@ -22,10 +22,10 @@ fi
 mkdir -p packages_windows/com.zachcobell.metoceanviewer/data 
 
 #...Grab the MetOceanViewer executable
-cp ../../build-MetOceanViewer-Desktop_Qt_5_7_0_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOcean_Viewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOcean_Viewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the proj4 library
-cp ../../build-MetOceanViewer-Desktop_Qt_5_7_0_MSVC2015_64bit-Release/libproj4/release/proj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/libproj4/release/proj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the Windows XTide executable
 cp ../MetOceanViewer_GUI/thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.

@@ -24,3 +24,6 @@ SUBDIRS  = libproj4 \
            libnetcdfcxx \
            MetOceanViewer_GUI
 CONFIG += ordered           
+
+RESOURCES += \
+    MetOceanViewer_GUI/MetOceanViewer.qrc

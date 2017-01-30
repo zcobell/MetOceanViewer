@@ -102,6 +102,22 @@ int MovDflow::_init()
     ierr = this->_getStations();
     if(ierr!=0)
         return -1;
+    ierr = this->_get3d();
+    if(ierr!=0)
+        return -1;
+
+    //...Until 3d is implemented, it is an error
+    if(this->_is3d)
+        return -1;
+
+    return 0;
+}
+
+
+int MovDflow::_get3d()
+{
+    if(this->_dimnames.contains("laydimw"))
+        this->_is3d = true;
     return 0;
 }
 
@@ -113,22 +129,13 @@ int MovDflow::_getPlottingVariables()
     int i,ierr;
     QString sname;
 
-    char * varname = (char*)malloc(sizeof(char)*(NC_MAX_NAME+1));
-    int  * dims    = (int*)malloc(sizeof(int)*NC_MAX_DIMS);
-
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=NC_NOERR)
-    {
-        free(varname);
-        free(dims);
         return -1;
-    }
 
     ierr = nc_inq_nvars(ncid,&nvar);
     if(ierr!=NC_NOERR)
     {
-        free(varname);
-        free(dims);
         ierr = nc_close(ncid);
         return -1;
     }
@@ -136,11 +143,12 @@ int MovDflow::_getPlottingVariables()
     ierr = nc_inq_ndims(ncid,&ndim);
     if(ierr!=NC_NOERR)
     {
-        free(varname);
-        free(dims);
         ierr = nc_close(ncid);
         return -1;
     }
+
+    char * varname = (char*)malloc(sizeof(char)*(NC_MAX_NAME+1));
+    int  * dims    = (int*)malloc(sizeof(int)*NC_MAX_DIMS);
 
     for(i=0;i<ndim;i++)
     {
@@ -192,6 +200,17 @@ int MovDflow::_getPlottingVariables()
                dims[1]==this->_dimnames["stations"])
                  this->_plotvarnames.append(sname);
         }
+        else if(nd==3)
+        {
+            if(dims[0]==this->_dimnames["time"] &&
+               dims[1]==this->_dimnames["stations"] &&
+               dims[2]==this->_dimnames["laydim"])
+                this->_plotvarnames.append(sname);
+            else if(dims[0]==this->_dimnames["time"] &&
+                    dims[1]==this->_dimnames["stations"] &&
+                    dims[2]==this->_dimnames["laydimw"])
+                this->_plotvarnames.append(sname);
+        }
         this->_varnames[sname] = i;
     }
 
@@ -223,7 +242,7 @@ int MovDflow::_getStations()
     NcVar nameVar = file.getVar("station_name");
 
     nstation = stationDimension.getSize();
-    this->_nStations = nstation;
+    this->_nStations = (int)nstation;
     name_len = stationNameLength.getSize();
     char *stationName = (char*)malloc(sizeof(char)*name_len);
     double *xcoor = (double*)malloc(sizeof(double)*nstation);
@@ -302,15 +321,15 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     }
 
     refString = QString(refstring);
-    refString = refString.mid(0,unitsLen).right(19);
+    refString = refString.mid(0,(int)unitsLen).right(19);
     free(refstring);
 
     this->_refTime = QDateTime::fromString(refString,"yyyy-MM-dd hh:mm:ss");
     this->_refTime.setTimeSpec(Qt::UTC);
 
-    timeList.resize(nsteps);
+    timeList.resize((int)nsteps);
     time = (double*)malloc(sizeof(double)*nsteps);
-    this->_nSteps = nsteps;
+    this->_nSteps = (int)nsteps;
 
     ierr = nc_get_var_double(ncid,varid_time,time);
     if(ierr!=NC_NOERR)

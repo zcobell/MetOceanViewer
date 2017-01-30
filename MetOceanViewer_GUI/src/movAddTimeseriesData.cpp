@@ -156,7 +156,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
         if(dflow->isError())
             return;
         ui->combo_variableSelect->addItems(dflow->getVaribleList());
-        ui->combo_variableSelect->setCurrentIndex(dflow->getVaribleList().indexOf(this->dFlowVariable));
+        ui->combo_variableSelect->setCurrentIndex(dflow->getVaribleList().indexOf(varname));
         ui->combo_variableSelect->setEnabled(true);
     }
     return;
@@ -307,6 +307,7 @@ void mov_dialog_addtimeseries::accept()
     this->InputSeriesName = ui->text_seriesname->text();
     this->InputFileColdStart = ui->date_coldstart->dateTime();
     this->epsg = ui->spin_epsg->value();
+    this->dFlowVariable = ui->combo_variableSelect->currentText();
     TempString = ui->text_unitconvert->text();
     this->InputStationFile = ui->text_stationfile->text();
     if(TempString==NULL)
@@ -322,11 +323,11 @@ void mov_dialog_addtimeseries::accept()
 
     //...Convert to other time units
     if(ui->combo_timeSelect->currentText()=="seconds")
-        this->xadjust = this->xadjust / 3600;
+        this->xadjust = this->xadjust / 3600.0;
     else if(ui->combo_timeSelect->currentText()=="minutes")
-        this->xadjust = this->xadjust / 60;
+        this->xadjust = this->xadjust / 60.0;
     else if(ui->combo_timeSelect->currentText()=="days")
-        this->xadjust = this->xadjust * 24;
+        this->xadjust = this->xadjust * 24.0;
 
     TempString = ui->text_yadjust->text();
     if(TempString==NULL)
