@@ -28,17 +28,17 @@ cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/MetOceanVi
 cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/libproj4/release/proj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the Windows XTide executable
-cp ../MetOceanViewer_GUI/thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the database
-cp ../MetOceanViewer_GUI/thirdparty/xtide-2.15.1/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/xtide-2.15.1/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the icon
 cp ../MetOceanViewer_GUI/img/mov.ico packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab some of the third party libraries
-cp ../MetOceanViewer_GUI/thirdparty/netcdf/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
-cp ../MetOceanViewer_GUI/thirdparty/openssl/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/netcdf/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/openssl/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Run the deployment script
 cd packages_windows/com.zachcobell.metoceanviewer/data

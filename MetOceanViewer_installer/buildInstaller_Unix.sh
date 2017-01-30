@@ -1,8 +1,8 @@
 #!/bin/bash
 
 QtHome=/opt/Qt
-executable=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/MetOceanViewer_GUI/MetOcean_Viewer
-proj4lib=../../build-MetOceanViewer-Desktop_Qt_5_7_0_GCC_64bit-Release/libproj4/libproj4.so
+executable=../../build-MetOceanViewer-Desktop_Qt_5_8_0_GCC_64bit-Release/MetOceanViewer_GUI/MetOcean_Viewer
+proj4lib=../../build-MetOceanViewer-Desktop_Qt_5_8_0_GCC_64bit-Release/libproj4/libproj4.so
 xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
 version=$(git describe --always --tags)
