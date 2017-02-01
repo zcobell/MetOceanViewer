@@ -169,7 +169,6 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
 //-------------------------------------------//
 void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
 {
-    QStringList List;
     QString Directory,filename,TempFile;
 
     if(this->EditBox)
@@ -235,7 +234,10 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
             MovDflow *dflow = new MovDflow(this->CurrentFileName,this);
             this->FileReadError = !dflow->isError();
             if(this->FileReadError)
+            {
                 ui->combo_variableSelect->addItems(dflow->getVaribleList());
+                ui->combo_variableSelect->setCurrentIndex(0);
+            }
         }
         else
         {

@@ -11,6 +11,7 @@ MovDflow::MovDflow(QString filename, QObject *parent) : QObject(parent)
     this->_isInitialized = false;
     this->_readError = true;
     this->_filename = filename;
+    this->_is3d = false;
     int ierr = this->_init();
     if(ierr==0)
     {
@@ -50,7 +51,7 @@ int MovDflow::getVariable(QString variable, MovImeds *imeds)
             return -1;
         ierr = this->_getVar("y_velocity",y_data);
         if(ierr!=0)
-            return -1;
+            return -2;
         data.resize(this->_nStations);
         for(i=0;i<this->_nStations;i++)
         {
@@ -65,7 +66,7 @@ int MovDflow::getVariable(QString variable, MovImeds *imeds)
     {
         ierr = this->_getVar(variable,data);
         if(ierr!=0)
-            return -1;
+            return -3;
     }
 
     imeds->nstations = this->_nStations;
@@ -101,14 +102,14 @@ int MovDflow::_init()
         return -1;
     ierr = this->_getStations();
     if(ierr!=0)
-        return -1;
+        return -2;
     ierr = this->_get3d();
     if(ierr!=0)
-        return -1;
+        return -3;
 
     //...Until 3d is implemented, it is an error
     if(this->_is3d)
-        return -1;
+        return -4;
 
     return 0;
 }
@@ -118,6 +119,8 @@ int MovDflow::_get3d()
 {
     if(this->_dimnames.contains("laydimw"))
         this->_is3d = true;
+    else
+        this->_is3d = false;
     return 0;
 }
 
