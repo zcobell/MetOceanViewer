@@ -91,6 +91,11 @@ private slots:
 private:
     Ui::mov_dialog_addtimeseries *ui;
 
+    void setVariableSelectElements(bool enabled);
+    void setStationSelectElements(bool enabled);
+    void setColdstartSelectElements(bool enabled);
+    void setItemsByFiletype();
+
     struct IMEDSList
     {
         QString Filename;

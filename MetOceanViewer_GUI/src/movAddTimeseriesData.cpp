@@ -26,6 +26,7 @@
 #include "movGeneric.h"
 #include "movFiletypes.h"
 #include "movDflow.h"
+#include <QDebug>
 
 //-------------------------------------------//
 //This brings up the dialog box used to add
@@ -78,6 +79,11 @@ void mov_dialog_addtimeseries::set_default_dialog_box_elements(int NumRowsInTabl
     this->epsg = 4326;
     this->dFlowVariable = QString();
     this->proj = new proj4(this);
+
+    this->setColdstartSelectElements(false);
+    this->setStationSelectElements(false);
+    this->setVariableSelectElements(false);
+
     return;
 }
 //-------------------------------------------//
@@ -115,55 +121,127 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
     ui->button_seriesColor->update();
 
-    if(FileType == FILETYPE_ASCII_IMEDS)
-    {
-        this->InputFileType = FileType;
-        ui->text_filetype->setText("IMEDS");
-        ui->date_coldstart->setEnabled(false);
-        ui->text_stationfile->setEnabled(false);
-        ui->browse_stationfile->setEnabled(false);
-        this->FileReadError = false;
-    }
-    else if(FileType == FILETYPE_NETCDF_ADCIRC)
-    {
-        this->InputFileType = FileType;
-        ui->text_filetype->setText("netCDF");
-        ui->date_coldstart->setEnabled(true);
-        ui->text_stationfile->setEnabled(false);
-        ui->browse_stationfile->setEnabled(false);
-        this->FileReadError = false;
-        ui->combo_variableSelect->setEnabled(false);
-    }
-    else if(FileType == FILETYPE_ASCII_ADCIRC)
-    {
-        this->InputFileType = FileType;
-        ui->text_filetype->setText("ADCIRC");
-        ui->date_coldstart->setEnabled(true);
-        ui->text_stationfile->setEnabled(true);
-        ui->browse_stationfile->setEnabled(true);
-        this->FileReadError = false;
-        ui->combo_variableSelect->setEnabled(false);
-    }
-    else if(FileType == FILETYPE_NETCDF_DFLOW)
-    {
-        this->InputFileType = FileType;
-        ui->text_filetype->setText("DFlow");
-        ui->date_coldstart->setEnabled(false);
-        ui->text_stationfile->setEnabled(false);
-        ui->browse_stationfile->setEnabled(false);
-        this->FileReadError = false;
-        MovDflow *dflow = new MovDflow(Filepath,this);
-        if(dflow->isError())
-            return;
-        ui->combo_variableSelect->clear();
-        ui->combo_variableSelect->addItems(dflow->getVaribleList());
-        ui->combo_variableSelect->setCurrentIndex(dflow->getVaribleList().indexOf(varname));
-        ui->combo_variableSelect->setEnabled(true);
-    }
+    this->setItemsByFiletype();
+
     return;
 }
 //-------------------------------------------//
 
+
+void mov_dialog_addtimeseries::setItemsByFiletype()
+{
+
+    if(this->InputFileType == FILETYPE_ASCII_IMEDS)
+    {
+        ui->text_filetype->setText("IMEDS");
+        this->setColdstartSelectElements(false);
+        this->setStationSelectElements(false);
+        this->setVariableSelectElements(false);
+        this->FileReadError = false;
+    }
+    else if(this->InputFileType == FILETYPE_NETCDF_ADCIRC)
+    {
+        ui->text_filetype->setText("netCDF");
+        ui->date_coldstart->setEnabled(true);
+        this->setColdstartSelectElements(true);
+        this->setStationSelectElements(true);
+        this->setVariableSelectElements(false);
+        this->FileReadError = false;
+    }
+    else if(this->InputFileType == FILETYPE_ASCII_ADCIRC)
+    {
+        ui->text_filetype->setText("ADCIRC");
+        this->setColdstartSelectElements(true);
+        this->setStationSelectElements(true);
+        this->setVariableSelectElements(false);
+        this->FileReadError = false;
+    }
+    else if(this->InputFileType == FILETYPE_NETCDF_DFLOW)
+    {
+        QString variable = this->dFlowVariable;
+
+        ui->text_filetype->setText("DFlow-FM");
+        this->FileReadError = false;
+        this->setColdstartSelectElements(false);
+        this->setStationSelectElements(false);
+        this->setVariableSelectElements(true);
+        MovDflow *dflow = new MovDflow(this->InputFilePath,this);
+        if(dflow->isError())
+        {
+            this->FileReadError = true;
+            return;
+        }
+        ui->combo_variableSelect->clear();
+        QStringList dflowVariables = dflow->getVaribleList();
+        ui->combo_variableSelect->addItems(dflowVariables);
+
+        if(dflowVariables.contains(variable))
+            ui->combo_variableSelect->setCurrentIndex(dflowVariables.indexOf(variable));
+        else
+            ui->combo_variableSelect->setCurrentIndex(0);
+
+        this->dFlowVariable = variable;
+    }
+    else
+    {
+        this->FileReadError = true;
+    }
+}
+
+
+void mov_dialog_addtimeseries::setStationSelectElements(bool enabled)
+{
+    ui->browse_stationfile->setEnabled(enabled);
+    ui->text_stationfile->setEnabled(enabled);
+    if(enabled)
+    {
+        ui->browse_stationfile->show();
+        ui->text_stationfile->show();
+        ui->label_stationfile->show();
+    }
+    else
+    {
+        ui->browse_stationfile->hide();
+        ui->text_stationfile->hide();
+        ui->label_stationfile->hide();
+    }
+    return;
+}
+
+void mov_dialog_addtimeseries::setColdstartSelectElements(bool enabled)
+{
+    ui->date_coldstart->setEnabled(enabled);
+    if(enabled)
+    {
+        ui->date_coldstart->show();
+        ui->label_coldstart->show();
+    }
+    else
+    {
+        ui->date_coldstart->hide();
+        ui->label_coldstart->hide();
+    }
+    return;
+}
+
+
+void mov_dialog_addtimeseries::setVariableSelectElements(bool enabled)
+{
+    ui->combo_variableSelect->setEnabled(enabled);
+    if(enabled)
+    {
+        ui->combo_variableSelect->show();
+        ui->label_variable->show();
+        ui->button_describeVariable->show();
+    }
+    else
+    {
+        ui->combo_variableSelect->hide();
+        ui->label_variable->hide();
+        ui->button_describeVariable->hide();
+    }
+    return;
+}
 
 //-------------------------------------------//
 //Bring up the browse for file dialog
@@ -201,50 +279,8 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
         this->FileReadError = false;
         this->InputFileType = movFiletypes::getIntegerFiletype(this->CurrentFileName);
 
-        if(this->InputFileType == FILETYPE_ASCII_IMEDS)
-        {
-            ui->text_filetype->setText("IMEDS");
-            ui->date_coldstart->setEnabled(false);
-            ui->text_stationfile->setEnabled(false);
-            ui->browse_stationfile->setEnabled(false);
-            this->FileReadError = false;
-        }
-        else if(this->InputFileType == FILETYPE_NETCDF_ADCIRC)
-        {
-            ui->text_filetype->setText("netCDF");
-            ui->date_coldstart->setEnabled(true);
-            ui->text_stationfile->setEnabled(false);
-            ui->browse_stationfile->setEnabled(false);
-            this->FileReadError = false;
-        }
-        else if(this->InputFileType == FILETYPE_ASCII_ADCIRC)
-        {
-            ui->text_filetype->setText("ADCIRC");
-            ui->date_coldstart->setEnabled(true);
-            ui->text_stationfile->setEnabled(true);
-            ui->browse_stationfile->setEnabled(true);
-            this->FileReadError = false;
-        }
-        else if(this->InputFileType == FILETYPE_NETCDF_DFLOW)
-        {
-            ui->text_filetype->setText("DFlow");
-            ui->date_coldstart->setEnabled(false);
-            ui->text_stationfile->setEnabled(false);
-            ui->browse_stationfile->setEnabled(false);
-            this->FileReadError = false;
-            MovDflow *dflow = new MovDflow(this->CurrentFileName,this);
-            this->FileReadError = !dflow->isError();
-            if(this->FileReadError)
-            {
-                ui->combo_variableSelect->clear();
-                ui->combo_variableSelect->addItems(dflow->getVaribleList());
-                ui->combo_variableSelect->setCurrentIndex(0);
-            }
-        }
-        else
-        {
-            this->FileReadError = true;
-        }
+        this->setItemsByFiletype();
+
     }
     return;
 }

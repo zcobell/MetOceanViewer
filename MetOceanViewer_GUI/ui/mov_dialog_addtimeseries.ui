@@ -548,7 +548,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_8">
      <item>
-      <widget class="QLabel" name="label_filename_2">
+      <widget class="QLabel" name="label_stationfile">
        <property name="minimumSize">
         <size>
          <width>125</width>
