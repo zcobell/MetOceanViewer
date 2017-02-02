@@ -42,8 +42,16 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent) :
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
     this->PreviousDirectory = ((mov_window_main *)parent)->PreviousDirectory;
     this->epsgmap = this->proj->getMap();
+    connect(this,SIGNAL(addTimeseriesError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 }
 //-------------------------------------------//
+
+
+void mov_dialog_addtimeseries::throwErrorMessageBox(QString errorString)
+{
+    QMessageBox::critical(this,"ERROR",errorString);
+    return;
+}
 
 
 //-------------------------------------------//
@@ -168,6 +176,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
         MovDflow *dflow = new MovDflow(this->InputFilePath,this);
         if(dflow->isError())
         {
+            emit addTimeseriesError("Error reading DFlow-FM file");
             this->FileReadError = true;
             return;
         }
@@ -185,7 +194,9 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
     else
     {
         this->FileReadError = true;
+        emit addTimeseriesError("No suitable filetype found.");
     }
+    return;
 }
 
 
@@ -377,27 +388,27 @@ void mov_dialog_addtimeseries::accept()
 
     if(this->InputFileName==NULL)
     {
-        QMessageBox::critical(this,"ERROR","Please select an input file.");
+        emit addTimeseriesError("Please select an input file.");
         return;
     }
     else if(this->InputSeriesName==NULL)
     {
-        QMessageBox::critical(this,"ERROR","Please input a series name.");
+        emit addTimeseriesError("Please input a series name.");
         return;
     }
     else if(this->InputColorString==NULL)
     {
-        QMessageBox::critical(this,"ERROR","Please select a valid color for this series.");
+        emit addTimeseriesError("Please select a valid color for this series.");
         return;
     }
     else if(this->InputStationFile==NULL && this->InputFileType==FILETYPE_ASCII_ADCIRC)
     {
-        QMessageBox::critical(this,"ERROR","You did not select a station file.");
+        emit addTimeseriesError("You did not select a station file.");
         return;
     }
     else if(!this->epsgmap->contains(this->epsg))
     {
-        QMessageBox::critical(this,"ERROR","You did not enter a valid EPSG coordinate system.");
+        emit addTimeseriesError("You did not enter a valid EPSG coordinate system.");
     }
     else
         QDialog::accept();

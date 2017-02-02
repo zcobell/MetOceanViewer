@@ -88,6 +88,12 @@ private slots:
 
     void on_combo_variableSelect_currentIndexChanged(const QString &arg1);
 
+signals:
+    void addTimeseriesError(QString);
+
+private slots:
+    void throwErrorMessageBox(QString);
+
 private:
     Ui::mov_dialog_addtimeseries *ui;
 
