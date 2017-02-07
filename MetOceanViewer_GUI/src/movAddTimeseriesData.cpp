@@ -86,6 +86,7 @@ void mov_dialog_addtimeseries::set_default_dialog_box_elements(int NumRowsInTabl
     this->epsg = 4326;
     this->dFlowVariable = QString();
     this->proj = new proj4(this);
+    this->layer = 1;
 
     this->setColdstartSelectElements(false);
     this->setStationSelectElements(false);
