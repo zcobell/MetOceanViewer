@@ -2,6 +2,7 @@
 #include "netcdf"
 #include "movImeds.h"
 #include <QtMath>
+#include <QDebug>
 
 using namespace netCDF;
 using namespace netCDF::exceptions;
@@ -28,45 +29,107 @@ bool MovDflow::isError()
 }
 
 
+bool MovDflow::is3d()
+{
+    return this->_is3d;
+}
+
+
 QStringList MovDflow::getVaribleList()
 {
     return QStringList(this->_plotvarnames);
 }
 
+int MovDflow::getNumLayers()
+{
+    return this->_nLayers;
+}
 
-int MovDflow::getVariable(QString variable, MovImeds *imeds)
+
+int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
 {
     int i,j,ierr;
     QVector<QDateTime> time;
-    QVector<QVector<double> > data,x_data,y_data;
+    QVector<QVector<double> > data,x_data,y_data,z_data;
 
     ierr = this->_getTime(time);
     if(ierr!=0)
         return -1;
 
-    if(variable=="velocity_magnitude")
+    if(this->is3d())
     {
-        ierr = this->_getVar("x_velocity",x_data);
-        if(ierr!=0)
-            return -1;
-        ierr = this->_getVar("y_velocity",y_data);
-        if(ierr!=0)
-            return -2;
-        data.resize(this->_nStations);
-        for(i=0;i<this->_nStations;i++)
+        if(variable==QStringLiteral("horizontal_velocity_magnitude"))
         {
-            data[i].resize(this->_nSteps);
-            for(j=0;j<this->_nSteps;j++)
+            ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
+            if(ierr!=0)
+                return -1;
+            ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
+            if(ierr!=0)
+                return -2;
+            data.resize(this->_nStations);
+            for(i=0;i<this->_nStations;i++)
             {
-                data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+                data[i].resize(this->_nSteps);
+                for(j=0;j<this->_nSteps;j++)
+                {
+                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+                }
             }
+        }
+        else if(variable==QStringLiteral("velocity_magnitude"))
+        {
+            ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
+            if(ierr!=0)
+                return -1;
+            ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
+            if(ierr!=0)
+                return -2;
+            ierr = this->_getVar(QStringLiteral("z_velocity"),layer,z_data);
+            if(ierr!=0)
+                return -3;
+            data.resize(this->_nStations);
+            for(i=0;i<this->_nStations;i++)
+            {
+                data[i].resize(this->_nSteps);
+                for(j=0;j<this->_nSteps;j++)
+                {
+                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0)+qPow(z_data[i][j],2.0));
+                }
+            }
+        }
+        else
+        {
+            ierr = this->_getVar(variable,layer,data);
+            if(ierr!=0)
+                return -3;
         }
     }
     else
     {
-        ierr = this->_getVar(variable,data);
-        if(ierr!=0)
-            return -3;
+        if(variable==QStringLiteral("velocity_magnitude"))
+        {
+            ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
+            if(ierr!=0)
+                return -1;
+            ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
+            if(ierr!=0)
+                return -2;
+            data.resize(this->_nStations);
+            for(i=0;i<this->_nStations;i++)
+            {
+                data[i].resize(this->_nSteps);
+                for(j=0;j<this->_nSteps;j++)
+                {
+                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+                }
+            }
+        }
+        else
+        {
+            ierr = this->_getVar(variable,layer,data);
+            if(ierr!=0)
+                return -3;
+        }
     }
 
     imeds->nstations = this->_nStations;
@@ -103,13 +166,6 @@ int MovDflow::_init()
     ierr = this->_getStations();
     if(ierr!=0)
         return -2;
-    ierr = this->_get3d();
-    if(ierr!=0)
-        return -3;
-
-    //...Until 3d is implemented, it is an error
-    if(this->_is3d)
-        return -4;
 
     return 0;
 }
@@ -117,10 +173,32 @@ int MovDflow::_init()
 
 int MovDflow::_get3d()
 {
+
+    int ierr,ncid;
+    size_t nLayers;
+
     if(this->_dimnames.contains("laydimw"))
         this->_is3d = true;
     else
+    {
         this->_is3d = false;
+        return 0;
+    }
+
+    ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
+    if(ierr!=NC_NOERR)
+        return -1;
+
+    ierr = nc_inq_dimlen(ncid,this->_dimnames["laydim"],&nLayers);
+    if(ierr!=NC_NOERR)
+        return -1;
+
+    ierr = nc_close(ncid);
+    if(ierr!=NC_NOERR)
+        return -1;
+
+    this->_nLayers = (int)nLayers;
+
     return 0;
 }
 
@@ -188,6 +266,8 @@ int MovDflow::_getPlottingVariables()
             return -1;
         }
 
+        this->_nDims[sname] = (int)nd;
+
         ierr = nc_inq_vardimid(ncid,i,dims);
         if(ierr!=NC_NOERR)
         {
@@ -209,10 +289,10 @@ int MovDflow::_getPlottingVariables()
                dims[1]==this->_dimnames["stations"] &&
                dims[2]==this->_dimnames["laydim"])
                 this->_plotvarnames.append(sname);
-            else if(dims[0]==this->_dimnames["time"] &&
-                    dims[1]==this->_dimnames["stations"] &&
-                    dims[2]==this->_dimnames["laydimw"])
-                this->_plotvarnames.append(sname);
+//            else if(dims[0]==this->_dimnames["time"] &&
+//                    dims[1]==this->_dimnames["stations"] &&
+//                    dims[2]==this->_dimnames["laydimw"])
+//                this->_plotvarnames.append(sname);
         }
         this->_varnames[sname] = i;
     }
@@ -222,8 +302,25 @@ int MovDflow::_getPlottingVariables()
 
     ierr = nc_close(ncid);
 
-    if(this->_plotvarnames.contains("x_velocity") && this->_plotvarnames.contains("y_velocity"))
-        this->_plotvarnames.append("velocity_magnitude");
+    ierr = this->_get3d();
+    if(ierr!=0)
+        return -1;
+
+    if(this->is3d())
+    {
+        if(this->_plotvarnames.contains("x_velocity") &&
+                this->_plotvarnames.contains("y_velocity") &&
+                this->_plotvarnames.contains("z_velocity"))
+            this->_plotvarnames.append("velocity_magnitude");
+
+        if(this->_plotvarnames.contains("x_velocity") && this->_plotvarnames.contains("y_velocity"))
+            this->_plotvarnames.append("horizontal_velocity_magnitude");
+    }
+    else
+    {
+        if(this->_plotvarnames.contains("x_velocity") && this->_plotvarnames.contains("y_velocity"))
+            this->_plotvarnames.append("velocity_magnitude");
+    }
 
     return 0;
 
@@ -348,7 +445,18 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
 }
 
 
-int MovDflow::_getVar(QString variable, QVector<QVector<double> > &data)
+int MovDflow::_getVar(QString variable, int layer, QVector<QVector<double> > &data)
+{
+    if(this->_nDims[variable]==2)
+        return this->_getVar2D(variable,data);
+    else if(this->_nDims[variable]==3)
+        return this->_getVar3D(variable,layer,data);
+    else
+        return -1;
+}
+
+
+int MovDflow::_getVar2D(QString variable, QVector<QVector<double> > &data)
 {
     int i,j,ierr,ncid,varid;
     double *d = (double*)malloc(sizeof(double)*this->_nSteps*this->_nStations);
@@ -366,6 +474,43 @@ int MovDflow::_getVar(QString variable, QVector<QVector<double> > &data)
     start[1] = 0;
     count[0] = this->_nSteps;
     count[1] = this->_nStations;
+    ierr = nc_get_vara_double(ncid,varid,start,count,d);
+
+    for(i=0;i<this->_nSteps;i++)
+        for(j=0;j<this->_nStations;j++)
+            data[j][i] = d[i*this->_nStations+j];
+
+    free(d);
+    free(start);
+    free(count);
+
+    ierr = nc_close(ncid);
+
+    return ierr;
+
+}
+
+
+int MovDflow::_getVar3D(QString variable, int layer, QVector<QVector<double> > &data)
+{
+    int i,j,ierr,ncid,varid;
+    double *d = (double*)malloc(sizeof(double)*this->_nSteps*this->_nStations);
+    size_t *start  = (size_t*)malloc(sizeof(size_t)*3);
+    size_t *count = (size_t*)malloc(sizeof(size_t)*3);
+
+    data.resize(this->_nStations);
+    for(i=0;i<this->_nStations;i++)
+        data[i].resize(this->_nSteps);
+
+    varid = this->_varnames[variable];
+    ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
+
+    start[0] = 0;
+    start[1] = 0;
+    start[2] = layer-1;
+    count[0] = this->_nSteps;
+    count[1] = this->_nStations;
+    count[2] = 1;
     ierr = nc_get_vara_double(ncid,varid,start,count,d);
 
     for(i=0;i<this->_nSteps;i++)

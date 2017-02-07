@@ -44,7 +44,7 @@ public:
     void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
                                  double UnitConvert, double xmove, double ymove, QColor Color,
                                  QDateTime ColdStart, int FileType, QString StationPath, int epsg,
-                                 QString varname);
+                                 QString varname, int layer);
 
     QString PreviousDirectory;
 
@@ -60,7 +60,7 @@ public:
     QString InputStationFile,CurrentFileName;
     QDateTime InputFileColdStart;
     int InputFileType;
-    int epsg;
+    int epsg,layer;
     proj4 *proj;
     QMap<int,QString> *epsgmap;
 
@@ -100,6 +100,7 @@ private:
     void setVariableSelectElements(bool enabled);
     void setStationSelectElements(bool enabled);
     void setColdstartSelectElements(bool enabled);
+    void setVerticalLayerElements(bool enabled);
     void setItemsByFiletype();
 
     struct IMEDSList

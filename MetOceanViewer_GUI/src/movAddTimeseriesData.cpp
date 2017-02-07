@@ -91,6 +91,7 @@ void mov_dialog_addtimeseries::set_default_dialog_box_elements(int NumRowsInTabl
     this->setColdstartSelectElements(false);
     this->setStationSelectElements(false);
     this->setVariableSelectElements(false);
+    this->setVerticalLayerElements(false);
 
     return;
 }
@@ -105,7 +106,8 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
                                              QString SeriesName, double UnitConvert,
                                              double xmove, double ymove, QColor Color,
                                              QDateTime ColdStart, int FileType,
-                                             QString StationPath, int epsg, QString varname)
+                                             QString StationPath, int epsg, QString varname,
+                                             int layer)
 {
     QString ButtonStyle,StationFile;
     this->InputFileColdStart.setTimeSpec(Qt::UTC);
@@ -124,6 +126,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
     this->InputFileType = FileType;
     this->dFlowVariable = varname;
     this->epsg = epsg;
+    this->layer = layer;
     ButtonStyle = MovColors::MakeColorString(Color);
     this->RandomButtonColor = Color;
     ui->button_seriesColor->setStyleSheet(ButtonStyle);
@@ -145,6 +148,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
         this->setColdstartSelectElements(false);
         this->setStationSelectElements(false);
         this->setVariableSelectElements(false);
+        this->setVerticalLayerElements(false);
         this->FileReadError = false;
     }
     else if(this->InputFileType == FILETYPE_NETCDF_ADCIRC)
@@ -154,6 +158,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
         this->setColdstartSelectElements(true);
         this->setStationSelectElements(true);
         this->setVariableSelectElements(false);
+        this->setVerticalLayerElements(false);
         this->FileReadError = false;
     }
     else if(this->InputFileType == FILETYPE_ASCII_ADCIRC)
@@ -162,6 +167,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
         this->setColdstartSelectElements(true);
         this->setStationSelectElements(true);
         this->setVariableSelectElements(false);
+        this->setVerticalLayerElements(false);
         this->FileReadError = false;
     }
     else if(this->InputFileType == FILETYPE_NETCDF_DFLOW)
@@ -170,16 +176,30 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
 
         ui->text_filetype->setText("DFlow-FM");
         this->FileReadError = false;
+
         this->setColdstartSelectElements(false);
         this->setStationSelectElements(false);
         this->setVariableSelectElements(true);
+
         MovDflow *dflow = new MovDflow(this->InputFilePath,this);
+
         if(dflow->isError())
         {
             emit addTimeseriesError("Error reading DFlow-FM file");
             this->FileReadError = true;
             return;
         }
+
+        if(dflow->is3d())
+        {
+            this->setVerticalLayerElements(true);
+            ui->spin_layer->setMinimum(1);
+            ui->spin_layer->setMaximum(dflow->getNumLayers());
+            ui->spin_layer->setValue(this->layer);
+        }
+        else
+            this->setVerticalLayerElements(false);
+
         ui->combo_variableSelect->clear();
         QStringList dflowVariables = dflow->getVaribleList();
         ui->combo_variableSelect->addItems(dflowVariables);
@@ -195,6 +215,23 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
     {
         this->FileReadError = true;
         emit addTimeseriesError("No suitable filetype found.");
+    }
+    return;
+}
+
+
+void mov_dialog_addtimeseries::setVerticalLayerElements(bool enabled)
+{
+    ui->spin_layer->setEnabled(enabled);
+    if(enabled)
+    {
+        ui->spin_layer->show();
+        ui->label_layer->show();
+    }
+    else
+    {
+        ui->spin_layer->hide();
+        ui->label_layer->hide();
     }
     return;
 }
@@ -358,6 +395,7 @@ void mov_dialog_addtimeseries::accept()
     this->InputSeriesName = ui->text_seriesname->text();
     this->InputFileColdStart = ui->date_coldstart->dateTime();
     this->epsg = ui->spin_epsg->value();
+    this->layer = ui->spin_layer->value();
     this->dFlowVariable = ui->combo_variableSelect->currentText();
     TempString = ui->text_unitconvert->text();
     this->InputStationFile = ui->text_stationfile->text();

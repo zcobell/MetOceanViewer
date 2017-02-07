@@ -97,6 +97,7 @@ void mov_window_main::on_button_TimeseriesAddRow_clicked()
         ui->table_TimeseriesData->setItem(NumberOfRows-1,10,new QTableWidgetItem(AddWindow->StationFilePath));
         ui->table_TimeseriesData->setItem(NumberOfRows-1,11,new QTableWidgetItem(QString::number(AddWindow->epsg)));
         ui->table_TimeseriesData->setItem(NumberOfRows-1,12,new QTableWidgetItem(AddWindow->dFlowVariable));
+        ui->table_TimeseriesData->setItem(NumberOfRows-1,13,new QTableWidgetItem(QString::number(AddWindow->layer)));
         CellColor.setNamedColor(AddWindow->InputColorString);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setBackgroundColor(CellColor);
         ui->table_TimeseriesData->item(NumberOfRows-1,2)->setTextColor(CellColor);
@@ -151,11 +152,11 @@ void mov_window_main::SetupTimeseriesTable()
 {
     QString HeaderString = QString("Filename;Series Name;Color;Unit Conversion;")+
                            QString("x-shift;y-shift;FullPathToFile;Cold Start;")+
-                           QString("FileType;StationFile;StationFilePath;epsg;dflowvariable");
+                           QString("FileType;StationFile;StationFilePath;epsg;dflowvariable;layer");
     QStringList Header = HeaderString.split(";");
 
     ui->table_TimeseriesData->setRowCount(0);
-    ui->table_TimeseriesData->setColumnCount(13);
+    ui->table_TimeseriesData->setColumnCount(14);
     ui->table_TimeseriesData->setColumnHidden(6,true);
     ui->table_TimeseriesData->setColumnHidden(7,true);
     ui->table_TimeseriesData->setColumnHidden(8,true);
@@ -163,6 +164,7 @@ void mov_window_main::SetupTimeseriesTable()
     ui->table_TimeseriesData->setColumnHidden(10,true);
     ui->table_TimeseriesData->setColumnHidden(11,true);
     ui->table_TimeseriesData->setColumnHidden(12,true);
+    ui->table_TimeseriesData->setColumnHidden(13,true);
     ui->table_TimeseriesData->setHorizontalHeaderLabels(Header);
     ui->table_TimeseriesData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->table_TimeseriesData->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -178,7 +180,7 @@ void mov_window_main::SetupTimeseriesTable()
 //-------------------------------------------//
 void mov_window_main::on_button_TimeseriesEditRow_clicked()
 {
-    int CurrentRow,FileType,epsg;
+    int CurrentRow,FileType,epsg,dflowLayer;
     double xadjust,yadjust,UnitConversion;
     QColor CellColor;
     QString Filename,Filepath,SeriesName,StationFilePath,dflowVariable;
@@ -215,11 +217,12 @@ void mov_window_main::on_button_TimeseriesEditRow_clicked()
     CellColor.setNamedColor(ui->table_TimeseriesData->item(CurrentRow,2)->text());
     StationFilePath = ui->table_TimeseriesData->item(CurrentRow,10)->text();
     CheckState = ui->table_TimeseriesData->item(CurrentRow,0)->checkState();
+    dflowLayer = ui->table_TimeseriesData->item(CurrentRow,13)->text().toInt();
 
     AddWindow->set_dialog_box_elements(Filename,Filepath,SeriesName,
                                        UnitConversion,xadjust,yadjust,
                                        CellColor,ColdStart,FileType,
-                                       StationFilePath,epsg,dflowVariable);
+                                       StationFilePath,epsg,dflowVariable,dflowLayer);
 
     int WindowStatus = AddWindow->exec();
 
@@ -238,6 +241,7 @@ void mov_window_main::on_button_TimeseriesEditRow_clicked()
         ui->table_TimeseriesData->setItem(CurrentRow,10,new QTableWidgetItem(AddWindow->StationFilePath));
         ui->table_TimeseriesData->setItem(CurrentRow,11,new QTableWidgetItem(QString::number(AddWindow->epsg)));
         ui->table_TimeseriesData->setItem(CurrentRow,12,new QTableWidgetItem(AddWindow->dFlowVariable));
+        ui->table_TimeseriesData->setItem(CurrentRow,13,new QTableWidgetItem(QString::number(AddWindow->layer)));
 
         //Tooltips in table cells
         ui->table_TimeseriesData->item(CurrentRow,0)->setToolTip(AddWindow->InputFilePath);

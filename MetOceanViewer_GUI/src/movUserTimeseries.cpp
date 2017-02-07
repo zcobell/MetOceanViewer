@@ -426,7 +426,7 @@ QString MovUserTimeseries::getErrorString()
 
 int MovUserTimeseries::processData()
 {
-    int ierr,i,j,nRow,InputFileType;
+    int ierr,i,j,nRow,InputFileType,dflowLayer;
     double x,y;
     QString javascript,StationName,TempFile,TempStationFile,dflowVar;
     QDateTime ColdStart;
@@ -495,7 +495,9 @@ int MovUserTimeseries::processData()
             this->fileData[j] = new MovImeds(this);
             MovDflow *dflow = new MovDflow(TempFile,this);
             dflowVar = this->table->item(i,12)->text();
-            ierr = dflow->getVariable(dflowVar,this->fileData[j]);
+            dflowLayer = this->table->item(i,13)->text().toInt();
+            qDebug() << dflowLayer;
+            ierr = dflow->getVariable(dflowVar,dflowLayer,this->fileData[j]);
             if(ierr!=0)
                 return -1;
         }

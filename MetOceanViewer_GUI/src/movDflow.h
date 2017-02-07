@@ -20,9 +20,13 @@ public:
 
     int getStations();
 
-    int getVariable(QString variable, MovImeds *imeds);
+    int getVariable(QString variable, int layer, MovImeds *imeds);
+
+    int getNumLayers();
 
     bool isError();
+
+    bool is3d();
 
 private:
 
@@ -31,7 +35,9 @@ private:
     int _getStations();
     int _get3d();
     int _getTime(QVector<QDateTime> &timeList);
-    int _getVar(QString variable, QVector<QVector<double> > &data);
+    int _getVar(QString variable, int layer, QVector<QVector<double> > &data);
+    int _getVar2D(QString variable, QVector<QVector<double> > &data);
+    int _getVar3D(QString variable, int layer, QVector<QVector<double> > &data);
 
     bool              _isInitialized;
     bool              _readError;
@@ -42,6 +48,7 @@ private:
     QString           _filename;
     QMap<QString,int> _varnames;
     QMap<QString,int> _dimnames;
+    QMap<QString,int> _nDims;
     QList<QString>    _plotvarnames;
     QVector<double>   _xCoordinates;
     QVector<double>   _yCoordinates;
