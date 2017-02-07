@@ -496,7 +496,6 @@ int MovUserTimeseries::processData()
             MovDflow *dflow = new MovDflow(TempFile,this);
             dflowVar = this->table->item(i,12)->text();
             dflowLayer = this->table->item(i,13)->text().toInt();
-            qDebug() << dflowLayer;
             ierr = dflow->getVariable(dflowVar,dflowLayer,this->fileData[j]);
             if(ierr!=0)
                 return -1;

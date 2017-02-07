@@ -26,7 +26,6 @@
 #include "movGeneric.h"
 #include "movFiletypes.h"
 #include "movDflow.h"
-#include <QDebug>
 
 //-------------------------------------------//
 //This brings up the dialog box used to add

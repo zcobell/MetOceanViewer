@@ -2,7 +2,6 @@
 #include "netcdf"
 #include "movImeds.h"
 #include <QtMath>
-#include <QDebug>
 
 using namespace netCDF;
 using namespace netCDF::exceptions;
