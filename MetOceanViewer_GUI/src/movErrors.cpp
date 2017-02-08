@@ -1,4 +1,4 @@
-#include "moverrors.h"
+#include "movErrors.h"
 #include "netcdf.h"
 
 static QMap<int,QString> _errorTable = {
