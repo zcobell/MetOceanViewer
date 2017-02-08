@@ -26,6 +26,7 @@
 #include "proj4.h"
 #include "netcdf.h"
 #include "movDflow.h"
+#include "movErrors.h"
 
 MovUserTimeseries::MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
@@ -94,7 +95,7 @@ int MovUserTimeseries::getDataBounds(double &ymin, double &ymax, QDateTime &minD
             }
         }
     }
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -146,7 +147,7 @@ int MovUserTimeseries::saveImage(QString filename, QString filter)
         pixmap.save(&outputFile,"JPG",100);
     }
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -158,7 +159,7 @@ int MovUserTimeseries::getCurrentMarkerID()
 int MovUserTimeseries::setMarkerID()
 {
     this->markerID = this->getMarkerIDFromMap();
-    return 0;
+    return ERR_NOERR;
 }
 
 int MovUserTimeseries::getClickedMarkerID()
@@ -199,9 +200,9 @@ int MovUserTimeseries::getMultipleMarkersFromMap()
         }
     }
     else
-        return -1;
+        return ERR_MARKERSELECTION;
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -449,10 +450,10 @@ int MovUserTimeseries::processData()
         {
             this->fileData[j] = new MovImeds(this);
             ierr = this->fileData[j]->read(TempFile);
-            if(ierr!=0)
+            if(ierr!=ERR_NOERR)
             {
                 this->errorString = "Error reading file: "+TempFile;
-                return -1;
+                return ERR_IMEDS_FILEREADERROR;
             }
             this->fileData[j]->success = true;
         }
@@ -461,15 +462,15 @@ int MovUserTimeseries::processData()
             ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
             adcircData = new MovAdcircStationOutput(this);
             ierr = adcircData->read(TempFile,ColdStart);
-            if(ierr!=0)
+            if(ierr!=ERR_NOERR)
             {
                 this->errorString = "Error reading file: "+TempFile;
-                return -1;
+                return ERR_ADCIRC_NETCDFREADERROR;
             }
 
             this->fileData[j] = adcircData->toIMEDS();
-            if(ierr!=0)
-                return -1;
+            if(ierr!=ERR_NOERR)
+                return ERR_ADCIRC_NETCDFTOIMEDS;
             this->fileData[j]->success = true;
 
         }
@@ -479,14 +480,14 @@ int MovUserTimeseries::processData()
             TempStationFile = this->table->item(i,10)->text();
             adcircData = new MovAdcircStationOutput(this);
             ierr = adcircData->read(TempFile,TempStationFile,ColdStart);
-            if(ierr!=0)
+            if(ierr!=ERR_NOERR)
             {
                 this->errorString = "Error reading file: "+TempFile;
-                return -1;
+                return ERR_ADCIRC_ASCIIREADERROR;
             }
             this->fileData[j] = adcircData->toIMEDS();
-            if(ierr!=0)
-                return -1;
+            if(ierr!=ERR_NOERR)
+                return ERR_ADCIRC_ASCIITOIMEDS;
             this->fileData[j]->success = true;
 
         }
@@ -497,43 +498,43 @@ int MovUserTimeseries::processData()
             dflowVar = this->table->item(i,12)->text();
             dflowLayer = this->table->item(i,13)->text().toInt();
             ierr = dflow->getVariable(dflowVar,dflowLayer,this->fileData[j]);
-            if(ierr!=0)
-                return -1;
+            this->errorString = "Error processing DFlow: "+dflow->error->toString();
+            if(ierr!=ERR_NOERR)
+                return ERR_DFLOW_FILEREADERROR;
         }
         else
         {
             this->errorString = "Invalid file format";
-            return -1;
+            return ERR_INVALIDFILEFORMAT;
         }
 
         if(this->fileData[j]->success)
             j = j + 1;
         else
-            return -1;
+            return ERR_GENERICFILEREADERROR;
 
     }
 
     //...Project the data to WGS84
     ierr = this->projectStations(this->epsg,this->fileData);
+    if(ierr!=0)
+    {
+        this->errorString = "Error projecting the station locations";
+        return ERR_PROJECTSTATIONS;
+    }
 
     //...Build a unique set of timeseries data
     ierr = this->getUniqueStationList(this->fileData,this->StationXLocs,this->StationYLocs);
-    if(ierr!=0)
+    if(ierr!=ERR_NOERR)
     {
         this->errorString = "Error building the station list";
-        return -1;
+        return ERR_BUILDSTATIONLIST;
     }
     ierr = this->buildRevisedIMEDS(this->fileData,this->StationXLocs,this->StationYLocs,this->fileDataUnique);
     if(ierr!=0)
     {
         this->errorString = "Error building the unique dataset";
-        return -1;
-    }
-
-    if(ierr!=0)
-    {
-        this->errorString = "Error projecting the station locations";
-        return -1;
+        return ERR_BUILDREVISEDIMEDS;
     }
 
     //...Check that the page is finished loading
@@ -570,7 +571,7 @@ int MovUserTimeseries::processData()
     }
     this->map->page()->runJavaScript("AddToMap()");
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -580,7 +581,7 @@ int MovUserTimeseries::plotData()
     //...Get the current marker selections, multiple if user ctrl+click selects
     this->getAsyncMultipleMarkersFromMap();
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -618,7 +619,7 @@ int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data, QVector<do
 
         }
     }
-    return 0;
+    return ERR_NOERR;
 }
 //-------------------------------------------//
 
@@ -652,7 +653,7 @@ int MovUserTimeseries::getUniqueStationList(QVector<MovImeds *> Data, QVector<do
 
         }
     }
-    return 0;
+    return ERR_NOERR;
 }
 //-------------------------------------------//
 
@@ -722,7 +723,7 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds*> &Data,QVector<double
             }
         }
     }
-    return 0;
+    return ERR_NOERR;
 }
 
 int MovUserTimeseries::projectStations(QVector<int> epsg, QVector<MovImeds *> &projectedStations)
@@ -742,11 +743,11 @@ int MovUserTimeseries::projectStations(QVector<int> epsg, QVector<MovImeds *> &p
                 y = projectedStations[i]->station[j]->latitude;
                 ierr = projection->transform(epsg[i],4326,x,y,x2,y2,isLatLon);
                 if(ierr!=0)
-                    return -1;
+                    return ERR_PROJECTSTATIONS;
                 projectedStations[i]->station[j]->longitude = x2;
                 projectedStations[i]->station[j]->latitude = y2;
             }
         }
     }
-    return 0;
+    return ERR_NOERR;
 }

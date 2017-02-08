@@ -25,6 +25,7 @@
 #include <QDialog>
 #include <QVector>
 #include "proj4.h"
+#include "movDflow.h"
 
 namespace Ui {
 class mov_dialog_addtimeseries;
@@ -102,6 +103,8 @@ private:
     void setColdstartSelectElements(bool enabled);
     void setVerticalLayerElements(bool enabled);
     void setItemsByFiletype();
+
+    MovDflow *dflow;
 
     struct IMEDSList
     {

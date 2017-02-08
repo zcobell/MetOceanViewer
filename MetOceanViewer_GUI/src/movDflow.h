@@ -7,6 +7,7 @@
 #include <QVector>
 #include <QDateTime>
 #include "movImeds.h"
+#include "movErrors.h"
 
 class MovDflow : public QObject
 {
@@ -24,9 +25,11 @@ public:
 
     int getNumLayers();
 
-    bool isError();
-
     bool is3d();
+
+    bool variableIs3d(QString variable);
+
+    movErrors *error;
 
 private:
 

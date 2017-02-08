@@ -1,6 +1,7 @@
 #include "movDflow.h"
 #include "netcdf"
 #include "movImeds.h"
+#include "movErrors.h"
 #include <QtMath>
 
 using namespace netCDF;
@@ -12,19 +13,23 @@ MovDflow::MovDflow(QString filename, QObject *parent) : QObject(parent)
     this->_readError = true;
     this->_filename = filename;
     this->_is3d = false;
+    this->error = new movErrors(this);
+
     int ierr = this->_init();
-    if(ierr==0)
+
+    this->error->setErrorCode(ierr);
+
+    if(this->error->isError())
     {
         this->_isInitialized = true;
         this->_readError = false;
     }
+    else
+    {
+        this->_isInitialized = false;
+        this->_readError = true;
+    }
     return;
-}
-
-
-bool MovDflow::isError()
-{
-    return this->_readError;
 }
 
 
@@ -39,9 +44,26 @@ QStringList MovDflow::getVaribleList()
     return QStringList(this->_plotvarnames);
 }
 
+
 int MovDflow::getNumLayers()
 {
     return this->_nLayers;
+}
+
+
+bool MovDflow::variableIs3d(QString variable)
+{
+    if(variable=="velocity_magnitude")
+    {
+        if(this->_nDims["x_velocity"]==3)
+            return true;
+        else
+            return false;
+    }
+    if(this->_nDims[variable]==3)
+        return true;
+    else
+        return false;
 }
 
 
@@ -52,19 +74,28 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
     QVector<QVector<double> > data,x_data,y_data,z_data;
 
     ierr = this->_getTime(time);
-    if(ierr!=0)
-        return -1;
+    this->error->setErrorCode(ierr);
+    if(this->error->isError())
+        return this->error->errorCode();
 
     if(this->is3d())
     {
         if(variable==QStringLiteral("horizontal_velocity_magnitude"))
         {
             ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
-            if(ierr!=0)
-                return -1;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+                return this->error->errorCode();
+            }
+
             ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
-            if(ierr!=0)
-                return -2;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+                return this->error->errorCode();
+            }
+
             data.resize(this->_nStations);
             for(i=0;i<this->_nStations;i++)
             {
@@ -78,14 +109,26 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
         else if(variable==QStringLiteral("velocity_magnitude"))
         {
             ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
-            if(ierr!=0)
-                return -1;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+                return this->error->errorCode();
+            }
+
             ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
-            if(ierr!=0)
-                return -2;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+                return this->error->errorCode();
+            }
+
             ierr = this->_getVar(QStringLiteral("z_velocity"),layer,z_data);
-            if(ierr!=0)
-                return -3;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOZVELOCITY);
+                return this->error->errorCode();
+            }
+
             data.resize(this->_nStations);
             for(i=0;i<this->_nStations;i++)
             {
@@ -98,21 +141,35 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
         }
         else
         {
+
             ierr = this->_getVar(variable,layer,data);
-            if(ierr!=0)
-                return -3;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ierr);
+                return this->error->errorCode();
+            }
+
         }
     }
     else
     {
         if(variable==QStringLiteral("velocity_magnitude"))
         {
+
             ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
-            if(ierr!=0)
-                return -1;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+                return this->error->errorCode();
+            }
+
             ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
-            if(ierr!=0)
-                return -2;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+                return this->error->errorCode();
+            }
+
             data.resize(this->_nStations);
             for(i=0;i<this->_nStations;i++)
             {
@@ -126,17 +183,20 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
         else
         {
             ierr = this->_getVar(variable,layer,data);
-            if(ierr!=0)
-                return -3;
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ierr);
+                return this->error->errorCode();
+            }
         }
     }
 
     imeds->nstations = this->_nStations;
-    imeds->datum = "dflowfm_datum";
+    imeds->datum = QStringLiteral("dflowfm_datum");
     imeds->station.resize(this->_nStations);
-    imeds->header1 = "DFlowFM";
-    imeds->header2 = "DFlowFM";
-    imeds->header3 = "DFlowFM";
+    imeds->header1 = QStringLiteral("DFlowFM");
+    imeds->header2 = QStringLiteral("DFlowFM");
+    imeds->header3 = QStringLiteral("DFlowFM");
     for(i=0;i<this->_nStations;i++)
     {        
         imeds->station[i] = new MovImedsStation(this);
@@ -152,21 +212,29 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
         imeds->station[i]->StationName = this->_stationNames[i];
     }
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
 int MovDflow::_init()
 {
     int ierr;
-    ierr = this->_getPlottingVariables();
-    if(ierr!=0)
-        return -1;
-    ierr = this->_getStations();
-    if(ierr!=0)
-        return -2;
 
-    return 0;
+    ierr = this->_getPlottingVariables();
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_GETPLOTVARS);
+        return this->error->errorCode();
+    }
+
+    ierr = this->_getStations();
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_GETSTATIONS);
+        return this->error->errorCode();
+    }
+
+    return ERR_NOERR;
 }
 
 
@@ -181,24 +249,36 @@ int MovDflow::_get3d()
     else
     {
         this->_is3d = false;
-        return 0;
+        return ERR_NOERR;
     }
 
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=NC_NOERR)
-        return -1;
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     ierr = nc_inq_dimlen(ncid,this->_dimnames["laydim"],&nLayers);
     if(ierr!=NC_NOERR)
-        return -1;
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     ierr = nc_close(ncid);
     if(ierr!=NC_NOERR)
-        return -1;
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     this->_nLayers = (int)nLayers;
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -210,21 +290,29 @@ int MovDflow::_getPlottingVariables()
     QString sname;
 
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->error->setNcErrorCode(ierr);
+    if(this->error->isNcError())
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        return this->error->errorCode();
+    }
 
     ierr = nc_inq_nvars(ncid,&nvar);
-    if(ierr!=NC_NOERR)
+    this->error->setNcErrorCode(ierr);
+    if(this->error->isNcError())
     {
+        this->error->setErrorCode(ERR_NETCDF);
         ierr = nc_close(ncid);
-        return -1;
+        return this->error->errorCode();
     }
 
     ierr = nc_inq_ndims(ncid,&ndim);
-    if(ierr!=NC_NOERR)
+    this->error->setNcErrorCode(ierr);
+    if(this->error->isNcError())
     {
+        this->error->setErrorCode(ERR_NETCDF);
         ierr = nc_close(ncid);
-        return -1;
+        return this->error->errorCode();
     }
 
     char * varname = (char*)malloc(sizeof(char)*(NC_MAX_NAME+1));
@@ -237,8 +325,10 @@ int MovDflow::_getPlottingVariables()
         {
             free(varname);
             free(dims);
+            this->error->setErrorCode(ERR_NETCDF);
+            this->error->setNcErrorCode(ierr);
             ierr = nc_close(ncid);
-            return -1;
+            return ERR_NETCDF;
         }
         sname = QString(varname);
         this->_dimnames[sname] = i;
@@ -251,8 +341,10 @@ int MovDflow::_getPlottingVariables()
         {
             free(varname);
             free(dims);
+            this->error->setErrorCode(ERR_NETCDF);
+            this->error->setNcErrorCode(ierr);
             ierr = nc_close(ncid);
-            return -1;
+            return ERR_NETCDF;
         }
         sname = QString(varname);
 
@@ -261,8 +353,10 @@ int MovDflow::_getPlottingVariables()
         {
             free(varname);
             free(dims);
+            this->error->setErrorCode(ERR_NETCDF);
+            this->error->setNcErrorCode(ierr);
             ierr = nc_close(ncid);
-            return -1;
+            return ERR_NETCDF;
         }
 
         this->_nDims[sname] = (int)nd;
@@ -272,8 +366,10 @@ int MovDflow::_getPlottingVariables()
         {
             free(varname);
             free(dims);
+            this->error->setErrorCode(ERR_NETCDF);
+            this->error->setNcErrorCode(ierr);
             ierr = nc_close(ncid);
-            return -1;
+            return ERR_NETCDF;
         }
 
         if(nd==2)
@@ -300,10 +396,16 @@ int MovDflow::_getPlottingVariables()
     free(dims);
 
     ierr = nc_close(ncid);
+    if(ierr!=NC_NOERR)
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     ierr = this->_get3d();
-    if(ierr!=0)
-        return -1;
+    if(ierr!=ERR_NOERR)
+        return ERR_DFLOW_3DVARS;
 
     if(this->is3d())
     {
@@ -312,16 +414,18 @@ int MovDflow::_getPlottingVariables()
                 this->_plotvarnames.contains("z_velocity"))
             this->_plotvarnames.append("velocity_magnitude");
 
-        if(this->_plotvarnames.contains("x_velocity") && this->_plotvarnames.contains("y_velocity"))
+        if(this->_plotvarnames.contains("x_velocity") &&
+                this->_plotvarnames.contains("y_velocity"))
             this->_plotvarnames.append("horizontal_velocity_magnitude");
     }
     else
     {
-        if(this->_plotvarnames.contains("x_velocity") && this->_plotvarnames.contains("y_velocity"))
+        if(this->_plotvarnames.contains("x_velocity") &&
+                this->_plotvarnames.contains("y_velocity"))
             this->_plotvarnames.append("velocity_magnitude");
     }
 
-    return 0;
+    return ERR_NOERR;
 
 }
 
@@ -400,15 +504,27 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
 
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=NC_NOERR)
-        return -1;
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     ierr = nc_inq_dimlen(ncid,dimid_time,&nsteps);
     if(ierr!=NC_NOERR)
-        return -1;
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     ierr = nc_inq_attlen(ncid,varid_time,units,&unitsLen);
     if(ierr!=NC_NOERR)
-        return -1;
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     refstring = (char*)malloc(sizeof(char)*unitsLen);
 
@@ -416,14 +532,16 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     if(ierr!=NC_NOERR)
     {
         free(refstring);
-        return -1;
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
     }
 
     refString = QString(refstring);
     refString = refString.mid(0,(int)unitsLen).right(19);
     free(refstring);
 
-    this->_refTime = QDateTime::fromString(refString,"yyyy-MM-dd hh:mm:ss");
+    this->_refTime = QDateTime::fromString(refString,QStringLiteral("yyyy-MM-dd hh:mm:ss"));
     this->_refTime.setTimeSpec(Qt::UTC);
 
     timeList.resize((int)nsteps);
@@ -434,13 +552,15 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     if(ierr!=NC_NOERR)
     {
         free(time);
-        return -1;
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
     }
 
     for(i=0;i<this->_nSteps;i++)
         timeList[i] = this->_refTime.addMSecs(qRound64(time[i]*1000.0));
 
-    return 0;
+    return ERR_NOERR;
 }
 
 
@@ -451,7 +571,7 @@ int MovDflow::_getVar(QString variable, int layer, QVector<QVector<double> > &da
     else if(this->_nDims[variable]==3)
         return this->_getVar3D(variable,layer,data);
     else
-        return -1;
+        return ERR_DFLOW_ILLEGALDIMENSION;
 }
 
 
@@ -468,12 +588,27 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double> > &data)
 
     varid = this->_varnames[variable];
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
+    if(ierr!=NC_NOERR)
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     start[0] = 0;
     start[1] = 0;
     count[0] = this->_nSteps;
     count[1] = this->_nStations;
     ierr = nc_get_vara_double(ncid,varid,start,count,d);
+    if(ierr!=NC_NOERR)
+    {
+        free(d);
+        free(start);
+        free(count);
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     for(i=0;i<this->_nSteps;i++)
         for(j=0;j<this->_nStations;j++)
@@ -484,8 +619,15 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double> > &data)
     free(count);
 
     ierr = nc_close(ncid);
+    if(ierr!=NC_NOERR)
+    {
 
-    return ierr;
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
+
+    return ERR_NOERR;
 
 }
 
@@ -503,6 +645,15 @@ int MovDflow::_getVar3D(QString variable, int layer, QVector<QVector<double> > &
 
     varid = this->_varnames[variable];
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
+    if(ierr!=NC_NOERR)
+    {
+        free(d);
+        free(start);
+        free(count);
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     start[0] = 0;
     start[1] = 0;
@@ -511,6 +662,12 @@ int MovDflow::_getVar3D(QString variable, int layer, QVector<QVector<double> > &
     count[1] = this->_nStations;
     count[2] = 1;
     ierr = nc_get_vara_double(ncid,varid,start,count,d);
+    if(ierr!=NC_NOERR)
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
     for(i=0;i<this->_nSteps;i++)
         for(j=0;j<this->_nStations;j++)
@@ -521,7 +678,13 @@ int MovDflow::_getVar3D(QString variable, int layer, QVector<QVector<double> > &
     free(count);
 
     ierr = nc_close(ncid);
+    if(ierr!=NC_NOERR)
+    {
+        this->error->setErrorCode(ERR_NETCDF);
+        this->error->setNcErrorCode(ierr);
+        return ERR_NETCDF;
+    }
 
-    return ierr;
+    return ERR_NOERR;
 
 }

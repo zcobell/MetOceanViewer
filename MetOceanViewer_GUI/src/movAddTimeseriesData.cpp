@@ -25,7 +25,6 @@
 #include "movColors.h"
 #include "movGeneric.h"
 #include "movFiletypes.h"
-#include "movDflow.h"
 
 //-------------------------------------------//
 //This brings up the dialog box used to add
@@ -153,7 +152,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
     }
     else if(this->InputFileType == FILETYPE_NETCDF_ADCIRC)
     {
-        ui->text_filetype->setText("netCDF");
+        ui->text_filetype->setText(QStringLiteral("ADCIRC netCDF"));
         ui->date_coldstart->setEnabled(true);
         this->setColdstartSelectElements(true);
         this->setStationSelectElements(true);
@@ -163,7 +162,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
     }
     else if(this->InputFileType == FILETYPE_ASCII_ADCIRC)
     {
-        ui->text_filetype->setText("ADCIRC");
+        ui->text_filetype->setText(QStringLiteral("ADCIRC ASCII"));
         this->setColdstartSelectElements(true);
         this->setStationSelectElements(true);
         this->setVariableSelectElements(false);
@@ -174,34 +173,37 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
     {
         QString variable = this->dFlowVariable;
 
-        ui->text_filetype->setText("DFlow-FM");
+        ui->text_filetype->setText(QStringLiteral("DFlow-FM"));
         this->FileReadError = false;
 
         this->setColdstartSelectElements(false);
         this->setStationSelectElements(false);
         this->setVariableSelectElements(true);
 
-        MovDflow *dflow = new MovDflow(this->InputFilePath,this);
+        this->dflow = new MovDflow(this->InputFilePath,this);
 
-        if(dflow->isError())
+        if(this->dflow->error->isError())
         {
-            emit addTimeseriesError("Error reading DFlow-FM file");
+            emit addTimeseriesError(this->dflow->error->toString());
             this->FileReadError = true;
             return;
         }
 
-        if(dflow->is3d())
+        if(this->dflow->is3d())
         {
             this->setVerticalLayerElements(true);
             ui->spin_layer->setMinimum(1);
             ui->spin_layer->setMaximum(dflow->getNumLayers());
             ui->spin_layer->setValue(this->layer);
+            ui->label_layerinfo->setText("Layer 1 = bottom\nLayer "+
+                                QString::number(dflow->getNumLayers())+" = top");
+
         }
         else
             this->setVerticalLayerElements(false);
 
         ui->combo_variableSelect->clear();
-        QStringList dflowVariables = dflow->getVaribleList();
+        QStringList dflowVariables = this->dflow->getVaribleList();
         ui->combo_variableSelect->addItems(dflowVariables);
 
         if(dflowVariables.contains(variable))
@@ -227,11 +229,13 @@ void mov_dialog_addtimeseries::setVerticalLayerElements(bool enabled)
     {
         ui->spin_layer->show();
         ui->label_layer->show();
+        ui->label_layerinfo->show();
     }
     else
     {
         ui->spin_layer->hide();
         ui->label_layer->hide();
+        ui->label_layerinfo->hide();
     }
     return;
 }
@@ -280,13 +284,11 @@ void mov_dialog_addtimeseries::setVariableSelectElements(bool enabled)
     {
         ui->combo_variableSelect->show();
         ui->label_variable->show();
-        ui->button_describeVariable->show();
     }
     else
     {
         ui->combo_variableSelect->hide();
         ui->label_variable->hide();
-        ui->button_describeVariable->hide();
     }
     return;
 }
@@ -515,5 +517,17 @@ void mov_dialog_addtimeseries::on_spin_epsg_valueChanged(int arg1)
 void mov_dialog_addtimeseries::on_combo_variableSelect_currentIndexChanged(const QString &arg1)
 {
     this->dFlowVariable = arg1;
+    if(this->dflow->variableIs3d(arg1))
+    {
+        ui->spin_layer->show();
+        ui->label_layer->show();
+        ui->label_layerinfo->show();
+    }
+    else
+    {
+        ui->spin_layer->hide();
+        ui->label_layer->hide();
+        ui->label_layerinfo->hide();
+    }
     return;
 }

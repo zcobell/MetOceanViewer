@@ -22,24 +22,35 @@
 #include <QFile>
 #include "movAdcircStationOutput.h"
 #include "movImeds.h"
+#include "movErrors.h"
 
 MovAdcircStationOutput::MovAdcircStationOutput(QObject *parent) : QObject(parent)
 {
+    this->_error = ERR_NOERR;
+}
 
+int MovAdcircStationOutput::error()
+{
+    return this->_error;
+}
+
+QString MovAdcircStationOutput::errorString()
+{
+    return "errorString";
 }
 
 int MovAdcircStationOutput::read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart)
 {
     this->coldStartTime = coldStart;
-    int ierr = this->readAscii(AdcircFile,AdcircStationFile);
-    return ierr;
+    this->_error = this->readAscii(AdcircFile,AdcircStationFile);
+    return this->_error;
 }
 
 int MovAdcircStationOutput::read(QString AdcircFile, QDateTime coldStart)
 {
     this->coldStartTime = coldStart;
-    int ierr = this->readNetCDF(AdcircFile);
-    return ierr;
+    this->_error = this->readNetCDF(AdcircFile);
+    return this->_error;
 }
 
 int MovAdcircStationOutput::readAscii(QString AdcircOutputFile, QString AdcircStationFile)
@@ -51,10 +62,16 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile, QString AdcircSt
 
     //Check if we can open the file
     if(!MyFile.open(QIODevice::ReadOnly|QIODevice::Text))
-        return -1;
+    {
+        this->_error = ERR_CANNOT_OPEN_FILE;
+        return this->_error;
+    }
 
     if(!StationFile.open(QIODevice::ReadOnly|QIODevice::Text))
-        return -1;
+    {
+        this->_error = ERR_CANNOT_OPEN_FILE;
+        return this->_error;
+    }
 
     //Read the 61/62 style file
     header1 = MyFile.readLine();
@@ -93,7 +110,7 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile, QString AdcircSt
     TempList = TempLine.split(" ");
     int TempStations = TempList.value(0).toInt();
     if(TempStations!=this->nStations)
-        return -1;
+        return ERR_WRONG_NUMBER_OF_STATIONS;
 
     this->longitude.resize(this->nStations);
     this->latitude.resize(this->nStations);
@@ -125,8 +142,8 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
 {
 
     size_t station_size,time_size,startIndex;
-    int i,j,time_size_int,station_size_int;
-    int ierr, ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
+    int i,j,ierr,time_size_int,station_size_int;
+    int ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
     int dimid_time,dimid_station;
     bool isVector;
     double Temp;
@@ -145,27 +162,47 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
     netcdf_types[5] = "windy";
 
     //Open the file
-    ierr = nc_open(AdcircOutputFile.toUtf8(),NC_NOWRITE,&ncid);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_open(AdcircOutputFile.toUtf8(),NC_NOWRITE,&ncid);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
     //Get the dimension ids
-    ierr = nc_inq_dimid(ncid,"time",&dimid_time);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_dimid(ncid,"time",&dimid_time);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
-    ierr = nc_inq_dimid(ncid,"station",&dimid_station);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_dimid(ncid,"station",&dimid_station);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
     //Find out the dimension size
-    ierr = nc_inq_dimlen(ncid,dimid_time,&time_size);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_dimlen(ncid,dimid_time,&time_size);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
-    ierr = nc_inq_dimlen(ncid,dimid_station,&station_size);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_dimlen(ncid,dimid_station,&station_size);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
     station_size_int = static_cast<unsigned int>(station_size);
     time_size_int = static_cast<unsigned int>(time_size);
@@ -181,9 +218,13 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
             if(i==1||i==4)
             {
                 isVector = true;
-                ierr = nc_inq_varid(ncid,netcdf_types[i+1].toUtf8(),&varid_zeta2);
-                if(ierr!=NC_NOERR)
-                    return -1;
+                this->_error = nc_inq_varid(ncid,netcdf_types[i+1].toUtf8(),&varid_zeta2);
+                if(this->_error!=NC_NOERR)
+                {
+                    this->_ncerr = this->_error;
+                    this->_error = ERR_NETCDF;
+                    return this->_error;
+                }
             }
             else
                 isVector = false;
@@ -194,7 +235,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
         //If we're at the end of the array
         //and haven't quit yet, that's a problem
         if(i==5)
-            return -1;
+            return ERR_NO_VARIABLE_FOUND;
     }
 
     //Size the output variables
@@ -208,24 +249,40 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
         this->data[i].resize(time_size_int);
 
     //Read the station locations and times
-    ierr = nc_inq_varid(ncid,"time",&varid_time);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_varid(ncid,"time",&varid_time);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
-    ierr = nc_inq_varid(ncid,"x",&varid_lon);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_varid(ncid,"x",&varid_lon);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
-    ierr = nc_inq_varid(ncid,"y",&varid_lat);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_inq_varid(ncid,"y",&varid_lat);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
     for(j=0;j<time_size_int;j++)
     {
         startIndex = static_cast<size_t>(j);
-        ierr = nc_get_var1(ncid,varid_time,&startIndex,&Temp);
-        if(ierr!=NC_NOERR)
-            return -1;
+        this->_error = nc_get_var1(ncid,varid_time,&startIndex,&Temp);
+        if(this->_error!=NC_NOERR)
+        {
+            this->_ncerr = this->_error;
+            this->_error = ERR_NETCDF;
+            return this->_error;
+        }
 
         this->time[j] = Temp;
     }
@@ -233,15 +290,23 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
     for(j=0;j<station_size_int;j++)
     {
         startIndex = static_cast<size_t>(j);
-        ierr = nc_get_var1(ncid,varid_lon,&startIndex,&Temp);
-        if(ierr!=NC_NOERR)
-            return -1;
+        this->_error = nc_get_var1(ncid,varid_lon,&startIndex,&Temp);
+        if(this->_error!=NC_NOERR)
+        {
+            this->_ncerr = this->_error;
+            this->_error = ERR_NETCDF;
+            return this->_error;
+        }
 
         this->longitude[j] = Temp;
 
-        ierr = nc_get_var1(ncid,varid_lat,&startIndex,&Temp);
-        if(ierr!=NC_NOERR)
-            return -1;
+        this->_error = nc_get_var1(ncid,varid_lat,&startIndex,&Temp);
+        if(this->_error!=NC_NOERR)
+        {
+            this->_ncerr = this->_error;
+            this->_error = ERR_NETCDF;
+            return this->_error;
+        }
 
         this->latitude[j] = Temp;
     }
@@ -258,15 +323,23 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
         start[1] = static_cast<size_t>(i);
         count[0] = static_cast<size_t>(time_size_int);
         count[1] = static_cast<size_t>(1);
-        ierr = nc_get_vara(ncid,varid_zeta,start,count,tempVar1);
-        if(ierr!=NC_NOERR)
-            return -1;
+        this->_error = nc_get_vara(ncid,varid_zeta,start,count,tempVar1);
+        if(this->_error!=NC_NOERR)
+        {
+            this->_ncerr = this->_error;
+            this->_error = ERR_NETCDF;
+            return this->_error;
+        }
 
         if(isVector)
         {
-            ierr = nc_get_vara(ncid,varid_zeta2,start,count,tempVar2);
-            if(ierr!=NC_NOERR)
-                return -1;
+            this->_error = nc_get_vara(ncid,varid_zeta2,start,count,tempVar2);
+            if(this->_error!=NC_NOERR)
+            {
+                this->_ncerr = this->_error;
+                this->_error = ERR_NETCDF;
+                return this->_error;
+            }
             for(j=0;j<time_size_int;j++)
                 this->data[i][j] = qSqrt(qPow(tempVar1[j],2.0)+qPow(tempVar2[j],2.0));
         }
@@ -277,9 +350,13 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
                 this->data[i][j] = tempVar1[j];
         }
     }
-    ierr = nc_close(ncid);
-    if(ierr!=NC_NOERR)
-        return -1;
+    this->_error = nc_close(ncid);
+    if(this->_error!=NC_NOERR)
+    {
+        this->_ncerr = this->_error;
+        this->_error = ERR_NETCDF;
+        return this->_error;
+    }
 
     //Finally, name the stations the default names for now. Later
     //we can get fancy and try to get the ADCIRC written names in

@@ -34,6 +34,8 @@ public:
 
     int read(QString AdcircFile,QDateTime coldStart);
     int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
+    QString errorString();
+    int error();
     MovImeds* toIMEDS();
 
 private:
@@ -44,6 +46,8 @@ private:
 
     int nStations;
     int nSnaps;
+    int _error;
+    int _ncerr;
 
     QDateTime coldStartTime;
 

@@ -52,7 +52,8 @@ SOURCES +=\
     src/movUiXTideTab.cpp \
     src/movUpdateDialog.cpp \
     src/movUsgs.cpp \
-    src/movXtide.cpp
+    src/movXtide.cpp \
+    src/movErrors.cpp
 
 HEADERS  += \
     src/movAdcircStationOutput.h \
@@ -78,7 +79,8 @@ HEADERS  += \
     src/mov_dialog_addtimeseriesdata.h \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
-    src/mov_window_main.h
+    src/mov_window_main.h \
+    moverrors.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \

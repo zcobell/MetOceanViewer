@@ -910,13 +910,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="button_describeVariable">
-       <property name="text">
-        <string>Describe</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="horizontalSpacer_11">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -968,6 +961,13 @@
          <width>200</width>
          <height>25</height>
         </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_layerinfo">
+       <property name="text">
+        <string>DefaultText</string>
        </property>
       </widget>
      </item>
