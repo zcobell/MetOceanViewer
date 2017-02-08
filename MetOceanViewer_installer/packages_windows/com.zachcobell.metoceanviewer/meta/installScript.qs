@@ -14,6 +14,5 @@ Component.prototype.createOperations = function()
             "workingDirectory=@TargetDir@", "iconPath=@TargetDir@/mov.ico");
         component.addOperation("CreateShortcut", "@TargetDir@/MetOceanViewer_MaintenanceTool.exe", "@StartMenuDir@/Uninstall MetOceanViewer.lnk",
             "workingDirectory=@TargetDir@", "iconPath=@TargetDir@/mov.ico");
-        component.addOperation("Execute", "@TargetDir@/vcredist_x64.exe", "/quiet", "/norestart");
     }
 }

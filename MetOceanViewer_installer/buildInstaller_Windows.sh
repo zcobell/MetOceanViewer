@@ -46,5 +46,9 @@ $winDeployQtBinary --compiler-runtime -release MetOcean_Viewer.exe
 $winDeployQtBinary --compiler-runtime -release proj4.dll
 cd ../../..
 
+#...Move the Visual C++ installer to its own directory
+mkdir -p packages_windows/com.microsoft.vcredist/data
+mv packages_windows/com.zachcobell.metoceanviewer/data/vcredist_x64.exe packages_windows/com.microsoft.vcredist/data/vcredist_x64.exe
+
 #...Run the installer generator
 $binaryCreator -c config/config.xml -p packages_windows MetOceanViewer_Windows64bit_Installer_$version.exe
