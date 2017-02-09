@@ -101,6 +101,8 @@ private slots:
 
     void on_button_TimeseriesAddRow_clicked();
 
+    void on_button_TimeseriesCopyRow_clicked();
+
     void on_button_TimeseriesEditRow_clicked();
 
     void on_button_processTimeseriesData_clicked();

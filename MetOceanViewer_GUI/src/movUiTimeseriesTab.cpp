@@ -22,6 +22,7 @@
 #include "ui_mov_window_main.h"
 #include "mov_dialog_addtimeseriesdata.h"
 #include "movUserTimeseries.h"
+#include <QDebug>
 
 //-------------------------------------------//
 //Called when the user tries to save the
@@ -106,9 +107,6 @@ void mov_window_main::on_button_TimeseriesAddRow_clicked()
         //Tooltips in table cells
         ui->table_TimeseriesData->item(NumberOfRows-1,0)->setToolTip(AddWindow->InputFilePath);
         ui->table_TimeseriesData->item(NumberOfRows-1,1)->setToolTip(AddWindow->InputSeriesName);
-        ui->table_TimeseriesData->item(NumberOfRows-1,3)->setToolTip(QString::number(AddWindow->UnitConversion));
-        ui->table_TimeseriesData->item(NumberOfRows-1,4)->setToolTip(QString::number(AddWindow->xadjust));
-        ui->table_TimeseriesData->item(NumberOfRows-1,5)->setToolTip(QString::number(AddWindow->yadjust));
 
         this->PreviousDirectory = AddWindow->PreviousDirectory;
 
@@ -348,6 +346,31 @@ void mov_window_main::on_button_plotTimeseriesStation_clicked()
     return;
 }
 //-------------------------------------------//
+
+
+void mov_window_main::on_button_TimeseriesCopyRow_clicked()
+{
+    QColor CellColor;
+    int currentRow = ui->table_TimeseriesData->currentRow();
+
+    if(currentRow<0||currentRow>ui->table_TimeseriesData->rowCount()-1)
+        return;
+
+    ui->table_TimeseriesData->setRowCount(ui->table_TimeseriesData->rowCount()+1);
+    int row = ui->table_TimeseriesData->rowCount()-1;
+
+    for(int i=0;i<ui->table_TimeseriesData->columnCount();i++)
+        ui->table_TimeseriesData->setItem(row,i,new QTableWidgetItem(ui->table_TimeseriesData->item(currentRow,i)->text()));
+
+    CellColor.setNamedColor(ui->table_TimeseriesData->item(currentRow,2)->text());
+    ui->table_TimeseriesData->item(row,2)->setBackgroundColor(CellColor);
+    ui->table_TimeseriesData->item(row,2)->setTextColor(CellColor);
+    ui->table_TimeseriesData->item(row,0)->setCheckState(Qt::Checked);
+    ui->table_TimeseriesData->item(row,0)->setToolTip(ui->table_TimeseriesData->item(row,6)->text());
+    ui->table_TimeseriesData->item(row,1)->setToolTip(ui->table_TimeseriesData->item(row,1)->text());
+
+    return;
+}
 
 
 //-------------------------------------------//
