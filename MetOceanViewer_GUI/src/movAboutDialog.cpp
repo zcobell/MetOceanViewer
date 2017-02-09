@@ -121,7 +121,7 @@ QString mov_dialog_about::generateLicenseText()
            "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">" +
            "<b>MetOcean Viewer</b> <br>" +
            "<i>A simple interface for viewing hydrodynamic model data</i> <br><br>" +
-           "Copyright (C) 2015  Zach Cobell <br><br>" +
+           "Copyright (C) 2017  Zach Cobell <br><br>" +
            "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License" +
            " as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. <br><br>"
            "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied " +

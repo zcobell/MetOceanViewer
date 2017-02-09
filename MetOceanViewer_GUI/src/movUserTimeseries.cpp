@@ -492,9 +492,8 @@ int MovUserTimeseries::processData()
                 return ERR_ADCIRC_ASCIIREADERROR;
             }
             this->fileData[j] = adcircData->toIMEDS();
-            if(ierr!=ERR_NOERR)
+            if(!this->fileData[j]->success)
                 return ERR_ADCIRC_ASCIITOIMEDS;
-            this->fileData[j]->success = true;
 
         }
         else if(FILETYPE_NETCDF_DFLOW)

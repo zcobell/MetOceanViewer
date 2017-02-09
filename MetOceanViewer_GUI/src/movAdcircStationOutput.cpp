@@ -28,6 +28,8 @@ MovAdcircStationOutput::MovAdcircStationOutput(QObject *parent) : QObject(parent
 {
     this->_error = ERR_NOERR;
     this->_ncerr = NC_NOERR;
+    this->nStations = 0;
+    this->nSnaps = 0;
 }
 
 int MovAdcircStationOutput::error()
@@ -401,5 +403,6 @@ MovImeds *MovAdcircStationOutput::toIMEDS()
             outputIMEDS->station[i]->data[j] = this->data[i][j];
         }
     }
+    outputIMEDS->success = true;
     return outputIMEDS;
 }
