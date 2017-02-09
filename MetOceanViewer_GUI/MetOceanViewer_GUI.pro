@@ -54,6 +54,7 @@ SOURCES +=\
     src/movUsgs.cpp \
     src/movXtide.cpp \
     src/movErrors.cpp \
+    src/movNefis.cpp \
     src/movusertimeseriesoptions.cpp
 
 HEADERS  += \
@@ -81,8 +82,11 @@ HEADERS  += \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
     src/movErrors.h \
+    src/movNefis.h \
     src/movusertimeseriesoptions.h \
-    src/MainWindow.h
+    src/MainWindow.h\
+    src/nefis_defines.h \
+    src/movusertimeseriesoptions.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \
@@ -92,6 +96,15 @@ FORMS    += \
     ui/movusertimeseriesoptions.ui
 
 OTHER_FILES +=
+
+#...Include NEFIS
+INCLUDEPATH += $$PWD/../thirdparty/nefis/include
+win32{
+    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../thirdparty/nefis/debug -lnefis
+    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../thirdparty/nefis/release -lnefis
+}unix{
+    LIBS += -L$$OUT_PWD/../thirdparty/nefis -lnefis
+}
 
 #...Include the PROJ4 library
 INCLUDEPATH += $$PWD/../libraries/libproj4
