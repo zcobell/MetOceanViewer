@@ -191,6 +191,7 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
         }
     }
 
+    imeds->success = false;
     imeds->nstations = this->_nStations;
     imeds->datum = QStringLiteral("dflowfm_datum");
     imeds->station.resize(this->_nStations);
@@ -211,6 +212,7 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
         imeds->station[i]->StationID = i;
         imeds->station[i]->StationName = this->_stationNames[i];
     }
+    imeds->success = true;
 
     return ERR_NOERR;
 }

@@ -22,7 +22,6 @@
 #include "ui_mov_window_main.h"
 #include "mov_dialog_addtimeseriesdata.h"
 #include "movUserTimeseries.h"
-#include <QDebug>
 
 //-------------------------------------------//
 //Called when the user tries to save the

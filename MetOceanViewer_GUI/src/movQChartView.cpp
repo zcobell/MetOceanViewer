@@ -27,7 +27,6 @@
 #include <QtGui/QMouseEvent>
 #include <QDateTime>
 #include "movQChartView.h"
-#include <QDebug>
 
 
 MovQChartView::MovQChartView(QWidget *parent) : QChartView(parent)
