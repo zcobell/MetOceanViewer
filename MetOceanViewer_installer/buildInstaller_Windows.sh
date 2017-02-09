@@ -22,7 +22,7 @@ fi
 mkdir -p packages_windows/com.zachcobell.metoceanviewer/data 
 
 #...Grab the MetOceanViewer executable
-cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOcean_Viewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOceanViewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the proj4 library
 cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/libproj4/release/proj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
@@ -42,7 +42,7 @@ cp ../thirdparty/openssl/bin_64/*.dll packages_windows/com.zachcobell.metoceanvi
 
 #...Run the deployment script
 cd packages_windows/com.zachcobell.metoceanviewer/data
-$winDeployQtBinary --compiler-runtime -release MetOcean_Viewer.exe
+$winDeployQtBinary --compiler-runtime -release MetOceanViewer.exe
 $winDeployQtBinary --compiler-runtime -release proj4.dll
 cd ../../..
 
