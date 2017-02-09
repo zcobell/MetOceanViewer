@@ -14,6 +14,9 @@ MovDflow::MovDflow(QString filename, QObject *parent) : QObject(parent)
     this->_filename = filename;
     this->_is3d = false;
     this->error = new movErrors(this);
+    this->_nSteps = 0;
+    this->_nStations = 0;
+    this->_nLayers = 0;
 
     int ierr = this->_init();
 
@@ -507,6 +510,7 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=NC_NOERR)
     {
+        free(units);
         this->error->setErrorCode(ERR_NETCDF);
         this->error->setNcErrorCode(ierr);
         return ERR_NETCDF;
@@ -515,6 +519,7 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     ierr = nc_inq_dimlen(ncid,dimid_time,&nsteps);
     if(ierr!=NC_NOERR)
     {
+        free(units);
         this->error->setErrorCode(ERR_NETCDF);
         this->error->setNcErrorCode(ierr);
         return ERR_NETCDF;
@@ -523,6 +528,7 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     ierr = nc_inq_attlen(ncid,varid_time,units,&unitsLen);
     if(ierr!=NC_NOERR)
     {
+        free(units);
         this->error->setErrorCode(ERR_NETCDF);
         this->error->setNcErrorCode(ierr);
         return ERR_NETCDF;
@@ -533,6 +539,7 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
     ierr = nc_get_att(ncid,varid_time,units,refstring);
     if(ierr!=NC_NOERR)
     {
+        free(units);
         free(refstring);
         this->error->setErrorCode(ERR_NETCDF);
         this->error->setNcErrorCode(ierr);
@@ -541,6 +548,7 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
 
     refString = QString(refstring);
     refString = refString.mid(0,(int)unitsLen).right(19);
+    free(units);
     free(refstring);
 
     this->_refTime = QDateTime::fromString(refString,QStringLiteral("yyyy-MM-dd hh:mm:ss"));
@@ -561,6 +569,8 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList)
 
     for(i=0;i<this->_nSteps;i++)
         timeList[i] = this->_refTime.addMSecs(qRound64(time[i]*1000.0));
+
+    free(time);
 
     return ERR_NOERR;
 }
@@ -592,6 +602,9 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double> > &data)
     ierr = nc_open(this->_filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=NC_NOERR)
     {
+        free(start);
+        free(count);
+        free(d);
         this->error->setErrorCode(ERR_NETCDF);
         this->error->setNcErrorCode(ierr);
         return ERR_NETCDF;
@@ -623,7 +636,6 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double> > &data)
     ierr = nc_close(ncid);
     if(ierr!=NC_NOERR)
     {
-
         this->error->setErrorCode(ERR_NETCDF);
         this->error->setNcErrorCode(ierr);
         return ERR_NETCDF;

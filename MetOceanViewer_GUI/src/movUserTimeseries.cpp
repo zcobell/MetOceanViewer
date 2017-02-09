@@ -51,6 +51,8 @@ MovUserTimeseries::MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCh
     this->chart      = inChart;
     this->statusBar  = inStatusBar;
     this->randomColorList = inRandomColorList;
+    this->markerID   = 0;
+    this->thisChart  = NULL;
 }
 
 MovUserTimeseries::~MovUserTimeseries()
@@ -234,7 +236,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
     //   For some reason, the qDatTime axis operate in local
     //   time, which can show an offset when converting to mSecSinceEpoch
     QDateTime now = QDateTime::currentDateTime();
-    qint64 offset = now.offsetFromUtc()*1000;
+    qint64 offset = now.offsetFromUtc()*qint64(1000);
 
     QString tempString;
     QStringList dataList = data.split(",");

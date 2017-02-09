@@ -34,6 +34,10 @@ MovUsgs::MovUsgs(QWebEngineView *inMap,
     this->USGSMarkerID = "none";
     this->ProductIndex = 0;
     this->ProductName = "none";
+    this->thisChart = NULL;
+    this->USGSdataMethod = 0;
+    this->CurrentUSGSLat = 0.0;
+    this->CurrentUSGSLon = 0.0;
 
     //...Assign object pointers
     this->map = inMap;

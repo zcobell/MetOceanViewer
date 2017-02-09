@@ -61,11 +61,15 @@ bool movFiletypes::_checkNetcdfAdcirc(QString filename)
 
     ierr = nc_open(filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=0)
+    {
+        free(attname);
         return false;
+    }
 
     ierr = nc_inq_attlen(ncid,NC_GLOBAL,attname,&attlen);
     if(ierr!=0)
     {
+        free(attname);
         ierr = nc_close(ncid);
         return false;
     }
@@ -74,12 +78,16 @@ bool movFiletypes::_checkNetcdfAdcirc(QString filename)
     ierr = nc_get_att(ncid,NC_GLOBAL,attname,model);
     if(ierr!=0)
     {
+        free(attname);
+        free(model);
         ierr = nc_close(ncid);
         return false;
     }
     ierr = nc_close(ncid);
 
-    models = QString(model).mid(0,attlen);
+    models = QString(model).mid(0,(int)attlen);
+
+    free(attname);
     free(model);
 
     if(models==QStringLiteral("ADCIRC"))
@@ -98,11 +106,17 @@ bool movFiletypes::_checkNetcdfDflow(QString filename)
 
     ierr = nc_open(filename.toStdString().c_str(),NC_NOWRITE,&ncid);
     if(ierr!=0)
+    {
+        free(varname_stationx);
+        free(varname_stationy);
         return false;
+    }
 
     ierr = nc_inq_varid(ncid,varname_stationx,&varid_stationx);
     if(ierr!=0)
     {
+        free(varname_stationx);
+        free(varname_stationy);
         ierr = nc_close(ncid);
         return false;
     }
@@ -110,6 +124,8 @@ bool movFiletypes::_checkNetcdfDflow(QString filename)
     ierr = nc_inq_varid(ncid,varname_stationy,&varid_stationy);
     if(ierr!=0)
     {
+        free(varname_stationx);
+        free(varname_stationy);
         ierr = nc_close(ncid);
         return false;
     }

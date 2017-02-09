@@ -21,7 +21,8 @@
 
 MovImeds::MovImeds(QObject *parent) : QObject(parent)
 {
-
+    this->success = false;
+    this->nstations = 0;
 }
 
 

@@ -21,5 +21,11 @@
 
 MovImedsStation::MovImedsStation(QObject *parent) : QObject(parent)
 {
-
+    this->latitude = 0.0;
+    this->longitude = 0.0;
+    this->NumSnaps = 0;
+    this->StationID = QString();
+    this->StationName = QString();
+    this->StationIndex = 0;
+    this->isNull = false;
 }

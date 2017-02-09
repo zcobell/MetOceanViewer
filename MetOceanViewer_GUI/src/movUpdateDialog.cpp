@@ -117,6 +117,9 @@ mov_dialog_update::mov_dialog_update(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    this->networkError = false;
+    this->hasNewVersion = false;
+
 }
 
 mov_dialog_update::~mov_dialog_update()

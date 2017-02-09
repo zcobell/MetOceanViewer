@@ -41,6 +41,19 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent) :
     this->PreviousDirectory = ((mov_window_main *)parent)->PreviousDirectory;
     this->epsgmap = this->proj->getMap();
     connect(this,SIGNAL(addTimeseriesError(QString)),this,SLOT(throwErrorMessageBox(QString)));
+    this->NumIMEDSFiles = 0;
+    this->CurrentRowsInTable = 0;
+    this->ColorUpdated = false;
+    this->FileReadError = false;
+    this->EditBox = false;
+    this->UnitConversion = 1.0;
+    this->xadjust = 0.0;
+    this->yadjust = 0.0;
+    this->InputFileType = 0;
+    this->epsg = 4326;
+    this->layer = 0;
+    this->proj = NULL;
+    this->dflow = NULL;
 }
 //-------------------------------------------//
 

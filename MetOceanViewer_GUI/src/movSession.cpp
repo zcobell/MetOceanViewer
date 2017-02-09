@@ -245,58 +245,58 @@ int MovSession::save()
     {
         start[0] = iu;
 
-        relPath = CurrentDir.relativeFilePath(filenames_ts[iu]);
+        relPath = CurrentDir.relativeFilePath(filenames_ts[(int)iu]);
         tempByte = relPath.toUtf8();
         mydatastring[0] = tempByte.data();
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_filename,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        tempString = seriesname_ts[iu];
+        tempString = seriesname_ts[(int)iu];
         tempByte  = tempString.toUtf8();
         mydatastring[0] = tempByte.data();
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_names,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        tempByte = colors_ts[iu].toUtf8();
+        tempByte = colors_ts[(int)iu].toUtf8();
         mydatastring[0] = tempByte.data();
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_colors,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        tempByte = date_ts[iu].toUtf8();
+        tempByte = date_ts[(int)iu].toUtf8();
         mydatastring[0] = tempByte.data();
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_coldstart,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        relPath = CurrentDir.relativeFilePath(stationfile_ts[iu]);
+        relPath = CurrentDir.relativeFilePath(stationfile_ts[(int)iu]);
         tempByte  = relPath.toUtf8();
         mydatastring[0] = tempByte.data();
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_stationfile,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        tempByte = filetype_ts[iu].toUtf8();
+        tempByte = filetype_ts[(int)iu].toUtf8();
         mydatastring[0] = tempByte.data();
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_type,start,mydatastring));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        mydatadouble[0]  = xshift_ts[iu];
+        mydatadouble[0]  = xshift_ts[(int)iu];
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_double(ncid,varid_xshift,start,mydatadouble));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatadouble[0]  = yshift_ts[iu];
+        mydatadouble[0]  = yshift_ts[(int)iu];
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_double(ncid,varid_yshift,start,mydatadouble));
         if(ierr!=NC_NOERR)return 1;
 
-        mydatadouble[0]  = units_ts[iu];
+        mydatadouble[0]  = units_ts[(int)iu];
         ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_double(ncid,varid_units,start,mydatadouble));
         if(ierr!=NC_NOERR)return 1;
 
-        mydataint[0] = checkStates_ts[iu];
+        mydataint[0] = checkStates_ts[(int)iu];
         ierr = MovGeneric::NETCDF_ERR(nc_put_var1_int(ncid,varid_checkState,start,mydataint));
         if(ierr!=NC_NOERR)return 1;
 
@@ -304,6 +304,7 @@ int MovSession::save()
 
     ierr = MovGeneric::NETCDF_ERR(nc_close(ncid));
     if(ierr!=NC_NOERR)return 1;
+    return 0;
 }
 
 
@@ -515,6 +516,7 @@ int MovSession::open(QString openFilename)
         if(hasCheckInfo)
         {
             ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_checkState,start,&mydataint));
+            if(ierr!=NC_NOERR)return 1;
             if(mydataint[0]==1)
                 checkState = Qt::Checked;
             else

@@ -41,6 +41,14 @@ MovQChartView::MovQChartView(QWidget *parent) : QChartView(parent)
     this->m_info      = NULL;
     this->m_statusBar = NULL;
     this->m_style     = 0;
+    this->x_axis_max  = 0.0;
+    this->x_axis_min  = 0.0;
+    this->y_axis_max  = 0.0;
+    this->y_axis_min  = 0.0;
+    this->current_x_axis_max = 0.0;
+    this->current_x_axis_min = 0.0;
+    this->current_y_axis_max = 0.0;
+    this->current_y_axis_min = 0.0;
     this->setRubberBand(QChartView::RectangleRubberBand);
 }
 
@@ -94,7 +102,7 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event)
     QString   dateString;
     QDateTime date;
     qreal     x,y;
-    int       i_min;
+    int       i_min = 0;
     qreal     y_dum = 0.0;
 
     if(this->m_coord)

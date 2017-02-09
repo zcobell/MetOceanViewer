@@ -28,14 +28,17 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
            QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
            QComboBox *inNoaaDatum, QStatusBar *inStatusBar, QObject *parent) : QObject(parent)
 {
-    map = inMap;
-    chart = inChart;
-    startDateEdit = inStartDateEdit;
-    endDateEdit = inEndDateEdit;
-    noaaProduct = inNoaaProduct;
-    noaaDatum = inNoaaDatum;
-    noaaUnits = inNoaaUnits;
-    statusBar = inStatusBar;
+    this->map = inMap;
+    this->chart = inChart;
+    this->startDateEdit = inStartDateEdit;
+    this->endDateEdit = inEndDateEdit;
+    this->noaaProduct = inNoaaProduct;
+    this->noaaDatum = inNoaaDatum;
+    this->noaaUnits = inNoaaUnits;
+    this->statusBar = inStatusBar;
+    this->NOAAMarkerID = 0;
+    this->ProductIndex = 0;
+    this->thisChart = NULL;
 
     //...Initialize the IMEDS object
     this->CurrentNOAAStation.resize(2);

@@ -27,6 +27,7 @@
 MovAdcircStationOutput::MovAdcircStationOutput(QObject *parent) : QObject(parent)
 {
     this->_error = ERR_NOERR;
+    this->_ncerr = NC_NOERR;
 }
 
 int MovAdcircStationOutput::error()
@@ -135,7 +136,7 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile, QString AdcircSt
     }
     StationFile.close();
 
-    return 0;
+    return ERR_NOERR;
 }
 
 int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
@@ -326,6 +327,8 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
         this->_error = nc_get_vara(ncid,varid_zeta,start,count,tempVar1);
         if(this->_error!=NC_NOERR)
         {
+            free(tempVar1);
+            free(tempVar2);
             this->_ncerr = this->_error;
             this->_error = ERR_NETCDF;
             return this->_error;
@@ -336,6 +339,8 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
             this->_error = nc_get_vara(ncid,varid_zeta2,start,count,tempVar2);
             if(this->_error!=NC_NOERR)
             {
+                free(tempVar1);
+                free(tempVar2);
                 this->_ncerr = this->_error;
                 this->_error = ERR_NETCDF;
                 return this->_error;
@@ -353,6 +358,8 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
     this->_error = nc_close(ncid);
     if(this->_error!=NC_NOERR)
     {
+        free(tempVar1);
+        free(tempVar2);
         this->_ncerr = this->_error;
         this->_error = ERR_NETCDF;
         return this->_error;

@@ -32,6 +32,10 @@ movXtide::movXtide(QWebEngineView *inMap, MovQChartView *inChart, QDateEdit *inS
     this->endDateEdit = inEndDateEdit;
     this->unitSelect = inUnits;
     this->statusBar = inStatusBar;
+    this->currentXTideLat = 0;
+    this->currentXTideLon = 0;
+    this->currentStationName = QString();
+    this->thisChart = NULL;
 }
 
 //...Destructor

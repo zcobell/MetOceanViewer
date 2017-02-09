@@ -49,6 +49,11 @@ MovHwm::MovHwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnit
     this->chartView = inChartView;
     this->map = inMap;
     this->statusBar = inStatusBar;
+    this->regCorrelation = 0.0;
+    this->regLineIntercept = 0.0;
+    this->regLineSlope = 0.0;
+    this->regStdDev = 0.0;
+    this->thisChart = NULL;
 
     this->classes.resize(inClassValues.length());
     for(int i=0;i<this->classes.length();i++)

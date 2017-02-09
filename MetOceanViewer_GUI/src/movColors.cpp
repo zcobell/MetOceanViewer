@@ -70,9 +70,7 @@ QColor MovColors::GenerateRandomColor()
 {
     QColor MyColor, Mix;
     QTime SeedTime;
-    bool DoMix;
-
-    DoMix = false;
+    const bool DoMix = false;
 
     SeedTime = QTime::currentTime();
     qsrand((uint)SeedTime.msec());
