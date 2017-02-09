@@ -482,6 +482,8 @@ int MovNoaa::plotChart()
     this->thisChart->addSeries(series1);
     series1->attachAxis(axisX);
     series1->attachAxis(axisY);
+    this->chart->clear();
+    this->chart->addSeries(series1,series1->name());
 
     if(this->ProductIndex==0)
     {
@@ -493,6 +495,7 @@ int MovNoaa::plotChart()
                                 this->CurrentNOAAStation[1]->station[0]->data[j]);
             }
         this->thisChart->addSeries(series2);
+        this->chart->addSeries(series2,series2->name());
         series2->attachAxis(axisX);
         series2->attachAxis(axisY);
     }

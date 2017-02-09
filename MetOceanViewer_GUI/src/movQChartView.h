@@ -23,6 +23,8 @@
 #include <QtWidgets>
 #include <QChartView>
 #include <QtCharts/QChartGlobal>
+#include <QLineSeries>
+#include "qkdtree2.h"
 
 QT_BEGIN_NAMESPACE
 class QGraphicsScene;
@@ -46,12 +48,14 @@ public:
     void initializeAxisLimits();
     void resetZoom();
     void setStatusBar(QStatusBar *inStatusBar);
+    void addSeries(QLineSeries *series, QString name);
+    void clear();
 
     QGraphicsSimpleTextItem *m_coord;
     QGraphicsTextItem       *m_info;
-    QChart                  *m_chart;
     int                      m_style;
     QString                  m_infoString;
+    QChart                  *m_chart;
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -61,12 +65,15 @@ protected:
     void wheelEvent(QWheelEvent *event);
 
 private:
-    void        resetAxisLimits();
-    qreal       x_axis_min,x_axis_max;
-    qreal       y_axis_min,y_axis_max;
-    qreal       current_x_axis_min,current_x_axis_max;
-    qreal       current_y_axis_min,current_y_axis_max;
-    QStatusBar *m_statusBar;
+    void                     resetAxisLimits();
+    qreal                    x_axis_min,x_axis_max;
+    qreal                    y_axis_min,y_axis_max;
+    qreal                    current_x_axis_min,current_x_axis_max;
+    qreal                    current_y_axis_min,current_y_axis_max;
+    QStatusBar              *m_statusBar;
+    QVector<QString>         m_legendNames;
+    QVector<QLineSeries*>    m_series;
+    QVector<qKdtree2*>       m_kdtree;
 
 public slots:
     void handleLegendMarkerClicked();

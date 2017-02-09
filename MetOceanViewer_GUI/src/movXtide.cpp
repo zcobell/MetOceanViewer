@@ -119,7 +119,7 @@ int movXtide::findXTideExe()
 {
     QString installLocation       = QApplication::applicationDirPath().replace(" ","\ ");
     QString buildLocationLinux    = QApplication::applicationDirPath()+"/../../MetOceanViewer/MetOceanViewer_GUI/mov_libs/bin";
-    QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../../MetOceanViewer/MetOceanViewer_GUI/thirdparty/xtide-2.15.1";
+    QString buildLocationWindows  = QApplication::applicationDirPath()+"/../../../MetOceanViewer/thirdparty/xtide-2.15.1";
     QString appLocationMacOSX     = QApplication::applicationDirPath();
 
     QFile location1(installLocation+"/tide");
@@ -368,6 +368,8 @@ int movXtide::plotChart()
         series1->append(this->currentXTideStation[i].date.toMSecsSinceEpoch(),
                         this->currentXTideStation[i].value);
     this->thisChart->addSeries(series1);
+    this->chart->clear();
+    this->chart->addSeries(series1,series1->name());
     series1->attachAxis(axisX);
     series1->attachAxis(axisY);
     axisY->setTickCount(10);
@@ -390,6 +392,7 @@ int movXtide::plotChart()
     this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
     this->chart->initializeAxisLimits();
     this->chart->setStatusBar(this->statusBar);
+    this->thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
 
     foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
     {

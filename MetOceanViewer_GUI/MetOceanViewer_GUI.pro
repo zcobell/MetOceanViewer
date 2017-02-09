@@ -53,7 +53,9 @@ SOURCES +=\
     src/movUpdateDialog.cpp \
     src/movUsgs.cpp \
     src/movXtide.cpp \
-    src/movErrors.cpp
+    src/movErrors.cpp \
+    src/qkdtree2.cpp \
+    ../thirdparty/kdtree/kdtree2.cpp
 
 HEADERS  += \
     src/movAdcircStationOutput.h \
@@ -80,7 +82,8 @@ HEADERS  += \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
     src/mov_window_main.h \
-    src/movErrors.h
+    src/movErrors.h \
+    src/qkdtree2.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \
@@ -89,6 +92,12 @@ FORMS    += \
     ui/mov_dialog_update.ui
 
 OTHER_FILES +=
+
+#...Include Boost
+INCLUDEPATH += $$PWD/../thirdparty/boost-library
+
+#...Include KDTREE2
+INCLUDEPATH += $$PWD/../thirdparty/kdtree
 
 #...Include the PROJ4 library
 INCLUDEPATH += $$PWD/../libproj4

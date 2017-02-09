@@ -527,6 +527,9 @@ int MovUsgs::plotUSGS()
     }
     this->thisChart->addSeries(series1);
 
+    this->chart->clear();
+    this->chart->addSeries(series1,this->ProductName);
+
     minDateTime = QDateTime(minDateTime.date(),QTime(minDateTime.time().hour()  ,0,0));
     maxDateTime = QDateTime(maxDateTime.date(),QTime(maxDateTime.time().hour()+1,0,0));
 

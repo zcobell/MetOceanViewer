@@ -312,6 +312,8 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
 
     seriesCounter = 0;
 
+    this->chart->clear();
+
     for(i=0;i<this->fileDataUnique.length();i++)
     {
 
@@ -340,6 +342,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
           this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
           series[seriesCounter-1]->attachAxis(axisX);
           series[seriesCounter-1]->attachAxis(axisY);
+          this->chart->addSeries(series[seriesCounter-1],series[seriesCounter-1]->name());
       }
       else
       {
@@ -378,6 +381,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
                   this->thisChart->legend()->markers().at(seriesCounter-1)->setFont(QFont("Helvetica",10,QFont::Bold));
                   series[seriesCounter-1]->attachAxis(axisX);
                   series[seriesCounter-1]->attachAxis(axisY);
+                  this->chart->addSeries(series[seriesCounter-1],series[seriesCounter-1]->name());
               }
           }
       }
