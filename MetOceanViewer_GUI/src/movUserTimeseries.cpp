@@ -475,7 +475,7 @@ int MovUserTimeseries::processData()
             }
 
             this->fileData[j] = adcircData->toIMEDS();
-            if(ierr!=ERR_NOERR)
+            if(!this->fileData[j]->success)
                 return ERR_ADCIRC_NETCDFTOIMEDS;
             this->fileData[j]->success = true;
 
