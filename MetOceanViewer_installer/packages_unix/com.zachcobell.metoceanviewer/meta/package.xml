@@ -2,8 +2,8 @@
 <Package>
     <DisplayName>MetOceanViewer</DisplayName>
     <Description>MetOceanViewer component</Description>
-    <Version>2.6.0</Version>
-    <ReleaseDate>2016-10-15</ReleaseDate>
+    <Version>3.0.0</Version>
+    <ReleaseDate>2017-02-08</ReleaseDate>
     <Default>true</Default>
     <Licenses>
         <License name="GNU Generic Public License, Version 3" file="LICENSE" />

@@ -22,66 +22,102 @@ QT       += core gui webenginewidgets network xml charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = MetOcean_Viewer
+TARGET = MetOceanViewer
 TEMPLATE = app
 
-SOURCES += src/main.cpp\
-    src/ui_hwm_tab.cpp \
-    src/ui_noaa_tab.cpp \
-    src/ui_usgs_tab.cpp \
-    src/timeseries_add_data.cpp \
-    src/ui_timeseries_tab.cpp \
-    src/about_dialog.cpp \
-    src/MetOceanViewer_main.cpp \
-    src/setupMetOceanViewerUI.cpp \
-    src/noaa.cpp \
-    src/usgs.cpp \
-    src/user_timeseries.cpp \
-    src/hwm.cpp \
-    src/keyhandler.cpp \
-    src/mov_qchartview.cpp \
-    src/update_dialog.cpp \
-    src/ui_tab_xtide.cpp \
-    src/xtide.cpp \
-    src/javascriptAsyncReturn.cpp \
-    src/imeds.cpp \
-    src/imeds_station.cpp \
-    src/mov_generic.cpp \
-    src/mov_colors.cpp \
-    src/mov_session.cpp \
-    src/adcirc_station_output.cpp
+SOURCES +=\
+    src/movAboutDialog.cpp \
+    src/movAdcircStationOutput.cpp \
+    src/movAddTimeseriesData.cpp \
+    src/movColors.cpp \
+    src/movDflow.cpp \
+    src/movFiletypes.cpp \
+    src/movGeneric.cpp \
+    src/movHwm.cpp \
+    src/movImeds.cpp \
+    src/movImedsStation.cpp \
+    src/movInitUI.cpp \
+    src/movJavascriptAsyncReturn.cpp \
+    src/movKeyhandler.cpp \
+    src/movMain.cpp \
+    src/movNoaa.cpp \
+    src/movQChartView.cpp \
+    src/movSession.cpp \
+    src/movStartup.cpp \
+    src/movUserTimeseries.cpp \
+    src/movUiHwmTab.cpp \
+    src/movUiNoaaTab.cpp \
+    src/movUiTimeseriesTab.cpp \
+    src/movUiUsgsTab.cpp \
+    src/movUiXTideTab.cpp \
+    src/movUpdateDialog.cpp \
+    src/movUsgs.cpp \
+    src/movXtide.cpp \
+    src/movErrors.cpp \
+    src/qkdtree2.cpp \
+    ../thirdparty/kdtree/kdtree2.cpp
 
 HEADERS  += \
-    version.h \
-    src/timeseries_add_data.h \
-    src/about_dialog.h \
-    src/MetOceanViewer.h \
-    src/noaa.h \
-    src/mov_errors.h \
-    src/mov_flags.h \ 
-    src/usgs.h \
-    src/user_timeseries.h \
-    src/hwm.h \
-    src/keyhandler.h \
-    src/mov_qchartview.h \
-    src/mov_qwebenginepage.h \
-    src/update_dialog.h \
-    src/xtide.h \
-    src/javascriptAsyncReturn.h \
-    src/imeds.h \
-    src/imeds_station.h \
-    src/mov_generic.h \
-    src/mov_colors.h \
-    src/mov_session.h \
-    src/adcirc_station_output.h
+    src/movAdcircStationOutput.h \
+    src/movColors.h \
+    src/movDflow.h \
+    src/movErrors.h \
+    src/movFiletypes.h \
+    src/movFlags.h \
+    src/movGeneric.h \
+    src/movHwm.h \
+    src/movImeds.h \
+    src/movImedsStation.h \
+    src/movJavascriptAsyncReturn.h \
+    src/movKeyhandler.h \
+    src/movNoaa.h \
+    src/movQChartView.h \
+    src/movQWebEnginePage.h \
+    src/movSession.h \
+    src/movUserTimeseries.h \
+    src/movUsgs.h \
+    src/movXtide.h \
+    movVersion.h \
+    src/mov_dialog_addtimeseriesdata.h \
+    src/mov_dialog_about.h \
+    src/mov_dialog_update.h \
+    src/mov_window_main.h \
+    src/movErrors.h \
+    src/qkdtree2.h
 
 FORMS    += \
-    ui/timeseries_add_data.ui \
-    ui/about_dialog.ui \
-    ui/MetOceanViewer_main.ui \
-    ui/update_dialog.ui
+    ui/mov_dialog_about.ui \
+    ui/mov_dialog_addtimeseries.ui \
+    ui/mov_window_main.ui \
+    ui/mov_dialog_update.ui
 
 OTHER_FILES +=
+
+#...Include Boost
+INCLUDEPATH += $$PWD/../thirdparty/boost-library
+
+#...Include KDTREE2
+INCLUDEPATH += $$PWD/../thirdparty/kdtree
+
+#...Include the PROJ4 library
+INCLUDEPATH += $$PWD/../libproj4
+win32{
+    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libproj4/debug -lproj4
+    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libproj4/release -lproj4
+}
+unix{
+    LIBS += -L$$OUT_PWD/../libproj4 -lproj4
+}
+
+#...Include the netCDF4-CXX library
+INCLUDEPATH += $$PWD/../thirdparty/netcdf-cxx/cxx4
+win32{
+    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libnetcdfcxx/debug -lnetcdfcxx
+    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libnetcdfcxx/release -lnetcdfcxx
+}
+unix{
+    LIBS += -L$$OUT_PWD/../libnetcdfcxx -lnetcdfcxx
+}
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
@@ -89,87 +125,86 @@ DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
 #...Microsoft Visual C++ compilers
 *msvc* {
 
-#...Location of the netCDF srcs
-INCLUDEPATH += $$PWD/thirdparty/netcdf/include
+    #...Location of the netCDF srcs
+    INCLUDEPATH += $$PWD/../thirdparty/netcdf/include
 
-contains(QT_ARCH, i386){
+    contains(QT_ARCH, i386){
 
-#...Microsoft Visual C++ 32-bit compiler
-message("Using MSVC-32 bit compiler...")
-LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+        #...Microsoft Visual C++ 32-bit compiler
+        message("Using MSVC-32 bit compiler...")
+        LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -DEBUG
+        #...Optimization flags
+        QMAKE_CXXFLAGS_RELEASE +=
+        QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"msvc\\\"
+        #...Define a variable for the about dialog
+        DEFINES += MOV_COMPILER=\\\"msvc\\\"
+    }else{
 
-} else {
+        #...Microsoft Visual C++ 64-bit compiler
+        message("Using MSVC-64 bit compiler...")
+        LIBS += -L$$PWD/../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
-#...Microsoft Visual C++ 64-bit compiler
-message("Using MSVC-64 bit compiler...")
-LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+        #...Optimization flags
+        QMAKE_CXXFLAGS_RELEASE +=
+        QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -DEBUG
-
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"msvc\\\"
-}
+        #...Define a variable for the about dialog
+        DEFINES += MOV_COMPILER=\\\"msvc\\\"
+    }
 
 }
 
 #...MinGW 32 bit compiler, throw error
 win32-g++{
-error("MinGW not compatible with this project. See the Qt documentation for QtWebEngine.")
+    error("MinGW not compatible with this project. See the Qt documentation for QtWebEngine.")
 }
 
 #...Unix - We assume static library for NetCDF installed
 #          in the system path already
 unix:!macx{
-LIBS += -lnetcdf
+    LIBS += -lnetcdf
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+    #...Optimization flags
+    QMAKE_CXXFLAGS_RELEASE +=
+    QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"gpp\\\"
+    #...Define a variable for the about dialog
+    DEFINES += MOV_COMPILER=\\\"gpp\\\"
 }
 
 #...Mac - Assume static libs for netCDF in this path
 #         This, obviously, will vary by the machine
 #         the code is built on
 macx{
-LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
-INCLUDEPATH += /Users/zcobell/Software/netCDF/src
-ICON = img/mov.icns
+    LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
+    INCLUDEPATH += /Users/zcobell/Software/netCDF/src
+    ICON = img/mov.icns
 
-#...Files to be srcd in the bundle
-XTIDEBIN.files = $$PWD/mov_libs/bin/tide \
-                 $$PWD/mov_libs/bin/harmonics.tcd
-XTIDEBIN.path  = Contents/MacOS/XTide/bin
+    #...Files to be srcd in the bundle
+    XTIDEBIN.files = $$PWD/mov_libs/bin/tide \
+                     $$PWD/mov_libs/bin/harmonics.tcd
+    XTIDEBIN.path  = Contents/MacOS/XTide/bin
 
-XTIDELIB.files = $$PWD/mov_libs/lib/libtcd.dylib \
-                 $$PWD/mov_libs/lib/libxtide.dylib
-XTIDELIB.path  = Contents/MacOS/XTide/lib
+    XTIDELIB.files = $$PWD/mov_libs/lib/libtcd.dylib \
+                     $$PWD/mov_libs/lib/libxtide.dylib
+    XTIDELIB.path  = Contents/MacOS/XTide/lib
 
-QMAKE_BUNDLE_DATA += XTIDEBIN XTIDELIB
+    QMAKE_BUNDLE_DATA += XTIDEBIN XTIDELIB
 
-#...Optimization flags
-QMAKE_CXXFLAGS_RELEASE +=
-QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
+    #...Optimization flags
+    QMAKE_CXXFLAGS_RELEASE +=
+    QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
-#...Define a variable for the about dialog
-DEFINES += MOV_COMPILER=\\\"xcode\\\"
+    #...Define a variable for the about dialog
+    DEFINES += MOV_COMPILER=\\\"xcode\\\"
 }
 
 INCLUDEPATH += src
 
 RESOURCES += \
-    MetOceanViewer.qrc
+    movResource.qrc
     
 RC_FILE = resources.rc
 
