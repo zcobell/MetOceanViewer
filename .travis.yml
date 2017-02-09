@@ -18,7 +18,7 @@ addons:
     notification_email: zachary.cobell@arcadis.com
     build_command_prepend: "/opt/qt58/bin/qmake MetOceanViewer.pro"
     build_command:   "make"
-    branch_pattern: coverity
+    branch_pattern: master
 
 before_install:
 - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
