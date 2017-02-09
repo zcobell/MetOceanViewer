@@ -4,3 +4,6 @@ nsis/MetOceanViewer_installer_v2.0.154.exe
 mov_libs
 MetOceanViewer_installer/packages_windows/com.zachcobell.metoceanviewer/data
 MetOceanViewer_installer/packages_windows/com.microsoft.vcredist/data
+MetOceanViewer_installer/packages_unix/com.qt.qtsharedlibraries/data
+MetOceanViewer_installer/packages_unix/com.unidata.netcdf/data
+MetOceanViewer_installer/packages_unix/com.zachcobell.metoceanviewer/data

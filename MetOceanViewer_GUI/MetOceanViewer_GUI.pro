@@ -22,7 +22,7 @@ QT       += core gui webenginewidgets network xml charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = MetOcean_Viewer
+TARGET = MetOceanViewer
 TEMPLATE = app
 
 SOURCES +=\
@@ -80,7 +80,7 @@ HEADERS  += \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
     src/mov_window_main.h \
-    moverrors.h
+    src/movErrors.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \

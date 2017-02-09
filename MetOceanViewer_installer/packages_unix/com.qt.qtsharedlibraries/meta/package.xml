@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package>
     <DisplayName>Qt5 Shared Libraries</DisplayName>
-    <Description>Shared Qt5.7 libraries required. If you already have Qt5.7 installed, these are not necessary</Description>
-    <Version>5.7.0</Version>
-    <ReleaseDate>2016-10-15</ReleaseDate>
+    <Description>Shared Qt5.8 libraries required. If you already have Qt5.8 installed, these are not necessary</Description>
+    <Version>5.8.0</Version>
+    <ReleaseDate>2017-02-08</ReleaseDate>
     <Default>false</Default>
 </Package>
