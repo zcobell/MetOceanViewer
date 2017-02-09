@@ -40,6 +40,7 @@
 #include <QSharedPointer>
 #include <QPointF>
 #include <QVector3D>
+#include <QList>
 #include "kdtree2.hpp"
 
 class qKdtree2 : public QObject

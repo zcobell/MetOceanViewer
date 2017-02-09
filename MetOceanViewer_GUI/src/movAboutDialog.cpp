@@ -100,7 +100,9 @@ QString mov_dialog_about::generateAboutText()
            "zlib v1.2.8 - <a href=\"http://www.zlib.net/\">http://www.zlib.net/</a><br>" +
            "proj.4 v4.9.2 - <a href=\"http://proj4.org/\">http://proj4.org/</a><br>" +
            "OpenSSL v1.0.2d - <a href=\"https://www.openssl.org\">https://www.openssl.org</a><br>" +
-           "XTide - <a href=\"http://www.flaterco.com/xtide/\">http://www.flaterco.com/xtide/</a>" +
+           "XTide - <a href=\"http://www.flaterco.com/xtide/\">http://www.flaterco.com/xtide/</a><br>" +
+           "KDTree2 - Matthew Kennel (Institute for Nonlinear Science)<br>"+
+           "Boost v1.6 - <a href=\"http://www.boost.org/\">http://www.boost.org/</a>"+
 
            "</p></body></html>";
 

@@ -65,7 +65,8 @@ void MovQChartView::addSeries(QLineSeries *series, QString name)
     this->m_legendNames[this->m_legendNames.length()-1] = name;
 
     this->m_kdtree[this->m_kdtree.length()-1] = new qKdtree2(this);
-    this->m_kdtree[this->m_kdtree.length()-1]->build(this->m_series[this->m_series.length()-1]->points());
+    QList<QPointF> points = this->m_series[this->m_series.length()-1]->points();
+    this->m_kdtree[this->m_kdtree.length()-1]->build(points);
     return;
 }
 
@@ -106,17 +107,16 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event)
         {
             if(this->m_style==1)
             {
-
-                date = QDateTime::fromMSecsSinceEpoch(x);
-                date.setTimeSpec(Qt::UTC);
-                dateString = QString("Date: ")+date.toString("MM/dd/yyyy hh:mm AP");
-                this->m_coord->setText(dateString);
                 for(int i=0;i<this->m_series.length();i++)
                 {
                     this->m_kdtree.at(i)->findNearest(x,y_dum,i_min);
                     this->chart()->series().at(i)->setName(this->m_legendNames.at(i)+": "+
                                                            QString::number(this->m_series[i]->points().at(i_min).y()));
                 }
+                date = QDateTime::fromMSecsSinceEpoch(this->m_series[0]->at(i_min).x());
+                date.setTimeSpec(Qt::UTC);
+                dateString = QString("Date: ")+date.toString("MM/dd/yyyy hh:mm AP");
+                this->m_coord->setText(dateString);
             }
             else if(this->m_style==2)
                 this->m_coord->setText(QString("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
