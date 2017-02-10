@@ -60,7 +60,7 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent) :
 
 void mov_dialog_addtimeseries::throwErrorMessageBox(QString errorString)
 {
-    QMessageBox::critical(this,"ERROR",errorString);
+    QMessageBox::critical(this,tr("ERROR"),errorString);
     return;
 }
 
@@ -83,7 +83,7 @@ void mov_dialog_addtimeseries::set_default_dialog_box_elements(int NumRowsInTabl
 {
     QString ButtonStyle;
     this->InputFileColdStart.setTimeSpec(Qt::UTC);
-    ui->text_seriesname->setText("Series "+QString::number(NumRowsInTable+1));
+    ui->text_seriesname->setText(tr("Series ")+QString::number(NumRowsInTable+1));
     ui->text_unitconvert->setText("1.0");
     ui->text_xadjust->setText("0.0");
     ui->text_yadjust->setText("0.0");
@@ -208,8 +208,8 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
             ui->spin_layer->setMinimum(1);
             ui->spin_layer->setMaximum(dflow->getNumLayers());
             ui->spin_layer->setValue(this->layer);
-            ui->label_layerinfo->setText("Layer 1 = bottom\nLayer "+
-                                QString::number(dflow->getNumLayers())+" = top");
+            ui->label_layerinfo->setText(tr("Layer 1 = bottom\nLayer ")+
+                                QString::number(dflow->getNumLayers())+tr(" = top"));
 
         }
         else
@@ -229,7 +229,7 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
     else
     {
         this->FileReadError = true;
-        emit addTimeseriesError("No suitable filetype found.");
+        emit addTimeseriesError(tr("No suitable filetype found."));
     }
     return;
 }
@@ -318,11 +318,11 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
     else
         Directory = this->PreviousDirectory;
 
-    QString TempPath = QFileDialog::getOpenFileName(this,"Select File",
+    QString TempPath = QFileDialog::getOpenFileName(this,tr("Select File"),
             Directory,
-            QString("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; ")+
-            QString("IMEDS File (*.imeds *.IMEDS) ;; netCDF Output Files (*.nc) ;; ")+
-            QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
+            tr("MetOceanViewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; "
+                    "IMEDS File (*.imeds *.IMEDS) ;; netCDF Output Files (*.nc) ;; "
+                    "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
     this->InputFilePath = TempPath;
     if(TempPath!=NULL || (TempPath==NULL && this->CurrentFileName!=NULL) )
@@ -381,10 +381,10 @@ void mov_dialog_addtimeseries::on_button_seriesColor_clicked()
 void mov_dialog_addtimeseries::on_browse_stationfile_clicked()
 {
     QString TempFile;
-    QString TempPath = QFileDialog::getOpenFileName(this,"Select ADCIRC Station File",
+    QString TempPath = QFileDialog::getOpenFileName(this,tr("Select ADCIRC Station File"),
             this->PreviousDirectory,
-            QString("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )")+
-            QString("Comma Separated File (*.csv) ;; All Files (*.*)"));
+            tr("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )"
+            "Comma Separated File (*.csv) ;; All Files (*.*)"));
     if(TempPath!=NULL)
     {
         this->StationFilePath = TempPath;
@@ -441,27 +441,27 @@ void mov_dialog_addtimeseries::accept()
 
     if(this->InputFileName==NULL)
     {
-        emit addTimeseriesError("Please select an input file.");
+        emit addTimeseriesError(tr("Please select an input file."));
         return;
     }
     else if(this->InputSeriesName==NULL)
     {
-        emit addTimeseriesError("Please input a series name.");
+        emit addTimeseriesError(tr("Please input a series name."));
         return;
     }
     else if(this->InputColorString==NULL)
     {
-        emit addTimeseriesError("Please select a valid color for this series.");
+        emit addTimeseriesError(tr("Please select a valid color for this series."));
         return;
     }
     else if(this->InputStationFile==NULL && this->InputFileType==FILETYPE_ASCII_ADCIRC)
     {
-        emit addTimeseriesError("You did not select a station file.");
+        emit addTimeseriesError(tr("You did not select a station file."));
         return;
     }
     else if(!this->epsgmap->contains(this->epsg))
     {
-        emit addTimeseriesError("You did not enter a valid EPSG coordinate system.");
+        emit addTimeseriesError(tr("You did not enter a valid EPSG coordinate system."));
     }
     else
         QDialog::accept();
@@ -510,10 +510,10 @@ void mov_dialog_addtimeseries::on_button_describeepsg_clicked()
     if(this->epsgmap->contains(ui->spin_epsg->value()))
     {
         QString description = this->epsgmap->value(ui->spin_epsg->value());
-        QMessageBox::information(this,"Coordinate System Description",description);
+        QMessageBox::information(this,tr("Coordinate System Description"),description);
     }
     else
-        QMessageBox::information(this,"Coordinate System Description","ERROR: Invalid EPSG");
+        QMessageBox::information(this,tr("Coordinate System Description"),tr("ERROR: Invalid EPSG"));
 }
 
 

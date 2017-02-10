@@ -137,25 +137,25 @@ void mov_window_main::on_button_usgssavemap_clicked()
 
     if(MarkerID=="none")
     {
-        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No Station has been selected."));
         return;
     }
 
     if(MarkerID != MarkerID2)
     {
-        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,tr("ERROR"),tr("The currently selected station is not the data loaded."));
         return;
     }
 
     if(!thisUSGS->getUSGSBeenPlotted())
     {
-        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        QMessageBox::critical(this,tr("ERROR"),tr("Plot the data before attempting to save."));
         return;
     }
 
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/USGS_"+MarkerID+".jpg";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
@@ -184,26 +184,26 @@ void mov_window_main::on_button_usgssavedata_clicked()
 
     if(MarkerID=="none")
     {
-        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No Station has been selected."));
         return;
     }
 
     if(MarkerID != MarkerID2)
     {
-        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,tr("ERROR"),tr("The currently selected station is not the data loaded."));
         return;
     }
 
     if(!thisUSGS->getUSGSBeenPlotted())
     {
-        QMessageBox::critical(this,"ERROR","Plot the data before attempting to save.");
+        QMessageBox::critical(this,tr("ERROR"),tr("Plot the data before attempting to save."));
         return;
     }
 
     QString filter;
     QString DefaultFile = "/USGS_"+MarkerID+".imeds";
 
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                                     PreviousDirectory+DefaultFile,
                                     "IMEDS (*.imeds);;CSV (*.csv)",&filter);
 

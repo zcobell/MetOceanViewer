@@ -175,7 +175,7 @@ int movXtide::findXTideExe()
         return 0;
     }
 
-    emit xTideError("The XTide executable was not found");
+    emit xTideError(tr("The XTide executable was not found"));
 
     return -1;
 }
@@ -329,9 +329,9 @@ int movXtide::plotChart()
     ierr = this->getDataBounds(ymin,ymax);
 
     if(this->unitSelect->currentIndex()==1)
-        this->yLabel = "Water Surface Elevation (ft, MLLW)";
+        this->yLabel = tr("Water Surface Elevation (ft, MLLW)");
     else
-        this->yLabel = "Water Surface Elevation (m, MLLW)";
+        this->yLabel = tr("Water Surface Elevation (m, MLLW)");
 
     //...Create the chart
     this->thisChart = new QChart();
@@ -522,7 +522,7 @@ void movXtide::javascriptDataReturned(QString data)
     //...Sanity check on data
     if(this->currentStationName==QString() || this->currentStationName=="none")
     {
-        emit xTideError("You must select a station");
+        emit xTideError(tr("You must select a station"));
         return;
     }
 
@@ -531,7 +531,7 @@ void movXtide::javascriptDataReturned(QString data)
     ierr = this->calculateXTides();
     if(ierr!=0)
     {
-        emit xTideError("There was an error calculation tides");
+        emit xTideError(tr("There was an error calculation tides"));
         return;
     }
 
@@ -539,7 +539,7 @@ void movXtide::javascriptDataReturned(QString data)
     ierr = this->plotChart();
     if(ierr!=0)
     {
-        emit xTideError("There was an error drawing the chart");
+        emit xTideError(tr("There was an error drawing the chart"));
         return;
     }
 }

@@ -113,7 +113,7 @@ void MovUsgs::javascriptDataReturned(QString data)
 
     if(reply->error()!=QNetworkReply::NoError)
     {
-        emit usgsError("There was an error contacting the USGS data server");
+        emit usgsError(tr("There was an error contacting the USGS data server"));
         return;
     }
 
@@ -121,7 +121,7 @@ void MovUsgs::javascriptDataReturned(QString data)
     ierr = this->readUSGSDataFinished(reply);
     if(ierr!=0)
     {
-        emit usgsError("Error reading the USGS data");
+        emit usgsError(tr("Error reading the USGS data"));
         return;
     }
 
@@ -135,7 +135,7 @@ void MovUsgs::javascriptDataReturned(QString data)
     ierr = this->plotUSGS();
     if(ierr!=0)
     {
-        emit usgsError("No data available for this station");
+        emit usgsError(tr("No data available for this station"));
         return;
     }
 
@@ -165,7 +165,7 @@ int MovUsgs::formatUSGSInstantResponse(QByteArray Input)
 
     if(InputData.isEmpty()||InputData.isNull())
     {
-        this->USGSErrorString = QString("This data is not available except from the USGS archive server.");
+        this->USGSErrorString = tr("This data is not available except from the USGS archive server.");
         return ERR_USGS_ARCHIVEONLY;
     }
 
@@ -447,7 +447,7 @@ int MovUsgs::plotNewUSGSStation()
         this->USGSdataMethod = 0;
 
     //...Set status bar
-    statusBar->showMessage("Downloading data from USGS...");
+    statusBar->showMessage(tr("Downloading data from USGS..."));
 
     //...Wipe out the combo box
     productBox->clear();
@@ -473,7 +473,7 @@ int MovUsgs::replotCurrentUSGSStation(int index)
         statusBar->clearMessage();
         if(ierr!=0)
         {
-            this->USGSErrorString = "No data available for this selection.";
+            this->USGSErrorString = tr("No data available for this selection.");
             return ierr;
         }
         return 0;
@@ -571,7 +571,7 @@ int MovUsgs::plotUSGS()
     axisY->setTitleFont(QFont("Helvetica",10,QFont::Bold));
     this->thisChart->legend()->markers().at(0)->setFont(QFont("Helvetica",10,QFont::Bold));
 
-    this->thisChart->setTitle("USGS Station "+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
+    this->thisChart->setTitle(tr("USGS Station ")+this->USGSMarkerID+": "+this->CurrentUSGSStationName);
     this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     chart->setRenderHint(QPainter::Antialiasing);
     chart->setChart(this->thisChart);

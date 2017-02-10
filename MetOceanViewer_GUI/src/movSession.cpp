@@ -595,20 +595,20 @@ int MovSession::open(QString openFilename)
             {
                 //If we haven't previously specified an alternate folder, inform the user and
                 //ask if they want to specify.
-                reply = QMessageBox::question((QWidget*)parent(),"File not found",
-                    "Data file not found in default location. Would you like to specify another?");
+                reply = QMessageBox::question((QWidget*)parent(),tr("File not found"),
+                    tr("Data file not found in default location. Would you like to specify another?"));
                 if(reply==QMessageBox::Yes)
                 {
 
                     //Get an alternate location
                     //this->alternateFolder = QFileDialog::getExistingDirectory(0,"Select Folder",this->previousDirectory);
-                    this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),"Test",this->previousDirectory);
+                    this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),tr("Select Folder"),this->previousDirectory);
                     NewFile = this->alternateFolder+"/"+BaseFile;
                     QFile myfile(NewFile);
                     if(!myfile.exists())
                     {
                         continueToLoad = false;
-                        emit sessionError("The file "+BaseFile+" was not found and has been skipped.");
+                        emit sessionError(tr("The file ")+BaseFile+tr(" was not found and has been skipped."));
                     }
                     else
                     {
@@ -626,18 +626,18 @@ int MovSession::open(QString openFilename)
                 QFile myfile(NewFile);
                 if(!myfile.exists())
                 {
-                    reply = QMessageBox::question((QWidget*)parent(),"File not found",
-                        "File not found in default location. Would you like to specify another?");
+                    reply = QMessageBox::question((QWidget*)parent(),tr("File not found"),
+                        tr("File not found in default location. Would you like to specify another?"));
                     if(reply==QMessageBox::Yes)
                     {
                         //Get an alternate location
-                        this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),"Select Folder",this->previousDirectory);
+                        this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),tr("Select Folder"),this->previousDirectory);
                         NewFile = this->alternateFolder+"/"+BaseFile;
                         QFile myfile(NewFile);
                         if(!myfile.exists())
                         {
                             continueToLoad = false;
-                            emit sessionError("The file "+BaseFile+" was not found and has been skipped.");
+                            emit sessionError(tr("The file ")+BaseFile+tr(" was not found and has been skipped."));
                         }
                         else
                         {
@@ -673,18 +673,18 @@ int MovSession::open(QString openFilename)
                 {
                     //If we haven't previously specified an alternate folder, inform the user and
                     //ask if they want to specify.
-                    reply = QMessageBox::question((QWidget*)parent(),"File not found",
-                        "Station file not found in default location. Would you like to specify another?");
+                    reply = QMessageBox::question((QWidget*)parent(),tr("File not found"),
+                        tr("Station file not found in default location. Would you like to specify another?"));
                     if(reply==QMessageBox::Yes)
                     {
                         //Get an alternate location
-                        this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),"Select Folder",this->previousDirectory);
+                        this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),tr("Select Folder"),this->previousDirectory);
                         NewFile = this->alternateFolder+"/"+BaseFile;
                         QFile myfile(NewFile);
                         if(!myfile.exists())
                         {
                             continueToLoad = false;
-                            emit sessionError("The file "+BaseFile+" was not found and has been skipped.");
+                            emit sessionError(tr("The file ")+BaseFile+tr(" was not found and has been skipped."));
                         }
                         else
                         {
@@ -702,18 +702,18 @@ int MovSession::open(QString openFilename)
                     QFile myfile(NewFile);
                     if(!myfile.exists())
                     {
-                        reply = QMessageBox::question((QWidget*)parent(),"File not found",
-                            "File not found in default location. Would you like to specify another?");
+                        reply = QMessageBox::question((QWidget*)parent(),tr("File not found"),
+                            tr("File not found in default location. Would you like to specify another?"));
                         if(reply==QMessageBox::Yes)
                         {
                             //Get an alternate location
-                            this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),"Select Folder",this->previousDirectory);
+                            this->alternateFolder = QFileDialog::getExistingDirectory((QWidget*)parent(),tr("Select Folder"),this->previousDirectory);
                             NewFile = this->alternateFolder+"/"+BaseFile;
                             QFile myfile(NewFile);
                             if(!myfile.exists())
                             {
                                 continueToLoad = false;
-                                emit sessionError("The file "+BaseFile+" was not found and has been skipped.");
+                                emit sessionError(tr("The file ")+BaseFile+tr(" was not found and has been skipped."));
                             }
                             else
                             {

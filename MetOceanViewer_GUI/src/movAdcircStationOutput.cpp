@@ -133,7 +133,7 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile, QString AdcircSt
                 this->station_name[i] = this->station_name[i]+" "+TempList.value(j);
         }
         else
-            this->station_name[i] = "Station_"+QString::number(i);
+            this->station_name[i] = tr("Station_")+QString::number(i);
 
     }
     StationFile.close();
@@ -372,7 +372,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile)
     //the NetCDF file
     this->station_name.resize(station_size_int);
     for(i=0;i<station_size_int;++i)
-        this->station_name[i] = "Station "+QString::number(i);
+        this->station_name[i] = tr("Station ")+QString::number(i);
 
     free(tempVar1);
     free(tempVar2);

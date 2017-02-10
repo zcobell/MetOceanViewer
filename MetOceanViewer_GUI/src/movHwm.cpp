@@ -392,7 +392,7 @@ int MovHwm::plotRegression()
         this->thisChart->addSeries(scatterSeries[i]);
         scatterSeries[i]->attachAxis(axisX);
         scatterSeries[i]->attachAxis(axisY);
-        scatterSeries[i]->setName("High Water Marks");
+        scatterSeries[i]->setName(tr("High Water Marks"));
     }
 
     //...Don't display all the HWM series
@@ -417,7 +417,7 @@ int MovHwm::plotRegression()
     this->thisChart->addSeries(RegressionLine);
     RegressionLine->attachAxis(axisX);
     RegressionLine->attachAxis(axisY);
-    RegressionLine->setName("Regression Line");
+    RegressionLine->setName(tr("Regression Line"));
 
     //...Standard Deviation Lines
     if(displayBoundingLines)
@@ -430,7 +430,7 @@ int MovHwm::plotRegression()
         this->thisChart->addSeries(UpperBoundLine);
         UpperBoundLine->attachAxis(axisX);
         UpperBoundLine->attachAxis(axisY);
-        UpperBoundLine->setName("Standard Deviation Interval");
+        UpperBoundLine->setName(tr("Standard Deviation Interval"));
 
         //...Lower Bound Line
         QLineSeries *LowerBoundLine = new QLineSeries(this);
@@ -440,7 +440,7 @@ int MovHwm::plotRegression()
         this->thisChart->addSeries(LowerBoundLine);
         LowerBoundLine->attachAxis(axisX);
         LowerBoundLine->attachAxis(axisY);
-        LowerBoundLine->setName("Standard Deviation Interval");
+        LowerBoundLine->setName(tr("Standard Deviation Interval"));
 
         this->thisChart->legend()->markers().at(10)->setVisible(false);
         this->thisChart->legend()->markers().at(11)->setVisible(false);
@@ -470,9 +470,9 @@ int MovHwm::plotRegression()
     this->chartView->m_coord->setPos(this->chartView->size().width()/2 - 100, this->chartView->size().height() - 20);
 
     this->chartView->m_info = new QGraphicsTextItem(this->thisChart);
-    this->chartView->m_infoString = "<table><tr><td align=\"right\"><b> Regression Line: </b></td><td>"+RegressionString+"</td></tr>"+
-                                     "<tr><td align=\"right\"><b> Correlation (R&sup2;): </b></td><td>"+CorrelationString+"</td></tr>"+
-                                     "<tr><td align=\"right\"><b> Standard Deviation: </b></td><td>"+StandardDeviationString+"</td></tr></table>";
+    this->chartView->m_infoString = "<table><tr><td align=\"right\"><b> "+tr("Regression Line")+": </b></td><td>"+RegressionString+"</td></tr>"+
+                                     "<tr><td align=\"right\"><b> "+tr("Correlation")+" (R&sup2;): </b></td><td>"+CorrelationString+"</td></tr>"+
+                                     "<tr><td align=\"right\"><b> "+tr("Standard Deviation:")+" </b></td><td>"+StandardDeviationString+"</td></tr></table>";
     this->chartView->m_info->setHtml(this->chartView->m_infoString);
     this->chartView->m_info->setPos(10,this->chartView->m_chart->size().height()-50);
     this->chartView->initializeAxisLimits();
@@ -501,14 +501,14 @@ int MovHwm::processHWMData()
     ierr = this->readHWMData();
     if(ierr!=0)
     {
-        this->hwmErrorString = "Could not read the high water mark file.";
+        this->hwmErrorString = tr("Could not read the high water mark file.");
         return -1;
     }
 
     ierr = this->computeLinearRegression();
     if(ierr!=0)
     {
-        this->hwmErrorString = "Could not calculate the regression function.";
+        this->hwmErrorString = tr("Could not calculate the regression function.");
         return -1;
     }
 
@@ -533,32 +533,32 @@ int MovHwm::processHWMData()
 
         if(c1<=c0)
         {
-            this->hwmErrorString = "Your classifications are invalid.";
+            this->hwmErrorString = tr("Your classifications are invalid.");
             return -1;
         }
         else if(c2<=c1)
         {
-            this->hwmErrorString = "Your classifications are invalid.";
+            this->hwmErrorString = tr("Your classifications are invalid.");
             return -1;
         }
         else if(c3<=c2)
         {
-            this->hwmErrorString = "Your classifications are invalid.";
+            this->hwmErrorString = tr("Your classifications are invalid.");
             return -1;
         }
         else if(c4<=c3)
         {
-            this->hwmErrorString = "Your classifications are invalid.";
+            this->hwmErrorString = tr("Your classifications are invalid.");
             return -1;
         }
         else if(c5<=c4)
         {
-            this->hwmErrorString = "Your classifications are invalid.";
+            this->hwmErrorString = tr("Your classifications are invalid.");
             return -1;
         }
         else if(c6<=c5)
         {
-            this->hwmErrorString = "Your classifications are invalid.";
+            this->hwmErrorString = tr("Your classifications are invalid.");
             return -1;
         }
     }
@@ -614,7 +614,7 @@ int MovHwm::readHWMData()
     }
     catch(...)
     {
-        this->hwmErrorString = "Unexpected error reading file.";
+        this->hwmErrorString = tr("Unexpected error reading file.");
         return 1;
     }
 

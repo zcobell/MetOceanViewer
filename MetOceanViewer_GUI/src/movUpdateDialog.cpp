@@ -312,16 +312,16 @@ void mov_dialog_update::setDialogText()
     if(!this->networkError)
     {
         if(this->hasNewVersion)
-            dialogHTML = "A new version of MetOcean Viewer is available for download <a href=\""+this->latestVersionURL+"\">here</a><br><br>";
+            dialogHTML = tr("A new version of MetOceanViewer is available for download")+"<a href=\""+this->latestVersionURL+"\">here</a><br><br>";
         else
-            dialogHTML = dialogHTML + "Your version of MetOcean Viewer is up to date. <br><br>";
+            dialogHTML = dialogHTML + tr("Your version of MetOceanViewer is up to date.")+" <br><br>";
         dialogHTML = dialogHTML +
                 QString("<table>")+
                     QString("<tr>")+
-                        QString("<td align=\"right\"> <b>Current Revision:</b> </td><td align=\"left\">")+this->currentVersion+QString("</td>")+
+                        QString("<td align=\"right\"> <b>"+tr("Current Revision:")+"</b> </td><td align=\"left\">")+this->currentVersion+QString("</td>")+
                     QString("</tr>")+
                     QString("<tr>")+
-                        QString("<td align=\"right\"> <b>Latest Release:</b> </td><td align=\"left\">")+this->latestVersion+
+                        QString("<td align=\"right\"> <b>"+tr("Latest Release:")+"</b> </td><td align=\"left\">")+this->latestVersion+
                                 " (Released: "+this->latestVersionDate.toString("MM/dd/yyyy)")+QString("</td>")+
                     QString("</tr>")+
                 QString("</table>")+
@@ -331,14 +331,14 @@ void mov_dialog_update::setDialogText()
     {
         dialogHTML = QString("<br><br><table>")+
                     QString("<tr>")+
-                        QString("<td align=\"right\"> <b>Current Revision:</b> </td><td align=\"right\">")+this->currentVersion+QString("</td>")+
+                        QString("<td align=\"right\"> <b>"+tr("Current Revision:")+"</b> </td><td align=\"right\">")+this->currentVersion+QString("</td>")+
                     QString("</tr>")+
                     QString("<tr>")+
-                        QString("<td align=\"right\"> <b>Latest Revision:</b> </td><td align=\"right\">")+"Unknown"+QString("</td>")+
+                        QString("<td align=\"right\"> <b>"+tr("Latest Release:")+"</b> </td><td align=\"right\">")+tr("Unknown")+QString("</td>")+
                     QString("</tr>")+
                 QString("</table>")+
                 QString("<br><br>")+
-                QString("<b>ERROR:</b> The update server could not be contacted successfully.");
+                QString("<b>"+tr("ERROR:")+"</b> "+tr("The update server could not be contacted successfully."));
     }
 
     ui->text_update->setHtml(dialogHTML);

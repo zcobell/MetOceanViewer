@@ -47,19 +47,19 @@ void mov_window_main::on_button_noaasavechart_clicked()
 
     if(MarkerID==-1)
     {
-        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No Station has been selected."));
         return;
     }
 
     if(MarkerID != MarkerID2)
     {
-        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,tr("ERROR"),tr("The currently selected station is not the data loaded."));
         return;
     }
 
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/NOAA_"+QString::number(MarkerID)+".jpg";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
@@ -88,19 +88,19 @@ void mov_window_main::on_button_noaasavedata_clicked()
 
     if(MarkerID==-1)
     {
-        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No Station has been selected."));
         return;
     }
 
     if(MarkerID != MarkerID2)
     {
-        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,tr("ERROR"),tr("The currently selected station is not the data loaded."));
         return;
     }
 
     QString filter;
     QString DefaultFile = "/NOAA_"+QString::number(MarkerID)+".imeds";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",PreviousDirectory+DefaultFile,
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),PreviousDirectory+DefaultFile,
                                                     "IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);

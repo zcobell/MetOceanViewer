@@ -251,7 +251,7 @@ int MovNoaa::generateLabels()
             this->Units="m";
         else
             this->Units="ft";
-        this->yLabel = "Water Level ("+this->Units+", "+this->Datum+")";
+        this->yLabel = tr("Water Level (")+this->Units+", "+this->Datum+")";
     }
     else if(this->ProductIndex == 1 || this->ProductIndex == 2 || this->ProductIndex == 3)
     {
@@ -259,7 +259,7 @@ int MovNoaa::generateLabels()
             this->Units="m";
         else
             this->Units="ft";
-        this->yLabel = Product+" ("+Units+", "+this->Datum+")";
+        this->yLabel = Product+" ("+this->Units+", "+this->Datum+")";
     }
     else if(this->ProductIndex == 6)
     {
@@ -292,7 +292,7 @@ int MovNoaa::generateLabels()
         this->yLabel = Product+" ("+this->Units+")";
     }
 
-    this->plotTitle = "Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStation[0]->station[0]->StationName;
+    this->plotTitle = tr("Station ")+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStation[0]->station[0]->StationName;
 
     return 0;
 }
@@ -375,7 +375,7 @@ void MovNoaa::javascriptDataReturned(QString data)
 
     if(this->NOAAMarkerID==-1)
     {
-        emit noaaError("You must select a station");
+        emit noaaError(tr("You must select a station"));
         return;
     }
 
@@ -390,13 +390,13 @@ void MovNoaa::javascriptDataReturned(QString data)
     this->ProductIndex = this->noaaProduct->currentIndex();
 
     //Update status
-    statusBar->showMessage("Downloading data from NOAA...",0);
+    statusBar->showMessage(tr("Downloading data from NOAA...",0));
 
     //...Generate the javascript calls in this array
     ierr = this->fetchNOAAData();
 
     //...Update the status bar
-    statusBar->showMessage("Plotting the data from NOAA...");
+    statusBar->showMessage(tr("Plotting the data from NOAA..."));
 
     //...Generate prep the data for plotting
     ierr = this->prepNOAAResponse();
@@ -516,7 +516,7 @@ int MovNoaa::plotChart()
 
     this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
     this->thisChart->legend()->setAlignment(Qt::AlignBottom);
-    this->thisChart->setTitle("NOAA Station "+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStation[0]->station[0]->StationName);
+    this->thisChart->setTitle(tr("NOAA Station ")+QString::number(this->NOAAMarkerID)+": "+this->CurrentNOAAStation[0]->station[0]->StationName);
     this->thisChart->setTitleFont(QFont("Helvetica",14,QFont::Bold));
     this->chart->setRenderHint(QPainter::Antialiasing);
     this->chart->setChart(this->thisChart);
@@ -570,7 +570,7 @@ void MovNoaa::readNOAAResponse(QNetworkReply *reply, int index, int index2)
     //Catch some errors during the download
     if(reply->error()!=0)
     {
-        emit noaaError("ERROR: "+reply->errorString());
+        emit noaaError(tr("ERROR: ")+reply->errorString());
         reply->deleteLater();
         return;
     }

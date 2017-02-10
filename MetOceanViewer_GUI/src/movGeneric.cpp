@@ -75,7 +75,7 @@ void MovGeneric::splitPath(QString input,QString &filename,QString &directory)
 int MovGeneric::NETCDF_ERR(int status)
 {
     if(status != NC_NOERR)
-        QMessageBox::critical(NULL,"Error Saving File",nc_strerror(status));
+        QMessageBox::critical(NULL,tr("Error Saving File"),tr(nc_strerror(status)));
 
     return status;
 }

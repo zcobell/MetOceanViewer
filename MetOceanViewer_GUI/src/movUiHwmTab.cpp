@@ -36,9 +36,9 @@
 void mov_window_main::on_browse_hwm_clicked()
 {
     QString filename;
-    QString HighWaterMarkFile = QFileDialog::getOpenFileName(this,"Select High Water Mark File",
+    QString HighWaterMarkFile = QFileDialog::getOpenFileName(this,tr("Select High Water Mark File"),
                                     this->PreviousDirectory,
-                                    "Shintaro Style High Water Mark File (*.csv) ;; All Files (*.*)");
+                                    tr("High Water Mark File (*.csv) ;; All Files (*.*)"));
     if(HighWaterMarkFile==NULL)
         return;
 
@@ -112,7 +112,7 @@ void mov_window_main::on_button_processHWM_clicked()
 
     if(ierr!=0)
     {
-        QMessageBox::critical(this,"ERROR",thisHWM->getErrorString());
+        QMessageBox::critical(this,tr("ERROR"),thisHWM->getErrorString());
         return;
     }
 
@@ -152,7 +152,7 @@ void mov_window_main::on_button_saveHWMMap_clicked()
 {
     QString filename;
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                 this->PreviousDirectory,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
@@ -290,7 +290,7 @@ void mov_window_main::on_button_saveHWMScatter_clicked()
 {
     QString filename;
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                 this->PreviousDirectory,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)

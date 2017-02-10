@@ -101,9 +101,9 @@ void mov_window_main::on_actionLoad_Session_triggered()
 {
     QString BaseFile;
     QString LoadFile = QFileDialog::getOpenFileName(this,
-                            "Open Session...",
+                            tr("Open Session..."),
                             this->PreviousDirectory,
-                            "MetOcean Viewer Sessions (*.mvs)");
+                            tr("MetOcean Viewer Sessions (*.mvs)"));
 
     if(LoadFile==NULL)
         return;
@@ -144,8 +144,8 @@ void mov_window_main::on_actionSave_Session_triggered()
 void mov_window_main::on_actionSave_Session_As_triggered()
 {
     QString SaveFile = QFileDialog::getSaveFileName(this,
-                        "Save Session...",this->PreviousDirectory,
-                        "MetOcean Viewer Sessions (*.mvs)");
+                        tr("Save Session..."),this->PreviousDirectory,
+                        tr("MetOcean Viewer Sessions (*.mvs)"));
     if(SaveFile!=NULL)
     {
         this->sessionState->setSessionFilename(SaveFile);
@@ -209,7 +209,7 @@ void mov_window_main::handleEnterKey()
 
 void mov_window_main::throwErrorMessageBox(QString errorString)
 {
-    QMessageBox::critical(this,"ERROR",errorString);
+    QMessageBox::critical(this,tr("ERROR"),errorString);
     return;
 }
 

@@ -34,9 +34,9 @@ int main(int argc, char *argv[])
 
     if(!MovGeneric::isConnectedToNetwork())
     {
-        QMessageBox::critical(0,"Internet Connection Not Detected",
-                              "No internet connection was detected.\n "
-                              "The program will now be terminated.");
+        QMessageBox::critical(0,QObject::tr("Internet Connection Not Detected"),
+                              QObject::tr("No internet connection was detected.\n "
+                              "The program will now be terminated."));
         return -1;
     }
 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     if(pixmap.isNull())
     {
         //Warning about splash screen, which shouldn't happen
-        QMessageBox::warning(0,"ERROR","Failed to load spash screen image.");
+        QMessageBox::warning(0,QObject::tr("ERROR"),QObject::tr("Failed to load spash screen image."));
     }
     else
     {

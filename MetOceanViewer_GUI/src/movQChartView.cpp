@@ -126,10 +126,10 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event)
                 this->m_coord->setText(dateString);
             }
             else if(this->m_style==2)
-                this->m_coord->setText(QString("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
+                this->m_coord->setText(tr("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
 
             if(this->m_statusBar)
-                this->m_statusBar->showMessage("Left click and drag to zoom in, Right click to zoom out, Double click to reset zoom");
+                this->m_statusBar->showMessage(tr("Left click and drag to zoom in, Right click to zoom out, Double click to reset zoom"));
         }
         else
         {

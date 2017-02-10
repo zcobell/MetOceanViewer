@@ -70,19 +70,19 @@ void mov_window_main::on_button_xtide_savemap_clicked()
 
     if(MarkerID=="none")
     {
-        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No Station has been selected."));
         return;
     }
 
     if(MarkerID != MarkerID2)
     {
-        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,tr("ERROR"),tr("The currently selected station is not the data loaded."));
         return;
     }
 
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/XTide_"+MarkerID.replace(" ","_")+".jpg";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                 PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
@@ -104,20 +104,20 @@ void mov_window_main::on_button_xtide_savedata_clicked()
 
     if(MarkerID=="none")
     {
-        QMessageBox::critical(this,"ERROR","No Station has been selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No Station has been selected."));
         return;
     }
 
     if(MarkerID != MarkerID2)
     {
-        QMessageBox::critical(this,"ERROR","The currently selected station is not the data loaded.");
+        QMessageBox::critical(this,tr("ERROR"),tr("The currently selected station is not the data loaded."));
         return;
     }
 
     QString filter;
     QString DefaultFile = "/XTide_"+MarkerID.replace(" ","_")+".imeds";
 
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                                     PreviousDirectory+DefaultFile,
                                     "IMEDS (*.imeds);;CSV (*.csv)",&filter);
 

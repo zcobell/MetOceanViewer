@@ -254,7 +254,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
     }
     else
     {
-        emit timeseriesError("No stations selected");
+        emit timeseriesError(tr("No stations selected"));
         return;
     }
 
@@ -463,7 +463,7 @@ int MovUserTimeseries::processData()
             ierr = this->fileData[j]->read(TempFile);
             if(ierr!=ERR_NOERR)
             {
-                this->errorString = "Error reading file: "+TempFile;
+                this->errorString = tr("Error reading file: ")+TempFile;
                 return ERR_IMEDS_FILEREADERROR;
             }
             this->fileData[j]->success = true;
@@ -476,7 +476,7 @@ int MovUserTimeseries::processData()
             ierr = adcircData->read(TempFile,ColdStart);
             if(ierr!=ERR_NOERR)
             {
-                this->errorString = "Error reading file: "+TempFile;
+                this->errorString = tr("Error reading file: ")+TempFile;
                 return ERR_ADCIRC_NETCDFREADERROR;
             }
 
@@ -495,7 +495,7 @@ int MovUserTimeseries::processData()
             ierr = adcircData->read(TempFile,TempStationFile,ColdStart);
             if(ierr!=ERR_NOERR)
             {
-                this->errorString = "Error reading file: "+TempFile;
+                this->errorString = tr("Error reading file: ")+TempFile;
                 return ERR_ADCIRC_ASCIIREADERROR;
             }
             this->fileData[j] = adcircData->toIMEDS();
@@ -512,14 +512,14 @@ int MovUserTimeseries::processData()
             ierr = dflow->getVariable(dflowVar,dflowLayer,this->fileData[j]);
             if(ierr!=ERR_NOERR)
             {
-                this->errorString = "Error processing DFlow: "+
+                this->errorString = tr("Error processing DFlow: ")+
                         dflow->error->toString();
                 return ERR_DFLOW_FILEREADERROR;
             }
         }
         else
         {
-            this->errorString = "Invalid file format";
+            this->errorString = tr("Invalid file format");
             return ERR_INVALIDFILEFORMAT;
         }
 
@@ -534,7 +534,7 @@ int MovUserTimeseries::processData()
     ierr = this->projectStations(this->epsg,this->fileData);
     if(ierr!=0)
     {
-        this->errorString = "Error projecting the station locations";
+        this->errorString = tr("Error projecting the station locations");
         return ERR_PROJECTSTATIONS;
     }
 
@@ -543,14 +543,14 @@ int MovUserTimeseries::processData()
                                       this->StationYLocs);
     if(ierr!=ERR_NOERR)
     {
-        this->errorString = "Error building the station list";
+        this->errorString = tr("Error building the station list");
         return ERR_BUILDSTATIONLIST;
     }
     ierr = this->buildRevisedIMEDS(this->fileData,this->StationXLocs,
                                    this->StationYLocs,this->fileDataUnique);
     if(ierr!=0)
     {
-        this->errorString = "Error building the unique dataset";
+        this->errorString = tr("Error building the unique dataset");
         return ERR_BUILDREVISEDIMEDS;
     }
 

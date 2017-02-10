@@ -26,10 +26,10 @@
 #include "movGeneric.h"
 #include "movSession.h"
 #include "movDflow.h"
+#include <QDebug>
 
 void mov_window_main::setupMetOceanViewerUI()
 {
-    QString BaseFile;
 
     //-------------------------------------------//
     //Setting up the NOAA tab for the user

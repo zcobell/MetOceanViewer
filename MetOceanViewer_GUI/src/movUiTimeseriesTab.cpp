@@ -31,7 +31,7 @@ void mov_window_main::on_button_saveTimeseriesImage_clicked()
 {
     QString Filename;
     QString filter = "JPG (*.jpg *.jpeg)";
-    QString TempString = QFileDialog::getSaveFileName(this,"Save as...",
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
                 PreviousDirectory,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
@@ -127,7 +127,7 @@ void mov_window_main::on_button_TimeseriesDeleteRow_clicked()
 {
     if(ui->table_TimeseriesData->rowCount()==0)
     {
-        QMessageBox::critical(this,"ERROR","There are no datasets currently.");
+        QMessageBox::critical(this,tr("ERROR"),tr("There are no datasets currently."));
         return;
     }
 
@@ -147,9 +147,9 @@ void mov_window_main::on_button_TimeseriesDeleteRow_clicked()
 //-------------------------------------------//
 void mov_window_main::SetupTimeseriesTable()
 {
-    QString HeaderString = QString("Filename;Series Name;Color;Unit Conversion;")+
-                           QString("x-shift;y-shift;FullPathToFile;Cold Start;")+
-                           QString("FileType;StationFile;StationFilePath;epsg;dflowvariable;layer");
+    QString HeaderString = tr("Filename;Series Name;Color;Unit Conversion;"
+                           "x-shift;y-shift;FullPathToFile;Cold Start;"
+                           "FileType;StationFile;StationFilePath;epsg;dflowvariable;layer");
     QStringList Header = HeaderString.split(";");
 
     ui->table_TimeseriesData->setRowCount(0);
@@ -187,13 +187,13 @@ void mov_window_main::on_button_TimeseriesEditRow_clicked()
 
     if(ui->table_TimeseriesData->rowCount() == 0)
     {
-        QMessageBox::critical(this,"ERROR","Insert a dataset first.");
+        QMessageBox::critical(this,tr("ERROR"),tr("Insert a dataset first."));
         return;
     }
 
     if(ui->table_TimeseriesData->currentRow() == -1)
     {
-        QMessageBox::critical(this,"ERROR","No dataset selected.");
+        QMessageBox::critical(this,tr("ERROR"),tr("No dataset selected."));
         return;
     }
 
@@ -295,7 +295,7 @@ void mov_window_main::on_button_processTimeseriesData_clicked()
 
     ierr = this->thisTimeseries->processData();
     if(ierr!=0)
-        QMessageBox::critical(this,"ERROR",this->thisTimeseries->getErrorString());
+        QMessageBox::critical(this,tr("ERROR"),this->thisTimeseries->getErrorString());
     else
     {
         ui->MainTabs->setCurrentIndex(1);
