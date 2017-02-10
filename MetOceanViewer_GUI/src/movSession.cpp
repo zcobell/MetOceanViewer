@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "movSession.h"
 #include "movGeneric.h"
+#include "movFiletypes.h"
 
 MovSession::MovSession(QTableWidget *inTableWidget,
                          QLineEdit *inPlotTitleWidget,
@@ -68,7 +69,8 @@ int MovSession::save()
     int varid_xshift,varid_yshift,varid_type,varid_coldstart;
     int varid_stationfile,varid_plottitle,varid_xlabel,varid_ylabel;
     int varid_startdate,varid_enddate,varid_precision,varid_ymin,varid_ymax;
-    int varid_autodate,varid_autoy,varid_checkState;
+    int varid_autodate,varid_autoy,varid_checkState,varid_epsg,varid_dflowlayer;
+    int varid_dflowvar;
     int dims_1d[1];
     int nTimeseries;
     QString relPath,TempFile,Directory,tempString;
@@ -82,7 +84,7 @@ int MovSession::save()
     QFile Session(this->sessionFileName);
 
     QVector<QString> filenames_ts;
-    QVector<QString> filetype_ts;
+    QVector<int> filetype_ts;
     QVector<QString> colors_ts;
     QVector<double> units_ts;
     QVector<QString> seriesname_ts;
@@ -91,6 +93,9 @@ int MovSession::save()
     QVector<QString> date_ts;
     QVector<QString> stationfile_ts;
     QVector<int> checkStates_ts;
+    QVector<int> epsg_ts;
+    QVector<QString> dflowvar_ts;
+    QVector<int> dflowlayer_ts;
 
     //Remove the old file
     if(Session.exists())
@@ -116,6 +121,9 @@ int MovSession::save()
     stationfile_ts.resize(nTimeseries);
     filetype_ts.resize(nTimeseries);
     checkStates_ts.resize(nTimeseries);
+    epsg_ts.resize(nTimeseries);
+    dflowvar_ts.resize(nTimeseries);
+    dflowlayer_ts.resize(nTimeseries);
 
     for(i=0;i<nTimeseries;i++)
     {
@@ -126,12 +134,15 @@ int MovSession::save()
         xshift_ts[i] = this->tableWidget->item(i,4)->text().toDouble();
         yshift_ts[i] = this->tableWidget->item(i,5)->text().toDouble();
         date_ts[i] = this->tableWidget->item(i,7)->text();
-        filetype_ts[i] = this->tableWidget->item(i,8)->text();
+        filetype_ts[i] = this->tableWidget->item(i,8)->text().toInt();
         stationfile_ts[i] = this->tableWidget->item(i,10)->text();
         if(this->tableWidget->item(i,0)->checkState()==Qt::Checked)
             checkStates_ts[i] = 1;
         else
             checkStates_ts[i] = 0;
+        epsg_ts[i] = this->tableWidget->item(i,11)->text().toInt();
+        dflowvar_ts[i] = this->tableWidget->item(i,12)->text();
+        dflowlayer_ts[i] = this->tableWidget->item(i,13)->text().toInt();
     }
 
     ierr = MovGeneric::NETCDF_ERR(nc_def_dim(ncid,"ntimeseries",static_cast<size_t>(nTimeseries),&dimid_ntimeseries));
@@ -147,7 +158,7 @@ int MovSession::save()
     if(ierr!=NC_NOERR)return 1;
     ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_names",NC_STRING,1,dims_1d,&varid_names));
     if(ierr!=NC_NOERR)return 1;
-    ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_filetype",NC_STRING,1,dims_1d,&varid_type));
+    ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_filetype",NC_INT,1,dims_1d,&varid_type));
     if(ierr!=NC_NOERR)return 1;
     ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_coldstartdate",NC_STRING,1,dims_1d,&varid_coldstart));
     if(ierr!=NC_NOERR)return 1;
@@ -160,6 +171,12 @@ int MovSession::save()
     ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_units",NC_DOUBLE,1,dims_1d,&varid_units));
     if(ierr!=NC_NOERR)return 1;
     ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_checkState",NC_INT,1,dims_1d,&varid_checkState));
+    if(ierr!=NC_NOERR)return 1;
+    ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_epsg",NC_INT,1,dims_1d,&varid_epsg));
+    if(ierr!=NC_NOERR)return 1;
+    ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_dflowvar",NC_STRING,1,dims_1d,&varid_dflowvar));
+    if(ierr!=NC_NOERR)return 1;
+    ierr = MovGeneric::NETCDF_ERR(nc_def_var(ncid,"timeseries_layer",NC_INT,1,dims_1d,&varid_dflowlayer));
     if(ierr!=NC_NOERR)return 1;
 
     //Scalars
@@ -278,9 +295,8 @@ int MovSession::save()
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
-        tempByte = filetype_ts[(int)iu].toUtf8();
-        mydatastring[0] = tempByte.data();
-        ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_type,start,mydatastring));
+        mydataint[0] = filetype_ts[(int)iu];
+        ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_int(ncid,varid_type,start,mydataint));
         if(ierr!=NC_NOERR)return 1;
         mydatastring[0] = NULL;
 
@@ -300,6 +316,21 @@ int MovSession::save()
         ierr = MovGeneric::NETCDF_ERR(nc_put_var1_int(ncid,varid_checkState,start,mydataint));
         if(ierr!=NC_NOERR)return 1;
 
+        mydataint[0] = epsg_ts[(int)iu];
+        ierr = MovGeneric::NETCDF_ERR(nc_put_var1_int(ncid,varid_epsg,start,mydataint));
+        if(ierr!=NC_NOERR)return 1;
+
+        tempByte = dflowvar_ts[(int)iu].toUtf8();
+        mydatastring[0] = tempByte.data();
+        ierr  = MovGeneric::NETCDF_ERR(nc_put_var1_string(ncid,varid_dflowvar,start,mydatastring));
+        if(ierr!=NC_NOERR)return 1;
+        mydatastring[0] = NULL;
+
+        mydataint[0] = dflowlayer_ts[(int)iu];
+        ierr = MovGeneric::NETCDF_ERR(nc_put_var1_int(ncid,varid_dflowlayer,start,mydataint));
+        if(ierr!=NC_NOERR)return 1;
+
+
     }
 
     ierr = MovGeneric::NETCDF_ERR(nc_close(ncid));
@@ -316,14 +347,18 @@ int MovSession::open(QString openFilename)
     int varid_xshift,varid_yshift,varid_type,varid_coldstart;
     int varid_stationfile,varid_plottitle,varid_xlabel,varid_ylabel;
     int varid_startdate,varid_enddate,varid_precision,varid_ymin,varid_ymax;
-    int varid_autodate,varid_autoy,varid_checkState;
+    int varid_autodate,varid_autoy,varid_checkState,varid_epsg,varid_dflowvar;
+    int varid_dflowlayer;
     const char * mydatachar[1];
     double mydatadouble[1];
     int mydataint[1];
+    int type;
+    int epsg,layer;
     QMessageBox::StandardButton reply;
-    QString filelocation,filename,series_name,color,type;
+    QString filelocation,filename,series_name,color;
     QString coldstartstring,stationfile,stationfilepath;
     QString BaseFile,NewFile,TempFile,BaseDir;
+    QString dflowvar;
     double unitconvert,xshift,yshift;
     size_t temp_size_t;
     size_t start[1];
@@ -331,8 +366,6 @@ int MovSession::open(QString openFilename)
     QString tempstring;
     QColor CellColor;
     QDateTime ColdStart;
-    //ADCNC NetCDFData;
-    //ADCASCII ADCData;
     bool continueToLoad,hasCheckInfo;
     Qt::CheckState checkState;
 
@@ -407,6 +440,15 @@ int MovSession::open(QString openFilename)
     if(ierr!=NC_NOERR)return 1;
 
     ierr = MovGeneric::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_autoy",&varid_autoy));
+    if(ierr!=NC_NOERR)return 1;
+
+    ierr = MovGeneric::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_epsg",&varid_epsg));
+    if(ierr!=NC_NOERR)return 1;
+
+    ierr = MovGeneric::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_dflowvar",&varid_dflowvar));
+    if(ierr!=NC_NOERR)return 1;
+
+    ierr = MovGeneric::NETCDF_ERR(nc_inq_varid(ncid,"timeseries_layer",&varid_dflowlayer));
     if(ierr!=NC_NOERR)return 1;
 
     ierr = nc_inq_varid(ncid,"timeseries_checkState",&varid_checkState);
@@ -484,9 +526,9 @@ int MovSession::open(QString openFilename)
         if(ierr!=NC_NOERR)return 1;
         series_name = QString(mydatachar[0]);
 
-        ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_type,start,&mydatachar));
+        ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_type,start,&mydataint));
         if(ierr!=NC_NOERR)return 1;
-        type = QString(mydatachar[0]);
+        type = mydataint[0];
 
         ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_colors,start,&mydatachar));
         if(ierr!=NC_NOERR)return 1;
@@ -512,6 +554,19 @@ int MovSession::open(QString openFilename)
         if(ierr!=NC_NOERR)return 1;
         stationfilepath = QString(mydatachar[0]);
         MovGeneric::splitPath(stationfilepath,stationfile,TempFile);
+
+        ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_dflowvar,start,&mydatachar));
+        if(ierr!=NC_NOERR)return 1;
+        dflowvar = QString(mydatachar[0]);
+
+        ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_epsg,start,&mydataint));
+        if(ierr!=NC_NOERR)return 1;
+        epsg = mydataint[0];
+
+        ierr = MovGeneric::NETCDF_ERR(nc_get_var1(ncid,varid_dflowlayer,start,&mydataint));
+        if(ierr!=NC_NOERR)return 1;
+        layer = mydataint[0];
+
 
         if(hasCheckInfo)
         {
@@ -605,7 +660,7 @@ int MovSession::open(QString openFilename)
             continueToLoad = true;
         }
 
-        if(type == "ADCIRC")
+        if(type == FILETYPE_ASCII_ADCIRC)
         {
             MovGeneric::splitPath(stationfilepath,BaseFile,BaseDir);
             stationfilepath = this->currentDirectory+"/"+stationfilepath;
@@ -696,11 +751,15 @@ int MovSession::open(QString openFilename)
             this->tableWidget->setItem(nrow-1,5,new QTableWidgetItem(QString::number(yshift)));
             this->tableWidget->setItem(nrow-1,6,new QTableWidgetItem(filelocation));
             this->tableWidget->setItem(nrow-1,7,new QTableWidgetItem((coldstartstring)));
-            this->tableWidget->setItem(nrow-1,8,new QTableWidgetItem(type));
+            this->tableWidget->setItem(nrow-1,8,new QTableWidgetItem(QString::number(type)));
             this->tableWidget->setItem(nrow-1,9,new QTableWidgetItem(stationfile));
             this->tableWidget->setItem(nrow-1,10,new QTableWidgetItem(stationfilepath));
+            this->tableWidget->setItem(nrow-1,11,new QTableWidgetItem(QString::number(epsg)));
+            this->tableWidget->setItem(nrow-1,12,new QTableWidgetItem(dflowvar));
+            this->tableWidget->setItem(nrow-1,13,new QTableWidgetItem(QString::number(layer)));
             CellColor.setNamedColor(color);
             this->tableWidget->item(nrow-1,2)->setBackgroundColor(CellColor);
+            this->tableWidget->item(nrow-1,2)->setTextColor(CellColor);
             this->tableWidget->item(nrow-1,0)->setCheckState(checkState);
             ColdStart = QDateTime::fromString(coldstartstring,"yyyy-MM-dd hh:mm:ss");
         }

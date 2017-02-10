@@ -401,7 +401,9 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
 
 
     if(this->selectedStations.length()==1)
-        this->thisChart->setTitle(this->plotTitle->text()+": "+this->fileDataUnique[0]->station[this->markerID]->StationName);
+        this->thisChart->setTitle(this->plotTitle->text()+": "+
+                                  this->fileDataUnique[0]->
+                                    station[this->markerID]->StationName);
     else
         this->thisChart->setTitle(this->plotTitle->text());
 
@@ -412,13 +414,16 @@ void MovUserTimeseries::javascriptDataReturned(QString data)
     foreach (QLegendMarker* marker, this->thisChart->legend()->markers())
     {
         // Disconnect possible existing connection to avoid multiple connections
-        disconnect(marker, SIGNAL(clicked()), this->chart, SLOT(handleLegendMarkerClicked()));
-        connect(marker, SIGNAL(clicked()), this->chart, SLOT(handleLegendMarkerClicked()));
+        disconnect(marker, SIGNAL(clicked()), this->chart,
+                   SLOT(handleLegendMarkerClicked()));
+        connect(marker, SIGNAL(clicked()), this->chart,
+                SLOT(handleLegendMarkerClicked()));
     }
 
     this->chart->m_style = 1;
     this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
-    this->chart->m_coord->setPos(this->chart->size().width()/2 - 100, this->chart->size().height() - 20);
+    this->chart->m_coord->setPos(this->chart->size().width()/2 - 100,
+                                 this->chart->size().height() - 20);
     this->chart->initializeAxisLimits();
     this->chart->setStatusBar(this->statusBar);
 
@@ -465,7 +470,8 @@ int MovUserTimeseries::processData()
         }
         else if(InputFileType==FILETYPE_NETCDF_ADCIRC)
         {
-            ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
+            ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),
+                                              "yyyy-MM-dd hh:mm:ss");
             adcircData = new MovAdcircStationOutput(this);
             ierr = adcircData->read(TempFile,ColdStart);
             if(ierr!=ERR_NOERR)
@@ -482,7 +488,8 @@ int MovUserTimeseries::processData()
         }
         else if(InputFileType==FILETYPE_ASCII_ADCIRC)
         {
-            ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),"yyyy-MM-dd hh:mm:ss");
+            ColdStart = QDateTime::fromString(this->table->item(i,7)->text(),
+                                              "yyyy-MM-dd hh:mm:ss");
             TempStationFile = this->table->item(i,10)->text();
             adcircData = new MovAdcircStationOutput(this);
             ierr = adcircData->read(TempFile,TempStationFile,ColdStart);
@@ -496,16 +503,19 @@ int MovUserTimeseries::processData()
                 return ERR_ADCIRC_ASCIITOIMEDS;
 
         }
-        else if(FILETYPE_NETCDF_DFLOW)
+        else if(InputFileType==FILETYPE_NETCDF_DFLOW)
         {
             this->fileData[j] = new MovImeds(this);
             MovDflow *dflow = new MovDflow(TempFile,this);
             dflowVar = this->table->item(i,12)->text();
             dflowLayer = this->table->item(i,13)->text().toInt();
             ierr = dflow->getVariable(dflowVar,dflowLayer,this->fileData[j]);
-            this->errorString = "Error processing DFlow: "+dflow->error->toString();
             if(ierr!=ERR_NOERR)
+            {
+                this->errorString = "Error processing DFlow: "+
+                        dflow->error->toString();
                 return ERR_DFLOW_FILEREADERROR;
+            }
         }
         else
         {
@@ -529,13 +539,15 @@ int MovUserTimeseries::processData()
     }
 
     //...Build a unique set of timeseries data
-    ierr = this->getUniqueStationList(this->fileData,this->StationXLocs,this->StationYLocs);
+    ierr = this->getUniqueStationList(this->fileData,this->StationXLocs,
+                                      this->StationYLocs);
     if(ierr!=ERR_NOERR)
     {
         this->errorString = "Error building the station list";
         return ERR_BUILDSTATIONLIST;
     }
-    ierr = this->buildRevisedIMEDS(this->fileData,this->StationXLocs,this->StationYLocs,this->fileDataUnique);
+    ierr = this->buildRevisedIMEDS(this->fileData,this->StationXLocs,
+                                   this->StationYLocs,this->fileDataUnique);
     if(ierr!=0)
     {
         this->errorString = "Error building the unique dataset";
@@ -548,7 +560,8 @@ int MovUserTimeseries::processData()
     loop.exec();
 
     //...Add the markers to the map
-    this->map->page()->runJavaScript("allocateData("+QString::number(this->fileDataUnique.length())+")");
+    this->map->page()->runJavaScript("allocateData("+
+                                     QString::number(this->fileDataUnique.length())+")");
     for(i=0;i<this->fileDataUnique[0]->nstations;i++)
     {
         x=-1.0;
@@ -596,7 +609,8 @@ int MovUserTimeseries::plotData()
 //and not show data where it doesn't exist for
 //certain files
 //-------------------------------------------//
-int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X, QVector<double> &Y)
+int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data,
+                                            QVector<double> &X, QVector<double> &Y)
 {
     int i,j,k;
     bool found;
