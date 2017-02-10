@@ -321,7 +321,7 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
     QString TempPath = QFileDialog::getOpenFileName(this,"Select File",
             Directory,
             QString("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; ")+
-            QString("IMEDS File (*.imeds *.IMEDS) ;; NetCDF ADCIRC Output Files (*.nc) ;; ")+
+            QString("IMEDS File (*.imeds *.IMEDS) ;; netCDF Output Files (*.nc) ;; ")+
             QString("ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
     this->InputFilePath = TempPath;
