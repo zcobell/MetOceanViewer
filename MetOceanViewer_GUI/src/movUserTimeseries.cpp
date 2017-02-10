@@ -514,10 +514,27 @@ int MovUserTimeseries::processData()
             ierr = dflow->getVariable(dflowVar,dflowLayer,this->fileData[j]);
             if(ierr!=ERR_NOERR)
             {
-                this->errorString = tr("Error processing DFlow: ")+
-                        dflow->error->toString();
+                this->errorString = "Error processing DFlow: "+dflow->error->toString();
                 return ERR_DFLOW_FILEREADERROR;
             }
+        }
+        else if(InputFileType==FILETYPE_NEFIS_DELFT3D)
+        {
+            this->fileData[j] = new MovImeds(this);
+            MovNefis *nefis = new MovNefis(MovNefis::getNefisDefFilename(TempFile),
+                                           TempFile,this);
+            nefis->open(true);
+
+            dflowVar = this->table->item(i,12)->text();
+            dflowLayer = this->table->item(i,13)->text().toInt();
+            ierr = nefis->generateIMEDS(dflowVar,this->fileData[j],dflowLayer);
+            nefis->close();
+            if(ierr!=ERR_NOERR)
+            {
+                this->errorString = "Error processing Delft3D Nefis";
+                return ERR_GENERICFILEREADERROR;
+            }
+
         }
         else
         {

@@ -151,6 +151,7 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(QString Filename, QString
 
 void mov_dialog_addtimeseries::setItemsByFiletype()
 {
+    int ierr;
 
     if(this->InputFileType == FILETYPE_ASCII_IMEDS)
     {
@@ -223,6 +224,27 @@ void mov_dialog_addtimeseries::setItemsByFiletype()
             ui->combo_variableSelect->setCurrentIndex(0);
 
         this->dFlowVariable = variable;
+    }
+    else if(this->InputFileType==FILETYPE_NEFIS_DELFT3D)
+    {
+        QString variable = this->dFlowVariable;
+
+        ui->text_filetype->setText(QStringLiteral("Delft3D"));
+        this->FileReadError = false;
+
+        this->setColdstartSelectElements(false);
+        this->setStationSelectElements(false);
+        this->setVariableSelectElements(true);
+
+        this->nefis = new MovNefis(MovNefis::getNefisDefFilename(this->InputFilePath),
+                                   this->InputFilePath,this);
+        ierr = this->nefis->open(false);
+
+        ui->combo_variableSelect->clear();
+        QStringList delft3dVariables = this->nefis->getSeriesNames();
+        ui->combo_variableSelect->addItems(delft3dVariables);
+        this->nefis->close();
+
     }
     else
     {
@@ -318,10 +340,13 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
 
     QString TempPath = QFileDialog::getOpenFileName(this,tr("Select File"),
             Directory,
-            tr("MetOceanViewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; "
-                    "IMEDS File (*.imeds *.IMEDS) ;; netCDF Output Files (*.nc) ;; "
-                    "DFlow-FM History Files (*_his.nc) ;; "
-                    "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
+            tr("MetOcean Viewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc *.dat) ;; "
+                "IMEDS File (*.imeds *.IMEDS) ;; "
+                "netCDF Output Files (*.nc) ;;"
+                "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;;"
+                "DFlow-FM History Files (*_his.nc) ;; "
+                "Delft3D NEFIS Output Files (*.dat) ;;"
+                "All Files (*.*)"));
 
     this->InputFilePath = TempPath;
     if(TempPath!=NULL || (TempPath==NULL && this->CurrentFileName!=NULL) )
@@ -382,8 +407,10 @@ void mov_dialog_addtimeseries::on_browse_stationfile_clicked()
     QString TempFile;
     QString TempPath = QFileDialog::getOpenFileName(this,tr("Select ADCIRC Station File"),
             this->PreviousDirectory,
-            tr("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )"
-            "Comma Separated File (*.csv) ;; All Files (*.*)"));
+            tr("Station Format Files (*.txt *.csv) ;; "
+               "Text File (*.txt) ;; "
+               "Comma Separated File (*.csv) ;; "
+               "All Files (*.*)"));
     if(TempPath!=NULL)
     {
         this->StationFilePath = TempPath;
@@ -528,18 +555,25 @@ void mov_dialog_addtimeseries::on_spin_epsg_valueChanged(int arg1)
 
 void mov_dialog_addtimeseries::on_combo_variableSelect_currentIndexChanged(const QString &arg1)
 {
-    this->dFlowVariable = arg1;
-    if(this->dflow->variableIs3d(arg1))
+    if(this->InputFileType==FILETYPE_NETCDF_DFLOW)
     {
-        ui->spin_layer->show();
-        ui->label_layer->show();
-        ui->label_layerinfo->show();
+        this->dFlowVariable = arg1;
+        if(this->dflow->variableIs3d(arg1))
+        {
+            ui->spin_layer->show();
+            ui->label_layer->show();
+            ui->label_layerinfo->show();
+        }
+        else
+        {
+            ui->spin_layer->hide();
+            ui->label_layer->hide();
+            ui->label_layerinfo->hide();
+        }
     }
-    else
+    else if(this->InputFileType==FILETYPE_NEFIS_DELFT3D)
     {
-        ui->spin_layer->hide();
-        ui->label_layer->hide();
-        ui->label_layerinfo->hide();
+
     }
     return;
 }

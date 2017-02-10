@@ -26,6 +26,7 @@
 #include <QVector>
 #include "proj4.h"
 #include "movDflow.h"
+#include "movNefis.h"
 
 namespace Ui {
 class mov_dialog_addtimeseries;
@@ -104,6 +105,7 @@ private:
 
     MovDflow *dflow;
     proj4    *proj;
+    MovNefis *nefis;
 
     struct IMEDSList
     {

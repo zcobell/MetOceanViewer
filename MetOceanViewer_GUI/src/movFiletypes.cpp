@@ -1,20 +1,26 @@
 #include "movFiletypes.h"
 #include "netcdf.h"
+#include "movNefis.h"
 #include <QMap>
 #include <QFileInfo>
+#include <QDir>
+#include <QPointer>
+#include <QDebug>
 
 static QMap<QString,int> filetypeMapString = {
     {QStringLiteral("NETCDF-ADCIRC"),FILETYPE_NETCDF_ADCIRC},
     {QStringLiteral("NETCDF-DFLOW"),FILETYPE_NETCDF_DFLOW},
     {QStringLiteral("ASCII-ADCIRC"),FILETYPE_ASCII_ADCIRC},
-    {QStringLiteral("ASCII-IMEDS"),FILETYPE_ASCII_IMEDS}
+    {QStringLiteral("ASCII-IMEDS"),FILETYPE_ASCII_IMEDS},
+    {QStringLiteral("NEFIS-DELFT3D"),FILETYPE_NEFIS_DELFT3D}
 };
 
 static QMap<int,QString> filetypeMapInt = {
     {FILETYPE_NETCDF_ADCIRC,QStringLiteral("NETCDF-ADCIRC")},
     {FILETYPE_NETCDF_DFLOW,QStringLiteral("NETCDF-DFLOW")},
     {FILETYPE_ASCII_ADCIRC,QStringLiteral("ASCII-ADCIRC")},
-    {FILETYPE_ASCII_IMEDS,QStringLiteral("ASCII-IMEDS")}
+    {FILETYPE_ASCII_IMEDS,QStringLiteral("ASCII-IMEDS")},
+    {FILETYPE_NEFIS_DELFT3D,QStringLiteral("NEFIS-DELFT3D")}
 };
 
 
@@ -34,6 +40,8 @@ int movFiletypes::getIntegerFiletype(QString filename)
         return FILETYPE_ASCII_IMEDS;
     if(movFiletypes::_checkASCIIAdcirc(filename))
         return FILETYPE_ASCII_ADCIRC;
+    if(movFiletypes::_checkNefisDelft3D(filename))
+        return FILETYPE_NEFIS_DELFT3D;
     return FILETYPE_ERROR;
 }
 
@@ -47,7 +55,24 @@ QString movFiletypes::getStringFiletype(QString filename)
         return QStringLiteral("ASCII-ADCIRC");
     if(movFiletypes::_checkASCIIImeds(filename))
         return QStringLiteral("ASCII-IMEDS");
+    if(movFiletypes::_checkNefisDelft3D(filename))
+        return QStringLiteral("NEFIS-DELFT3D");
     return QStringLiteral("ERROR");
+}
+
+bool movFiletypes::_checkNefisDelft3D(QString filename)
+{
+    int ierr;
+    QString defFilename = MovNefis::getNefisDefFilename(filename);
+    QPointer<MovNefis> nefis = new MovNefis(defFilename,filename);
+    ierr = nefis->open(false);
+    if(ierr!=0)
+        return false;
+    else
+    {
+        nefis->close();
+        return true;
+    }
 }
 
 

@@ -7,6 +7,7 @@
 #define FILETYPE_NETCDF_DFLOW   -99991
 #define FILETYPE_ASCII_ADCIRC   -99992
 #define FILETYPE_ASCII_IMEDS    -99993
+#define FILETYPE_NEFIS_DELFT3D  -99994
 #define FILETYPE_ERROR          -88888
 
 class movFiletypes : public QObject
@@ -24,6 +25,7 @@ private:
     static bool _checkNetcdfDflow(QString filename);
     static bool _checkASCIIAdcirc(QString filename);
     static bool _checkASCIIImeds(QString filename);
+    static bool _checkNefisDelft3D(QString filename);
 
 };
 

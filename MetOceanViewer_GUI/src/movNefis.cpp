@@ -18,7 +18,6 @@
 //
 //-----------------------------------------------------------------------*/
 #include "movNefis.h"
-#include <QDebug>
 
 extern "C" {
 #include "nefis_defines.h"

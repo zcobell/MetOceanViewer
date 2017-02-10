@@ -33,6 +33,8 @@
 #include "movGeneric.h"
 #include "movQChartView.h"
 #include "movImeds.h"
+#include "movDflow.h"
+#include "movNefis.h"
 
 class MovUserTimeseries : public QObject
 {
