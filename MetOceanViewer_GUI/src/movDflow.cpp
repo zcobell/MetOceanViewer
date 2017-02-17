@@ -70,177 +70,198 @@ bool MovDflow::variableIs3d(QString variable)
 }
 
 
+int MovDflow::_get2DVelocityMagnitude(int layer, QVector<QVector<double> > &data)
+{
+    int ierr,i,j;
+    QVector<QVector<double> > x_data,y_data;
+
+    ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+        return this->error->errorCode();
+    }
+
+    ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+        return this->error->errorCode();
+    }
+
+    data.resize(this->_nStations);
+    for(i=0;i<this->_nStations;i++)
+    {
+        data[i].resize(this->_nSteps);
+        for(j=0;j<this->_nSteps;j++)
+        {
+            data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+        }
+    }
+    return ERR_NOERR;
+}
+
+
+int MovDflow::_get2DVelocityDirection(int layer, QVector<QVector<double> > &data)
+{
+    int ierr,i,j;
+    QVector<QVector<double> > x_data,y_data;
+
+    ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+        return this->error->errorCode();
+    }
+
+    ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+        return this->error->errorCode();
+    }
+
+    data.resize(this->_nStations);
+    for(i=0;i<this->_nStations;i++)
+    {
+        data[i].resize(this->_nSteps);
+        for(j=0;j<this->_nSteps;j++)
+            data[i][j] = qAtan2(y_data[i][j],x_data[i][j])*180.0/M_PI;
+    }
+    return ERR_NOERR;
+}
+
+
+int MovDflow::_get3DVeloctiyMagnitude(int layer, QVector<QVector<double> > &data)
+{
+    int ierr,i,j;
+    QVector<QVector<double> > x_data,y_data,z_data;
+
+    ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+        return this->error->errorCode();
+    }
+
+    ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+        return this->error->errorCode();
+    }
+
+    ierr = this->_getVar(QStringLiteral("z_velocity"),layer,z_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOZVELOCITY);
+        return this->error->errorCode();
+    }
+
+    data.resize(this->_nStations);
+    for(i=0;i<this->_nStations;i++)
+    {
+        data[i].resize(this->_nSteps);
+        for(j=0;j<this->_nSteps;j++)
+        {
+            data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0)+qPow(z_data[i][j],2.0));
+        }
+    }
+    return ERR_NOERR;
+}
+
+
+int MovDflow::_getWindVelocityMagnitude(QVector<QVector<double> > &data)
+{
+    int ierr,i,j;
+     QVector<QVector<double> > x_data,y_data;
+
+    ierr = this->_getVar(QStringLiteral("windx"),0,x_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+        return this->error->errorCode();
+    }
+    ierr = this->_getVar(QStringLiteral("windy"),0,y_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+        return this->error->errorCode();
+    }
+    data.resize(this->_nStations);
+    for(i=0;i<this->_nStations;i++)
+    {
+        data[i].resize(this->_nSteps);
+        for(j=0;j<this->_nSteps;j++)
+        {
+            data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+        }
+    }
+    return ERR_NOERR;
+}
+
+
+int MovDflow::_getWindDirection(QVector<QVector<double> > &data)
+{
+    int ierr,i,j;
+     QVector<QVector<double> > x_data,y_data;
+
+    ierr = this->_getVar(QStringLiteral("windx"),0,x_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+        return this->error->errorCode();
+    }
+    ierr = this->_getVar(QStringLiteral("windy"),0,y_data);
+    if(ierr!=ERR_NOERR)
+    {
+        this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+        return this->error->errorCode();
+    }
+    data.resize(this->_nStations);
+    for(i=0;i<this->_nStations;i++)
+    {
+        data[i].resize(this->_nSteps);
+        for(j=0;j<this->_nSteps;j++)
+            data[i][j] = qAtan2(y_data[i][j],x_data[i][j])*180.0/M_PI;
+    }
+    return ERR_NOERR;
+}
+
+
+
 int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
 {
-    int i,j,ierr;
+    int i,ierr;
     QVector<QDateTime> time;
-    QVector<QVector<double> > data,x_data,y_data,z_data;
+    QVector<QVector<double> > data;
 
     ierr = this->_getTime(time);
     this->error->setErrorCode(ierr);
     if(this->error->isError())
         return this->error->errorCode();
 
-    if(this->is3d())
-    {
-        if(variable==QStringLiteral("horizontal_velocity_magnitude"))
-        {
-            ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
-                return this->error->errorCode();
-            }
-
-            ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
-                return this->error->errorCode();
-            }
-
-            data.resize(this->_nStations);
-            for(i=0;i<this->_nStations;i++)
-            {
-                data[i].resize(this->_nSteps);
-                for(j=0;j<this->_nSteps;j++)
-                {
-                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
-                }
-            }
-        }
-        else if(variable==QStringLiteral("velocity_magnitude"))
-        {
-            ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
-                return this->error->errorCode();
-            }
-
-            ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
-                return this->error->errorCode();
-            }
-
-            ierr = this->_getVar(QStringLiteral("z_velocity"),layer,z_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOZVELOCITY);
-                return this->error->errorCode();
-            }
-
-            data.resize(this->_nStations);
-            for(i=0;i<this->_nStations;i++)
-            {
-                data[i].resize(this->_nSteps);
-                for(j=0;j<this->_nSteps;j++)
-                {
-                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0)+qPow(z_data[i][j],2.0));
-                }
-            }
-        }
-        else if(variable==QStringLiteral("wind_velocity"))
-        {
-            ierr = this->_getVar(QStringLiteral("windx"),layer,x_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
-                return this->error->errorCode();
-            }
-            ierr = this->_getVar(QStringLiteral("windy"),layer,y_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
-                return this->error->errorCode();
-            }
-            data.resize(this->_nStations);
-            for(i=0;i<this->_nStations;i++)
-            {
-                data[i].resize(this->_nSteps);
-                for(j=0;j<this->_nSteps;j++)
-                {
-                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
-                }
-            }
-        }
-        else
-        {
-
-            ierr = this->_getVar(variable,layer,data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ierr);
-                return this->error->errorCode();
-            }
-
-        }
-    }
+    //...Check for derrived data or just retrieve the
+    //   requested variable
+    if(variable==QStringLiteral("2D_current_speed"))
+        ierr = this->_get2DVelocityMagnitude(layer,data);
+    else if(variable==QStringLiteral("2D_current_direction"))
+        ierr = this->_get2DVelocityDirection(layer,data);
+    else if(variable==QStringLiteral("3D_current_speed"))
+        ierr = this->_get3DVeloctiyMagnitude(layer,data);
+    else if(variable==QStringLiteral("wind_speed"))
+        ierr = this->_getWindVelocityMagnitude(data);
+    else if(variable==QStringLiteral("wind_direction"))
+        ierr = this->_getWindDirection(data);
     else
+        ierr = this->_getVar(variable,layer,data);
+
+    if(ierr!=ERR_NOERR)
     {
-        if(variable==QStringLiteral("velocity_magnitude"))
-        {
-
-            ierr = this->_getVar(QStringLiteral("x_velocity"),layer,x_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
-                return this->error->errorCode();
-            }
-
-            ierr = this->_getVar(QStringLiteral("y_velocity"),layer,y_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
-                return this->error->errorCode();
-            }
-
-            data.resize(this->_nStations);
-            for(i=0;i<this->_nStations;i++)
-            {
-                data[i].resize(this->_nSteps);
-                for(j=0;j<this->_nSteps;j++)
-                {
-                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
-                }
-            }
-        }
-        else if(variable==QStringLiteral("wind_velocity"))
-        {
-            ierr = this->_getVar(QStringLiteral("windx"),layer,x_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
-                return this->error->errorCode();
-            }
-            ierr = this->_getVar(QStringLiteral("windy"),layer,y_data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
-                return this->error->errorCode();
-            }
-            data.resize(this->_nStations);
-            for(i=0;i<this->_nStations;i++)
-            {
-                data[i].resize(this->_nSteps);
-                for(j=0;j<this->_nSteps;j++)
-                {
-                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
-                }
-            }
-        }
-        else
-        {
-            ierr = this->_getVar(variable,layer,data);
-            if(ierr!=ERR_NOERR)
-            {
-                this->error->setErrorCode(ierr);
-                return this->error->errorCode();
-            }
-        }
+        this->error->setErrorCode(ierr);
+        return this->error->errorCode();
     }
+
 
     imeds->success = false;
     imeds->nstations = this->_nStations;
@@ -465,22 +486,22 @@ int MovDflow::_getPlottingVariables()
         if(this->_plotvarnames.contains("x_velocity") &&
                 this->_plotvarnames.contains("y_velocity") &&
                 this->_plotvarnames.contains("z_velocity"))
-            this->_plotvarnames.append("velocity_magnitude");
-
-        if(this->_plotvarnames.contains("x_velocity") &&
-                this->_plotvarnames.contains("y_velocity"))
-            this->_plotvarnames.append("horizontal_velocity_magnitude");
+            this->_plotvarnames.append("3D_current_speed");
     }
-    else
+
+    if(this->_plotvarnames.contains("x_velocity") &&
+            this->_plotvarnames.contains("y_velocity"))
     {
-        if(this->_plotvarnames.contains("x_velocity") &&
-                this->_plotvarnames.contains("y_velocity"))
-            this->_plotvarnames.append("velocity_magnitude");
+        this->_plotvarnames.append("2D_current_speed");
+        this->_plotvarnames.append("2D_current_direction");
     }
 
     if(this->_plotvarnames.contains("windx") &&
             this->_plotvarnames.contains("windy"))
-        this->_plotvarnames.append("wind_velocity");
+    {
+        this->_plotvarnames.append("wind_speed");
+        this->_plotvarnames.append("wind_direction");
+    }
 
     return ERR_NOERR;
 

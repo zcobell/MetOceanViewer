@@ -41,6 +41,11 @@ private:
     int _getVar(QString variable, int layer, QVector<QVector<double> > &data);
     int _getVar2D(QString variable, QVector<QVector<double> > &data);
     int _getVar3D(QString variable, int layer, QVector<QVector<double> > &data);
+    int _get2DVelocityMagnitude(int layer, QVector<QVector<double> > &data);
+    int _get2DVelocityDirection(int layer, QVector<QVector<double> > &data);
+    int _get3DVeloctiyMagnitude(int layer, QVector<QVector<double> > &data);
+    int _getWindVelocityMagnitude(QVector<QVector<double> > &data);
+    int _getWindDirection(QVector<QVector<double> > &data);
 
     bool              _isInitialized;
     bool              _readError;
