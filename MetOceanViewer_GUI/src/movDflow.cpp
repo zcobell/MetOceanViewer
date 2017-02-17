@@ -142,6 +142,30 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
                 }
             }
         }
+        else if(variable==QStringLiteral("wind_velocity"))
+        {
+            ierr = this->_getVar(QStringLiteral("windx"),layer,x_data);
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+                return this->error->errorCode();
+            }
+            ierr = this->_getVar(QStringLiteral("windy"),layer,y_data);
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+                return this->error->errorCode();
+            }
+            data.resize(this->_nStations);
+            for(i=0;i<this->_nStations;i++)
+            {
+                data[i].resize(this->_nSteps);
+                for(j=0;j<this->_nSteps;j++)
+                {
+                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+                }
+            }
+        }
         else
         {
 
@@ -173,6 +197,30 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds)
                 return this->error->errorCode();
             }
 
+            data.resize(this->_nStations);
+            for(i=0;i<this->_nStations;i++)
+            {
+                data[i].resize(this->_nSteps);
+                for(j=0;j<this->_nSteps;j++)
+                {
+                    data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+                }
+            }
+        }
+        else if(variable==QStringLiteral("wind_velocity"))
+        {
+            ierr = this->_getVar(QStringLiteral("windx"),layer,x_data);
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+                return this->error->errorCode();
+            }
+            ierr = this->_getVar(QStringLiteral("windy"),layer,y_data);
+            if(ierr!=ERR_NOERR)
+            {
+                this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+                return this->error->errorCode();
+            }
             data.resize(this->_nStations);
             for(i=0;i<this->_nStations;i++)
             {
@@ -429,6 +477,10 @@ int MovDflow::_getPlottingVariables()
                 this->_plotvarnames.contains("y_velocity"))
             this->_plotvarnames.append("velocity_magnitude");
     }
+
+    if(this->_plotvarnames.contains("windx") &&
+            this->_plotvarnames.contains("windy"))
+        this->_plotvarnames.append("wind_velocity");
 
     return ERR_NOERR;
 
