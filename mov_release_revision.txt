@@ -1,1 +1,1 @@
-12/19/2016,v2.7.1,https://github.com/zcobell/MetOceanViewer/releases/tag/v2.7.1 
+02/17/2017,v3.0.0,https://github.com/zcobell/MetOceanViewer/releases/tag/v3.0.0 
