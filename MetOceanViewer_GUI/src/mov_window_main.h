@@ -45,17 +45,17 @@ class MovSession;
 //the main set of functions used
 //-------------------------------------------//
 namespace Ui {
-class mov_window_main;
+class MainWindow;
 }
 
-class mov_window_main : public QMainWindow
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit mov_window_main(bool processCommandLine, QString commandLineFile, QWidget *parent = 0);
+    explicit MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent = 0);
 
-    ~mov_window_main();
+    ~MainWindow();
 
     void setLoadSessionFile(bool toggle,QString sessionFile = QString());
 
@@ -161,8 +161,6 @@ private slots:
 
     void on_actionCheck_For_Updates_triggered();
 
-    void on_pushButton_hideInfoWindow_toggled(bool checked);
-
     void on_button_xtide_compute_clicked();
 
     void on_button_xtide_resetzoom_clicked();
@@ -173,8 +171,10 @@ private slots:
 
     void on_button_xtide_savedata_clicked();
 
+    void on_pushButton_displayOptions_clicked();
+
 private:
-    Ui::mov_window_main *ui;
+    Ui::MainWindow *ui;
 
     QList<QTableWidgetItem *> grabTableRow(int row);
 
@@ -219,6 +219,8 @@ private:
     QString commandLineFile;
 
     bool processCommandLine;
+    bool timeseriesDisplayValues;
+    bool timeseriesHideInfoWindows;
 
 protected:
 

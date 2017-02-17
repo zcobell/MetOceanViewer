@@ -49,6 +49,7 @@ public:
     void resetZoom();
     void setStatusBar(QStatusBar *inStatusBar);
     void addSeries(QLineSeries *series, QString name);
+    void setDisplayValues(bool value);
     void clear();
 
     QGraphicsSimpleTextItem *m_coord;
@@ -74,6 +75,7 @@ private:
     QVector<QString>         m_legendNames;
     QVector<QLineSeries*>    m_series;
     QVector<qKdtree2*>       m_kdtree;
+    bool                     m_displayValues;
 
 public slots:
     void handleLegendMarkerClicked();

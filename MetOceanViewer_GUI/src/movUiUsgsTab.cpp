@@ -25,7 +25,7 @@
 //-------------------------------------------//
 //Send the data to the panTo function
 //-------------------------------------------//
-void mov_window_main::on_combo_usgs_panto_currentIndexChanged(int index)
+void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 {
     ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
     return;
@@ -37,7 +37,7 @@ void mov_window_main::on_combo_usgs_panto_currentIndexChanged(int index)
 //Function to fetch the data from the USGS
 //server
 //-------------------------------------------//
-void mov_window_main::on_button_usgs_fetch_clicked()
+void MainWindow::on_button_usgs_fetch_clicked()
 {
     int ierr;
 
@@ -62,7 +62,7 @@ void mov_window_main::on_button_usgs_fetch_clicked()
 //radio button is clicked since the "instant"
 //data is only available 120 days into the past
 //-------------------------------------------//
-void mov_window_main::on_radio_usgs_instant_clicked()
+void MainWindow::on_radio_usgs_instant_clicked()
 {
     if(!thisUSGS.isNull())
         thisUSGS->setUSGSBeenPlotted(false);
@@ -84,7 +84,7 @@ void mov_window_main::on_radio_usgs_instant_clicked()
 //Resets the minimum datetime to a long time
 //ago when using daily data from USGS
 //-------------------------------------------//
-void mov_window_main::on_radio_usgsDaily_clicked()
+void MainWindow::on_radio_usgsDaily_clicked()
 {
     if(!thisUSGS.isNull())
         thisUSGS->setUSGSBeenPlotted(false);
@@ -99,7 +99,7 @@ void mov_window_main::on_radio_usgsDaily_clicked()
 //Resets the minimum datetime to a long time
 //ago when using daily data from USGS
 //-------------------------------------------//
-void mov_window_main::on_radio_usgshistoric_clicked()
+void MainWindow::on_radio_usgshistoric_clicked()
 {
     if(!thisUSGS.isNull())
         thisUSGS->setUSGSBeenPlotted(false);
@@ -114,7 +114,7 @@ void mov_window_main::on_radio_usgshistoric_clicked()
 //Fires when the combo box is changed and
 //plots the data immediately
 //-------------------------------------------//
-void mov_window_main::on_combo_USGSProduct_currentIndexChanged(int index)
+void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index)
 {
     int ierr;
     QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -128,7 +128,7 @@ void mov_window_main::on_combo_USGSProduct_currentIndexChanged(int index)
 //-------------------------------------------//
 //Function to save the map and chart as a jpg
 //-------------------------------------------//
-void mov_window_main::on_button_usgssavemap_clicked()
+void MainWindow::on_button_usgssavemap_clicked()
 {
     QString filename;
 
@@ -175,7 +175,7 @@ void mov_window_main::on_button_usgssavemap_clicked()
 //Saves the USGS data as an IMEDS formatted file
 //or a CSV
 //-------------------------------------------//
-void mov_window_main::on_button_usgssavedata_clicked()
+void MainWindow::on_button_usgssavedata_clicked()
 {
     QString filename;
 
@@ -221,7 +221,7 @@ void mov_window_main::on_button_usgssavedata_clicked()
 }
 //-------------------------------------------//
 
-void mov_window_main::on_button_usgsresetzoom_clicked()
+void MainWindow::on_button_usgsresetzoom_clicked()
 {
     if(!this->thisUSGS.isNull())
         ui->usgs_graphics->resetZoom();

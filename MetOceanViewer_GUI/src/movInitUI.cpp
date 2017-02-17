@@ -28,7 +28,7 @@
 #include "movDflow.h"
 #include <QDebug>
 
-void mov_window_main::setupMetOceanViewerUI()
+void MainWindow::setupMetOceanViewerUI()
 {
 
     //-------------------------------------------//
@@ -86,6 +86,9 @@ void mov_window_main::setupMetOceanViewerUI()
     //Set the minimum and maximum times that can be selected
     ui->date_TimeseriesStartDate->setDateTime(ui->date_TimeseriesStartDate->minimumDateTime());
     ui->date_TimeseriesEndDate->setDateTime(ui->date_TimeseriesEndDate->maximumDateTime());
+
+    this->timeseriesDisplayValues = false;
+    this->timeseriesHideInfoWindows = true;
 
     //...Build a table of random colors
     this->randomColors.resize(16);

@@ -55,7 +55,8 @@ SOURCES +=\
     src/movXtide.cpp \
     src/movErrors.cpp \
     src/qkdtree2.cpp \
-    ../thirdparty/kdtree/kdtree2.cpp
+    ../thirdparty/kdtree/kdtree2.cpp \
+    src/movusertimeseriesoptions.cpp
 
 HEADERS  += \
     src/movAdcircStationOutput.h \
@@ -83,13 +84,15 @@ HEADERS  += \
     src/mov_dialog_update.h \
     src/mov_window_main.h \
     src/movErrors.h \
-    src/qkdtree2.h
+    src/qkdtree2.h \
+    src/movusertimeseriesoptions.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \
     ui/mov_dialog_addtimeseries.ui \
     ui/mov_window_main.ui \
-    ui/mov_dialog_update.ui
+    ui/mov_dialog_update.ui \
+    ui/movusertimeseriesoptions.ui
 
 OTHER_FILES +=
 

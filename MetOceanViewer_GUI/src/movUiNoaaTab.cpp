@@ -26,7 +26,7 @@
 //-------------------------------------------//
 //Called when the pan to combo box is updated
 //-------------------------------------------//
-void mov_window_main::on_Combo_NOAAPanTo_currentIndexChanged(int index)
+void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 {
     ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
     return;
@@ -37,7 +37,7 @@ void mov_window_main::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 //-------------------------------------------//
 //Called when the user attempts to save the NOAA chart
 //-------------------------------------------//
-void mov_window_main::on_button_noaasavechart_clicked()
+void MainWindow::on_button_noaasavechart_clicked()
 {
     QString filename;
     int ierr;
@@ -78,7 +78,7 @@ void mov_window_main::on_button_noaasavechart_clicked()
 //-------------------------------------------//
 //Called when the user tries to save the NOAA data
 //-------------------------------------------//
-void mov_window_main::on_button_noaasavedata_clicked()
+void MainWindow::on_button_noaasavedata_clicked()
 {
 
     QString filename;
@@ -116,7 +116,7 @@ void mov_window_main::on_button_noaasavedata_clicked()
 }
 //-------------------------------------------//
 
-void mov_window_main::on_combo_NOAAProduct_currentIndexChanged(int index)
+void MainWindow::on_combo_NOAAProduct_currentIndexChanged(int index)
 {
     if(index==3 || index==0)
     {
@@ -138,14 +138,14 @@ void mov_window_main::on_combo_NOAAProduct_currentIndexChanged(int index)
 //-------------------------------------------//
 //Called when the NOAA fetch data button is clicked
 //-------------------------------------------//
-void mov_window_main::on_Button_FetchData_clicked()
+void MainWindow::on_Button_FetchData_clicked()
 {
     this->plotNOAAStation();
     return;
 }
 //-------------------------------------------//
 
-void mov_window_main::plotNOAAStation()
+void MainWindow::plotNOAAStation()
 {
     int ierr;
 
@@ -161,7 +161,7 @@ void mov_window_main::plotNOAAStation()
     return;
 }
 
-void mov_window_main::on_button_noaaresetzoom_clicked()
+void MainWindow::on_button_noaaresetzoom_clicked()
 {
     if(!this->thisNOAA.isNull())
         ui->noaa_graphics->resetZoom();

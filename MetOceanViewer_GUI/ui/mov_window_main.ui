@@ -21,7 +21,7 @@
 //
 //-----------------------------------------------------------------------//
 </comment>
- <class>mov_window_main</class>
+ <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
@@ -2996,7 +2996,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_hideInfoWindow">
+               <widget class="QPushButton" name="pushButton_displayOptions">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -3004,13 +3004,13 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Hide Info Bubbles While Selecting</string>
+                 <string>Options</string>
                 </property>
                 <property name="checkable">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                 <property name="checked">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>

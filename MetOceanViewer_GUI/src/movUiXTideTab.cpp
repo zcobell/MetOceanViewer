@@ -21,14 +21,14 @@
 #include "ui_mov_window_main.h"
 #include "movXtide.h"
 
-void mov_window_main::on_button_xtide_compute_clicked()
+void MainWindow::on_button_xtide_compute_clicked()
 {
     this->plotXTideStation();
     return;
 }
 
 
-void mov_window_main::plotXTideStation()
+void MainWindow::plotXTideStation()
 {
     int ierr;
 
@@ -46,7 +46,7 @@ void mov_window_main::plotXTideStation()
 
 }
 
-void mov_window_main::on_button_xtide_resetzoom_clicked()
+void MainWindow::on_button_xtide_resetzoom_clicked()
 {
     if(!this->thisXTide.isNull())
         ui->xtide_graphics->resetZoom();
@@ -54,14 +54,14 @@ void mov_window_main::on_button_xtide_resetzoom_clicked()
 }
 
 
-void mov_window_main::on_combo_xtide_panto_activated(const QString &arg1)
+void MainWindow::on_combo_xtide_panto_activated(const QString &arg1)
 {
     ui->xtide_map->page()->runJavaScript("panTo('"+ui->combo_xtide_panto->currentText()+"')");
     return;
 }
 
 
-void mov_window_main::on_button_xtide_savemap_clicked()
+void MainWindow::on_button_xtide_savemap_clicked()
 {
     QString filename;
 
@@ -95,7 +95,7 @@ void mov_window_main::on_button_xtide_savemap_clicked()
     return;
 }
 
-void mov_window_main::on_button_xtide_savedata_clicked()
+void MainWindow::on_button_xtide_savedata_clicked()
 {
     QString filename;
 

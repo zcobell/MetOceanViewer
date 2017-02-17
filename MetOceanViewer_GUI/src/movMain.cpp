@@ -27,7 +27,7 @@
 
 //-------------------------------------------//
 //Main routine which will intialize all the tabs
-mov_window_main::mov_window_main(bool processCommandLine, QString commandLineFile, QWidget *parent):QMainWindow(parent),ui(new Ui::mov_window_main)
+MainWindow::MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent):QMainWindow(parent),ui(new Ui::MainWindow)
 {
     //Setup UI
     ui->setupUi(this);
@@ -37,7 +37,7 @@ mov_window_main::mov_window_main(bool processCommandLine, QString commandLineFil
 }
 
 //Main destructor routine
-mov_window_main::~mov_window_main()
+MainWindow::~MainWindow()
 {
     delete ui;
 }
@@ -45,14 +45,14 @@ mov_window_main::~mov_window_main()
 //-------------------------------------------//
 //Terminates the application when quit button clicked
 //-------------------------------------------//
-void mov_window_main::on_actionQuit_triggered()
+void MainWindow::on_actionQuit_triggered()
 {
     this->close();
 }
 //-------------------------------------------//
 
 
-void mov_window_main::closeEvent(QCloseEvent *event)
+void MainWindow::closeEvent(QCloseEvent *event)
 {
     if(confirmClose())
         event->accept();
@@ -60,7 +60,7 @@ void mov_window_main::closeEvent(QCloseEvent *event)
         event->ignore();
 }
 
-bool mov_window_main::confirmClose()
+bool MainWindow::confirmClose()
 {
     QMessageBox::StandardButton answer;
     answer = QMessageBox::question(this,tr("Exit"),tr("Do you want to exit MetOcean Viewer?"),QMessageBox::Yes|QMessageBox::No);
@@ -70,7 +70,7 @@ bool mov_window_main::confirmClose()
 //-------------------------------------------//
 //Bring up the about dialog box
 //-------------------------------------------//
-void mov_window_main::on_actionAbout_triggered()
+void MainWindow::on_actionAbout_triggered()
 {
     QPointer<mov_dialog_about> aboutWindow = new mov_dialog_about(this);
     aboutWindow->setModal(false);
@@ -82,7 +82,7 @@ void mov_window_main::on_actionAbout_triggered()
 //-------------------------------------------//
 //Bring up the update dialog
 //-------------------------------------------//
-void mov_window_main::on_actionCheck_For_Updates_triggered()
+void MainWindow::on_actionCheck_For_Updates_triggered()
 {
     QPointer<mov_dialog_update> updateWindow = new mov_dialog_update(this);
     updateWindow->setModal(false);
@@ -97,7 +97,7 @@ void mov_window_main::on_actionCheck_For_Updates_triggered()
 //Use of the load session button from the
 //menu is triggered here
 //-------------------------------------------//
-void mov_window_main::on_actionLoad_Session_triggered()
+void MainWindow::on_actionLoad_Session_triggered()
 {
     QString BaseFile;
     QString LoadFile = QFileDialog::getOpenFileName(this,
@@ -126,7 +126,7 @@ void mov_window_main::on_actionLoad_Session_triggered()
 //The save session button from the file menu
 //is triggered here
 //-------------------------------------------//
-void mov_window_main::on_actionSave_Session_triggered()
+void MainWindow::on_actionSave_Session_triggered()
 {
     if(this->sessionState->getSessionFilename()!=QString())
         this->sessionState->save();
@@ -141,7 +141,7 @@ void mov_window_main::on_actionSave_Session_triggered()
 //The save as session button from the file
 //menu is triggered here
 //-------------------------------------------//
-void mov_window_main::on_actionSave_Session_As_triggered()
+void MainWindow::on_actionSave_Session_As_triggered()
 {
     QString SaveFile = QFileDialog::getSaveFileName(this,
                         tr("Save Session..."),this->PreviousDirectory,
@@ -155,7 +155,7 @@ void mov_window_main::on_actionSave_Session_As_triggered()
 }
 //-------------------------------------------//
 
-void mov_window_main::handleEnterKey()
+void MainWindow::handleEnterKey()
 {
     //Events for "ENTER" on the Live Data tabs
     if(ui->MainTabs->currentIndex()==0)
@@ -207,14 +207,14 @@ void mov_window_main::handleEnterKey()
 }
 
 
-void mov_window_main::throwErrorMessageBox(QString errorString)
+void MainWindow::throwErrorMessageBox(QString errorString)
 {
     QMessageBox::critical(this,tr("ERROR"),errorString);
     return;
 }
 
 
-void mov_window_main::setLoadSessionFile(bool toggle, QString sessionFile)
+void MainWindow::setLoadSessionFile(bool toggle, QString sessionFile)
 {
     this->processCommandLine = toggle;
     this->commandLineFile = sessionFile;

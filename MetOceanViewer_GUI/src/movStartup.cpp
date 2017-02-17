@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     }
 
     //Create the window
-    mov_window_main w(doSession,sessionFile);
+    MainWindow w(doSession,sessionFile);
 
     //Splash Screen
     QPixmap pixmap(":/rsc/img/logo_full.png");

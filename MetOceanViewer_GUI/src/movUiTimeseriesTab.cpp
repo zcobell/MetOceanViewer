@@ -22,12 +22,13 @@
 #include "ui_mov_window_main.h"
 #include "mov_dialog_addtimeseriesdata.h"
 #include "movUserTimeseries.h"
+#include "movusertimeseriesoptions.h"
 
 //-------------------------------------------//
 //Called when the user tries to save the
 //timeseries image
 //-------------------------------------------//
-void mov_window_main::on_button_saveTimeseriesImage_clicked()
+void MainWindow::on_button_saveTimeseriesImage_clicked()
 {
     QString Filename;
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -49,7 +50,7 @@ void mov_window_main::on_button_saveTimeseriesImage_clicked()
 //Called when the user checks the timeseries
 //auto y axis box
 //-------------------------------------------//
-void mov_window_main::on_check_TimeseriesYauto_toggled(bool checked)
+void MainWindow::on_check_TimeseriesYauto_toggled(bool checked)
 {
     ui->spin_TimeseriesYmin->setEnabled(!checked);
     ui->spin_TimeseriesYmax->setEnabled(!checked);
@@ -62,7 +63,7 @@ void mov_window_main::on_check_TimeseriesYauto_toggled(bool checked)
 //Adds a row to the table and reads the new
 //data into the timeseries variable
 //-------------------------------------------//
-void mov_window_main::on_button_TimeseriesAddRow_clicked()
+void MainWindow::on_button_TimeseriesAddRow_clicked()
 {
     QPointer<mov_dialog_addtimeseries> AddWindow = new mov_dialog_addtimeseries(this);
     QColor CellColor;
@@ -123,7 +124,7 @@ void mov_window_main::on_button_TimeseriesAddRow_clicked()
 //clicked. Removes from the
 //table as well as the data vector
 //-------------------------------------------//
-void mov_window_main::on_button_TimeseriesDeleteRow_clicked()
+void MainWindow::on_button_TimeseriesDeleteRow_clicked()
 {
     if(ui->table_TimeseriesData->rowCount()==0)
     {
@@ -145,7 +146,7 @@ void mov_window_main::on_button_TimeseriesDeleteRow_clicked()
 //-------------------------------------------//
 //Set up the table of time series files
 //-------------------------------------------//
-void mov_window_main::SetupTimeseriesTable()
+void MainWindow::SetupTimeseriesTable()
 {
     QString HeaderString = tr("Filename;Series Name;Color;Unit Conversion;"
                            "x-shift;y-shift;FullPathToFile;Cold Start;"
@@ -175,7 +176,7 @@ void mov_window_main::SetupTimeseriesTable()
 //Called when the edit row button is clicked.
 //Updates the timeseries data vector
 //-------------------------------------------//
-void mov_window_main::on_button_TimeseriesEditRow_clicked()
+void MainWindow::on_button_TimeseriesEditRow_clicked()
 {
     int CurrentRow,FileType,epsg,dflowLayer;
     double xadjust,yadjust,UnitConversion;
@@ -267,7 +268,7 @@ void mov_window_main::on_button_TimeseriesEditRow_clicked()
 //Send the data to the HTML side of the code
 //for plotting
 //-------------------------------------------//
-void mov_window_main::on_button_processTimeseriesData_clicked()
+void MainWindow::on_button_processTimeseriesData_clicked()
 {
     int ierr;
 
@@ -313,7 +314,7 @@ void mov_window_main::on_button_processTimeseriesData_clicked()
 //that are not available when using all or a
 //specific set of time series dates
 //-------------------------------------------//
-void mov_window_main::on_check_TimeseriesAllData_toggled(bool checked)
+void MainWindow::on_check_TimeseriesAllData_toggled(bool checked)
 {
     ui->date_TimeseriesStartDate->setEnabled(!checked);
     ui->date_TimeseriesEndDate->setEnabled(!checked);
@@ -326,7 +327,7 @@ void mov_window_main::on_check_TimeseriesAllData_toggled(bool checked)
 //A button to fit the time series locations
 //to the viewport
 //-------------------------------------------//
-void mov_window_main::on_button_fitTimeseries_clicked()
+void MainWindow::on_button_fitTimeseries_clicked()
 {
     ui->timeseries_map->page()->runJavaScript("fitMarkers()");
     return;
@@ -339,7 +340,7 @@ void mov_window_main::on_button_fitTimeseries_clicked()
 //series data is clicked or the enter/return
 //key is pressed
 //-------------------------------------------//
-void mov_window_main::on_button_plotTimeseriesStation_clicked()
+void MainWindow::on_button_plotTimeseriesStation_clicked()
 {
     int ierr = thisTimeseries->plotData();
     return;
@@ -347,7 +348,7 @@ void mov_window_main::on_button_plotTimeseriesStation_clicked()
 //-------------------------------------------//
 
 
-void mov_window_main::on_button_TimeseriesCopyRow_clicked()
+void MainWindow::on_button_TimeseriesCopyRow_clicked()
 {
     QColor CellColor;
     int currentRow = ui->table_TimeseriesData->currentRow();
@@ -375,7 +376,7 @@ void mov_window_main::on_button_TimeseriesCopyRow_clicked()
 //-------------------------------------------//
 //Moves a table row up
 //-------------------------------------------//
-void mov_window_main::on_button_moveRowUp_clicked()
+void MainWindow::on_button_moveRowUp_clicked()
 {
     int currentRow = ui->table_TimeseriesData->currentRow();
 
@@ -401,7 +402,7 @@ void mov_window_main::on_button_moveRowUp_clicked()
 //-------------------------------------------//
 //Move a table row down
 //-------------------------------------------//
-void mov_window_main::on_button_moveRowDown_clicked()
+void MainWindow::on_button_moveRowDown_clicked()
 {
     int currentRow = ui->table_TimeseriesData->currentRow();
 
@@ -427,7 +428,7 @@ void mov_window_main::on_button_moveRowDown_clicked()
 //-------------------------------------------//
 //Function that grabs an entire table row
 //-------------------------------------------//
-QList<QTableWidgetItem*> mov_window_main::grabTableRow(int row)
+QList<QTableWidgetItem*> MainWindow::grabTableRow(int row)
 {
     QList<QTableWidgetItem*> rowItems;
     for (int col = 0; col < ui->table_TimeseriesData->columnCount(); ++col)
@@ -441,7 +442,7 @@ QList<QTableWidgetItem*> mov_window_main::grabTableRow(int row)
 //Function that sets a table row based upon
 //an input list
 //-------------------------------------------//
-void mov_window_main::setTableRow(int row, const QList<QTableWidgetItem*>& rowItems)
+void MainWindow::setTableRow(int row, const QList<QTableWidgetItem*>& rowItems)
 {
     for (int col = 0; col < ui->table_TimeseriesData->columnCount(); ++col)
         ui->table_TimeseriesData->setItem(row, col, rowItems.at(col));
@@ -449,18 +450,34 @@ void mov_window_main::setTableRow(int row, const QList<QTableWidgetItem*>& rowIt
 }
 //-------------------------------------------//
 
-void mov_window_main::on_button_usertimeseriesResetZoom_clicked()
+void MainWindow::on_button_usertimeseriesResetZoom_clicked()
 {
     if(!this->thisTimeseries.isNull())
         ui->timeseries_graphics->resetZoom();
     return;
 }
 
-void mov_window_main::on_pushButton_hideInfoWindow_toggled(bool checked)
+
+void MainWindow::on_pushButton_displayOptions_clicked()
 {
-    if(checked)
-        ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('false')");
-    else
-        ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('true')");
+    movUserTimeseriesOptions *optionsWindow = new movUserTimeseriesOptions(this);
+    optionsWindow->setDisplayValues(this->timeseriesDisplayValues);
+    optionsWindow->setHideInfoWindows(this->timeseriesHideInfoWindows);
+
+    int ierr = optionsWindow->exec();
+
+    if(ierr==QDialog::Accepted)
+    {
+        this->timeseriesDisplayValues = optionsWindow->displayValues();
+        this->timeseriesHideInfoWindows = optionsWindow->hideInfoWindows();
+        ui->timeseries_graphics->setDisplayValues(this->timeseriesDisplayValues);
+
+        if(this->timeseriesHideInfoWindows)
+            ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('false')");
+        else
+            ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('true')");
+    }
+
     return;
+
 }

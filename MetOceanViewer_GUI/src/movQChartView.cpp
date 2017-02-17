@@ -35,6 +35,7 @@ MovQChartView::MovQChartView(QWidget *parent) : QChartView(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->setMouseTracking(true);
+    this->setDisplayValues(false);
 
     this->m_chart     = NULL;
     this->m_coord     = NULL;
@@ -58,6 +59,13 @@ void MovQChartView::clear()
     this->m_legendNames.clear();
     this->m_series.clear();
     this->m_kdtree.clear();
+    return;
+}
+
+
+void MovQChartView::setDisplayValues(bool value)
+{
+    this->m_displayValues = value;
     return;
 }
 
@@ -107,29 +115,40 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event)
 
     if(this->m_coord)
     {
-        x = this->m_chart->mapToValue(event->pos()).x();
-        y = this->m_chart->mapToValue(event->pos()).y();
-
-        if(x<this->current_x_axis_max && x>this->current_x_axis_min && y<this->current_y_axis_max && y>this->current_y_axis_min)
+        if(this->m_displayValues)
         {
-            if(this->m_style==1)
-            {
-                for(int i=0;i<this->m_series.length();i++)
-                {
-                    this->m_kdtree.at(i)->findNearest(x,y_dum,i_min);
-                    this->chart()->series().at(i)->setName(this->m_legendNames.at(i)+": "+
-                                                           QString::number(this->m_series[i]->points().at(i_min).y()));
-                }
-                date = QDateTime::fromMSecsSinceEpoch(this->m_series[0]->at(i_min).x());
-                date.setTimeSpec(Qt::UTC);
-                dateString = QString("Date: ")+date.toString("MM/dd/yyyy hh:mm AP");
-                this->m_coord->setText(dateString);
-            }
-            else if(this->m_style==2)
-                this->m_coord->setText(tr("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
+            x = this->m_chart->mapToValue(event->pos()).x();
+            y = this->m_chart->mapToValue(event->pos()).y();
 
-            if(this->m_statusBar)
-                this->m_statusBar->showMessage(tr("Left click and drag to zoom in, Right click to zoom out, Double click to reset zoom"));
+            if(x<this->current_x_axis_max && x>this->current_x_axis_min && y<this->current_y_axis_max && y>this->current_y_axis_min)
+            {
+                if(this->m_style==1)
+                {
+                    for(int i=0;i<this->m_series.length();i++)
+                    {
+                        this->m_kdtree.at(i)->findNearest(x,y_dum,i_min);
+                        this->chart()->series().at(i)->setName(this->m_legendNames.at(i)+": "+
+                                                               QString::number(this->m_series[i]->points().at(i_min).y()));
+                    }
+                    date = QDateTime::fromMSecsSinceEpoch(this->m_series[0]->at(i_min).x());
+                    date.setTimeSpec(Qt::UTC);
+                    dateString = QString("Date: ")+date.toString("MM/dd/yyyy hh:mm AP");
+                    this->m_coord->setText(dateString);
+                }
+                else if(this->m_style==2)
+                    this->m_coord->setText(tr("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y-x));
+
+                if(this->m_statusBar)
+                    this->m_statusBar->showMessage(tr("Left click and drag to zoom in, Right click to zoom out, Double click to reset zoom"));
+            }
+            else
+            {
+                this->m_coord->setText("");
+                if(this->m_statusBar)
+                    this->m_statusBar->clearMessage();
+                for(int i=0;i<this->m_series.length();i++)
+                    this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
+            }
         }
         else
         {

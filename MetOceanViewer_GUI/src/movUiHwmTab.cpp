@@ -33,7 +33,7 @@
 //Called when the browse for HWM file button
 //is clicked
 //-------------------------------------------//
-void mov_window_main::on_browse_hwm_clicked()
+void MainWindow::on_browse_hwm_clicked()
 {
     QString filename;
     QString HighWaterMarkFile = QFileDialog::getOpenFileName(this,tr("Select High Water Mark File"),
@@ -51,7 +51,7 @@ void mov_window_main::on_browse_hwm_clicked()
 //-------------------------------------------//
 //Called when the process HWM button is clicked
 //-------------------------------------------//
-void mov_window_main::on_button_processHWM_clicked()
+void MainWindow::on_button_processHWM_clicked()
 {
     int ierr;
     QVector<double> classes;
@@ -130,7 +130,7 @@ void mov_window_main::on_button_processHWM_clicked()
 //Called when the manual HWM scale button is
 //clicked
 //-------------------------------------------//
-void mov_window_main::on_check_manualHWM_toggled(bool checked)
+void MainWindow::on_check_manualHWM_toggled(bool checked)
 {
     ui->spin_class0->setEnabled(checked);
     ui->spin_class1->setEnabled(checked);
@@ -148,7 +148,7 @@ void mov_window_main::on_check_manualHWM_toggled(bool checked)
 //Called when the save HWM map image button
 //is clicked
 //-------------------------------------------//
-void mov_window_main::on_button_saveHWMMap_clicked()
+void MainWindow::on_button_saveHWMMap_clicked()
 {
     QString filename;
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -173,7 +173,7 @@ void mov_window_main::on_button_saveHWMMap_clicked()
 //Bring up a color dialog to choose the color
 //used for plotting high water marks
 //-------------------------------------------//
-void mov_window_main::on_button_hwmcolor_clicked()
+void MainWindow::on_button_hwmcolor_clicked()
 {
     QString ButtonStyle;
     QColor TempColor;
@@ -196,7 +196,7 @@ void mov_window_main::on_button_hwmcolor_clicked()
 //Bring up a color dialog box for choosing the
 //1:1 color
 //-------------------------------------------//
-void mov_window_main::on_button_121linecolor_clicked()
+void MainWindow::on_button_121linecolor_clicked()
 {
     QString ButtonStyle;
     QColor TempColor;
@@ -219,7 +219,7 @@ void mov_window_main::on_button_121linecolor_clicked()
 //Bring up a color dialog for choosing the
 //regression line color
 //-------------------------------------------//
-void mov_window_main::on_button_reglinecolor_clicked()
+void MainWindow::on_button_reglinecolor_clicked()
 {
     QString ButtonStyle;
     QColor TempColor;
@@ -242,7 +242,7 @@ void mov_window_main::on_button_reglinecolor_clicked()
 //Bring up a color dialog to choose the
 //standard deviation bounding line color
 //-------------------------------------------//
-void mov_window_main::on_button_boundlinecolor_clicked()
+void MainWindow::on_button_boundlinecolor_clicked()
 {
     QString ButtonStyle;
     QColor TempColor;
@@ -265,7 +265,7 @@ void mov_window_main::on_button_boundlinecolor_clicked()
 //Button click routine for fitting high water
 //marks to the current view
 //-------------------------------------------//
-void mov_window_main::on_button_fitHWM_clicked()
+void MainWindow::on_button_fitHWM_clicked()
 {
     ui->map_hwm->page()->runJavaScript("fitMarkers()");
     return;
@@ -277,7 +277,7 @@ void mov_window_main::on_button_fitHWM_clicked()
 //Button to toggle options when the color match
 //option for the linear regression is clicked
 //-------------------------------------------//
-void mov_window_main::on_check_regressionColorMatch_clicked(bool checked)
+void MainWindow::on_check_regressionColorMatch_clicked(bool checked)
 {
     ui->button_hwmcolor->setEnabled(!checked);
     ui->label_hwmcolor->setEnabled(!checked);
@@ -286,7 +286,7 @@ void mov_window_main::on_check_regressionColorMatch_clicked(bool checked)
 //-------------------------------------------//
 
 
-void mov_window_main::on_button_saveHWMScatter_clicked()
+void MainWindow::on_button_saveHWMScatter_clicked()
 {
     QString filename;
     QString filter = "JPG (*.jpg *.jpeg)";
@@ -305,7 +305,7 @@ void mov_window_main::on_button_saveHWMScatter_clicked()
     return;
 }
 
-void mov_window_main::on_button_hwmResetZoom_clicked()
+void MainWindow::on_button_hwmResetZoom_clicked()
 {
     if(!this->thisHWM.isNull())
         ui->graphics_hwm->resetZoom();

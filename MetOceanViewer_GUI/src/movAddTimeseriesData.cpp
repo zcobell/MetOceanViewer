@@ -38,7 +38,7 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent) :
     ui->text_unitconvert->setValidator(new QDoubleValidator(this));
     ui->text_xadjust->setValidator(new QDoubleValidator(this));
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
-    this->PreviousDirectory = ((mov_window_main *)parent)->PreviousDirectory;
+    this->PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
     this->epsgmap = this->proj->getMap();
     connect(this,SIGNAL(addTimeseriesError(QString)),this,SLOT(throwErrorMessageBox(QString)));
     this->NumIMEDSFiles = 0;
