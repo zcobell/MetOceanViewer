@@ -67,7 +67,7 @@ int MovNoaa::fetchNOAAData()
     int i,j,ierr,NumDownloads,NumData;
     QVector<QDateTime> StartDateList,EndDateList;
 
-    if(this->StartDate==this->EndDate||this->EndDate<this->StartDate)
+    if(this->StartDate.operator ==(this->EndDate)||this->EndDate.operator <(this->StartDate))
         return ERR_NOAA_INVALIDDATERANGE;
 
     //Begin organizing the dates for download
@@ -558,6 +558,8 @@ int MovNoaa::prepNOAAResponse()
     {
         NOAAData[i] = this->formatNOAAResponse(this->NOAAWebData[i],this->ErrorString[i],i);
         this->ErrorString[i].remove(QRegExp("[\\n\\t\\r]"));
+        if(this->ErrorString[i]==QStringLiteral(" Wrong Date: The end date should be greater than the begin date "))
+            this->ErrorString[i] = QStringLiteral("NOAA data unavailable for the specified dates");
     }
     return 0;
 }
