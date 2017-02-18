@@ -27,6 +27,7 @@
 #include "movColors.h"
 #include "movGeneric.h"
 #include "movHwm.h"
+#include "movusertimeseriesoptions.h"
 
 
 //-------------------------------------------//
@@ -309,5 +310,22 @@ void MainWindow::on_button_hwmResetZoom_clicked()
 {
     if(!this->thisHWM.isNull())
         ui->graphics_hwm->resetZoom();
+    return;
+}
+
+
+void MainWindow::on_button_hwmOptions_clicked()
+{
+    movUserTimeseriesOptions *optionsWindow = new movUserTimeseriesOptions(this);
+    optionsWindow->setDisplayValues(this->hwmDisplayValues);
+    optionsWindow->setShowHideInfoWindowOption(false);
+
+    int ierr = optionsWindow->exec();
+
+    if(ierr==QDialog::Accepted)
+    {
+        this->hwmDisplayValues = optionsWindow->displayValues();
+        ui->graphics_hwm->setDisplayValues(this->hwmDisplayValues);
+    }
     return;
 }

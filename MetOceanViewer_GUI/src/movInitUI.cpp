@@ -48,6 +48,7 @@ void MainWindow::setupMetOceanViewerUI()
     ui->Date_EndTime->setDateTime(QDateTime::currentDateTimeUtc());
     ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
     ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
+    this->noaaDisplayValues = false;
 
 
     //-------------------------------------------//
@@ -64,6 +65,7 @@ void MainWindow::setupMetOceanViewerUI()
     this->usgs_page = new MovQWebEnginePage;
     ui->usgs_map->setPage(this->usgs_page);
     ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
+    this->usgsDisplayValues = false;
 
 
 
@@ -74,6 +76,7 @@ void MainWindow::setupMetOceanViewerUI()
     this->xtide_page = new MovQWebEnginePage;
     ui->xtide_map->setPage(this->xtide_page);
     ui->xtide_map->load(QUrl("qrc:/rsc/html/xtide_maps.html"));
+    this->xtideDisplayValues = false;
 
 
 
@@ -121,6 +124,7 @@ void MainWindow::setupMetOceanViewerUI()
     this->LineColorRegression.setRgb(7,145,0);
     this->LineColor121Line.setRgb(255,0,0);
     this->LineColorBounds.setRgb(0,0,0);
+    this->hwmDisplayValues = false;
 
     //Set the button color for high water marks
     QString ButtonStyle = MovColors::MakeColorString(this->DotColorHWM);

@@ -53,3 +53,12 @@ int movUserTimeseriesOptions::exec()
     ui->check_hideBubbles->setChecked(this->_mHideInfoWindows);
     return QDialog::exec();
 }
+
+void movUserTimeseriesOptions::setShowHideInfoWindowOption(bool value)
+{
+    if(value)
+        ui->check_hideBubbles->show();
+    else
+        ui->check_hideBubbles->hide();
+    return;
+}

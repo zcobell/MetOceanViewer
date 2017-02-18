@@ -469,12 +469,14 @@ int MovHwm::plotRegression()
     this->chartView->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
     this->chartView->m_coord->setPos(this->chartView->size().width()/2 - 100, this->chartView->size().height() - 20);
 
-    this->chartView->m_info = new QGraphicsTextItem(this->thisChart);
     this->chartView->m_infoString = "<table><tr><td align=\"right\"><b> "+tr("Regression Line")+": </b></td><td>"+RegressionString+"</td></tr>"+
                                      "<tr><td align=\"right\"><b> "+tr("Correlation")+" (R&sup2;): </b></td><td>"+CorrelationString+"</td></tr>"+
                                      "<tr><td align=\"right\"><b> "+tr("Standard Deviation:")+" </b></td><td>"+StandardDeviationString+"</td></tr></table>";
-    this->chartView->m_info->setHtml(this->chartView->m_infoString);
-    this->chartView->m_info->setPos(10,this->chartView->m_chart->size().height()-50);
+    QGraphicsTextItem *infoItem = new QGraphicsTextItem(this->thisChart);
+    infoItem->setZValue(10);
+    infoItem->setHtml(this->chartView->m_infoString);
+    infoItem->setPos(90,70);
+
     this->chartView->initializeAxisLimits();
     this->chartView->setStatusBar(this->statusBar);
 

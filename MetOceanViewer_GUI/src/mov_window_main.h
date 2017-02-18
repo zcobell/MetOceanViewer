@@ -173,6 +173,14 @@ private slots:
 
     void on_pushButton_displayOptions_clicked();
 
+    void on_button_noaaOptions_clicked();
+
+    void on_button_usgsOptions_clicked();
+
+    void on_button_xTideOptions_clicked();
+
+    void on_button_hwmOptions_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -221,6 +229,10 @@ private:
     bool processCommandLine;
     bool timeseriesDisplayValues;
     bool timeseriesHideInfoWindows;
+    bool noaaDisplayValues;
+    bool usgsDisplayValues;
+    bool xtideDisplayValues;
+    bool hwmDisplayValues;
 
 protected:
 

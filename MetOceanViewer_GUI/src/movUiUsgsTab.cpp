@@ -21,6 +21,7 @@
 #include "mov_window_main.h"
 #include "ui_mov_window_main.h"
 #include "movUsgs.h"
+#include "movusertimeseriesoptions.h"
 
 //-------------------------------------------//
 //Send the data to the panTo function
@@ -225,5 +226,22 @@ void MainWindow::on_button_usgsresetzoom_clicked()
 {
     if(!this->thisUSGS.isNull())
         ui->usgs_graphics->resetZoom();
+    return;
+}
+
+
+void MainWindow::on_button_usgsOptions_clicked()
+{
+    movUserTimeseriesOptions *optionsWindow = new movUserTimeseriesOptions(this);
+    optionsWindow->setDisplayValues(this->usgsDisplayValues);
+    optionsWindow->setShowHideInfoWindowOption(false);
+
+    int ierr = optionsWindow->exec();
+
+    if(ierr==QDialog::Accepted)
+    {
+        this->usgsDisplayValues = optionsWindow->displayValues();
+        ui->usgs_graphics->setDisplayValues(this->usgsDisplayValues);
+    }
     return;
 }

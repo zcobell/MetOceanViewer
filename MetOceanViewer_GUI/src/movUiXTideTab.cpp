@@ -20,6 +20,7 @@
 #include "mov_window_main.h"
 #include "ui_mov_window_main.h"
 #include "movXtide.h"
+#include "movusertimeseriesoptions.h"
 
 void MainWindow::on_button_xtide_compute_clicked()
 {
@@ -131,5 +132,22 @@ void MainWindow::on_button_xtide_savedata_clicked()
 
     thisXTide->saveXTideData(TempString,format);
 
+    return;
+}
+
+
+void MainWindow::on_button_xTideOptions_clicked()
+{
+    movUserTimeseriesOptions *optionsWindow = new movUserTimeseriesOptions(this);
+    optionsWindow->setDisplayValues(this->xtideDisplayValues);
+    optionsWindow->setShowHideInfoWindowOption(false);
+
+    int ierr = optionsWindow->exec();
+
+    if(ierr==QDialog::Accepted)
+    {
+        this->xtideDisplayValues = optionsWindow->displayValues();
+        ui->xtide_graphics->setDisplayValues(this->xtideDisplayValues);
+    }
     return;
 }

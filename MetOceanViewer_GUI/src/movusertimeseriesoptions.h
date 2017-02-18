@@ -19,6 +19,7 @@ public:
     bool displayValues();
     void setDisplayValues(bool value);
     void setHideInfoWindows(bool value);
+    void setShowHideInfoWindowOption(bool value);
 
 private slots:
     void on_check_displayValues_toggled(bool checked);

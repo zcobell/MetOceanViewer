@@ -47,7 +47,7 @@
    <string>MetOcean Viewer</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../movResource.qrc">
+   <iconset resource="../MetOceanViewer.qrc">
     <normaloff>:/rsc/img/logo_small.png</normaloff>:/rsc/img/logo_small.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
@@ -959,6 +959,31 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="button_noaaOptions">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Options</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="horizontalSpacer">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
@@ -1640,6 +1665,25 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="button_usgsOptions">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>75</horstretch>
+                     <verstretch>27</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Options</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="horizontalSpacer_7">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
@@ -2224,6 +2268,25 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="button_xTideOptions">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>75</horstretch>
+                     <verstretch>27</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Options</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="horizontalSpacer_11">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
@@ -2420,7 +2483,7 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset resource="../movResource.qrc">
+                 <iconset resource="../MetOceanViewer.qrc">
                   <normaloff>:/rsc/img/arrow_up.png</normaloff>:/rsc/img/arrow_up.png</iconset>
                 </property>
                </widget>
@@ -2446,7 +2509,7 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset resource="../movResource.qrc">
+                 <iconset resource="../MetOceanViewer.qrc">
                   <normaloff>:/rsc/img/arrow_down.png</normaloff>:/rsc/img/arrow_down.png</iconset>
                 </property>
                </widget>
@@ -3265,7 +3328,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_darkblue.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_darkblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3315,7 +3378,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_lightblue.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_lightblue.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3365,7 +3428,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_darkgreen.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_darkgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3412,7 +3475,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_lightgreen.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_lightgreen.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3462,7 +3525,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_yellow.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_yellow.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3512,7 +3575,7 @@
                        <string/>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_darkorange.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_darkorange.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -3559,7 +3622,7 @@
                        </size>
                       </property>
                       <property name="pixmap">
-                       <pixmap resource="../movResource.qrc">:/rsc/img/mm_20_red.png</pixmap>
+                       <pixmap resource="../MetOceanViewer.qrc">:/rsc/img/mm_20_red.png</pixmap>
                       </property>
                      </widget>
                     </item>
@@ -4206,6 +4269,18 @@
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <item>
              <widget class="MovQChartView" name="graphics_hwm" native="true">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>400</width>
+                <height>400</height>
+               </size>
+              </property>
               <property name="styleSheet">
                <string notr="true">background-color: rgb(255, 255, 255);</string>
               </property>
@@ -4248,6 +4323,13 @@
                 </property>
                 <property name="text">
                  <string>Reset Plot Zoom</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_hwmOptions">
+                <property name="text">
+                 <string>Options</string>
                 </property>
                </widget>
               </item>
@@ -4352,7 +4434,7 @@
   <tabstop>Button_FetchData</tabstop>
  </tabstops>
  <resources>
-  <include location="../movResource.qrc"/>
+  <include location="../MetOceanViewer.qrc"/>
  </resources>
  <connections/>
 </ui>

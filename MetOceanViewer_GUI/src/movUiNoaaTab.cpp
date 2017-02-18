@@ -22,6 +22,7 @@
 #include "ui_mov_window_main.h"
 #include "movNoaa.h"
 #include "movGeneric.h"
+#include "movusertimeseriesoptions.h"
 
 //-------------------------------------------//
 //Called when the pan to combo box is updated
@@ -42,8 +43,8 @@ void MainWindow::on_button_noaasavechart_clicked()
     QString filename;
     int ierr;
 
-    int MarkerID = thisNOAA->getLoadedNOAAStation();
-    int MarkerID2 = thisNOAA->getClickedNOAAStation();
+    int MarkerID = this->thisNOAA->getLoadedNOAAStation();
+    int MarkerID2 = this->thisNOAA->getClickedNOAAStation();
 
     if(MarkerID==-1)
     {
@@ -60,14 +61,14 @@ void MainWindow::on_button_noaasavechart_clicked()
     QString filter = "JPG (*.jpg *.jpeg)";
     QString DefaultFile = "/NOAA_"+QString::number(MarkerID)+".jpg";
     QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),
-                PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
+                this->PreviousDirectory+DefaultFile,"JPG (*.jpg *.jpeg) ;; PDF (*.pdf)",&filter);
 
     if(TempString==NULL)
         return;
 
     MovGeneric::splitPath(TempString,filename,this->PreviousDirectory);
 
-    ierr = thisNOAA->saveNOAAImage(TempString,filter);
+    ierr = this->thisNOAA->saveNOAAImage(TempString,filter);
 
     return;
 
@@ -83,8 +84,8 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     QString filename;
 
-    int MarkerID = thisNOAA->getLoadedNOAAStation();
-    int MarkerID2 = thisNOAA->getClickedNOAAStation();
+    int MarkerID = this->thisNOAA->getLoadedNOAAStation();
+    int MarkerID2 = this->thisNOAA->getClickedNOAAStation();
 
     if(MarkerID==-1)
     {
@@ -100,7 +101,7 @@ void MainWindow::on_button_noaasavedata_clicked()
 
     QString filter;
     QString DefaultFile = "/NOAA_"+QString::number(MarkerID)+".imeds";
-    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),PreviousDirectory+DefaultFile,
+    QString TempString = QFileDialog::getSaveFileName(this,tr("Save as..."),this->PreviousDirectory+DefaultFile,
                                                     "IMEDS (*.imeds);;CSV (*.csv)",&filter);
     QStringList filter2 = filter.split(" ");
     QString format = filter2.value(0);
@@ -155,7 +156,7 @@ void MainWindow::plotNOAAStation()
     this->thisNOAA = new MovNoaa(ui->noaa_map,ui->noaa_graphics,ui->Date_StartTime,
                         ui->Date_EndTime,ui->combo_NOAAProduct,ui->combo_noaaunits,
                         ui->combo_noaadatum,ui->statusBar,this);
-    connect(thisNOAA,SIGNAL(noaaError(QString)),this,SLOT(throwErrorMessageBox(QString)));
+    connect(this->thisNOAA,SIGNAL(noaaError(QString)),this,SLOT(throwErrorMessageBox(QString)));
 
     ierr = this->thisNOAA->plotNOAAStation();
     return;
@@ -165,5 +166,21 @@ void MainWindow::on_button_noaaresetzoom_clicked()
 {
     if(!this->thisNOAA.isNull())
         ui->noaa_graphics->resetZoom();
+    return;
+}
+
+void MainWindow::on_button_noaaOptions_clicked()
+{
+    movUserTimeseriesOptions *optionsWindow = new movUserTimeseriesOptions(this);
+    optionsWindow->setDisplayValues(this->noaaDisplayValues);
+    optionsWindow->setShowHideInfoWindowOption(false);
+
+    int ierr = optionsWindow->exec();
+
+    if(ierr==QDialog::Accepted)
+    {
+        this->noaaDisplayValues = optionsWindow->displayValues();
+        ui->noaa_graphics->setDisplayValues(this->noaaDisplayValues);
+    }
     return;
 }
