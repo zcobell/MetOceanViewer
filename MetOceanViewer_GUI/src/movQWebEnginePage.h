@@ -36,6 +36,7 @@ public:
 
     bool acceptNavigationRequest(const QUrl & url, QWebEnginePage::NavigationType type, bool isMainFrame)
     {
+        Q_UNUSED(isMainFrame);
         if (type == QWebEnginePage::NavigationTypeLinkClicked)
         {
             QDesktopServices::openUrl(url);

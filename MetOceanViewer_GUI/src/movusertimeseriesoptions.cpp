@@ -6,6 +6,8 @@ movUserTimeseriesOptions::movUserTimeseriesOptions(QWidget *parent) :
     ui(new Ui::movUserTimeseriesOptions)
 {
     ui->setupUi(this);
+    this->_mDisplayValues = false;
+    this->_mHideInfoWindows = false;
 }
 
 movUserTimeseriesOptions::~movUserTimeseriesOptions()

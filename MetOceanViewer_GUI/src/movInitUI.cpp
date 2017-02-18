@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "movKeyhandler.h"
 #include "mov_dialog_update.h"

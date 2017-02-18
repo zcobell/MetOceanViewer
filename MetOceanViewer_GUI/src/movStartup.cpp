@@ -18,7 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
         
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "movGeneric.h"
 
 #include <QApplication>

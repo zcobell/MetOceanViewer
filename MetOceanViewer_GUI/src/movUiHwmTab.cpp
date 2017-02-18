@@ -22,7 +22,7 @@
 //This file contains all the user interactions that occur on the HWM tab
 //
 
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "movColors.h"
 #include "movGeneric.h"

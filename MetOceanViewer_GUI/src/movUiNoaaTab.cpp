@@ -18,7 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "movNoaa.h"
 #include "movGeneric.h"
@@ -29,6 +29,7 @@
 //-------------------------------------------//
 void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index)
 {
+    Q_UNUSED(index);
     ui->noaa_map->page()->runJavaScript("panTo('"+ui->Combo_NOAAPanTo->currentText()+"')");
     return;
 }

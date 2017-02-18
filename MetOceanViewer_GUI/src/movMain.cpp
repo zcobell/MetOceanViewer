@@ -18,7 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
         
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "mov_dialog_about.h"
 #include "mov_dialog_update.h"

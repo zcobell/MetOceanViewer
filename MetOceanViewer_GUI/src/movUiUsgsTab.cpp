@@ -18,7 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "movUsgs.h"
 #include "movusertimeseriesoptions.h"
@@ -28,6 +28,7 @@
 //-------------------------------------------//
 void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index)
 {
+    Q_UNUSED(index);
     ui->usgs_map->page()->runJavaScript("panTo('"+ui->combo_usgs_panto->currentText()+"')");
     return;
 }

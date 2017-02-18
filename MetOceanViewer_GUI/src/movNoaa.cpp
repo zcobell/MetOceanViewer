@@ -540,9 +540,7 @@ int MovNoaa::plotChart()
 
 int MovNoaa::plotNOAAStation()
 {
-
-    //...get the latest station
-    int ierr = this->setAsyncNOAAStation();
+    this->setAsyncNOAAStation();
     return 0;
 }
 

@@ -21,7 +21,7 @@
 #include <QMessageBox>
 #include "mov_dialog_addtimeseriesdata.h"
 #include "ui_mov_dialog_addtimeseries.h"
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "movColors.h"
 #include "movGeneric.h"
 #include "movFiletypes.h"

@@ -486,7 +486,7 @@ int MovUsgs::replotCurrentUSGSStation(int index)
 int MovUsgs::plotUSGS()
 {
 
-    int i,j,ierr;
+    int j,ierr;
     double ymin,ymax;
     QString format;
     QDateTime minDateTime,maxDateTime;

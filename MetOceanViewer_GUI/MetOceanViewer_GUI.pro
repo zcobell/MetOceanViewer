@@ -82,10 +82,10 @@ HEADERS  += \
     src/mov_dialog_addtimeseriesdata.h \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
-    src/mov_window_main.h \
     src/movErrors.h \
     src/qkdtree2.h \
-    src/movusertimeseriesoptions.h
+    src/movusertimeseriesoptions.h \
+    src/MainWindow.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \

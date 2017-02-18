@@ -18,7 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "mov_dialog_addtimeseriesdata.h"
 #include "movUserTimeseries.h"
@@ -40,7 +40,7 @@ void MainWindow::on_button_saveTimeseriesImage_clicked()
 
     MovGeneric::splitPath(TempString,Filename,PreviousDirectory);
 
-    int ierr = this->thisTimeseries->saveImage(TempString,filter);
+    this->thisTimeseries->saveImage(TempString,filter);
 
 }
 //-------------------------------------------//
@@ -342,7 +342,7 @@ void MainWindow::on_button_fitTimeseries_clicked()
 //-------------------------------------------//
 void MainWindow::on_button_plotTimeseriesStation_clicked()
 {
-    int ierr = thisTimeseries->plotData();
+    this->thisTimeseries->plotData();
     return;
 }
 //-------------------------------------------//

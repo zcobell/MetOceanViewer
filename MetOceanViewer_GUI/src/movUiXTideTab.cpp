@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#include "mov_window_main.h"
+#include "MainWindow.h"
 #include "ui_mov_window_main.h"
 #include "movXtide.h"
 #include "movusertimeseriesoptions.h"
@@ -57,6 +57,7 @@ void MainWindow::on_button_xtide_resetzoom_clicked()
 
 void MainWindow::on_combo_xtide_panto_activated(const QString &arg1)
 {
+    Q_UNUSED(arg1);
     ui->xtide_map->page()->runJavaScript("panTo('"+ui->combo_xtide_panto->currentText()+"')");
     return;
 }
