@@ -322,6 +322,7 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked()
             Directory,
             tr("MetOceanViewer Compatible file (*.imeds *.61 *.62 *.71 *.72 *.nc) ;; "
                     "IMEDS File (*.imeds *.IMEDS) ;; netCDF Output Files (*.nc) ;; "
+                    "DFlow-FM History Files (*_his.nc) ;; "
                     "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
     this->InputFilePath = TempPath;
