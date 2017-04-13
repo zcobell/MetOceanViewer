@@ -100,7 +100,7 @@ win32{
     CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libraries/libproj4/release -lmovProj4
 }
 unix{
-    LIBS += -L$$OUT_PWD/../libproj4 -lmovProj4
+    LIBS += -L$$OUT_PWD/../libraries/libproj4 -lmovProj4
 }
 
 #...Include the netCDF4-CXX library
