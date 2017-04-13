@@ -24,7 +24,7 @@ TARGET       = movProj4
 
 TEMPLATE     = lib
 
-PROJ4PATH    = $$PWD/../thirdparty/proj4/src
+PROJ4PATH    = $$PWD/../../thirdparty/proj4/src
 
 INCLUDEPATH += $$PROJ4PATH
 

@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
-# QADCModules - A library for working with ADCIRC models
-# Copyright (C) 2016  Zach Cobell
+# MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+# Copyright (C) 2015-2017  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,8 +18,23 @@
 #
 #-----------------------------------------------------------------------#
 
-TEMPLATE = subdirs
+QT          += core
 
-SUBDIRS  = libraries \
-           MetOceanViewer_GUI
-CONFIG += ordered           
+TARGET       = movKdtree2
+
+TEMPLATE     = lib
+
+CONFIG      += staticlib
+
+#...Include Boost
+INCLUDEPATH += $$PWD/../../thirdparty/boost-library
+
+#...Include KDTREE2
+INCLUDEPATH += $$PWD/../../thirdparty/kdtree
+
+DEFINES      = KDTREE2_LIBRARY
+
+HEADERS += qkdtree2.h
+
+SOURCES += qkdtree2.cpp \
+           ../../thirdparty/kdtree/kdtree2.cpp

@@ -94,10 +94,10 @@ FORMS    += \
 OTHER_FILES +=
 
 #...Include the PROJ4 library
-INCLUDEPATH += $$PWD/../libproj4
+INCLUDEPATH += $$PWD/../libraries/libproj4
 win32{
-    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libproj4/debug -lmovProj4
-    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libproj4/release -lmovProj4
+    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libraries/libproj4/debug -lmovProj4
+    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libraries/libproj4/release -lmovProj4
 }
 unix{
     LIBS += -L$$OUT_PWD/../libproj4 -lmovProj4
@@ -106,21 +106,21 @@ unix{
 #...Include the netCDF4-CXX library
 INCLUDEPATH += $$PWD/../thirdparty/netcdf-cxx/cxx4
 win32{
-    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libnetcdfcxx/debug -lnetcdfcxx
-    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libnetcdfcxx/release -lnetcdfcxx
+    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/debug -lnetcdfcxx
+    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/release -lnetcdfcxx
 }
 unix{
-    LIBS += -L$$OUT_PWD/../libnetcdfcxx -lnetcdfcxx
+    LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx -lnetcdfcxx
 }
 
 #...Include the KDTREE2 library
-INCLUDEPATH += $$PWD/../libkdtree2
+INCLUDEPATH += $$PWD/../libraries/libkdtree2
 win32{
-    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libkdtree2/debug -lmovKdtree2
-    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libkdtree2/release -lmovKdtree2
+    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libraries/libkdtree2/debug -lmovKdtree2
+    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libraries/libkdtree2/release -lmovKdtree2
 }
 unix{
-    LIBS += -L$$OUT_PWD/../libkdtree2 -lmovKdtree2
+    LIBS += -L$$OUT_PWD/../libraries/libkdtree2 -lmovKdtree2
 }
 
 #...Compiler dependent options
