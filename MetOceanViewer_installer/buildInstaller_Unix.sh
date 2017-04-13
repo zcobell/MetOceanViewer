@@ -4,10 +4,10 @@ QtHome=/opt/Qt
 QtLibDir=/opt/Qt/5.8/gcc_64/lib
 executable=../../build-MetOceanViewer-Desktop_Qt_5_8_0_GCC_64bit-Release/MetOceanViewer_GUI/MetOceanViewer
 webenginelib=/opt/Qt/5.8/gcc_64/lib/libQt5WebEngineCore.so.5
-proj4lib=../../build-MetOceanViewer-Desktop_Qt_5_8_0_GCC_64bit-Release/libproj4/libproj4.so.1
+proj4lib=../../build-MetOceanViewer-Desktop_Qt_5_8_0_GCC_64bit-Release/libproj4/libmovProj4.so.1
 xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
-version=$(git describe --always --tags)
+version=$(git describe --always --tags --dirty)
 
 
 if [ ! -s $executable ] ; then

@@ -24,7 +24,6 @@
 //------------------------------------------------------------------------------
 #include "proj4.h"
 #include "proj_api.h"
-#include "epsg.h"
 
 //-----------------------------------------------------------------------------------------//
 // Initializer
@@ -35,7 +34,7 @@
 //-----------------------------------------------------------------------------------------//
 proj4::proj4(QObject *parent)
 {
-
+    this->_initEpsgMapping();
 }
 //-----------------------------------------------------------------------------------------//
 
@@ -58,14 +57,14 @@ int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in, do
     ierr = 0;
     z = 0.0;
 
-    if(!epsgMapping.contains(inputEPSG))
+    if(!this->containsEPSG(inputEPSG))
         return ERROR_PROJ4_NOSUCHPROJECTION;
 
-    if(!epsgMapping.contains(outputEPSG))
+    if(!this->containsEPSG(outputEPSG))
         return ERROR_PROJ4_NOSUCHPROJECTION;
 
-    QString currentInitialization = epsgMapping[inputEPSG];
-    QString outputInitialization  = epsgMapping[outputEPSG];
+    QString currentInitialization = this->coordinateSystemString(inputEPSG);
+    QString outputInitialization  = this->coordinateSystemString(outputEPSG);
 
     if(!(inputPJ = pj_init_plus(currentInitialization.toStdString().c_str())))
         return ERROR_PROJ4_INTERNAL;
@@ -108,16 +107,38 @@ int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in, do
 
 
 //-----------------------------------------------------------------------------------------//
-// Function to return the internal map constructed for outside usage
+// Function to return check if an epsg is contained within the master list
 //-----------------------------------------------------------------------------------------//
-/** \brief Function to return the internal map constructed for outside usage
+/** \brief Function to check if an epsg is contained within the master list
  *
- * Function to return the internal map constructed for outside usage
+ * Function to check if an epsg is contained within the master list
  *
  **/
 //-----------------------------------------------------------------------------------------//
-QMap<int, QString> *proj4::getMap()
+bool proj4::containsEPSG(int epsg)
 {
-    return &epsgMapping;
+    if(this->_epsgMapping.contains(epsg))
+        return true;
+    else
+        return false;
+}
+//-----------------------------------------------------------------------------------------//
+
+
+//-----------------------------------------------------------------------------------------//
+// Function to return the proj4 initialization for an epsg
+//-----------------------------------------------------------------------------------------//
+/** \brief Function to return the proj4 initialization for an epsg
+ *
+ * Function to return the proj4 initialization for an epsg
+ *
+ **/
+//-----------------------------------------------------------------------------------------//
+QString proj4::coordinateSystemString(int epsg)
+{
+    if(this->containsEPSG(epsg))
+        return this->_epsgMapping[epsg];
+    else
+        return QStringLiteral("ERROR: No such epsg");
 }
 //-----------------------------------------------------------------------------------------//

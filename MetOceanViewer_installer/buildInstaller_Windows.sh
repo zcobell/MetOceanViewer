@@ -3,7 +3,7 @@
 
 winDeployQtBinary=/cygdrive/c/Qt/Qt5.8.0/5.8/msvc2015_64/bin/windeployqt.exe
 binaryCreator=/cygdrive/c/Qt/QtIFW2.0.3/bin/binarycreator.exe
-version=$(git describe --always --tags)
+version=$(git describe --always --tags --dirty)
 
 
 #...Check for WindDeployQt
@@ -25,7 +25,7 @@ mkdir -p packages_windows/com.zachcobell.metoceanviewer/data
 cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOceanViewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the proj4 library
-cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/libproj4/release/proj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../../build-MetOceanViewer-Desktop_Qt_5_8_0_MSVC2015_64bit-Release/libproj4/release/movProj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the Windows XTide executable
 cp ../thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
@@ -43,7 +43,7 @@ cp ../thirdparty/openssl/bin_64/*.dll packages_windows/com.zachcobell.metoceanvi
 #...Run the deployment script
 cd packages_windows/com.zachcobell.metoceanviewer/data
 $winDeployQtBinary --compiler-runtime -release MetOceanViewer.exe
-$winDeployQtBinary --compiler-runtime -release proj4.dll
+$winDeployQtBinary --compiler-runtime -release movProj4.dll
 cd ../../..
 
 #...Move the Visual C++ installer to its own directory

@@ -28,6 +28,8 @@
 #include "movDflow.h"
 #include "movErrors.h"
 
+#define _DUPLICATE_STATION_TOL 0.00001
+
 MovUserTimeseries::MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                                  QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
                                  QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
@@ -614,6 +616,8 @@ int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data,
 {
     int i,j,k;
     bool found;
+    double d;
+
     for(i=0;i<Data.length();i++)
     {
         for(j=0;j<Data[i]->nstations;j++)
@@ -621,8 +625,8 @@ int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data,
             found = false;
             for(k=0;k<X.length();k++)
             {
-                if(Data[i]->station[j]->longitude == X[k] &&
-                        Data[i]->station[j]->latitude == Y[k] )
+                d = qSqrt(qPow(Data[i]->station[j]->longitude-X[k],2.0)+qPow(Data[i]->station[j]->latitude-Y[k],2.0));
+                if(d<_DUPLICATE_STATION_TOL)
                 {
                     found = true;
                     break;
@@ -635,7 +639,6 @@ int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data,
                 X[X.length()-1] = Data[i]->station[j]->longitude;
                 Y[Y.length()-1] = Data[i]->station[j]->latitude;
             }
-
         }
     }
     return ERR_NOERR;
@@ -648,6 +651,8 @@ int MovUserTimeseries::getUniqueStationList(QVector<MovImeds *> Data, QVector<do
 {
     int i,j,k;
     bool found;
+    double d;
+
     for(i=0;i<Data.length();i++)
     {
         for(j=0;j<Data[i]->nstations;j++)
@@ -655,8 +660,8 @@ int MovUserTimeseries::getUniqueStationList(QVector<MovImeds *> Data, QVector<do
             found = false;
             for(k=0;k<X.length();k++)
             {
-                if(Data[i]->station[j]->longitude == X[k] &&
-                        Data[i]->station[j]->latitude == Y[k] )
+                d = qSqrt(qPow(Data[i]->station[j]->longitude-X[k],2.0)+qPow(Data[i]->station[j]->latitude-Y[k],2.0));
+                if(d<_DUPLICATE_STATION_TOL)
                 {
                     found = true;
                     break;
@@ -686,6 +691,7 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds*> &Data,QVector<double
 {
     int i,j,k;
     bool found;
+    double d;
 
     DataOut.resize(Data.length());
 
@@ -715,8 +721,9 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds*> &Data,QVector<double
             found = false;
             for(k=0;k<Data[i]->nstations;k++)
             {
-                if(Data[i]->station[k]->longitude == DataOut[i]->station[j]->longitude &&
-                   Data[i]->station[k]->latitude == DataOut[i]->station[j]->latitude)
+                d = qSqrt(qPow(Data[i]->station[k]->longitude-DataOut[i]->station[j]->longitude,2.0)+
+                          qPow(Data[i]->station[k]->latitude-DataOut[i]->station[j]->latitude,2.0));
+                if(d<_DUPLICATE_STATION_TOL)
                 {
                     DataOut[i]->station[j]->data.resize(Data[i]->station[k]->data.length());
                     DataOut[i]->station[j]->date.resize(Data[i]->station[k]->date.length());

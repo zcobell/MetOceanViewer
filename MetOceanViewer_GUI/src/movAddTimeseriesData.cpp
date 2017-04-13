@@ -39,7 +39,6 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent) :
     ui->text_xadjust->setValidator(new QDoubleValidator(this));
     ui->text_yadjust->setValidator(new QDoubleValidator(this));
     this->PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
-    this->epsgmap = this->proj->getMap();
     connect(this,SIGNAL(addTimeseriesError(QString)),this,SLOT(throwErrorMessageBox(QString)));
     this->NumIMEDSFiles = 0;
     this->CurrentRowsInTable = 0;
@@ -52,8 +51,8 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent) :
     this->InputFileType = 0;
     this->epsg = 4326;
     this->layer = 0;
-    this->proj = NULL;
     this->dflow = NULL;
+    this->proj = new proj4(this);
 }
 //-------------------------------------------//
 
@@ -97,7 +96,6 @@ void mov_dialog_addtimeseries::set_default_dialog_box_elements(int NumRowsInTabl
     this->CurrentFileName = QString();
     this->epsg = 4326;
     this->dFlowVariable = QString();
-    this->proj = new proj4(this);
     this->layer = 1;
 
     this->setColdstartSelectElements(false);
@@ -460,7 +458,7 @@ void mov_dialog_addtimeseries::accept()
         emit addTimeseriesError(tr("You did not select a station file."));
         return;
     }
-    else if(!this->epsgmap->contains(this->epsg))
+    else if(!this->proj->containsEPSG(this->epsg))
     {
         emit addTimeseriesError(tr("You did not enter a valid EPSG coordinate system."));
     }
@@ -508,9 +506,9 @@ void mov_dialog_addtimeseries::on_button_presetColor4_clicked()
 
 void mov_dialog_addtimeseries::on_button_describeepsg_clicked()
 {
-    if(this->epsgmap->contains(ui->spin_epsg->value()))
+    if(this->proj->containsEPSG(ui->spin_epsg->value()))
     {
-        QString description = this->epsgmap->value(ui->spin_epsg->value());
+        QString description = this->proj->coordinateSystemString(ui->spin_epsg->value());
         QMessageBox::information(this,tr("Coordinate System Description"),description);
     }
     else
@@ -520,7 +518,7 @@ void mov_dialog_addtimeseries::on_button_describeepsg_clicked()
 
 void mov_dialog_addtimeseries::on_spin_epsg_valueChanged(int arg1)
 {
-    if(this->epsgmap->contains(arg1))
+    if(this->proj->containsEPSG(arg1))
         ui->spin_epsg->setStyleSheet("background-color: rgb(255, 255, 255);");
     else
         ui->spin_epsg->setStyleSheet("background-color: rgb(255, 0, 0);");

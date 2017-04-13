@@ -62,8 +62,6 @@ public:
     QDateTime InputFileColdStart;
     int InputFileType;
     int epsg,layer;
-    proj4 *proj;
-    QMap<int,QString> *epsgmap;
 
 private slots:
 
@@ -105,6 +103,7 @@ private:
     void setItemsByFiletype();
 
     MovDflow *dflow;
+    proj4    *proj;
 
     struct IMEDSList
     {

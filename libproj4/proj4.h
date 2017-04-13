@@ -56,7 +56,14 @@ public:
 
     int transform(int inputEPSG, int outputEPSG, double x_in, double y_in, double &x_out, double &y_out, bool &isLatLon);
 
-    QMap<int,QString> *getMap();
+    bool containsEPSG(int epsg);
+
+    QString coordinateSystemString(int epsg);
+
+private:
+    int _initEpsgMapping();
+
+    QMap<int,QString> _epsgMapping;
 
 };
 

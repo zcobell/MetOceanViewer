@@ -2,6 +2,7 @@
 #include "netcdf"
 #include "movImeds.h"
 #include "movErrors.h"
+#include "movFlags.h"
 #include <QtMath>
 
 using namespace netCDF;
@@ -95,7 +96,10 @@ int MovDflow::_get2DVelocityMagnitude(int layer, QVector<QVector<double> > &data
         data[i].resize(this->_nSteps);
         for(j=0;j<this->_nSteps;j++)
         {
-            data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+            if(x_data[i][j]==MOV_NULL_TS || y_data[i][j]==MOV_NULL_TS)
+                data[i][j] = MOV_NULL_TS;
+            else
+                data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
         }
     }
     return ERR_NOERR;
@@ -126,7 +130,10 @@ int MovDflow::_get2DVelocityDirection(int layer, QVector<QVector<double> > &data
     {
         data[i].resize(this->_nSteps);
         for(j=0;j<this->_nSteps;j++)
-            data[i][j] = qAtan2(y_data[i][j],x_data[i][j])*180.0/M_PI;
+            if(x_data[i][j]==MOV_NULL_TS || y_data[i][j]==MOV_NULL_TS)
+                data[i][j] = MOV_NULL_TS;
+            else
+                data[i][j] = qAtan2(y_data[i][j],x_data[i][j])*180.0/M_PI;
     }
     return ERR_NOERR;
 }
@@ -164,7 +171,10 @@ int MovDflow::_get3DVeloctiyMagnitude(int layer, QVector<QVector<double> > &data
         data[i].resize(this->_nSteps);
         for(j=0;j<this->_nSteps;j++)
         {
-            data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0)+qPow(z_data[i][j],2.0));
+            if(x_data[i][j]==MOV_NULL_TS || y_data[i][j]==MOV_NULL_TS || z_data[i][j]==MOV_NULL_TS)
+                data[i][j] = MOV_NULL_TS;
+            else
+                data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0)+qPow(z_data[i][j],2.0));
         }
     }
     return ERR_NOERR;
@@ -194,7 +204,10 @@ int MovDflow::_getWindVelocityMagnitude(QVector<QVector<double> > &data)
         data[i].resize(this->_nSteps);
         for(j=0;j<this->_nSteps;j++)
         {
-            data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
+            if(x_data[i][j]==MOV_NULL_TS || y_data[i][j]==MOV_NULL_TS)
+                data[i][j] = MOV_NULL_TS;
+            else
+                data[i][j] = qSqrt(qPow(x_data[i][j],2.0)+qPow(y_data[i][j],2.0));
         }
     }
     return ERR_NOERR;
@@ -223,7 +236,10 @@ int MovDflow::_getWindDirection(QVector<QVector<double> > &data)
     {
         data[i].resize(this->_nSteps);
         for(j=0;j<this->_nSteps;j++)
-            data[i][j] = qAtan2(y_data[i][j],x_data[i][j])*180.0/M_PI;
+            if(x_data[i][j]==MOV_NULL_TS || y_data[i][j]==MOV_NULL_TS)
+                data[i][j] = MOV_NULL_TS;
+            else
+                data[i][j] = qAtan2(y_data[i][j],x_data[i][j])*180.0/M_PI;
     }
     return ERR_NOERR;
 }
@@ -700,7 +716,12 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double> > &data)
 
     for(i=0;i<this->_nSteps;i++)
         for(j=0;j<this->_nStations;j++)
-            data[j][i] = d[i*this->_nStations+j];
+        {
+            if(d[i*this->_nStations+j]==-999.0)
+                data[j][i] = MOV_NULL_TS;
+            else
+                data[j][i] = d[i*this->_nStations+j];
+        }
 
     free(d);
     free(start);
@@ -758,7 +779,12 @@ int MovDflow::_getVar3D(QString variable, int layer, QVector<QVector<double> > &
 
     for(i=0;i<this->_nSteps;i++)
         for(j=0;j<this->_nStations;j++)
-            data[j][i] = d[i*this->_nStations+j];
+        {
+            if(d[i*this->_nStations+j]==-999.0)
+                data[j][i] = MOV_NULL_TS;
+            else
+                data[j][i] = d[i*this->_nStations+j];
+        }
 
     free(d);
     free(start);

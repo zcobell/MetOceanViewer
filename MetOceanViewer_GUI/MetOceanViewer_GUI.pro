@@ -105,11 +105,11 @@ INCLUDEPATH += $$PWD/../thirdparty/kdtree
 #...Include the PROJ4 library
 INCLUDEPATH += $$PWD/../libproj4
 win32{
-    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libproj4/debug -lproj4
-    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libproj4/release -lproj4
+    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libproj4/debug -lmovProj4
+    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libproj4/release -lmovProj4
 }
 unix{
-    LIBS += -L$$OUT_PWD/../libproj4 -lproj4
+    LIBS += -L$$OUT_PWD/../libproj4 -lmovProj4
 }
 
 #...Include the netCDF4-CXX library

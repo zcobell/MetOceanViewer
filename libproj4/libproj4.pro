@@ -20,7 +20,7 @@
 
 QT          += core
 
-TARGET       = proj4
+TARGET       = movProj4
 
 TEMPLATE     = lib
 
@@ -66,9 +66,9 @@ SOURCES_PROJ4 = \
     $$PROJ4PATH/jniproj.c $$PROJ4PATH/pj_mutex.c $$PROJ4PATH/pj_initcache.c $$PROJ4PATH/pj_apply_vgridshift.c $$PROJ4PATH/geodesic.c \
     $$PROJ4PATH/pj_strtod.c
 
-SOURCES += proj4.cpp $$SOURCES_PROJ4
+SOURCES += proj4.cpp $$SOURCES_PROJ4 \
+    epsg.cpp
 
 HEADERS += proj4.h \
-           proj4_global.h \
-    epsg.h
+           proj4_global.h
 
