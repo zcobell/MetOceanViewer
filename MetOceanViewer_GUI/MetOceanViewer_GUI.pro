@@ -100,10 +100,10 @@ OTHER_FILES +=
 #...Include NEFIS
 INCLUDEPATH += $$PWD/../thirdparty/nefis/include
 win32{
-    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libnefis/debug -lmovNefis
-    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libnefis/release -lmovNefis
+    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libraries/libnefis/debug -lmovNefis
+    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libraries/libnefis/release -lmovNefis
 }unix{
-    LIBS += -L$$OUT_PWD/../libnefis -lmovNefis
+    LIBS += -L$$OUT_PWD/../libraries/libnefis -lmovNefis
 }
 
 #...Include the PROJ4 library

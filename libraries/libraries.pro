@@ -22,5 +22,6 @@ TEMPLATE = subdirs
 
 SUBDIRS  = libproj4 \
            libnetcdfcxx \
-           libkdtree2 
+           libkdtree2 \
+           libnefis
 CONFIG += ordered           

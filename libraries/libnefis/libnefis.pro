@@ -53,36 +53,36 @@ QMAKE_CXXFLAGS_RELEASE = -D_GNU_SOURCE -DSTR_LEN_AT_END -DFTN_UNDERSCORE \
                -DW64 -w
 }
 
-INCLUDEPATH += ../thirdparty/nefis/include
+INCLUDEPATH += ../../thirdparty/nefis/include
 
-SOURCES += ../thirdparty/nefis/src/c2c.c \
-           ../thirdparty/nefis/src/df.c  \
-           ../thirdparty/nefis/src/er.c  \
-           ../thirdparty/nefis/src/f2c.c \
-           ../thirdparty/nefis/src/gp.c  \
-           ../thirdparty/nefis/src/gt.c  \
-           ../thirdparty/nefis/src/hs.c  \
-           ../thirdparty/nefis/src/nefis_version.cpp \
-           ../thirdparty/nefis/src/oc.c  \
-           ../thirdparty/nefis/src/pt.c  \
-           ../thirdparty/nefis/src/rt.c  \
-           ../thirdparty/nefis/src/wl-xdr.c
+SOURCES += ../../thirdparty/nefis/src/c2c.c \
+           ../../thirdparty/nefis/src/df.c  \
+           ../../thirdparty/nefis/src/er.c  \
+           ../../thirdparty/nefis/src/f2c.c \
+           ../../thirdparty/nefis/src/gp.c  \
+           ../../thirdparty/nefis/src/gt.c  \
+           ../../thirdparty/nefis/src/hs.c  \
+           ../../thirdparty/nefis/src/nefis_version.cpp \
+           ../../thirdparty/nefis/src/oc.c  \
+           ../../thirdparty/nefis/src/pt.c  \
+           ../../thirdparty/nefis/src/rt.c  \
+           ../../thirdparty/nefis/src/wl-xdr.c
 
-HEADERS += ../thirdparty/nefis/include/btps.h \
-           ../thirdparty/nefis/include/c2c.h \
-           ../thirdparty/nefis/include/config.h \
-           ../thirdparty/nefis/include/df.h \
-           ../thirdparty/nefis/include/f2c.h \
-           ../thirdparty/nefis/include/gp.h \
-           ../thirdparty/nefis/include/gt.h \
-           ../thirdparty/nefis/include/hs.h \
-           ../thirdparty/nefis/include/nef-def.h \
-           ../thirdparty/nefis/include/nef-tag.h \
-           ../thirdparty/nefis/include/nef-xdf.h \
-           ../thirdparty/nefis/include/nefis.h \
-           ../thirdparty/nefis/include/nefis_version.h \
-           ../thirdparty/nefis/include/oc.h \
-           ../thirdparty/nefis/include/pt.h \
-           ../thirdparty/nefis/include/resource.h \
-           ../thirdparty/nefis/include/rt.h \
-           ../thirdparty/nefis/include/wl-xdr.h
+HEADERS += ../../thirdparty/nefis/include/btps.h \
+           ../../thirdparty/nefis/include/c2c.h \
+           ../../thirdparty/nefis/include/config.h \
+           ../../thirdparty/nefis/include/df.h \
+           ../../thirdparty/nefis/include/f2c.h \
+           ../../thirdparty/nefis/include/gp.h \
+           ../../thirdparty/nefis/include/gt.h \
+           ../../thirdparty/nefis/include/hs.h \
+           ../../thirdparty/nefis/include/nef-def.h \
+           ../../thirdparty/nefis/include/nef-tag.h \
+           ../../thirdparty/nefis/include/nef-xdf.h \
+           ../../thirdparty/nefis/include/nefis.h \
+           ../../thirdparty/nefis/include/nefis_version.h \
+           ../../thirdparty/nefis/include/oc.h \
+           ../../thirdparty/nefis/include/pt.h \
+           ../../thirdparty/nefis/include/resource.h \
+           ../../thirdparty/nefis/include/rt.h \
+           ../../thirdparty/nefis/include/wl-xdr.h
