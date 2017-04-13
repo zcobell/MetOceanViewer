@@ -21,16 +21,16 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 # Compiling
 To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.6.0 on Windows, Mac OSX, and Linux.
 
-##QtCharts
+## QtCharts
 This program requires the non-standard QtCharts library. This is packaged as part of the windows DLLs provided here, however, to compile this code for yourself you will need to manually generate this Qt module. The QtCharts module can be obtained [here](https://code.qt.io/cgit/qt/qtcharts.git). This module has taken over for the HighCharts plotting routines which, while extremely powerful, are not ideal for being embedded in a Qt C++ application with large amounts of data.
 
-##QtWebEngine
+## QtWebEngine
 This program requires a version of Qt with QtWebEngine available. The Qt development team has decided that it will discontinue support for QtWebKit in favor of QtWebEngine. This project has followed their lead in order to maintain access to updates and bug fixes. 
 
-##netCDF
+## netCDF
 You will need to have netCDF version 4+ installed on your system with acccess to the headers and libraries. You may need to edit the netCDF path in MetOceanViewer.pro to correctly locate these files. When compiling for Windows, these libraries are already included in the package. However, Unix/Mac users will need to ensure they are in their LD_LIBRARY_PATH variable or configure the .pro file accordingly.
 
-##OpenSSL
+## OpenSSL
 You will need a version of OpenSSL installed to correctly run this program. Note that the since these libraries are linked at execution time instead of compile time, the code will compile without OpenSSL. Windows libraries are automatically included when installing the program via NSIS. Unix/Mac users will need to ensure they have OpenSSL installed on their system. If there is an issue with the OpenSSL library, you likely will not be able to recieve web content (Google Maps, update notifications).
 
 # Credits
