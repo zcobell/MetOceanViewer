@@ -41,7 +41,9 @@
 #include <QPointF>
 #include <QVector3D>
 #include <QList>
-#include "kdtree2.hpp"
+
+//Forward declaration of kdtree2 class included from kdtree2.hpp
+class kdtree2;
 
 class qKdtree2 : public QObject
 {

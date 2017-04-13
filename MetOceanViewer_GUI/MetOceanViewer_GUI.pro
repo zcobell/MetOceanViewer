@@ -54,8 +54,6 @@ SOURCES +=\
     src/movUsgs.cpp \
     src/movXtide.cpp \
     src/movErrors.cpp \
-    src/qkdtree2.cpp \
-    ../thirdparty/kdtree/kdtree2.cpp \
     src/movusertimeseriesoptions.cpp
 
 HEADERS  += \
@@ -83,7 +81,6 @@ HEADERS  += \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
     src/movErrors.h \
-    src/qkdtree2.h \
     src/movusertimeseriesoptions.h \
     src/MainWindow.h
 
@@ -95,12 +92,6 @@ FORMS    += \
     ui/movusertimeseriesoptions.ui
 
 OTHER_FILES +=
-
-#...Include Boost
-INCLUDEPATH += $$PWD/../thirdparty/boost-library
-
-#...Include KDTREE2
-INCLUDEPATH += $$PWD/../thirdparty/kdtree
 
 #...Include the PROJ4 library
 INCLUDEPATH += $$PWD/../libproj4
@@ -120,6 +111,16 @@ win32{
 }
 unix{
     LIBS += -L$$OUT_PWD/../libnetcdfcxx -lnetcdfcxx
+}
+
+#...Include the KDTREE2 library
+INCLUDEPATH += $$PWD/../libkdtree2
+win32{
+    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libkdtree2/debug -lmovKdtree2
+    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libkdtree2/release -lmovKdtree2
+}
+unix{
+    LIBS += -L$$OUT_PWD/../libkdtree2 -lmovKdtree2
 }
 
 #...Compiler dependent options
