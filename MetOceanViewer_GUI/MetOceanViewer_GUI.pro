@@ -80,9 +80,9 @@ HEADERS  += \
     src/mov_dialog_addtimeseriesdata.h \
     src/mov_dialog_about.h \
     src/mov_dialog_update.h \
-    src/movErrors.h \
     src/movusertimeseriesoptions.h \
-    src/MainWindow.h
+    src/MainWindow.h \
+    src/movQWebEngineView.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \

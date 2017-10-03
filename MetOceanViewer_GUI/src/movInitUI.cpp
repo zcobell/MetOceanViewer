@@ -167,6 +167,10 @@ void MainWindow::setupMetOceanViewerUI()
     MovKeyhandler* key = new MovKeyhandler();
     this->centralWidget()->installEventFilter(key);
     connect(key,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+    connect(ui->noaa_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+    connect(ui->usgs_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+    connect(ui->timeseries_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+    connect(ui->xtide_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
 
     //...Check for updates and alert the user if there is a new version
     QPointer<mov_dialog_update> update = new mov_dialog_update(this);

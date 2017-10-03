@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "movKeyhandler.h"
 #include <QKeyEvent>
+#include <QDebug>
 
 bool MovKeyhandler::eventFilter(QObject* obj, QEvent* event)
 {
@@ -26,6 +27,7 @@ bool MovKeyhandler::eventFilter(QObject* obj, QEvent* event)
         QKeyEvent* key = static_cast<QKeyEvent*>(event);
         if ( (key->key()==Qt::Key_Enter) || (key->key()==Qt::Key_Return) )
         {
+            qDebug() << "PRESSED!";
             emit enterKeyPressed();
         }
         else
