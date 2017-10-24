@@ -167,10 +167,18 @@ void MainWindow::setupMetOceanViewerUI()
     MovKeyhandler* key = new MovKeyhandler();
     this->centralWidget()->installEventFilter(key);
     connect(key,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+
+//...This accounts for a bug in Qt v5.9.1
+//   If the user cursor is not in the map, the
+//   enter key "plot" signal is not sent. In the
+//   case of Qt5.9.1, we make this connection manually
+//   but otherwise there is no need.
+#if (QT_VERSION == QT_VERSION_CHECK(5,9,1))
     connect(ui->noaa_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
     connect(ui->usgs_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
     connect(ui->timeseries_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
     connect(ui->xtide_map,SIGNAL(enterKeyPressed()),this,SLOT(handleEnterKey()));
+#endif
 
     //...Check for updates and alert the user if there is a new version
     QPointer<mov_dialog_update> update = new mov_dialog_update(this);
