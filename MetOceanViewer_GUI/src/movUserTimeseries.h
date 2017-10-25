@@ -20,91 +20,94 @@
 #ifndef MOV_USER_TIMESERIES_H
 #define MOV_USER_TIMESERIES_H
 
-#include <QObject>
-#include <QVector>
 #include <QChartView>
-#include <QtCharts>
-#include <QtWebEngine/QtWebEngine>
-#include <QWebEngineView>
+#include <QDateTime>
+#include <QObject>
 #include <QPrinter>
 #include <QTableWidget>
-#include <QDateTime>
+#include <QVector>
+#include <QWebEngineView>
+#include <QtCharts>
+#include <QtWebEngine/QtWebEngine>
 
 #include "movGeneric.h"
-#include "movQChartView.h"
 #include "movImeds.h"
+#include "movQChartView.h"
 
-class MovUserTimeseries : public QObject
-{
+class MovUserTimeseries : public QObject {
 
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
+  explicit MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                              QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
                              QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
                              QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
                              QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
                              QWebEngineView *inMap, MovQChartView *inChart,
-                             QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
+                             QStatusBar *inStatusBar,
+                             QVector<QColor> inRandomColorList,
                              QObject *parent = 0);
 
-    ~MovUserTimeseries();
+  ~MovUserTimeseries();
 
-    //...Public functions
-    int processData();
-    int plotData();
-    int getCurrentMarkerID();
-    int getClickedMarkerID();
-    int getAsyncClickedMarkerID();
-    int saveImage(QString filename, QString filter);
-    QString getErrorString();
+  //...Public functions
+  int processData();
+  int plotData();
+  int getCurrentMarkerID();
+  int getClickedMarkerID();
+  int getAsyncClickedMarkerID();
+  int saveImage(QString filename, QString filter);
+  QString getErrorString();
 
 private slots:
-    void javascriptDataReturned(QString);
+  void javascriptDataReturned(QString);
 
 signals:
-    void timeseriesError(QString);
+  void timeseriesError(QString);
 
 private:
+  //...Private functions
+  int getMarkerIDFromMap();
+  int setMarkerID();
+  int GetUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X,
+                           QVector<double> &Y);
+  int getUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X,
+                           QVector<double> &Y);
+  int buildRevisedIMEDS(QVector<MovImeds *> &Data, QVector<double> X,
+                        QVector<double> Y, QVector<MovImeds *> &DataOut);
+  int getDataBounds(double &ymin, double &ymax, QDateTime &minDate,
+                    QDateTime &maxDate, QVector<double> timeAddList);
+  int getMultipleMarkersFromMap();
+  int getAsyncMultipleMarkersFromMap();
+  int projectStations(QVector<int> epsg,
+                      QVector<MovImeds *> &projectedStations);
 
-    //...Private functions
-    int getMarkerIDFromMap();
-    int setMarkerID();
-    int GetUniqueStationList(QVector<MovImeds*> Data,QVector<double> &X,QVector<double> &Y);
-    int getUniqueStationList(QVector<MovImeds*> Data, QVector<double> &X, QVector<double> &Y);
-    int buildRevisedIMEDS(QVector<MovImeds *> &Data, QVector<double> X, QVector<double> Y, QVector<MovImeds*> &DataOut);
-    int getDataBounds(double &ymin, double &ymax, QDateTime &minDate, QDateTime &maxDate, QVector<double> timeAddList);
-    int getMultipleMarkersFromMap();
-    int getAsyncMultipleMarkersFromMap();
-    int projectStations(QVector<int> epsg, QVector<MovImeds*> &projectedStations);
+  //...Private Variables
+  int markerID;
+  QString errorString;
+  QVector<MovImeds *> fileData, fileDataUnique;
+  QVector<double> StationXLocs;
+  QVector<double> StationYLocs;
+  QVector<int> selectedStations;
+  QVector<QColor> randomColorList;
+  QVector<int> epsg;
 
-    //...Private Variables
-    int markerID;
-    QString errorString;
-    QVector<MovImeds*> fileData,fileDataUnique;
-    QVector<double> StationXLocs;
-    QVector<double> StationYLocs;
-    QVector<int>    selectedStations;
-    QVector<QColor> randomColorList;
-    QVector<int>    epsg;
-
-    //...Widgets we'll need
-    QTableWidget   *table;
-    QCheckBox      *xAxisCheck;
-    QCheckBox      *yAxisCheck;
-    QDateEdit      *startDate;
-    QDateEdit      *endDate;
-    QDoubleSpinBox *yMinEdit;
-    QDoubleSpinBox *yMaxEdit;
-    QLineEdit      *plotTitle;
-    QLineEdit      *xLabelEdit;
-    QLineEdit      *yLabelEdit;
-    QWebEngineView *map;
-    MovQChartView *chart;
-    QChart         *thisChart;
-    QStatusBar     *statusBar;
-
+  //...Widgets we'll need
+  QTableWidget *table;
+  QCheckBox *xAxisCheck;
+  QCheckBox *yAxisCheck;
+  QDateEdit *startDate;
+  QDateEdit *endDate;
+  QDoubleSpinBox *yMinEdit;
+  QDoubleSpinBox *yMaxEdit;
+  QLineEdit *plotTitle;
+  QLineEdit *xLabelEdit;
+  QLineEdit *yLabelEdit;
+  QWebEngineView *map;
+  MovQChartView *chart;
+  QChart *thisChart;
+  QStatusBar *statusBar;
 };
 
 #endif // MOV_USER_TIMESERIES_H

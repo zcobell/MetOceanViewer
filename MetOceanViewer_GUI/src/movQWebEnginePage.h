@@ -20,30 +20,29 @@
 #ifndef MOV_QWEBENGINEPAGE_H
 #define MOV_QWEBENGINEPAGE_H
 
-#include <QWebEngineView>
-#include <QWebEnginePage>
 #include <QDesktopServices>
+#include <QWebEnginePage>
+#include <QWebEngineView>
 #include <QtCharts>
 
 using namespace QtCharts;
 
-class MovQWebEnginePage : public QWebEnginePage
-{
-    Q_OBJECT
+class MovQWebEnginePage : public QWebEnginePage {
+  Q_OBJECT
 
 public:
-    MovQWebEnginePage(QObject* parent = 0) : QWebEnginePage(parent){}
+  MovQWebEnginePage(QObject *parent = 0) : QWebEnginePage(parent) {}
 
-    bool acceptNavigationRequest(const QUrl & url, QWebEnginePage::NavigationType type, bool isMainFrame)
-    {
-        Q_UNUSED(isMainFrame);
-        if (type == QWebEnginePage::NavigationTypeLinkClicked)
-        {
-            QDesktopServices::openUrl(url);
-            return false;
-        }
-        return true;
+  bool acceptNavigationRequest(const QUrl &url,
+                               QWebEnginePage::NavigationType type,
+                               bool isMainFrame) {
+    Q_UNUSED(isMainFrame);
+    if (type == QWebEnginePage::NavigationTypeLinkClicked) {
+      QDesktopServices::openUrl(url);
+      return false;
     }
+    return true;
+  }
 };
 
 #endif // MOV_QWEBENGINEPAGE_H

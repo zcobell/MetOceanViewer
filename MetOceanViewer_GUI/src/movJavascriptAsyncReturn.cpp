@@ -19,19 +19,15 @@
 //-----------------------------------------------------------------------*/
 #include "movJavascriptAsyncReturn.h"
 
-MovJavascriptAsyncReturn::MovJavascriptAsyncReturn(QObject *parent) : QObject(parent)
-{
+MovJavascriptAsyncReturn::MovJavascriptAsyncReturn(QObject *parent)
+    : QObject(parent) {}
 
+void MovJavascriptAsyncReturn::setValue(QVariant value) {
+  this->javaVariable = value.toString();
+  emit valueChanged(this->javaVariable);
 }
 
-void MovJavascriptAsyncReturn::setValue(QVariant value)
-{
-    this->javaVariable = value.toString();
-    emit valueChanged(this->javaVariable);
-}
-
-QString MovJavascriptAsyncReturn::getValue()
-{
-    QString returnValue = this->javaVariable;
-    return returnValue;
+QString MovJavascriptAsyncReturn::getValue() {
+  QString returnValue = this->javaVariable;
+  return returnValue;
 }

@@ -27,21 +27,20 @@ namespace Ui {
 class mov_dialog_about;
 }
 
-class mov_dialog_about : public QDialog
-{
-    Q_OBJECT
+class mov_dialog_about : public QDialog {
+  Q_OBJECT
 
 public:
-    explicit mov_dialog_about(QWidget *parent = 0);
-    ~mov_dialog_about();
+  explicit mov_dialog_about(QWidget *parent = 0);
+  ~mov_dialog_about();
 
 private slots:
-    void on_button_ok_clicked();
+  void on_button_ok_clicked();
 
 private:
-    Ui::mov_dialog_about *ui;
-    QString generateAboutText();
-    QString generateLicenseText();
+  Ui::mov_dialog_about *ui;
+  QString generateAboutText();
+  QString generateLicenseText();
 };
 
 #endif // MOV_DIALOG_ABOUT_H

@@ -22,14 +22,13 @@
 
 #include <QObject>
 
-class MovKeyhandler : public QObject
-{
-    Q_OBJECT
+class MovKeyhandler : public QObject {
+  Q_OBJECT
 protected:
-    bool eventFilter(QObject* obj, QEvent* event);
+  bool eventFilter(QObject *obj, QEvent *event);
 
 signals:
-    void enterKeyPressed();
+  void enterKeyPressed();
 };
 
 #endif // MOV_KEYHANDLER_H

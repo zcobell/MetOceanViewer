@@ -21,97 +21,96 @@
 #ifndef MOV_DIALOG_ADDTIMESERIES_H
 #define MOV_DIALOG_ADDTIMESERIES_H
 
+#include "movDflow.h"
+#include "proj4.h"
 #include <QDateTime>
 #include <QDialog>
 #include <QVector>
-#include "proj4.h"
-#include "movDflow.h"
 
 namespace Ui {
 class mov_dialog_addtimeseries;
 }
 
-class mov_dialog_addtimeseries : public QDialog
-{
-    Q_OBJECT
+class mov_dialog_addtimeseries : public QDialog {
+  Q_OBJECT
 
 public:
-    explicit mov_dialog_addtimeseries(QWidget *parent = 0);
+  explicit mov_dialog_addtimeseries(QWidget *parent = 0);
 
-    ~mov_dialog_addtimeseries();
+  ~mov_dialog_addtimeseries();
 
-    void set_default_dialog_box_elements(int NumberOfRows);
+  void set_default_dialog_box_elements(int NumberOfRows);
 
-    void set_dialog_box_elements(QString Filename, QString Filepath, QString SeriesName,
-                                 double UnitConvert, double xmove, double ymove, QColor Color,
-                                 QDateTime ColdStart, int FileType, QString StationPath, int epsg,
-                                 QString varname, int layer);
+  void set_dialog_box_elements(QString Filename, QString Filepath,
+                               QString SeriesName, double UnitConvert,
+                               double xmove, double ymove, QColor Color,
+                               QDateTime ColdStart, int FileType,
+                               QString StationPath, int epsg, QString varname,
+                               int layer);
 
-    QString PreviousDirectory;
+  QString PreviousDirectory;
 
-    int NumIMEDSFiles;
-    int CurrentRowsInTable;
-    bool ColorUpdated, FileReadError;
-    bool EditBox;
-    double UnitConversion, xadjust, yadjust;
-    QColor RandomButtonColor;
-    QString InputFileName,InputColorString;
-    QString InputSeriesName,InputFilePath;
-    QString StationFilePath,dFlowVariable;
-    QString InputStationFile,CurrentFileName;
-    QDateTime InputFileColdStart;
-    int InputFileType;
-    int epsg,layer;
+  int NumIMEDSFiles;
+  int CurrentRowsInTable;
+  bool ColorUpdated, FileReadError;
+  bool EditBox;
+  double UnitConversion, xadjust, yadjust;
+  QColor RandomButtonColor;
+  QString InputFileName, InputColorString;
+  QString InputSeriesName, InputFilePath;
+  QString StationFilePath, dFlowVariable;
+  QString InputStationFile, CurrentFileName;
+  QDateTime InputFileColdStart;
+  int InputFileType;
+  int epsg, layer;
 
 private slots:
 
-    void on_browse_filebrowse_clicked();
+  void on_browse_filebrowse_clicked();
 
-    void on_button_seriesColor_clicked();
+  void on_button_seriesColor_clicked();
 
-    void on_browse_stationfile_clicked();
+  void on_browse_stationfile_clicked();
 
-    void accept();
+  void accept();
 
-    void on_button_presetColor1_clicked();
+  void on_button_presetColor1_clicked();
 
-    void on_button_presetColor2_clicked();
+  void on_button_presetColor2_clicked();
 
-    void on_button_presetColor3_clicked();
+  void on_button_presetColor3_clicked();
 
-    void on_button_presetColor4_clicked();
+  void on_button_presetColor4_clicked();
 
-    void on_button_describeepsg_clicked();
+  void on_button_describeepsg_clicked();
 
-    void on_spin_epsg_valueChanged(int arg1);
+  void on_spin_epsg_valueChanged(int arg1);
 
-    void on_combo_variableSelect_currentIndexChanged(const QString &arg1);
+  void on_combo_variableSelect_currentIndexChanged(const QString &arg1);
 
 signals:
-    void addTimeseriesError(QString);
+  void addTimeseriesError(QString);
 
 private slots:
-    void throwErrorMessageBox(QString);
+  void throwErrorMessageBox(QString);
 
 private:
-    Ui::mov_dialog_addtimeseries *ui;
+  Ui::mov_dialog_addtimeseries *ui;
 
-    void setVariableSelectElements(bool enabled);
-    void setStationSelectElements(bool enabled);
-    void setColdstartSelectElements(bool enabled);
-    void setVerticalLayerElements(bool enabled);
-    void setItemsByFiletype();
+  void setVariableSelectElements(bool enabled);
+  void setStationSelectElements(bool enabled);
+  void setColdstartSelectElements(bool enabled);
+  void setVerticalLayerElements(bool enabled);
+  void setItemsByFiletype();
 
-    MovDflow *dflow;
-    proj4    *proj;
+  MovDflow *dflow;
+  proj4 *proj;
 
-    struct IMEDSList
-    {
-        QString Filename;
-        QString Label;
-        QColor  Color;
-    };
-
+  struct IMEDSList {
+    QString Filename;
+    QString Label;
+    QColor Color;
+  };
 };
 
 #endif // MOV_DIALOG_ADDTIMESERIES_H

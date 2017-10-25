@@ -32,12 +32,8 @@
  *
  **/
 //-----------------------------------------------------------------------------------------//
-proj4::proj4(QObject *parent)
-{
-    this->_initEpsgMapping();
-}
+proj4::proj4(QObject *parent) { this->_initEpsgMapping(); }
 //-----------------------------------------------------------------------------------------//
-
 
 //-----------------------------------------------------------------------------------------//
 // Function to execute a coordinate system transformation using Proj4
@@ -48,63 +44,56 @@ proj4::proj4(QObject *parent)
  *
  **/
 //-----------------------------------------------------------------------------------------//
-int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in, double &x_out, double &y_out, bool &isLatLon)
-{
-    projPJ inputPJ,outputPJ;
-    double x,y,z;
-    int ierr;
+int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in,
+                     double &x_out, double &y_out, bool &isLatLon) {
+  projPJ inputPJ, outputPJ;
+  double x, y, z;
+  int ierr;
 
-    ierr = 0;
-    z = 0.0;
+  ierr = 0;
+  z = 0.0;
 
-    if(!this->containsEPSG(inputEPSG))
-        return ERROR_PROJ4_NOSUCHPROJECTION;
+  if (!this->containsEPSG(inputEPSG))
+    return ERROR_PROJ4_NOSUCHPROJECTION;
 
-    if(!this->containsEPSG(outputEPSG))
-        return ERROR_PROJ4_NOSUCHPROJECTION;
+  if (!this->containsEPSG(outputEPSG))
+    return ERROR_PROJ4_NOSUCHPROJECTION;
 
-    QString currentInitialization = this->coordinateSystemString(inputEPSG);
-    QString outputInitialization  = this->coordinateSystemString(outputEPSG);
+  QString currentInitialization = this->coordinateSystemString(inputEPSG);
+  QString outputInitialization = this->coordinateSystemString(outputEPSG);
 
-    if(!(inputPJ = pj_init_plus(currentInitialization.toStdString().c_str())))
-        return ERROR_PROJ4_INTERNAL;
+  if (!(inputPJ = pj_init_plus(currentInitialization.toStdString().c_str())))
+    return ERROR_PROJ4_INTERNAL;
 
-    if(!(outputPJ = pj_init_plus(outputInitialization.toStdString().c_str())))
-        return ERROR_PROJ4_INTERNAL;
+  if (!(outputPJ = pj_init_plus(outputInitialization.toStdString().c_str())))
+    return ERROR_PROJ4_INTERNAL;
 
-    if(pj_is_latlong(inputPJ))
-    {
-        x = x_in*DEG_TO_RAD;
-        y = y_in*DEG_TO_RAD;
-    }
-    else
-    {
-        x = x_in;
-        y = y_in;
-    }
+  if (pj_is_latlong(inputPJ)) {
+    x = x_in * DEG_TO_RAD;
+    y = y_in * DEG_TO_RAD;
+  } else {
+    x = x_in;
+    y = y_in;
+  }
 
-    ierr = pj_transform(inputPJ,outputPJ,1,1,&x,&y,&z);
+  ierr = pj_transform(inputPJ, outputPJ, 1, 1, &x, &y, &z);
 
-    if(ierr!=0)
-        return ERROR_PROJ4_INTERNAL;
+  if (ierr != 0)
+    return ERROR_PROJ4_INTERNAL;
 
-    if(pj_is_latlong(outputPJ))
-    {
-        x_out = x*RAD_TO_DEG;
-        y_out = y*RAD_TO_DEG;
-        isLatLon = true;
-    }
-    else
-    {
-        x_out = x;
-        y_out = y;
-        isLatLon = false;
-    }
+  if (pj_is_latlong(outputPJ)) {
+    x_out = x * RAD_TO_DEG;
+    y_out = y * RAD_TO_DEG;
+    isLatLon = true;
+  } else {
+    x_out = x;
+    y_out = y;
+    isLatLon = false;
+  }
 
-    return ERROR_NOERROR;
+  return ERROR_NOERROR;
 }
 //-----------------------------------------------------------------------------------------//
-
 
 //-----------------------------------------------------------------------------------------//
 // Function to return check if an epsg is contained within the master list
@@ -115,15 +104,13 @@ int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in, do
  *
  **/
 //-----------------------------------------------------------------------------------------//
-bool proj4::containsEPSG(int epsg)
-{
-    if(this->_epsgMapping.contains(epsg))
-        return true;
-    else
-        return false;
+bool proj4::containsEPSG(int epsg) {
+  if (this->_epsgMapping.contains(epsg))
+    return true;
+  else
+    return false;
 }
 //-----------------------------------------------------------------------------------------//
-
 
 //-----------------------------------------------------------------------------------------//
 // Function to return the proj4 initialization for an epsg
@@ -134,11 +121,10 @@ bool proj4::containsEPSG(int epsg)
  *
  **/
 //-----------------------------------------------------------------------------------------//
-QString proj4::coordinateSystemString(int epsg)
-{
-    if(this->containsEPSG(epsg))
-        return this->_epsgMapping[epsg];
-    else
-        return QStringLiteral("ERROR: No such epsg");
+QString proj4::coordinateSystemString(int epsg) {
+  if (this->containsEPSG(epsg))
+    return this->_epsgMapping[epsg];
+  else
+    return QStringLiteral("ERROR: No such epsg");
 }
 //-----------------------------------------------------------------------------------------//

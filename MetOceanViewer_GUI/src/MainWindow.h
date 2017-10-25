@@ -17,19 +17,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-        
+
 #ifndef MOV_MAINWINDOW_H
 #define MOV_MAINWINDOW_H
 
+#include <QColorDialog>
+#include <QFileDialog>
 #include <QMainWindow>
-#include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
-#include <QtNetwork>
 #include <QVector>
-#include <QFileDialog>
-#include <QColorDialog>
 #include <QtCharts>
+#include <QtNetwork>
+#include <QtWebEngineWidgets>
 
 //...Forward declarations of classes
 class MovNoaa;
@@ -41,204 +41,201 @@ class MovQWebEnginePage;
 class MovSession;
 
 //-------------------------------------------//
-//Main class used by the Qt program that holds
-//the main set of functions used
+// Main class used by the Qt program that holds
+// the main set of functions used
 //-------------------------------------------//
 namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
-{
-    Q_OBJECT
+class MainWindow : public QMainWindow {
+  Q_OBJECT
 
 public:
-    explicit MainWindow(bool processCommandLine, QString commandLineFile, QWidget *parent = 0);
+  explicit MainWindow(bool processCommandLine, QString commandLineFile,
+                      QWidget *parent = 0);
 
-    ~MainWindow();
+  ~MainWindow();
 
-    void setLoadSessionFile(bool toggle,QString sessionFile = QString());
+  void setLoadSessionFile(bool toggle, QString sessionFile = QString());
 
-    QString PreviousDirectory;
+  QString PreviousDirectory;
 
 private slots:
 
-    void throwErrorMessageBox(QString);
+  void throwErrorMessageBox(QString);
 
-    void setupMetOceanViewerUI();
+  void setupMetOceanViewerUI();
 
-    void on_Button_FetchData_clicked();
+  void on_Button_FetchData_clicked();
 
-    void on_Combo_NOAAPanTo_currentIndexChanged(int index);
+  void on_Combo_NOAAPanTo_currentIndexChanged(int index);
 
-    void on_button_noaasavechart_clicked();
+  void on_button_noaasavechart_clicked();
 
-    void on_button_noaasavedata_clicked();
+  void on_button_noaasavedata_clicked();
 
-    void on_button_saveTimeseriesImage_clicked();
+  void on_button_saveTimeseriesImage_clicked();
 
-    void on_check_TimeseriesYauto_toggled(bool checked);
+  void on_check_TimeseriesYauto_toggled(bool checked);
 
-    void on_browse_hwm_clicked();
+  void on_browse_hwm_clicked();
 
-    void on_button_processHWM_clicked();
+  void on_button_processHWM_clicked();
 
-    void on_check_manualHWM_toggled(bool checked);
+  void on_check_manualHWM_toggled(bool checked);
 
-    void on_button_saveHWMMap_clicked();
+  void on_button_saveHWMMap_clicked();
 
-    void on_button_hwmcolor_clicked();
+  void on_button_hwmcolor_clicked();
 
-    void on_button_121linecolor_clicked();
+  void on_button_121linecolor_clicked();
 
-    void on_button_reglinecolor_clicked();
+  void on_button_reglinecolor_clicked();
 
-    void on_button_boundlinecolor_clicked();
+  void on_button_boundlinecolor_clicked();
 
-    void on_actionQuit_triggered();
+  void on_actionQuit_triggered();
 
-    void on_button_TimeseriesDeleteRow_clicked();
+  void on_button_TimeseriesDeleteRow_clicked();
 
-    void on_button_TimeseriesAddRow_clicked();
+  void on_button_TimeseriesAddRow_clicked();
 
-    void on_button_TimeseriesCopyRow_clicked();
+  void on_button_TimeseriesCopyRow_clicked();
 
-    void on_button_TimeseriesEditRow_clicked();
+  void on_button_TimeseriesEditRow_clicked();
 
-    void on_button_processTimeseriesData_clicked();
+  void on_button_processTimeseriesData_clicked();
 
-    void on_check_TimeseriesAllData_toggled(bool checked);
+  void on_check_TimeseriesAllData_toggled(bool checked);
 
-    void on_button_fitHWM_clicked();
+  void on_button_fitHWM_clicked();
 
-    void on_button_fitTimeseries_clicked();
+  void on_button_fitTimeseries_clicked();
 
-    void on_button_plotTimeseriesStation_clicked();
+  void on_button_plotTimeseriesStation_clicked();
 
-    void on_actionAbout_triggered();
+  void on_actionAbout_triggered();
 
-    void on_actionLoad_Session_triggered();
+  void on_actionLoad_Session_triggered();
 
-    void on_actionSave_Session_triggered();
+  void on_actionSave_Session_triggered();
 
-    void on_actionSave_Session_As_triggered();
+  void on_actionSave_Session_As_triggered();
 
-    void on_combo_usgs_panto_currentIndexChanged(int index);
+  void on_combo_usgs_panto_currentIndexChanged(int index);
 
-    void on_button_usgs_fetch_clicked();
+  void on_button_usgs_fetch_clicked();
 
-    void on_button_usgssavemap_clicked();
+  void on_button_usgssavemap_clicked();
 
-    void on_button_usgssavedata_clicked();
+  void on_button_usgssavedata_clicked();
 
-    void on_combo_USGSProduct_currentIndexChanged(int index);
+  void on_combo_USGSProduct_currentIndexChanged(int index);
 
-    void on_radio_usgsDaily_clicked();
+  void on_radio_usgsDaily_clicked();
 
-    void on_radio_usgshistoric_clicked();
+  void on_radio_usgshistoric_clicked();
 
-    void on_radio_usgs_instant_clicked();
+  void on_radio_usgs_instant_clicked();
 
-    void on_check_regressionColorMatch_clicked(bool checked);
+  void on_check_regressionColorMatch_clicked(bool checked);
 
-    void on_button_moveRowUp_clicked();
+  void on_button_moveRowUp_clicked();
 
-    void on_button_moveRowDown_clicked();
+  void on_button_moveRowDown_clicked();
 
-    void on_combo_NOAAProduct_currentIndexChanged(int index);
+  void on_combo_NOAAProduct_currentIndexChanged(int index);
 
-    void handleEnterKey();
+  void handleEnterKey();
 
-    void on_button_saveHWMScatter_clicked();
+  void on_button_saveHWMScatter_clicked();
 
-    void on_button_noaaresetzoom_clicked();
+  void on_button_noaaresetzoom_clicked();
 
-    void on_button_usgsresetzoom_clicked();
+  void on_button_usgsresetzoom_clicked();
 
-    void on_button_usertimeseriesResetZoom_clicked();
+  void on_button_usertimeseriesResetZoom_clicked();
 
-    void on_button_hwmResetZoom_clicked();
+  void on_button_hwmResetZoom_clicked();
 
-    void on_actionCheck_For_Updates_triggered();
+  void on_actionCheck_For_Updates_triggered();
 
-    void on_button_xtide_compute_clicked();
+  void on_button_xtide_compute_clicked();
 
-    void on_button_xtide_resetzoom_clicked();
+  void on_button_xtide_resetzoom_clicked();
 
-    void on_combo_xtide_panto_activated(const QString &arg1);
+  void on_combo_xtide_panto_activated(const QString &arg1);
 
-    void on_button_xtide_savemap_clicked();
+  void on_button_xtide_savemap_clicked();
 
-    void on_button_xtide_savedata_clicked();
+  void on_button_xtide_savedata_clicked();
 
-    void on_pushButton_displayOptions_clicked();
+  void on_pushButton_displayOptions_clicked();
 
-    void on_button_noaaOptions_clicked();
+  void on_button_noaaOptions_clicked();
 
-    void on_button_usgsOptions_clicked();
+  void on_button_usgsOptions_clicked();
 
-    void on_button_xTideOptions_clicked();
+  void on_button_xTideOptions_clicked();
 
-    void on_button_hwmOptions_clicked();
+  void on_button_hwmOptions_clicked();
 
 private:
-    Ui::MainWindow *ui;
+  Ui::MainWindow *ui;
 
-    QList<QTableWidgetItem *> grabTableRow(int row);
+  QList<QTableWidgetItem *> grabTableRow(int row);
 
-    void setTableRow(int row, const QList<QTableWidgetItem*>& rowItems);
+  void setTableRow(int row, const QList<QTableWidgetItem *> &rowItems);
 
-    void SetupTimeseriesTable();
+  void SetupTimeseriesTable();
 
-    bool confirmClose();
+  bool confirmClose();
 
-    void plotNOAAStation();
+  void plotNOAAStation();
 
-    void plotXTideStation();
+  void plotXTideStation();
 
-    QPointer<MovNoaa> thisNOAA;
+  QPointer<MovNoaa> thisNOAA;
 
-    QPointer<MovUsgs> thisUSGS;
+  QPointer<MovUsgs> thisUSGS;
 
-    QPointer<MovHwm> thisHWM;
+  QPointer<MovHwm> thisHWM;
 
-    QPointer<movXtide> thisXTide;
+  QPointer<movXtide> thisXTide;
 
-    MovSession* sessionState;
+  MovSession *sessionState;
 
-    QPointer<MovUserTimeseries> thisTimeseries;
+  QPointer<MovUserTimeseries> thisTimeseries;
 
-    QPointer<MovQWebEnginePage> noaa_page;
+  QPointer<MovQWebEnginePage> noaa_page;
 
-    QPointer<MovQWebEnginePage> usgs_page;
+  QPointer<MovQWebEnginePage> usgs_page;
 
-    QPointer<MovQWebEnginePage> xtide_page;
+  QPointer<MovQWebEnginePage> xtide_page;
 
-    QColor DotColorHWM,LineColorRegression,LineColor121Line,LineColorBounds;
+  QColor DotColorHWM, LineColorRegression, LineColor121Line, LineColorBounds;
 
-    int LocalTimezoneOffset;
+  int LocalTimezoneOffset;
 
-    QDateTime LocalTimeUTC;
+  QDateTime LocalTimeUTC;
 
-    QString SessionFile;
+  QString SessionFile;
 
-    QVector<QColor> randomColors;
+  QVector<QColor> randomColors;
 
-    QString commandLineFile;
+  QString commandLineFile;
 
-    bool processCommandLine;
-    bool timeseriesDisplayValues;
-    bool timeseriesHideInfoWindows;
-    bool noaaDisplayValues;
-    bool usgsDisplayValues;
-    bool xtideDisplayValues;
-    bool hwmDisplayValues;
+  bool processCommandLine;
+  bool timeseriesDisplayValues;
+  bool timeseriesHideInfoWindows;
+  bool noaaDisplayValues;
+  bool usgsDisplayValues;
+  bool xtideDisplayValues;
+  bool hwmDisplayValues;
 
 protected:
-
-    void closeEvent(QCloseEvent *);
-
+  void closeEvent(QCloseEvent *);
 };
-
 
 #endif // MOV_MAINWINDOW_H

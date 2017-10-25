@@ -20,10 +20,10 @@
 #ifndef MOV_VERSION_H
 #define MOV_VERSION_H
 
-#define VER_FILEVERSION             3.0.2
-#define VER_FILEVERSION_STR         "v3.0.2"
+#define VER_FILEVERSION 3.0.2
+#define VER_FILEVERSION_STR "v3.0.2"
 
-#define VER_PRODUCTVERSION          3.0.2
-#define VER_PRODUCTVERSION_STR      "v3.0.2"
+#define VER_PRODUCTVERSION 3.0.2
+#define VER_PRODUCTVERSION_STR "v3.0.2"
 
 #endif // MOV_VERSION_H

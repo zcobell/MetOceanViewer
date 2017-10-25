@@ -20,24 +20,22 @@
 #ifndef MOV_COLORS_H
 #define MOV_COLORS_H
 
-#include <QObject>
 #include <QColor>
+#include <QObject>
 #include <QTime>
 
-class MovColors : public QObject
-{
-    Q_OBJECT
+class MovColors : public QObject {
+  Q_OBJECT
 public:
-    explicit MovColors(QObject *parent = 0);
+  explicit MovColors(QObject *parent = 0);
 
-    static QString MakeColorString(QColor InputColor);
+  static QString MakeColorString(QColor InputColor);
 
-    static QColor GenerateRandomColor();
+  static QColor GenerateRandomColor();
 
-    static QColor styleSheetToColor(QString stylesheet);
+  static QColor styleSheetToColor(QString stylesheet);
 
-    static QString getHexColor(QColor InputColor);
-
+  static QString getHexColor(QColor InputColor);
 };
 
 #endif // MOV_COLORS_H

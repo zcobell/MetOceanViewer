@@ -20,11 +20,11 @@
 
 #ifndef MOV_QCHARTVIEW_H
 #define MOV_QCHARTVIEW_H
-#include <QtWidgets>
-#include <QChartView>
-#include <QtCharts/QChartGlobal>
-#include <QLineSeries>
 #include "qkdtree2.h"
+#include <QChartView>
+#include <QLineSeries>
+#include <QtCharts/QChartGlobal>
+#include <QtWidgets>
 
 QT_BEGIN_NAMESPACE
 class QGraphicsScene;
@@ -38,48 +38,46 @@ QT_CHARTS_END_NAMESPACE
 
 QT_CHARTS_USE_NAMESPACE
 
-class MovQChartView: public QChartView
-{
-    Q_OBJECT
+class MovQChartView : public QChartView {
+  Q_OBJECT
 
 public:
-    MovQChartView(QWidget *parent = 0);
+  MovQChartView(QWidget *parent = 0);
 
-    void initializeAxisLimits();
-    void resetZoom();
-    void setStatusBar(QStatusBar *inStatusBar);
-    void addSeries(QLineSeries *series, QString name);
-    void setDisplayValues(bool value);
-    void clear();
+  void initializeAxisLimits();
+  void resetZoom();
+  void setStatusBar(QStatusBar *inStatusBar);
+  void addSeries(QLineSeries *series, QString name);
+  void setDisplayValues(bool value);
+  void clear();
 
-    QGraphicsSimpleTextItem *m_coord;
-    QGraphicsTextItem       *m_info;
-    int                      m_style;
-    QString                  m_infoString;
-    QChart                  *m_chart;
+  QGraphicsSimpleTextItem *m_coord;
+  QGraphicsTextItem *m_info;
+  int m_style;
+  QString m_infoString;
+  QChart *m_chart;
 
 protected:
-    void resizeEvent(QResizeEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseDoubleClickEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void wheelEvent(QWheelEvent *event);
+  void resizeEvent(QResizeEvent *event);
+  void mouseMoveEvent(QMouseEvent *event);
+  void mouseDoubleClickEvent(QMouseEvent *event);
+  void mouseReleaseEvent(QMouseEvent *event);
+  void wheelEvent(QWheelEvent *event);
 
 private:
-    void                     resetAxisLimits();
-    qreal                    x_axis_min,x_axis_max;
-    qreal                    y_axis_min,y_axis_max;
-    qreal                    current_x_axis_min,current_x_axis_max;
-    qreal                    current_y_axis_min,current_y_axis_max;
-    QStatusBar              *m_statusBar;
-    QVector<QString>         m_legendNames;
-    QVector<QLineSeries*>    m_series;
-    QVector<qKdtree2*>       m_kdtree;
-    bool                     m_displayValues;
+  void resetAxisLimits();
+  qreal x_axis_min, x_axis_max;
+  qreal y_axis_min, y_axis_max;
+  qreal current_x_axis_min, current_x_axis_max;
+  qreal current_y_axis_min, current_y_axis_max;
+  QStatusBar *m_statusBar;
+  QVector<QString> m_legendNames;
+  QVector<QLineSeries *> m_series;
+  QVector<qKdtree2 *> m_kdtree;
+  bool m_displayValues;
 
 public slots:
-    void handleLegendMarkerClicked();
-
+  void handleLegendMarkerClicked();
 };
 
-#endif //MOVQCHARTVIEW_H
+#endif // MOVQCHARTVIEW_H

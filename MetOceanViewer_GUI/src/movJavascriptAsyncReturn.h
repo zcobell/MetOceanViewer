@@ -23,19 +23,18 @@
 #include <QObject>
 #include <QVariant>
 
-class MovJavascriptAsyncReturn : public QObject
-{
-    Q_OBJECT
+class MovJavascriptAsyncReturn : public QObject {
+  Q_OBJECT
 public:
-    explicit MovJavascriptAsyncReturn(QObject *parent = 0);
-    void setValue(QVariant value);
-    QString getValue();
+  explicit MovJavascriptAsyncReturn(QObject *parent = 0);
+  void setValue(QVariant value);
+  QString getValue();
 
 signals:
-    void valueChanged(QString);
+  void valueChanged(QString);
 
 private:
-    QString javaVariable;
+  QString javaVariable;
 };
 
 #endif // MOV_JAVASCRIPTASYNCRETURN_H

@@ -23,9 +23,9 @@
  * \brief Class that serves as an interface to the kdtree2 library
  *
  * This function serves as the C++ interface to the kdtree2 library. Kdtree2
- * requires the boost library headers that are included with this code. This implementatin
- * currently only supports 2-dimensional searches, though the kd-tree library
- * this interfaces with does not have such a limitation
+ * requires the boost library headers that are included with this code. This
+ * implementatin currently only supports 2-dimensional searches, though the
+ * kd-tree library this interfaces with does not have such a limitation
  *
  * \author Zach Cobell
  *
@@ -35,46 +35,43 @@
 #ifndef QKDTREE2_H
 #define QKDTREE2_H
 
-#include <QObject>
-#include <QVector>
-#include <QSharedPointer>
-#include <QPointF>
-#include <QVector3D>
 #include <QList>
+#include <QObject>
+#include <QPointF>
+#include <QSharedPointer>
+#include <QVector3D>
+#include <QVector>
 
-//Forward declaration of kdtree2 class included from kdtree2.hpp
+// Forward declaration of kdtree2 class included from kdtree2.hpp
 class kdtree2;
 
-class qKdtree2 : public QObject
-{
-    Q_OBJECT
+class qKdtree2 : public QObject {
+  Q_OBJECT
 public:
-    explicit qKdtree2(QObject *parent = 0);
+  explicit qKdtree2(QObject *parent = 0);
 
-    ///Variable holding the total number of points in the search tree
-    int numDataPoints;
+  /// Variable holding the total number of points in the search tree
+  int numDataPoints;
 
-    ///Variable that ensures the search tree is initialized
-    bool initialized;
+  /// Variable that ensures the search tree is initialized
+  bool initialized;
 
-    int build(QVector<QPointF> &pointCloud);
-    int build(QVector<qreal> &x, QVector<qreal> &y);
-    int build(QVector<QVector3D> &pointCloud);
-    int build(QList<QPointF> &pointCloud);
+  int build(QVector<QPointF> &pointCloud);
+  int build(QVector<qreal> &x, QVector<qreal> &y);
+  int build(QVector<QVector3D> &pointCloud);
+  int build(QList<QPointF> &pointCloud);
 
-    int findNearest(QPointF pointLocation, int &index);
-    int findNearest(qreal x, qreal y, int &index);
-    int findNearest(QVector3D pointLocation, int &index);
+  int findNearest(QPointF pointLocation, int &index);
+  int findNearest(qreal x, qreal y, int &index);
+  int findNearest(QVector3D pointLocation, int &index);
 
-    int findXNearest(QPointF pointLocation, int nn, QVector<int> &indicies);
-    int findXNearest(qreal x, qreal y, int nn, QVector<int> &indicies);
-    int findXNearest(QVector3D pointLocation, int nn, QVector<int> &indicies);
+  int findXNearest(QPointF pointLocation, int nn, QVector<int> &indicies);
+  int findXNearest(qreal x, qreal y, int nn, QVector<int> &indicies);
+  int findXNearest(QVector3D pointLocation, int nn, QVector<int> &indicies);
 
 private:
-
-    ///Pointer to variable holding the kdtree search tree
-    QSharedPointer<kdtree2> tree;
-
+  /// Pointer to variable holding the kdtree search tree
+  QSharedPointer<kdtree2> tree;
 };
 
 #endif // QKDTREE2_H

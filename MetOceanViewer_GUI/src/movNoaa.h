@@ -21,15 +21,15 @@
 #ifndef MOV_NOAA_H
 #define MOV_NOAA_H
 
-#include <QNetworkInterface>
-#include <QUrl>
-#include <QtNetwork>
-#include <QVector>
 #include <QChartView>
-#include <QtCharts>
-#include <QtWebEngine/QtWebEngine>
-#include <QWebEngineView>
+#include <QNetworkInterface>
 #include <QPrinter>
+#include <QUrl>
+#include <QVector>
+#include <QWebEngineView>
+#include <QtCharts>
+#include <QtNetwork>
+#include <QtWebEngine/QtWebEngine>
 
 #include "movErrors.h"
 #include "movFlags.h"
@@ -40,78 +40,77 @@ class MovImeds;
 
 using namespace QtCharts;
 
-class MovNoaa : public QObject
-{
+class MovNoaa : public QObject {
 
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    //...Constructor
-    explicit MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
-                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                  QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-                  QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
-                  QObject *parent = 0);
+  //...Constructor
+  explicit MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
+                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                   QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
+                   QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
+                   QObject *parent = 0);
 
-    //...Destructor
-    ~MovNoaa();
+  //...Destructor
+  ~MovNoaa();
 
-    //...Public Functions
-    int plotNOAAStation();
-    int saveNOAAImage(QString filename, QString filter);
-    int saveNOAAData(QString filename, QString PreviousDirectory, QString format);
-    int getLoadedNOAAStation();
-    int getClickedNOAAStation();
-    QString getNOAAErrorString();
+  //...Public Functions
+  int plotNOAAStation();
+  int saveNOAAImage(QString filename, QString filter);
+  int saveNOAAData(QString filename, QString PreviousDirectory, QString format);
+  int getLoadedNOAAStation();
+  int getClickedNOAAStation();
+  QString getNOAAErrorString();
 
 private slots:
-    void javascriptDataReturned(QString);
+  void javascriptDataReturned(QString);
 
 signals:
-    void noaaError(QString);
+  void noaaError(QString);
 
 private:
+  //...Private Functions
+  int formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString,
+                         int index);
+  void readNOAAResponse(QNetworkReply *reply, int index, int index2);
+  int fetchNOAAData();
+  int prepNOAAResponse();
+  int retrieveProduct(int type, QString &Product, QString &Product2);
+  int getDataBounds(double &ymin, double &ymax);
+  int generateLabels();
+  int plotChart();
+  int setNOAAStation();
+  int setAsyncNOAAStation();
+  int getNOAAStation(QString &NOAAStationName, double &longitude,
+                     double &latitude);
 
-    //...Private Functions
-    int formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString, int index);
-    void readNOAAResponse(QNetworkReply *reply, int index, int index2);
-    int fetchNOAAData();
-    int prepNOAAResponse();
-    int retrieveProduct(int type, QString &Product, QString &Product2);
-    int getDataBounds(double &ymin, double &ymax);
-    int generateLabels();
-    int plotChart();
-    int setNOAAStation();
-    int setAsyncNOAAStation();
-    int getNOAAStation(QString &NOAAStationName, double &longitude, double &latitude);
+  //...Private Variables
+  QVector<QVector<QByteArray>> NOAAWebData;
+  int NOAAMarkerID;
+  int ProductIndex;
 
-    //...Private Variables
-    QVector< QVector<QByteArray> > NOAAWebData;
-    int NOAAMarkerID;
-    int ProductIndex;
+  QString Datum;
+  QString Units;
+  QString yLabel;
+  QString plotTitle;
+  QString NOAAErrorString;
 
-    QString Datum;
-    QString Units;
-    QString yLabel;
-    QString plotTitle;
-    QString NOAAErrorString;
+  QDateTime StartDate;
+  QDateTime EndDate;
 
-    QDateTime StartDate;
-    QDateTime EndDate;
+  QVector<MovImeds *> CurrentNOAAStation;
+  QVector<QString> ErrorString;
 
-    QVector<MovImeds*>  CurrentNOAAStation;
-    QVector<QString> ErrorString;
+  //...Pointers to GUI elements
+  QWebEngineView *map;
+  MovQChartView *chart;
+  QDateEdit *startDateEdit, *endDateEdit;
+  QComboBox *noaaProduct, *noaaUnits, *noaaDatum;
+  QStatusBar *statusBar;
 
-    //...Pointers to GUI elements
-    QWebEngineView *map;
-    MovQChartView *chart;
-    QDateEdit      *startDateEdit,*endDateEdit;
-    QComboBox      *noaaProduct,*noaaUnits,*noaaDatum;
-    QStatusBar     *statusBar;
-
-    //...Keep the local chart here for reference
-    QChart         *thisChart;
-
+  //...Keep the local chart here for reference
+  QChart *thisChart;
 };
 
 #endif // MOV_NOAA_H

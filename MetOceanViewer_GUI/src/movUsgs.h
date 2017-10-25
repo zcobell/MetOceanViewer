@@ -20,110 +20,105 @@
 #ifndef MOV_USGS_H
 #define MOV_USGS_H
 
-
-#include <QtPrintSupport>
-#include <QtWebEngineWidgets>
 #include <QNetworkInterface>
 #include <QUrl>
-#include <QtNetwork>
 #include <QVector>
 #include <QtCharts>
+#include <QtNetwork>
+#include <QtPrintSupport>
+#include <QtWebEngineWidgets>
 
-#include "movGeneric.h"
-#include "movQChartView.h"
 #include "movErrors.h"
 #include "movFlags.h"
+#include "movGeneric.h"
+#include "movQChartView.h"
 
 using namespace QtCharts;
 
-class MovUsgs : public QObject
-{
+class MovUsgs : public QObject {
 
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit MovUsgs(QWebEngineView *inMap,
-               MovQChartView *inChart,QRadioButton *inDailyButton,
-               QRadioButton *inHistoricButton,QRadioButton *inInstantButton,
-               QComboBox *inProductBox, QDateEdit *inStartDateEdit,
-               QDateEdit *inEndDateEdit, QStatusBar *instatusBar,QObject *parent = 0);
+  explicit MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
+                   QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
+                   QRadioButton *inInstantButton, QComboBox *inProductBox,
+                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                   QStatusBar *instatusBar, QObject *parent = 0);
 
-    ~MovUsgs();
+  ~MovUsgs();
 
-    //...Public functions
-    bool getUSGSBeenPlotted();
-    int plotNewUSGSStation();
-    int replotCurrentUSGSStation(int index);
-    int setUSGSBeenPlotted(bool input);
-    int saveUSGSImage(QString filename, QString filter);
-    int saveUSGSData(QString filename,QString format);
-    QString getUSGSErrorString();
-    QString getLoadedUSGSStation();
-    QString getClickedUSGSStation();
+  //...Public functions
+  bool getUSGSBeenPlotted();
+  int plotNewUSGSStation();
+  int replotCurrentUSGSStation(int index);
+  int setUSGSBeenPlotted(bool input);
+  int saveUSGSImage(QString filename, QString filter);
+  int saveUSGSData(QString filename, QString format);
+  QString getUSGSErrorString();
+  QString getLoadedUSGSStation();
+  QString getClickedUSGSStation();
 
 private slots:
-    void javascriptDataReturned(QString data);
-
+  void javascriptDataReturned(QString data);
 
 signals:
-    void usgsError(QString);
+  void usgsError(QString);
 
 private:
-    //...Private functions
-    QString getMarkerSelection(QString &name, double &longitude, double &latitude);
-    int setMarkerSelection();
-    void setAsyncMarkerSelection();
-    int getTimezoneOffset(QString timezone);
-    int fetchUSGSData();
-    int plotUSGS();
-    int readUSGSDataFinished(QNetworkReply*);
-    int formatUSGSInstantResponse(QByteArray Input);
-    int formatUSGSDailyResponse(QByteArray Input);
-    int getDataBounds(double &ymin, double &ymax);
+  //...Private functions
+  QString getMarkerSelection(QString &name, double &longitude,
+                             double &latitude);
+  int setMarkerSelection();
+  void setAsyncMarkerSelection();
+  int getTimezoneOffset(QString timezone);
+  int fetchUSGSData();
+  int plotUSGS();
+  int readUSGSDataFinished(QNetworkReply *);
+  int formatUSGSInstantResponse(QByteArray Input);
+  int formatUSGSDailyResponse(QByteArray Input);
+  int getDataBounds(double &ymin, double &ymax);
 
-    //...Data structures
-    struct USGSData
-    {
-        int NumDataPoints;
-        QString Description;
-        QVector<QDateTime> Date;
-        QVector<double> Data;
-    };
+  //...Data structures
+  struct USGSData {
+    int NumDataPoints;
+    QString Description;
+    QVector<QDateTime> Date;
+    QVector<double> Data;
+  };
 
-    struct USGSStationData
-    {
-        QDate Date;
-        QTime Time;
-        double value;
-    };
+  struct USGSStationData {
+    QDate Date;
+    QTime Time;
+    double value;
+  };
 
-    //...Pointers to variables
-    QWebEngineView *map;
-    MovQChartView *chart;
-    QRadioButton   *dailyButton,*historicButton,*instantButton;
-    QComboBox      *productBox;
-    QDateEdit      *startDateEdit,*endDateEdit;
-    QStatusBar     *statusBar;
-    QChart         *thisChart;
+  //...Pointers to variables
+  QWebEngineView *map;
+  MovQChartView *chart;
+  QRadioButton *dailyButton, *historicButton, *instantButton;
+  QComboBox *productBox;
+  QDateEdit *startDateEdit, *endDateEdit;
+  QStatusBar *statusBar;
+  QChart *thisChart;
 
-    //...Private variables
-    bool USGSDataReady;
-    bool USGSBeenPlotted;
-    int USGSdataMethod;
-    int ProductIndex;
-    double CurrentUSGSLat;
-    double CurrentUSGSLon;
-    QString USGSMarkerID;
-    QString CurrentUSGSStationName;
-    QString USGSErrorString;
-    QString ProductName;
-    QString Units,Datum,yLabel;
-    QDateTime requestStartDate;
-    QDateTime requestEndDate;
-    QVector<QString> Parameters;
-    QVector<USGSStationData> USGSPlot;
-    QVector<USGSData> CurrentUSGSStation;
-
+  //...Private variables
+  bool USGSDataReady;
+  bool USGSBeenPlotted;
+  int USGSdataMethod;
+  int ProductIndex;
+  double CurrentUSGSLat;
+  double CurrentUSGSLon;
+  QString USGSMarkerID;
+  QString CurrentUSGSStationName;
+  QString USGSErrorString;
+  QString ProductName;
+  QString Units, Datum, yLabel;
+  QDateTime requestStartDate;
+  QDateTime requestEndDate;
+  QVector<QString> Parameters;
+  QVector<USGSStationData> USGSPlot;
+  QVector<USGSData> CurrentUSGSStation;
 };
 
 #endif // MOV_USGS_H

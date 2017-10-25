@@ -20,88 +20,86 @@
 #ifndef MOV_XTIDE_H
 #define MOV_XTIDE_H
 
-#include <QObject>
-#include <QtWidgets>
-#include <QWebEngineView>
-#include <QtCharts>
 #include <QChartView>
+#include <QObject>
 #include <QPrinter>
 #include <QVector>
+#include <QWebEngineView>
+#include <QtCharts>
 #include <QtWebEngine/QtWebEngine>
+#include <QtWidgets>
 
-#include "movQChartView.h"
 #include "movErrors.h"
 #include "movFlags.h"
 #include "movGeneric.h"
+#include "movQChartView.h"
 
 using namespace QtCharts;
 
-class movXtide : public QObject
-{
+class movXtide : public QObject {
 
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    //...Constructor
-    explicit movXtide(QWebEngineView *inMap, MovQChartView *inChart,
-                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                   QComboBox *inUnits, QStatusBar *inStatusBar, QObject *parent = 0);
+  //...Constructor
+  explicit movXtide(QWebEngineView *inMap, MovQChartView *inChart,
+                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                    QComboBox *inUnits, QStatusBar *inStatusBar,
+                    QObject *parent = 0);
 
-    //...Destructor
-    ~movXtide();
+  //...Destructor
+  ~movXtide();
 
-    //...Public Functions
-    int plotXTideStation();
-    QString getLoadedXTideStation();
-    QString getCurrentXTideStation();
-    int getClickedXTideStation();
-    int getAsyncClickedXTideStation();
-    int saveXTideData(QString filename, QString format);
-    int saveXTidePlot(QString filename, QString filter);
-    QString getErrorString();
+  //...Public Functions
+  int plotXTideStation();
+  QString getLoadedXTideStation();
+  QString getCurrentXTideStation();
+  int getClickedXTideStation();
+  int getAsyncClickedXTideStation();
+  int saveXTideData(QString filename, QString format);
+  int saveXTidePlot(QString filename, QString filter);
+  QString getErrorString();
 
 private slots:
-    void javascriptDataReturned(QString);
+  void javascriptDataReturned(QString);
 
 signals:
-    void xTideError(QString);
+  void xTideError(QString);
 
 private:
-    int findXTideExe();
-    int calculateXTides();
-    int plotChart();
-    int getDataBounds(double &min, double &max);
-    int parseXTideResponse(QString xTideResponse);
+  int findXTideExe();
+  int calculateXTides();
+  int plotChart();
+  int getDataBounds(double &min, double &max);
+  int parseXTideResponse(QString xTideResponse);
 
-    //Structures
-    struct XTideStationData
-    {
-        QDateTime date;
-        double value;
-    };
+  // Structures
+  struct XTideStationData {
+    QDateTime date;
+    double value;
+  };
 
-    //...Private Variables
-    QVector<XTideStationData> currentXTideStation;
-    double currentXTideLat;
-    double currentXTideLon;
+  //...Private Variables
+  QVector<XTideStationData> currentXTideStation;
+  double currentXTideLat;
+  double currentXTideLon;
 
-    QString currentStationName;
-    QString units;
-    QString yLabel;
-    QString xLabel;
-    QString plotTitle;
-    QString xTideErrorString;
-    QString xTideExe;
-    QString xTideHarmFile;
-    QChart  *thisChart;
+  QString currentStationName;
+  QString units;
+  QString yLabel;
+  QString xLabel;
+  QString plotTitle;
+  QString xTideErrorString;
+  QString xTideExe;
+  QString xTideHarmFile;
+  QChart *thisChart;
 
-    //...Pointers to GUI elements
-    QWebEngineView *map;
-    MovQChartView *chart;
-    QDateEdit *startDateEdit,*endDateEdit;
-    QComboBox *unitSelect;
-    QStatusBar *statusBar;
-
+  //...Pointers to GUI elements
+  QWebEngineView *map;
+  MovQChartView *chart;
+  QDateEdit *startDateEdit, *endDateEdit;
+  QComboBox *unitSelect;
+  QStatusBar *statusBar;
 };
 
 #endif // MOV_XTIDE_H

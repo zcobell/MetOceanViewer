@@ -20,34 +20,32 @@
 #ifndef MOV_IMEDS_H
 #define MOV_IMEDS_H
 
-#include <QObject>
-#include <QFile>
 #include "movImedsStation.h"
+#include <QFile>
+#include <QObject>
 
-class MovImeds : public QObject
-{
-    Q_OBJECT
+class MovImeds : public QObject {
+  Q_OBJECT
 public:
-    explicit MovImeds(QObject *parent = 0);
+  explicit MovImeds(QObject *parent = 0);
 
-    //...Methods
-    int read(QString filename);
-    int write(QString filename);
-    int writeCSV(QString filename);
+  //...Methods
+  int read(QString filename);
+  int write(QString filename);
+  int writeCSV(QString filename);
 
-    //...Variables
-    int nstations;
+  //...Variables
+  int nstations;
 
-    QString header1;
-    QString header2;
-    QString header3;
-    QString units;
-    QString datum;
+  QString header1;
+  QString header2;
+  QString header3;
+  QString units;
+  QString datum;
 
-    QVector<MovImedsStation*> station;
+  QVector<MovImedsStation *> station;
 
-    bool success;
-
+  bool success;
 };
 
 #endif // MOV_IMEDS_H

@@ -17,71 +17,64 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-        
+
 #include "MainWindow.h"
 #include "movGeneric.h"
 
 #include <QApplication>
 
 //-------------------------------------------//
-//Main function for the code
+// Main function for the code
 //-------------------------------------------//
-int main(int argc, char *argv[])
-{
-    QApplication a(argc, argv);
-    QString sessionFile;
-    bool doSession;
+int main(int argc, char *argv[]) {
+  QApplication a(argc, argv);
+  QString sessionFile;
+  bool doSession;
 
-    if(!MovGeneric::isConnectedToNetwork())
-    {
-        QMessageBox::critical(0,QObject::tr("Internet Connection Not Detected"),
-                              QObject::tr("No internet connection was detected.\n "
-                              "The program will now be terminated."));
-        return -1;
-    }
+  if (!MovGeneric::isConnectedToNetwork()) {
+    QMessageBox::critical(nullptr,
+                          QObject::tr("Internet Connection Not Detected"),
+                          QObject::tr("No internet connection was detected.\n"
+                                      "The program will now be terminated."));
+    return -1;
+  }
 
+  // If the session file was dropped onto the executable,
+  // try to load it.
+  if (argc == 2) {
+    sessionFile = QCoreApplication::arguments().at(1);
+    doSession = true;
+  } else {
+    doSession = false;
+    sessionFile = QString();
+  }
 
-    //If the session file was dropped onto the executable,
-    //try to load it.
-    if(argc==2)
-    {
-        sessionFile = QCoreApplication::arguments().at(1);
-        doSession = true;
-    }
-    else
-    {
-        doSession = false;
-        sessionFile = QString();
-    }
+  // Create the window
+  MainWindow w(doSession, sessionFile);
 
-    //Create the window
-    MainWindow w(doSession,sessionFile);
+  // Splash Screen
+  QPixmap pixmap(":/rsc/img/logo_full.png");
+  if (pixmap.isNull()) {
+    // Warning about splash screen, which shouldn't happen
+    QMessageBox::warning(0, QObject::tr("ERROR"),
+                         QObject::tr("Failed to load spash screen image."));
+  } else {
+    // Display the splash screen for 2 seconds
+    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
+    splash.setEnabled(false);
+    splash.show();
+    a.processEvents();
 
-    //Splash Screen
-    QPixmap pixmap(":/rsc/img/logo_full.png");
-    if(pixmap.isNull())
-    {
-        //Warning about splash screen, which shouldn't happen
-        QMessageBox::warning(0,QObject::tr("ERROR"),QObject::tr("Failed to load spash screen image."));
-    }
-    else
-    {
-        //Display the splash screen for 2 seconds
-        QSplashScreen splash(pixmap,Qt::WindowStaysOnTopHint);
-        splash.setEnabled(false);
-        splash.show();
-        a.processEvents();
+    QTime dieTime = QTime::currentTime().addSecs(1);
+    while (QTime::currentTime() < dieTime)
+      QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 
-        QTime dieTime= QTime::currentTime().addSecs(1);
-        while( QTime::currentTime() < dieTime )
-            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    splash.hide();
+  }
 
-        splash.hide();
-    }
+  // Show the user the window
+  w.show();
 
-    //Show the user the window
-    w.show();
-
-    return a.exec();
+  return a.exec();
 }
 //-------------------------------------------//

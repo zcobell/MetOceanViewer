@@ -20,24 +20,22 @@
 #ifndef MOV_GENERIC_H
 #define MOV_GENERIC_H
 
-#include <QMessageBox>
 #include <QColor>
-#include <QtCore>
-#include <QString>
 #include <QDateTime>
+#include <QMessageBox>
 #include <QNetworkInterface>
+#include <QString>
+#include <QtCore>
 
-class MovGeneric : public QObject
-{
-    Q_OBJECT
+class MovGeneric : public QObject {
+  Q_OBJECT
 public:
-    static void splitPath(QString input,QString &filename,QString &directory);
-    static void delay(int delayTime);
-    static void delayM(int delayTime);
-    static int NETCDF_ERR(int status);
-    static bool isConnectedToNetwork();
-    static int getLocalTimzoneOffset();
-
+  static void splitPath(QString input, QString &filename, QString &directory);
+  static void delay(int delayTime);
+  static void delayM(int delayTime);
+  static int NETCDF_ERR(int status);
+  static bool isConnectedToNetwork();
+  static int getLocalTimzoneOffset();
 };
 
 #endif // MOV_GENERIC_H

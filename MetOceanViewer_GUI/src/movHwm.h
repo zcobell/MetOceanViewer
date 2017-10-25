@@ -20,75 +20,75 @@
 #ifndef MOV_HWM_H
 #define MOV_HWM_H
 
-#include <QObject>
-#include <QtWidgets>
-#include <QFile>
-#include <QtMath>
-#include <QWebEngineView>
 #include <QChartView>
+#include <QFile>
+#include <QObject>
+#include <QWebEngineView>
 #include <QtCharts>
+#include <QtMath>
+#include <QtWidgets>
 
 #include "movQChartView.h"
 
-class MovHwm : public QObject
-{
-    Q_OBJECT
+class MovHwm : public QObject {
+  Q_OBJECT
 public:
-    explicit MovHwm(QLineEdit *inFilebox, QCheckBox *inManualCheck, QComboBox *inUnitCombobox,
-                 QCheckBox *inForceThroughZero, QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,
-                 QPushButton *inHWMColor, QPushButton *inButton121LineColor,
-                 QPushButton *inButtonBoundingLineColor, QPushButton *inButtonRegLineColor,
-                 QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
-                 QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue, QWebEngineView *inMap, MovQChartView *inChartView,
-                 QStatusBar *inStatusBar, QVector<double> &inClassValues, QObject *parent = 0);
+  explicit MovHwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
+                  QComboBox *inUnitCombobox, QCheckBox *inForceThroughZero,
+                  QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,
+                  QPushButton *inHWMColor, QPushButton *inButton121LineColor,
+                  QPushButton *inButtonBoundingLineColor,
+                  QPushButton *inButtonRegLineColor,
+                  QLineEdit *inModeledAxisLabel, QLineEdit *inMeasuredAxisLabel,
+                  QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue,
+                  QWebEngineView *inMap, MovQChartView *inChartView,
+                  QStatusBar *inStatusBar, QVector<double> &inClassValues,
+                  QObject *parent = 0);
 
-    //...Public Functions
-    int processHWMData();
-    int saveHWMMap(QString outputFile, QString filter);
-    int saveRegressionPlot(QString outputFile, QString filter);
-    QString getErrorString();
+  //...Public Functions
+  int processHWMData();
+  int saveHWMMap(QString outputFile, QString filter);
+  int saveRegressionPlot(QString outputFile, QString filter);
+  QString getErrorString();
 
 private:
-    //...High water mark structure
-    struct hwm_data
-    {
-        double lat;
-        double lon;
-        double bathy;
-        double measured;
-        double modeled;
-        double error;
-    };
+  //...High water mark structure
+  struct hwm_data {
+    double lat;
+    double lon;
+    double bathy;
+    double measured;
+    double modeled;
+    double error;
+  };
 
-    //...Private Variables
-    double regLineSlope,regLineIntercept;
-    double regCorrelation,regStdDev;
-    QString hwmErrorString;
-    QVector<double> classes;
-    QVector<hwm_data> highWaterMarks;
+  //...Private Variables
+  double regLineSlope, regLineIntercept;
+  double regCorrelation, regStdDev;
+  QString hwmErrorString;
+  QVector<double> classes;
+  QVector<hwm_data> highWaterMarks;
 
-    //...Private Functions
-    int readHWMData();
-    int computeLinearRegression();
-    int classifyHWM(double diff);
-    int plotHWMMap();
-    int plotRegression();
+  //...Private Functions
+  int readHWMData();
+  int computeLinearRegression();
+  int classifyHWM(double diff);
+  int plotHWMMap();
+  int plotRegression();
 
-    //...Pointers to widgets
-    QLineEdit      *fileBox,*modeledAxisLabelBox;
-    QLineEdit      *measuredAxisLabelBox,*plotTitleBox;
-    QPushButton    *buttonHWMColor,*button121LineColor;
-    QPushButton    *buttonBoundingLinecolor,*buttonRegLineColor;
-    QCheckBox      *manualClassificationCheckbox,*forceThroughZeroCheckbox;
-    QCheckBox      *upperLowerLinesCheckbox,*colorHWMDotsCheckbox;
-    QSpinBox       *boundingLinesValue;
-    QComboBox      *unitComboBox;
-    MovQChartView *chartView;
-    QWebEngineView *map;
-    QChart         *thisChart;
-    QStatusBar     *statusBar;
-
+  //...Pointers to widgets
+  QLineEdit *fileBox, *modeledAxisLabelBox;
+  QLineEdit *measuredAxisLabelBox, *plotTitleBox;
+  QPushButton *buttonHWMColor, *button121LineColor;
+  QPushButton *buttonBoundingLinecolor, *buttonRegLineColor;
+  QCheckBox *manualClassificationCheckbox, *forceThroughZeroCheckbox;
+  QCheckBox *upperLowerLinesCheckbox, *colorHWMDotsCheckbox;
+  QSpinBox *boundingLinesValue;
+  QComboBox *unitComboBox;
+  MovQChartView *chartView;
+  QWebEngineView *map;
+  QChart *thisChart;
+  QStatusBar *statusBar;
 };
-
 
 #endif // MOV_HWM_H

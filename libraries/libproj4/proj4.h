@@ -38,33 +38,32 @@
 #ifndef PROJ4_H
 #define PROJ4_H
 
-#include <QtCore>
-#include <QMap>
 #include "proj4_global.h"
+#include <QMap>
+#include <QtCore>
 
 //...PROJ4 CLASS ERRORS
-#define ERROR_NOERROR                    0
-#define ERROR_PROJ4_CANNOTREADEPSGFILE  -999905001
-#define ERROR_PROJ4_NOSUCHPROJECTION    -999905002
-#define ERROR_PROJ4_INTERNAL            -999905003
+#define ERROR_NOERROR 0
+#define ERROR_PROJ4_CANNOTREADEPSGFILE -999905001
+#define ERROR_PROJ4_NOSUCHPROJECTION -999905002
+#define ERROR_PROJ4_INTERNAL -999905003
 
-class PROJ4SHARED_EXPORT proj4 : public QObject
-{
-    Q_OBJECT
+class PROJ4SHARED_EXPORT proj4 : public QObject {
+  Q_OBJECT
 public:
-    explicit proj4(QObject *parent = 0);
+  explicit proj4(QObject *parent = 0);
 
-    int transform(int inputEPSG, int outputEPSG, double x_in, double y_in, double &x_out, double &y_out, bool &isLatLon);
+  int transform(int inputEPSG, int outputEPSG, double x_in, double y_in,
+                double &x_out, double &y_out, bool &isLatLon);
 
-    bool containsEPSG(int epsg);
+  bool containsEPSG(int epsg);
 
-    QString coordinateSystemString(int epsg);
+  QString coordinateSystemString(int epsg);
 
 private:
-    int _initEpsgMapping();
+  int _initEpsgMapping();
 
-    QMap<int,QString> _epsgMapping;
-
+  QMap<int, QString> _epsgMapping;
 };
 
 #endif // PROJ4_H

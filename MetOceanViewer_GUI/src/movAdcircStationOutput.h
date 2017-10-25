@@ -20,45 +20,42 @@
 #ifndef MOV_ADCIRC_STATION_OUTPUT_H
 #define MOV_ADCIRC_STATION_OUTPUT_H
 
-#include <QObject>
 #include <QDateTime>
+#include <QObject>
 #include <QVector>
 
 class MovImeds;
 
-class MovAdcircStationOutput : public QObject
-{
-    Q_OBJECT
+class MovAdcircStationOutput : public QObject {
+  Q_OBJECT
 public:
-    explicit MovAdcircStationOutput(QObject *parent = 0);
+  explicit MovAdcircStationOutput(QObject *parent = 0);
 
-    int read(QString AdcircFile,QDateTime coldStart);
-    int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
-    QString errorString();
-    int error();
-    MovImeds* toIMEDS();
+  int read(QString AdcircFile, QDateTime coldStart);
+  int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
+  QString errorString();
+  int error();
+  MovImeds *toIMEDS();
 
 private:
+  int readAscii(QString AdcircOutputFile, QString AdcircStationFile);
 
-    int readAscii(QString AdcircOutputFile, QString AdcircStationFile);
+  int readNetCDF(QString AdicrcOutputFile);
 
-    int readNetCDF(QString AdicrcOutputFile);
+  int nStations;
+  int nSnaps;
+  int _error;
+  int _ncerr;
 
-    int nStations;
-    int nSnaps;
-    int _error;
-    int _ncerr;
+  QDateTime coldStartTime;
 
-    QDateTime coldStartTime;
+  QVector<double> latitude;
+  QVector<double> longitude;
+  QVector<double> time;
 
-    QVector<double> latitude;
-    QVector<double> longitude;
-    QVector<double> time;
+  QVector<QVector<double>> data;
 
-    QVector< QVector<double> > data;
-
-    QVector<QString> station_name;
-
+  QVector<QString> station_name;
 };
 
 #endif // MOV_ADCIRC_STATION_OUTPUT_H
