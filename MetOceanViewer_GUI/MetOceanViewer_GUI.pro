@@ -62,7 +62,6 @@ HEADERS  += \
     src/movDflow.h \
     src/movErrors.h \
     src/movFiletypes.h \
-    src/movFlags.h \
     src/movGeneric.h \
     src/movHwm.h \
     src/movImeds.h \
@@ -82,7 +81,8 @@ HEADERS  += \
     src/mov_dialog_update.h \
     src/movusertimeseriesoptions.h \
     src/MainWindow.h \
-    src/movQWebEngineView.h
+    src/movQWebEngineView.h \
+    src/metoceanviewer.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \

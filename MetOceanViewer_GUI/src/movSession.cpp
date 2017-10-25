@@ -813,7 +813,7 @@ int MovSession::open(QString openFilename) {
       continueToLoad = true;
     }
 
-    if (type == FILETYPE_ASCII_ADCIRC) {
+    if (type == MetOceanViewer::FileType::ASCII_ADCIRC) {
       MovGeneric::splitPath(stationfilepath, BaseFile, BaseDir);
       stationfilepath = this->currentDirectory + "/" + stationfilepath;
       QFile myfile(stationfilepath);

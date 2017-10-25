@@ -4,29 +4,29 @@
 #include <QMap>
 
 static QMap<QString, int> filetypeMapString = {
-    {QStringLiteral("NETCDF-ADCIRC"), FILETYPE_NETCDF_ADCIRC},
-    {QStringLiteral("NETCDF-DFLOW"), FILETYPE_NETCDF_DFLOW},
-    {QStringLiteral("ASCII-ADCIRC"), FILETYPE_ASCII_ADCIRC},
-    {QStringLiteral("ASCII-IMEDS"), FILETYPE_ASCII_IMEDS}};
+    {QStringLiteral("NETCDF-ADCIRC"), MetOceanViewer::FileType::NETCDF_ADCIRC},
+    {QStringLiteral("NETCDF-DFLOW"), MetOceanViewer::FileType::NETCDF_DFLOW},
+    {QStringLiteral("ASCII-ADCIRC"), MetOceanViewer::FileType::ASCII_ADCIRC},
+    {QStringLiteral("ASCII-IMEDS"), MetOceanViewer::FileType::ASCII_IMEDS}};
 
 static QMap<int, QString> filetypeMapInt = {
-    {FILETYPE_NETCDF_ADCIRC, QStringLiteral("NETCDF-ADCIRC")},
-    {FILETYPE_NETCDF_DFLOW, QStringLiteral("NETCDF-DFLOW")},
-    {FILETYPE_ASCII_ADCIRC, QStringLiteral("ASCII-ADCIRC")},
-    {FILETYPE_ASCII_IMEDS, QStringLiteral("ASCII-IMEDS")}};
+    {MetOceanViewer::FileType::NETCDF_ADCIRC, QStringLiteral("NETCDF-ADCIRC")},
+    {MetOceanViewer::FileType::NETCDF_DFLOW, QStringLiteral("NETCDF-DFLOW")},
+    {MetOceanViewer::FileType::ASCII_ADCIRC, QStringLiteral("ASCII-ADCIRC")},
+    {MetOceanViewer::FileType::ASCII_IMEDS, QStringLiteral("ASCII-IMEDS")}};
 
 movFiletypes::movFiletypes(QObject *parent) : QObject(parent) {}
 
 int movFiletypes::getIntegerFiletype(QString filename) {
   if (movFiletypes::_checkNetcdfAdcirc(filename))
-    return FILETYPE_NETCDF_ADCIRC;
+    return MetOceanViewer::FileType::NETCDF_ADCIRC;
   if (movFiletypes::_checkNetcdfDflow(filename))
-    return FILETYPE_NETCDF_DFLOW;
+    return MetOceanViewer::FileType::NETCDF_DFLOW;
   if (movFiletypes::_checkASCIIImeds(filename))
-    return FILETYPE_ASCII_IMEDS;
+    return MetOceanViewer::FileType::ASCII_IMEDS;
   if (movFiletypes::_checkASCIIAdcirc(filename))
-    return FILETYPE_ASCII_ADCIRC;
-  return FILETYPE_ERROR;
+    return MetOceanViewer::FileType::ASCII_ADCIRC;
+  return MetOceanViewer::FileType::FILETYPE_ERROR;
 }
 
 QString movFiletypes::getStringFiletype(QString filename) {

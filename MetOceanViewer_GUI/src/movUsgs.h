@@ -20,6 +20,9 @@
 #ifndef MOV_USGS_H
 #define MOV_USGS_H
 
+#include "movErrors.h"
+#include "movGeneric.h"
+#include "movQChartView.h"
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QVector>
@@ -27,11 +30,6 @@
 #include <QtNetwork>
 #include <QtPrintSupport>
 #include <QtWebEngineWidgets>
-
-#include "movErrors.h"
-#include "movFlags.h"
-#include "movGeneric.h"
-#include "movQChartView.h"
 
 using namespace QtCharts;
 

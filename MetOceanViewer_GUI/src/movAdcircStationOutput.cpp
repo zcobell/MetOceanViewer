@@ -26,7 +26,7 @@
 
 MovAdcircStationOutput::MovAdcircStationOutput(QObject *parent)
     : QObject(parent) {
-  this->_error = ERR_NOERR;
+  this->_error = MetOceanViewer::Error::NOERR;
   this->_ncerr = NC_NOERR;
   this->nStations = 0;
   this->nSnaps = 0;
@@ -58,12 +58,12 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile,
 
   // Check if we can open the file
   if (!MyFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    this->_error = ERR_CANNOT_OPEN_FILE;
+    this->_error = MetOceanViewer::Error::CANNOT_OPEN_FILE;
     return this->_error;
   }
 
   if (!StationFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    this->_error = ERR_CANNOT_OPEN_FILE;
+    this->_error = MetOceanViewer::Error::CANNOT_OPEN_FILE;
     return this->_error;
   }
 
@@ -103,7 +103,7 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile,
   TempList = TempLine.split(" ");
   int TempStations = TempList.value(0).toInt();
   if (TempStations != this->nStations)
-    return ERR_WRONG_NUMBER_OF_STATIONS;
+    return MetOceanViewer::Error::WRONG_NUMBER_OF_STATIONS;
 
   this->longitude.resize(this->nStations);
   this->latitude.resize(this->nStations);
@@ -124,7 +124,7 @@ int MovAdcircStationOutput::readAscii(QString AdcircOutputFile,
   }
   StationFile.close();
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
@@ -153,7 +153,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->_error = nc_open(AdcircOutputFile.toUtf8(), NC_NOWRITE, &ncid);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
@@ -161,14 +161,14 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->_error = nc_inq_dimid(ncid, "time", &dimid_time);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
   this->_error = nc_inq_dimid(ncid, "station", &dimid_station);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
@@ -176,14 +176,14 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->_error = nc_inq_dimlen(ncid, dimid_time, &time_size);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
   this->_error = nc_inq_dimlen(ncid, dimid_station, &station_size);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
@@ -202,7 +202,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
             nc_inq_varid(ncid, netcdf_types[i + 1].toUtf8(), &varid_zeta2);
         if (this->_error != NC_NOERR) {
           this->_ncerr = this->_error;
-          this->_error = ERR_NETCDF;
+          this->_error = MetOceanViewer::Error::NETCDF;
           return this->_error;
         }
       } else
@@ -214,7 +214,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     // If we're at the end of the array
     // and haven't quit yet, that's a problem
     if (i == 5)
-      return ERR_NO_VARIABLE_FOUND;
+      return MetOceanViewer::Error::NO_VARIABLE_FOUND;
   }
 
   // Size the output variables
@@ -231,21 +231,21 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->_error = nc_inq_varid(ncid, "time", &varid_time);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
   this->_error = nc_inq_varid(ncid, "x", &varid_lon);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
   this->_error = nc_inq_varid(ncid, "y", &varid_lat);
   if (this->_error != NC_NOERR) {
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
@@ -254,7 +254,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     this->_error = nc_get_var1(ncid, varid_time, &startIndex, &Temp);
     if (this->_error != NC_NOERR) {
       this->_ncerr = this->_error;
-      this->_error = ERR_NETCDF;
+      this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
     }
 
@@ -266,7 +266,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     this->_error = nc_get_var1(ncid, varid_lon, &startIndex, &Temp);
     if (this->_error != NC_NOERR) {
       this->_ncerr = this->_error;
-      this->_error = ERR_NETCDF;
+      this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
     }
 
@@ -275,7 +275,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     this->_error = nc_get_var1(ncid, varid_lat, &startIndex, &Temp);
     if (this->_error != NC_NOERR) {
       this->_ncerr = this->_error;
-      this->_error = ERR_NETCDF;
+      this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
     }
 
@@ -298,7 +298,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
       free(tempVar1);
       free(tempVar2);
       this->_ncerr = this->_error;
-      this->_error = ERR_NETCDF;
+      this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
     }
 
@@ -308,7 +308,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
         free(tempVar1);
         free(tempVar2);
         this->_ncerr = this->_error;
-        this->_error = ERR_NETCDF;
+        this->_error = MetOceanViewer::Error::NETCDF;
         return this->_error;
       }
       for (j = 0; j < time_size_int; j++)
@@ -325,7 +325,7 @@ int MovAdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     free(tempVar1);
     free(tempVar2);
     this->_ncerr = this->_error;
-    this->_error = ERR_NETCDF;
+    this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 

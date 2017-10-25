@@ -21,6 +21,7 @@
 #ifndef MOV_NOAA_H
 #define MOV_NOAA_H
 
+#include "movErrors.h"
 #include <QChartView>
 #include <QNetworkInterface>
 #include <QPrinter>
@@ -30,9 +31,6 @@
 #include <QtCharts>
 #include <QtNetwork>
 #include <QtWebEngine/QtWebEngine>
-
-#include "movErrors.h"
-#include "movFlags.h"
 
 //...Forward declare classes
 class MovQChartView;

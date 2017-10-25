@@ -20,6 +20,9 @@
 #ifndef MOV_XTIDE_H
 #define MOV_XTIDE_H
 
+#include "movErrors.h"
+#include "movGeneric.h"
+#include "movQChartView.h"
 #include <QChartView>
 #include <QObject>
 #include <QPrinter>
@@ -28,11 +31,6 @@
 #include <QtCharts>
 #include <QtWebEngine/QtWebEngine>
 #include <QtWidgets>
-
-#include "movErrors.h"
-#include "movFlags.h"
-#include "movGeneric.h"
-#include "movQChartView.h"
 
 using namespace QtCharts;
 

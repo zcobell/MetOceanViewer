@@ -139,14 +139,14 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(
 
 void mov_dialog_addtimeseries::setItemsByFiletype() {
 
-  if (this->InputFileType == FILETYPE_ASCII_IMEDS) {
+  if (this->InputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
     ui->text_filetype->setText("IMEDS");
     this->setColdstartSelectElements(false);
     this->setStationSelectElements(false);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
     this->FileReadError = false;
-  } else if (this->InputFileType == FILETYPE_NETCDF_ADCIRC) {
+  } else if (this->InputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
     ui->text_filetype->setText(QStringLiteral("ADCIRC netCDF"));
     ui->date_coldstart->setEnabled(true);
     this->setColdstartSelectElements(true);
@@ -154,14 +154,14 @@ void mov_dialog_addtimeseries::setItemsByFiletype() {
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
     this->FileReadError = false;
-  } else if (this->InputFileType == FILETYPE_ASCII_ADCIRC) {
+  } else if (this->InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
     ui->text_filetype->setText(QStringLiteral("ADCIRC ASCII"));
     this->setColdstartSelectElements(true);
     this->setStationSelectElements(true);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
     this->FileReadError = false;
-  } else if (this->InputFileType == FILETYPE_NETCDF_DFLOW) {
+  } else if (this->InputFileType == MetOceanViewer::FileType::NETCDF_DFLOW) {
     QString variable = this->dFlowVariable;
 
     ui->text_filetype->setText(QStringLiteral("DFlow-FM"));
@@ -394,7 +394,7 @@ void mov_dialog_addtimeseries::accept() {
     emit addTimeseriesError(tr("Please select a valid color for this series."));
     return;
   } else if (this->InputStationFile == NULL &&
-             this->InputFileType == FILETYPE_ASCII_ADCIRC) {
+             this->InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
     emit addTimeseriesError(tr("You did not select a station file."));
     return;
   } else if (!this->proj->containsEPSG(this->epsg)) {

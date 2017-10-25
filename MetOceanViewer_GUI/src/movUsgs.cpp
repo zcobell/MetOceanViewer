@@ -164,7 +164,7 @@ int MovUsgs::formatUSGSInstantResponse(QByteArray Input) {
   if (InputData.isEmpty() || InputData.isNull()) {
     this->USGSErrorString =
         tr("This data is not available except from the USGS archive server.");
-    return ERR_USGS_ARCHIVEONLY;
+    return MetOceanViewer::Error::USGS_ARCHIVEONLY;
   }
 
   //...Save the potential error string
@@ -583,7 +583,7 @@ int MovUsgs::readUSGSDataFinished(QNetworkReply *reply) {
 
   if (reply->error() != QNetworkReply::NoError) {
     this->USGSErrorString = reply->errorString();
-    return ERR_USGS_SERVERREADERROR;
+    return MetOceanViewer::Error::USGS_SERVERREADERROR;
   }
 
   // Read the data that was received
@@ -595,7 +595,7 @@ int MovUsgs::readUSGSDataFinished(QNetworkReply *reply) {
   else
     ierr = this->formatUSGSDailyResponse(RawUSGSData);
   if (ierr != 0)
-    return ERR_USGS_FORMATTING;
+    return MetOceanViewer::Error::USGS_FORMATTING;
 
   this->USGSDataReady = true;
 

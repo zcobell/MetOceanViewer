@@ -64,7 +64,7 @@ int MovNoaa::fetchNOAAData() {
 
   if (this->StartDate.operator==(this->EndDate) ||
       this->EndDate.operator<(this->StartDate))
-    return ERR_NOAA_INVALIDDATERANGE;
+    return MetOceanViewer::Error::NOAA_INVALIDDATERANGE;
 
   // Begin organizing the dates for download
   Duration = this->StartDate.daysTo(this->EndDate);

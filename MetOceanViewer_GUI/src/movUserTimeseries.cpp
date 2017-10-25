@@ -18,11 +18,11 @@
 //
 //-----------------------------------------------------------------------*/
 #include "movUserTimeseries.h"
+#include "metoceanviewer.h"
 #include "movAdcircStationOutput.h"
 #include "movDflow.h"
 #include "movErrors.h"
 #include "movFiletypes.h"
-#include "movFlags.h"
 #include "movGeneric.h"
 #include "movJavascriptAsyncReturn.h"
 #include "netcdf.h"
@@ -63,8 +63,11 @@ int MovUserTimeseries::getDataBounds(double &ymin, double &ymax,
   int i, j, k;
   double unitConversion, addY;
 
-  QDateTime nullDate(QDate(MOV_NULL_YEAR, MOV_NULL_MONTH, MOV_NULL_DAY),
-                     QTime(MOV_NULL_HOUR, MOV_NULL_MINUTE, MOV_NULL_SECOND));
+  QDateTime nullDate(
+      QDate(MetOceanViewer::NULL_YEAR, MetOceanViewer::NULL_MONTH,
+            MetOceanViewer::NULL_DAY),
+      QTime(MetOceanViewer::NULL_HOUR, MetOceanViewer::NULL_MINUTE,
+            MetOceanViewer::NULL_SECOND));
   ymin = DBL_MAX;
   ymax = DBL_MIN;
   minDate = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
@@ -89,7 +92,7 @@ int MovUserTimeseries::getDataBounds(double &ymin, double &ymax,
                   ymin &&
               this->fileDataUnique[i]
                       ->station[this->selectedStations[k]]
-                      ->data[j] != MOV_NULL_TS)
+                      ->data[j] != MetOceanViewer::NULL_TS)
             ymin = this->fileDataUnique[i]
                            ->station[this->selectedStations[k]]
                            ->data[j] *
@@ -103,7 +106,7 @@ int MovUserTimeseries::getDataBounds(double &ymin, double &ymax,
                   ymax &&
               this->fileDataUnique[i]
                       ->station[this->selectedStations[k]]
-                      ->data[j] != MOV_NULL_TS)
+                      ->data[j] != MetOceanViewer::NULL_TS)
             ymax = this->fileDataUnique[i]
                            ->station[this->selectedStations[k]]
                            ->data[j] *
@@ -135,7 +138,7 @@ int MovUserTimeseries::getDataBounds(double &ymin, double &ymax,
       }
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovUserTimeseries::saveImage(QString filename, QString filter) {
@@ -186,14 +189,14 @@ int MovUserTimeseries::saveImage(QString filename, QString filter) {
     pixmap.save(&outputFile, "JPG", 100);
   }
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovUserTimeseries::getCurrentMarkerID() { return this->markerID; }
 
 int MovUserTimeseries::setMarkerID() {
   this->markerID = this->getMarkerIDFromMap();
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovUserTimeseries::getClickedMarkerID() {
@@ -230,9 +233,9 @@ int MovUserTimeseries::getMultipleMarkersFromMap() {
       this->selectedStations[i - 1] = tempString.toInt();
     }
   } else
-    return ERR_MARKERSELECTION;
+    return MetOceanViewer::Error::MARKERSELECTION;
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovUserTimeseries::getAsyncMultipleMarkersFromMap() {
@@ -362,7 +365,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
                         unitConversion +
                     addY;
         if (this->fileDataUnique[i]->station[this->markerID]->data[j] !=
-                MOV_NULL_TS &&
+                MetOceanViewer::NULL_TS &&
             this->fileDataUnique[i]
                 ->station[this->markerID]
                 ->date[j]
@@ -381,7 +384,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
                              series[seriesCounter - 1]->name());
     } else {
       //...Plot multiple stations. We use random colors and append the station
-      //number
+      // number
       for (k = 0; k < this->selectedStations.length(); k++) {
         if (!this->fileDataUnique[i]
                  ->station[this->selectedStations[k]]
@@ -422,7 +425,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
                         addY;
             if (this->fileDataUnique[i]
                         ->station[this->selectedStations[k]]
-                        ->data[j] != MOV_NULL_TS &&
+                        ->data[j] != MetOceanViewer::NULL_TS &&
                 this->fileDataUnique[i]
                     ->station[this->selectedStations[k]]
                     ->date[j]
@@ -503,84 +506,84 @@ int MovUserTimeseries::processData() {
     this->epsg.resize(j + 1);
     this->epsg[j] = this->table->item(i, 11)->text().toInt();
 
-    if (InputFileType == FILETYPE_ASCII_IMEDS) {
+    if (InputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
       this->fileData[j] = new MovImeds(this);
       ierr = this->fileData[j]->read(TempFile);
-      if (ierr != ERR_NOERR) {
+      if (ierr != MetOceanViewer::Error::NOERR) {
         this->errorString = tr("Error reading file: ") + TempFile;
-        return ERR_IMEDS_FILEREADERROR;
+        return MetOceanViewer::Error::IMEDS_FILEREADERROR;
       }
       this->fileData[j]->success = true;
-    } else if (InputFileType == FILETYPE_NETCDF_ADCIRC) {
+    } else if (InputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
       ColdStart = QDateTime::fromString(this->table->item(i, 7)->text(),
                                         "yyyy-MM-dd hh:mm:ss");
       adcircData = new MovAdcircStationOutput(this);
       ierr = adcircData->read(TempFile, ColdStart);
-      if (ierr != ERR_NOERR) {
+      if (ierr != MetOceanViewer::Error::NOERR) {
         this->errorString = tr("Error reading file: ") + TempFile;
-        return ERR_ADCIRC_NETCDFREADERROR;
+        return MetOceanViewer::Error::ADCIRC_NETCDFREADERROR;
       }
 
       this->fileData[j] = adcircData->toIMEDS();
       if (!this->fileData[j]->success)
-        return ERR_ADCIRC_NETCDFTOIMEDS;
+        return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
       this->fileData[j]->success = true;
 
-    } else if (InputFileType == FILETYPE_ASCII_ADCIRC) {
+    } else if (InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
       ColdStart = QDateTime::fromString(this->table->item(i, 7)->text(),
                                         "yyyy-MM-dd hh:mm:ss");
       TempStationFile = this->table->item(i, 10)->text();
       adcircData = new MovAdcircStationOutput(this);
       ierr = adcircData->read(TempFile, TempStationFile, ColdStart);
-      if (ierr != ERR_NOERR) {
+      if (ierr != MetOceanViewer::Error::NOERR) {
         this->errorString = tr("Error reading file: ") + TempFile;
-        return ERR_ADCIRC_ASCIIREADERROR;
+        return MetOceanViewer::Error::ADCIRC_ASCIIREADERROR;
       }
       this->fileData[j] = adcircData->toIMEDS();
       if (!this->fileData[j]->success)
-        return ERR_ADCIRC_ASCIITOIMEDS;
+        return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
 
-    } else if (InputFileType == FILETYPE_NETCDF_DFLOW) {
+    } else if (InputFileType == MetOceanViewer::FileType::NETCDF_DFLOW) {
       this->fileData[j] = new MovImeds(this);
       MovDflow *dflow = new MovDflow(TempFile, this);
       dflowVar = this->table->item(i, 12)->text();
       dflowLayer = this->table->item(i, 13)->text().toInt();
       ierr = dflow->getVariable(dflowVar, dflowLayer, this->fileData[j]);
-      if (ierr != ERR_NOERR) {
+      if (ierr != MetOceanViewer::Error::NOERR) {
         this->errorString =
             tr("Error processing DFlow: ") + dflow->error->toString();
-        return ERR_DFLOW_FILEREADERROR;
+        return MetOceanViewer::Error::DFLOW_FILEREADERROR;
       }
     } else {
       this->errorString = tr("Invalid file format");
-      return ERR_INVALIDFILEFORMAT;
+      return MetOceanViewer::Error::INVALIDFILEFORMAT;
     }
 
     if (this->fileData[j]->success)
       j = j + 1;
     else
-      return ERR_GENERICFILEREADERROR;
+      return MetOceanViewer::Error::GENERICFILEREADERROR;
   }
 
   //...Project the data to WGS84
   ierr = this->projectStations(this->epsg, this->fileData);
   if (ierr != 0) {
     this->errorString = tr("Error projecting the station locations");
-    return ERR_PROJECTSTATIONS;
+    return MetOceanViewer::Error::PROJECTSTATIONS;
   }
 
   //...Build a unique set of timeseries data
   ierr = this->getUniqueStationList(this->fileData, this->StationXLocs,
                                     this->StationYLocs);
-  if (ierr != ERR_NOERR) {
+  if (ierr != MetOceanViewer::Error::NOERR) {
     this->errorString = tr("Error building the station list");
-    return ERR_BUILDSTATIONLIST;
+    return MetOceanViewer::Error::BUILDSTATIONLIST;
   }
   ierr = this->buildRevisedIMEDS(this->fileData, this->StationXLocs,
                                  this->StationYLocs, this->fileDataUnique);
   if (ierr != 0) {
     this->errorString = tr("Error building the unique dataset");
-    return ERR_BUILDREVISEDIMEDS;
+    return MetOceanViewer::Error::BUILDREVISEDIMEDS;
   }
 
   //...Check that the page is finished loading
@@ -614,7 +617,7 @@ int MovUserTimeseries::processData() {
   }
   this->map->page()->runJavaScript("AddToMap()");
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovUserTimeseries::plotData() {
@@ -622,7 +625,7 @@ int MovUserTimeseries::plotData() {
   //...Get the current marker selections, multiple if user ctrl+click selects
   this->getAsyncMultipleMarkersFromMap();
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 //-------------------------------------------//
@@ -657,7 +660,7 @@ int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data,
       }
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 //-------------------------------------------//
 
@@ -687,7 +690,7 @@ int MovUserTimeseries::getUniqueStationList(QVector<MovImeds *> Data,
       }
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 //-------------------------------------------//
 
@@ -752,15 +755,17 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds *> &Data,
         DataOut[i]->station[j]->data.resize(1);
         DataOut[i]->station[j]->date.resize(1);
         DataOut[i]->station[j]->StationName = "NONAME";
-        DataOut[i]->station[j]->data[0] = MOV_NULL_TS;
-        DataOut[i]->station[j]->date[0] =
-            QDateTime(QDate(MOV_NULL_YEAR, MOV_NULL_MONTH, MOV_NULL_DAY),
-                      QTime(MOV_NULL_HOUR, MOV_NULL_MINUTE, MOV_NULL_SECOND));
+        DataOut[i]->station[j]->data[0] = MetOceanViewer::NULL_TS;
+        DataOut[i]->station[j]->date[0] = QDateTime(
+            QDate(MetOceanViewer::NULL_YEAR, MetOceanViewer::NULL_MONTH,
+                  MetOceanViewer::NULL_DAY),
+            QTime(MetOceanViewer::NULL_HOUR, MetOceanViewer::NULL_MINUTE,
+                  MetOceanViewer::NULL_SECOND));
         DataOut[i]->station[j]->isNull = true;
       }
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovUserTimeseries::projectStations(QVector<int> epsg,
@@ -777,11 +782,11 @@ int MovUserTimeseries::projectStations(QVector<int> epsg,
         y = projectedStations[i]->station[j]->latitude;
         ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
         if (ierr != 0)
-          return ERR_PROJECTSTATIONS;
+          return MetOceanViewer::Error::PROJECTSTATIONS;
         projectedStations[i]->station[j]->longitude = x2;
         projectedStations[i]->station[j]->latitude = y2;
       }
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }

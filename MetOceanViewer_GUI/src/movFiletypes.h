@@ -2,12 +2,7 @@
 #define MOV_FILETYPES_H
 
 #include <QObject>
-
-#define FILETYPE_NETCDF_ADCIRC -99990
-#define FILETYPE_NETCDF_DFLOW -99991
-#define FILETYPE_ASCII_ADCIRC -99992
-#define FILETYPE_ASCII_IMEDS -99993
-#define FILETYPE_ERROR -88888
+#include "metoceanviewer.h"
 
 class movFiletypes : public QObject {
   Q_OBJECT

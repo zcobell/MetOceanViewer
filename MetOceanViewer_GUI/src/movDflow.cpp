@@ -1,6 +1,6 @@
 #include "movDflow.h"
+#include "metoceanviewer.h"
 #include "movErrors.h"
-#include "movFlags.h"
 #include "movImeds.h"
 #include "netcdf"
 #include <QtMath>
@@ -59,14 +59,14 @@ int MovDflow::_get2DVelocityMagnitude(int layer,
   QVector<QVector<double>> x_data, y_data;
 
   ierr = this->_getVar(QStringLiteral("x_velocity"), layer, x_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOXVELOCITY);
     return this->error->errorCode();
   }
 
   ierr = this->_getVar(QStringLiteral("y_velocity"), layer, y_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOYVELOCITY);
     return this->error->errorCode();
   }
 
@@ -74,13 +74,14 @@ int MovDflow::_get2DVelocityMagnitude(int layer,
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++) {
-      if (x_data[i][j] == MOV_NULL_TS || y_data[i][j] == MOV_NULL_TS)
-        data[i][j] = MOV_NULL_TS;
+      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
+          y_data[i][j] == MetOceanViewer::NULL_TS)
+        data[i][j] = MetOceanViewer::NULL_TS;
       else
         data[i][j] = qSqrt(qPow(x_data[i][j], 2.0) + qPow(y_data[i][j], 2.0));
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_get2DVelocityDirection(int layer,
@@ -89,14 +90,14 @@ int MovDflow::_get2DVelocityDirection(int layer,
   QVector<QVector<double>> x_data, y_data;
 
   ierr = this->_getVar(QStringLiteral("x_velocity"), layer, x_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOXVELOCITY);
     return this->error->errorCode();
   }
 
   ierr = this->_getVar(QStringLiteral("y_velocity"), layer, y_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOYVELOCITY);
     return this->error->errorCode();
   }
 
@@ -104,12 +105,13 @@ int MovDflow::_get2DVelocityDirection(int layer,
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++)
-      if (x_data[i][j] == MOV_NULL_TS || y_data[i][j] == MOV_NULL_TS)
-        data[i][j] = MOV_NULL_TS;
+      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
+          y_data[i][j] == MetOceanViewer::NULL_TS)
+        data[i][j] = MetOceanViewer::NULL_TS;
       else
         data[i][j] = qAtan2(y_data[i][j], x_data[i][j]) * 180.0 / M_PI;
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_get3DVeloctiyMagnitude(int layer,
@@ -118,20 +120,20 @@ int MovDflow::_get3DVeloctiyMagnitude(int layer,
   QVector<QVector<double>> x_data, y_data, z_data;
 
   ierr = this->_getVar(QStringLiteral("x_velocity"), layer, x_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOXVELOCITY);
     return this->error->errorCode();
   }
 
   ierr = this->_getVar(QStringLiteral("y_velocity"), layer, y_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOYVELOCITY);
     return this->error->errorCode();
   }
 
   ierr = this->_getVar(QStringLiteral("z_velocity"), layer, z_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOZVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOZVELOCITY);
     return this->error->errorCode();
   }
 
@@ -139,15 +141,16 @@ int MovDflow::_get3DVeloctiyMagnitude(int layer,
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++) {
-      if (x_data[i][j] == MOV_NULL_TS || y_data[i][j] == MOV_NULL_TS ||
-          z_data[i][j] == MOV_NULL_TS)
-        data[i][j] = MOV_NULL_TS;
+      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
+          y_data[i][j] == MetOceanViewer::NULL_TS ||
+          z_data[i][j] == MetOceanViewer::NULL_TS)
+        data[i][j] = MetOceanViewer::NULL_TS;
       else
         data[i][j] = qSqrt(qPow(x_data[i][j], 2.0) + qPow(y_data[i][j], 2.0) +
                            qPow(z_data[i][j], 2.0));
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_getWindVelocityMagnitude(QVector<QVector<double>> &data) {
@@ -155,26 +158,27 @@ int MovDflow::_getWindVelocityMagnitude(QVector<QVector<double>> &data) {
   QVector<QVector<double>> x_data, y_data;
 
   ierr = this->_getVar(QStringLiteral("windx"), 0, x_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOXVELOCITY);
     return this->error->errorCode();
   }
   ierr = this->_getVar(QStringLiteral("windy"), 0, y_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOYVELOCITY);
     return this->error->errorCode();
   }
   data.resize(this->_nStations);
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++) {
-      if (x_data[i][j] == MOV_NULL_TS || y_data[i][j] == MOV_NULL_TS)
-        data[i][j] = MOV_NULL_TS;
+      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
+          y_data[i][j] == MetOceanViewer::NULL_TS)
+        data[i][j] = MetOceanViewer::NULL_TS;
       else
         data[i][j] = qSqrt(qPow(x_data[i][j], 2.0) + qPow(y_data[i][j], 2.0));
     }
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_getWindDirection(QVector<QVector<double>> &data) {
@@ -182,25 +186,26 @@ int MovDflow::_getWindDirection(QVector<QVector<double>> &data) {
   QVector<QVector<double>> x_data, y_data;
 
   ierr = this->_getVar(QStringLiteral("windx"), 0, x_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOXVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOXVELOCITY);
     return this->error->errorCode();
   }
   ierr = this->_getVar(QStringLiteral("windy"), 0, y_data);
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_NOYVELOCITY);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_NOYVELOCITY);
     return this->error->errorCode();
   }
   data.resize(this->_nStations);
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++)
-      if (x_data[i][j] == MOV_NULL_TS || y_data[i][j] == MOV_NULL_TS)
-        data[i][j] = MOV_NULL_TS;
+      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
+          y_data[i][j] == MetOceanViewer::NULL_TS)
+        data[i][j] = MetOceanViewer::NULL_TS;
       else
         data[i][j] = qAtan2(y_data[i][j], x_data[i][j]) * 180.0 / M_PI;
   }
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds) {
@@ -228,7 +233,7 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds) {
   else
     ierr = this->_getVar(variable, layer, data);
 
-  if (ierr != ERR_NOERR) {
+  if (ierr != MetOceanViewer::Error::NOERR) {
     this->error->setErrorCode(ierr);
     return this->error->errorCode();
   }
@@ -255,25 +260,25 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds) {
   }
   imeds->success = true;
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_init() {
   int ierr;
 
   ierr = this->_getPlottingVariables();
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_GETPLOTVARS);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_GETPLOTVARS);
     return this->error->errorCode();
   }
 
   ierr = this->_getStations();
-  if (ierr != ERR_NOERR) {
-    this->error->setErrorCode(ERR_DFLOW_GETSTATIONS);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->error->setErrorCode(MetOceanViewer::Error::DFLOW_GETSTATIONS);
     return this->error->errorCode();
   }
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_get3d() {
@@ -285,33 +290,33 @@ int MovDflow::_get3d() {
     this->_is3d = true;
   else {
     this->_is3d = false;
-    return ERR_NOERR;
+    return MetOceanViewer::Error::NOERR;
   }
 
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   ierr = nc_inq_dimlen(ncid, this->_dimnames["laydim"], &nLayers);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   this->_nLayers = (int)nLayers;
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_getPlottingVariables() {
@@ -323,14 +328,14 @@ int MovDflow::_getPlottingVariables() {
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   this->error->setNcErrorCode(ierr);
   if (this->error->isNcError()) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     return this->error->errorCode();
   }
 
   ierr = nc_inq_nvars(ncid, &nvar);
   this->error->setNcErrorCode(ierr);
   if (this->error->isNcError()) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     ierr = nc_close(ncid);
     return this->error->errorCode();
   }
@@ -338,7 +343,7 @@ int MovDflow::_getPlottingVariables() {
   ierr = nc_inq_ndims(ncid, &ndim);
   this->error->setNcErrorCode(ierr);
   if (this->error->isNcError()) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     ierr = nc_close(ncid);
     return this->error->errorCode();
   }
@@ -351,10 +356,10 @@ int MovDflow::_getPlottingVariables() {
     if (ierr != NC_NOERR) {
       free(varname);
       free(dims);
-      this->error->setErrorCode(ERR_NETCDF);
+      this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
-      return ERR_NETCDF;
+      return MetOceanViewer::Error::NETCDF;
     }
     sname = QString(varname);
     this->_dimnames[sname] = i;
@@ -365,10 +370,10 @@ int MovDflow::_getPlottingVariables() {
     if (ierr != NC_NOERR) {
       free(varname);
       free(dims);
-      this->error->setErrorCode(ERR_NETCDF);
+      this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
-      return ERR_NETCDF;
+      return MetOceanViewer::Error::NETCDF;
     }
     sname = QString(varname);
 
@@ -376,10 +381,10 @@ int MovDflow::_getPlottingVariables() {
     if (ierr != NC_NOERR) {
       free(varname);
       free(dims);
-      this->error->setErrorCode(ERR_NETCDF);
+      this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
-      return ERR_NETCDF;
+      return MetOceanViewer::Error::NETCDF;
     }
 
     this->_nDims[sname] = (int)nd;
@@ -388,10 +393,10 @@ int MovDflow::_getPlottingVariables() {
     if (ierr != NC_NOERR) {
       free(varname);
       free(dims);
-      this->error->setErrorCode(ERR_NETCDF);
+      this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
-      return ERR_NETCDF;
+      return MetOceanViewer::Error::NETCDF;
     }
 
     if (nd == 2) {
@@ -416,14 +421,14 @@ int MovDflow::_getPlottingVariables() {
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   ierr = this->_get3d();
-  if (ierr != ERR_NOERR)
-    return ERR_DFLOW_3DVARS;
+  if (ierr != MetOceanViewer::Error::NOERR)
+    return MetOceanViewer::Error::DFLOW_3DVARS;
 
   if (this->is3d()) {
     if (this->_plotvarnames.contains("x_velocity") &&
@@ -444,7 +449,7 @@ int MovDflow::_getPlottingVariables() {
     this->_plotvarnames.append("wind_direction");
   }
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_getStations() {
@@ -517,25 +522,25 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList) {
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
     free(units);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   ierr = nc_inq_dimlen(ncid, dimid_time, &nsteps);
   if (ierr != NC_NOERR) {
     free(units);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   ierr = nc_inq_attlen(ncid, varid_time, units, &unitsLen);
   if (ierr != NC_NOERR) {
     free(units);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   refstring = (char *)malloc(sizeof(char) * unitsLen);
@@ -544,9 +549,9 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList) {
   if (ierr != NC_NOERR) {
     free(units);
     free(refstring);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   refString = QString(refstring);
@@ -565,9 +570,9 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList) {
   ierr = nc_get_var_double(ncid, varid_time, time);
   if (ierr != NC_NOERR) {
     free(time);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   for (i = 0; i < this->_nSteps; i++)
@@ -575,7 +580,7 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList) {
 
   free(time);
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_getVar(QString variable, int layer,
@@ -585,7 +590,7 @@ int MovDflow::_getVar(QString variable, int layer,
   else if (this->_nDims[variable] == 3)
     return this->_getVar3D(variable, layer, data);
   else
-    return ERR_DFLOW_ILLEGALDIMENSION;
+    return MetOceanViewer::Error::DFLOW_ILLEGALDIMENSION;
 }
 
 int MovDflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
@@ -605,9 +610,9 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
     free(start);
     free(count);
     free(d);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   start[0] = 0;
@@ -619,15 +624,15 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
     free(d);
     free(start);
     free(count);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   for (i = 0; i < this->_nSteps; i++)
     for (j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
-        data[j][i] = MOV_NULL_TS;
+        data[j][i] = MetOceanViewer::NULL_TS;
       else
         data[j][i] = d[i * this->_nStations + j];
     }
@@ -638,12 +643,12 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
 
 int MovDflow::_getVar3D(QString variable, int layer,
@@ -664,9 +669,9 @@ int MovDflow::_getVar3D(QString variable, int layer,
     free(d);
     free(start);
     free(count);
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   start[0] = 0;
@@ -677,15 +682,15 @@ int MovDflow::_getVar3D(QString variable, int layer,
   count[2] = 1;
   ierr = nc_get_vara_double(ncid, varid, start, count, d);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
   for (i = 0; i < this->_nSteps; i++)
     for (j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
-        data[j][i] = MOV_NULL_TS;
+        data[j][i] = MetOceanViewer::NULL_TS;
       else
         data[j][i] = d[i * this->_nStations + j];
     }
@@ -696,10 +701,10 @@ int MovDflow::_getVar3D(QString variable, int layer,
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
-    this->error->setErrorCode(ERR_NETCDF);
+    this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
-    return ERR_NETCDF;
+    return MetOceanViewer::Error::NETCDF;
   }
 
-  return ERR_NOERR;
+  return MetOceanViewer::Error::NOERR;
 }
