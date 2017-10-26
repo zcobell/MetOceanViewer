@@ -1,10 +1,19 @@
 #!/bin/bash
-
-
-winDeployQtBinary=/cygdrive/c/Qt/Qt5.9.1/5.9.1/msvc2015_64/bin/windeployqt.exe
-binaryCreator=/cygdrive/c/Qt/QtIFW2.0.3/bin/binarycreator.exe
+redist=1
+autoredist=0
+redistexe=$(cygpath "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\vcredist.x64.exe")
+msvcVersion=2017
+QtVersion=5_9_2
+compileDirectory="../../build-MetOceanViewer-Desktop_Qt_"$QtVersion"_MSVC"$msvcVersion"_64bit-Release"
+winDeployQtBinary=/cygdrive/c/Qt/5.9.2/msvc2017_64/bin/windeployqt.exe
+binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator.exe
 version=$(git describe --always --tags)
 
+if [ $redist == 1 ] ; then
+    winPackDir=packages_windows_redist
+else
+    winPackDir=packages_windows
+fi
 
 #...Check for WindDeployQt
 if [ ! -s $windDeployQtBinary ] ; then
@@ -19,36 +28,48 @@ if [ ! -s $binaryCreator ] ; then
 fi
 
 #...Make the data directory
-mkdir -p packages_windows/com.zachcobell.metoceanviewer/data 
+mkdir -p $winPackDir/com.zachcobell.metoceanviewer/data 
 
 #...Grab the MetOceanViewer executable
-cp ../../build-MetOceanViewer-Desktop_Qt_5_9_1_MSVC2015_64bit-Release/MetOceanViewer_GUI/release/MetOceanViewer.exe packages_windows/com.zachcobell.metoceanviewer/data/.
+cp $compileDirectory/MetOceanViewer_GUI/release/MetOceanViewer.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the proj4 library
-cp ../../build-MetOceanViewer-Desktop_Qt_5_9_1_MSVC2015_64bit-Release/libraries/libproj4/release/movProj4.dll packages_windows/com.zachcobell.metoceanviewer/data/.
+cp $compileDirectory/libraries/libproj4/release/movProj4.dll $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the Windows XTide executable
-cp ../thirdparty/xtide-2.15.1/tide.exe packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/xtide-2.15.1/tide.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the database
-cp ../thirdparty/xtide-2.15.1/harmonics.tcd packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/xtide-2.15.1/harmonics.tcd $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the icon
-cp ../MetOceanViewer_GUI/img/mov.ico packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../MetOceanViewer_GUI/img/mov.ico $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab some of the third party libraries
-cp ../thirdparty/netcdf/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
-cp ../thirdparty/openssl/bin_64/*.dll packages_windows/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/netcdf/bin_64/*.dll $winPackDir/com.zachcobell.metoceanviewer/data/.
+cp ../thirdparty/openssl/bin_64/*.dll $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Run the deployment script
-cd packages_windows/com.zachcobell.metoceanviewer/data
-$winDeployQtBinary --compiler-runtime -release MetOceanViewer.exe
-$winDeployQtBinary --compiler-runtime -release movProj4.dll
+cd $winPackDir/com.zachcobell.metoceanviewer/data
+if [ $autoredist == 1 ] ; then
+    $winDeployQtBinary --compiler-runtime -release MetOceanViewer.exe
+    $winDeployQtBinary --compiler-runtime -release movProj4.dll
+else
+    $winDeployQtBinary -release MetOceanViewer.exe
+    $winDeployQtBinary -release movProj4.dll
+fi
 cd ../../..
 
 #...Move the Visual C++ installer to its own directory
-mkdir -p packages_windows/com.microsoft.vcredist/data
-mv packages_windows/com.zachcobell.metoceanviewer/data/vcredist_x64.exe packages_windows/com.microsoft.vcredist/data/vcredist_x64.exe
+if [ $redist == 1 ] ; then
+    mkdir -p $winPackDir/com.microsoft.vcredist/data
+    if [ $autoredist == 1 ] ; then
+        mv $winPackDir/com.zachcobell.metoceanviewer/data/vcredist_x64.exe $winPackDir/com.microsoft.vcredist/data/vcredist_x64.exe
+    else
+        cp "$redistexe" $winPackDir/com.microsoft.vcredist/data/.
+        mv $winPackDir/com.microsoft.vcredist/data/$(basename "$redistexe") $winPackDir/com.microsoft.vcredist/data/vcredist_x64.exe 
+    fi
+fi
 
 #...Run the installer generator
-$binaryCreator -c config/config.xml -p packages_windows MetOceanViewer_Windows64bit_Installer_$version.exe
+$binaryCreator -c config/config.xml -p $winPackDir MetOceanViewer_Windows64bit_Installer_$version.exe

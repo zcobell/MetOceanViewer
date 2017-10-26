@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package>
-    <DisplayName>Microsoft Visual C++ 2015 Redistributable (x64)</DisplayName>
+    <DisplayName>Microsoft Visual C++ 2017 Redistributable (x64)</DisplayName>
     <Description>Microsoft Visual C++ Runtime installer</Description>
     <Version>14.0.24212</Version>
     <ReleaseDate>2017-02-08</ReleaseDate>
