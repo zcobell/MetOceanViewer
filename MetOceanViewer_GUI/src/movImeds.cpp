@@ -87,15 +87,15 @@ int MovImeds::read(QString filename) {
     this->station[i]->NumSnaps = 0;
 
   // Organize the data into the variable
-  j = -1;
+  j = 0;
   for (i = 0; i < nLine; i++) {
     TempList = FileData[i].split(" ");
     if (TempList.length() == 3) {
-      j = j + 1;
       this->station[j]->longitude = TempList[2].toDouble();
       this->station[j]->latitude = TempList[1].toDouble();
       this->station[j]->StationName = TempList[0];
       this->station[j]->StationIndex = j;
+      j = j + 1;
     } else {
       this->station[j]->NumSnaps = this->station[j]->NumSnaps + 1;
     }
