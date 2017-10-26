@@ -95,7 +95,7 @@ void MovUsgs::javascriptDataReturned(QString data) {
 
   //...Construct the correct request URL
   if (this->USGSdataMethod == 0)
-    RequestURL = "https://nwis.waterdata.usgs.gov/nwis/uv?format=rdb&site_no=" +
+    RequestURL = "https://waterdata.usgs.gov/nwis/uv?format=rdb&site_no=" +
                  this->USGSMarkerID + startDateString2 + endDateString2;
   else if (this->USGSdataMethod == 1)
     RequestURL =
