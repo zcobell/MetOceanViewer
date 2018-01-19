@@ -97,7 +97,7 @@ int MovImeds::read(QString filename) {
       this->station[j]->StationIndex = j;
       j = j + 1;
     } else {
-      this->station[j]->NumSnaps = this->station[j]->NumSnaps + 1;
+      this->station[j-1]->NumSnaps = this->station[j-1]->NumSnaps + 1;
     }
   }
   // Preallocate arrays for data and dates
