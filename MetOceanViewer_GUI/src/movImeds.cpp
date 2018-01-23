@@ -61,8 +61,7 @@ int MovImeds::read(QString filename) {
   nLine = 0;
   while (!MyFile.atEnd()) {
     nLine = nLine + 1;
-    FileData.resize(nLine);
-    FileData[nLine - 1] = MyFile.readLine().simplified();
+    FileData.push_back(MyFile.readLine().simplified());
   }
   MyFile.close();
 

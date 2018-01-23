@@ -39,7 +39,7 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
   this->statusBar = inStatusBar;
   this->NOAAMarkerID = 0;
   this->ProductIndex = 0;
-  this->thisChart = NULL;
+  this->thisChart = nullptr;
 
   //...Initialize the IMEDS object
   this->CurrentNOAAStation.resize(2);

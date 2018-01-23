@@ -35,10 +35,10 @@ MovQChartView::MovQChartView(QWidget *parent) : QChartView(parent) {
   this->setMouseTracking(true);
   this->setDisplayValues(false);
 
-  this->m_chart = NULL;
-  this->m_coord = NULL;
-  this->m_info = NULL;
-  this->m_statusBar = NULL;
+  this->m_chart = nullptr;
+  this->m_coord = nullptr;
+  this->m_info = nullptr;
+  this->m_statusBar = nullptr;
   this->m_style = 0;
   this->x_axis_max = 0.0;
   this->x_axis_min = 0.0;
@@ -49,6 +49,11 @@ MovQChartView::MovQChartView(QWidget *parent) : QChartView(parent) {
   this->current_y_axis_max = 0.0;
   this->current_y_axis_min = 0.0;
   this->setRubberBand(QChartView::RectangleRubberBand);
+}
+
+MovQChartView::~MovQChartView() {
+  if (this->m_chart != nullptr)
+    delete this->m_chart;
 }
 
 void MovQChartView::clear() {
@@ -71,7 +76,7 @@ void MovQChartView::addSeries(QLineSeries *series, QString name) {
   this->m_series[this->m_series.length() - 1] = series;
   this->m_legendNames[this->m_legendNames.length() - 1] = name;
 
-  this->m_kdtree[this->m_kdtree.length() - 1] = new qKdtree2(this);
+  this->m_kdtree[this->m_kdtree.length() - 1] = new qKdtree2(this->m_chart);
   QList<QPointF> points = this->m_series[this->m_series.length() - 1]->points();
   this->m_kdtree[this->m_kdtree.length() - 1]->build(points);
   return;
@@ -81,13 +86,13 @@ void MovQChartView::resizeEvent(QResizeEvent *event) {
   if (scene()) {
 
     scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
-    if (m_chart) {
+    if (this->m_chart != nullptr) {
       m_chart->resize(event->size());
       m_coord->setPos(m_chart->size().width() / 2 - 100,
                       m_chart->size().height() - 20);
     }
-    if (m_info) {
-      m_info->setPos(10, m_chart->size().height() - 50);
+    if (this->m_info != nullptr) {
+      this->m_info->setPos(10, this->m_chart->size().height() - 50);
     }
   }
   QChartView::resizeEvent(event);
@@ -165,7 +170,7 @@ void MovQChartView::mouseDoubleClickEvent(QMouseEvent *event) {
 }
 
 void MovQChartView::wheelEvent(QWheelEvent *event) {
-  if (this->m_chart == NULL)
+  if (this->m_chart == nullptr)
     return;
 
   if (event->delta() > 0)
@@ -207,22 +212,22 @@ void MovQChartView::resetAxisLimits() {
 void MovQChartView::initializeAxisLimits() {
   qreal x1, x2, y1, y2;
   QRectF box = this->m_chart->plotArea();
-  x1 = m_chart->mapToValue(box.bottomLeft()).x();
-  x2 = m_chart->mapToValue(box.topRight()).x();
-  y1 = m_chart->mapToValue(box.bottomLeft()).y();
-  y2 = m_chart->mapToValue(box.topRight()).y();
-  x_axis_min = x1;
-  y_axis_min = y1;
-  x_axis_max = x2;
-  y_axis_max = y2;
-  current_x_axis_min = x_axis_min;
-  current_x_axis_max = x_axis_max;
-  current_y_axis_min = y_axis_min;
-  current_y_axis_max = y_axis_max;
-  current_x_axis_max = x_axis_max;
-  current_y_axis_max = y_axis_max;
-  current_x_axis_min = x_axis_min;
-  current_y_axis_min = y_axis_min;
+  x1 = this->m_chart->mapToValue(box.bottomLeft()).x();
+  x2 = this->m_chart->mapToValue(box.topRight()).x();
+  y1 = this->m_chart->mapToValue(box.bottomLeft()).y();
+  y2 = this->m_chart->mapToValue(box.topRight()).y();
+  this->x_axis_min = x1;
+  this->y_axis_min = y1;
+  this->x_axis_max = x2;
+  this->y_axis_max = y2;
+  this->current_x_axis_min = this->x_axis_min;
+  this->current_x_axis_max = this->x_axis_max;
+  this->current_y_axis_min = this->y_axis_min;
+  this->current_y_axis_max = this->y_axis_max;
+  this->current_x_axis_max = this->x_axis_max;
+  this->current_y_axis_max = this->y_axis_max;
+  this->current_x_axis_min = this->x_axis_min;
+  this->current_y_axis_min = this->y_axis_min;
   return;
 }
 

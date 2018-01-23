@@ -52,7 +52,7 @@ MovUserTimeseries::MovUserTimeseries(
   this->statusBar = inStatusBar;
   this->randomColorList = inRandomColorList;
   this->markerID = 0;
-  this->thisChart = NULL;
+  this->chart->m_chart = nullptr;
 }
 
 MovUserTimeseries::~MovUserTimeseries() {}
@@ -292,12 +292,15 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
   this->markerID = this->selectedStations[0];
   ierr = this->getDataBounds(ymin, ymax, minDate, maxDate, addXList);
 
-  this->thisChart = new QChart();
-  this->chart->m_chart = this->thisChart;
-  this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
-  this->thisChart->legend()->setAlignment(Qt::AlignBottom);
+  if(this->chart->m_chart!=nullptr)
+    delete this->chart->m_chart;
 
-  QDateTimeAxis *axisX = new QDateTimeAxis(this);
+  this->chart->m_chart = new QChart();
+
+  this->chart->m_chart->setAnimationOptions(QChart::SeriesAnimations);
+  this->chart->m_chart->legend()->setAlignment(Qt::AlignBottom);
+
+  QDateTimeAxis *axisX = new QDateTimeAxis(this->chart);
   axisX->setTickCount(5);
   axisX->setTitleText("Date");
   if (!this->xAxisCheck->isChecked()) {
@@ -311,9 +314,9 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
   }
 
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->thisChart->addAxis(axisX, Qt::AlignBottom);
+  this->chart->m_chart->addAxis(axisX, Qt::AlignBottom);
 
-  QValueAxis *axisY = new QValueAxis(this);
+  QValueAxis *axisY = new QValueAxis(this->chart);
   axisY->setTickCount(5);
   axisY->setTitleText(this->yLabelEdit->text());
   if (!this->yAxisCheck->isChecked()) {
@@ -324,7 +327,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
     axisY->setMax(ymax);
   }
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->thisChart->addAxis(axisY, Qt::AlignLeft);
+  this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
 
   if (axisX->min().daysTo(axisX->max()) > 90)
     axisX->setFormat("MM/yyyy");
@@ -342,7 +345,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
     if (this->selectedStations.length() == 1) {
       seriesCounter = seriesCounter + 1;
       series.resize(seriesCounter);
-      series[seriesCounter - 1] = new QLineSeries(this);
+      series[seriesCounter - 1] = new QLineSeries(this->chart->m_chart);
       series[seriesCounter - 1]->setName(
           this->table->item(seriesCounter - 1, 1)->text());
       seriesColor.setNamedColor(
@@ -373,8 +376,8 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
           series[seriesCounter - 1]->append(TempDate, TempValue);
         }
       }
-      this->thisChart->addSeries(series[seriesCounter - 1]);
-      this->thisChart->legend()
+      this->chart->m_chart->addSeries(series[seriesCounter - 1]);
+      this->chart->m_chart->legend()
           ->markers()
           .at(seriesCounter - 1)
           ->setFont(QFont("Helvetica", 10, QFont::Bold));
@@ -397,7 +400,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
             colorCounter = 0;
 
           series.resize(seriesCounter);
-          series[seriesCounter - 1] = new QLineSeries(this);
+          series[seriesCounter - 1] = new QLineSeries(this->chart);
           series[seriesCounter - 1]->setName(
               this->fileDataUnique[i]
                   ->station[this->selectedStations[k]]
@@ -433,8 +436,8 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
               series[seriesCounter - 1]->append(TempDate, TempValue);
             }
           }
-          this->thisChart->addSeries(series[seriesCounter - 1]);
-          this->thisChart->legend()
+          this->chart->m_chart->addSeries(series[seriesCounter - 1]);
+          this->chart->m_chart->legend()
               ->markers()
               .at(seriesCounter - 1)
               ->setFont(QFont("Helvetica", 10, QFont::Bold));
@@ -457,17 +460,17 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
   axisY->applyNiceNumbers();
 
   if (this->selectedStations.length() == 1)
-    this->thisChart->setTitle(
+    this->chart->m_chart->setTitle(
         this->plotTitle->text() + ": " +
         this->fileDataUnique[0]->station[this->markerID]->StationName);
   else
-    this->thisChart->setTitle(this->plotTitle->text());
+    this->chart->m_chart->setTitle(this->plotTitle->text());
 
-  this->thisChart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+  this->chart->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->chart->setRenderHint(QPainter::Antialiasing);
-  this->chart->setChart(this->thisChart);
+  this->chart->setChart(this->chart->m_chart);
 
-  foreach (QLegendMarker *marker, this->thisChart->legend()->markers()) {
+  foreach (QLegendMarker *marker, this->chart->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
     disconnect(marker, SIGNAL(clicked()), this->chart,
                SLOT(handleLegendMarkerClicked()));
@@ -476,7 +479,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
   }
 
   this->chart->m_style = 1;
-  this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
+  this->chart->m_coord = new QGraphicsSimpleTextItem(this->chart->m_chart);
   this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
                                this->chart->size().height() - 20);
   this->chart->initializeAxisLimits();
@@ -586,6 +589,14 @@ int MovUserTimeseries::processData() {
     return MetOceanViewer::Error::BUILDREVISEDIMEDS;
   }
 
+  //...Delete the data we're done with
+  for (i = 0; i < this->fileData.size(); i++) {
+    for (j = 0; j < this->fileData[i]->nstations; j++) {
+      delete this->fileData[i]->station[j];
+    }
+    delete this->fileData[i];
+  }
+
   //...Check that the page is finished loading
   QEventLoop loop;
   connect(this->map->page(), SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
@@ -634,36 +645,6 @@ int MovUserTimeseries::plotData() {
 // and not show data where it doesn't exist for
 // certain files
 //-------------------------------------------//
-int MovUserTimeseries::GetUniqueStationList(QVector<MovImeds *> Data,
-                                            QVector<double> &X,
-                                            QVector<double> &Y) {
-  int i, j, k;
-  bool found;
-  double d;
-
-  for (i = 0; i < Data.length(); i++) {
-    for (j = 0; j < Data[i]->nstations; j++) {
-      found = false;
-      for (k = 0; k < X.length(); k++) {
-        d = qSqrt(qPow(Data[i]->station[j]->longitude - X[k], 2.0) +
-                  qPow(Data[i]->station[j]->latitude - Y[k], 2.0));
-        if (d < _DUPLICATE_STATION_TOL) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        X.resize(X.length() + 1);
-        Y.resize(Y.length() + 1);
-        X[X.length() - 1] = Data[i]->station[j]->longitude;
-        Y[Y.length() - 1] = Data[i]->station[j]->latitude;
-      }
-    }
-  }
-  return MetOceanViewer::Error::NOERR;
-}
-//-------------------------------------------//
-
 int MovUserTimeseries::getUniqueStationList(QVector<MovImeds *> Data,
                                             QVector<double> &X,
                                             QVector<double> &Y) {
@@ -718,7 +699,7 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds *> &Data,
     DataOut[i]->station.resize(X.length());
     for (j = 0; j < X.length(); j++) {
 
-      DataOut[i]->station[j] = new MovImedsStation(this);
+      DataOut[i]->station[j] = new MovImedsStation(DataOut[i]);
 
       DataOut[i]->station[j]->longitude = X[j];
       DataOut[i]->station[j]->latitude = Y[j];

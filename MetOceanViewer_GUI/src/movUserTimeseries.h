@@ -70,8 +70,6 @@ private:
   //...Private functions
   int getMarkerIDFromMap();
   int setMarkerID();
-  int GetUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X,
-                           QVector<double> &Y);
   int getUniqueStationList(QVector<MovImeds *> Data, QVector<double> &X,
                            QVector<double> &Y);
   int buildRevisedIMEDS(QVector<MovImeds *> &Data, QVector<double> X,
@@ -106,7 +104,6 @@ private:
   QLineEdit *yLabelEdit;
   QWebEngineView *map;
   MovQChartView *chart;
-  QChart *thisChart;
   QStatusBar *statusBar;
 };
 

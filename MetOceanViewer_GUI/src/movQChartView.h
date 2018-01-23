@@ -44,6 +44,8 @@ class MovQChartView : public QChartView {
 public:
   MovQChartView(QWidget *parent = 0);
 
+  ~MovQChartView();
+
   void initializeAxisLimits();
   void resetZoom();
   void setStatusBar(QStatusBar *inStatusBar);

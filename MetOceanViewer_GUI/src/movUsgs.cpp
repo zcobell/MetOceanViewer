@@ -34,7 +34,7 @@ MovUsgs::MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
   this->USGSMarkerID = "none";
   this->ProductIndex = 0;
   this->ProductName = "none";
-  this->thisChart = NULL;
+  this->thisChart = nullptr;
   this->USGSdataMethod = 0;
   this->CurrentUSGSLat = 0.0;
   this->CurrentUSGSLon = 0.0;

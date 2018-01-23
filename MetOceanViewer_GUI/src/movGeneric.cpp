@@ -19,6 +19,8 @@
 //-----------------------------------------------------------------------*/
 #include "movGeneric.h"
 #include <QDesktopServices>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QWebEnginePage>
 #include <netcdf.h>
 
@@ -68,7 +70,7 @@ void MovGeneric::splitPath(QString input, QString &filename,
 //-------------------------------------------//
 int MovGeneric::NETCDF_ERR(int status) {
   if (status != NC_NOERR)
-    QMessageBox::critical(NULL, tr("Error Saving File"),
+    QMessageBox::critical(nullptr, tr("Error Saving File"),
                           tr(nc_strerror(status)));
 
   return status;
@@ -83,37 +85,16 @@ int MovGeneric::NETCDF_ERR(int status) {
 // a connection to the internet
 //-------------------------------------------//
 bool MovGeneric::isConnectedToNetwork() {
-
-  QList<QNetworkInterface> ifaces = QNetworkInterface::allInterfaces();
-  bool result = false;
-
-  for (int i = 0; i < ifaces.count(); i++) {
-
-    QNetworkInterface iface = ifaces.at(i);
-    if (iface.flags().testFlag(QNetworkInterface::IsUp) &&
-        !iface.flags().testFlag(QNetworkInterface::IsLoopBack)) {
-
-#ifdef DEBUG
-      // details of connection
-      qDebug() << "name:" << iface.name() << endl
-               << "ip addresses:" << endl
-               << "mac:" << iface.hardwareAddress() << endl;
-#endif
-
-      for (int j = 0; j < iface.addressEntries().count(); j++) {
-#ifdef DEBUG
-        qDebug() << iface.addressEntries().at(j).ip().toString() << " / "
-                 << iface.addressEntries().at(j).netmask().toString() << endl;
-#endif
-
-        // got an interface which is up, and has an ip address
-        if (result == false)
-          result = true;
-      }
-    }
-  }
-
-  return result;
+  QNetworkAccessManager nam;
+  QNetworkRequest req(QUrl("http://www.google.com"));
+  QNetworkReply *reply = nam.get(req);
+  QEventLoop loop;
+  connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+  loop.exec();
+  if (reply->bytesAvailable())
+    return true;
+  else
+    return false;
 }
 
 int MovGeneric::getLocalTimzoneOffset() {

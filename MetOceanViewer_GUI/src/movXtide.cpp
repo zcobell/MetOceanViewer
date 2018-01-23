@@ -35,7 +35,7 @@ movXtide::movXtide(QWebEngineView *inMap, MovQChartView *inChart,
   this->currentXTideLat = 0;
   this->currentXTideLon = 0;
   this->currentStationName = QString();
-  this->thisChart = NULL;
+  this->thisChart = nullptr;
 }
 
 //...Destructor

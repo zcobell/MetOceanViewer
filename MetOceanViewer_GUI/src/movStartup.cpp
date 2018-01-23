@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
                           QObject::tr("Internet Connection Not Detected"),
                           QObject::tr("No internet connection was detected.\n"
                                       "The program will now be terminated."));
-    return -1;
+    return 1;
   }
 
   // If the session file was dropped onto the executable,

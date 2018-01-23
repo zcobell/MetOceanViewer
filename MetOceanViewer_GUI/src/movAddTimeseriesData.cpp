@@ -50,7 +50,7 @@ mov_dialog_addtimeseries::mov_dialog_addtimeseries(QWidget *parent)
   this->InputFileType = 0;
   this->epsg = 4326;
   this->layer = 0;
-  this->dflow = NULL;
+  this->dflow = nullptr;
   this->proj = new proj4(this);
 }
 //-------------------------------------------//

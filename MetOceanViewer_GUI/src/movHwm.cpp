@@ -56,7 +56,7 @@ MovHwm::MovHwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
   this->regLineIntercept = 0.0;
   this->regLineSlope = 0.0;
   this->regStdDev = 0.0;
-  this->thisChart = NULL;
+  this->thisChart = nullptr;
 
   this->classes.resize(inClassValues.length());
   for (int i = 0; i < this->classes.length(); i++)
