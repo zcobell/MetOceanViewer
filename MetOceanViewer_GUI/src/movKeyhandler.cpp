@@ -20,6 +20,8 @@
 #include "movKeyhandler.h"
 #include <QKeyEvent>
 
+MovKeyhandler::MovKeyhandler(QObject *parent) : QObject(parent) {}
+
 bool MovKeyhandler::eventFilter(QObject *obj, QEvent *event) {
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent *key = static_cast<QKeyEvent *>(event);

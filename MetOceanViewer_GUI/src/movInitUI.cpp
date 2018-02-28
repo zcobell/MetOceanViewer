@@ -34,7 +34,7 @@ void MainWindow::setupMetOceanViewerUI() {
   // Setting up the NOAA tab for the user
 
   // Define which web page we will use from the resource included
-  this->noaa_page = new MovQWebEnginePage;
+  this->noaa_page = new MovQWebEnginePage(this);
   ui->noaa_map->setPage(this->noaa_page);
   ui->noaa_map->page()->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
 
@@ -61,7 +61,7 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
   ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
-  this->usgs_page = new MovQWebEnginePage;
+  this->usgs_page = new MovQWebEnginePage(this);
   ui->usgs_map->setPage(this->usgs_page);
   ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
   this->usgsDisplayValues = false;
@@ -70,7 +70,7 @@ void MainWindow::setupMetOceanViewerUI() {
   // Set up the XTide tab for the user
   ui->date_xtide_start->setDateTime(QDateTime::currentDateTime().addDays(-7));
   ui->date_xtide_end->setDateTime(QDateTime::currentDateTime());
-  this->xtide_page = new MovQWebEnginePage;
+  this->xtide_page = new MovQWebEnginePage(this);
   ui->xtide_map->setPage(this->xtide_page);
   ui->xtide_map->load(QUrl("qrc:/rsc/html/xtide_maps.html"));
   this->xtideDisplayValues = false;
@@ -160,7 +160,7 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
   ui->usgs_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
-  MovKeyhandler *key = new MovKeyhandler();
+  MovKeyhandler *key = new MovKeyhandler(this);
   this->centralWidget()->installEventFilter(key);
   connect(key, SIGNAL(enterKeyPressed()), this, SLOT(handleEnterKey()));
 

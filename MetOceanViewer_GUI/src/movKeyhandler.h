@@ -24,6 +24,10 @@
 
 class MovKeyhandler : public QObject {
   Q_OBJECT
+
+public:
+  MovKeyhandler(QObject *parent = nullptr);
+
 protected:
   bool eventFilter(QObject *obj, QEvent *event);
 

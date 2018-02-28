@@ -8,7 +8,7 @@
 class MovQWebEngineView : public QWebEngineView {
   Q_OBJECT
 public:
-  MovQWebEngineView(QWidget *parent = 0) : QWebEngineView(parent) {}
+  MovQWebEngineView(QWidget *parent = nullptr) : QWebEngineView(parent) {}
 
 //...This accounts for a bug in Qt v5.9.1
 //   If the user cursor is not in the map, the

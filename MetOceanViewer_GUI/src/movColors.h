@@ -27,7 +27,7 @@
 class MovColors : public QObject {
   Q_OBJECT
 public:
-  explicit MovColors(QObject *parent = 0);
+  explicit MovColors(QObject *parent = nullptr);
 
   static QString MakeColorString(QColor InputColor);
 

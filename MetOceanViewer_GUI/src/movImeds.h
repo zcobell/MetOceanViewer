@@ -27,7 +27,7 @@
 class MovImeds : public QObject {
   Q_OBJECT
 public:
-  explicit MovImeds(QObject *parent = 0);
+  explicit MovImeds(QObject *parent = nullptr);
 
   //...Methods
   int read(QString filename);

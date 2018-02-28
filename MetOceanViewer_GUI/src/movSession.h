@@ -36,7 +36,7 @@ public:
                       QDoubleSpinBox *inYMinSpinBox,
                       QDoubleSpinBox *inYMaxSpinBox, QCheckBox *incheckAllData,
                       QCheckBox *inCheckYAuto, QString &inPreviousDirectory,
-                      QObject *parent = 0);
+                      QObject *parent = nullptr);
 
   int save();
   int open(QString openFilename);

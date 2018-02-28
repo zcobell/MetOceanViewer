@@ -35,7 +35,7 @@ class mov_dialog_addtimeseries : public QDialog {
   Q_OBJECT
 
 public:
-  explicit mov_dialog_addtimeseries(QWidget *parent = 0);
+  explicit mov_dialog_addtimeseries(QWidget *parent = nullptr);
 
   ~mov_dialog_addtimeseries();
 

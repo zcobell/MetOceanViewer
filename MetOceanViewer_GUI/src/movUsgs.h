@@ -42,7 +42,7 @@ public:
                    QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
                    QRadioButton *inInstantButton, QComboBox *inProductBox,
                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                   QStatusBar *instatusBar, QObject *parent = 0);
+                   QStatusBar *instatusBar, QObject *parent = nullptr);
 
   ~MovUsgs();
 

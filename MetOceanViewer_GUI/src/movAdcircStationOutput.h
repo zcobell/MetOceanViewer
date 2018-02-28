@@ -29,7 +29,7 @@ class MovImeds;
 class MovAdcircStationOutput : public QObject {
   Q_OBJECT
 public:
-  explicit MovAdcircStationOutput(QObject *parent = 0);
+  explicit MovAdcircStationOutput(QObject *parent = nullptr);
 
   int read(QString AdcircFile, QDateTime coldStart);
   int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);

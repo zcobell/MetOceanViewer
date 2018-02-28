@@ -31,7 +31,7 @@ class mov_dialog_about : public QDialog {
   Q_OBJECT
 
 public:
-  explicit mov_dialog_about(QWidget *parent = 0);
+  explicit mov_dialog_about(QWidget *parent = nullptr);
   ~mov_dialog_about();
 
 private slots:

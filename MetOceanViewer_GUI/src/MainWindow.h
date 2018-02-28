@@ -53,7 +53,7 @@ class MainWindow : public QMainWindow {
 
 public:
   explicit MainWindow(bool processCommandLine, QString commandLineFile,
-                      QWidget *parent = 0);
+                      QWidget *parent = nullptr);
 
   ~MainWindow();
 

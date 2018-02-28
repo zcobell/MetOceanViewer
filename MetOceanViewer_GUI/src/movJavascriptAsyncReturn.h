@@ -26,7 +26,7 @@
 class MovJavascriptAsyncReturn : public QObject {
   Q_OBJECT
 public:
-  explicit MovJavascriptAsyncReturn(QObject *parent = 0);
+  explicit MovJavascriptAsyncReturn(QObject *parent = nullptr);
   void setValue(QVariant value);
   QString getValue();
 

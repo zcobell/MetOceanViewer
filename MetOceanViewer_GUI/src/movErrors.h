@@ -27,7 +27,7 @@
 class movErrors : public QObject {
   Q_OBJECT
 public:
-  explicit movErrors(QObject *parent = 0);
+  explicit movErrors(QObject *parent = nullptr);
 
   QString toString();
 

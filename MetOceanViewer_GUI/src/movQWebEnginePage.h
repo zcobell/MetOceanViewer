@@ -31,7 +31,7 @@ class MovQWebEnginePage : public QWebEnginePage {
   Q_OBJECT
 
 public:
-  MovQWebEnginePage(QObject *parent = 0) : QWebEnginePage(parent) {}
+  MovQWebEnginePage(QObject *parent = nullptr) : QWebEnginePage(parent) {}
 
   bool acceptNavigationRequest(const QUrl &url,
                                QWebEnginePage::NavigationType type,

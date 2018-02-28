@@ -47,7 +47,7 @@ public:
                              QWebEngineView *inMap, MovQChartView *inChart,
                              QStatusBar *inStatusBar,
                              QVector<QColor> inRandomColorList,
-                             QObject *parent = 0);
+                             QObject *parent = nullptr);
 
   ~MovUserTimeseries();
 

@@ -11,7 +11,7 @@ class movUserTimeseriesOptions : public QDialog {
   Q_OBJECT
 
 public:
-  explicit movUserTimeseriesOptions(QWidget *parent = 0);
+  explicit movUserTimeseriesOptions(QWidget *parent = nullptr);
   ~movUserTimeseriesOptions();
 
   bool hideInfoWindows();

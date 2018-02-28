@@ -42,7 +42,7 @@ class MovQChartView : public QChartView {
   Q_OBJECT
 
 public:
-  MovQChartView(QWidget *parent = 0);
+  MovQChartView(QWidget *parent = nullptr);
 
   ~MovQChartView();
 

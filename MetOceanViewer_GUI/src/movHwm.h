@@ -43,7 +43,7 @@ public:
                   QLineEdit *inPlotTitle, QSpinBox *inBoundingLinesValue,
                   QWebEngineView *inMap, MovQChartView *inChartView,
                   QStatusBar *inStatusBar, QVector<double> &inClassValues,
-                  QObject *parent = 0);
+                  QObject *parent = nullptr);
 
   //...Public Functions
   int processHWMData();

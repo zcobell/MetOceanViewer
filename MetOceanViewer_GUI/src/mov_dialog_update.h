@@ -31,7 +31,7 @@ class mov_dialog_update : public QDialog {
   Q_OBJECT
 
 public:
-  explicit mov_dialog_update(QWidget *parent = 0);
+  explicit mov_dialog_update(QWidget *parent = nullptr);
   ~mov_dialog_update();
 
   void runUpdater();

@@ -43,7 +43,7 @@ public:
   explicit movXtide(QWebEngineView *inMap, MovQChartView *inChart,
                     QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                     QComboBox *inUnits, QStatusBar *inStatusBar,
-                    QObject *parent = 0);
+                    QObject *parent = nullptr);
 
   //...Destructor
   ~movXtide();

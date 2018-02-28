@@ -51,7 +51,7 @@
 class PROJ4SHARED_EXPORT proj4 : public QObject {
   Q_OBJECT
 public:
-  explicit proj4(QObject *parent = 0);
+  explicit proj4(QObject *parent = nullptr);
 
   int transform(int inputEPSG, int outputEPSG, double x_in, double y_in,
                 double &x_out, double &y_out, bool &isLatLon);

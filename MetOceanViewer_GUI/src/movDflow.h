@@ -12,7 +12,7 @@
 class MovDflow : public QObject {
   Q_OBJECT
 public:
-  explicit MovDflow(QString filename, QObject *parent = 0);
+  explicit MovDflow(QString filename, QObject *parent = nullptr);
 
   QStringList getVaribleList();
 

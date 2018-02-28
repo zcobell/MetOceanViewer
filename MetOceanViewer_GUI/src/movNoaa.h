@@ -48,7 +48,7 @@ public:
                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                    QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                    QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
-                   QObject *parent = 0);
+                   QObject *parent = nullptr);
 
   //...Destructor
   ~MovNoaa();

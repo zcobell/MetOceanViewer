@@ -7,7 +7,7 @@
 class movFiletypes : public QObject {
   Q_OBJECT
 public:
-  explicit movFiletypes(QObject *parent = 0);
+  explicit movFiletypes(QObject *parent = nullptr);
 
   static int getIntegerFiletype(QString filename);
   static QString getStringFiletype(QString filename);

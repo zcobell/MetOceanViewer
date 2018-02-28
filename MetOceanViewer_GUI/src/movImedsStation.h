@@ -27,7 +27,7 @@
 class MovImedsStation : public QObject {
   Q_OBJECT
 public:
-  explicit MovImedsStation(QObject *parent = 0);
+  explicit MovImedsStation(QObject *parent = nullptr);
 
   double latitude;
   double longitude;
