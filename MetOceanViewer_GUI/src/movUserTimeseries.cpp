@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "movUserTimeseries.h"
+#include <QDebug>
 #include "metoceanviewer.h"
 #include "movAdcircStationOutput.h"
 #include "movDflow.h"
@@ -207,8 +208,7 @@ int MovUserTimeseries::getMarkerIDFromMap() {
   QVariant eval = QVariant();
   this->map->page()->runJavaScript("getMarker()",
                                    [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull())
-    MovGeneric::delayM(5);
+  while (eval.isNull()) MovGeneric::delayM(5);
   return eval.toInt();
 }
 
@@ -216,8 +216,7 @@ int MovUserTimeseries::getMultipleMarkersFromMap() {
   QVariant eval = QVariant();
   this->map->page()->runJavaScript("getMarkers()",
                                    [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull())
-    MovGeneric::delayM(5);
+  while (eval.isNull()) MovGeneric::delayM(5);
 
   int i;
   QString tempString;
@@ -249,7 +248,6 @@ int MovUserTimeseries::getAsyncMultipleMarkersFromMap() {
 }
 
 void MovUserTimeseries::javascriptDataReturned(QString data) {
-
   int i, j, k, ierr, seriesCounter, colorCounter;
   qint64 TempDate;
   qreal TempValue;
@@ -292,8 +290,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
   this->markerID = this->selectedStations[0];
   ierr = this->getDataBounds(ymin, ymax, minDate, maxDate, addXList);
 
-  if(this->chart->m_chart!=nullptr)
-    delete this->chart->m_chart;
+  if (this->chart->m_chart != nullptr) delete this->chart->m_chart;
 
   this->chart->m_chart = new QChart();
 
@@ -341,7 +338,6 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
   this->chart->clear();
 
   for (i = 0; i < this->fileDataUnique.length(); i++) {
-
     if (this->selectedStations.length() == 1) {
       seriesCounter = seriesCounter + 1;
       series.resize(seriesCounter);
@@ -396,8 +392,7 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
           colorCounter = colorCounter + 1;
 
           //...Loop the colors
-          if (colorCounter >= this->randomColorList.length())
-            colorCounter = 0;
+          if (colorCounter >= this->randomColorList.length()) colorCounter = 0;
 
           series.resize(seriesCounter);
           series[seriesCounter - 1] = new QLineSeries(this->chart);
@@ -517,6 +512,7 @@ int MovUserTimeseries::processData() {
         return MetOceanViewer::Error::IMEDS_FILEREADERROR;
       }
       this->fileData[j]->success = true;
+
     } else if (InputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
       ColdStart = QDateTime::fromString(this->table->item(i, 7)->text(),
                                         "yyyy-MM-dd hh:mm:ss");
@@ -532,6 +528,8 @@ int MovUserTimeseries::processData() {
         return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
       this->fileData[j]->success = true;
 
+      delete adcircData;
+
     } else if (InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
       ColdStart = QDateTime::fromString(this->table->item(i, 7)->text(),
                                         "yyyy-MM-dd hh:mm:ss");
@@ -543,6 +541,8 @@ int MovUserTimeseries::processData() {
         return MetOceanViewer::Error::ADCIRC_ASCIIREADERROR;
       }
       this->fileData[j] = adcircData->toIMEDS();
+      delete adcircData;
+
       if (!this->fileData[j]->success)
         return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
 
@@ -557,6 +557,22 @@ int MovUserTimeseries::processData() {
             tr("Error processing DFlow: ") + dflow->error->toString();
         return MetOceanViewer::Error::DFLOW_FILEREADERROR;
       }
+
+      delete dflow;
+
+    } else if (InputFileType == MetOceanViewer::FileType::NETCDF_GENERIC) {
+      this->fileData[j] = new MovImeds(this);
+      MovNetcdfTimeseries *genericNetcdf = new MovNetcdfTimeseries(this);
+      genericNetcdf->setFilename(TempFile);
+      ierr = genericNetcdf->read();
+      if (ierr != 0) {
+        this->errorString = "Error processing generic netcdf file.";
+        return MetOceanViewer::Error::GENERICNETCDFERROR;
+      }
+      ierr = genericNetcdf->toImeds(this->fileData[j]);
+
+      delete genericNetcdf;
+
     } else {
       this->errorString = tr("Invalid file format");
       return MetOceanViewer::Error::INVALIDFILEFORMAT;
@@ -632,7 +648,6 @@ int MovUserTimeseries::processData() {
 }
 
 int MovUserTimeseries::plotData() {
-
   //...Get the current marker selections, multiple if user ctrl+click selects
   this->getAsyncMultipleMarkersFromMap();
 
@@ -698,7 +713,6 @@ int MovUserTimeseries::buildRevisedIMEDS(QVector<MovImeds *> &Data,
     DataOut[i]->header3 = Data[i]->header3;
     DataOut[i]->station.resize(X.length());
     for (j = 0; j < X.length(); j++) {
-
       DataOut[i]->station[j] = new MovImedsStation(DataOut[i]);
 
       DataOut[i]->station[j]->longitude = X[j];
@@ -762,8 +776,7 @@ int MovUserTimeseries::projectStations(QVector<int> epsg,
         x = projectedStations[i]->station[j]->longitude;
         y = projectedStations[i]->station[j]->latitude;
         ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
-        if (ierr != 0)
-          return MetOceanViewer::Error::PROJECTSTATIONS;
+        if (ierr != 0) return MetOceanViewer::Error::PROJECTSTATIONS;
         projectedStations[i]->station[j]->longitude = x2;
         projectedStations[i]->station[j]->latitude = y2;
       }
