@@ -369,7 +369,11 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
                 ->station[this->markerID]
                 ->date[j]
                 .isValid()) {
-          series[seriesCounter - 1]->append(TempDate, TempValue);
+          if (this->fileDataUnique[i]->station[this->markerID]->date[j] >=
+                  this->startDate->dateTime() &&
+              this->fileDataUnique[i]->station[this->markerID]->date[j] <=
+                  this->endDate->dateTime())
+            series[seriesCounter - 1]->append(TempDate, TempValue);
         }
       }
       this->chart->m_chart->addSeries(series[seriesCounter - 1]);
@@ -428,7 +432,13 @@ void MovUserTimeseries::javascriptDataReturned(QString data) {
                     ->station[this->selectedStations[k]]
                     ->date[j]
                     .isValid()) {
-              series[seriesCounter - 1]->append(TempDate, TempValue);
+              if (this->fileDataUnique[i]
+                          ->station[this->selectedStations[k]]
+                          ->date[j] >= this->startDate->dateTime() &&
+                  this->fileDataUnique[i]
+                          ->station[this->selectedStations[k]]
+                          ->date[j] <= this->endDate->dateTime())
+                series[seriesCounter - 1]->append(TempDate, TempValue);
             }
           }
           this->chart->m_chart->addSeries(series[seriesCounter - 1]);
