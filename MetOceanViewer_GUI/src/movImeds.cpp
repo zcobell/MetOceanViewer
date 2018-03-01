@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "movImeds.h"
+#include <QDateTime>
 
 MovImeds::MovImeds(QObject *parent) : QObject(parent) {
   this->success = false;
@@ -25,7 +26,6 @@ MovImeds::MovImeds(QObject *parent) : QObject(parent) {
 }
 
 int MovImeds::read(QString filename) {
-
   // Variables
   QString year;
   QString month;
@@ -35,6 +35,7 @@ int MovImeds::read(QString filename) {
   QString second;
   QStringList TempList;
   QVector<QString> FileData;
+  QDateTime tempDate;
   int nLine;
   int nStation;
   int i;
@@ -44,12 +45,13 @@ int MovImeds::read(QString filename) {
   double value;
   QFile MyFile(filename);
 
+  tempDate.setTimeSpec(Qt::UTC);
+
   // Default to an unsuccessful read
   this->success = false;
 
   // Check if we can open the file
-  if (!MyFile.open(QIODevice::ReadOnly | QIODevice::Text))
-    return -1;
+  if (!MyFile.open(QIODevice::ReadOnly | QIODevice::Text)) return -1;
 
   // Read the header to output variable
 
@@ -79,31 +81,29 @@ int MovImeds::read(QString filename) {
   this->nstations = nStation;
 
   for (i = 0; i < this->nstations; i++)
-    this->station[i] = new MovImedsStation(this);
 
-  // Zero out the incremented variable
-  for (i = 0; i < nStation; i++)
-    this->station[i]->NumSnaps = 0;
+    // Zero out the incremented variable
+    for (i = 0; i < nStation; i++) this->station[i].NumSnaps = 0;
 
   // Organize the data into the variable
   j = 0;
   for (i = 0; i < nLine; i++) {
     TempList = FileData[i].split(" ");
     if (TempList.length() == 3) {
-      this->station[j]->longitude = TempList[2].toDouble();
-      this->station[j]->latitude = TempList[1].toDouble();
-      this->station[j]->StationName = TempList[0];
-      this->station[j]->StationIndex = j;
+      this->station[j].longitude = TempList[2].toDouble();
+      this->station[j].latitude = TempList[1].toDouble();
+      this->station[j].StationName = TempList[0];
+      this->station[j].StationIndex = j;
       j = j + 1;
     } else {
-      this->station[j-1]->NumSnaps = this->station[j-1]->NumSnaps + 1;
+      this->station[j - 1].NumSnaps = this->station[j - 1].NumSnaps + 1;
     }
   }
   // Preallocate arrays for data and dates
 
   for (i = 0; i < nStation; i++) {
-    this->station[i]->data.resize(this->station[i]->NumSnaps);
-    this->station[i]->date.resize(this->station[i]->NumSnaps);
+    this->station[i].data.resize(this->station[i].NumSnaps);
+    this->station[i].date.resize(this->station[i].NumSnaps);
   }
 
   // Now, loop over the data section and save to vectors
@@ -127,11 +127,14 @@ int MovImeds::read(QString filename) {
           minute = TempList.value(4);
           second = "0";
           value = TempList.value(5).toDouble();
-          this->station[j]->date[k] =
+
+          tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j]->date[k].setTimeSpec(Qt::UTC);
-          this->station[j]->data[k] = value;
+
+          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
+
+          this->station[j].data[k] = value;
           this->success = true;
         } else if (TempList.length() == 7) {
           expectedLength = 7;
@@ -143,11 +146,13 @@ int MovImeds::read(QString filename) {
           minute = TempList.value(4);
           second = TempList.value(5);
           value = TempList.value(6).toDouble();
-          this->station[j]->date[k] =
+
+          tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j]->date[k].setTimeSpec(Qt::UTC);
-          this->station[j]->data[k] = value;
+          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
+
+          this->station[j].data[k] = value;
           this->success = true;
         }
       } else {
@@ -165,11 +170,12 @@ int MovImeds::read(QString filename) {
           minute = TempList.value(4);
           second = "0";
           value = TempList.value(5).toDouble();
-          this->station[j]->date[k] =
+          tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j]->date[k].setTimeSpec(Qt::UTC);
-          this->station[j]->data[k] = value;
+          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
+
+          this->station[j].data[k] = value;
           this->success = true;
         } else if (expectedLength == 7) {
           expectedLength = 7;
@@ -181,11 +187,13 @@ int MovImeds::read(QString filename) {
           minute = TempList.value(4);
           second = TempList.value(5);
           value = TempList.value(6).toDouble();
-          this->station[j]->date[k] =
+
+          tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j]->date[k].setTimeSpec(Qt::UTC);
-          this->station[j]->data[k] = value;
+          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
+
+          this->station[j].data[k] = value;
           this->success = true;
         }
       }
@@ -198,8 +206,7 @@ int MovImeds::write(QString filename) {
   QString value;
   QFile outputFile(filename);
 
-  if (!outputFile.open(QIODevice::WriteOnly))
-    return -1;
+  if (!outputFile.open(QIODevice::WriteOnly)) return -1;
 
   outputFile.write(QString("% IMEDS generic format - Water Level\n").toUtf8());
   outputFile.write(
@@ -209,19 +216,20 @@ int MovImeds::write(QString filename) {
       QString("MetOceanViewer    UTC    " + this->datum + "\n").toUtf8());
 
   for (int s = 0; s < this->nstations; s++) {
-    outputFile.write(
-        QString(this->station[s]->StationID + "   " +
-                QString::number(this->station[s]->latitude) + "   " +
-                QString::number(this->station[s]->longitude) + "\n")
-            .toUtf8());
+    outputFile.write(QString(this->station[s].StationID + "   " +
+                             QString::number(this->station[s].latitude) +
+                             "   " +
+                             QString::number(this->station[s].longitude) + "\n")
+                         .toUtf8());
 
-    for (int i = 0; i < this->station[s]->data.length(); i++) {
-      if (this->station[s]->date[i].isValid()) {
-        value.sprintf("%10.4e", this->station[s]->data[i]);
-        outputFile.write(QString(this->station[s]->date[i].toString(
-                                     "yyyy    MM    dd    hh    mm    ss") +
-                                 "    " + value + "\n")
-                             .toUtf8());
+    for (int i = 0; i < this->station[s].data.length(); i++) {
+      if (QDateTime::fromMSecsSinceEpoch(this->station[s].date[i]).isValid()) {
+        value.sprintf("%10.4e", this->station[s].data[i]);
+        outputFile.write(
+            QString(QDateTime::fromMSecsSinceEpoch(this->station[s].date[i])
+                        .toString("yyyy    MM    dd    hh    mm    ss") +
+                    "    " + value + "\n")
+                .toUtf8());
       }
     }
   }
@@ -234,20 +242,20 @@ int MovImeds::writeCSV(QString filename) {
   QString value;
   QFile output(filename);
 
-  if (!output.open(QIODevice::WriteOnly))
-    return -1;
+  if (!output.open(QIODevice::WriteOnly)) return -1;
 
   for (s = 0; s < this->nstations; s++) {
     output.write(
-        QString("Station: " + this->station[s]->StationID + "\n").toUtf8());
+        QString("Station: " + this->station[s].StationID + "\n").toUtf8());
     output.write(QString("Datum: " + this->datum + "\n").toUtf8());
     output.write(QString("Units: " + this->units + "\n").toUtf8());
     output.write(QString("\n").toUtf8());
-    for (i = 0; i < this->station[s]->data.length(); i++) {
-      if (this->station[s]->date[i].isValid()) {
-        value.sprintf("%10.4e", this->station[s]->data[i]);
+    for (i = 0; i < this->station[s].data.length(); i++) {
+      if (QDateTime::fromMSecsSinceEpoch(this->station[s].date[i]).isValid()) {
+        value.sprintf("%10.4e", this->station[s].data[i]);
         output.write(
-            QString(this->station[s]->date[i].toString("MM/dd/yyyy,hh:mm,") +
+            QString(QDateTime::fromMSecsSinceEpoch(this->station[s].date[i])
+                        .toString("MM/dd/yyyy,hh:mm,") +
                     value + "\n")
                 .toUtf8());
       }

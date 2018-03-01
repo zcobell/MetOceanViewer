@@ -18,8 +18,8 @@
 //
 //-----------------------------------------------------------------------*/
 #include "movXtide.h"
-#include "movJavascriptAsyncReturn.h"
 #include <float.h>
+#include "movJavascriptAsyncReturn.h"
 
 //...Constructor
 movXtide::movXtide(QWebEngineView *inMap, MovQChartView *inChart,
@@ -45,13 +45,11 @@ QString movXtide::getErrorString() { return this->xTideErrorString; }
 
 //...Overall routine for plotting XTide
 int movXtide::plotXTideStation() {
-
   int ierr;
 
   //...Get the executables
   ierr = this->findXTideExe();
-  if (ierr != 0)
-    return -1;
+  if (ierr != 0) return -1;
 
   //...Get the selected station
   ierr = this->getAsyncClickedXTideStation();
@@ -63,8 +61,7 @@ QString movXtide::getCurrentXTideStation() {
   QVariant eval = QVariant();
   this->map->page()->runJavaScript("returnStationID()",
                                    [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull())
-    MovGeneric::delayM(5);
+  while (eval.isNull()) MovGeneric::delayM(5);
   QStringList evalList = eval.toString().split(";");
 
   return evalList.value(0);
@@ -78,8 +75,7 @@ int movXtide::getClickedXTideStation() {
   QVariant eval = QVariant();
   this->map->page()->runJavaScript("returnStationID()",
                                    [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull())
-    MovGeneric::delayM(5);
+  while (eval.isNull()) MovGeneric::delayM(5);
   QStringList evalList = eval.toString().split(";");
 
   this->currentStationName = evalList.value(0);
@@ -88,14 +84,13 @@ int movXtide::getClickedXTideStation() {
   tempString = evalList.value(2);
   this->currentXTideLat = tempString.toDouble();
 
-  if (this->currentStationName == "none")
-    return -1;
+  if (this->currentStationName == "none") return -1;
 
   return 0;
 }
 
 //...In the case of the plotting routine, we handle the asynchronous behavior
-//more gracefully
+// more gracefully
 int movXtide::getAsyncClickedXTideStation() {
   MovJavascriptAsyncReturn *javaReturn = new MovJavascriptAsyncReturn(this);
   connect(javaReturn, SIGNAL(valueChanged(QString)), this,
@@ -168,7 +163,6 @@ int movXtide::findXTideExe() {
 
 //...Compute the tidal signal
 int movXtide::calculateXTides() {
-
   int ierr;
   QEventLoop loop;
 
@@ -209,8 +203,7 @@ int movXtide::calculateXTides() {
 
   //...Check the error code
   ierr = xTideRun.exitCode();
-  if (ierr != 0)
-    return -1;
+  if (ierr != 0) return -1;
 
   //...Grab the output from XTide and send to the parse routine
   ierr = this->parseXTideResponse(xTideRun.readAllStandardOutput());
@@ -224,6 +217,7 @@ int movXtide::parseXTideResponse(QString xTideResponse) {
   QStringList tempList;
   QStringList response = xTideResponse.split("\n");
   QDate date;
+  QTime time;
   XTideStationData thisData;
   int hour, minute;
   double elevation, unitConvert;
@@ -240,8 +234,7 @@ int movXtide::parseXTideResponse(QString xTideResponse) {
     tempString = tempString.simplified();
     tempList = tempString.split(" ");
 
-    if (tempList.length() != 5)
-      continue;
+    if (tempList.length() != 5) continue;
 
     tempDate = tempList.value(0);
     tempTime = tempList.value(1);
@@ -262,10 +255,10 @@ int movXtide::parseXTideResponse(QString xTideResponse) {
       hour = 0;
 
     date = QDate::fromString(tempDate, "yyyy-MM-dd");
+    time = QTime(hour, minute);
     elevation = tempElev.toDouble();
 
-    thisData.date.setDate(date);
-    thisData.date.setTime(QTime(hour, minute));
+    thisData.date = QDateTime(date, time).toMSecsSinceEpoch();
     thisData.value = elevation * unitConvert;
 
     this->currentXTideStation.push_back(thisData);
@@ -345,7 +338,7 @@ int movXtide::plotChart() {
   this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
   for (i = 0; i < this->currentXTideStation.length(); i++)
-    series1->append(this->currentXTideStation[i].date.toMSecsSinceEpoch(),
+    series1->append(this->currentXTideStation[i].date,
                     this->currentXTideStation[i].value);
   this->thisChart->addSeries(series1);
   this->chart->clear();
@@ -398,9 +391,15 @@ int movXtide::saveXTideData(QString filename, QString format) {
     Output << "Units: N/A\n";
     Output << "\n";
     for (int i = 0; i < this->currentXTideStation.length(); i++) {
-      Output << this->currentXTideStation[i].date.toString("MM/dd/yyyy") + "," +
-                    this->currentXTideStation[i].date.toString("hh:mm") + "," +
-                    QString::number(this->currentXTideStation[i].value) + "\n";
+      Output << QDateTime::fromMSecsSinceEpoch(
+                    this->currentXTideStation[i].date)
+                        .toString("MM/dd/yyyy") +
+                    "," +
+                    QDateTime::fromMSecsSinceEpoch(
+                        this->currentXTideStation[i].date)
+                        .toString("hh:mm") +
+                    "," + QString::number(this->currentXTideStation[i].value) +
+                    "\n";
     }
   } else if (format.compare("IMEDS") == 0) {
     Output << "% IMEDS generic format - Water Level\n";
@@ -410,12 +409,26 @@ int movXtide::saveXTideData(QString filename, QString format) {
                   QString::number(this->currentXTideLat) + "   " +
                   QString::number(this->currentXTideLon) + "\n";
     for (int i = 0; i < this->currentXTideStation.length(); i++) {
-      Output << this->currentXTideStation[i].date.toString("yyyy") + "    " +
-                    this->currentXTideStation[i].date.toString("MM") + "    " +
-                    this->currentXTideStation[i].date.toString("dd") + "    " +
-                    this->currentXTideStation[i].date.toString("hh") + "    " +
-                    this->currentXTideStation[i].date.toString("mm") + "    " +
-                    "00" + "    " +
+      Output << QDateTime::fromMSecsSinceEpoch(
+                    this->currentXTideStation[i].date)
+                        .toString("yyyy") +
+                    "    " +
+                    QDateTime::fromMSecsSinceEpoch(
+                        this->currentXTideStation[i].date)
+                        .toString("MM") +
+                    "    " +
+                    QDateTime::fromMSecsSinceEpoch(
+                        this->currentXTideStation[i].date)
+                        .toString("dd") +
+                    "    " +
+                    QDateTime::fromMSecsSinceEpoch(
+                        this->currentXTideStation[i].date)
+                        .toString("hh") +
+                    "    " +
+                    QDateTime::fromMSecsSinceEpoch(
+                        this->currentXTideStation[i].date)
+                        .toString("mm") +
+                    "    " + "00" + "    " +
                     QString::number(this->currentXTideStation[i].value) + "\n";
     }
   }
@@ -476,7 +489,6 @@ int movXtide::saveXTidePlot(QString filename, QString filter) {
 }
 
 void movXtide::javascriptDataReturned(QString data) {
-
   int ierr;
   QString tempString;
   QStringList dataList;

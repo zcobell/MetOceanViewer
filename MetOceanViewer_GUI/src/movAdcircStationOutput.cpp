@@ -349,18 +349,17 @@ MovImeds *MovAdcircStationOutput::toIMEDS() {
   outputIMEDS->station.resize(outputIMEDS->nstations);
 
   for (int i = 0; i < outputIMEDS->nstations; ++i) {
-    outputIMEDS->station[i] = new MovImedsStation(this);
-    outputIMEDS->station[i]->data.resize(this->nSnaps);
-    outputIMEDS->station[i]->date.resize(this->nSnaps);
-    outputIMEDS->station[i]->StationName = this->station_name[i];
-    outputIMEDS->station[i]->NumSnaps = this->nSnaps;
-    outputIMEDS->station[i]->longitude = this->longitude[i];
-    outputIMEDS->station[i]->latitude = this->latitude[i];
-    outputIMEDS->station[i]->StationIndex = i;
+    outputIMEDS->station[i].data.resize(this->nSnaps);
+    outputIMEDS->station[i].date.resize(this->nSnaps);
+    outputIMEDS->station[i].StationName = this->station_name[i];
+    outputIMEDS->station[i].NumSnaps = this->nSnaps;
+    outputIMEDS->station[i].longitude = this->longitude[i];
+    outputIMEDS->station[i].latitude = this->latitude[i];
+    outputIMEDS->station[i].StationIndex = i;
     for (int j = 0; j < this->nSnaps; ++j) {
-      outputIMEDS->station[i]->date[j] =
-          this->coldStartTime.addSecs(this->time[j]);
-      outputIMEDS->station[i]->data[j] = this->data[i][j];
+      outputIMEDS->station[i].date[j] =
+          this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch();
+      outputIMEDS->station[i].data[j] = this->data[i][j];
     }
   }
   outputIMEDS->success = true;

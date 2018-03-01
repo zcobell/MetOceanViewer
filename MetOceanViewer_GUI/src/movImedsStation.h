@@ -20,14 +20,11 @@
 #ifndef MOV_IMEDS_STATION_H
 #define MOV_IMEDS_STATION_H
 
-#include <QDateTime>
-#include <QObject>
 #include <QVector>
 
-class MovImedsStation : public QObject {
-  Q_OBJECT
-public:
-  explicit MovImedsStation(QObject *parent = nullptr);
+class MovImedsStation {
+ public:
+  explicit MovImedsStation();
 
   double latitude;
   double longitude;
@@ -38,10 +35,10 @@ public:
   int NumSnaps;
   int StationIndex;
 
-  QVector<QDateTime> date;
+  QVector<long long> date;
   QVector<double> data;
 
   bool isNull;
 };
 
-#endif // MOV_IMEDS_STATION_H
+#endif  // MOV_IMEDS_STATION_H

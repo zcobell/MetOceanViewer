@@ -73,7 +73,7 @@ private:
 
   // Structures
   struct XTideStationData {
-    QDateTime date;
+    long long date;
     double value;
   };
 

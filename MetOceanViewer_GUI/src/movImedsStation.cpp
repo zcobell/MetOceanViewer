@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "movImedsStation.h"
 
-MovImedsStation::MovImedsStation(QObject *parent) : QObject(parent) {
+MovImedsStation::MovImedsStation() {
   this->latitude = 0.0;
   this->longitude = 0.0;
   this->NumSnaps = 0;

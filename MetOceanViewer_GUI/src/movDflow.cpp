@@ -1,9 +1,9 @@
 #include "movDflow.h"
+#include <QtMath>
 #include "metoceanviewer.h"
 #include "movErrors.h"
 #include "movImeds.h"
 #include "netcdf"
-#include <QtMath>
 
 using namespace netCDF;
 using namespace netCDF::exceptions;
@@ -210,13 +210,12 @@ int MovDflow::_getWindDirection(QVector<QVector<double>> &data) {
 
 int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds) {
   int i, ierr;
-  QVector<QDateTime> time;
+  QVector<long long> time;
   QVector<QVector<double>> data;
 
   ierr = this->_getTime(time);
   this->error->setErrorCode(ierr);
-  if (this->error->isError())
-    return this->error->errorCode();
+  if (this->error->isError()) return this->error->errorCode();
 
   //...Check for derrived data or just retrieve the
   //   requested variable
@@ -246,17 +245,16 @@ int MovDflow::getVariable(QString variable, int layer, MovImeds *imeds) {
   imeds->header2 = QStringLiteral("DFlowFM");
   imeds->header3 = QStringLiteral("DFlowFM");
   for (i = 0; i < this->_nStations; i++) {
-    imeds->station[i] = new MovImedsStation(this);
 
-    imeds->station[i]->date = time;
-    imeds->station[i]->data = data[i];
+    imeds->station[i].date = time;
+    imeds->station[i].data = data[i];
 
-    imeds->station[i]->NumSnaps = this->_nSteps;
-    imeds->station[i]->latitude = this->_yCoordinates[i];
-    imeds->station[i]->longitude = this->_xCoordinates[i];
-    imeds->station[i]->StationIndex = i;
-    imeds->station[i]->StationID = i;
-    imeds->station[i]->StationName = this->_stationNames[i];
+    imeds->station[i].NumSnaps = this->_nSteps;
+    imeds->station[i].latitude = this->_yCoordinates[i];
+    imeds->station[i].longitude = this->_xCoordinates[i];
+    imeds->station[i].StationIndex = i;
+    imeds->station[i].StationID = i;
+    imeds->station[i].StationName = this->_stationNames[i];
   }
   imeds->success = true;
 
@@ -282,7 +280,6 @@ int MovDflow::_init() {
 }
 
 int MovDflow::_get3d() {
-
   int ierr, ncid;
   size_t nLayers;
 
@@ -509,7 +506,7 @@ int MovDflow::_getStations() {
   return 0;
 }
 
-int MovDflow::_getTime(QVector<QDateTime> &timeList) {
+int MovDflow::_getTime(QVector<long long> &timeList) {
   int i, ierr, ncid;
   size_t nsteps, unitsLen;
   double *time;
@@ -576,7 +573,8 @@ int MovDflow::_getTime(QVector<QDateTime> &timeList) {
   }
 
   for (i = 0; i < this->_nSteps; i++)
-    timeList[i] = this->_refTime.addMSecs(qRound64(time[i] * 1000.0));
+    timeList[i] =
+        this->_refTime.addMSecs(qRound64(time[i] * 1000.0)).toMSecsSinceEpoch();
 
   free(time);
 
@@ -601,8 +599,7 @@ int MovDflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
   size_t *count = (size_t *)malloc(sizeof(size_t) * 2);
 
   data.resize(this->_nStations);
-  for (i = 0; i < this->_nStations; i++)
-    data[i].resize(this->_nSteps);
+  for (i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
 
   varid = this->_varnames[variable];
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
@@ -660,8 +657,7 @@ int MovDflow::_getVar3D(QString variable, int layer,
   size_t *count = (size_t *)malloc(sizeof(size_t) * 3);
 
   data.resize(this->_nStations);
-  for (i = 0; i < this->_nStations; i++)
-    data[i].resize(this->_nSteps);
+  for (i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
 
   varid = this->_varnames[variable];
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);

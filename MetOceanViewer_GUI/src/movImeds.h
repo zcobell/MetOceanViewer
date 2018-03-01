@@ -43,7 +43,7 @@ public:
   QString units;
   QString datum;
 
-  QVector<MovImedsStation *> station;
+  QVector<MovImedsStation> station;
 
   bool success;
 };

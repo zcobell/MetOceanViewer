@@ -73,8 +73,8 @@ class MovUserTimeseries : public QObject {
                            QVector<double> &Y);
   int buildRevisedIMEDS(QVector<MovImeds *> &Data, QVector<double> X,
                         QVector<double> Y, QVector<MovImeds *> &DataOut);
-  int getDataBounds(double &ymin, double &ymax, QDateTime &minDate,
-                    QDateTime &maxDate, QVector<double> timeAddList);
+  int getDataBounds(double &ymin, double &ymax, QDateTime &minDateOut,
+                    QDateTime &maxDateOut, QVector<double> timeAddList);
   int getMultipleMarkersFromMap();
   int getAsyncMultipleMarkersFromMap();
   int projectStations(QVector<int> epsg,

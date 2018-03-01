@@ -120,7 +120,7 @@ int MovNetcdfTimeseries::read() {
 
     for (size_t j = 0; j < length; j++) {
       this->m_data[i][j] = varData[j];
-      this->m_time[i][j] = refTime.addSecs(timeData[j]);
+      this->m_time[i][j] = refTime.addSecs(timeData[j]).toMSecsSinceEpoch();
     }
 
     free(timeData);
@@ -142,17 +142,14 @@ int MovNetcdfTimeseries::toImeds(MovImeds *imeds) {
   imeds->success = false;
 
   for (size_t i = 0; i < this->m_numStations; i++) {
-    MovImedsStation *station = new MovImedsStation(imeds);
-    station->NumSnaps = this->m_time[i].size();
-    station->date = this->m_time[i];
-    station->data = this->m_data[i];
-    station->latitude = this->m_ycoor[i];
-    station->longitude = this->m_xcoor[i];
-    station->StationName = this->m_stationName[i];
-    station->StationID = this->m_stationName[i];
-    station->StationIndex = i;
-
-    imeds->station[i] = station;
+    imeds->station[i].NumSnaps = this->m_time[i].size();
+    imeds->station[i].date = this->m_time[i];
+    imeds->station[i].data = this->m_data[i];
+    imeds->station[i].latitude = this->m_ycoor[i];
+    imeds->station[i].longitude = this->m_xcoor[i];
+    imeds->station[i].StationName = this->m_stationName[i];
+    imeds->station[i].StationID = this->m_stationName[i];
+    imeds->station[i].StationIndex = i;
   }
 
   imeds->success = true;

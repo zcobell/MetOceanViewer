@@ -1,17 +1,17 @@
 #ifndef MOVDFLOW_H
 #define MOVDFLOW_H
 
-#include "movErrors.h"
-#include "movImeds.h"
 #include <QDateTime>
 #include <QList>
 #include <QMap>
 #include <QObject>
 #include <QVector>
+#include "movErrors.h"
+#include "movImeds.h"
 
 class MovDflow : public QObject {
   Q_OBJECT
-public:
+ public:
   explicit MovDflow(QString filename, QObject *parent = nullptr);
 
   QStringList getVaribleList();
@@ -30,12 +30,12 @@ public:
 
   movErrors *error;
 
-private:
+ private:
   int _init();
   int _getPlottingVariables();
   int _getStations();
   int _get3d();
-  int _getTime(QVector<QDateTime> &timeList);
+  int _getTime(QVector<long long> &timeList);
   int _getVar(QString variable, int layer, QVector<QVector<double>> &data);
   int _getVar2D(QString variable, QVector<QVector<double>> &data);
   int _getVar3D(QString variable, int layer, QVector<QVector<double>> &data);
@@ -62,4 +62,4 @@ private:
   QDateTime _refTime;
 };
 
-#endif // MOVDFLOW_H
+#endif  // MOVDFLOW_H
