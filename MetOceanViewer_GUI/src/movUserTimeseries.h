@@ -29,16 +29,15 @@
 #include <QWebEngineView>
 #include <QtCharts>
 #include <QtWebEngine/QtWebEngine>
-
 #include "movGeneric.h"
 #include "movImeds.h"
 #include "movQChartView.h"
+#include "movNetcdfTimeseries.h"
 
 class MovUserTimeseries : public QObject {
-
   Q_OBJECT
 
-public:
+ public:
   explicit MovUserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
                              QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
                              QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
@@ -60,13 +59,13 @@ public:
   int saveImage(QString filename, QString filter);
   QString getErrorString();
 
-private slots:
+ private slots:
   void javascriptDataReturned(QString);
 
-signals:
+ signals:
   void timeseriesError(QString);
 
-private:
+ private:
   //...Private functions
   int getMarkerIDFromMap();
   int setMarkerID();
@@ -107,4 +106,4 @@ private:
   QStatusBar *statusBar;
 };
 
-#endif // MOV_USER_TIMESERIES_H
+#endif  // MOV_USER_TIMESERIES_H

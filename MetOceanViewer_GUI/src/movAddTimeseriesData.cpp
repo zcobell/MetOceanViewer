@@ -18,13 +18,14 @@
 //
 //-----------------------------------------------------------------------*/
 
+#include <QMessageBox>
 #include "MainWindow.h"
 #include "movColors.h"
 #include "movFiletypes.h"
 #include "movGeneric.h"
+#include "movNetcdfTimeseries.h"
 #include "mov_dialog_addtimeseriesdata.h"
 #include "ui_mov_dialog_addtimeseries.h"
-#include <QMessageBox>
 
 //-------------------------------------------//
 // This brings up the dialog box used to add
@@ -138,7 +139,6 @@ void mov_dialog_addtimeseries::set_dialog_box_elements(
 //-------------------------------------------//
 
 void mov_dialog_addtimeseries::setItemsByFiletype() {
-
   if (this->InputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
     ui->text_filetype->setText("IMEDS");
     this->setColdstartSelectElements(false);
@@ -202,6 +202,18 @@ void mov_dialog_addtimeseries::setItemsByFiletype() {
       ui->combo_variableSelect->setCurrentIndex(0);
 
     this->dFlowVariable = variable;
+  } else if (this->InputFileType == MetOceanViewer::FileType::NETCDF_GENERIC) {
+    ui->text_filetype->setText("Generic netCDF");
+    this->setColdstartSelectElements(false);
+    this->setStationSelectElements(false);
+    this->setVariableSelectElements(false);
+    this->setVerticalLayerElements(false);
+    int epsg = MovNetcdfTimeseries::getEpsg(this->InputFilePath);
+    if (epsg != 0)
+      ui->spin_epsg->setValue(epsg);
+    else
+      ui->spin_epsg->setValue(4326);
+    this->FileReadError = false;
   } else {
     this->FileReadError = true;
     emit addTimeseriesError(tr("No suitable filetype found."));
@@ -282,7 +294,6 @@ void mov_dialog_addtimeseries::on_browse_filebrowse_clicked() {
 
   this->InputFilePath = TempPath;
   if (TempPath != NULL || (TempPath == NULL && this->CurrentFileName != NULL)) {
-
     if (TempPath == NULL) {
       TempPath = this->CurrentFileName;
       this->InputFilePath = this->CurrentFileName;
@@ -347,7 +358,6 @@ void mov_dialog_addtimeseries::on_browse_stationfile_clicked() {
 // of the dialog box
 //-------------------------------------------//
 void mov_dialog_addtimeseries::accept() {
-
   QString TempString;
 
   this->InputFileName = ui->text_filename->text();

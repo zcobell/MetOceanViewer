@@ -18,10 +18,9 @@
 //
 //-----------------------------------------------------------------------*/
 
+#include <QApplication>
 #include "MainWindow.h"
 #include "movGeneric.h"
-
-#include <QApplication>
 
 //-------------------------------------------//
 // Main function for the code
@@ -31,6 +30,13 @@ int main(int argc, char *argv[]) {
   QString sessionFile;
   bool doSession;
 
+  //...Display the splash screen
+  QPixmap pixmap(":/rsc/img/logo_full.png");
+  QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
+  splash.setEnabled(false);
+  splash.show();
+
+  //...Check for the internet connection
   if (!MovGeneric::isConnectedToNetwork()) {
     QMessageBox::critical(nullptr,
                           QObject::tr("Internet Connection Not Detected"),
@@ -39,8 +45,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // If the session file was dropped onto the executable,
-  // try to load it.
+  // Check for drag/drop operations
   if (argc == 2) {
     sessionFile = QCoreApplication::arguments().at(1);
     doSession = true;
@@ -52,27 +57,10 @@ int main(int argc, char *argv[]) {
   // Create the window
   MainWindow w(doSession, sessionFile);
 
-  // Splash Screen
-  QPixmap pixmap(":/rsc/img/logo_full.png");
-  if (pixmap.isNull()) {
-    // Warning about splash screen, which shouldn't happen
-    QMessageBox::warning(0, QObject::tr("ERROR"),
-                         QObject::tr("Failed to load spash screen image."));
-  } else {
-    // Display the splash screen for 2 seconds
-    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
-    splash.setEnabled(false);
-    splash.show();
-    a.processEvents();
+  // Hide the splash screen
+  splash.hide();
 
-    QTime dieTime = QTime::currentTime().addSecs(1);
-    while (QTime::currentTime() < dieTime)
-      QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-
-    splash.hide();
-  }
-
-  // Show the user the window
+  // Show the program window
   w.show();
 
   return a.exec();

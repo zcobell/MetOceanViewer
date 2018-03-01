@@ -1,23 +1,29 @@
 #include "movFiletypes.h"
-#include "netcdf.h"
 #include <QFileInfo>
 #include <QMap>
+#include "netcdf.h"
 
 static QMap<QString, int> filetypeMapString = {
     {QStringLiteral("NETCDF-ADCIRC"), MetOceanViewer::FileType::NETCDF_ADCIRC},
     {QStringLiteral("NETCDF-DFLOW"), MetOceanViewer::FileType::NETCDF_DFLOW},
     {QStringLiteral("ASCII-ADCIRC"), MetOceanViewer::FileType::ASCII_ADCIRC},
-    {QStringLiteral("ASCII-IMEDS"), MetOceanViewer::FileType::ASCII_IMEDS}};
+    {QStringLiteral("ASCII-IMEDS"), MetOceanViewer::FileType::ASCII_IMEDS},
+    {QStringLiteral("NETCDF-GENERIC"),
+     MetOceanViewer::FileType::NETCDF_GENERIC}};
 
 static QMap<int, QString> filetypeMapInt = {
     {MetOceanViewer::FileType::NETCDF_ADCIRC, QStringLiteral("NETCDF-ADCIRC")},
     {MetOceanViewer::FileType::NETCDF_DFLOW, QStringLiteral("NETCDF-DFLOW")},
     {MetOceanViewer::FileType::ASCII_ADCIRC, QStringLiteral("ASCII-ADCIRC")},
-    {MetOceanViewer::FileType::ASCII_IMEDS, QStringLiteral("ASCII-IMEDS")}};
+    {MetOceanViewer::FileType::ASCII_IMEDS, QStringLiteral("ASCII-IMEDS")},
+    {MetOceanViewer::FileType::NETCDF_GENERIC,
+     QStringLiteral("NETCDF-GENERIC")}};
 
 movFiletypes::movFiletypes(QObject *parent) : QObject(parent) {}
 
 int movFiletypes::getIntegerFiletype(QString filename) {
+  if (movFiletypes::_checkNetcdfGeneric(filename))
+    return MetOceanViewer::FileType::NETCDF_GENERIC;
   if (movFiletypes::_checkNetcdfAdcirc(filename))
     return MetOceanViewer::FileType::NETCDF_ADCIRC;
   if (movFiletypes::_checkNetcdfDflow(filename))
@@ -30,6 +36,8 @@ int movFiletypes::getIntegerFiletype(QString filename) {
 }
 
 QString movFiletypes::getStringFiletype(QString filename) {
+  if (movFiletypes::_checkNetcdfGeneric(filename))
+    return QStringLiteral("NETCDF-GENERIC");
   if (movFiletypes::_checkNetcdfAdcirc(filename))
     return QStringLiteral("NETCDF-ADCIRC");
   if (movFiletypes::_checkNetcdfDflow(filename))
@@ -127,9 +135,18 @@ bool movFiletypes::_checkASCIIAdcirc(QString filename) {
 bool movFiletypes::_checkASCIIImeds(QString filename) {
   QFileInfo file(filename);
   QString suffix = file.suffix().toUpper();
-  if (suffix == "IMEDS")
-    return true;
+  if (suffix == "IMEDS") return true;
   return false;
+}
+
+bool movFiletypes::_checkNetcdfGeneric(QString filename) {
+  int ierr, ncid, varid;
+  ierr = nc_open(filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  if (ierr != 0) return false;
+  ierr = nc_inq_varid(ncid, "time_station_0001", &varid);
+  nc_close(ncid);
+  if (ierr != 0) return false;
+  return true;
 }
 
 QString movFiletypes::integerFiletypeToString(int filetype) {

@@ -18,6 +18,7 @@ private:
   static bool _checkNetcdfDflow(QString filename);
   static bool _checkASCIIAdcirc(QString filename);
   static bool _checkASCIIImeds(QString filename);
+  static bool _checkNetcdfGeneric(QString filename);
 };
 
 #endif // MOV_FILETYPES_H

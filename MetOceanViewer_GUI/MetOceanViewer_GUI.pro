@@ -54,7 +54,8 @@ SOURCES +=\
     src/movUsgs.cpp \
     src/movXtide.cpp \
     src/movErrors.cpp \
-    src/movusertimeseriesoptions.cpp
+    src/movusertimeseriesoptions.cpp \
+    src/movNetcdfTimeseries.cpp
 
 HEADERS  += \
     src/movAdcircStationOutput.h \
@@ -82,7 +83,8 @@ HEADERS  += \
     src/movusertimeseriesoptions.h \
     src/MainWindow.h \
     src/movQWebEngineView.h \
-    src/metoceanviewer.h
+    src/metoceanviewer.h \
+    src/movNetcdfTimeseries.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \
@@ -92,36 +94,6 @@ FORMS    += \
     ui/movusertimeseriesoptions.ui
 
 OTHER_FILES +=
-
-#...Include the PROJ4 library
-INCLUDEPATH += $$PWD/../libraries/libproj4
-win32{
-    CONFIG(debug, debug | release):LIBS += -L$$OUT_PWD/../libraries/libproj4/debug -lmovProj4
-    CONFIG(release, debug | release):LIBS += -L$$OUT_PWD/../libraries/libproj4/release -lmovProj4
-}
-unix{
-    LIBS += -L$$OUT_PWD/../libraries/libproj4 -lmovProj4
-}
-
-#...Include the netCDF4-CXX library
-INCLUDEPATH += $$PWD/../thirdparty/netcdf-cxx/cxx4
-win32{
-    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/debug -lnetcdfcxx
-    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/release -lnetcdfcxx
-}
-unix{
-    LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx -lnetcdfcxx
-}
-
-#...Include the KDTREE2 library
-INCLUDEPATH += $$PWD/../libraries/libkdtree2
-win32{
-    CONFIG(debug,debug|release):LIBS += -L$$OUT_PWD/../libraries/libkdtree2/debug -lmovKdtree2
-    CONFIG(release,debug|release):LIBS += -L$$OUT_PWD/../libraries/libkdtree2/release -lmovKdtree2
-}
-unix{
-    LIBS += -L$$OUT_PWD/../libraries/libkdtree2 -lmovKdtree2
-}
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
@@ -215,3 +187,36 @@ RC_FILE = resources.rc
 #...Ensure that git is in the system path. If not using GIT comment these two lines
 GIT_VERSION = $$system(git --git-dir $$PWD/../.git --work-tree $$PWD/.. describe --always --tags)
 DEFINES += GIT_VERSION=\\\"$$GIT_VERSION\\\"
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/release/ -lmovProj4
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/debug/ -lmovProj4
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libproj4/ -lmovProj4
+
+INCLUDEPATH += $$PWD/../libraries/libproj4
+DEPENDPATH += $$PWD/../libraries/libproj4
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/release/ -lnetcdfcxx
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/debug/ -lnetcdfcxx
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/ -lnetcdfcxx
+
+INCLUDEPATH += $$PWD/../libraries/libnetcdfcxx $$PWD/../thirdparty/netcdf-cxx/cxx4
+DEPENDPATH += $$PWD/../libraries/libnetcdfcxx
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/release/libnetcdfcxx.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/debug/libnetcdfcxx.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/release/netcdfcxx.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/debug/netcdfcxx.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/libnetcdfcxx.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libkdtree2/release/ -lmovKdtree2
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libkdtree2/debug/ -lmovKdtree2
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libkdtree2/ -lmovKdtree2
+
+INCLUDEPATH += $$PWD/../libraries/libkdtree2
+DEPENDPATH += $$PWD/../libraries/libkdtree2
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/release/libmovKdtree2.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/debug/libmovKdtree2.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/release/movKdtree2.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/debug/movKdtree2.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/libmovKdtree2.a
