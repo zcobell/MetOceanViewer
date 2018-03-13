@@ -6,22 +6,7 @@ language: cpp
 
 compiler: gcc
 
-env:
-  global:
-   - secure: "e6C18f3v2gOQP0pB6DLlYZbmh3zXgyqMn++10cbZ/zi85LGjNs4FZCQ2rBGVAs+JqON7RKL95mzHPv4HTPWOfTJGZzh17hcX/XDRbc4OgNF94/DNTOEO56OTLNwLntCdGG0gE7gbyvqjLT2KhN1kZb+ov/xD646dVLeSJ5lNGY/jB2Y/KKKnwnIK/gUTGd8BeGcPFcOVu4SkgKOe+3xP8st1tUDuFYYYFRgugONXceRZyR59MH1Ya1sTRo2Nq6wLgbr1QojE202Hb3EnUpes3ynNMfLywlbm2GYTPYQo8Faxq0+YLWQLFf00lhx2BuchPNm8CGMB1VLulx6/80pWbG3PMAT03vKc/FXsxU9fzMJp+nBWU3z236e08PYIvNiqj4SCiwKhSWh5jSeIaYD7Zp4Q6FwF5vSCu8DkWCsQkozHPzdtu/aP9IHjpMca1jXLlS9YGLI5EIlnknCzeeFMOTYcl6vES6QEqss4TI2652IXCKc1wrnkJSQy7piuJ30WhjpjjBuksbYZ2Alnh7tuOaRY1F842JAJUoX3Xtfh+3YTEDacC9W7vcl5wVSJr4Vc9aXeH7Nh04dzAwI/k9DK+N3esN71KidPL8hVr8bD4a9S1gzY5XBzcPCu56drMl+80sov+6IcxPq51SnKa4tzbSxpWNWRhmYSo2PB7m4NpRQ="
-
-addons:
-  coverity_scan:
-    project:
-      name: "zcobell/MetOceanViewer"
-      description: "Tool for viewing hydrodynamic model data"
-    notification_email: zachary.cobell@arcadis.com
-    build_command_prepend: "/opt/qt59/bin/qmake MetOceanViewer.pro"
-    build_command:   "make"
-    branch_pattern: master
-
 before_install:
-- echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 - sudo add-apt-repository --yes ppa:beineri/opt-qt592-trusty
 - sudo apt-get update  -qq
 - sudo apt-get install -qq libsqlite3-dev libnetcdf-dev
@@ -36,4 +21,4 @@ script:
 - g++ --version
 - . /opt/qt59/bin/qt59-env.sh
 - /opt/qt59/bin/qmake MetOceanViewer.pro 
-- make
+- make -j4
