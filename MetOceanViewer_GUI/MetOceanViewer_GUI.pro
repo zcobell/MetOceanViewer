@@ -55,7 +55,7 @@ SOURCES +=\
     src/movXtide.cpp \
     src/movErrors.cpp \
     src/movusertimeseriesoptions.cpp \
-    src/movNetcdfTimeseries.cpp
+    src/movNetcdfTimeseries.cpp \
 
 HEADERS  += \
     src/movAdcircStationOutput.h \
@@ -84,7 +84,7 @@ HEADERS  += \
     src/MainWindow.h \
     src/movQWebEngineView.h \
     src/metoceanviewer.h \
-    src/movNetcdfTimeseries.h
+    src/movNetcdfTimeseries.h \
 
 FORMS    += \
     ui/mov_dialog_about.ui \
@@ -220,3 +220,16 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libr
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/release/movKdtree2.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/debug/movKdtree2.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/libmovKdtree2.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libtimezone/release/ -ltimezone
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libtimezone/debug/ -ltimezone
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libtimezone/ -ltimezone
+
+INCLUDEPATH += $$PWD/../libraries/libtimezone
+DEPENDPATH += $$PWD/../libraries/libtimezone
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/release/libtimezone.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/debug/libtimezone.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/release/timezone.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/debug/timezone.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/libtimezone.a

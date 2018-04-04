@@ -22,6 +22,7 @@
 #include "movGeneric.h"
 #include "movNoaa.h"
 #include "movusertimeseriesoptions.h"
+#include "timezone.h"
 #include "ui_mov_window_main.h"
 
 //-------------------------------------------//
@@ -64,8 +65,7 @@ void MainWindow::on_button_noaasavechart_clicked() {
       this, tr("Save as..."), this->PreviousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   MovGeneric::splitPath(TempString, filename, this->PreviousDirectory);
 
@@ -79,7 +79,6 @@ void MainWindow::on_button_noaasavechart_clicked() {
 // Called when the user tries to save the NOAA data
 //-------------------------------------------//
 void MainWindow::on_button_noaasavedata_clicked() {
-
   QString filename;
 
   int MarkerID = this->thisNOAA->getLoadedNOAAStation();
@@ -106,8 +105,7 @@ void MainWindow::on_button_noaasavedata_clicked() {
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   MovGeneric::splitPath(TempString, filename, this->PreviousDirectory);
 
@@ -147,12 +145,12 @@ void MainWindow::plotNOAAStation() {
   int ierr;
 
   //...Create a new NOAA object
-  if (!this->thisNOAA.isNull())
-    delete this->thisNOAA;
+  if (!this->thisNOAA.isNull()) delete this->thisNOAA;
   this->thisNOAA =
       new MovNoaa(ui->noaa_map, ui->noaa_graphics, ui->Date_StartTime,
                   ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
-                  ui->combo_noaadatum, ui->statusBar, this);
+                  ui->combo_noaadatum, ui->statusBar,
+                  ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone, this);
   connect(this->thisNOAA, SIGNAL(noaaError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -161,8 +159,7 @@ void MainWindow::plotNOAAStation() {
 }
 
 void MainWindow::on_button_noaaresetzoom_clicked() {
-  if (!this->thisNOAA.isNull())
-    ui->noaa_graphics->resetZoom();
+  if (!this->thisNOAA.isNull()) ui->noaa_graphics->resetZoom();
   return;
 }
 
@@ -177,5 +174,29 @@ void MainWindow::on_button_noaaOptions_clicked() {
     this->noaaDisplayValues = optionsWindow->displayValues();
     ui->noaa_graphics->setDisplayValues(this->noaaDisplayValues);
   }
+  return;
+}
+
+void MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(int index) {
+  TZData::Location l = static_cast<TZData::Location>(index);
+  Timezone *t = new Timezone(this);
+  QStringList tz = t->getTimezoneAbbreviations(l);
+  ui->combo_noaaTimezone->clear();
+  ui->combo_noaaTimezone->addItems(tz);
+  delete t;
+  return;
+}
+
+void MainWindow::on_combo_noaaTimezone_currentIndexChanged(
+    const QString &arg1) {
+  if (this->thisNOAA == nullptr) return;
+
+  Timezone *t = new Timezone(this);
+  if (!t->fromAbbreviation(arg1,
+                           static_cast<TZData::Location>(
+                               ui->combo_noaaTimezoneLocation->currentIndex())))
+    return;
+  this->thisNOAA->replotChart(t);
+  delete t;
   return;
 }

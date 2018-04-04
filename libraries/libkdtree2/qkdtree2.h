@@ -38,7 +38,6 @@
 #include <QList>
 #include <QObject>
 #include <QPointF>
-#include <QSharedPointer>
 #include <QVector3D>
 #include <QVector>
 
@@ -50,11 +49,15 @@ class qKdtree2 : public QObject {
 public:
   explicit qKdtree2(QObject *parent = 0);
 
+  ~qKdtree2();
+
   /// Variable holding the total number of points in the search tree
   int numDataPoints;
 
   /// Variable that ensures the search tree is initialized
   bool initialized;
+
+  void clear();
 
   int build(QVector<QPointF> &pointCloud);
   int build(QVector<qreal> &x, QVector<qreal> &y);
@@ -71,7 +74,7 @@ public:
 
 private:
   /// Pointer to variable holding the kdtree search tree
-  QSharedPointer<kdtree2> tree;
+  kdtree2 *tree;
 };
 
 #endif // QKDTREE2_H

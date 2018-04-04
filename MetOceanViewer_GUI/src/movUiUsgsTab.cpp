@@ -21,6 +21,7 @@
 #include "MainWindow.h"
 #include "movUsgs.h"
 #include "movusertimeseriesoptions.h"
+#include "timezone.h"
 #include "ui_mov_window_main.h"
 
 //-------------------------------------------//
@@ -42,12 +43,12 @@ void MainWindow::on_button_usgs_fetch_clicked() {
   int ierr;
 
   //...Create a new USGS object
-  if (!thisUSGS.isNull())
-    delete thisUSGS;
-  thisUSGS = new MovUsgs(ui->usgs_map, ui->usgs_graphics, ui->radio_usgsDaily,
-                         ui->radio_usgshistoric, ui->radio_usgs_instant,
-                         ui->combo_USGSProduct, ui->Date_usgsStart,
-                         ui->Date_usgsEnd, ui->statusBar, this);
+  if (!thisUSGS.isNull()) delete thisUSGS;
+  thisUSGS = new MovUsgs(
+      ui->usgs_map, ui->usgs_graphics, ui->radio_usgsDaily,
+      ui->radio_usgshistoric, ui->radio_usgs_instant, ui->combo_USGSProduct,
+      ui->Date_usgsStart, ui->Date_usgsEnd, ui->statusBar,
+      ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone, this);
   connect(thisUSGS, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -63,8 +64,7 @@ void MainWindow::on_button_usgs_fetch_clicked() {
 // data is only available 120 days into the past
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked() {
-  if (!thisUSGS.isNull())
-    thisUSGS->setUSGSBeenPlotted(false);
+  if (!thisUSGS.isNull()) thisUSGS->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(
       QDateTime::currentDateTime().addDays(-120));
   ui->Date_usgsEnd->setMinimumDateTime(
@@ -86,8 +86,7 @@ void MainWindow::on_radio_usgs_instant_clicked() {
 // ago when using daily data from USGS
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked() {
-  if (!thisUSGS.isNull())
-    thisUSGS->setUSGSBeenPlotted(false);
+  if (!thisUSGS.isNull()) thisUSGS->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   return;
@@ -99,8 +98,7 @@ void MainWindow::on_radio_usgsDaily_clicked() {
 // ago when using daily data from USGS
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked() {
-  if (!thisUSGS.isNull())
-    thisUSGS->setUSGSBeenPlotted(false);
+  if (!thisUSGS.isNull()) thisUSGS->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   return;
@@ -154,8 +152,7 @@ void MainWindow::on_button_usgssavemap_clicked() {
       this, tr("Save as..."), PreviousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   MovGeneric::splitPath(TempString, filename, PreviousDirectory);
 
@@ -204,8 +201,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   MovGeneric::splitPath(TempString, filename, PreviousDirectory);
 
@@ -216,8 +212,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
 //-------------------------------------------//
 
 void MainWindow::on_button_usgsresetzoom_clicked() {
-  if (!this->thisUSGS.isNull())
-    ui->usgs_graphics->resetZoom();
+  if (!this->thisUSGS.isNull()) ui->usgs_graphics->resetZoom();
   return;
 }
 
@@ -232,5 +227,29 @@ void MainWindow::on_button_usgsOptions_clicked() {
     this->usgsDisplayValues = optionsWindow->displayValues();
     ui->usgs_graphics->setDisplayValues(this->usgsDisplayValues);
   }
+  return;
+}
+
+void MainWindow::on_combo_usgsTimezoneLocation_currentIndexChanged(int index) {
+  TZData::Location l = static_cast<TZData::Location>(index);
+  Timezone *t = new Timezone(this);
+  QStringList tz = t->getTimezoneAbbreviations(l);
+  ui->combo_usgsTimezone->clear();
+  ui->combo_usgsTimezone->addItems(tz);
+  delete t;
+  return;
+}
+
+void MainWindow::on_combo_usgsTimezone_currentIndexChanged(
+    const QString &arg1) {
+  if (this->thisUSGS == nullptr) return;
+
+  Timezone *t = new Timezone(this);
+  if (!t->fromAbbreviation(arg1,
+                           static_cast<TZData::Location>(
+                               ui->combo_usgsTimezoneLocation->currentIndex())))
+    return;
+  this->thisUSGS->replotChart(t);
+  delete t;
   return;
 }

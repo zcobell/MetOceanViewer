@@ -13,6 +13,7 @@ MovNetcdfTimeseries::MovNetcdfTimeseries(QObject *parent) : QObject(parent) {
   this->m_units = "unknown";
   this->m_verticalDatum = "unknown";
   this->m_horizontalProjection = "WGS84";
+  this->m_numStations = 0;
 }
 
 QString MovNetcdfTimeseries::filename() const { return this->m_filename; }
@@ -32,7 +33,7 @@ int MovNetcdfTimeseries::read() {
   QString station_dim_string, station_time_var_string, station_data_var_string,
       stationNameString;
   size_t stationNameLength, length;
-  int ncid;
+  int ierr, ncid;
   int dimid_nstations, dimidStationLength, dimid_stationNameLen;
   int varid_time, varid_data, varid_xcoor, varid_ycoor, varid_stationName;
   int epsg;
@@ -57,8 +58,21 @@ int MovNetcdfTimeseries::read() {
   xcoor = (double *)malloc(sizeof(double) * this->m_numStations);
   ycoor = (double *)malloc(sizeof(double) * this->m_numStations);
 
-  NCCHECK(nc_get_var_double(ncid, varid_xcoor, xcoor));
-  NCCHECK(nc_get_var_double(ncid, varid_ycoor, ycoor));
+  ierr = nc_get_var_double(ncid, varid_xcoor, xcoor);
+  if (ierr != NC_NOERR) {
+    free(xcoor);
+    free(ycoor);
+    nc_close(ncid);
+    return ierr;
+  }
+
+  ierr = nc_get_var_double(ncid, varid_ycoor, ycoor);
+  if (ierr != NC_NOERR) {
+    free(xcoor);
+    free(ycoor);
+    nc_close(ncid);
+    return ierr;
+  }
 
   for (size_t i = 0; i < this->m_numStations; i++) {
     this->m_xcoor.push_back(xcoor[i]);
@@ -112,8 +126,21 @@ int MovNetcdfTimeseries::read() {
     start = 0;
     count = &length;
 
-    NCCHECK(nc_get_var_double(ncid, varid_data, varData));
-    NCCHECK(nc_get_var_longlong(ncid, varid_time, timeData));
+    ierr = nc_get_var_double(ncid, varid_data, varData);
+    if (ierr != NC_NOERR) {
+      free(timeData);
+      free(varData);
+      nc_close(ncid);
+      return ierr;
+    }
+
+    ierr = nc_get_var_longlong(ncid, varid_time, timeData);
+    if (ierr != NC_NOERR) {
+      free(timeData);
+      free(varData);
+      nc_close(ncid);
+      return ierr;
+    }
 
     this->m_data[i].resize(length);
     this->m_time[i].resize(length);

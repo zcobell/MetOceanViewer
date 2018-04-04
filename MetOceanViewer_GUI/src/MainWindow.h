@@ -181,6 +181,14 @@ private slots:
 
   void on_button_hwmOptions_clicked();
 
+  void on_combo_noaaTimezoneLocation_currentIndexChanged(int index);
+
+  void on_combo_usgsTimezoneLocation_currentIndexChanged(int index);
+
+  void on_combo_noaaTimezone_currentIndexChanged(const QString &arg1);
+
+  void on_combo_usgsTimezone_currentIndexChanged(const QString &arg1);
+
 private:
   Ui::MainWindow *ui;
 

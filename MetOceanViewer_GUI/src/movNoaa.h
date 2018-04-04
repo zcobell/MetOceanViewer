@@ -21,7 +21,6 @@
 #ifndef MOV_NOAA_H
 #define MOV_NOAA_H
 
-#include "movErrors.h"
 #include <QChartView>
 #include <QNetworkInterface>
 #include <QPrinter>
@@ -31,6 +30,8 @@
 #include <QtCharts>
 #include <QtNetwork>
 #include <QtWebEngine/QtWebEngine>
+#include "movErrors.h"
+#include "timezone.h"
 
 //...Forward declare classes
 class MovQChartView;
@@ -39,15 +40,15 @@ class MovImeds;
 using namespace QtCharts;
 
 class MovNoaa : public QObject {
-
   Q_OBJECT
 
-public:
+ public:
   //...Constructor
   explicit MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                    QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                    QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
+                   QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
                    QObject *parent = nullptr);
 
   //...Destructor
@@ -60,14 +61,15 @@ public:
   int getLoadedNOAAStation();
   int getClickedNOAAStation();
   QString getNOAAErrorString();
+  int replotChart(Timezone *newTimezone);
 
-private slots:
+ private slots:
   void javascriptDataReturned(QString);
 
-signals:
+ signals:
   void noaaError(QString);
 
-private:
+ private:
   //...Private Functions
   int formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString,
                          int index);
@@ -100,15 +102,20 @@ private:
   QVector<MovImeds *> CurrentNOAAStation;
   QVector<QString> ErrorString;
 
+  Timezone *tz;
+  int offsetSeconds;
+  int priorOffsetSeconds;
+
   //...Pointers to GUI elements
   QWebEngineView *map;
   MovQChartView *chart;
   QDateEdit *startDateEdit, *endDateEdit;
-  QComboBox *noaaProduct, *noaaUnits, *noaaDatum;
+  QComboBox *noaaProduct, *noaaUnits, *noaaDatum, *noaaTimezoneLocation,
+      *noaaTimezone;
   QStatusBar *statusBar;
 
   //...Keep the local chart here for reference
   QChart *thisChart;
 };
 
-#endif // MOV_NOAA_H
+#endif  // MOV_NOAA_H

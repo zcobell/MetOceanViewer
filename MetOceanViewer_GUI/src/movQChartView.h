@@ -51,6 +51,7 @@ public:
   void setStatusBar(QStatusBar *inStatusBar);
   void addSeries(QLineSeries *series, QString name);
   void setDisplayValues(bool value);
+  void rebuild();
   void clear();
 
   QGraphicsSimpleTextItem *m_coord;

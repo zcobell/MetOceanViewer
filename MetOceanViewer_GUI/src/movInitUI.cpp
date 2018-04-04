@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
+#include <QDebug>
 #include "MainWindow.h"
 #include "movColors.h"
 #include "movDflow.h"
@@ -26,10 +27,8 @@
 #include "movSession.h"
 #include "mov_dialog_update.h"
 #include "ui_mov_window_main.h"
-#include <QDebug>
 
 void MainWindow::setupMetOceanViewerUI() {
-
   //-------------------------------------------//
   // Setting up the NOAA tab for the user
 
@@ -48,6 +47,9 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
   ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
   this->noaaDisplayValues = false;
+  ui->combo_noaaTimezoneLocation->setCurrentIndex(12);
+  MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(
+      ui->combo_noaaTimezoneLocation->currentIndex());
 
   //-------------------------------------------//
   // Set up the USGS tab for the user
@@ -65,6 +67,9 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->usgs_map->setPage(this->usgs_page);
   ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
   this->usgsDisplayValues = false;
+  ui->combo_usgsTimezoneLocation->setCurrentIndex(12);
+  MainWindow::on_combo_usgsTimezoneLocation_currentIndexChanged(
+      ui->combo_usgsTimezoneLocation->currentIndex());
 
   //-------------------------------------------//
   // Set up the XTide tab for the user

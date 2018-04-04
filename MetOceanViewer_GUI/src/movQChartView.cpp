@@ -52,8 +52,7 @@ MovQChartView::MovQChartView(QWidget *parent) : QChartView(parent) {
 }
 
 MovQChartView::~MovQChartView() {
-  if (this->m_chart != nullptr)
-    delete this->m_chart;
+  if (this->m_chart != nullptr) delete this->m_chart;
 }
 
 void MovQChartView::clear() {
@@ -82,14 +81,23 @@ void MovQChartView::addSeries(QLineSeries *series, QString name) {
   return;
 }
 
+void MovQChartView::rebuild() {
+  for (int i = 0; i < this->m_kdtree.length(); i++) {
+    QList<QPointF> points = this->m_series[i]->points();
+    this->m_kdtree[i]->build(points);
+  }
+  this->initializeAxisLimits();
+  return;
+}
+
 void MovQChartView::resizeEvent(QResizeEvent *event) {
   if (scene()) {
-
     scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
     if (this->m_chart != nullptr) {
-      m_chart->resize(event->size());
-      m_coord->setPos(m_chart->size().width() / 2 - 100,
-                      m_chart->size().height() - 20);
+      this->resetAxisLimits();
+      this->m_chart->resize(event->size());
+      this->m_coord->setPos(m_chart->size().width() / 2 - 100,
+                            m_chart->size().height() - 20);
     }
     if (this->m_info != nullptr) {
       this->m_info->setPos(10, this->m_chart->size().height() - 50);
@@ -120,8 +128,7 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event) {
                 this->m_legendNames.at(i) + ": " +
                 QString::number(this->m_series[i]->points().at(i_min).y()));
           }
-          date =
-              QDateTime::fromMSecsSinceEpoch(this->m_series[0]->at(i_min).x());
+          date = QDateTime::fromMSecsSinceEpoch(x);
           date.setTimeSpec(Qt::UTC);
           dateString = QString("Date: ") + date.toString("MM/dd/yyyy hh:mm AP");
           this->m_coord->setText(dateString);
@@ -137,15 +144,13 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event) {
                  "Double click to reset zoom"));
       } else {
         this->m_coord->setText("");
-        if (this->m_statusBar)
-          this->m_statusBar->clearMessage();
+        if (this->m_statusBar) this->m_statusBar->clearMessage();
         for (int i = 0; i < this->m_series.length(); i++)
           this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
       }
     } else {
       this->m_coord->setText("");
-      if (this->m_statusBar)
-        this->m_statusBar->clearMessage();
+      if (this->m_statusBar) this->m_statusBar->clearMessage();
       for (int i = 0; i < this->m_series.length(); i++)
         this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
     }
@@ -157,21 +162,18 @@ void MovQChartView::mouseMoveEvent(QMouseEvent *event) {
 
 void MovQChartView::mouseReleaseEvent(QMouseEvent *event) {
   QChartView::mouseReleaseEvent(event);
-  if (this->m_chart)
-    this->resetAxisLimits();
+  if (this->m_chart) this->resetAxisLimits();
   return;
 }
 
 void MovQChartView::mouseDoubleClickEvent(QMouseEvent *event) {
-  if (this->m_chart)
-    this->resetZoom();
   QChartView::mouseDoubleClickEvent(event);
+  if (this->m_chart) this->resetZoom();
   return;
 }
 
 void MovQChartView::wheelEvent(QWheelEvent *event) {
-  if (this->m_chart == nullptr)
-    return;
+  if (this->m_chart == nullptr) return;
 
   if (event->delta() > 0)
     this->m_chart->zoomIn();
@@ -179,6 +181,9 @@ void MovQChartView::wheelEvent(QWheelEvent *event) {
     this->m_chart->zoomOut();
 
   QChartView::wheelEvent(event);
+
+  this->resetAxisLimits();
+
   return;
 }
 
@@ -192,34 +197,21 @@ void MovQChartView::resetZoom() {
 
 void MovQChartView::resetAxisLimits() {
   if (this->m_chart) {
-    qreal x1, x2, y1, y2;
-
     QRectF box = this->m_chart->plotArea();
-    x1 = m_chart->mapToValue(box.bottomLeft()).x();
-    x2 = m_chart->mapToValue(box.topRight()).x();
-    y1 = m_chart->mapToValue(box.bottomLeft()).y();
-    y2 = m_chart->mapToValue(box.topRight()).y();
-
-    current_x_axis_min = x1;
-    current_x_axis_max = x2;
-    current_y_axis_min = y1;
-    current_y_axis_max = y2;
+    this->current_x_axis_min = m_chart->mapToValue(box.bottomLeft()).x();
+    this->current_x_axis_max = m_chart->mapToValue(box.topRight()).x();
+    this->current_y_axis_min = m_chart->mapToValue(box.bottomLeft()).y();
+    this->current_y_axis_max = m_chart->mapToValue(box.topRight()).y();
   }
-
   return;
 }
 
 void MovQChartView::initializeAxisLimits() {
-  qreal x1, x2, y1, y2;
   QRectF box = this->m_chart->plotArea();
-  x1 = this->m_chart->mapToValue(box.bottomLeft()).x();
-  x2 = this->m_chart->mapToValue(box.topRight()).x();
-  y1 = this->m_chart->mapToValue(box.bottomLeft()).y();
-  y2 = this->m_chart->mapToValue(box.topRight()).y();
-  this->x_axis_min = x1;
-  this->y_axis_min = y1;
-  this->x_axis_max = x2;
-  this->y_axis_max = y2;
+  this->x_axis_min = this->m_chart->mapToValue(box.bottomLeft()).x();
+  this->y_axis_min = this->m_chart->mapToValue(box.bottomLeft()).y();
+  this->x_axis_max = this->m_chart->mapToValue(box.topRight()).x();
+  this->y_axis_max = this->m_chart->mapToValue(box.topRight()).y();
   this->current_x_axis_min = this->x_axis_min;
   this->current_x_axis_max = this->x_axis_max;
   this->current_y_axis_min = this->y_axis_min;
@@ -242,42 +234,41 @@ void MovQChartView::handleLegendMarkerClicked() {
   Q_ASSERT(marker);
 
   switch (marker->type()) {
-  case QLegendMarker::LegendMarkerTypeXY: {
-    // Toggle visibility of series
-    marker->series()->setVisible(!marker->series()->isVisible());
+    case QLegendMarker::LegendMarkerTypeXY: {
+      // Toggle visibility of series
+      marker->series()->setVisible(!marker->series()->isVisible());
 
-    // Turn legend marker back to visible, since hiding series also hides the
-    // marker and we don't want it to happen now.
-    marker->setVisible(true);
+      // Turn legend marker back to visible, since hiding series also hides the
+      // marker and we don't want it to happen now.
+      marker->setVisible(true);
 
-    // Dim the marker, if series is not visible
-    qreal alpha = 1.0;
+      // Dim the marker, if series is not visible
+      qreal alpha = 1.0;
 
-    if (!marker->series()->isVisible())
-      alpha = 0.5;
+      if (!marker->series()->isVisible()) alpha = 0.5;
 
-    QColor color;
-    QBrush brush = marker->labelBrush();
-    color = brush.color();
-    color.setAlphaF(alpha);
-    brush.setColor(color);
-    marker->setLabelBrush(brush);
+      QColor color;
+      QBrush brush = marker->labelBrush();
+      color = brush.color();
+      color.setAlphaF(alpha);
+      brush.setColor(color);
+      marker->setLabelBrush(brush);
 
-    brush = marker->brush();
-    color = brush.color();
-    color.setAlphaF(alpha);
-    brush.setColor(color);
-    marker->setBrush(brush);
+      brush = marker->brush();
+      color = brush.color();
+      color.setAlphaF(alpha);
+      brush.setColor(color);
+      marker->setBrush(brush);
 
-    QPen pen = marker->pen();
-    color = pen.color();
-    color.setAlphaF(alpha);
-    pen.setColor(color);
-    marker->setPen(pen);
+      QPen pen = marker->pen();
+      color = pen.color();
+      color.setAlphaF(alpha);
+      pen.setColor(color);
+      marker->setPen(pen);
 
-    break;
-  }
-  default:
-    break;
+      break;
+    }
+    default:
+      break;
   }
 }

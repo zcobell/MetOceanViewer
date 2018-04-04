@@ -27,6 +27,7 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                  QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                  QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
+                 QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
                  QObject *parent)
     : QObject(parent) {
   this->map = inMap;
@@ -37,6 +38,8 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
   this->noaaDatum = inNoaaDatum;
   this->noaaUnits = inNoaaUnits;
   this->statusBar = inStatusBar;
+  this->noaaTimezoneLocation = inNoaaTimezoneLocation;
+  this->noaaTimezone = inNoaaTimezone;
   this->NOAAMarkerID = 0;
   this->ProductIndex = 0;
   this->thisChart = nullptr;
@@ -49,6 +52,14 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
   this->CurrentNOAAStation[1]->station.resize(1);
   this->CurrentNOAAStation[0]->nstations = 1;
   this->CurrentNOAAStation[1]->nstations = 1;
+
+  //...Initialize the timezone
+  this->tz = new Timezone(this);
+  tz->fromAbbreviation(this->noaaTimezone->currentText(),
+                       static_cast<TZData::Location>(
+                           this->noaaTimezoneLocation->currentIndex()));
+  this->offsetSeconds = tz->utcOffset() * 1000;
+  this->priorOffsetSeconds = this->offsetSeconds;
 }
 
 MovNoaa::~MovNoaa() {}
@@ -65,18 +76,20 @@ int MovNoaa::fetchNOAAData() {
     return MetOceanViewer::Error::NOAA_INVALIDDATERANGE;
 
   // Begin organizing the dates for download
-  Duration = this->StartDate.daysTo(this->EndDate);
+  QDateTime localStartDate = this->StartDate.addMSecs(-this->offsetSeconds);
+  QDateTime localEndDate = this->EndDate.addMSecs(-this->offsetSeconds);
+  Duration = localStartDate.daysTo(localEndDate);
   NumDownloads = (Duration / 30) + 1;
   StartDateList.resize(NumDownloads);
   EndDateList.resize(NumDownloads);
 
   // Build the list of dates in 30 day intervals
   for (i = 0; i < NumDownloads; i++) {
-    StartDateList[i] = this->StartDate.addDays(i * 30).addDays(i);
+    StartDateList[i] = localStartDate.addDays(i * 30).addDays(i);
     StartDateList[i].setTime(QTime(0, 0, 0));
     EndDateList[i] = StartDateList[i].addDays(30);
     EndDateList[i].setTime(QTime(23, 59, 59));
-    if (EndDateList[i] > this->EndDate) EndDateList[i] = this->EndDate;
+    if (EndDateList[i] > localEndDate) EndDateList[i] = localEndDate;
   }
 
   ierr = this->retrieveProduct(2, Product, Product2);
@@ -110,21 +123,23 @@ int MovNoaa::fetchNOAAData() {
             QString("http://tidesandcurrents.noaa.gov/api/datagetter?") +
             QString("product=" + Product + "&application=metoceanviewer") +
             QString("&begin_date=") + StartString + QString("&end_date=") +
-            EndString + QString("&station=") + QString::number(NOAAMarkerID) +
-            QString("&time_zone=GMT&units=") + Units +
+            EndString + QString("&station=") +
+            QString::number(this->NOAAMarkerID) +
+            QString("&time_zone=GMT&units=") + this->Units +
             QString("&interval=&format=csv");
       else
         RequestURL =
             QString("http://tidesandcurrents.noaa.gov/api/datagetter?") +
             QString("product=" + Product2 + "&application=metoceanviewer") +
             QString("&begin_date=") + StartString + QString("&end_date=") +
-            EndString + QString("&station=") + QString::number(NOAAMarkerID) +
-            QString("&time_zone=GMT&units=") + Units +
+            EndString + QString("&station=") +
+            QString::number(this->NOAAMarkerID) +
+            QString("&time_zone=GMT&units=") + this->Units +
             QString("&interval=&format=csv");
 
       // Allow a different datum where allowed
       if (this->Datum != "Stnd")
-        RequestURL = RequestURL + QString("&datum=") + Datum;
+        RequestURL = RequestURL + QString("&datum=") + this->Datum;
 
       // Send the request
       QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
@@ -389,7 +404,7 @@ void MovNoaa::javascriptDataReturned(QString data) {
   //...Plot the chart
   ierr = this->plotChart();
 
-  statusBar->clearMessage();
+  this->statusBar->clearMessage();
 
   return;
 }
@@ -440,7 +455,7 @@ int MovNoaa::plotChart() {
     axisX->setFormat("MM/dd/yyyy");
   else
     axisX->setFormat("MM/dd/yyyy hh:mm");
-  axisX->setTitleText("Date (GMT)");
+  axisX->setTitleText("Date (" + this->tz->abbreviation() + ")");
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisX->setMin(minDateTime);
   axisX->setMax(maxDateTime);
@@ -454,14 +469,17 @@ int MovNoaa::plotChart() {
   axisY->setMax(ymax);
   this->thisChart->addAxis(axisY, Qt::AlignLeft);
 
-  for (j = 0; j < this->CurrentNOAAStation[0]->station[0].data.length(); j++)
+  for (j = 0; j < this->CurrentNOAAStation[0]->station[0].data.length(); j++) {
     if (QDateTime::fromMSecsSinceEpoch(
-            this->CurrentNOAAStation[0]->station[0].date[j])
+            this->CurrentNOAAStation[0]->station[0].date[j] +
+            this->offsetSeconds)
             .isValid()) {
       if (this->CurrentNOAAStation[0]->station[0].data[j] != 0.0)
-        series1->append(this->CurrentNOAAStation[0]->station[0].date[j],
+        series1->append(this->CurrentNOAAStation[0]->station[0].date[j] +
+                            this->offsetSeconds,
                         this->CurrentNOAAStation[0]->station[0].data[j]);
     }
+  }
   this->thisChart->addSeries(series1);
   series1->attachAxis(axisX);
   series1->attachAxis(axisY);
@@ -471,10 +489,12 @@ int MovNoaa::plotChart() {
   if (this->ProductIndex == 0) {
     for (j = 0; j < this->CurrentNOAAStation[1]->station[0].data.length(); j++)
       if (QDateTime::fromMSecsSinceEpoch(
-              this->CurrentNOAAStation[1]->station[0].date[j])
+              this->CurrentNOAAStation[1]->station[0].date[j] +
+              this->offsetSeconds)
               .isValid()) {
         if (this->CurrentNOAAStation[1]->station[0].data[j] != 0.0)
-          series2->append(this->CurrentNOAAStation[1]->station[0].date[j],
+          series2->append(this->CurrentNOAAStation[1]->station[0].date[j] +
+                              this->offsetSeconds,
                           this->CurrentNOAAStation[1]->station[0].data[j]);
       }
     this->thisChart->addSeries(series2);
@@ -740,6 +760,53 @@ int MovNoaa::saveNOAAData(QString filename, QString PreviousDirectory,
       if (ierr != 0) emit noaaError("Error writing IMEDS file");
     }
   }
+
+  return 0;
+}
+
+int MovNoaa::replotChart(Timezone *newTimezone) {
+  int offset = newTimezone->utcOffset() * 1000;
+  int totalOffset = -this->priorOffsetSeconds + offset;
+
+  QVector<QLineSeries *> series;
+  series.resize(this->chart->m_chart->series().length());
+
+  for (int i = 0; i < this->chart->m_chart->series().length(); i++) {
+    series[i] =
+        static_cast<QLineSeries *>(this->chart->m_chart->series().at(i));
+  }
+
+  for (int i = 0; i < series.length(); i++) {
+    QList<QPointF> data = series[i]->points();
+    series[i]->clear();
+    for (int j = 0; j < data.length(); j++) {
+      data[j].setX(data[j].x() + totalOffset);
+    }
+    series[i]->append(data);
+  }
+
+  QDateTime minDateTime = this->startDateEdit->dateTime();
+  QDateTime maxDateTime = this->endDateEdit->dateTime().addDays(1);
+  minDateTime.setTime(QTime(0, 0, 0));
+  maxDateTime.setTime(QTime(0, 0, 0));
+  minDateTime.setTimeSpec(Qt::UTC);
+  maxDateTime.setTimeSpec(Qt::UTC);
+
+  minDateTime = minDateTime.addMSecs(totalOffset);
+  maxDateTime = maxDateTime.addMSecs(totalOffset);
+
+  this->chart->m_chart->axisX()->setTitleText(
+      "Date (" + newTimezone->abbreviation() + ")");
+  this->chart->m_chart->axisX()->setMin(minDateTime);
+  this->chart->m_chart->axisX()->setMax(maxDateTime);
+
+  this->priorOffsetSeconds = offset;
+
+  this->chart->rebuild();
+
+  this->chart->update();
+
+  this->chart->m_chart->zoomReset();
 
   return 0;
 }

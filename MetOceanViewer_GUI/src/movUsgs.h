@@ -20,9 +20,6 @@
 #ifndef MOV_USGS_H
 #define MOV_USGS_H
 
-#include "movErrors.h"
-#include "movGeneric.h"
-#include "movQChartView.h"
 #include <QNetworkInterface>
 #include <QUrl>
 #include <QVector>
@@ -30,19 +27,23 @@
 #include <QtNetwork>
 #include <QtPrintSupport>
 #include <QtWebEngineWidgets>
+#include "movErrors.h"
+#include "movGeneric.h"
+#include "movQChartView.h"
+#include "timezone.h"
 
 using namespace QtCharts;
 
 class MovUsgs : public QObject {
-
   Q_OBJECT
 
-public:
+ public:
   explicit MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
                    QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
                    QRadioButton *inInstantButton, QComboBox *inProductBox,
                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                   QStatusBar *instatusBar, QObject *parent = nullptr);
+                   QStatusBar *instatusBar, QComboBox *inUSGSTimezoneLocation,
+                   QComboBox *inUSGSTimezone, QObject *parent = nullptr);
 
   ~MovUsgs();
 
@@ -56,14 +57,15 @@ public:
   QString getUSGSErrorString();
   QString getLoadedUSGSStation();
   QString getClickedUSGSStation();
+  int replotChart(Timezone *newTimezone);
 
-private slots:
+ private slots:
   void javascriptDataReturned(QString data);
 
-signals:
+ signals:
   void usgsError(QString);
 
-private:
+ private:
   //...Private functions
   QString getMarkerSelection(QString &name, double &longitude,
                              double &latitude);
@@ -95,15 +97,17 @@ private:
   QWebEngineView *map;
   MovQChartView *chart;
   QRadioButton *dailyButton, *historicButton, *instantButton;
-  QComboBox *productBox;
+  QComboBox *productBox, *usgsTimezoneLocation, *usgsTimezone;
   QDateEdit *startDateEdit, *endDateEdit;
   QStatusBar *statusBar;
-  QChart *thisChart;
+  //QChart *thisChart;
 
   //...Private variables
   bool USGSDataReady;
   bool USGSBeenPlotted;
   int USGSdataMethod;
+  int offsetSeconds;
+  int priorOffsetSeconds;
   int ProductIndex;
   double CurrentUSGSLat;
   double CurrentUSGSLon;
@@ -117,6 +121,7 @@ private:
   QVector<QString> Parameters;
   QVector<USGSStationData> USGSPlot;
   QVector<USGSData> CurrentUSGSStation;
+  Timezone *tz;
 };
 
-#endif // MOV_USGS_H
+#endif  // MOV_USGS_H

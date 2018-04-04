@@ -244,6 +244,163 @@
                 </layout>
                </item>
                <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_42">
+                 <item>
+                  <widget class="QLabel" name="label_noaaTimezone">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Time Zone:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_noaaTimezoneLocation">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>120</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="currentText">
+                    <string>Africa</string>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>Africa</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Antarctica</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Asia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Atlantic</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Australia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Caribbean</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Europe</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Indian Ocean</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Military</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>North America</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Pacific</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>South America</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Worldwide</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_noaaTimezone">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_16">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_12">
                  <item>
                   <widget class="QLabel" name="label_noaaproduct">
@@ -556,43 +713,43 @@
                  </item>
                 </layout>
                </item>
-               <item>
-                <layout class="QHBoxLayout" name="layout_noaagraphics">
-                 <item>
-                  <widget class="MovQWebEngineView" name="noaa_map" native="true">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>2</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="autoFillBackground">
-                    <bool>false</bool>
-                   </property>
-                   <property name="url" stdset="0">
-                    <url>
-                     <string>qrc:/rsc/html/noaa_maps.html</string>
-                    </url>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="MovQChartView" name="noaa_graphics" native="true">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>2</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">background-color: rgb(255, 255, 255);</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
               </layout>
              </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="layout_noaagraphics">
+              <item>
+               <widget class="MovQWebEngineView" name="noaa_map" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>2</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>false</bool>
+                </property>
+                <property name="url" stdset="0">
+                 <url>
+                  <string>qrc:/rsc/html/noaa_maps.html</string>
+                 </url>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="MovQChartView" name="noaa_graphics" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>2</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 255, 255);</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item>
              <widget class="QGroupBox" name="groupBox">
@@ -1139,6 +1296,160 @@
                 </layout>
                </item>
                <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_18">
+                 <item>
+                  <widget class="QLabel" name="label_usgsTimezone">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Time Zone:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_usgsTimezoneLocation">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>120</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>Africa</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Antarctica</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Asia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Atlantic</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Australia</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Caribbean</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Europe</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Indian Ocean</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Military</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>North America</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Pacific</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>South America</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Worldwide</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_usgsTimezone">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_12">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_17">
                  <item>
                   <widget class="QLabel" name="label_usgs_datatype">
@@ -1190,7 +1501,7 @@
                 </layout>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_18">
+                <layout class="QHBoxLayout" name="horizontalLayout_41">
                  <item>
                   <widget class="QLabel" name="label_usgs_product">
                    <property name="minimumSize">
@@ -4351,7 +4662,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

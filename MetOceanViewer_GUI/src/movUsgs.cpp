@@ -24,9 +24,9 @@ MovUsgs::MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
                  QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
                  QRadioButton *inInstantButton, QComboBox *inProductBox,
                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                 QStatusBar *instatusBar, QObject *parent)
+                 QStatusBar *instatusBar, QComboBox *inUSGSTimezoneLocation,
+                 QComboBox *inUSGSTimezone, QObject *parent)
     : QObject(parent) {
-
   //...Initialize variables
   this->USGSDataReady = false;
   this->USGSBeenPlotted = false;
@@ -34,7 +34,6 @@ MovUsgs::MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
   this->USGSMarkerID = "none";
   this->ProductIndex = 0;
   this->ProductName = "none";
-  this->thisChart = nullptr;
   this->USGSdataMethod = 0;
   this->CurrentUSGSLat = 0.0;
   this->CurrentUSGSLon = 0.0;
@@ -49,12 +48,21 @@ MovUsgs::MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
   this->startDateEdit = inStartDateEdit;
   this->endDateEdit = inEndDateEdit;
   this->statusBar = instatusBar;
+  this->usgsTimezoneLocation = inUSGSTimezoneLocation;
+  this->usgsTimezone = inUSGSTimezone;
+
+  //...Initialize the timezone
+  this->tz = new Timezone(this);
+  tz->fromAbbreviation(this->usgsTimezone->currentText(),
+                       static_cast<TZData::Location>(
+                           this->usgsTimezoneLocation->currentIndex()));
+  this->offsetSeconds = tz->utcOffset() * 1000;
+  this->priorOffsetSeconds = this->offsetSeconds;
 }
 
 MovUsgs::~MovUsgs() {}
 
 int MovUsgs::fetchUSGSData() {
-
   //...Get the current marker
   this->setAsyncMarkerSelection();
 
@@ -62,7 +70,6 @@ int MovUsgs::fetchUSGSData() {
 }
 
 void MovUsgs::javascriptDataReturned(QString data) {
-
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
   QString endDateString1, startDateString1;
   QString endDateString2, startDateString2;
@@ -213,8 +220,7 @@ int MovUsgs::formatUSGSInstantResponse(QByteArray Input) {
   this->CurrentUSGSStation.resize(this->Parameters.length());
 
   //...Sanity check
-  if (this->CurrentUSGSStation.length() == 0)
-    return -1;
+  if (this->CurrentUSGSStation.length() == 0) return -1;
 
   //...Zero counters
   for (i = 0; i < this->CurrentUSGSStation.length(); i++)
@@ -228,7 +234,7 @@ int MovUsgs::formatUSGSInstantResponse(QByteArray Input) {
     TempTimeZoneString = TempList.value(3);
     CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
     CurrentDate.setTimeSpec(Qt::UTC);
-    OffsetHours = getTimezoneOffset(TempTimeZoneString);
+    OffsetHours = this->getTimezoneOffset(TempTimeZoneString);
     CurrentDate = CurrentDate.addSecs(-3600 * OffsetHours);
     for (j = 0; j < this->Parameters.length(); j++) {
       TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
@@ -363,55 +369,17 @@ int MovUsgs::getDataBounds(double &ymin, double &ymax) {
   ymax = -999999999.0;
 
   for (j = 0; j < this->USGSPlot.length(); j++) {
-    if (this->USGSPlot[j].value < ymin)
-      ymin = this->USGSPlot[j].value;
-    if (this->USGSPlot[j].value > ymax)
-      ymax = this->USGSPlot[j].value;
+    if (this->USGSPlot[j].value < ymin) ymin = this->USGSPlot[j].value;
+    if (this->USGSPlot[j].value > ymax) ymax = this->USGSPlot[j].value;
   }
   return 0;
 }
 
 int MovUsgs::getTimezoneOffset(QString timezone) {
-  if (timezone.isNull() || timezone.isEmpty())
-    return 0;
-  else if (timezone == "UTC")
-    return 0;
-  else if (timezone == "GMT")
-    return 0;
-  else if (timezone == "EST")
-    return -5;
-  else if (timezone == "EDT")
-    return -4;
-  else if (timezone == "CST")
-    return -6;
-  else if (timezone == "CDT")
-    return -5;
-  else if (timezone == "MST")
-    return -7;
-  else if (timezone == "MDT")
-    return -6;
-  else if (timezone == "PST")
-    return -8;
-  else if (timezone == "PDT")
-    return -7;
-  else if (timezone == "AKST")
-    return -9;
-  else if (timezone == "AKDT")
-    return -8;
-  else if (timezone == "HST")
-    return -10;
-  else if (timezone == "HDT")
-    return -9;
-  else if (timezone == "AST")
-    return -4;
-  else if (timezone == "ADT")
-    return -3;
-  else if (timezone == "SST")
-    return -11;
-  else if (timezone == "SDT")
-    return -10;
-  else
-    return -9999;
+  if (timezone.isNull() || timezone.isEmpty()) return 0;
+  Timezone tempTZ;
+  tempTZ.fromAbbreviation(timezone, TZData::NorthAmerica);
+  return tempTZ.utcOffset();
 }
 
 int MovUsgs::plotNewUSGSStation() {
@@ -458,14 +426,9 @@ int MovUsgs::replotCurrentUSGSStation(int index) {
 }
 
 int MovUsgs::plotUSGS() {
-
   int j, ierr;
   double ymin, ymax;
   QString format;
-  QDateTime minDateTime, maxDateTime;
-
-  maxDateTime = QDateTime(QDate(1000, 1, 1), QTime(0, 0, 0));
-  minDateTime = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
 
   // Put the data into a plotting object
   this->USGSPlot.resize(
@@ -480,8 +443,7 @@ int MovUsgs::plotUSGS() {
         this->CurrentUSGSStation[this->ProductIndex].Data[i];
   }
 
-  if (USGSPlot.length() < 5)
-    return -1;
+  if (USGSPlot.length() < 5) return -1;
 
   //...Create the line series
   ierr = this->getDataBounds(ymin, ymax);
@@ -492,25 +454,27 @@ int MovUsgs::plotUSGS() {
       QPen(QColor(0, 0, 255), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
   //...Create the chart
-  this->thisChart = new QChart();
-  this->chart->m_chart = this->thisChart;
-  this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
-  this->thisChart->legend()->setAlignment(Qt::AlignBottom);
+  this->chart->m_chart = new QChart();
+  this->chart->m_chart->setAnimationOptions(QChart::SeriesAnimations);
+  this->chart->m_chart->legend()->setAlignment(Qt::AlignBottom);
+
   for (j = 0; j < this->USGSPlot.length(); j++) {
     if (QDateTime(this->USGSPlot[j].Date, this->USGSPlot[j].Time).isValid()) {
       series1->append(QDateTime(this->USGSPlot[j].Date, this->USGSPlot[j].Time)
                           .toMSecsSinceEpoch(),
                       this->USGSPlot[j].value);
-      if (minDateTime > QDateTime(USGSPlot[j].Date, USGSPlot[j].Time))
-        minDateTime = QDateTime(USGSPlot[j].Date, USGSPlot[j].Time);
-      if (maxDateTime < QDateTime(USGSPlot[j].Date, USGSPlot[j].Time))
-        maxDateTime = QDateTime(USGSPlot[j].Date, USGSPlot[j].Time);
     }
   }
-  this->thisChart->addSeries(series1);
+  this->chart->m_chart->addSeries(series1);
 
   this->chart->clear();
   this->chart->addSeries(series1, this->ProductName);
+
+  QDateTime minDateTime = QDateTime(USGSPlot[0].Date, USGSPlot[0].Time);
+  QDateTime maxDateTime = QDateTime(USGSPlot[USGSPlot.length() - 1].Date,
+                                    USGSPlot[USGSPlot.length() - 1].Time);
+  minDateTime.setTimeSpec(Qt::UTC);
+  maxDateTime.setTimeSpec(Qt::UTC);
 
   minDateTime =
       QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));
@@ -525,10 +489,10 @@ int MovUsgs::plotUSGS() {
     axisX->setFormat("MM/dd/yyyy");
   else
     axisX->setFormat("MM/dd/yyyy hh:mm");
-  axisX->setTitleText("Date (GMT)");
+  axisX->setTitleText("Date (" + this->tz->abbreviation() + ")");
   axisX->setMin(minDateTime);
   axisX->setMax(maxDateTime);
-  this->thisChart->addAxis(axisX, Qt::AlignBottom);
+  this->chart->m_chart->addAxis(axisX, Qt::AlignBottom);
   series1->attachAxis(axisX);
 
   QValueAxis *axisY = new QValueAxis(this);
@@ -536,7 +500,7 @@ int MovUsgs::plotUSGS() {
   axisY->setTitleText(this->ProductName.split(",").value(0));
   axisY->setMin(ymin);
   axisY->setMax(ymax);
-  this->thisChart->addAxis(axisY, Qt::AlignLeft);
+  this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
   series1->attachAxis(axisY);
 
   axisY->setTickCount(10);
@@ -549,16 +513,16 @@ int MovUsgs::plotUSGS() {
   axisY->applyNiceNumbers();
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->thisChart->legend()->markers().at(0)->setFont(
+  this->chart->m_chart->legend()->markers().at(0)->setFont(
       QFont("Helvetica", 10, QFont::Bold));
 
-  this->thisChart->setTitle(tr("USGS Station ") + this->USGSMarkerID + ": " +
-                            this->CurrentUSGSStationName);
-  this->thisChart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+  this->chart->m_chart->setTitle(tr("USGS Station ") + this->USGSMarkerID +
+                                 ": " + this->CurrentUSGSStationName);
+  this->chart->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   chart->setRenderHint(QPainter::Antialiasing);
-  chart->setChart(this->thisChart);
+  chart->setChart(this->chart->m_chart);
 
-  foreach (QLegendMarker *marker, this->thisChart->legend()->markers()) {
+  foreach (QLegendMarker *marker, this->chart->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
     QObject::disconnect(marker, SIGNAL(clicked()), this->chart,
                         SLOT(handleLegendMarkerClicked()));
@@ -567,7 +531,7 @@ int MovUsgs::plotUSGS() {
   }
 
   this->chart->m_style = 1;
-  this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
+  this->chart->m_coord = new QGraphicsSimpleTextItem(this->chart->m_chart);
   this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
                                this->chart->size().height() - 20);
   this->chart->initializeAxisLimits();
@@ -594,8 +558,7 @@ int MovUsgs::readUSGSDataFinished(QNetworkReply *reply) {
     ierr = this->formatUSGSInstantResponse(RawUSGSData);
   else
     ierr = this->formatUSGSDailyResponse(RawUSGSData);
-  if (ierr != 0)
-    return MetOceanViewer::Error::USGS_FORMATTING;
+  if (ierr != 0) return MetOceanViewer::Error::USGS_FORMATTING;
 
   this->USGSDataReady = true;
 
@@ -606,7 +569,6 @@ int MovUsgs::readUSGSDataFinished(QNetworkReply *reply) {
 }
 
 int MovUsgs::saveUSGSImage(QString filename, QString filter) {
-
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
     printer.setPageSize(QPrinter::Letter);
@@ -721,8 +683,7 @@ QString MovUsgs::getMarkerSelection(QString &name, double &longitude,
   QVariant eval = QVariant();
   map->page()->runJavaScript("returnStationID()",
                              [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull())
-    MovGeneric::delayM(5);
+  while (eval.isNull()) MovGeneric::delayM(5);
   QStringList evalList = eval.toString().split(";");
 
   //...Station information
@@ -742,3 +703,57 @@ int MovUsgs::setMarkerSelection() {
 bool MovUsgs::getUSGSBeenPlotted() { return this->USGSBeenPlotted; }
 
 QString MovUsgs::getUSGSErrorString() { return this->USGSErrorString; }
+
+int MovUsgs::replotChart(Timezone *newTimezone) {
+  int offset = newTimezone->utcOffset() * 1000;
+  int totalOffset = -this->priorOffsetSeconds + offset;
+
+  qDebug() << offset / 1000;
+  qDebug() << this->priorOffsetSeconds / 1000;
+  qDebug() << totalOffset / 1000;
+
+  QVector<QLineSeries *> series;
+  series.resize(this->chart->m_chart->series().length());
+
+  for (int i = 0; i < this->chart->m_chart->series().length(); i++) {
+    series[i] =
+        static_cast<QLineSeries *>(this->chart->m_chart->series().at(i));
+  }
+  for (int i = 0; i < series.length(); i++) {
+    QList<QPointF> data = series[i]->points();
+    series[i]->clear();
+    for (int j = 0; j < data.length(); j++) {
+      data[j].setX(data[j].x() + totalOffset);
+    }
+    series[i]->append(data);
+  }
+
+  QDateTime minDateTime = QDateTime(USGSPlot[0].Date, USGSPlot[0].Time);
+  QDateTime maxDateTime = QDateTime(USGSPlot[USGSPlot.length() - 1].Date,
+                                    USGSPlot[USGSPlot.length() - 1].Time);
+  minDateTime.setTimeSpec(Qt::UTC);
+  maxDateTime.setTimeSpec(Qt::UTC);
+
+  minDateTime =
+      QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));
+  maxDateTime =
+      QDateTime(maxDateTime.date(), QTime(maxDateTime.time().hour() + 1, 0, 0));
+
+  minDateTime = minDateTime.addMSecs(totalOffset);
+  maxDateTime = maxDateTime.addMSecs(totalOffset);
+
+  this->chart->m_chart->axisX()->setTitleText(
+      "Date (" + newTimezone->abbreviation() + ")");
+  this->chart->m_chart->axisX()->setMin(minDateTime);
+  this->chart->m_chart->axisX()->setMax(maxDateTime);
+
+  this->priorOffsetSeconds = offset;
+
+  this->chart->rebuild();
+
+  this->chart->update();
+
+  this->chart->m_chart->zoomReset();
+
+  return 0;
+}

@@ -1,0 +1,238 @@
+A,Alpha Time Zone,Military,1
+ACDT,Australian Central Daylight Time,Australia,10.5
+ACST,Australian Central Standard Time,Australia,9.5
+ACT,Acre Time,South America,-5
+ACT,Australian Central Time,Australia,9.5
+ACWST,Australian Central Western Standard Time,Australia,8.75
+ADT,Arabia Daylight Time,Asia,4
+ADT,Atlantic Daylight Time,North America,-3
+AEDT,Australian Eastern Daylight Time,Australia,11
+AEST,Australian Eastern Standard Time,Australia,10
+AET,Australian Eastern Time,Australia,10
+AFT,Afghanistan Time,Asia,4.5
+AKDT,Alaska Daylight Time,North America,-8
+AKST,Alaska Standard Time,North America,-9
+ALMT,Alma-Ata Time,Asia,6
+AMST,Amazon Summer Time,South America,-3
+AMST,Armenia Summer Time,Asia,5
+AMT,Amazon Time,South America,-4
+AMT,Armenia Time,Asia,4
+ANAST,Anadyr Summer Time,Asia,12
+ANAT,Anadyr Time,Asia,12
+AQTT,Aqtobe Time,Asia,5
+ART,Argentina Time,Antarctica,-3
+AST,Arabia Standard Time,Asia,3
+AST,Atlantic Standard Time,North America,-4
+AWDT,Australian Western Daylight Time,Australia,9
+AWST,Australian Western Standard Time,Australia,8
+AZOST,Azores Summer Time,Atlantic,0
+AZOT,Azores Time,Atlantic,-1
+AZST,Azerbaijan Summer Time,Asia,5
+AZT,Azerbaijan Time,Asia,4
+AoE,Anywhere on Earth,Pacific,-12
+B,Bravo Time Zone,Military,2
+BNT,Brunei Darussalam Time,Asia,8
+BOT,Bolivia Time,South America,-4
+BRST,Brasília Summer Time,South America,-2
+BRT,Brasília Time,South America,-3
+BST,Bangladesh Standard Time,Asia,6
+BST,Bougainville Standard Time,Pacific,11
+BST,British Summer Time,Europe,1
+BTT,Bhutan Time,Asia,6
+C,Charlie Time Zone,Military,3
+CAST,Casey Time,Antarctica,8
+CAT,Central Africa Time,Africa,2
+CCT,Cocos Islands Time,Indian Ocean,6.5
+CDT,Central Daylight Time,North America,-5
+CDT,Cuba Daylight Time,Caribbean,-4
+CEST,Central European Summer Time,Europe,2
+CET,Central European Time,Europe,1
+CHADT,Chatham Island Daylight Time,Pacific,13.75
+CHAST,Chatham Island Standard Time,Pacific,12.75
+CHOST,Choibalsan Summer Time,Asia,9
+CHOT,Choibalsan Time,Asia,8
+CHUT,Chuuk Time,Pacific,10
+CIDST,Cayman Islands Daylight Saving Time,Caribbean,-4
+CIST,Cayman Islands Standard Time,Caribbean,-5
+CKT,Cook Island Time,Pacific,-10
+CLST,Chile Summer Time,South America,-3
+CLT,Chile Standard Time,South America,-4
+COT,Colombia Time,South America,-5
+CST,Central Standard Time,North America,-6
+CST,China Standard Time,Asia,8
+CST,Cuba Standard Time,Caribbean,-5
+CVT,Cape Verde Time,Africa,-1
+CXT,Christmas Island Time,Australia,7
+ChST,Chamorro Standard Time,Pacific,10
+D,Delta Time Zone,Military,4
+DAVT,Davis Time,Antarctica,7
+DDUT,Dumont-d'Urville Time,Antarctica,10
+E,Echo Time Zone,Military,5
+EASST,Easter Island Summer Time,Pacific,-5
+EAST,Easter Island Standard Time,Pacific,-6
+EAT,Eastern Africa Time,Africa,3
+ECT,Ecuador Time,South America,-5
+EDT,Eastern Daylight Time,North America,-4
+EEST,Eastern European Summer Time,Europe,3
+EET,Eastern European Time,Europe,2
+EGST,Eastern Greenland Summer Time,North America,0
+EGT,East Greenland Time,North America,-1
+EST,Eastern Standard Time,North America,-5
+F,Foxtrot Time Zone,Military,6
+FET,Further-Eastern European Time,Europe,3
+FJST,Fiji Summer Time,Pacific,13
+FJT,Fiji Time,Pacific,12
+FKST,Falkland Islands Summer Time,South America,-3
+FKT,Falkland Island Time,South America,-4
+FNT,Fernando de Noronha Time,South America,-2
+G,Golf Time Zone,Military,7
+GALT,Galapagos Time,Pacific,-6
+GAMT,Gambier Time,Pacific,-9
+GET,Georgia Standard Time,Asia,4
+GFT,French Guiana Time,South America,-3
+GILT,Gilbert Island Time,Pacific,12
+GMT,Greenwich Mean Time,Europe,0
+GST,Gulf Standard Time,Asia,4
+GST,South Georgia Time,South America,-2
+GYT,Guyana Time,South America,-4
+H,Hotel Time Zone,Military,8
+HADT,Hawaii-Aleutian Daylight Time,North America,-9
+HAST,Hawaii-Aleutian Standard Time,North America,-10
+HKT,Hong Kong Time,Asia,8
+HOVST,Hovd Summer Time,Asia,8
+HOVT,Hovd Time,Asia,7
+I,India Time Zone,Military,9
+ICT,Indochina Time,Asia,7
+IDT,Israel Daylight Time,Asia,3
+IOT,Indian Chagos Time,Indian Ocean,6
+IRDT,Iran Daylight Time,Asia,4.5
+IRKST,Irkutsk Summer Time,Asia,9
+IRKT,Irkutsk Time,Asia,8
+IRST,Iran Standard Time,Asia,3.5
+IST,India Standard Time,Asia,5.5
+IST,Irish Standard Time,Europe,1
+IST,Israel Standard Time,Asia,2
+JST,Japan Standard Time,Asia,9
+K,Kilo Time Zone,Military,10
+KGT,Kyrgyzstan Time,Asia,6
+KOST,Kosrae Time,Pacific,11
+KRAST,Krasnoyarsk Summer Time,Asia,8
+KRAT,Krasnoyarsk Time,Asia,7
+KST,Korea Standard Time,Asia,9
+KUYT,Kuybyshev Time,Europe,4
+L,Lima Time Zone,Military,11
+LHDT,Lord Howe Daylight Time,Australia,11
+LHST,Lord Howe Standard Time,Australia,10.5
+LINT,Line Islands Time,Pacific,14
+M,Mike Time Zone,Military,12
+MAGST,Magadan Summer Time,Asia,12
+MAGT,Magadan Time,Asia,11
+MART,Marquesas Time,Pacific,-9.5
+MAWT,Mawson Time,Antarctica,5
+MDT,Mountain Daylight Time,North America,-6
+MHT,Marshall Islands Time,Pacific,12
+MMT,Myanmar Time,Asia,6.5
+MSD,Moscow Daylight Time,Europe,4
+MSK,Moscow Standard Time,Europe,3
+MST,Mountain Standard Time,North America,-7
+MUT,Mauritius Time,Africa,4
+MVT,Maldives Time,Asia,5
+MYT,Malaysia Time,Asia,8
+N,November Time Zone,Military,-1
+NCT,New Caledonia Time,Pacific,11
+NDT,Newfoundland Daylight Time,North America,-2.5
+NFT,Norfolk Time,Australia,11
+NOVST,Novosibirsk Summer Time,Asia,7
+NOVT,Novosibirsk Time,Asia,6
+NPT,Nepal Time,Asia,5.75
+NRT,Nauru Time,Pacific,12
+NST,Newfoundland Standard Time,North America,-3.5
+NUT,Niue Time,Pacific,-11
+NZDT,New Zealand Daylight Time,Pacific,13
+NZST,New Zealand Standard Time,Pacific,12
+O,Oscar Time Zone,Military,-2
+OMSST,Omsk Summer Time,Asia,7
+OMST,Omsk Standard Time,Asia,6
+ORAT,Oral Time,Asia,5
+P,Papa Time Zone,Military,-3
+PDT,Pacific Daylight Time,North America,-7
+PET,Peru Time,South America,-5
+PETST,Kamchatka Summer Time,Asia,12
+PETT,Kamchatka Time,Asia,12
+PGT,Papua New Guinea Time,Pacific,10
+PHOT,Phoenix Island Time,Pacific,13
+PHT,Philippine Time,Asia,8
+PKT,Pakistan Standard Time,Asia,5
+PMDT,Pierre & Miquelon Daylight Time,North America,-2
+PMST,Pierre & Miquelon Standard Time,North America,-3
+PONT,Pohnpei Standard Time,Pacific,11
+PST,Pacific Standard Time,North America,-8
+PST,Pitcairn Standard Time,Pacific,-8
+PWT,Palau Time,Pacific,9
+PYST,Paraguay Summer Time,South America,-3
+PYT,Paraguay Time,South America,-4
+PYT,Pyongyang Time,Asia,8.5
+Q,Quebec Time Zone,Military,-4
+QYZT,Qyzylorda Time,Asia,6
+R,Romeo Time Zone,Military,-5
+RET,Reunion Time,Africa,4
+ROTT,Rothera Time,Antarctica,-3
+S,Sierra Time Zone,Military,-6
+SAKT,Sakhalin Time,Asia,11
+SAMT,Samara Time,Europe,4
+SAST,South Africa Standard Time,Africa,2
+SBT,Solomon Islands Time,Pacific,11
+SCT,Seychelles Time,Africa,4
+SGT,Singapore Time,Asia,8
+SRET,Srednekolymsk Time,Asia,11
+SRT,Suriname Time,South America,-3
+SST,Samoa Standard Time,Pacific,-11
+SYOT,Syowa Time,Antarctica,3
+T,Tango Time Zone,Military,-7
+TAHT,Tahiti Time,Pacific,-10
+TFT,French Southern and Antarctic Time,Indian Ocean,5
+TJT,Tajikistan Time,Asia,5
+TKT,Tokelau Time,Pacific,13
+TLT,East Timor Time,Asia,9
+TMT,Turkmenistan Time,Asia,5
+TOST,Tonga Summer Time,Pacific,14
+TOT,Tonga Time,Pacific,13
+TRT,Turkey Time,Asia,3
+TVT,Tuvalu Time,Pacific,12
+U,Uniform Time Zone,Military,-8
+ULAST,Ulaanbaatar Summer Time,Asia,9
+ULAT,Ulaanbaatar Time,Asia,8
+UTC,Coordinated Universal Time,Worldwide,0
+UYST,Uruguay Summer Time,South America,-2
+UYT,Uruguay Time,South America,-3
+UZT,Uzbekistan Time,Asia,5
+V,Victor Time Zone,Military,-9
+VET,Venezuelan Standard Time,South America,-4
+VLAST,Vladivostok Summer Time,Asia,11
+VLAT,Vladivostok Time,Asia,10
+VOST,Vostok Time,Antarctica,6
+VUT,Vanuatu Time,Pacific,11
+W,Whiskey Time Zone,Military,-10
+WAKT,Wake Time,Pacific,12
+WARST,Western Argentine Summer Time,South America,-3
+WAST,West Africa Summer Time,Africa,2
+WAT,West Africa Time,Africa,1
+WEST,Western European Summer Time,Europe,1
+WET,Western European Time,Europe,0
+WFT,Wallis and Futuna Time,Pacific,12
+WGST,Western Greenland Summer Time,North America,-2
+WGT,West Greenland Time,North America,-3
+WIB,Western Indonesian Time,Asia,7
+WIT,Eastern Indonesian Time,Asia,9
+WITA,Central Indonesian Time,Asia,8
+WST,West Samoa Time,Pacific,14
+WST,Western Sahara Summer Time,Africa,1
+WT,Western Sahara Standard Time,Africa,0
+X,X-ray Time Zone,Military,-11
+Y,Yankee Time Zone,Military,-12
+YAKST,Yakutsk Summer Time,Asia,10
+YAKT,Yakutsk Time,Asia,9
+YAPT,Yap Time,Pacific,10
+YEKST,Yekaterinburg Summer Time,Asia,6
+YEKT,Yekaterinburg Time,Asia,5
+Z,Zulu Time Zone,Military,0
