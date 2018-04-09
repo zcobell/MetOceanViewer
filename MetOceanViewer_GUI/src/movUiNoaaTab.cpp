@@ -30,8 +30,7 @@
 //-------------------------------------------//
 void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index) {
   Q_UNUSED(index);
-  ui->noaa_map->page()->runJavaScript(
-      "panTo('" + ui->Combo_NOAAPanTo->currentText() + "')");
+  this->changeNoaaMaptype();
   return;
 }
 //-------------------------------------------//
@@ -147,10 +146,12 @@ void MainWindow::plotNOAAStation() {
   //...Create a new NOAA object
   if (!this->thisNOAA.isNull()) delete this->thisNOAA;
   this->thisNOAA =
-      new MovNoaa(ui->noaa_map, ui->noaa_graphics, ui->Date_StartTime,
+      new MovNoaa(ui->quick_noaaMap, ui->noaa_graphics, ui->Date_StartTime,
                   ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
                   ui->combo_noaadatum, ui->statusBar,
-                  ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone, this);
+                  ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone,
+                  this->noaaStationModel, &this->noaaSelectedStation, this);
+
   connect(this->thisNOAA, SIGNAL(noaaError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 

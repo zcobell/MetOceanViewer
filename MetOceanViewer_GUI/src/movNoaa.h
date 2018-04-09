@@ -24,6 +24,7 @@
 #include <QChartView>
 #include <QNetworkInterface>
 #include <QPrinter>
+#include <QQuickWidget>
 #include <QUrl>
 #include <QVector>
 #include <QWebEngineView>
@@ -31,6 +32,7 @@
 #include <QtNetwork>
 #include <QtWebEngine/QtWebEngine>
 #include "movErrors.h"
+#include "stationmodel.h"
 #include "timezone.h"
 
 //...Forward declare classes
@@ -44,11 +46,12 @@ class MovNoaa : public QObject {
 
  public:
   //...Constructor
-  explicit MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
+  explicit MovNoaa(QQuickWidget *inMap, MovQChartView *inChart,
                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                    QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                    QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
                    QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
+                   StationModel *stationModel, QString *selectedStation,
                    QObject *parent = nullptr);
 
   //...Destructor
@@ -62,9 +65,12 @@ class MovNoaa : public QObject {
   int getClickedNOAAStation();
   QString getNOAAErrorString();
   int replotChart(Timezone *newTimezone);
+  void setActiveMarker(QString marker);
+
+  static void addStationsToModel(StationModel *model);
 
  private slots:
-  void javascriptDataReturned(QString);
+  // void javascriptDataReturned(QString);
 
  signals:
   void noaaError(QString);
@@ -81,7 +87,6 @@ class MovNoaa : public QObject {
   int generateLabels();
   int plotChart();
   int setNOAAStation();
-  int setAsyncNOAAStation();
   int getNOAAStation(QString &NOAAStationName, double &longitude,
                      double &latitude);
 
@@ -107,12 +112,15 @@ class MovNoaa : public QObject {
   int priorOffsetSeconds;
 
   //...Pointers to GUI elements
-  QWebEngineView *map;
+  QQuickWidget *map;
   MovQChartView *chart;
   QDateEdit *startDateEdit, *endDateEdit;
   QComboBox *noaaProduct, *noaaUnits, *noaaDatum, *noaaTimezoneLocation,
       *noaaTimezone;
   QStatusBar *statusBar;
+  StationModel *stationModel;
+  Station m_station;
+  QString *selectedStation;
 
   //...Keep the local chart here for reference
   QChart *thisChart;

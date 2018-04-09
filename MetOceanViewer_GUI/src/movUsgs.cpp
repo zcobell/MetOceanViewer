@@ -19,8 +19,9 @@
 //-----------------------------------------------------------------------*/
 #include "movUsgs.h"
 #include "movJavascriptAsyncReturn.h"
+#include "station.h"
 
-MovUsgs::MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
+MovUsgs::MovUsgs(QQuickWidget *inMap, MovQChartView *inChart,
                  QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
                  QRadioButton *inInstantButton, QComboBox *inProductBox,
                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
@@ -497,7 +498,7 @@ int MovUsgs::plotUSGS() {
 
   QValueAxis *axisY = new QValueAxis(this);
   axisY->setLabelFormat(format);
-  axisY->setTitleText(this->ProductName.split(",").value(0));
+  axisY->setTitleText(this->ProductName.split("),QStringLiteral(").value(0));
   axisY->setMin(ymin);
   axisY->setMax(ymax);
   this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
@@ -609,7 +610,7 @@ int MovUsgs::saveUSGSImage(QString filename, QString filter) {
     imagePainter.setRenderHints(QPainter::Antialiasing |
                                 QPainter::TextAntialiasing |
                                 QPainter::SmoothPixmapTransform);
-    this->map->render(&imagePainter, QPoint(0, 0));
+    // this->map->render(&imagePainter, QPoint(0, 0));
     this->chart->render(&imagePainter, chartRect);
 
     outputFile.open(QIODevice::WriteOnly);
@@ -630,8 +631,10 @@ int MovUsgs::saveUSGSData(QString filename, QString format) {
     Output << "Units: N/A\n";
     Output << "\n";
     for (int i = 0; i < this->USGSPlot.length(); i++) {
-      Output << this->USGSPlot[i].Date.toString("MM/dd/yyyy") + "," +
-                    this->USGSPlot[i].Time.toString("hh:mm") + "," +
+      Output << this->USGSPlot[i].Date.toString("MM/dd/yyyy") +
+                    "),QStringLiteral(" +
+                    this->USGSPlot[i].Time.toString("hh:mm") +
+                    "),QStringLiteral(" +
                     QString::number(this->USGSPlot[i].value) + "\n";
     }
   } else if (format.compare("IMEDS") == 0) {
@@ -672,18 +675,18 @@ void MovUsgs::setAsyncMarkerSelection() {
   MovJavascriptAsyncReturn *javaReturn = new MovJavascriptAsyncReturn(this);
   connect(javaReturn, SIGNAL(valueChanged(QString)), this,
           SLOT(javascriptDataReturned(QString)));
-  this->map->page()->runJavaScript(
-      "returnStationID()",
-      [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
+  // this->map->page()->runJavaScript(
+  //    "returnStationID()"),
+  //    [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
   return;
 }
 
 QString MovUsgs::getMarkerSelection(QString &name, double &longitude,
                                     double &latitude) {
   QVariant eval = QVariant();
-  map->page()->runJavaScript("returnStationID()",
-                             [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull()) MovGeneric::delayM(5);
+  // map->page()->runJavaScript("returnStationID()"),
+  //                           [&eval](const QVariant &v) { eval = v; });
+  // while (eval.isNull()) MovGeneric::delayM(5);
   QStringList evalList = eval.toString().split(";");
 
   //...Station information
@@ -756,4 +759,32 @@ int MovUsgs::replotChart(Timezone *newTimezone) {
   this->chart->m_chart->zoomReset();
 
   return 0;
+}
+
+void MovUsgs::addStationsToModel(StationModel *model) {
+  QFile stationFile(":/stations/data/usgs_stations.csv");
+
+  if (!stationFile.open(QIODevice::ReadOnly)) return;
+
+  while (!stationFile.atEnd()) {
+    QString line = stationFile.readLine().simplified();
+    QStringList list = line.split(";");
+    QString id = list.value(0);
+    QString name = list.value(1);
+    name = name.simplified();
+    QString temp = list.value(2);
+    double lat = temp.toDouble();
+    temp = list.value(3);
+    double lon = temp.toDouble();
+    model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+  }
+
+  stationFile.close();
+
+  return;
+}
+
+void MovUsgs::setActiveMarker(QString marker) {
+  this->USGSMarkerID = marker.toInt();
+  return;
 }

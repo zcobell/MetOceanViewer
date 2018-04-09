@@ -18,24 +18,51 @@
 //
 //-----------------------------------------------------------------------*/
 #include <QDebug>
+#include <QtGlobal>
 #include "MainWindow.h"
 #include "movColors.h"
 #include "movDflow.h"
 #include "movGeneric.h"
 #include "movKeyhandler.h"
+#include "movNoaa.h"
 #include "movQWebEnginePage.h"
 #include "movSession.h"
+#include "movUsgs.h"
 #include "mov_dialog_update.h"
 #include "ui_mov_window_main.h"
+
+void MainWindow::changeNoaaMarker(QString markerId) {
+  this->noaaSelectedStation = markerId;
+}
+
+void MainWindow::changeUsgsMarker(QString markerId) {
+  this->usgsSelectedStation = markerId;
+}
+
+void MainWindow::changeNoaaMaptype() {
+  ui->quick_noaaMap->rootContext()->setContextProperty(
+      "mapType", ui->Combo_NOAAPanTo->currentIndex());
+}
+
+void MainWindow::changeUsgsMaptype() {
+  ui->quick_usgsMap->rootContext()->setContextProperty(
+      "mapType", ui->combo_usgs_panto->currentIndex());
+}
 
 void MainWindow::setupMetOceanViewerUI() {
   //-------------------------------------------//
   // Setting up the NOAA tab for the user
 
   // Define which web page we will use from the resource included
-  this->noaa_page = new MovQWebEnginePage(this);
-  ui->noaa_map->setPage(this->noaa_page);
-  ui->noaa_map->page()->load(QUrl("qrc:/rsc/html/noaa_maps.html"));
+  this->noaaStationModel = new StationModel(this);
+  ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
+                                                       this->noaaStationModel);
+  this->changeNoaaMaptype();
+  ui->quick_noaaMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
+  MovNoaa::addStationsToModel(this->noaaStationModel);
+  QObject *noaaItem = ui->quick_noaaMap->rootObject();
+  QObject::connect(noaaItem, SIGNAL(markerChanged(QString)), this,
+                   SLOT(changeNoaaMarker(QString)));
 
   // Get the local timezone offset
   this->LocalTimezoneOffset = MovGeneric::getLocalTimzoneOffset();
@@ -63,13 +90,20 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
   ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
-  this->usgs_page = new MovQWebEnginePage(this);
-  ui->usgs_map->setPage(this->usgs_page);
-  ui->usgs_map->load(QUrl("qrc:/rsc/html/usgs_maps.html"));
   this->usgsDisplayValues = false;
   ui->combo_usgsTimezoneLocation->setCurrentIndex(12);
   MainWindow::on_combo_usgsTimezoneLocation_currentIndexChanged(
       ui->combo_usgsTimezoneLocation->currentIndex());
+
+  this->usgsStationModel = new StationModel(this);
+  ui->quick_usgsMap->rootContext()->setContextProperty("stationModel",
+                                                       this->usgsStationModel);
+  this->changeUsgsMaptype();
+  ui->quick_usgsMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
+  MovUsgs::addStationsToModel(this->usgsStationModel);
+  QObject *usgsItem = ui->quick_usgsMap->rootObject();
+  QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
+                   SLOT(changeUsgsMarker(QString)));
 
   //-------------------------------------------//
   // Set up the XTide tab for the user
@@ -162,8 +196,6 @@ void MainWindow::setupMetOceanViewerUI() {
 
   ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
   ui->timeseries_map->setContextMenuPolicy(Qt::CustomContextMenu);
-  ui->noaa_map->setContextMenuPolicy(Qt::CustomContextMenu);
-  ui->usgs_map->setContextMenuPolicy(Qt::CustomContextMenu);
 
   MovKeyhandler *key = new MovKeyhandler(this);
   this->centralWidget()->installEventFilter(key);

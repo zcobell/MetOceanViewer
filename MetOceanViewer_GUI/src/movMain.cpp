@@ -143,17 +143,17 @@ void MainWindow::handleEnterKey() {
   if (ui->MainTabs->currentIndex() == 0) {
     // NOAA Tab
     if (ui->subtab_livedata->currentIndex() == 0) {
-      if (ui->Combo_NOAAPanTo->hasFocus())
-        ui->noaa_map->page()->runJavaScript(
-            "panTo('" + ui->Combo_NOAAPanTo->currentText() + "')");
-      else
-        this->plotNOAAStation();
+      //if (ui->Combo_NOAAPanTo->hasFocus())
+        //ui->noaa_map->page()->runJavaScript(
+        //    "panTo('" + ui->Combo_NOAAPanTo->currentText() + "')");
+      //else
+      //  this->plotNOAAStation();
     }
     // USGS Tab
     else if (ui->subtab_livedata->currentIndex() == 1) {
-      if (ui->combo_usgs_panto->hasFocus())
-        ui->usgs_map->page()->runJavaScript(
-            "panTo('" + ui->combo_usgs_panto->currentText() + "')");
+      if (ui->combo_usgs_panto->hasFocus()) {}
+        //ui->usgs_map->page()->runJavaScript(
+        //    "panTo('" + ui->combo_usgs_panto->currentText() + "')");
       else
         on_button_usgs_fetch_clicked();
     }

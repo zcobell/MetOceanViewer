@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/rsc">
+    <qresource lang="Generic Resources" prefix="/rsc">
         <file>html/noaa_maps.html</file>
         <file>html/timeseries_maps.html</file>
         <file>html/hwm_map.html</file>
@@ -26,5 +26,13 @@
         <file>js/usgs_maps.js</file>
         <file>html/xtide_maps.html</file>
         <file>js/xtide_maps.js</file>
+    </qresource>
+    <qresource lang="QML" prefix="/qml">
+        <file>qml/MovMapItem.qml</file>
+        <file>qml/MapViewer.qml</file>
+    </qresource>
+    <qresource lang="csv" prefix="/stations">
+        <file>data/noaa_stations.csv</file>
+        <file>data/usgs_stations.csv</file>
     </qresource>
 </RCC>

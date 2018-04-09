@@ -29,8 +29,7 @@
 //-------------------------------------------//
 void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index) {
   Q_UNUSED(index);
-  ui->usgs_map->page()->runJavaScript(
-      "panTo('" + ui->combo_usgs_panto->currentText() + "')");
+  this->changeUsgsMaptype();
   return;
 }
 //-------------------------------------------//
@@ -45,7 +44,7 @@ void MainWindow::on_button_usgs_fetch_clicked() {
   //...Create a new USGS object
   if (!thisUSGS.isNull()) delete thisUSGS;
   thisUSGS = new MovUsgs(
-      ui->usgs_map, ui->usgs_graphics, ui->radio_usgsDaily,
+      ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
       ui->radio_usgshistoric, ui->radio_usgs_instant, ui->combo_USGSProduct,
       ui->Date_usgsStart, ui->Date_usgsEnd, ui->statusBar,
       ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone, this);

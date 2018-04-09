@@ -20,14 +20,14 @@
 #include "movNoaa.h"
 #include "movGeneric.h"
 #include "movImeds.h"
-#include "movJavascriptAsyncReturn.h"
 #include "movQChartView.h"
 
-MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
+MovNoaa::MovNoaa(QQuickWidget *inMap, MovQChartView *inChart,
                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
                  QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                  QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
                  QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
+                 StationModel *stationModel, QString *selectedStation,
                  QObject *parent)
     : QObject(parent) {
   this->map = inMap;
@@ -40,8 +40,10 @@ MovNoaa::MovNoaa(QWebEngineView *inMap, MovQChartView *inChart,
   this->statusBar = inStatusBar;
   this->noaaTimezoneLocation = inNoaaTimezoneLocation;
   this->noaaTimezone = inNoaaTimezone;
-  this->NOAAMarkerID = 0;
+  this->stationModel = stationModel;
+  this->NOAAMarkerID = -1;
   this->ProductIndex = 0;
+  this->selectedStation = selectedStation;
   this->thisChart = nullptr;
 
   //...Initialize the IMEDS object
@@ -294,120 +296,7 @@ QString MovNoaa::getNOAAErrorString() { return this->NOAAErrorString; }
 
 int MovNoaa::getLoadedNOAAStation() { return this->NOAAMarkerID; }
 
-int MovNoaa::getClickedNOAAStation() {
-  QString JunkString;
-  double JunkDouble1, JunkDouble2;
-  return getNOAAStation(JunkString, JunkDouble1, JunkDouble2);
-}
-
-int MovNoaa::setNOAAStation() {
-  QString name;
-  double lon, lat;
-  this->NOAAMarkerID = getNOAAStation(name, lon, lat);
-
-  this->CurrentNOAAStation[0]->station[0].StationName = name;
-  this->CurrentNOAAStation[0]->station[0].latitude = lat;
-  this->CurrentNOAAStation[0]->station[0].longitude = lon;
-  this->CurrentNOAAStation[1]->station[0].StationName = name;
-  this->CurrentNOAAStation[1]->station[0].latitude = lat;
-  this->CurrentNOAAStation[1]->station[0].longitude = lon;
-  this->CurrentNOAAStation[0]->station[0].StationID =
-      "NOAA_" + QString::number(this->NOAAMarkerID);
-  this->CurrentNOAAStation[1]->station[0].StationID =
-      "NOAA_" + QString::number(this->NOAAMarkerID);
-
-  return 0;
-}
-
-int MovNoaa::getNOAAStation(QString &NOAAStationName, double &longitude,
-                            double &latitude) {
-  QVariant eval = QVariant();
-  this->map->page()->runJavaScript("returnStationID()",
-                                   [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull()) MovGeneric::delayM(5);
-  QStringList evalList = eval.toString().split(";");
-
-  NOAAStationName = evalList.value(1).simplified();
-  latitude = evalList.value(3).toDouble();
-  longitude = evalList.value(2).toDouble();
-
-  return evalList.value(0).toInt();
-}
-
-int MovNoaa::setAsyncNOAAStation() {
-  MovJavascriptAsyncReturn *javaReturn = new MovJavascriptAsyncReturn(this);
-  connect(javaReturn, SIGNAL(valueChanged(QString)), this,
-          SLOT(javascriptDataReturned(QString)));
-  this->map->page()->runJavaScript(
-      "returnStationID()",
-      [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
-  return 0;
-}
-
-void MovNoaa::javascriptDataReturned(QString data) {
-  int ierr;
-  QStringList evalList;
-
-  evalList = data.split(";");
-
-  this->NOAAMarkerID = evalList.value(0).toInt();
-  this->CurrentNOAAStation[0]->station[0].latitude =
-      evalList.value(3).toDouble();
-  this->CurrentNOAAStation[0]->station[0].longitude =
-      evalList.value(2).toDouble();
-  this->CurrentNOAAStation[0]->station[0].StationName =
-      evalList.value(1).simplified();
-  this->CurrentNOAAStation[1]->station[0].latitude =
-      evalList.value(3).toDouble();
-  this->CurrentNOAAStation[1]->station[0].longitude =
-      evalList.value(2).toDouble();
-  this->CurrentNOAAStation[1]->station[0].StationName =
-      evalList.value(1).simplified();
-  this->CurrentNOAAStation[0]->station[0].StationID =
-      "NOAA_" + QString::number(this->NOAAMarkerID);
-  this->CurrentNOAAStation[1]->station[0].StationID =
-      "NOAA_" + QString::number(this->NOAAMarkerID);
-
-  if (this->NOAAMarkerID == -1) {
-    emit noaaError(tr("You must select a station"));
-    return;
-  }
-
-  //...Grab the options from the UI
-  this->StartDate = this->startDateEdit->dateTime();
-  this->StartDate.setTime(QTime(0, 0, 0));
-  this->EndDate = this->endDateEdit->dateTime();
-  this->EndDate = this->EndDate.addDays(1);
-  this->EndDate.setTime(QTime(0, 0, 0));
-  this->Units = this->noaaUnits->currentText();
-  this->Datum = this->noaaDatum->currentText();
-  this->ProductIndex = this->noaaProduct->currentIndex();
-
-  // Update status
-  this->statusBar->showMessage(tr("Downloading data from NOAA...", 0));
-
-  //...Generate the javascript calls in this array
-  ierr = this->fetchNOAAData();
-
-  //...Update the status bar
-  statusBar->showMessage(tr("Plotting the data from NOAA..."));
-
-  //...Generate prep the data for plotting
-  ierr = this->prepNOAAResponse();
-
-  //...Check for valid data
-  if (this->CurrentNOAAStation[0]->station[0].NumSnaps < 5) {
-    emit noaaError(this->ErrorString[0]);
-    return;
-  }
-
-  //...Plot the chart
-  ierr = this->plotChart();
-
-  this->statusBar->clearMessage();
-
-  return;
-}
+int MovNoaa::getClickedNOAAStation() { return this->NOAAMarkerID; }
 
 int MovNoaa::plotChart() {
   int i, j, ierr;
@@ -543,8 +432,69 @@ int MovNoaa::plotChart() {
 }
 
 int MovNoaa::plotNOAAStation() {
-  this->setAsyncNOAAStation();
-  return 0;
+  if (*(this->selectedStation) == "-1") {
+    emit noaaError(tr("You must select a station"));
+    return 1;
+  } else {
+    int ierr;
+
+    this->m_station = this->stationModel->findStation(*(this->selectedStation));
+    this->NOAAMarkerID = this->m_station.id().toInt();
+
+    this->CurrentNOAAStation[0]->station[0].longitude =
+        this->m_station.coordinate().longitude();
+    this->CurrentNOAAStation[0]->station[0].latitude =
+        this->m_station.coordinate().latitude();
+    this->CurrentNOAAStation[0]->station[0].StationName =
+        this->m_station.name();
+    this->CurrentNOAAStation[0]->station[0].StationID =
+        "NOAA_" + this->m_station.id();
+    this->CurrentNOAAStation[0]->station[0].StationIndex = 0;
+
+    this->CurrentNOAAStation[1]->station[0].longitude =
+        this->m_station.coordinate().longitude();
+    this->CurrentNOAAStation[1]->station[0].latitude =
+        this->m_station.coordinate().latitude();
+    this->CurrentNOAAStation[1]->station[0].StationName =
+        this->m_station.name();
+    this->CurrentNOAAStation[1]->station[0].StationID =
+        "NOAA_" + this->m_station.id();
+    this->CurrentNOAAStation[1]->station[0].StationIndex = 0;
+
+    //...Grab the options from the UI
+    this->StartDate = this->startDateEdit->dateTime();
+    this->StartDate.setTime(QTime(0, 0, 0));
+    this->EndDate = this->endDateEdit->dateTime();
+    this->EndDate = this->EndDate.addDays(1);
+    this->EndDate.setTime(QTime(0, 0, 0));
+    this->Units = this->noaaUnits->currentText();
+    this->Datum = this->noaaDatum->currentText();
+    this->ProductIndex = this->noaaProduct->currentIndex();
+
+    // Update status
+    this->statusBar->showMessage(tr("Downloading data from NOAA...", 0));
+
+    ierr = this->fetchNOAAData();
+
+    //...Update the status bar
+    statusBar->showMessage(tr("Plotting the data from NOAA..."));
+
+    //...Generate prep the data for plotting
+    ierr = this->prepNOAAResponse();
+
+    //...Check for valid data
+    if (this->CurrentNOAAStation[0]->station[0].NumSnaps < 5) {
+      emit noaaError(this->ErrorString[0]);
+      return 1;
+    }
+
+    //...Plot the chart
+    ierr = this->plotChart();
+
+    this->statusBar->clearMessage();
+
+    return 0;
+  }
 }
 
 int MovNoaa::prepNOAAResponse() {
@@ -809,4 +759,27 @@ int MovNoaa::replotChart(Timezone *newTimezone) {
   this->chart->m_chart->zoomReset();
 
   return 0;
+}
+
+void MovNoaa::addStationsToModel(StationModel *model) {
+  QFile stationFile(":/stations/data/noaa_stations.csv");
+
+  if (!stationFile.open(QIODevice::ReadOnly)) return;
+
+  while (!stationFile.atEnd()) {
+    QString line = stationFile.readLine().simplified();
+    QStringList list = line.split(";");
+    QString id = list.value(0);
+    QString name = list.value(3);
+    name = name.simplified();
+    QString temp = list.value(1);
+    double lat = temp.toDouble();
+    temp = list.value(2);
+    double lon = temp.toDouble();
+    model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+  }
+
+  stationFile.close();
+
+  return;
 }

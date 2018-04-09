@@ -18,7 +18,8 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core gui webenginewidgets network xml charts printsupport
+QT  += core gui webenginewidgets network xml charts printsupport
+QT  += qml quick positioning location quickwidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -56,6 +57,8 @@ SOURCES +=\
     src/movErrors.cpp \
     src/movusertimeseriesoptions.cpp \
     src/movNetcdfTimeseries.cpp \
+    src/stationmodel.cpp \
+    src/station.cpp
 
 HEADERS  += \
     src/movAdcircStationOutput.h \
@@ -85,6 +88,8 @@ HEADERS  += \
     src/movQWebEngineView.h \
     src/metoceanviewer.h \
     src/movNetcdfTimeseries.h \
+    src/stationmodel.h \
+    src/station.h
 
 FORMS    += \
     ui/mov_dialog_about.ui \
@@ -233,3 +238,7 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libr
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/release/timezone.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/debug/timezone.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/libtimezone.a
+
+DISTFILES += \
+    qml/MovMapItem.qml \
+    qml/MapViewer.qml

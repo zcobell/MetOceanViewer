@@ -30,6 +30,8 @@
 #include <QtCharts>
 #include <QtNetwork>
 #include <QtWebEngineWidgets>
+#include <QQuickWidget>
+#include "stationmodel.h"
 
 //...Forward declarations of classes
 class MovNoaa;
@@ -189,6 +191,14 @@ private slots:
 
   void on_combo_usgsTimezone_currentIndexChanged(const QString &arg1);
 
+  void changeNoaaMarker(QString markerId);
+
+  void changeUsgsMarker(QString markerId);
+
+  void changeNoaaMaptype();
+
+  void changeUsgsMaptype();
+
 private:
   Ui::MainWindow *ui;
 
@@ -234,6 +244,13 @@ private:
 
   QString commandLineFile;
 
+  StationModel *noaaStationModel;
+
+  StationModel *usgsStationModel;
+
+  QString noaaSelectedStation;
+  QString usgsSelectedStation;
+
   bool processCommandLine;
   bool timeseriesDisplayValues;
   bool timeseriesHideInfoWindows;
@@ -244,6 +261,7 @@ private:
 
 protected:
   void closeEvent(QCloseEvent *);
+
 };
 
 #endif // MOV_MAINWINDOW_H

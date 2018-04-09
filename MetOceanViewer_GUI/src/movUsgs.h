@@ -21,6 +21,7 @@
 #define MOV_USGS_H
 
 #include <QNetworkInterface>
+#include <QQuickWidget>
 #include <QUrl>
 #include <QVector>
 #include <QtCharts>
@@ -31,6 +32,7 @@
 #include "movGeneric.h"
 #include "movQChartView.h"
 #include "timezone.h"
+#include "stationmodel.h"
 
 using namespace QtCharts;
 
@@ -38,7 +40,7 @@ class MovUsgs : public QObject {
   Q_OBJECT
 
  public:
-  explicit MovUsgs(QWebEngineView *inMap, MovQChartView *inChart,
+  explicit MovUsgs(QQuickWidget *inMap, MovQChartView *inChart,
                    QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
                    QRadioButton *inInstantButton, QComboBox *inProductBox,
                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
@@ -58,6 +60,9 @@ class MovUsgs : public QObject {
   QString getLoadedUSGSStation();
   QString getClickedUSGSStation();
   int replotChart(Timezone *newTimezone);
+  void setActiveMarker(QString marker);
+
+  static void addStationsToModel(StationModel *model);
 
  private slots:
   void javascriptDataReturned(QString data);
@@ -94,13 +99,13 @@ class MovUsgs : public QObject {
   };
 
   //...Pointers to variables
-  QWebEngineView *map;
+  QQuickWidget *map;
   MovQChartView *chart;
   QRadioButton *dailyButton, *historicButton, *instantButton;
   QComboBox *productBox, *usgsTimezoneLocation, *usgsTimezone;
   QDateEdit *startDateEdit, *endDateEdit;
   QStatusBar *statusBar;
-  //QChart *thisChart;
+  // QChart *thisChart;
 
   //...Private variables
   bool USGSDataReady;
