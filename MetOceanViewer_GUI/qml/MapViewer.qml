@@ -36,6 +36,7 @@ Rectangle {
         MouseArea {
             anchors.fill: parent
             propagateComposedEvents: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: {
                 if(map.previousMarker){
                     map.previousMarker.deselect()
@@ -44,6 +45,14 @@ Rectangle {
                     infoWindow.state = "hidden"
                 }
             }
+            onDoubleClicked: {
+                if (mouse.button === Qt.RightButton) {
+                    map.zoomLevel = map.zoomLevel-1;
+                } else if(mouse.button === Qt.LeftButton) {
+                    map.zoomLevel = map.zoomLevel+1;
+                }
+            }
+
         }
 
         Component {
