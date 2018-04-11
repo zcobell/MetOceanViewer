@@ -169,14 +169,14 @@ int NetcdfTimeseries::toImeds(Imeds *imeds) {
   imeds->success = false;
 
   for (size_t i = 0; i < this->m_numStations; i++) {
-    imeds->station[i].NumSnaps = this->m_time[i].size();
-    imeds->station[i].date = this->m_time[i];
-    imeds->station[i].data = this->m_data[i];
-    imeds->station[i].latitude = this->m_ycoor[i];
-    imeds->station[i].longitude = this->m_xcoor[i];
-    imeds->station[i].StationName = this->m_stationName[i];
-    imeds->station[i].StationID = this->m_stationName[i];
-    imeds->station[i].StationIndex = i;
+    imeds->station[i].setNumSnaps(this->m_time[i].size());
+    imeds->station[i].setDate(this->m_time[i]);
+    imeds->station[i].setData(this->m_data[i]);
+    imeds->station[i].coordinate().setLatitude(this->m_ycoor[i]);
+    imeds->station[i].coordinate().setLongitude(this->m_xcoor[i]);
+    imeds->station[i].setName(this->m_stationName[i]);
+    imeds->station[i].setId(this->m_stationName[i]);
+    imeds->station[i].setStationIndex(i);
   }
 
   imeds->success = true;

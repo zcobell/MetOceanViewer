@@ -20,25 +20,57 @@
 #ifndef IMEDSSTATION_H
 #define IMEDSSTATION_H
 
+#include <QGeoCoordinate>
 #include <QVector>
 
 class ImedsStation {
  public:
   explicit ImedsStation();
 
-  double latitude;
-  double longitude;
+  QGeoCoordinate coordinate() const;
+  void setCoordinate(const QGeoCoordinate &coordinate);
 
-  QString StationName;
-  QString StationID;
+  QString name() const;
+  void setName(const QString &name);
 
-  int NumSnaps;
-  int StationIndex;
+  QString id() const;
+  void setId(const QString &id);
 
-  QVector<long long> date;
-  QVector<double> data;
+  int numSnaps() const;
+  void setNumSnaps(int numSnaps);
 
-  bool isNull;
+  int stationIndex() const;
+  void setStationIndex(int stationIndex);
+
+  qint64 date(int index) const;
+  void setDate(const qint64 &date, int index);
+  void setDate(const QVector<qint64> &date);
+
+  void setNext(const qint64 &date, const double &data);
+
+  bool isNull() const;
+  void setIsNull(bool isNull);
+
+  double data(int index) const;
+  void setData(const double &data, int index);
+  void setData(const QVector<double> &data);
+
+  QVector<qint64> allDate() const;
+  QVector<double> allData() const;
+
+ private:
+  QGeoCoordinate m_coordinate;
+
+  QString m_name;
+  QString m_id;
+
+  int m_numSnaps;
+  int m_stationIndex;
+
+  QVector<qint64> m_date;
+  QVector<double> m_data;
+
+  bool m_isNull;
 };
 
 #endif  // IMEDSSTATION_H

@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------//
 </comment>
-<class>mov_dialog_update</class>
- <widget class="QDialog" name="update_dialog">
+<class>UpdateDialog</class>
+ <widget class="QDialog" name="updatedialog">
   <property name="geometry">
    <rect>
     <x>0</x>

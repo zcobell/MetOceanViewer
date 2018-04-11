@@ -1,8 +1,8 @@
 #include "dflow.h"
 #include <QtMath>
-#include "metoceanviewer.h"
 #include "errors.h"
 #include "imeds.h"
+#include "metoceanviewer.h"
 #include "netcdf"
 
 using namespace netCDF;
@@ -34,9 +34,7 @@ Dflow::Dflow(QString filename, QObject *parent) : QObject(parent) {
 
 bool Dflow::is3d() { return this->_is3d; }
 
-QStringList Dflow::getVaribleList() {
-  return QStringList(this->_plotvarnames);
-}
+QStringList Dflow::getVaribleList() { return QStringList(this->_plotvarnames); }
 
 int Dflow::getNumLayers() { return this->_nLayers; }
 
@@ -53,8 +51,7 @@ bool Dflow::variableIs3d(QString variable) {
     return false;
 }
 
-int Dflow::_get2DVelocityMagnitude(int layer,
-                                      QVector<QVector<double>> &data) {
+int Dflow::_get2DVelocityMagnitude(int layer, QVector<QVector<double>> &data) {
   int ierr, i, j;
   QVector<QVector<double>> x_data, y_data;
 
@@ -84,8 +81,7 @@ int Dflow::_get2DVelocityMagnitude(int layer,
   return MetOceanViewer::Error::NOERR;
 }
 
-int Dflow::_get2DVelocityDirection(int layer,
-                                      QVector<QVector<double>> &data) {
+int Dflow::_get2DVelocityDirection(int layer, QVector<QVector<double>> &data) {
   int ierr, i, j;
   QVector<QVector<double>> x_data, y_data;
 
@@ -114,8 +110,7 @@ int Dflow::_get2DVelocityDirection(int layer,
   return MetOceanViewer::Error::NOERR;
 }
 
-int Dflow::_get3DVeloctiyMagnitude(int layer,
-                                      QVector<QVector<double>> &data) {
+int Dflow::_get3DVeloctiyMagnitude(int layer, QVector<QVector<double>> &data) {
   int ierr, i, j;
   QVector<QVector<double>> x_data, y_data, z_data;
 
@@ -245,16 +240,15 @@ int Dflow::getVariable(QString variable, int layer, Imeds *imeds) {
   imeds->header2 = QStringLiteral("DFlowFM");
   imeds->header3 = QStringLiteral("DFlowFM");
   for (i = 0; i < this->_nStations; i++) {
+    imeds->station[i].setNumSnaps(this->_nSteps);
+    imeds->station[i].setDate(time);
+    imeds->station[i].setData(data[i]);
 
-    imeds->station[i].date = time;
-    imeds->station[i].data = data[i];
-
-    imeds->station[i].NumSnaps = this->_nSteps;
-    imeds->station[i].latitude = this->_yCoordinates[i];
-    imeds->station[i].longitude = this->_xCoordinates[i];
-    imeds->station[i].StationIndex = i;
-    imeds->station[i].StationID = i;
-    imeds->station[i].StationName = this->_stationNames[i];
+    imeds->station[i].coordinate().setLatitude(this->_yCoordinates[i]);
+    imeds->station[i].coordinate().setLongitude(this->_xCoordinates[i]);
+    imeds->station[i].setStationIndex(i);
+    imeds->station[i].setId(QString::number(i));
+    imeds->station[i].setName(this->_stationNames[i]);
   }
   imeds->success = true;
 
@@ -582,7 +576,7 @@ int Dflow::_getTime(QVector<long long> &timeList) {
 }
 
 int Dflow::_getVar(QString variable, int layer,
-                      QVector<QVector<double>> &data) {
+                   QVector<QVector<double>> &data) {
   if (this->_nDims[variable] == 2)
     return this->_getVar2D(variable, data);
   else if (this->_nDims[variable] == 3)
@@ -649,7 +643,7 @@ int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
 }
 
 int Dflow::_getVar3D(QString variable, int layer,
-                        QVector<QVector<double>> &data) {
+                     QVector<QVector<double>> &data) {
   int i, j, ierr, ncid, varid;
   double *d =
       (double *)malloc(sizeof(double) * this->_nSteps * this->_nStations);

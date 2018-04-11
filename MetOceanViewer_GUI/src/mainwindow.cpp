@@ -29,7 +29,7 @@
 #include "mainwindow.h"
 #include "noaa.h"
 #include "session.h"
-#include "ui_mov_window_main.h"
+#include "ui_mainwindow.h"
 #include "updatedialog.h"
 #include "usgs.h"
 #include "webenginepage.h"
@@ -376,13 +376,13 @@ void MainWindow::setupMetOceanViewerUI() {
   }
 
   //...Build the session object
-  this->sessionState = new Session(
-      ui->table_TimeseriesData, ui->text_TimeseriesPlotTitle,
-      ui->text_TimeseriesXaxisLabel, ui->text_TimeseriesYaxisLabel,
-      ui->date_TimeseriesStartDate, ui->date_TimeseriesEndDate,
-      ui->spin_TimeseriesYmin, ui->spin_TimeseriesYmax,
-      ui->check_TimeseriesAllData, ui->check_TimeseriesYauto,
-      this->PreviousDirectory, this);
+  this->sessionState =
+      new Session(ui->table_TimeseriesData, ui->text_TimeseriesPlotTitle,
+                  ui->text_TimeseriesXaxisLabel, ui->text_TimeseriesYaxisLabel,
+                  ui->date_TimeseriesStartDate, ui->date_TimeseriesEndDate,
+                  ui->spin_TimeseriesYmin, ui->spin_TimeseriesYmax,
+                  ui->check_TimeseriesAllData, ui->check_TimeseriesYauto,
+                  this->PreviousDirectory, this);
 
   connect(this->sessionState, SIGNAL(sessionError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));

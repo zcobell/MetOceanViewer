@@ -18,9 +18,9 @@
 //
 //-----------------------------------------------------------------------*/
 #include "mainwindow.h"
-#include "xtide.h"
 #include "timeseriesoptionsdialog.h"
-#include "ui_mov_window_main.h"
+#include "ui_mainwindow.h"
+#include "xtide.h"
 
 void MainWindow::on_button_xtide_compute_clicked() {
   this->plotXTideStation();
@@ -31,11 +31,10 @@ void MainWindow::plotXTideStation() {
   int ierr;
 
   //...Create an xTide object
-  if (!this->thisXTide.isNull())
-    delete this->thisXTide;
-  this->thisXTide = new XTide(ui->xtide_map, ui->xtide_graphics,
-                                 ui->date_xtide_start, ui->date_xtide_end,
-                                 ui->combo_xtide_units, ui->statusBar, this);
+  if (!this->thisXTide.isNull()) delete this->thisXTide;
+  this->thisXTide =
+      new XTide(ui->xtide_map, ui->xtide_graphics, ui->date_xtide_start,
+                ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar, this);
   connect(thisXTide, SIGNAL(xTideError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -46,8 +45,7 @@ void MainWindow::plotXTideStation() {
 }
 
 void MainWindow::on_button_xtide_resetzoom_clicked() {
-  if (!this->thisXTide.isNull())
-    ui->xtide_graphics->resetZoom();
+  if (!this->thisXTide.isNull()) ui->xtide_graphics->resetZoom();
   return;
 }
 
@@ -83,8 +81,7 @@ void MainWindow::on_button_xtide_savemap_clicked() {
       this, tr("Save as..."), PreviousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   Generic::splitPath(TempString, filename, PreviousDirectory);
 
@@ -122,8 +119,7 @@ void MainWindow::on_button_xtide_savedata_clicked() {
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   Generic::splitPath(TempString, filename, PreviousDirectory);
 

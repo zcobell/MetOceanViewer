@@ -20,7 +20,7 @@
 
 #include "version.h"
 #include "aboutdialog.h"
-#include "ui_mov_dialog_about.h"
+#include "ui_aboutdialog.h"
 
 AboutDialog::AboutDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::AboutDialog) {

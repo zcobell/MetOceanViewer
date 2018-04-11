@@ -22,7 +22,7 @@
 #include "usertimeseries.h"
 #include "addtimeseriesdialog.h"
 #include "timeseriesoptionsdialog.h"
-#include "ui_mov_window_main.h"
+#include "ui_mainwindow.h"
 
 //-------------------------------------------//
 // Called when the user tries to save the

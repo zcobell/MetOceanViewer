@@ -18,17 +18,16 @@
 //
 //-----------------------------------------------------------------------*/
 #include "noaa.h"
+#include "chartview.h"
 #include "generic.h"
 #include "imeds.h"
-#include "chartview.h"
 
-Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
-                 QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                 QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-                 QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
-                 QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
-                 StationModel *stationModel, QString *selectedStation,
-                 QObject *parent)
+Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
+           QDateEdit *inEndDateEdit, QComboBox *inNoaaProduct,
+           QComboBox *inNoaaUnits, QComboBox *inNoaaDatum,
+           QStatusBar *inStatusBar, QComboBox *inNoaaTimezoneLocation,
+           QComboBox *inNoaaTimezone, StationModel *stationModel,
+           QString *selectedStation, QObject *parent)
     : QObject(parent) {
   this->m_quickMap = inMap;
   this->m_chartView = inChart;
@@ -169,7 +168,7 @@ int Noaa::fetchNOAAData() {
 }
 
 int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
-                                int index) {
+                             int index) {
   int i, j, k;
   int dataCount;
   QString TempData, DateS, YearS, MonthS, DayS, HourMinS, HourS, MinS, WLS;
@@ -210,15 +209,11 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
       WLS = TimeSnap.value(1);
       tempDate.setDate(QDate(YearS.toInt(), MonthS.toInt(), DayS.toInt()));
       tempDate.setTime(QTime(HourS.toInt(), MinS.toInt(), 0));
-      this->m_currentStationData[index]->station[0].date.push_back(
-          tempDate.toMSecsSinceEpoch());
-      this->m_currentStationData[index]->station[0].data.push_back(
-          WLS.toDouble());
+      this->m_currentStationData[index]->station[0].setNext(
+          tempDate.toMSecsSinceEpoch(), WLS.toDouble());
       k = k + 1;
     }
   }
-
-  this->m_currentStationData[index]->station[0].NumSnaps = k;
 
   return 0;
 }
@@ -230,13 +225,12 @@ int Noaa::getDataBounds(double &ymin, double &ymax) {
   ymax = -DBL_MAX;
 
   for (i = 0; i < this->m_currentStationData.length(); i++) {
-    for (j = 0; j < this->m_currentStationData[i]->station[0].data.length();
-         j++) {
-      if (this->m_currentStationData[i]->station[0].data[j] != 0.0) {
-        if (this->m_currentStationData[i]->station[0].data[j] < ymin)
-          ymin = this->m_currentStationData[i]->station[0].data[j];
-        if (this->m_currentStationData[i]->station[0].data[j] > ymax)
-          ymax = this->m_currentStationData[i]->station[0].data[j];
+    for (j = 0; j < this->m_currentStationData[i]->station[0].numSnaps(); j++) {
+      if (this->m_currentStationData[i]->station[0].data(j) != 0.0) {
+        if (this->m_currentStationData[i]->station[0].data(j) < ymin)
+          ymin = this->m_currentStationData[i]->station[0].data(j);
+        if (this->m_currentStationData[i]->station[0].data(j) > ymax)
+          ymax = this->m_currentStationData[i]->station[0].data(j);
       }
     }
   }
@@ -287,7 +281,7 @@ int Noaa::generateLabels() {
         product + this->getUnitsLabel() + ", " + this->getDatumLabel() + ")";
   }
   this->m_plotTitle = tr("Station ") + this->m_station.id() + ": " +
-                      this->m_currentStationData[0]->station[0].StationName;
+                      this->m_currentStationData[0]->station[0].name();
   return 0;
 }
 
@@ -356,16 +350,15 @@ int Noaa::plotChart() {
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (j = 0; j < this->m_currentStationData[0]->station[0].data.length();
-       j++) {
+  for (j = 0; j < this->m_currentStationData[0]->station[0].numSnaps(); j++) {
     if (QDateTime::fromMSecsSinceEpoch(
-            this->m_currentStationData[0]->station[0].date[j] +
+            this->m_currentStationData[0]->station[0].date(j) +
             this->m_offsetSeconds)
             .isValid()) {
-      if (this->m_currentStationData[0]->station[0].data[j] != 0.0)
-        series1->append(this->m_currentStationData[0]->station[0].date[j] +
+      if (this->m_currentStationData[0]->station[0].data(j) != 0.0)
+        series1->append(this->m_currentStationData[0]->station[0].date(j) +
                             this->m_offsetSeconds,
-                        this->m_currentStationData[0]->station[0].data[j]);
+                        this->m_currentStationData[0]->station[0].data(j));
     }
   }
   this->m_chartView->m_chart->addSeries(series1);
@@ -375,16 +368,15 @@ int Noaa::plotChart() {
   this->m_chartView->addSeries(series1, series1->name());
 
   if (this->m_productIndex == 0) {
-    for (j = 0; j < this->m_currentStationData[1]->station[0].data.length();
-         j++)
+    for (j = 0; j < this->m_currentStationData[1]->station[0].numSnaps(); j++)
       if (QDateTime::fromMSecsSinceEpoch(
-              this->m_currentStationData[1]->station[0].date[j] +
+              this->m_currentStationData[1]->station[0].date(j) +
               this->m_offsetSeconds)
               .isValid()) {
-        if (this->m_currentStationData[1]->station[0].data[j] != 0.0)
-          series2->append(this->m_currentStationData[1]->station[0].date[j] +
+        if (this->m_currentStationData[1]->station[0].data(j) != 0.0)
+          series2->append(this->m_currentStationData[1]->station[0].date(j) +
                               this->m_offsetSeconds,
-                          this->m_currentStationData[1]->station[0].data[j]);
+                          this->m_currentStationData[1]->station[0].data(j));
       }
     this->m_chartView->m_chart->addSeries(series2);
     this->m_chartView->addSeries(series2, series2->name());
@@ -408,14 +400,14 @@ int Noaa::plotChart() {
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
   this->m_chartView->m_chart->setTitle(
       tr("NOAA Station ") + this->m_station.id() + ": " +
-      this->m_currentStationData[0]->station[0].StationName);
+      this->m_currentStationData[0]->station[0].name());
   this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_chartView->setRenderHint(QPainter::Antialiasing);
 
-  if (this->m_chartView->chart() != nullptr) delete this->m_chartView->chart();
   this->m_chartView->setChart(this->m_chartView->m_chart);
 
-  foreach (QLegendMarker *marker, this->m_chartView->m_chart->legend()->markers()) {
+  foreach (QLegendMarker *marker,
+           this->m_chartView->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
     QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
                         SLOT(handleLegendMarkerClicked()));
@@ -424,9 +416,11 @@ int Noaa::plotChart() {
   }
 
   this->m_chartView->m_style = 1;
-  this->m_chartView->m_coord = new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
-  this->m_chartView->m_coord->setPos(this->m_chartView->size().width() / 2 - 100,
-                                 this->m_chartView->size().height() - 20);
+  this->m_chartView->m_coord =
+      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
+  this->m_chartView->m_coord->setPos(
+      this->m_chartView->size().width() / 2 - 100,
+      this->m_chartView->size().height() - 20);
   this->m_chartView->initializeAxisLimits();
   this->m_chartView->setStatusBar(this->m_statusBar);
 
@@ -444,25 +438,23 @@ int Noaa::plotNOAAStation() {
         this->m_stationModel->findStation(*(this->m_selectedStation));
     this->m_station.id() = this->m_station.id().toInt();
 
-    this->m_currentStationData[0]->station[0].longitude =
-        this->m_station.coordinate().longitude();
-    this->m_currentStationData[0]->station[0].latitude =
-        this->m_station.coordinate().latitude();
-    this->m_currentStationData[0]->station[0].StationName =
-        this->m_station.name();
-    this->m_currentStationData[0]->station[0].StationID =
-        "NOAA_" + this->m_station.id();
-    this->m_currentStationData[0]->station[0].StationIndex = 0;
+    this->m_currentStationData[0]->station[0].coordinate().setLongitude(
+        this->m_station.coordinate().longitude());
+    this->m_currentStationData[0]->station[0].coordinate().setLatitude(
+        this->m_station.coordinate().latitude());
+    this->m_currentStationData[0]->station[0].setName(this->m_station.name());
+    this->m_currentStationData[0]->station[0].setId("NOAA_" +
+                                                    this->m_station.id());
+    this->m_currentStationData[0]->station[0].setStationIndex(0);
 
-    this->m_currentStationData[1]->station[0].longitude =
-        this->m_station.coordinate().longitude();
-    this->m_currentStationData[1]->station[0].latitude =
-        this->m_station.coordinate().latitude();
-    this->m_currentStationData[1]->station[0].StationName =
-        this->m_station.name();
-    this->m_currentStationData[1]->station[0].StationID =
-        "NOAA_" + this->m_station.id();
-    this->m_currentStationData[1]->station[0].StationIndex = 0;
+    this->m_currentStationData[1]->station[0].coordinate().setLongitude(
+        this->m_station.coordinate().longitude());
+    this->m_currentStationData[1]->station[0].coordinate().setLatitude(
+        this->m_station.coordinate().latitude());
+    this->m_currentStationData[1]->station[0].setName(this->m_station.name());
+    this->m_currentStationData[1]->station[0].setId("NOAA_" +
+                                                    this->m_station.id());
+    this->m_currentStationData[1]->station[0].setStationIndex(0);
 
     //...Grab the options from the UI
     this->m_startDate = this->m_startDateEdit->dateTime();
@@ -486,7 +478,7 @@ int Noaa::plotNOAAStation() {
     ierr = this->prepNOAAResponse();
 
     //...Check for valid data
-    if (this->m_currentStationData[0]->station[0].NumSnaps < 5) {
+    if (this->m_currentStationData[0]->station[0].numSnaps() < 5) {
       emit noaaError(this->m_errorStringVec[0]);
       return 1;
     }
@@ -623,8 +615,9 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
     painter.end();
   } else if (filter == "JPG (*.jpg *.jpeg)") {
     QFile outputFile(filename);
-    QSize imageSize(this->m_quickMap->size().width() + this->m_chartView->size().width(),
-                    this->m_quickMap->size().height());
+    QSize imageSize(
+        this->m_quickMap->size().width() + this->m_chartView->size().width(),
+        this->m_quickMap->size().height());
     QRect chartRect(this->m_quickMap->size().width(), 0,
                     this->m_chartView->size().width(),
                     this->m_chartView->size().height());
@@ -646,7 +639,7 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
 }
 
 int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
-                          QString format) {
+                       QString format) {
   int ierr, index;
   QString filename2;
 

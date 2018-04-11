@@ -22,12 +22,12 @@
 // This file contains all the user interactions that occur on the HWM tab
 //
 
-#include "mainwindow.h"
 #include "colors.h"
 #include "generic.h"
 #include "hwm.h"
+#include "mainwindow.h"
 #include "timeseriesoptionsdialog.h"
-#include "ui_mov_window_main.h"
+#include "ui_mainwindow.h"
 
 //-------------------------------------------//
 // Called when the browse for HWM file button
@@ -38,8 +38,7 @@ void MainWindow::on_browse_hwm_clicked() {
   QString HighWaterMarkFile = QFileDialog::getOpenFileName(
       this, tr("Select High Water Mark File"), this->PreviousDirectory,
       tr("High Water Mark File (*.csv) ;; All Files (*.*)"));
-  if (HighWaterMarkFile == NULL)
-    return;
+  if (HighWaterMarkFile == NULL) return;
 
   Generic::splitPath(HighWaterMarkFile, filename, this->PreviousDirectory);
   ui->Text_HWMFile->setText(HighWaterMarkFile);
@@ -86,18 +85,17 @@ void MainWindow::on_button_processHWM_clicked() {
     }
   }
 
-  if (!thisHWM.isNull())
-    delete thisHWM;
+  if (!thisHWM.isNull()) delete thisHWM;
 
   thisHWM =
       new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
-                 ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
-                 ui->check_regressionColorMatch, ui->button_hwmcolor,
-                 ui->button_121linecolor, ui->button_boundlinecolor,
-                 ui->button_reglinecolor, ui->text_adchwmaxislabel,
-                 ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
-                 ui->spin_upperlowervalue, ui->map_hwm, ui->graphics_hwm,
-                 ui->statusBar, classes, this);
+              ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
+              ui->check_regressionColorMatch, ui->button_hwmcolor,
+              ui->button_121linecolor, ui->button_boundlinecolor,
+              ui->button_reglinecolor, ui->text_adchwmaxislabel,
+              ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
+              ui->spin_upperlowervalue, ui->map_hwm, ui->graphics_hwm,
+              ui->statusBar, classes, this);
 
   ierr = thisHWM->processHWMData();
 
@@ -143,8 +141,7 @@ void MainWindow::on_button_saveHWMMap_clicked() {
       this, tr("Save as..."), this->PreviousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   Generic::splitPath(TempString, filename, this->PreviousDirectory);
 
@@ -268,8 +265,7 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
       this, tr("Save as..."), this->PreviousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   Generic::splitPath(TempString, filename, this->PreviousDirectory);
 
@@ -281,8 +277,7 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
 }
 
 void MainWindow::on_button_hwmResetZoom_clicked() {
-  if (!this->thisHWM.isNull())
-    ui->graphics_hwm->resetZoom();
+  if (!this->thisHWM.isNull()) ui->graphics_hwm->resetZoom();
   return;
 }
 

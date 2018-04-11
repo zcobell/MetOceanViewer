@@ -1,5 +1,5 @@
 #include "timeseriesoptionsdialog.h"
-#include "ui_movusertimeseriesoptions.h"
+#include "ui_timeseriesoptionsdialog.h"
 
 TimeseriesOptionsDialog::TimeseriesOptionsDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::TimeseriesOptionsDialog) {

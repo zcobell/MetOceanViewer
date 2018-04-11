@@ -23,7 +23,7 @@
 #include "noaa.h"
 #include "timeseriesoptionsdialog.h"
 #include "timezone.h"
-#include "ui_mov_window_main.h"
+#include "ui_mainwindow.h"
 
 //-------------------------------------------//
 // Called when the pan to combo box is updated

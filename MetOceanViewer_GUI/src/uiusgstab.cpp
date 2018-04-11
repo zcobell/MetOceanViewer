@@ -22,7 +22,7 @@
 #include "usgs.h"
 #include "timeseriesoptionsdialog.h"
 #include "timezone.h"
-#include "ui_mov_window_main.h"
+#include "ui_mainwindow.h"
 
 //-------------------------------------------//
 // Send the data to the panTo function

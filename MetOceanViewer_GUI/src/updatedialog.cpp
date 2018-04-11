@@ -17,12 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#include "version.h"
 #include "updatedialog.h"
-#include "ui_mov_dialog_update.h"
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include "ui_updatedialog.h"
+#include "version.h"
 
 bool operator>(const UpdateDialog::gitVersion version1,
                const UpdateDialog::gitVersion version2) {
@@ -118,8 +118,9 @@ int UpdateDialog::getLatestVersionData() {
   QString response;
 
   //...Get the update list
-  versionURL = QUrl("https://raw.githubusercontent.com/zcobell/MetOceanViewer/"
-                    "master/mov_release_revision.txt");
+  versionURL = QUrl(
+      "https://raw.githubusercontent.com/zcobell/MetOceanViewer/"
+      "master/mov_release_revision.txt");
   QNetworkReply *reply = manager.get(QNetworkRequest(versionURL));
   connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
   connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
@@ -127,7 +128,7 @@ int UpdateDialog::getLatestVersionData() {
   loop.exec();
 
   //...Allow no error or unknown content, which is a the server being picky
-  //about content headers
+  // about content headers
   if (reply->error() == QNetworkReply::NoError ||
       reply->error() == QNetworkReply::UnknownContentError) {
     responseBytes = reply->readAll();
@@ -194,14 +195,12 @@ bool UpdateDialog::checkForUpdate() {
 
   this->hasNewVersion = false;
 
-  if (ierr == 0)
-    this->parseUpdateData();
+  if (ierr == 0) this->parseUpdateData();
 
   return this->hasNewVersion;
 }
 
-int UpdateDialog::parseGitVersion(QString versionString,
-                                       gitVersion &version) {
+int UpdateDialog::parseGitVersion(QString versionString, gitVersion &version) {
   QString v1, v2, v3;
   QStringList v1L, v2L;
   QString temp, alphaBeta;

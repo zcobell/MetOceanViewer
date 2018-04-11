@@ -25,7 +25,7 @@
 #include "generic.h"
 #include "netcdftimeseries.h"
 #include "addtimeseriesdialog.h"
-#include "ui_mov_dialog_addtimeseries.h"
+#include "ui_addtimeseriesdialog.h"
 
 //-------------------------------------------//
 // This brings up the dialog box used to add

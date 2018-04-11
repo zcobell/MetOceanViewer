@@ -82,28 +82,20 @@ int Imeds::read(QString filename) {
 
   for (i = 0; i < this->nstations; i++)
 
-    // Zero out the incremented variable
-    for (i = 0; i < nStation; i++) this->station[i].NumSnaps = 0;
-
-  // Organize the data into the variable
-  j = 0;
+    // Organize the data into the variable
+    j = 0;
   for (i = 0; i < nLine; i++) {
     TempList = FileData[i].split(" ");
     if (TempList.length() == 3) {
-      this->station[j].longitude = TempList[2].toDouble();
-      this->station[j].latitude = TempList[1].toDouble();
-      this->station[j].StationName = TempList[0];
-      this->station[j].StationIndex = j;
+      double lon = TempList[2].toDouble();
+      double lat = TempList[1].toDouble();
+      this->station[j].setCoordinate(QGeoCoordinate(lat, lon));
+      this->station[j].setName(TempList[0]);
+      this->station[j].setStationIndex(j);
       j = j + 1;
     } else {
-      this->station[j - 1].NumSnaps = this->station[j - 1].NumSnaps + 1;
+      this->station[j - 1].setNumSnaps(this->station[j - 1].numSnaps() + 1);
     }
-  }
-  // Preallocate arrays for data and dates
-
-  for (i = 0; i < nStation; i++) {
-    this->station[i].data.resize(this->station[i].NumSnaps);
-    this->station[i].date.resize(this->station[i].NumSnaps);
   }
 
   // Now, loop over the data section and save to vectors
@@ -132,10 +124,10 @@ int Imeds::read(QString filename) {
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
 
-          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
-
-          this->station[j].data[k] = value;
+          this->station[j].setDate(tempDate.toMSecsSinceEpoch(), k);
+          this->station[j].setData(value, k);
           this->success = true;
+
         } else if (TempList.length() == 7) {
           expectedLength = 7;
           k = k + 1;
@@ -150,9 +142,8 @@ int Imeds::read(QString filename) {
           tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
-
-          this->station[j].data[k] = value;
+          this->station[j].setDate(tempDate.toMSecsSinceEpoch(), k);
+          this->station[j].setData(value, k);
           this->success = true;
         }
       } else {
@@ -173,9 +164,8 @@ int Imeds::read(QString filename) {
           tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
-
-          this->station[j].data[k] = value;
+          this->station[j].setDate(tempDate.toMSecsSinceEpoch(), k);
+          this->station[j].setData(value, k);
           this->success = true;
         } else if (expectedLength == 7) {
           expectedLength = 7;
@@ -191,9 +181,8 @@ int Imeds::read(QString filename) {
           tempDate =
               QDateTime(QDate(year.toInt(), month.toInt(), day.toInt()),
                         QTime(hour.toInt(), minute.toInt(), second.toInt()));
-          this->station[j].date[k] = tempDate.toMSecsSinceEpoch();
-
-          this->station[j].data[k] = value;
+          this->station[j].setDate(tempDate.toMSecsSinceEpoch(), k);
+          this->station[j].setData(value, k);
           this->success = true;
         }
       }
@@ -216,17 +205,17 @@ int Imeds::write(QString filename) {
       QString("MetOceanViewer    UTC    " + this->datum + "\n").toUtf8());
 
   for (int s = 0; s < this->nstations; s++) {
-    outputFile.write(QString(this->station[s].StationID + "   " +
-                             QString::number(this->station[s].latitude) +
+    outputFile.write(QString(this->station[s].id() + "   " +
+                             QString::number(this->station[s].coordinate().latitude()) +
                              "   " +
-                             QString::number(this->station[s].longitude) + "\n")
+                             QString::number(this->station[s].coordinate().longitude()) + "\n")
                          .toUtf8());
 
-    for (int i = 0; i < this->station[s].data.length(); i++) {
-      if (QDateTime::fromMSecsSinceEpoch(this->station[s].date[i]).isValid()) {
-        value.sprintf("%10.4e", this->station[s].data[i]);
+    for (int i = 0; i < this->station[s].numSnaps(); i++) {
+      if (QDateTime::fromMSecsSinceEpoch(this->station[s].date(i)).isValid()) {
+        value.sprintf("%10.4e", this->station[s].data(i));
         outputFile.write(
-            QString(QDateTime::fromMSecsSinceEpoch(this->station[s].date[i])
+            QString(QDateTime::fromMSecsSinceEpoch(this->station[s].date(i))
                         .toString("yyyy    MM    dd    hh    mm    ss") +
                     "    " + value + "\n")
                 .toUtf8());
@@ -246,15 +235,15 @@ int Imeds::writeCSV(QString filename) {
 
   for (s = 0; s < this->nstations; s++) {
     output.write(
-        QString("Station: " + this->station[s].StationID + "\n").toUtf8());
+        QString("Station: " + this->station[s].id() + "\n").toUtf8());
     output.write(QString("Datum: " + this->datum + "\n").toUtf8());
     output.write(QString("Units: " + this->units + "\n").toUtf8());
     output.write(QString("\n").toUtf8());
-    for (i = 0; i < this->station[s].data.length(); i++) {
-      if (QDateTime::fromMSecsSinceEpoch(this->station[s].date[i]).isValid()) {
-        value.sprintf("%10.4e", this->station[s].data[i]);
+    for (i = 0; i < this->station[s].numSnaps(); i++) {
+      if (QDateTime::fromMSecsSinceEpoch(this->station[s].date(i)).isValid()) {
+        value.sprintf("%10.4e", this->station[s].data(i));
         output.write(
-            QString(QDateTime::fromMSecsSinceEpoch(this->station[s].date[i])
+            QString(QDateTime::fromMSecsSinceEpoch(this->station[s].date(i))
                         .toString("MM/dd/yyyy,hh:mm,") +
                     value + "\n")
                 .toUtf8());

@@ -1750,7 +1750,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_34">
               <item>
-               <widget class="MovQWebEngineView" name="xtide_map" native="true">
+               <widget class="WebEngineView" name="xtide_map" native="true">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>2</horstretch>
@@ -2869,7 +2869,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_30">
               <item>
-               <widget class="MovQWebEngineView" name="timeseries_map" native="true">
+               <widget class="WebEngineView" name="timeseries_map" native="true">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                   <horstretch>2</horstretch>
@@ -4101,7 +4101,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
-             <widget class="MovQWebEngineView" name="map_hwm" native="true">
+             <widget class="WebEngineView" name="map_hwm" native="true">
               <property name="url" stdset="0">
                <url>
                 <string>qrc:/rsc/html/hwm_map.html</string>
@@ -4314,9 +4314,9 @@
    <header>QtQuickWidgets/QQuickWidget</header>
   </customwidget>
   <customwidget>
-   <class>MovQWebEngineView</class>
+   <class>WebEngineView</class>
    <extends>QWidget</extends>
-   <header>movQWebEngineView.h</header>
+   <header>webengineview.h</header>
   </customwidget>
   <customwidget>
    <class>ChartView</class>

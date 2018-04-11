@@ -18,14 +18,13 @@
 //
 //-----------------------------------------------------------------------*/
 #include "adcircstationoutput.h"
-#include "errors.h"
-#include "imeds.h"
+#include <netcdf.h>
 #include <QFile>
 #include <QtMath>
-#include <netcdf.h>
+#include "errors.h"
+#include "imeds.h"
 
-AdcircStationOutput::AdcircStationOutput(QObject *parent)
-    : QObject(parent) {
+AdcircStationOutput::AdcircStationOutput(QObject *parent) : QObject(parent) {
   this->_error = MetOceanViewer::Error::NOERR;
   this->_ncerr = NC_NOERR;
   this->nStations = 0;
@@ -37,7 +36,7 @@ int AdcircStationOutput::error() { return this->_error; }
 QString AdcircStationOutput::errorString() { return "errorString"; }
 
 int AdcircStationOutput::read(QString AdcircFile, QString AdcircStationFile,
-                                 QDateTime coldStart) {
+                              QDateTime coldStart) {
   this->coldStartTime = coldStart;
   this->_error = this->readAscii(AdcircFile, AdcircStationFile);
   return this->_error;
@@ -50,7 +49,7 @@ int AdcircStationOutput::read(QString AdcircFile, QDateTime coldStart) {
 }
 
 int AdcircStationOutput::readAscii(QString AdcircOutputFile,
-                                      QString AdcircStationFile) {
+                                   QString AdcircStationFile) {
   QFile MyFile(AdcircOutputFile), StationFile(AdcircStationFile);
   QString header1, header2, TempLine;
   QStringList headerData, TempList;
@@ -79,8 +78,7 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
   this->time.resize(this->nSnaps);
   this->data.resize(this->nStations);
 
-  for (int i = 0; i < this->nStations; ++i)
-    this->data[i].resize(this->nSnaps);
+  for (int i = 0; i < this->nStations; ++i) this->data[i].resize(this->nSnaps);
 
   for (int i = 0; i < this->nSnaps; ++i) {
     TempLine = MyFile.readLine().simplified();
@@ -91,9 +89,9 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
       TempList = TempLine.split(" ");
       this->data[j][i] = TempList.value(1).toDouble();
       if (nColumns == 2)
-        this->data[j][i] = qPow(qPow(this->data[j][i], 2) +
-                                    qPow(TempList.value(2).toDouble(), 2),
-                                2);
+        this->data[j][i] = qPow(
+            qPow(this->data[j][i], 2) + qPow(TempList.value(2).toDouble(), 2),
+            2);
     }
   }
   MyFile.close();
@@ -128,7 +126,6 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
 }
 
 int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
-
   size_t station_size, time_size, startIndex;
   int i, j, ierr, time_size_int, station_size_int;
   int ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
@@ -213,8 +210,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
 
     // If we're at the end of the array
     // and haven't quit yet, that's a problem
-    if (i == 5)
-      return MetOceanViewer::Error::NO_VARIABLE_FOUND;
+    if (i == 5) return MetOceanViewer::Error::NO_VARIABLE_FOUND;
   }
 
   // Size the output variables
@@ -224,8 +220,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->nSnaps = time_size_int;
   this->time.resize(time_size_int);
   this->data.resize(station_size_int);
-  for (i = 0; i < station_size_int; ++i)
-    this->data[i].resize(time_size_int);
+  for (i = 0; i < station_size_int; ++i) this->data[i].resize(time_size_int);
 
   // Read the station locations and times
   this->_error = nc_inq_varid(ncid, "time", &varid_time);
@@ -287,7 +282,6 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
 
   // Loop over the stations, reading the data into memory
   for (i = 0; i < station_size_int; ++i) {
-
     // Read from netCDF
     start[0] = static_cast<size_t>(0);
     start[1] = static_cast<size_t>(i);
@@ -316,8 +310,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
             qSqrt(qPow(tempVar1[j], 2.0) + qPow(tempVar2[j], 2.0));
     } else {
       // Place in the output variable
-      for (j = 0; j < time_size_int; ++j)
-        this->data[i][j] = tempVar1[j];
+      for (j = 0; j < time_size_int; ++j) this->data[i][j] = tempVar1[j];
     }
   }
   this->_error = nc_close(ncid);
@@ -349,17 +342,15 @@ Imeds *AdcircStationOutput::toIMEDS() {
   outputIMEDS->station.resize(outputIMEDS->nstations);
 
   for (int i = 0; i < outputIMEDS->nstations; ++i) {
-    outputIMEDS->station[i].data.resize(this->nSnaps);
-    outputIMEDS->station[i].date.resize(this->nSnaps);
-    outputIMEDS->station[i].StationName = this->station_name[i];
-    outputIMEDS->station[i].NumSnaps = this->nSnaps;
-    outputIMEDS->station[i].longitude = this->longitude[i];
-    outputIMEDS->station[i].latitude = this->latitude[i];
-    outputIMEDS->station[i].StationIndex = i;
+    outputIMEDS->station[i].setNumSnaps(this->nSnaps);
+    outputIMEDS->station[i].setName(this->station_name[i]);
+    outputIMEDS->station[i].coordinate().setLongitude(this->longitude[i]);
+    outputIMEDS->station[i].coordinate().setLatitude(this->latitude[i]);
+    outputIMEDS->station[i].setStationIndex(i);
     for (int j = 0; j < this->nSnaps; ++j) {
-      outputIMEDS->station[i].date[j] =
-          this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch();
-      outputIMEDS->station[i].data[j] = this->data[i][j];
+      outputIMEDS->station[i].setDate(
+          this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch(), j);
+      outputIMEDS->station[i].setData(this->data[i][j], j);
     }
   }
   outputIMEDS->success = true;
