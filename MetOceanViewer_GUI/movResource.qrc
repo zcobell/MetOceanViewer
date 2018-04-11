@@ -1,9 +1,7 @@
 <RCC>
     <qresource lang="Generic Resources" prefix="/rsc">
-        <file>html/noaa_maps.html</file>
         <file>html/timeseries_maps.html</file>
         <file>html/hwm_map.html</file>
-        <file>html/usgs_maps.html</file>
         <file>img/mm_20_darkblue.png</file>
         <file>img/mm_20_darkgreen.png</file>
         <file>img/mm_20_darkorange.png</file>
@@ -20,12 +18,8 @@
         <file>img/mov.ico</file>
         <file>img/arrow_down.png</file>
         <file>img/arrow_up.png</file>
-        <file>js/noaa_maps.js</file>
         <file>js/timeseries_maps.js</file>
         <file>js/hwm_map.js</file>
-        <file>js/usgs_maps.js</file>
-        <file>html/xtide_maps.html</file>
-        <file>js/xtide_maps.js</file>
     </qresource>
     <qresource lang="QML" prefix="/qml">
         <file>qml/MovMapItem.qml</file>
