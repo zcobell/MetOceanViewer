@@ -28,11 +28,11 @@
 #include <QtNetwork>
 #include <QtPrintSupport>
 #include <QtWebEngineWidgets>
+#include "chartview.h"
 #include "errors.h"
 #include "generic.h"
-#include "chartview.h"
-#include "timezone.h"
 #include "stationmodel.h"
+#include "timezone.h"
 
 using namespace QtCharts;
 
@@ -41,11 +41,12 @@ class Usgs : public QObject {
 
  public:
   explicit Usgs(QQuickWidget *inMap, ChartView *inChart,
-                   QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
-                   QRadioButton *inInstantButton, QComboBox *inProductBox,
-                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                   QStatusBar *instatusBar, QComboBox *inUSGSTimezoneLocation,
-                   QComboBox *inUSGSTimezone, QObject *parent = nullptr);
+                QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
+                QRadioButton *inInstantButton, QComboBox *inProductBox,
+                QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                QStatusBar *instatusBar, QComboBox *inUSGSTimezoneLocation,
+                QComboBox *inUSGSTimezone, StationModel *stationModel,
+                QString *inSelectedStation, QObject *parent = nullptr);
 
   ~Usgs();
 
@@ -60,22 +61,13 @@ class Usgs : public QObject {
   QString getLoadedUSGSStation();
   QString getClickedUSGSStation();
   int replotChart(Timezone *newTimezone);
-  void setActiveMarker(QString marker);
 
   static void addStationsToModel(StationModel *model);
-
- private slots:
-  void javascriptDataReturned(QString data);
 
  signals:
   void usgsError(QString);
 
  private:
-  //...Private functions
-  QString getMarkerSelection(QString &name, double &longitude,
-                             double &latitude);
-  int setMarkerSelection();
-  void setAsyncMarkerSelection();
   int getTimezoneOffset(QString timezone);
   int fetchUSGSData();
   int plotUSGS();
@@ -116,6 +108,7 @@ class Usgs : public QObject {
   int ProductIndex;
   double CurrentUSGSLat;
   double CurrentUSGSLon;
+  Station m_currentStation;
   QString USGSMarkerID;
   QString CurrentUSGSStationName;
   QString USGSErrorString;
@@ -127,6 +120,8 @@ class Usgs : public QObject {
   QVector<USGSStationData> USGSPlot;
   QVector<USGSData> CurrentUSGSStation;
   Timezone *tz;
+  StationModel *m_stationModel;
+  QString *m_selectedStation;
 };
 
 #endif  // USGS_H

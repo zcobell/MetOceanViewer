@@ -19,10 +19,10 @@
 //-----------------------------------------------------------------------*/
 
 #include "mainwindow.h"
-#include "usgs.h"
 #include "timeseriesoptionsdialog.h"
 #include "timezone.h"
 #include "ui_mainwindow.h"
+#include "usgs.h"
 
 //-------------------------------------------//
 // Send the data to the panTo function
@@ -43,11 +43,12 @@ void MainWindow::on_button_usgs_fetch_clicked() {
 
   //...Create a new USGS object
   if (!thisUSGS.isNull()) delete thisUSGS;
-  thisUSGS = new Usgs(
-      ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
-      ui->radio_usgshistoric, ui->radio_usgs_instant, ui->combo_USGSProduct,
-      ui->Date_usgsStart, ui->Date_usgsEnd, ui->statusBar,
-      ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone, this);
+  thisUSGS = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
+                      ui->radio_usgshistoric, ui->radio_usgs_instant,
+                      ui->combo_USGSProduct, ui->Date_usgsStart,
+                      ui->Date_usgsEnd, ui->statusBar,
+                      ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone,
+                      this->usgsStationModel, &this->usgsSelectedStation, this);
   connect(thisUSGS, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 

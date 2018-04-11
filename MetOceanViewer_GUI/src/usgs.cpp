@@ -18,15 +18,15 @@
 //
 //-----------------------------------------------------------------------*/
 #include "usgs.h"
-#include "javascriptasyncreturn.h"
 #include "station.h"
 
-Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart,
-                 QRadioButton *inDailyButton, QRadioButton *inHistoricButton,
-                 QRadioButton *inInstantButton, QComboBox *inProductBox,
-                 QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                 QStatusBar *instatusBar, QComboBox *inUSGSTimezoneLocation,
-                 QComboBox *inUSGSTimezone, QObject *parent)
+Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
+           QRadioButton *inHistoricButton, QRadioButton *inInstantButton,
+           QComboBox *inProductBox, QDateEdit *inStartDateEdit,
+           QDateEdit *inEndDateEdit, QStatusBar *instatusBar,
+           QComboBox *inUSGSTimezoneLocation, QComboBox *inUSGSTimezone,
+           StationModel *stationModel, QString *inSelectedStation,
+           QObject *parent)
     : QObject(parent) {
   //...Initialize variables
   this->USGSDataReady = false;
@@ -38,6 +38,8 @@ Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart,
   this->USGSdataMethod = 0;
   this->CurrentUSGSLat = 0.0;
   this->CurrentUSGSLon = 0.0;
+  this->m_stationModel = stationModel;
+  this->m_selectedStation = inSelectedStation;
 
   //...Assign object pointers
   this->map = inMap;
@@ -65,30 +67,22 @@ Usgs::~Usgs() {}
 
 int Usgs::fetchUSGSData() {
   //...Get the current marker
-  this->setAsyncMarkerSelection();
-
-  return 0;
-}
-
-void Usgs::javascriptDataReturned(QString data) {
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
   QString endDateString1, startDateString1;
   QString endDateString2, startDateString2;
   QString RequestURL;
-  QStringList evalList;
   QEventLoop loop;
   int i, ierr;
 
   //...Station information
-  evalList = data.split(";");
-  this->USGSMarkerID = evalList.value(0).mid(4);
-  this->CurrentUSGSStationName = evalList.value(1).simplified();
-  this->CurrentUSGSLon = evalList.value(2).toDouble();
-  this->CurrentUSGSLat = evalList.value(3).toDouble();
+  this->USGSMarkerID = this->m_currentStation.id();
+  this->CurrentUSGSStationName = this->m_currentStation.name();
+  this->CurrentUSGSLat = this->m_currentStation.coordinate().latitude();
+  this->CurrentUSGSLon = this->m_currentStation.coordinate().longitude();
 
   if (this->USGSMarkerID == QString()) {
     emit usgsError("You must select a station");
-    return;
+    return 1;
   }
 
   //...Format the date strings
@@ -123,14 +117,14 @@ void Usgs::javascriptDataReturned(QString data) {
 
   if (reply->error() != QNetworkReply::NoError) {
     emit usgsError(tr("There was an error contacting the USGS data server"));
-    return;
+    return 1;
   }
 
   //...Read the response
   ierr = this->readUSGSDataFinished(reply);
   if (ierr != 0) {
     emit usgsError(tr("Error reading the USGS data"));
-    return;
+    return 1;
   }
 
   //...Update the combo box
@@ -143,13 +137,13 @@ void Usgs::javascriptDataReturned(QString data) {
   ierr = this->plotUSGS();
   if (ierr != 0) {
     emit usgsError(tr("No data available for this station"));
-    return;
+    return 1;
   }
 
   //...Restore the status bar
-  statusBar->clearMessage();
+  this->statusBar->clearMessage();
 
-  return;
+  return 0;
 }
 
 int Usgs::formatUSGSInstantResponse(QByteArray Input) {
@@ -384,28 +378,36 @@ int Usgs::getTimezoneOffset(QString timezone) {
 }
 
 int Usgs::plotNewUSGSStation() {
-  int ierr;
+  if (*(this->m_selectedStation) == "-1") {
+    emit usgsError(tr("You must select a station"));
+    return 1;
+  } else {
+    int ierr;
 
-  //...Check the data type
-  if (instantButton->isChecked())
-    this->USGSdataMethod = 1;
-  else if (dailyButton->isChecked())
-    this->USGSdataMethod = 2;
-  else
-    this->USGSdataMethod = 0;
+    this->m_currentStation =
+        this->m_stationModel->findStation(*(this->m_selectedStation));
 
-  //...Set status bar
-  statusBar->showMessage(tr("Downloading data from USGS..."));
+    //...Check the data type
+    if (instantButton->isChecked())
+      this->USGSdataMethod = 1;
+    else if (dailyButton->isChecked())
+      this->USGSdataMethod = 2;
+    else
+      this->USGSdataMethod = 0;
 
-  //...Wipe out the combo box
-  productBox->clear();
+    //...Set status bar
+    this->statusBar->showMessage(tr("Downloading data from USGS..."));
 
-  //...Get the time period for the data
-  this->requestEndDate = endDateEdit->dateTime();
-  this->requestStartDate = startDateEdit->dateTime();
+    //...Wipe out the combo box
+    this->productBox->clear();
 
-  //...Grab the data from the server
-  ierr = this->fetchUSGSData();
+    //...Get the time period for the data
+    this->requestEndDate = endDateEdit->dateTime();
+    this->requestStartDate = startDateEdit->dateTime();
+
+    //...Grab the data from the server
+    ierr = this->fetchUSGSData();
+  }
 
   return 0;
 }
@@ -444,7 +446,7 @@ int Usgs::plotUSGS() {
         this->CurrentUSGSStation[this->ProductIndex].Data[i];
   }
 
-  if (USGSPlot.length() < 5) return -1;
+  if (this->USGSPlot.length() < 5) return -1;
 
   //...Create the line series
   ierr = this->getDataBounds(ymin, ymax);
@@ -663,45 +665,9 @@ int Usgs::setUSGSBeenPlotted(bool input) {
   return 0;
 }
 
-QString Usgs::getClickedUSGSStation() {
-  QString JunkString;
-  double JunkDouble1, JunkDouble2;
-  return this->getMarkerSelection(JunkString, JunkDouble1, JunkDouble2);
-}
+QString Usgs::getClickedUSGSStation() { return *(this->m_selectedStation); }
 
-QString Usgs::getLoadedUSGSStation() { return this->USGSMarkerID; }
-
-void Usgs::setAsyncMarkerSelection() {
-  JavascriptAsyncReturn *javaReturn = new JavascriptAsyncReturn(this);
-  connect(javaReturn, SIGNAL(valueChanged(QString)), this,
-          SLOT(javascriptDataReturned(QString)));
-  // this->map->page()->runJavaScript(
-  //    "returnStationID()"),
-  //    [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
-  return;
-}
-
-QString Usgs::getMarkerSelection(QString &name, double &longitude,
-                                    double &latitude) {
-  QVariant eval = QVariant();
-  // map->page()->runJavaScript("returnStationID()"),
-  //                           [&eval](const QVariant &v) { eval = v; });
-  // while (eval.isNull()) MovGeneric::delayM(5);
-  QStringList evalList = eval.toString().split(";");
-
-  //...Station information
-  name = evalList.value(1).simplified();
-  longitude = evalList.value(2).toDouble();
-  latitude = evalList.value(3).toDouble();
-
-  return evalList.value(0).mid(4);
-}
-
-int Usgs::setMarkerSelection() {
-  this->USGSMarkerID = getMarkerSelection(
-      this->CurrentUSGSStationName, this->CurrentUSGSLon, this->CurrentUSGSLat);
-  return 0;
-}
+QString Usgs::getLoadedUSGSStation() { return this->m_currentStation.id(); }
 
 bool Usgs::getUSGSBeenPlotted() { return this->USGSBeenPlotted; }
 
@@ -710,10 +676,6 @@ QString Usgs::getUSGSErrorString() { return this->USGSErrorString; }
 int Usgs::replotChart(Timezone *newTimezone) {
   int offset = newTimezone->utcOffset() * 1000;
   int totalOffset = -this->priorOffsetSeconds + offset;
-
-  qDebug() << offset / 1000;
-  qDebug() << this->priorOffsetSeconds / 1000;
-  qDebug() << totalOffset / 1000;
 
   QVector<QLineSeries *> series;
   series.resize(this->chart->m_chart->series().length());
@@ -781,10 +743,5 @@ void Usgs::addStationsToModel(StationModel *model) {
 
   stationFile.close();
 
-  return;
-}
-
-void Usgs::setActiveMarker(QString marker) {
-  this->USGSMarkerID = marker.toInt();
   return;
 }
