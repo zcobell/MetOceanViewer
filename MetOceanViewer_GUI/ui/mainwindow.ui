@@ -799,71 +799,11 @@
                     <bool>false</bool>
                    </property>
                    <property name="currentIndex">
-                    <number>0</number>
+                    <number>-1</number>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
                    </property>
-                   <item>
-                    <property name="text">
-                     <string>World Street Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Imagery</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Terrain Base</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Topography</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>USA Topo Maps</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>National Geographic World Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Light Gray Canvas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Physical Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Shaded Relief</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Ocean Base</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Dark Gray Canvas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>DeLorme World Basemap</string>
-                    </property>
-                   </item>
                   </widget>
                  </item>
                  <item>
@@ -1437,71 +1377,11 @@
                     <bool>false</bool>
                    </property>
                    <property name="currentIndex">
-                    <number>0</number>
+                    <number>-1</number>
                    </property>
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
                    </property>
-                   <item>
-                    <property name="text">
-                     <string>World Street Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Imagery</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Terrain Base</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Topography</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>USA Topo Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>National Geographic World Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Light Gray Canvas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Physical Map</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Shaded Relief</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>World Ocean Base</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Dark Gray Canvas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>DeLorme World Basemap</string>
-                    </property>
-                   </item>
                   </widget>
                  </item>
                  <item>
@@ -1750,20 +1630,15 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_34">
               <item>
-               <widget class="WebEngineView" name="xtide_map" native="true">
+               <widget class="QQuickWidget" name="quick_xtideMap">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>2</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
-                <property name="autoFillBackground">
-                 <bool>false</bool>
-                </property>
-                <property name="url" stdset="0">
-                 <url>
-                  <string>qrc:/rsc/html/xtide_maps.html</string>
-                 </url>
+                <property name="resizeMode">
+                 <enum>QQuickWidget::SizeRootObjectToView</enum>
                 </property>
                </widget>
               </item>
@@ -1832,7 +1707,7 @@
                     <bool>false</bool>
                    </property>
                    <property name="editable">
-                    <bool>true</bool>
+                    <bool>false</bool>
                    </property>
                    <property name="currentIndex">
                     <number>-1</number>
@@ -1840,271 +1715,6 @@
                    <property name="insertPolicy">
                     <enum>QComboBox::NoInsert</enum>
                    </property>
-                   <item>
-                    <property name="text">
-                     <string>Alaska</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Alabama</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Arizona</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Arkansas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Bermuda</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>California</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Colorado</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Connecticut</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Delaware</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Florida</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Georgia</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Guam</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Hawaii</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Idaho</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Illinois</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Indiana</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Iowa</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Kansas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Kentucky</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Louisiana</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Maine</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Maryland</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Massachusetts</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Michigan</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Minnesota</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Mississippi</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Missouri</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Montana</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Nebraska</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Nevada</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>New Hampshire</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>New Jersey</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>New Mexico</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>New York</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>North Carolina</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>North Dakota</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Ohio</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Oklahoma</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Pago Pago</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Pennsylvania</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Puerto Rico</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Rhode Island</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>South Carolina</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>South Dakota</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Tennessee</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Texas</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Utah</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Vermont</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Virginia</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Washington</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>West Virginia</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Wisconsin</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Wyoming</string>
-                    </property>
-                   </item>
                   </widget>
                  </item>
                  <item>

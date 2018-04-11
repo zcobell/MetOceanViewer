@@ -20,30 +20,29 @@
 #ifndef XTIDE_H
 #define XTIDE_H
 
-#include "errors.h"
-#include "generic.h"
-#include "chartview.h"
-#include <QChartView>
 #include <QObject>
 #include <QPrinter>
+#include <QQuickWidget>
 #include <QVector>
-#include <QWebEngineView>
 #include <QtCharts>
-#include <QtWebEngine/QtWebEngine>
 #include <QtWidgets>
+#include "chartview.h"
+#include "errors.h"
+#include "generic.h"
+#include "stationmodel.h"
 
 using namespace QtCharts;
 
 class XTide : public QObject {
-
   Q_OBJECT
 
-public:
+ public:
   //...Constructor
-  explicit XTide(QWebEngineView *inMap, ChartView *inChart,
-                    QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                    QComboBox *inUnits, QStatusBar *inStatusBar,
-                    QObject *parent = nullptr);
+  explicit XTide(QQuickWidget *inMap, ChartView *inChart,
+                 QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                 QComboBox *inUnits, QStatusBar *inStatusBar,
+                 StationModel *inStationModel, QString *currentStation,
+                 QObject *parent = nullptr);
 
   //...Destructor
   ~XTide();
@@ -52,19 +51,16 @@ public:
   int plotXTideStation();
   QString getLoadedXTideStation();
   QString getCurrentXTideStation();
-  int getClickedXTideStation();
-  int getAsyncClickedXTideStation();
   int saveXTideData(QString filename, QString format);
   int saveXTidePlot(QString filename, QString filter);
   QString getErrorString();
 
-private slots:
-  void javascriptDataReturned(QString);
+  static void addStationsToModel(StationModel *model);
 
-signals:
+ signals:
   void xTideError(QString);
 
-private:
+ private:
   int findXTideExe();
   int calculateXTides();
   int plotChart();
@@ -79,10 +75,7 @@ private:
 
   //...Private Variables
   QVector<XTideStationData> currentXTideStation;
-  double currentXTideLat;
-  double currentXTideLon;
 
-  QString currentStationName;
   QString units;
   QString yLabel;
   QString xLabel;
@@ -93,11 +86,14 @@ private:
   QChart *thisChart;
 
   //...Pointers to GUI elements
-  QWebEngineView *map;
+  QQuickWidget *map;
   ChartView *chart;
   QDateEdit *startDateEdit, *endDateEdit;
   QComboBox *unitSelect;
   QStatusBar *statusBar;
+  StationModel *m_stationModel;
+  Station m_station;
+  QString *m_currentStation;
 };
 
-#endif // XTIDE_H
+#endif  // XTIDE_H

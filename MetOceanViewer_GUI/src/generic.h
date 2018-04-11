@@ -26,6 +26,7 @@
 #include <QNetworkInterface>
 #include <QString>
 #include <QtCore>
+#include <QtWidgets>
 
 class Generic : public QObject {
   Q_OBJECT
@@ -36,6 +37,7 @@ public:
   static int NETCDF_ERR(int status);
   static bool isConnectedToNetwork();
   static int getLocalTimzoneOffset();
+  static void setEsriMapTypes(QComboBox *comboBox);
 };
 
 #endif // GENERIC_H

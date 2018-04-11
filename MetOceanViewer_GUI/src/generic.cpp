@@ -18,11 +18,11 @@
 //
 //-----------------------------------------------------------------------*/
 #include "generic.h"
+#include <netcdf.h>
 #include <QDesktopServices>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QWebEnginePage>
-#include <netcdf.h>
 
 // The name of the session file
 QString SessionFile;
@@ -51,8 +51,7 @@ void Generic::delayM(int delayTime) {
 }
 //-------------------------------------------//
 
-void Generic::splitPath(QString input, QString &filename,
-                           QString &directory) {
+void Generic::splitPath(QString input, QString &filename, QString &directory) {
   QRegExp rx("[/\\\\]");
   QStringList parts = input.split(rx);
   filename = parts.value(parts.length() - 1);
@@ -102,4 +101,22 @@ int Generic::getLocalTimzoneOffset() {
   QDateTime dt2 = dt1.toUTC();
   dt1.setTimeSpec(Qt::UTC);
   return dt2.secsTo(dt1) / 3600;
+}
+
+void Generic::setEsriMapTypes(QComboBox *comboBox) {
+  QStringList esriList = QStringList() << "World Street Map"
+                                       << "World Imagery"
+                                       << "World Terrain Base"
+                                       << "World Topography"
+                                       << "USA Topo Map"
+                                       << "National Geographic World Map"
+                                       << "Light Gray Canvas"
+                                       << "World Physical Map"
+                                       << "World Shaded Relief"
+                                       << "World Ocean Base"
+                                       << "Dark Gray Canvas"
+                                       << "DeLorme World Basemap";
+  comboBox->clear();
+  comboBox->addItems(esriList);
+  return;
 }

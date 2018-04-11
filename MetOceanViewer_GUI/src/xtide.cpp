@@ -22,9 +22,11 @@
 #include "javascriptasyncreturn.h"
 
 //...Constructor
-XTide::XTide(QWebEngineView *inMap, ChartView *inChart,
-                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                   QComboBox *inUnits, QStatusBar *inStatusBar, QObject *parent)
+XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
+             QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+             QComboBox *inUnits, QStatusBar *inStatusBar,
+             StationModel *inStationModel, QString *inCurrentStation,
+             QObject *parent)
     : QObject(parent) {
   this->map = inMap;
   this->chart = inChart;
@@ -32,10 +34,11 @@ XTide::XTide(QWebEngineView *inMap, ChartView *inChart,
   this->endDateEdit = inEndDateEdit;
   this->unitSelect = inUnits;
   this->statusBar = inStatusBar;
-  this->currentXTideLat = 0;
-  this->currentXTideLon = 0;
-  this->currentStationName = QString();
-  this->thisChart = nullptr;
+  this->m_station.coordinate().setLatitude(0.0);
+  this->m_station.coordinate().setLongitude(0.0);
+  this->m_station.name() = QString();
+  this->m_currentStation = inCurrentStation;
+  this->m_stationModel = inStationModel;
 }
 
 //...Destructor
@@ -52,54 +55,19 @@ int XTide::plotXTideStation() {
   if (ierr != 0) return -1;
 
   //...Get the selected station
-  ierr = this->getAsyncClickedXTideStation();
+  this->m_station = this->m_stationModel->findStation(*(this->m_currentStation));
+
+  //...Calculate the tide signal
+  ierr = this->calculateXTides();
+  if(ierr==0)
+    this->plotChart();
 
   return 0;
 }
 
-QString XTide::getCurrentXTideStation() {
-  QVariant eval = QVariant();
-  this->map->page()->runJavaScript("returnStationID()",
-                                   [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull()) Generic::delayM(5);
-  QStringList evalList = eval.toString().split(";");
+QString XTide::getLoadedXTideStation() { return this->m_station.id(); }
 
-  return evalList.value(0);
-}
-
-QString XTide::getLoadedXTideStation() { return this->currentStationName; }
-
-//...Get the XTide Station from the map
-int XTide::getClickedXTideStation() {
-  QString tempString;
-  QVariant eval = QVariant();
-  this->map->page()->runJavaScript("returnStationID()",
-                                   [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull()) Generic::delayM(5);
-  QStringList evalList = eval.toString().split(";");
-
-  this->currentStationName = evalList.value(0);
-  tempString = evalList.value(1);
-  this->currentXTideLon = tempString.toDouble();
-  tempString = evalList.value(2);
-  this->currentXTideLat = tempString.toDouble();
-
-  if (this->currentStationName == "none") return -1;
-
-  return 0;
-}
-
-//...In the case of the plotting routine, we handle the asynchronous behavior
-// more gracefully
-int XTide::getAsyncClickedXTideStation() {
-  JavascriptAsyncReturn *javaReturn = new JavascriptAsyncReturn(this);
-  connect(javaReturn, SIGNAL(valueChanged(QString)), this,
-          SLOT(javascriptDataReturned(QString)));
-  this->map->page()->runJavaScript(
-      "returnStationID()",
-      [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
-  return 0;
-}
+QString XTide::getCurrentXTideStation() { return *(this->m_currentStation); }
 
 //...Find the xTide executable
 int XTide::findXTideExe() {
@@ -185,11 +153,11 @@ int XTide::calculateXTides() {
   QString xTideCmd = "\"" + this->xTideExe.replace(" ", "\ ") +
                      "\""
                      " -l \"" +
-                     this->currentStationName + "\"" + " -b \"" +
+                     this->m_station.name() + "\"" + " -b \"" +
                      startDateString + "\"" + " -e \"" + endDateString + "\"" +
                      " -s \"00:30\" -z -m m";
 #else
-  QString xTideCmd = this->xTideExe + " -l \"" + this->currentStationName +
+  QString xTideCmd = this->xTideExe + " -l \"" + this->m_station.name() +
                      "\"" + " -b \"" + startDateString + "\"" + " -e \"" +
                      endDateString + "\"" + " -s \"00:30\" -z -m m";
 #endif
@@ -306,7 +274,7 @@ int XTide::plotChart() {
   this->chart->m_chart = this->thisChart;
 
   QLineSeries *series1 = new QLineSeries(this);
-  series1->setName(this->currentStationName);
+  series1->setName(this->m_station.name());
   series1->setPen(
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
@@ -355,7 +323,7 @@ int XTide::plotChart() {
 
   this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
   this->thisChart->legend()->setAlignment(Qt::AlignBottom);
-  this->thisChart->setTitle("XTide Station: " + this->currentStationName);
+  this->thisChart->setTitle("XTide Station: " + this->m_station.name());
   this->thisChart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->chart->setRenderHint(QPainter::Antialiasing);
   this->chart->setChart(this->thisChart);
@@ -386,7 +354,7 @@ int XTide::saveXTideData(QString filename, QString format) {
   XTideOutput.open(QIODevice::WriteOnly);
 
   if (format.compare("CSV") == 0) {
-    Output << "Station: " + this->currentStationName.replace(" ", "_") + "\n";
+    Output << "Station: " + this->m_station.name().replace(" ", "_") + "\n";
     Output << "Datum: MLLW\n";
     Output << "Units: N/A\n";
     Output << "\n";
@@ -405,9 +373,13 @@ int XTide::saveXTideData(QString filename, QString format) {
     Output << "% IMEDS generic format - Water Level\n";
     Output << "% year month day hour min sec value\n";
     Output << "XTide   UTC    MLLW\n";
-    Output << "XTide_" + this->currentStationName.replace(" ", "_") + "   " +
-                  QString::number(this->currentXTideLat) + "   " +
-                  QString::number(this->currentXTideLon) + "\n";
+    Output << "XTide_" + this->m_station.name().replace(" ", "_") + "   " +
+                  QString::number(
+                      this->m_station.coordinate().latitude()) +
+                  "   " +
+                  QString::number(
+                      this->m_station.coordinate().longitude()) +
+                  "\n";
     for (int i = 0; i < this->currentXTideStation.length(); i++) {
       Output << QDateTime::fromMSecsSinceEpoch(
                     this->currentXTideStation[i].date)
@@ -488,37 +460,25 @@ int XTide::saveXTidePlot(QString filename, QString filter) {
   return 0;
 }
 
-void XTide::javascriptDataReturned(QString data) {
-  int ierr;
-  QString tempString;
-  QStringList dataList;
+void XTide::addStationsToModel(StationModel *model) {
+  QFile stationFile(":/stations/data/xtide_stations.csv");
 
-  dataList = data.split(";");
+  if (!stationFile.open(QIODevice::ReadOnly)) return;
 
-  this->currentStationName = dataList.value(0);
-  tempString = dataList.value(1);
-  this->currentXTideLon = tempString.toDouble();
-  tempString = dataList.value(2);
-  this->currentXTideLat = tempString.toDouble();
-
-  //...Sanity check on data
-  if (this->currentStationName == QString() ||
-      this->currentStationName == "none") {
-    emit xTideError(tr("You must select a station"));
-    return;
+  while (!stationFile.atEnd()) {
+    QString line = stationFile.readLine().simplified();
+    QStringList list = line.split(";");
+    QString id = list.value(3);
+    QString name = list.value(4);
+    name = name.simplified();
+    QString temp = list.value(0);
+    double lat = temp.toDouble();
+    temp = list.value(1);
+    double lon = temp.toDouble();
+    model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
   }
 
-  //...Calculate the tidal signal
-  ierr = this->calculateXTides();
-  if (ierr != 0) {
-    emit xTideError(tr("There was an error calculation tides"));
-    return;
-  }
+  stationFile.close();
 
-  //...Plot the chart
-  ierr = this->plotChart();
-  if (ierr != 0) {
-    emit xTideError(tr("There was an error drawing the chart"));
-    return;
-  }
+  return;
 }

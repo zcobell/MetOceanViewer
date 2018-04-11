@@ -27,7 +27,6 @@
 #include <QtCharts>
 #include <QtNetwork>
 #include <QtPrintSupport>
-#include <QtWebEngineWidgets>
 #include "chartview.h"
 #include "errors.h"
 #include "generic.h"

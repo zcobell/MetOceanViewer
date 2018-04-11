@@ -27,10 +27,8 @@
 #include <QQuickWidget>
 #include <QUrl>
 #include <QVector>
-#include <QWebEngineView>
 #include <QtCharts>
 #include <QtNetwork>
-#include <QtWebEngine/QtWebEngine>
 #include "errors.h"
 #include "stationmodel.h"
 #include "timezone.h"

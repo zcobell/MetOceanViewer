@@ -167,8 +167,6 @@ private slots:
 
   void on_button_xtide_resetzoom_clicked();
 
-  void on_combo_xtide_panto_activated(const QString &arg1);
-
   void on_button_xtide_savemap_clicked();
 
   void on_button_xtide_savedata_clicked();
@@ -195,9 +193,15 @@ private slots:
 
   void changeUsgsMarker(QString markerId);
 
+  void changeXtideMarker(QString markerId);
+
   void changeNoaaMaptype();
 
   void changeUsgsMaptype();
+
+  void changeXtideMaptype();
+
+  void on_combo_xtide_panto_currentIndexChanged(int index);
 
 private:
   Ui::MainWindow *ui;
@@ -248,8 +252,11 @@ private:
 
   StationModel *usgsStationModel;
 
+  StationModel *xtideStationModel;
+
   QString noaaSelectedStation;
   QString usgsSelectedStation;
+  QString xtideSelectedStation;
 
   bool processCommandLine;
   bool timeseriesDisplayValues;

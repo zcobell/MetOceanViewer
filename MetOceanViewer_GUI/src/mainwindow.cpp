@@ -33,6 +33,7 @@
 #include "updatedialog.h"
 #include "usgs.h"
 #include "webenginepage.h"
+#include "xtide.h"
 
 //-------------------------------------------//
 // Main routine which will intialize all the tabs
@@ -189,6 +190,10 @@ void MainWindow::changeUsgsMarker(QString markerId) {
   this->usgsSelectedStation = markerId;
 }
 
+void MainWindow::changeXtideMarker(QString markerId) {
+  this->xtideSelectedStation = markerId;
+}
+
 void MainWindow::changeNoaaMaptype() {
   ui->quick_noaaMap->rootContext()->setContextProperty(
       "mapType", ui->Combo_NOAAPanTo->currentIndex());
@@ -199,6 +204,11 @@ void MainWindow::changeUsgsMaptype() {
       "mapType", ui->combo_usgs_panto->currentIndex());
 }
 
+void MainWindow::changeXtideMaptype() {
+  ui->quick_xtideMap->rootContext()->setContextProperty(
+      "mapType", ui->combo_xtide_panto->currentIndex());
+}
+
 void MainWindow::setupMetOceanViewerUI() {
   //-------------------------------------------//
   // Setting up the NOAA tab for the user
@@ -207,6 +217,9 @@ void MainWindow::setupMetOceanViewerUI() {
   this->noaaStationModel = new StationModel(this);
   ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
                                                        this->noaaStationModel);
+
+  Generic::setEsriMapTypes(ui->Combo_NOAAPanTo);
+  ui->Combo_NOAAPanTo->setCurrentIndex(0);
   this->changeNoaaMaptype();
   ui->quick_noaaMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
   Noaa::addStationsToModel(this->noaaStationModel);
@@ -248,6 +261,8 @@ void MainWindow::setupMetOceanViewerUI() {
   this->usgsStationModel = new StationModel(this);
   ui->quick_usgsMap->rootContext()->setContextProperty("stationModel",
                                                        this->usgsStationModel);
+  Generic::setEsriMapTypes(ui->combo_usgs_panto);
+  ui->combo_usgs_panto->setCurrentIndex(0);
   this->changeUsgsMaptype();
   ui->quick_usgsMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
   Usgs::addStationsToModel(this->usgsStationModel);
@@ -259,10 +274,18 @@ void MainWindow::setupMetOceanViewerUI() {
   // Set up the XTide tab for the user
   ui->date_xtide_start->setDateTime(QDateTime::currentDateTime().addDays(-7));
   ui->date_xtide_end->setDateTime(QDateTime::currentDateTime());
-  this->xtide_page = new WebEnginePage(this);
-  ui->xtide_map->setPage(this->xtide_page);
-  ui->xtide_map->load(QUrl("qrc:/rsc/html/xtide_maps.html"));
   this->xtideDisplayValues = false;
+  this->xtideStationModel = new StationModel(this);
+  ui->quick_xtideMap->rootContext()->setContextProperty("stationModel",
+                                                       this->xtideStationModel);
+  Generic::setEsriMapTypes(ui->combo_xtide_panto);
+  ui->combo_xtide_panto->setCurrentIndex(0);
+  this->changeXtideMaptype();
+  ui->quick_xtideMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
+  XTide::addStationsToModel(this->xtideStationModel);
+  QObject *xtideItem = ui->quick_xtideMap->rootObject();
+  QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
+                   SLOT(changeXtideMarker(QString)));
 
   //-------------------------------------------//
   // Set up the time series tab for the user
@@ -396,4 +419,9 @@ void MainWindow::setupMetOceanViewerUI() {
   }
 
   return;
+}
+
+void MainWindow::on_combo_xtide_panto_currentIndexChanged(int index) {
+  Q_UNUSED(index);
+  this->changeXtideMaptype();
 }

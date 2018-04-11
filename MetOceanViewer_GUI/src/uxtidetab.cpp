@@ -33,8 +33,9 @@ void MainWindow::plotXTideStation() {
   //...Create an xTide object
   if (!this->thisXTide.isNull()) delete this->thisXTide;
   this->thisXTide =
-      new XTide(ui->xtide_map, ui->xtide_graphics, ui->date_xtide_start,
-                ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar, this);
+      new XTide(ui->quick_xtideMap, ui->xtide_graphics, ui->date_xtide_start,
+                ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar,
+                this->xtideStationModel, &this->xtideSelectedStation, this);
   connect(thisXTide, SIGNAL(xTideError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -46,13 +47,6 @@ void MainWindow::plotXTideStation() {
 
 void MainWindow::on_button_xtide_resetzoom_clicked() {
   if (!this->thisXTide.isNull()) ui->xtide_graphics->resetZoom();
-  return;
-}
-
-void MainWindow::on_combo_xtide_panto_activated(const QString &arg1) {
-  Q_UNUSED(arg1);
-  ui->xtide_map->page()->runJavaScript(
-      "panTo('" + ui->combo_xtide_panto->currentText() + "')");
   return;
 }
 
