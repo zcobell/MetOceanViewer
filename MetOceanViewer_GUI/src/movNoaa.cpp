@@ -30,38 +30,37 @@ MovNoaa::MovNoaa(QQuickWidget *inMap, MovQChartView *inChart,
                  StationModel *stationModel, QString *selectedStation,
                  QObject *parent)
     : QObject(parent) {
-  this->map = inMap;
-  this->chart = inChart;
-  this->startDateEdit = inStartDateEdit;
-  this->endDateEdit = inEndDateEdit;
-  this->noaaProduct = inNoaaProduct;
-  this->noaaDatum = inNoaaDatum;
-  this->noaaUnits = inNoaaUnits;
-  this->statusBar = inStatusBar;
-  this->noaaTimezoneLocation = inNoaaTimezoneLocation;
-  this->noaaTimezone = inNoaaTimezone;
-  this->stationModel = stationModel;
-  this->NOAAMarkerID = -1;
-  this->ProductIndex = 0;
-  this->selectedStation = selectedStation;
-  this->thisChart = nullptr;
+  this->m_quickMap = inMap;
+  this->m_chartView = inChart;
+  this->m_startDateEdit = inStartDateEdit;
+  this->m_endDateEdit = inEndDateEdit;
+  this->m_comboProduct = inNoaaProduct;
+  this->m_comboDatum = inNoaaDatum;
+  this->m_comboUnits = inNoaaUnits;
+  this->m_statusBar = inStatusBar;
+  this->m_comboTimezoneLocation = inNoaaTimezoneLocation;
+  this->m_comboTimezone = inNoaaTimezone;
+  this->m_stationModel = stationModel;
+  this->m_productIndex = 0;
+  this->m_selectedStation = selectedStation;
+  this->m_chartView->m_chart = nullptr;
 
   //...Initialize the IMEDS object
-  this->CurrentNOAAStation.resize(2);
-  this->CurrentNOAAStation[0] = new MovImeds(this);
-  this->CurrentNOAAStation[1] = new MovImeds(this);
-  this->CurrentNOAAStation[0]->station.resize(1);
-  this->CurrentNOAAStation[1]->station.resize(1);
-  this->CurrentNOAAStation[0]->nstations = 1;
-  this->CurrentNOAAStation[1]->nstations = 1;
+  this->m_currentStationData.resize(2);
+  this->m_currentStationData[0] = new MovImeds(this);
+  this->m_currentStationData[1] = new MovImeds(this);
+  this->m_currentStationData[0]->station.resize(1);
+  this->m_currentStationData[1]->station.resize(1);
+  this->m_currentStationData[0]->nstations = 1;
+  this->m_currentStationData[1]->nstations = 1;
 
   //...Initialize the timezone
   this->tz = new Timezone(this);
-  tz->fromAbbreviation(this->noaaTimezone->currentText(),
+  tz->fromAbbreviation(this->m_comboTimezone->currentText(),
                        static_cast<TZData::Location>(
-                           this->noaaTimezoneLocation->currentIndex()));
-  this->offsetSeconds = tz->utcOffset() * 1000;
-  this->priorOffsetSeconds = this->offsetSeconds;
+                           this->m_comboTimezoneLocation->currentIndex()));
+  this->m_offsetSeconds = tz->utcOffset() * 1000;
+  this->m_priorOffsetSeconds = this->m_offsetSeconds;
 }
 
 MovNoaa::~MovNoaa() {}
@@ -69,17 +68,17 @@ MovNoaa::~MovNoaa() {}
 int MovNoaa::fetchNOAAData() {
   QEventLoop loop;
   qint64 Duration;
-  QString RequestURL, StartString, EndString, Product, Product2;
+  QString RequestURL, StartString, EndString, Product1, Product2;
   int i, j, ierr, NumDownloads, NumData;
   QVector<QDateTime> StartDateList, EndDateList;
 
-  if (this->StartDate.operator==(this->EndDate) ||
-      this->EndDate.operator<(this->StartDate))
+  if (this->m_startDate.operator==(this->m_endDate) ||
+      this->m_endDate.operator<(this->m_startDate))
     return MetOceanViewer::Error::NOAA_INVALIDDATERANGE;
 
   // Begin organizing the dates for download
-  QDateTime localStartDate = this->StartDate.addMSecs(-this->offsetSeconds);
-  QDateTime localEndDate = this->EndDate.addMSecs(-this->offsetSeconds);
+  QDateTime localStartDate = this->m_startDate.addMSecs(-this->m_offsetSeconds);
+  QDateTime localEndDate = this->m_endDate.addMSecs(-this->m_offsetSeconds);
   Duration = localStartDate.daysTo(localEndDate);
   NumDownloads = (Duration / 30) + 1;
   StartDateList.resize(NumDownloads);
@@ -94,22 +93,22 @@ int MovNoaa::fetchNOAAData() {
     if (EndDateList[i] > localEndDate) EndDateList[i] = localEndDate;
   }
 
-  ierr = this->retrieveProduct(2, Product, Product2);
+  ierr = this->getNoaaProductId(Product1, Product2);
 
-  if (this->ProductIndex == 0)
+  if (this->m_productIndex == 0)
     NumData = 2;
   else
     NumData = 1;
 
-  if (this->ProductIndex == 4 || this->ProductIndex == 5 ||
-      this->ProductIndex == 6 || this->ProductIndex == 7 ||
-      this->ProductIndex == 8)
-    this->Datum = "Stnd";
+  if (this->m_productIndex == 4 || this->m_productIndex == 5 ||
+      this->m_productIndex == 6 || this->m_productIndex == 7 ||
+      this->m_productIndex == 8)
+    this->m_datum = "Stnd";
 
   // Allocate the NOAA array
-  this->NOAAWebData.clear();
-  this->NOAAWebData.resize(NumData);
-  for (i = 0; i < NumData; i++) this->NOAAWebData[i].resize(NumDownloads);
+  this->m_webData.clear();
+  this->m_webData.resize(NumData);
+  for (i = 0; i < NumData; i++) this->m_webData[i].resize(NumDownloads);
 
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
 
@@ -123,25 +122,23 @@ int MovNoaa::fetchNOAAData() {
       if (j == 0)
         RequestURL =
             QString("http://tidesandcurrents.noaa.gov/api/datagetter?") +
-            QString("product=" + Product + "&application=metoceanviewer") +
+            QString("product=" + Product1 + "&application=metoceanviewer") +
             QString("&begin_date=") + StartString + QString("&end_date=") +
-            EndString + QString("&station=") +
-            QString::number(this->NOAAMarkerID) +
-            QString("&time_zone=GMT&units=") + this->Units +
+            EndString + QString("&station=") + this->m_station.id() +
+            QString("&time_zone=GMT&units=") + this->m_units +
             QString("&interval=&format=csv");
       else
         RequestURL =
             QString("http://tidesandcurrents.noaa.gov/api/datagetter?") +
             QString("product=" + Product2 + "&application=metoceanviewer") +
             QString("&begin_date=") + StartString + QString("&end_date=") +
-            EndString + QString("&station=") +
-            QString::number(this->NOAAMarkerID) +
-            QString("&time_zone=GMT&units=") + this->Units +
+            EndString + QString("&station=") + this->m_station.id() +
+            QString("&time_zone=GMT&units=") + this->m_units +
             QString("&interval=&format=csv");
 
       // Allow a different datum where allowed
-      if (this->Datum != "Stnd")
-        RequestURL = RequestURL + QString("&datum=") + this->Datum;
+      if (this->m_datum != "Stnd")
+        RequestURL = RequestURL + QString("&datum=") + this->m_datum;
 
       // Send the request
       QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
@@ -165,10 +162,13 @@ int MovNoaa::fetchNOAAData() {
         this->readNOAAResponse(reply, i, j);
     }
   }
+
+  this->m_loadedStationId = this->m_station.id().toInt();
+
   return 0;
 }
 
-int MovNoaa::formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString,
+int MovNoaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
                                 int index) {
   int i, j, k;
   int dataCount;
@@ -179,16 +179,16 @@ int MovNoaa::formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString,
   QVector<QString> Temp;
   QDateTime tempDate;
 
-  InputData.resize(Input.length());
-  DataList.resize(Input.length());
-  Temp.resize(Input.length());
+  InputData.resize(input.length());
+  DataList.resize(input.length());
+  Temp.resize(input.length());
 
   for (i = 0; i < DataList.length(); i++) {
-    InputData[i] = QString(Input[i]);
+    InputData[i] = QString(input[i]);
     DataList[i] =
         InputData[i].split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
-    Temp[i] = QString(Input[i]);
-    ErrorString = Temp[i] + "\n";
+    Temp[i] = QString(input[i]);
+    error = Temp[i] + "\n";
   }
 
   dataCount = 0;
@@ -210,15 +210,15 @@ int MovNoaa::formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString,
       WLS = TimeSnap.value(1);
       tempDate.setDate(QDate(YearS.toInt(), MonthS.toInt(), DayS.toInt()));
       tempDate.setTime(QTime(HourS.toInt(), MinS.toInt(), 0));
-      this->CurrentNOAAStation[index]->station[0].date.push_back(
+      this->m_currentStationData[index]->station[0].date.push_back(
           tempDate.toMSecsSinceEpoch());
-      this->CurrentNOAAStation[index]->station[0].data.push_back(
+      this->m_currentStationData[index]->station[0].data.push_back(
           WLS.toDouble());
       k = k + 1;
     }
   }
 
-  this->CurrentNOAAStation[index]->station[0].NumSnaps = k;
+  this->m_currentStationData[index]->station[0].NumSnaps = k;
 
   return 0;
 }
@@ -229,74 +229,73 @@ int MovNoaa::getDataBounds(double &ymin, double &ymax) {
   ymin = DBL_MAX;
   ymax = -DBL_MAX;
 
-  for (i = 0; i < this->CurrentNOAAStation.length(); i++) {
-    for (j = 0; j < this->CurrentNOAAStation[i]->station[0].data.length();
+  for (i = 0; i < this->m_currentStationData.length(); i++) {
+    for (j = 0; j < this->m_currentStationData[i]->station[0].data.length();
          j++) {
-      if (this->CurrentNOAAStation[i]->station[0].data[j] != 0.0) {
-        if (this->CurrentNOAAStation[i]->station[0].data[j] < ymin)
-          ymin = this->CurrentNOAAStation[i]->station[0].data[j];
-        if (this->CurrentNOAAStation[i]->station[0].data[j] > ymax)
-          ymax = this->CurrentNOAAStation[i]->station[0].data[j];
+      if (this->m_currentStationData[i]->station[0].data[j] != 0.0) {
+        if (this->m_currentStationData[i]->station[0].data[j] < ymin)
+          ymin = this->m_currentStationData[i]->station[0].data[j];
+        if (this->m_currentStationData[i]->station[0].data[j] > ymax)
+          ymax = this->m_currentStationData[i]->station[0].data[j];
       }
     }
   }
   return 0;
 }
 
-int MovNoaa::generateLabels() {
-  int ierr;
-  QString Product, Product2;
-
-  ierr = this->retrieveProduct(1, Product, Product2);
-
-  if (this->ProductIndex == 0) {
-    if (this->Units == "metric")
-      this->Units = "m";
-    else
-      this->Units = "ft";
-    this->yLabel = tr("Water Level (") + this->Units + ", " + this->Datum + ")";
-  } else if (this->ProductIndex == 1 || this->ProductIndex == 2 ||
-             this->ProductIndex == 3) {
-    if (this->Units == "metric")
-      this->Units = "m";
-    else
-      this->Units = "ft";
-    this->yLabel = Product + " (" + this->Units + ", " + this->Datum + ")";
-  } else if (this->ProductIndex == 6) {
-    if (this->Units == "metric")
-      this->Units = "m/s";
-    else
-      this->Units = "knots";
-    this->Datum = "Stnd";
-    this->yLabel = Product + " (" + this->Units + ")";
-  } else if (this->ProductIndex == 4 || this->ProductIndex == 5) {
-    if (this->Units == "metric")
-      this->Units = "Celcius";
-    else
-      this->Units = "Fahrenheit";
-    this->Datum = "Stnd";
-    this->yLabel = Product + " (" + this->Units + ")";
-  } else if (this->ProductIndex == 7) {
-    this->Units = "%";
-    this->Datum = "Stnd";
-    this->yLabel = Product + " (" + this->Units + ")";
-  } else if (this->ProductIndex == 8) {
-    this->Units = "mb";
-    this->Datum = "Stnd";
-    this->yLabel = Product + " (" + this->Units + ")";
+QString MovNoaa::getUnitsLabel() {
+  static QStringList unitsMetric = QStringList() << "m"
+                                                 << "m"
+                                                 << "m"
+                                                 << "m"
+                                                 << "C"
+                                                 << "C"
+                                                 << "m/s"
+                                                 << "%"
+                                                 << "mb";
+  static QStringList unitsImperial = QStringList() << "ft"
+                                                   << "ft"
+                                                   << "ft"
+                                                   << "ft"
+                                                   << "F"
+                                                   << "F"
+                                                   << "knot"
+                                                   << "%"
+                                                   << "mb";
+  if (this->m_comboUnits->currentIndex() == 0) {
+    return unitsMetric.at(this->m_productIndex);
+  } else {
+    return unitsImperial.at(this->m_productIndex);
   }
+}
 
-  this->plotTitle = tr("Station ") + QString::number(this->NOAAMarkerID) +
-                    ": " + this->CurrentNOAAStation[0]->station[0].StationName;
+QString MovNoaa::getDatumLabel() {
+  if (this->m_productIndex > 3)
+    return "Stnd";
+  else
+    return this->m_comboDatum->currentText();
+}
 
+int MovNoaa::generateLabels() {
+  if (this->m_productIndex == 1) {
+    this->m_ylabel = tr("Water Level (") + this->getUnitsLabel() + ", " +
+                     this->getDatumLabel() + ")";
+  } else {
+    QString product;
+    int ierr = this->getNoaaProductLabel(product);
+    this->m_ylabel =
+        product + this->getUnitsLabel() + ", " + this->getDatumLabel() + ")";
+  }
+  this->m_plotTitle = tr("Station ") + this->m_station.id() + ": " +
+                      this->m_currentStationData[0]->station[0].StationName;
   return 0;
 }
 
-QString MovNoaa::getNOAAErrorString() { return this->NOAAErrorString; }
+QString MovNoaa::getNOAAErrorString() { return this->m_errorString; }
 
-int MovNoaa::getLoadedNOAAStation() { return this->NOAAMarkerID; }
+int MovNoaa::getLoadedNOAAStation() { return this->m_loadedStationId; }
 
-int MovNoaa::getClickedNOAAStation() { return this->NOAAMarkerID; }
+int MovNoaa::getClickedNOAAStation() { return this->m_station.id().toInt(); }
 
 int MovNoaa::plotChart() {
   int i, j, ierr;
@@ -309,17 +308,16 @@ int MovNoaa::plotChart() {
 
   //...Create the line series
   ierr = this->generateLabels();
-  ierr = this->retrieveProduct(3, S1, S2);
+  ierr = this->getNoaaProductSeriesNaming(S1, S2);
   ierr = this->getDataBounds(ymin, ymax);
 
-  this->CurrentNOAAStation[0]->units = this->Units;
-  this->CurrentNOAAStation[0]->datum = this->Datum;
-  this->CurrentNOAAStation[1]->units = this->Units;
-  this->CurrentNOAAStation[1]->datum = this->Datum;
+  this->m_currentStationData[0]->units = this->m_units;
+  this->m_currentStationData[0]->datum = this->m_datum;
+  this->m_currentStationData[1]->units = this->m_units;
+  this->m_currentStationData[1]->datum = this->m_datum;
 
   //...Create the chart
-  this->thisChart = new QChart();
-  this->chart->m_chart = this->thisChart;
+  this->m_chartView->m_chart = new QChart();
 
   QLineSeries *series1 = new QLineSeries(this);
   QLineSeries *series2 = new QLineSeries(this);
@@ -330,17 +328,17 @@ int MovNoaa::plotChart() {
   series2->setPen(
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
-  minDateTime = this->startDateEdit->dateTime();
-  maxDateTime = this->endDateEdit->dateTime().addDays(1);
+  minDateTime = this->m_startDateEdit->dateTime();
+  maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
 
   minDateTime.setTime(QTime(0, 0, 0));
   maxDateTime.setTime(QTime(0, 0, 0));
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
-  if (this->StartDate.daysTo(this->EndDate) > 90)
+  if (this->m_startDate.daysTo(this->m_endDate) > 90)
     axisX->setFormat("MM/yyyy");
-  else if (this->StartDate.daysTo(this->EndDate) > 4)
+  else if (this->m_startDate.daysTo(this->m_endDate) > 4)
     axisX->setFormat("MM/dd/yyyy");
   else
     axisX->setFormat("MM/dd/yyyy hh:mm");
@@ -348,52 +346,54 @@ int MovNoaa::plotChart() {
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisX->setMin(minDateTime);
   axisX->setMax(maxDateTime);
-  this->thisChart->addAxis(axisX, Qt::AlignBottom);
+  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
 
   QValueAxis *axisY = new QValueAxis(this);
   axisY->setLabelFormat(format);
-  axisY->setTitleText(this->yLabel);
+  axisY->setTitleText(this->m_ylabel);
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisY->setMin(ymin);
   axisY->setMax(ymax);
-  this->thisChart->addAxis(axisY, Qt::AlignLeft);
+  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (j = 0; j < this->CurrentNOAAStation[0]->station[0].data.length(); j++) {
+  for (j = 0; j < this->m_currentStationData[0]->station[0].data.length();
+       j++) {
     if (QDateTime::fromMSecsSinceEpoch(
-            this->CurrentNOAAStation[0]->station[0].date[j] +
-            this->offsetSeconds)
+            this->m_currentStationData[0]->station[0].date[j] +
+            this->m_offsetSeconds)
             .isValid()) {
-      if (this->CurrentNOAAStation[0]->station[0].data[j] != 0.0)
-        series1->append(this->CurrentNOAAStation[0]->station[0].date[j] +
-                            this->offsetSeconds,
-                        this->CurrentNOAAStation[0]->station[0].data[j]);
+      if (this->m_currentStationData[0]->station[0].data[j] != 0.0)
+        series1->append(this->m_currentStationData[0]->station[0].date[j] +
+                            this->m_offsetSeconds,
+                        this->m_currentStationData[0]->station[0].data[j]);
     }
   }
-  this->thisChart->addSeries(series1);
+  this->m_chartView->m_chart->addSeries(series1);
   series1->attachAxis(axisX);
   series1->attachAxis(axisY);
-  this->chart->clear();
-  this->chart->addSeries(series1, series1->name());
+  this->m_chartView->clear();
+  this->m_chartView->addSeries(series1, series1->name());
 
-  if (this->ProductIndex == 0) {
-    for (j = 0; j < this->CurrentNOAAStation[1]->station[0].data.length(); j++)
+  if (this->m_productIndex == 0) {
+    for (j = 0; j < this->m_currentStationData[1]->station[0].data.length();
+         j++)
       if (QDateTime::fromMSecsSinceEpoch(
-              this->CurrentNOAAStation[1]->station[0].date[j] +
-              this->offsetSeconds)
+              this->m_currentStationData[1]->station[0].date[j] +
+              this->m_offsetSeconds)
               .isValid()) {
-        if (this->CurrentNOAAStation[1]->station[0].data[j] != 0.0)
-          series2->append(this->CurrentNOAAStation[1]->station[0].date[j] +
-                              this->offsetSeconds,
-                          this->CurrentNOAAStation[1]->station[0].data[j]);
+        if (this->m_currentStationData[1]->station[0].data[j] != 0.0)
+          series2->append(this->m_currentStationData[1]->station[0].date[j] +
+                              this->m_offsetSeconds,
+                          this->m_currentStationData[1]->station[0].data[j]);
       }
-    this->thisChart->addSeries(series2);
-    this->chart->addSeries(series2, series2->name());
+    this->m_chartView->m_chart->addSeries(series2);
+    this->m_chartView->addSeries(series2, series2->name());
     series2->attachAxis(axisX);
     series2->attachAxis(axisY);
   }
 
-  for (i = 0; i < this->thisChart->legend()->markers().length(); i++)
-    this->thisChart->legend()->markers().at(i)->setFont(
+  for (i = 0; i < this->m_chartView->m_chart->legend()->markers().length(); i++)
+    this->m_chartView->m_chart->legend()->markers().at(i)->setFont(
         QFont("Helvetica", 10, QFont::Bold));
 
   axisY->setTickCount(10);
@@ -404,94 +404,97 @@ int MovNoaa::plotChart() {
   axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
   axisY->setShadesVisible(true);
 
-  this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
-  this->thisChart->legend()->setAlignment(Qt::AlignBottom);
-  this->thisChart->setTitle(
-      tr("NOAA Station ") + QString::number(this->NOAAMarkerID) + ": " +
-      this->CurrentNOAAStation[0]->station[0].StationName);
-  this->thisChart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->chart->setRenderHint(QPainter::Antialiasing);
-  this->chart->setChart(this->thisChart);
+  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
+  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
+  this->m_chartView->m_chart->setTitle(
+      tr("NOAA Station ") + this->m_station.id() + ": " +
+      this->m_currentStationData[0]->station[0].StationName);
+  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+  this->m_chartView->setRenderHint(QPainter::Antialiasing);
 
-  foreach (QLegendMarker *marker, this->thisChart->legend()->markers()) {
+  if (this->m_chartView->chart() != nullptr) delete this->m_chartView->chart();
+  this->m_chartView->setChart(this->m_chartView->m_chart);
+
+  foreach (QLegendMarker *marker, this->m_chartView->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->chart,
+    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
                         SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->chart,
+    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
                      SLOT(handleLegendMarkerClicked()));
   }
 
-  this->chart->m_style = 1;
-  this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
-  this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
-                               this->chart->size().height() - 20);
-  this->chart->initializeAxisLimits();
-  this->chart->setStatusBar(this->statusBar);
+  this->m_chartView->m_style = 1;
+  this->m_chartView->m_coord = new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
+  this->m_chartView->m_coord->setPos(this->m_chartView->size().width() / 2 - 100,
+                                 this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeAxisLimits();
+  this->m_chartView->setStatusBar(this->m_statusBar);
 
   return 0;
 }
 
 int MovNoaa::plotNOAAStation() {
-  if (*(this->selectedStation) == "-1") {
+  if (*(this->m_selectedStation) == "-1") {
     emit noaaError(tr("You must select a station"));
     return 1;
   } else {
     int ierr;
 
-    this->m_station = this->stationModel->findStation(*(this->selectedStation));
-    this->NOAAMarkerID = this->m_station.id().toInt();
+    this->m_station =
+        this->m_stationModel->findStation(*(this->m_selectedStation));
+    this->m_station.id() = this->m_station.id().toInt();
 
-    this->CurrentNOAAStation[0]->station[0].longitude =
+    this->m_currentStationData[0]->station[0].longitude =
         this->m_station.coordinate().longitude();
-    this->CurrentNOAAStation[0]->station[0].latitude =
+    this->m_currentStationData[0]->station[0].latitude =
         this->m_station.coordinate().latitude();
-    this->CurrentNOAAStation[0]->station[0].StationName =
+    this->m_currentStationData[0]->station[0].StationName =
         this->m_station.name();
-    this->CurrentNOAAStation[0]->station[0].StationID =
+    this->m_currentStationData[0]->station[0].StationID =
         "NOAA_" + this->m_station.id();
-    this->CurrentNOAAStation[0]->station[0].StationIndex = 0;
+    this->m_currentStationData[0]->station[0].StationIndex = 0;
 
-    this->CurrentNOAAStation[1]->station[0].longitude =
+    this->m_currentStationData[1]->station[0].longitude =
         this->m_station.coordinate().longitude();
-    this->CurrentNOAAStation[1]->station[0].latitude =
+    this->m_currentStationData[1]->station[0].latitude =
         this->m_station.coordinate().latitude();
-    this->CurrentNOAAStation[1]->station[0].StationName =
+    this->m_currentStationData[1]->station[0].StationName =
         this->m_station.name();
-    this->CurrentNOAAStation[1]->station[0].StationID =
+    this->m_currentStationData[1]->station[0].StationID =
         "NOAA_" + this->m_station.id();
-    this->CurrentNOAAStation[1]->station[0].StationIndex = 0;
+    this->m_currentStationData[1]->station[0].StationIndex = 0;
 
     //...Grab the options from the UI
-    this->StartDate = this->startDateEdit->dateTime();
-    this->StartDate.setTime(QTime(0, 0, 0));
-    this->EndDate = this->endDateEdit->dateTime();
-    this->EndDate = this->EndDate.addDays(1);
-    this->EndDate.setTime(QTime(0, 0, 0));
-    this->Units = this->noaaUnits->currentText();
-    this->Datum = this->noaaDatum->currentText();
-    this->ProductIndex = this->noaaProduct->currentIndex();
+    this->m_startDate = this->m_startDateEdit->dateTime();
+    this->m_startDate.setTime(QTime(0, 0, 0));
+    this->m_endDate = this->m_endDateEdit->dateTime();
+    this->m_endDate = this->m_endDate.addDays(1);
+    this->m_endDate.setTime(QTime(0, 0, 0));
+    this->m_units = this->m_comboUnits->currentText();
+    this->m_datum = this->m_comboDatum->currentText();
+    this->m_productIndex = this->m_comboProduct->currentIndex();
 
     // Update status
-    this->statusBar->showMessage(tr("Downloading data from NOAA...", 0));
+    this->m_statusBar->showMessage(tr("Downloading data from NOAA...", 0));
 
     ierr = this->fetchNOAAData();
 
     //...Update the status bar
-    statusBar->showMessage(tr("Plotting the data from NOAA..."));
+    m_statusBar->showMessage(tr("Plotting the data from NOAA..."));
 
     //...Generate prep the data for plotting
     ierr = this->prepNOAAResponse();
 
     //...Check for valid data
-    if (this->CurrentNOAAStation[0]->station[0].NumSnaps < 5) {
-      emit noaaError(this->ErrorString[0]);
+    if (this->m_currentStationData[0]->station[0].NumSnaps < 5) {
+      emit noaaError(this->m_errorStringVec[0]);
       return 1;
     }
 
     //...Plot the chart
     ierr = this->plotChart();
 
-    this->statusBar->clearMessage();
+    this->m_statusBar->clearMessage();
 
     return 0;
   }
@@ -501,16 +504,16 @@ int MovNoaa::prepNOAAResponse() {
   QVector<QString> NOAAData;
   int i;
 
-  NOAAData.resize(NOAAWebData.length());
-  this->ErrorString.resize(NOAAWebData.length());
-  for (i = 0; i < NOAAWebData.length(); i++) {
-    NOAAData[i] =
-        this->formatNOAAResponse(this->NOAAWebData[i], this->ErrorString[i], i);
-    this->ErrorString[i].remove(QRegExp("[\\n\\t\\r]"));
-    if (this->ErrorString[i] ==
+  NOAAData.resize(m_webData.length());
+  this->m_errorStringVec.resize(m_webData.length());
+  for (i = 0; i < m_webData.length(); i++) {
+    NOAAData[i] = this->formatNOAAResponse(this->m_webData[i],
+                                           this->m_errorStringVec[i], i);
+    this->m_errorStringVec[i].remove(QRegExp("[\\n\\t\\r]"));
+    if (this->m_errorStringVec[i] ==
         QStringLiteral(
             " Wrong Date: The end date should be greater than the begin date "))
-      this->ErrorString[i] =
+      this->m_errorStringVec[i] =
           QStringLiteral("NOAA data unavailable for the specified dates");
   }
   return 0;
@@ -530,7 +533,7 @@ void MovNoaa::readNOAAResponse(QNetworkReply *reply, int index, int index2) {
   Data = reply->readAll();
 
   // Save the data into an array and increment the counter
-  this->NOAAWebData[index2][index] = Data;
+  this->m_webData[index2][index] = Data;
 
   // Delete this response
   reply->deleteLater();
@@ -538,101 +541,54 @@ void MovNoaa::readNOAAResponse(QNetworkReply *reply, int index, int index2) {
   return;
 }
 
-int MovNoaa::retrieveProduct(int type, QString &Product, QString &Product2) {
-  Product2 = "null";
-  if (type == 1) {
-    switch (this->ProductIndex) {
-      case (0):
-        Product = "6 Min Observed Water Level vs. Predicted";
-        break;
-      case (1):
-        Product = "6 Min Observed Water Level";
-        break;
-      case (2):
-        Product = "Hourly Observed Water Level";
-        break;
-      case (3):
-        Product = "Predicted Water Level";
-        break;
-      case (4):
-        Product = "Air Temperature";
-        break;
-      case (5):
-        Product = "Water Temperature";
-        break;
-      case (6):
-        Product = "Wind Speed";
-        break;
-      case (7):
-        Product = "Relative Humidity";
-        break;
-      case (8):
-        Product = "Air Pressure";
-        break;
-    }
-  } else if (type == 2) {
-    switch (this->ProductIndex) {
-      case (0):
-        Product = "water_level";
-        Product2 = "predictions";
-        break;
-      case (1):
-        Product = "water_level";
-        break;
-      case (2):
-        Product = "hourly_height";
-        break;
-      case (3):
-        Product = "predictions";
-        break;
-      case (4):
-        Product = "air_temperature";
-        break;
-      case (5):
-        Product = "water_temperature";
-        break;
-      case (6):
-        Product = "wind";
-        break;
-      case (7):
-        Product = "humidity";
-        break;
-      case (8):
-        Product = "air_pressure";
-        break;
-    }
-  }
-  if (type == 3) {
-    switch (this->ProductIndex) {
-      case (0):
-        Product = "Observed";
-        Product2 = "Predicted";
-        break;
-      case (1):
-        Product = "6 Min Observed Water Level";
-        break;
-      case (2):
-        Product = "Hourly Observed Water Level";
-        break;
-      case (3):
-        Product = "Predicted Water Level";
-        break;
-      case (4):
-        Product = "Air Temperature";
-        break;
-      case (5):
-        Product = "Water Temperature";
-        break;
-      case (6):
-        Product = "Wind Speed";
-        break;
-      case (7):
-        Product = "Relative Humidity";
-        break;
-      case (8):
-        Product = "Air Pressure";
-        break;
-    }
+int MovNoaa::getNoaaProductId(QString &product1, QString &product2) {
+  static QStringList noaaProductCode = QStringList() << "water_level"
+                                                     << "hourly_height"
+                                                     << "predictions"
+                                                     << "air_temperature"
+                                                     << "water_temperature"
+                                                     << "wind"
+                                                     << "humidity"
+                                                     << "air_pressure";
+  product1 = noaaProductCode.at(this->m_productIndex);
+  if (this->m_productIndex == 0)
+    product2 = "predictions";
+  else
+    product2 = QString();
+  return 0;
+}
+
+int MovNoaa::getNoaaProductLabel(QString &product) {
+  static QStringList productString =
+      QStringList() << "6 Min Observed Water Level vs. Predicted"
+                    << "6 Min Observed Water Level"
+                    << "Hourly Observed Water Level"
+                    << "Predicted Water Level"
+                    << "Air Temperature"
+                    << "Water Temperature"
+                    << "Wind Speed"
+                    << "Relative Humidity"
+                    << "Air Pressure";
+  product = productString.at(this->m_productIndex);
+  return 0;
+}
+
+int MovNoaa::getNoaaProductSeriesNaming(QString &product1, QString &product2) {
+  static QStringList plotFileCode = QStringList()
+                                    << "Observed"
+                                    << "6 min Observed Water Level"
+                                    << "Hourly Water Level"
+                                    << "Predicted Water Level"
+                                    << "Air Temperature"
+                                    << "Water Temperature"
+                                    << "Wind Speed"
+                                    << "Humidity"
+                                    << "Air Pressure";
+  product1 = plotFileCode.at(this->m_productIndex);
+  if (this->m_productIndex == 0) {
+    product2 = "Predicted";
+  } else {
+    product2 = QString();
   }
   return 0;
 }
@@ -651,11 +607,11 @@ int MovNoaa::saveNOAAImage(QString filename, QString filter) {
     painter.begin(&printer);
 
     //...Page 1 - Chart
-    this->chart->render(&painter);
+    this->m_chartView->render(&painter);
 
     //...Page 2 - Map
     printer.newPage();
-    QPixmap renderedMap = this->map->grab();
+    QPixmap renderedMap = this->m_quickMap->grab();
     QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
     if (mapScaled.height() > printer.height())
       mapScaled = renderedMap.scaledToHeight(printer.height());
@@ -667,10 +623,11 @@ int MovNoaa::saveNOAAImage(QString filename, QString filter) {
     painter.end();
   } else if (filter == "JPG (*.jpg *.jpeg)") {
     QFile outputFile(filename);
-    QSize imageSize(this->map->size().width() + this->chart->size().width(),
-                    this->map->size().height());
-    QRect chartRect(this->map->size().width(), 0, this->chart->size().width(),
-                    this->chart->size().height());
+    QSize imageSize(this->m_quickMap->size().width() + this->m_chartView->size().width(),
+                    this->m_quickMap->size().height());
+    QRect chartRect(this->m_quickMap->size().width(), 0,
+                    this->m_chartView->size().width(),
+                    this->m_chartView->size().height());
 
     QImage pixmap(imageSize, QImage::Format_ARGB32);
     pixmap.fill(Qt::white);
@@ -678,8 +635,8 @@ int MovNoaa::saveNOAAImage(QString filename, QString filter) {
     imagePainter.setRenderHints(QPainter::Antialiasing |
                                 QPainter::TextAntialiasing |
                                 QPainter::SmoothPixmapTransform);
-    this->map->render(&imagePainter, QPoint(0, 0));
-    this->chart->render(&imagePainter, chartRect);
+    this->m_quickMap->render(&imagePainter, QPoint(0, 0));
+    this->m_chartView->render(&imagePainter, chartRect);
 
     outputFile.open(QIODevice::WriteOnly);
     pixmap.save(&outputFile, "JPG", 100);
@@ -693,8 +650,8 @@ int MovNoaa::saveNOAAData(QString filename, QString PreviousDirectory,
   int ierr, index;
   QString filename2;
 
-  for (index = 0; index < this->CurrentNOAAStation.length(); index++) {
-    if (this->CurrentNOAAStation.length() == 2) {
+  for (index = 0; index < this->m_currentStationData.length(); index++) {
+    if (this->m_currentStationData.length() == 2) {
       if (index == 0)
         filename2 = PreviousDirectory + "/Observation_" + filename;
       else
@@ -703,10 +660,10 @@ int MovNoaa::saveNOAAData(QString filename, QString PreviousDirectory,
       filename2 = PreviousDirectory + "/" + filename;
 
     if (format.compare("CSV") == 0) {
-      ierr = this->CurrentNOAAStation[index]->writeCSV(filename2);
+      ierr = this->m_currentStationData[index]->writeCSV(filename2);
       if (ierr != 0) emit noaaError("Error writing CSV file");
     } else if (format.compare("IMEDS") == 0) {
-      ierr = this->CurrentNOAAStation[index]->write(filename2);
+      ierr = this->m_currentStationData[index]->write(filename2);
       if (ierr != 0) emit noaaError("Error writing IMEDS file");
     }
   }
@@ -716,14 +673,14 @@ int MovNoaa::saveNOAAData(QString filename, QString PreviousDirectory,
 
 int MovNoaa::replotChart(Timezone *newTimezone) {
   int offset = newTimezone->utcOffset() * 1000;
-  int totalOffset = -this->priorOffsetSeconds + offset;
+  int totalOffset = -this->m_priorOffsetSeconds + offset;
 
   QVector<QLineSeries *> series;
-  series.resize(this->chart->m_chart->series().length());
+  series.resize(this->m_chartView->m_chart->series().length());
 
-  for (int i = 0; i < this->chart->m_chart->series().length(); i++) {
+  for (int i = 0; i < this->m_chartView->m_chart->series().length(); i++) {
     series[i] =
-        static_cast<QLineSeries *>(this->chart->m_chart->series().at(i));
+        static_cast<QLineSeries *>(this->m_chartView->m_chart->series().at(i));
   }
 
   for (int i = 0; i < series.length(); i++) {
@@ -735,8 +692,8 @@ int MovNoaa::replotChart(Timezone *newTimezone) {
     series[i]->append(data);
   }
 
-  QDateTime minDateTime = this->startDateEdit->dateTime();
-  QDateTime maxDateTime = this->endDateEdit->dateTime().addDays(1);
+  QDateTime minDateTime = this->m_startDateEdit->dateTime();
+  QDateTime maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
   minDateTime.setTime(QTime(0, 0, 0));
   maxDateTime.setTime(QTime(0, 0, 0));
   minDateTime.setTimeSpec(Qt::UTC);
@@ -745,18 +702,18 @@ int MovNoaa::replotChart(Timezone *newTimezone) {
   minDateTime = minDateTime.addMSecs(totalOffset);
   maxDateTime = maxDateTime.addMSecs(totalOffset);
 
-  this->chart->m_chart->axisX()->setTitleText(
+  this->m_chartView->m_chart->axisX()->setTitleText(
       "Date (" + newTimezone->abbreviation() + ")");
-  this->chart->m_chart->axisX()->setMin(minDateTime);
-  this->chart->m_chart->axisX()->setMax(maxDateTime);
+  this->m_chartView->m_chart->axisX()->setMin(minDateTime);
+  this->m_chartView->m_chart->axisX()->setMax(maxDateTime);
 
-  this->priorOffsetSeconds = offset;
+  this->m_priorOffsetSeconds = offset;
 
-  this->chart->rebuild();
+  this->m_chartView->rebuild();
 
-  this->chart->update();
+  this->m_chartView->update();
 
-  this->chart->m_chart->zoomReset();
+  this->m_chartView->m_chart->zoomReset();
 
   return 0;
 }

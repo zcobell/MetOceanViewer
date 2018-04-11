@@ -94,8 +94,7 @@ void MainWindow::on_actionLoad_Session_triggered() {
       this, tr("Open Session..."), this->PreviousDirectory,
       tr("MetOcean Viewer Sessions (*.mvs)"));
 
-  if (LoadFile == NULL)
-    return;
+  if (LoadFile == NULL) return;
 
   MovGeneric::splitPath(LoadFile, BaseFile, this->PreviousDirectory);
   int ierr = this->sessionState->open(LoadFile);
@@ -141,29 +140,12 @@ void MainWindow::on_actionSave_Session_As_triggered() {
 void MainWindow::handleEnterKey() {
   // Events for "ENTER" on the Live Data tabs
   if (ui->MainTabs->currentIndex() == 0) {
-    // NOAA Tab
     if (ui->subtab_livedata->currentIndex() == 0) {
-      //if (ui->Combo_NOAAPanTo->hasFocus())
-        //ui->noaa_map->page()->runJavaScript(
-        //    "panTo('" + ui->Combo_NOAAPanTo->currentText() + "')");
-      //else
-      //  this->plotNOAAStation();
-    }
-    // USGS Tab
-    else if (ui->subtab_livedata->currentIndex() == 1) {
-      if (ui->combo_usgs_panto->hasFocus()) {}
-        //ui->usgs_map->page()->runJavaScript(
-        //    "panTo('" + ui->combo_usgs_panto->currentText() + "')");
-      else
-        on_button_usgs_fetch_clicked();
-    }
-    // XTide Tab
-    else if (ui->subtab_livedata->currentIndex() == 2) {
-      if (ui->combo_xtide_panto->hasFocus())
-        ui->xtide_map->page()->runJavaScript(
-            "panTo('" + ui->combo_xtide_panto->currentText() + "')");
-      else
-        on_button_xtide_compute_clicked();
+      on_Button_FetchData_clicked();
+    } else if (ui->subtab_livedata->currentIndex() == 1) {
+      on_button_usgs_fetch_clicked();
+    } else if (ui->subtab_livedata->currentIndex() == 2) {
+      on_button_xtide_compute_clicked();
     }
   }
   // Events for "ENTER" on the timeseries tabs
@@ -174,8 +156,7 @@ void MainWindow::handleEnterKey() {
       on_button_plotTimeseriesStation_clicked();
     }
   } else if (ui->MainTabs->currentIndex() == 2) {
-    if (ui->subtab_hwm->currentIndex() == 1)
-      on_button_processHWM_clicked();
+    if (ui->subtab_hwm->currentIndex() == 1) on_button_processHWM_clicked();
   }
   return;
 }

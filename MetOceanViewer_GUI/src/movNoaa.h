@@ -51,7 +51,7 @@ class MovNoaa : public QObject {
                    QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                    QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
                    QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
-                   StationModel *stationModel, QString *selectedStation,
+                   StationModel *m_stationModel, QString *m_selectedStation,
                    QObject *parent = nullptr);
 
   //...Destructor
@@ -66,64 +66,57 @@ class MovNoaa : public QObject {
   QString getNOAAErrorString();
   int replotChart(Timezone *newTimezone);
   void setActiveMarker(QString marker);
-
   static void addStationsToModel(StationModel *model);
-
- private slots:
-  // void javascriptDataReturned(QString);
 
  signals:
   void noaaError(QString);
 
  private:
   //...Private Functions
-  int formatNOAAResponse(QVector<QByteArray> Input, QString &ErrorString,
-                         int index);
+  int formatNOAAResponse(QVector<QByteArray> input, QString &error, int index);
   void readNOAAResponse(QNetworkReply *reply, int index, int index2);
   int fetchNOAAData();
   int prepNOAAResponse();
-  int retrieveProduct(int type, QString &Product, QString &Product2);
+  int getNoaaProductId(QString &product1, QString &product2);
+  int getNoaaProductLabel(QString &product);
+  int getNoaaProductSeriesNaming(QString &product1, QString &product2);
+  QString getDatumLabel();
+  QString getUnitsLabel();
   int getDataBounds(double &ymin, double &ymax);
   int generateLabels();
   int plotChart();
-  int setNOAAStation();
-  int getNOAAStation(QString &NOAAStationName, double &longitude,
-                     double &latitude);
 
   //...Private Variables
-  QVector<QVector<QByteArray>> NOAAWebData;
-  int NOAAMarkerID;
-  int ProductIndex;
+  QVector<QVector<QByteArray>> m_webData;
+  int m_productIndex;
 
-  QString Datum;
-  QString Units;
-  QString yLabel;
-  QString plotTitle;
-  QString NOAAErrorString;
+  QString m_datum;
+  QString m_units;
+  QString m_ylabel;
+  QString m_plotTitle;
+  QString m_errorString;
 
-  QDateTime StartDate;
-  QDateTime EndDate;
+  QDateTime m_startDate;
+  QDateTime m_endDate;
 
-  QVector<MovImeds *> CurrentNOAAStation;
-  QVector<QString> ErrorString;
+  QVector<MovImeds *> m_currentStationData;
+  QVector<QString> m_errorStringVec;
 
   Timezone *tz;
-  int offsetSeconds;
-  int priorOffsetSeconds;
+  int m_offsetSeconds;
+  int m_priorOffsetSeconds;
+  int m_loadedStationId;
 
   //...Pointers to GUI elements
-  QQuickWidget *map;
-  MovQChartView *chart;
-  QDateEdit *startDateEdit, *endDateEdit;
-  QComboBox *noaaProduct, *noaaUnits, *noaaDatum, *noaaTimezoneLocation,
-      *noaaTimezone;
-  QStatusBar *statusBar;
-  StationModel *stationModel;
+  QQuickWidget *m_quickMap;
+  MovQChartView *m_chartView;
+  QDateEdit *m_startDateEdit, *m_endDateEdit;
+  QComboBox *m_comboProduct, *m_comboUnits, *m_comboDatum,
+      *m_comboTimezoneLocation, *m_comboTimezone;
+  QStatusBar *m_statusBar;
+  StationModel *m_stationModel;
   Station m_station;
-  QString *selectedStation;
-
-  //...Keep the local chart here for reference
-  QChart *thisChart;
+  QString *m_selectedStation;
 };
 
 #endif  // MOV_NOAA_H
