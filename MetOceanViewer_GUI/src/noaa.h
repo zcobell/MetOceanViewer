@@ -51,7 +51,7 @@ class Noaa : public QObject {
                    QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                    QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
                    QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
-                   StationModel *m_stationModel, QString *m_selectedStation,
+                   StationModel *inStationModel, QString *inSelectedStation,
                    QObject *parent = nullptr);
 
   //...Destructor

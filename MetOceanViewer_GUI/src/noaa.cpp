@@ -26,8 +26,8 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
            QDateEdit *inEndDateEdit, QComboBox *inNoaaProduct,
            QComboBox *inNoaaUnits, QComboBox *inNoaaDatum,
            QStatusBar *inStatusBar, QComboBox *inNoaaTimezoneLocation,
-           QComboBox *inNoaaTimezone, StationModel *stationModel,
-           QString *selectedStation, QObject *parent)
+           QComboBox *inNoaaTimezone, StationModel *inStationModel,
+           QString *inSelectedStation, QObject *parent)
     : QObject(parent) {
   this->m_quickMap = inMap;
   this->m_chartView = inChart;
@@ -39,9 +39,9 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
   this->m_statusBar = inStatusBar;
   this->m_comboTimezoneLocation = inNoaaTimezoneLocation;
   this->m_comboTimezone = inNoaaTimezone;
-  this->m_stationModel = stationModel;
+  this->m_stationModel = inStationModel;
   this->m_productIndex = 0;
-  this->m_selectedStation = selectedStation;
+  this->m_selectedStation = inSelectedStation;
   this->m_chartView->m_chart = nullptr;
 
   //...Initialize the IMEDS object
