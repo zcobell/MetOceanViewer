@@ -19,7 +19,6 @@
 //-----------------------------------------------------------------------*/
 #include "xtide.h"
 #include <float.h>
-#include "javascriptasyncreturn.h"
 
 //...Constructor
 XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
@@ -28,12 +27,12 @@ XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
              StationModel *inStationModel, QString *inCurrentStation,
              QObject *parent)
     : QObject(parent) {
-  this->map = inMap;
-  this->chart = inChart;
-  this->startDateEdit = inStartDateEdit;
-  this->endDateEdit = inEndDateEdit;
-  this->unitSelect = inUnits;
-  this->statusBar = inStatusBar;
+  this->m_quickMap = inMap;
+  this->m_chartView = inChart;
+  this->m_startDateEdit = inStartDateEdit;
+  this->m_endDateEdit = inEndDateEdit;
+  this->m_comboUnits = inUnits;
+  this->m_statusBar = inStatusBar;
   this->m_station.coordinate().setLatitude(0.0);
   this->m_station.coordinate().setLongitude(0.0);
   this->m_station.name() = QString();
@@ -44,7 +43,7 @@ XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
 //...Destructor
 XTide::~XTide() {}
 
-QString XTide::getErrorString() { return this->xTideErrorString; }
+QString XTide::getErrorString() { return this->m_errorString; }
 
 //...Overall routine for plotting XTide
 int XTide::plotXTideStation() {
@@ -55,12 +54,12 @@ int XTide::plotXTideStation() {
   if (ierr != 0) return -1;
 
   //...Get the selected station
-  this->m_station = this->m_stationModel->findStation(*(this->m_currentStation));
+  this->m_station =
+      this->m_stationModel->findStation(*(this->m_currentStation));
 
   //...Calculate the tide signal
   ierr = this->calculateXTides();
-  if(ierr==0)
-    this->plotChart();
+  if (ierr == 0) this->plotChart();
 
   return 0;
 }
@@ -89,38 +88,38 @@ int XTide::findXTideExe() {
   QFile location6(appLocationMacOSX + "/XTide/bin/tide");
 
   if (location1.exists()) {
-    this->xTideExe = installLocation + "/tide";
-    this->xTideHarmFile = installLocation + "/harmonics.tcd";
+    this->m_xtideexe = installLocation + "/tide";
+    this->m_harmfile = installLocation + "/harmonics.tcd";
     return 0;
   }
 
   if (location2.exists()) {
-    this->xTideExe = buildLocationLinux + "/tide";
-    this->xTideHarmFile = buildLocationLinux + "/harmonics.tcd";
+    this->m_xtideexe = buildLocationLinux + "/tide";
+    this->m_harmfile = buildLocationLinux + "/harmonics.tcd";
     return 0;
   }
 
   if (location3.exists()) {
-    this->xTideExe = buildLocationWindows + "/tide";
-    this->xTideHarmFile = buildLocationWindows + "/harmonics.tcd";
+    this->m_xtideexe = buildLocationWindows + "/tide";
+    this->m_harmfile = buildLocationWindows + "/harmonics.tcd";
     return 0;
   }
 
   if (location4.exists()) {
-    this->xTideExe = buildLocationLinux + "/tide.exe";
-    this->xTideHarmFile = buildLocationLinux + "/harmonics.tcd";
+    this->m_xtideexe = buildLocationLinux + "/tide.exe";
+    this->m_harmfile = buildLocationLinux + "/harmonics.tcd";
     return 0;
   }
 
   if (location5.exists()) {
-    this->xTideExe = installLocation + "/tide.exe";
-    this->xTideHarmFile = installLocation + "/harmonics.tcd";
+    this->m_xtideexe = installLocation + "/tide.exe";
+    this->m_harmfile = installLocation + "/harmonics.tcd";
     return 0;
   }
 
   if (location6.exists()) {
-    this->xTideExe = appLocationMacOSX + "/XTide/bin/tide";
-    this->xTideHarmFile = appLocationMacOSX + "/XTide/bin/harmonics.tcd";
+    this->m_xtideexe = appLocationMacOSX + "/XTide/bin/tide";
+    this->m_harmfile = appLocationMacOSX + "/XTide/bin/harmonics.tcd";
     return 0;
   }
 
@@ -135,8 +134,8 @@ int XTide::calculateXTides() {
   QEventLoop loop;
 
   //...Get the selected dates
-  QDateTime startDate = this->startDateEdit->dateTime();
-  QDateTime endDate = this->endDateEdit->dateTime();
+  QDateTime startDate = this->m_startDateEdit->dateTime();
+  QDateTime endDate = this->m_endDateEdit->dateTime();
   startDate.setTime(QTime(0, 0, 0));
   endDate = endDate.addDays(1);
   endDate.setTime(QTime(0, 0, 0));
@@ -144,21 +143,21 @@ int XTide::calculateXTides() {
   QString endDateString = endDate.toString("yyyy-MM-dd hh:mm");
 
   QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-  env.insert("HFILE_PATH", this->xTideHarmFile);
+  env.insert("HFILE_PATH", this->m_harmfile);
 
   //...Build a calling string. For windows, quote the executable
   //   to avoid issues with path names like "Program Files". We'll
   //   assume Linux users aren't dumb enough to do such a thing
 #ifdef _WIN32
-  QString xTideCmd = "\"" + this->xTideExe.replace(" ", "\ ") +
+  QString xTideCmd = "\"" + this->m_xtideexe.replace(" ", "\ ") +
                      "\""
                      " -l \"" +
                      this->m_station.name() + "\"" + " -b \"" +
                      startDateString + "\"" + " -e \"" + endDateString + "\"" +
                      " -s \"00:30\" -z -m m";
 #else
-  QString xTideCmd = this->xTideExe + " -l \"" + this->m_station.name() +
-                     "\"" + " -b \"" + startDateString + "\"" + " -e \"" +
+  QString xTideCmd = this->xTideExe + " -l \"" + this->m_station.name() + "\"" +
+                     " -b \"" + startDateString + "\"" + " -e \"" +
                      endDateString + "\"" + " -s \"00:30\" -z -m m";
 #endif
 
@@ -190,12 +189,12 @@ int XTide::parseXTideResponse(QString xTideResponse) {
   int hour, minute;
   double elevation, unitConvert;
 
-  if (this->unitSelect->currentIndex() == 0)
+  if (this->m_comboUnits->currentIndex() == 0)
     unitConvert = 1.0 / 3.28084;
   else
     unitConvert = 1.0;
 
-  this->currentXTideStation.clear();
+  this->m_stationData.clear();
 
   for (int i = 0; i < response.length(); i++) {
     tempString = response.value(i);
@@ -226,10 +225,10 @@ int XTide::parseXTideResponse(QString xTideResponse) {
     time = QTime(hour, minute);
     elevation = tempElev.toDouble();
 
-    thisData.date = QDateTime(date, time).toMSecsSinceEpoch();
-    thisData.value = elevation * unitConvert;
+    thisData.m_date = QDateTime(date, time).toMSecsSinceEpoch();
+    thisData.m_value = elevation * unitConvert;
 
-    this->currentXTideStation.push_back(thisData);
+    this->m_stationData.push_back(thisData);
   }
 
   return 0;
@@ -241,11 +240,11 @@ int XTide::getDataBounds(double &min, double &max) {
   min = DBL_MAX;
   max = -DBL_MAX;
 
-  for (j = 0; j < this->currentXTideStation.length(); j++) {
-    if (this->currentXTideStation[j].value < min)
-      min = this->currentXTideStation[j].value;
-    if (this->currentXTideStation[j].value > max)
-      max = this->currentXTideStation[j].value;
+  for (j = 0; j < this->m_stationData.length(); j++) {
+    if (this->m_stationData[j].m_value < min)
+      min = this->m_stationData[j].m_value;
+    if (this->m_stationData[j].m_value > max)
+      max = this->m_stationData[j].m_value;
   }
   return 0;
 }
@@ -259,27 +258,26 @@ int XTide::plotChart() {
   maxDateTime = QDateTime(QDate(1000, 1, 1), QTime(0, 0, 0));
   minDateTime = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
 
-  startDate = this->startDateEdit->dateTime();
-  endDate = this->endDateEdit->dateTime();
+  startDate = this->m_startDateEdit->dateTime();
+  endDate = this->m_endDateEdit->dateTime();
 
   ierr = this->getDataBounds(ymin, ymax);
 
-  if (this->unitSelect->currentIndex() == 1)
-    this->yLabel = tr("Water Surface Elevation (ft, MLLW)");
+  if (this->m_comboUnits->currentIndex() == 1)
+    this->m_ylabel = tr("Water Surface Elevation (ft, MLLW)");
   else
-    this->yLabel = tr("Water Surface Elevation (m, MLLW)");
+    this->m_ylabel = tr("Water Surface Elevation (m, MLLW)");
 
   //...Create the chart
-  this->thisChart = new QChart();
-  this->chart->m_chart = this->thisChart;
+  this->m_chartView->m_chart = new QChart();
 
   QLineSeries *series1 = new QLineSeries(this);
   series1->setName(this->m_station.name());
   series1->setPen(
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
-  minDateTime = this->startDateEdit->dateTime();
-  maxDateTime = this->endDateEdit->dateTime().addDays(1);
+  minDateTime = this->m_startDateEdit->dateTime();
+  maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
   minDateTime.setTime(QTime(0, 0, 0));
   maxDateTime.setTime(QTime(0, 0, 0));
 
@@ -295,22 +293,22 @@ int XTide::plotChart() {
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisX->setMin(minDateTime);
   axisX->setMax(maxDateTime);
-  this->thisChart->addAxis(axisX, Qt::AlignBottom);
+  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
 
   QValueAxis *axisY = new QValueAxis(this);
   axisY->setLabelFormat(format);
-  axisY->setTitleText(this->yLabel);
+  axisY->setTitleText(this->m_ylabel);
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisY->setMin(ymin);
   axisY->setMax(ymax);
-  this->thisChart->addAxis(axisY, Qt::AlignLeft);
+  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (i = 0; i < this->currentXTideStation.length(); i++)
-    series1->append(this->currentXTideStation[i].date,
-                    this->currentXTideStation[i].value);
-  this->thisChart->addSeries(series1);
-  this->chart->clear();
-  this->chart->addSeries(series1, series1->name());
+  for (i = 0; i < this->m_stationData.length(); i++)
+    series1->append(this->m_stationData[i].m_date,
+                    this->m_stationData[i].m_value);
+  this->m_chartView->m_chart->addSeries(series1);
+  this->m_chartView->clear();
+  this->m_chartView->addSeries(series1, series1->name());
   series1->attachAxis(axisX);
   series1->attachAxis(axisY);
   axisY->setTickCount(10);
@@ -321,27 +319,28 @@ int XTide::plotChart() {
   axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
   axisY->setShadesVisible(true);
 
-  this->thisChart->setAnimationOptions(QChart::SeriesAnimations);
-  this->thisChart->legend()->setAlignment(Qt::AlignBottom);
-  this->thisChart->setTitle("XTide Station: " + this->m_station.name());
-  this->thisChart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->chart->setRenderHint(QPainter::Antialiasing);
-  this->chart->setChart(this->thisChart);
+  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
+  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
+  this->m_chartView->m_chart->setTitle("XTide Station: " + this->m_station.name());
+  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+  this->m_chartView->setRenderHint(QPainter::Antialiasing);
+  this->m_chartView->setChart(this->m_chartView->m_chart);
 
-  this->chart->m_style = 1;
-  this->chart->m_coord = new QGraphicsSimpleTextItem(this->thisChart);
-  this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
-                               this->chart->size().height() - 20);
-  this->chart->initializeAxisLimits();
-  this->chart->setStatusBar(this->statusBar);
-  this->thisChart->legend()->markers().at(0)->setFont(
+  this->m_chartView->m_style = 1;
+  this->m_chartView->m_coord = new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
+  this->m_chartView->m_coord->setPos(
+      this->m_chartView->size().width() / 2 - 100,
+      this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeAxisLimits();
+  this->m_chartView->setStatusBar(this->m_statusBar);
+  this->m_chartView->m_chart->legend()->markers().at(0)->setFont(
       QFont("Helvetica", 10, QFont::Bold));
 
-  foreach (QLegendMarker *marker, this->thisChart->legend()->markers()) {
+  foreach (QLegendMarker *marker, this->m_chartView->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->chart,
+    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
                         SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->chart,
+    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
                      SLOT(handleLegendMarkerClicked()));
   }
 
@@ -358,15 +357,14 @@ int XTide::saveXTideData(QString filename, QString format) {
     Output << "Datum: MLLW\n";
     Output << "Units: N/A\n";
     Output << "\n";
-    for (int i = 0; i < this->currentXTideStation.length(); i++) {
-      Output << QDateTime::fromMSecsSinceEpoch(
-                    this->currentXTideStation[i].date)
+    for (int i = 0; i < this->m_stationData.length(); i++) {
+      Output << QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
                         .toString("MM/dd/yyyy") +
                     "," +
                     QDateTime::fromMSecsSinceEpoch(
-                        this->currentXTideStation[i].date)
+                        this->m_stationData[i].m_date)
                         .toString("hh:mm") +
-                    "," + QString::number(this->currentXTideStation[i].value) +
+                    "," + QString::number(this->m_stationData[i].m_value) +
                     "\n";
     }
   } else if (format.compare("IMEDS") == 0) {
@@ -374,34 +372,28 @@ int XTide::saveXTideData(QString filename, QString format) {
     Output << "% year month day hour min sec value\n";
     Output << "XTide   UTC    MLLW\n";
     Output << "XTide_" + this->m_station.name().replace(" ", "_") + "   " +
-                  QString::number(
-                      this->m_station.coordinate().latitude()) +
+                  QString::number(this->m_station.coordinate().latitude()) +
                   "   " +
-                  QString::number(
-                      this->m_station.coordinate().longitude()) +
+                  QString::number(this->m_station.coordinate().longitude()) +
                   "\n";
-    for (int i = 0; i < this->currentXTideStation.length(); i++) {
-      Output << QDateTime::fromMSecsSinceEpoch(
-                    this->currentXTideStation[i].date)
-                        .toString("yyyy") +
-                    "    " +
-                    QDateTime::fromMSecsSinceEpoch(
-                        this->currentXTideStation[i].date)
-                        .toString("MM") +
-                    "    " +
-                    QDateTime::fromMSecsSinceEpoch(
-                        this->currentXTideStation[i].date)
-                        .toString("dd") +
-                    "    " +
-                    QDateTime::fromMSecsSinceEpoch(
-                        this->currentXTideStation[i].date)
-                        .toString("hh") +
-                    "    " +
-                    QDateTime::fromMSecsSinceEpoch(
-                        this->currentXTideStation[i].date)
-                        .toString("mm") +
-                    "    " + "00" + "    " +
-                    QString::number(this->currentXTideStation[i].value) + "\n";
+    for (int i = 0; i < this->m_stationData.length(); i++) {
+      Output
+          << QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
+                     .toString("yyyy") +
+                 "    " +
+                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
+                     .toString("MM") +
+                 "    " +
+                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
+                     .toString("dd") +
+                 "    " +
+                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
+                     .toString("hh") +
+                 "    " +
+                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
+                     .toString("mm") +
+                 "    " + "00" + "    " +
+                 QString::number(this->m_stationData[i].m_value) + "\n";
     }
   }
   XTideOutput.close();
@@ -423,11 +415,11 @@ int XTide::saveXTidePlot(QString filename, QString filter) {
     painter.begin(&printer);
 
     //...Page 1 - Chart
-    this->chart->render(&painter);
+    this->m_chartView->render(&painter);
 
     //...Page 2 - Map
     printer.newPage();
-    QPixmap renderedMap = this->map->grab();
+    QPixmap renderedMap = this->m_quickMap->grab();
     QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
     if (mapScaled.height() > printer.height())
       mapScaled = renderedMap.scaledToHeight(printer.height());
@@ -439,10 +431,12 @@ int XTide::saveXTidePlot(QString filename, QString filter) {
     painter.end();
   } else if (filter == "JPG (*.jpg *.jpeg)") {
     QFile outputFile(filename);
-    QSize imageSize(this->map->size().width() + this->chart->size().width(),
-                    this->map->size().height());
-    QRect chartRect(this->map->size().width(), 0, this->chart->size().width(),
-                    this->chart->size().height());
+    QSize imageSize(
+        this->m_quickMap->size().width() + this->m_chartView->size().width(),
+        this->m_quickMap->size().height());
+    QRect chartRect(this->m_quickMap->size().width(), 0,
+                    this->m_chartView->size().width(),
+                    this->m_chartView->size().height());
 
     QImage pixmap(imageSize, QImage::Format_ARGB32);
     pixmap.fill(Qt::white);
@@ -450,8 +444,8 @@ int XTide::saveXTidePlot(QString filename, QString filter) {
     imagePainter.setRenderHints(QPainter::Antialiasing |
                                 QPainter::TextAntialiasing |
                                 QPainter::SmoothPixmapTransform);
-    this->map->render(&imagePainter, QPoint(0, 0));
-    this->chart->render(&imagePainter, chartRect);
+    this->m_quickMap->render(&imagePainter, QPoint(0, 0));
+    this->m_chartView->render(&imagePainter, chartRect);
 
     outputFile.open(QIODevice::WriteOnly);
     pixmap.save(&outputFile, "JPG", 100);

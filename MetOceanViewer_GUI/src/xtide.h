@@ -69,28 +69,27 @@ class XTide : public QObject {
 
   // Structures
   struct XTideStationData {
-    long long date;
-    double value;
+    long long m_date;
+    double m_value;
   };
 
   //...Private Variables
-  QVector<XTideStationData> currentXTideStation;
+  QVector<XTideStationData> m_stationData;
 
-  QString units;
-  QString yLabel;
-  QString xLabel;
-  QString plotTitle;
-  QString xTideErrorString;
-  QString xTideExe;
-  QString xTideHarmFile;
-  QChart *thisChart;
+  QString m_units;
+  QString m_ylabel;
+  QString m_xlabel;
+  QString m_plotTitle;
+  QString m_errorString;
+  QString m_xtideexe;
+  QString m_harmfile;
 
   //...Pointers to GUI elements
-  QQuickWidget *map;
-  ChartView *chart;
-  QDateEdit *startDateEdit, *endDateEdit;
-  QComboBox *unitSelect;
-  QStatusBar *statusBar;
+  QQuickWidget *m_quickMap;
+  ChartView *m_chartView;
+  QDateEdit *m_startDateEdit, *m_endDateEdit;
+  QComboBox *m_comboUnits;
+  QStatusBar *m_statusBar;
   StationModel *m_stationModel;
   Station m_station;
   QString *m_currentStation;
