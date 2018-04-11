@@ -78,48 +78,43 @@ class Usgs : public QObject {
 
   //...Data structures
   struct USGSData {
-    int NumDataPoints;
-    QString Description;
-    QVector<QDateTime> Date;
-    QVector<double> Data;
+    int m_numDataPoints;
+    QString m_description;
+    QVector<QDateTime> m_date;
+    QVector<double> m_data;
   };
 
   struct USGSStationData {
-    QDate Date;
-    QTime Time;
-    double value;
+    QDate m_date;
+    QTime m_time;
+    double m_data;
   };
 
   //...Pointers to variables
-  QQuickWidget *map;
-  ChartView *chart;
-  QRadioButton *dailyButton, *historicButton, *instantButton;
-  QComboBox *productBox, *usgsTimezoneLocation, *usgsTimezone;
-  QDateEdit *startDateEdit, *endDateEdit;
-  QStatusBar *statusBar;
-  // QChart *thisChart;
+  QQuickWidget *m_quickMap;
+  ChartView *m_chartView;
+  QRadioButton *m_buttonDaily, *m_buttonHistoric, *m_buttonInstant;
+  QComboBox *m_comboProduct, *m_comboTimezoneLocation, *m_comboTimezone;
+  QDateEdit *m_startDateEdit, *m_endDateEdit;
+  QStatusBar *m_statusBar;
 
   //...Private variables
-  bool USGSDataReady;
-  bool USGSBeenPlotted;
-  int USGSdataMethod;
-  int offsetSeconds;
-  int priorOffsetSeconds;
-  int ProductIndex;
-  double CurrentUSGSLat;
-  double CurrentUSGSLon;
+  bool m_usgsDataReady;
+  bool m_usgsBeenPlotted;
+  int m_usgsDataMethod;
+  int m_offsetSeconds;
+  int m_priorOffsetSeconds;
+  int m_productIndex;
   Station m_currentStation;
-  QString USGSMarkerID;
-  QString CurrentUSGSStationName;
-  QString USGSErrorString;
-  QString ProductName;
-  QString Units, Datum, yLabel;
-  QDateTime requestStartDate;
-  QDateTime requestEndDate;
-  QVector<QString> Parameters;
-  QVector<USGSStationData> USGSPlot;
-  QVector<USGSData> CurrentUSGSStation;
-  Timezone *tz;
+  QString m_errorString;
+  QString m_productName;
+  QString m_units, m_datum, m_ylabel;
+  QDateTime m_requestStartDate;
+  QDateTime m_requestEndDate;
+  QVector<QString> m_availableDatatypes;
+  QVector<USGSStationData> m_allStationData;
+  QVector<USGSData> m_selectedProductData;
+  Timezone *m_tz;
   StationModel *m_stationModel;
   QString *m_selectedStation;
 };

@@ -29,38 +29,39 @@ Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
            QObject *parent)
     : QObject(parent) {
   //...Initialize variables
-  this->USGSDataReady = false;
-  this->USGSBeenPlotted = false;
-  this->CurrentUSGSStationName = "none";
-  this->USGSMarkerID = "none";
-  this->ProductIndex = 0;
-  this->ProductName = "none";
-  this->USGSdataMethod = 0;
-  this->CurrentUSGSLat = 0.0;
-  this->CurrentUSGSLon = 0.0;
+  this->m_usgsDataReady = false;
+  this->m_usgsBeenPlotted = false;
+  this->m_currentStation.setName("none");
+  this->m_currentStation.setId("none");
+  this->m_productIndex = 0;
+  this->m_productName = "none";
+  this->m_usgsDataMethod = 0;
+  this->m_currentStation.coordinate().setLatitude(0.0);
+  this->m_currentStation.coordinate().setLongitude(0.0);
   this->m_stationModel = stationModel;
   this->m_selectedStation = inSelectedStation;
 
   //...Assign object pointers
-  this->map = inMap;
-  this->chart = inChart;
-  this->dailyButton = inDailyButton;
-  this->historicButton = inHistoricButton;
-  this->instantButton = inInstantButton;
-  this->productBox = inProductBox;
-  this->startDateEdit = inStartDateEdit;
-  this->endDateEdit = inEndDateEdit;
-  this->statusBar = instatusBar;
-  this->usgsTimezoneLocation = inUSGSTimezoneLocation;
-  this->usgsTimezone = inUSGSTimezone;
+  this->m_quickMap = inMap;
+  this->m_chartView = inChart;
+  this->m_buttonDaily = inDailyButton;
+  this->m_buttonHistoric = inHistoricButton;
+  this->m_buttonInstant = inInstantButton;
+  this->m_comboProduct = inProductBox;
+  this->m_startDateEdit = inStartDateEdit;
+  this->m_endDateEdit = inEndDateEdit;
+  this->m_statusBar = instatusBar;
+  this->m_comboTimezoneLocation = inUSGSTimezoneLocation;
+  this->m_comboTimezone = inUSGSTimezone;
 
   //...Initialize the timezone
-  this->tz = new Timezone(this);
-  tz->fromAbbreviation(this->usgsTimezone->currentText(),
-                       static_cast<TZData::Location>(
-                           this->usgsTimezoneLocation->currentIndex()));
-  this->offsetSeconds = tz->utcOffset() * 1000;
-  this->priorOffsetSeconds = this->offsetSeconds;
+  this->m_tz = new Timezone(this);
+  this->m_tz->fromAbbreviation(
+      this->m_comboTimezone->currentText(),
+      static_cast<TZData::Location>(
+          this->m_comboTimezoneLocation->currentIndex()));
+  this->m_offsetSeconds = m_tz->utcOffset() * 1000;
+  this->m_priorOffsetSeconds = this->m_offsetSeconds;
 }
 
 Usgs::~Usgs() {}
@@ -74,39 +75,34 @@ int Usgs::fetchUSGSData() {
   QEventLoop loop;
   int i, ierr;
 
-  //...Station information
-  this->USGSMarkerID = this->m_currentStation.id();
-  this->CurrentUSGSStationName = this->m_currentStation.name();
-  this->CurrentUSGSLat = this->m_currentStation.coordinate().latitude();
-  this->CurrentUSGSLon = this->m_currentStation.coordinate().longitude();
-
-  if (this->USGSMarkerID == QString()) {
+  if (this->m_currentStation.id() == QString()) {
     emit usgsError("You must select a station");
     return 1;
   }
 
   //...Format the date strings
   endDateString1 =
-      "&endDT=" + this->requestEndDate.addDays(1).toString("yyyy-MM-dd");
+      "&endDT=" + this->m_requestEndDate.addDays(1).toString("yyyy-MM-dd");
   startDateString1 =
-      "&startDT=" + this->requestStartDate.toString("yyyy-MM-dd");
+      "&startDT=" + this->m_requestStartDate.toString("yyyy-MM-dd");
   endDateString2 =
-      "&end_date=" + this->requestEndDate.addDays(1).toString("yyyy-MM-dd");
+      "&end_date=" + this->m_requestEndDate.addDays(1).toString("yyyy-MM-dd");
   startDateString2 =
-      "&begin_date=" + this->requestStartDate.toString("yyyy-MM-dd");
+      "&begin_date=" + this->m_requestStartDate.toString("yyyy-MM-dd");
 
   //...Construct the correct request URL
-  if (this->USGSdataMethod == 0)
+  if (this->m_usgsDataMethod == 0)
     RequestURL = "https://waterdata.usgs.gov/nwis/uv?format=rdb&site_no=" +
-                 this->USGSMarkerID + startDateString2 + endDateString2;
-  else if (this->USGSdataMethod == 1)
-    RequestURL =
-        "https://waterservices.usgs.gov/nwis/iv/?sites=" + this->USGSMarkerID +
-        startDateString1 + endDateString1 + "&format=rdb";
+                 this->m_currentStation.id() + startDateString2 +
+                 endDateString2;
+  else if (this->m_usgsDataMethod == 1)
+    RequestURL = "https://waterservices.usgs.gov/nwis/iv/?sites=" +
+                 this->m_currentStation.id() + startDateString1 +
+                 endDateString1 + "&format=rdb";
   else
-    RequestURL =
-        "https://waterservices.usgs.gov/nwis/dv/?sites=" + this->USGSMarkerID +
-        startDateString1 + endDateString1 + "&format=rdb";
+    RequestURL = "https://waterservices.usgs.gov/nwis/dv/?sites=" +
+                 this->m_currentStation.id() + startDateString1 +
+                 endDateString1 + "&format=rdb";
 
   //...Make the request to the server
   QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
@@ -128,10 +124,10 @@ int Usgs::fetchUSGSData() {
   }
 
   //...Update the combo box
-  for (i = 0; i < this->Parameters.length(); i++)
-    productBox->addItem(this->Parameters[i]);
-  productBox->setCurrentIndex(0);
-  this->ProductName = productBox->currentText();
+  for (i = 0; i < this->m_availableDatatypes.length(); i++)
+    m_comboProduct->addItem(this->m_availableDatatypes[i]);
+  m_comboProduct->setCurrentIndex(0);
+  this->m_productName = m_comboProduct->currentText();
 
   //...Plot the first series
   ierr = this->plotUSGS();
@@ -141,7 +137,7 @@ int Usgs::fetchUSGSData() {
   }
 
   //...Restore the status bar
-  this->statusBar->clearMessage();
+  this->m_statusBar->clearMessage();
 
   return 0;
 }
@@ -164,13 +160,13 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
   HeaderEnd = -1;
 
   if (InputData.isEmpty() || InputData.isNull()) {
-    this->USGSErrorString =
+    this->m_errorString =
         tr("This data is not available except from the USGS archive server.");
     return MetOceanViewer::Error::USGS_ARCHIVEONLY;
   }
 
   //...Save the potential error string
-  this->USGSErrorString = InputData.remove(QRegExp("[\n\t\r]"));
+  this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
 
   //...Start by finding the header and reading the parameters from it
   for (i = 0; i < SplitByLine.length(); i++) {
@@ -188,18 +184,19 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
     }
   }
 
-  this->Parameters.resize(ParamStop - ParamStart + 1);
+  this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
 
   for (i = ParamStart; i <= ParamStop; i++) {
     TempLine = SplitByLine.value(i);
     TempList = TempLine.split(" ", QString::SkipEmptyParts);
-    this->Parameters[i - ParamStart] = QString();
+    this->m_availableDatatypes[i - ParamStart] = QString();
     for (j = 3; j < TempList.length(); j++) {
       if (j == 3)
-        this->Parameters[i - ParamStart] = TempList.value(j);
+        this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
       else
-        this->Parameters[i - ParamStart] =
-            this->Parameters[i - ParamStart] + " " + TempList.value(j);
+        this->m_availableDatatypes[i - ParamStart] =
+            this->m_availableDatatypes[i - ParamStart] + " " +
+            TempList.value(j);
     }
   }
 
@@ -212,14 +209,14 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
   }
 
   //...Initialize the array
-  this->CurrentUSGSStation.resize(this->Parameters.length());
+  this->m_selectedProductData.resize(this->m_availableDatatypes.length());
 
   //...Sanity check
-  if (this->CurrentUSGSStation.length() == 0) return -1;
+  if (this->m_selectedProductData.length() == 0) return -1;
 
   //...Zero counters
-  for (i = 0; i < this->CurrentUSGSStation.length(); i++)
-    this->CurrentUSGSStation[i].NumDataPoints = 0;
+  for (i = 0; i < this->m_selectedProductData.length(); i++)
+    this->m_selectedProductData[i].m_numDataPoints = 0;
 
   //...Read the data into the array
   for (i = HeaderEnd; i < SplitByLine.length(); i++) {
@@ -231,19 +228,21 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
     CurrentDate.setTimeSpec(Qt::UTC);
     OffsetHours = this->getTimezoneOffset(TempTimeZoneString);
     CurrentDate = CurrentDate.addSecs(-3600 * OffsetHours);
-    for (j = 0; j < this->Parameters.length(); j++) {
+    for (j = 0; j < this->m_availableDatatypes.length(); j++) {
       TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
       if (!TempList.value(2 * j + 4).isNull() && doubleok) {
-        this->CurrentUSGSStation[j].NumDataPoints =
-            this->CurrentUSGSStation[j].NumDataPoints + 1;
-        this->CurrentUSGSStation[j].Data.resize(
-            this->CurrentUSGSStation[j].Data.length() + 1);
-        this->CurrentUSGSStation[j].Date.resize(
-            this->CurrentUSGSStation[j].Date.length() + 1);
-        this->CurrentUSGSStation[j]
-            .Data[this->CurrentUSGSStation[j].Data.length() - 1] = TempData;
-        this->CurrentUSGSStation[j]
-            .Date[this->CurrentUSGSStation[j].Date.length() - 1] = CurrentDate;
+        this->m_selectedProductData[j].m_numDataPoints =
+            this->m_selectedProductData[j].m_numDataPoints + 1;
+        this->m_selectedProductData[j].m_data.resize(
+            this->m_selectedProductData[j].m_data.length() + 1);
+        this->m_selectedProductData[j].m_date.resize(
+            this->m_selectedProductData[j].m_date.length() + 1);
+        this->m_selectedProductData[j]
+            .m_data[this->m_selectedProductData[j].m_data.length() - 1] =
+            TempData;
+        this->m_selectedProductData[j]
+            .m_date[this->m_selectedProductData[j].m_date.length() - 1] =
+            CurrentDate;
       }
     }
   }
@@ -268,7 +267,7 @@ int Usgs::formatUSGSDailyResponse(QByteArray Input) {
   HeaderEnd = -1;
 
   //...Save the potential error string
-  this->USGSErrorString = InputData.remove(QRegExp("[\n\t\r]"));
+  this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
 
   //...Start by finding the header and reading the parameters from it
   for (i = 0; i < SplitByLine.length(); i++) {
@@ -286,24 +285,25 @@ int Usgs::formatUSGSDailyResponse(QByteArray Input) {
     }
   }
 
-  this->Parameters.resize(ParamStop - ParamStart + 1);
+  this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
 
   for (i = ParamStart; i <= ParamStop; i++) {
     TempLine = SplitByLine.value(i);
     TempList = TempLine.split(" ", QString::SkipEmptyParts);
-    this->Parameters[i - ParamStart] = QString();
+    this->m_availableDatatypes[i - ParamStart] = QString();
     for (j = 3; j < TempList.length(); j++) {
       if (j == 3)
-        this->Parameters[i - ParamStart] = TempList.value(j);
+        this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
       else
-        this->Parameters[i - ParamStart] =
-            this->Parameters[i - ParamStart] + " " + TempList.value(j);
+        this->m_availableDatatypes[i - ParamStart] =
+            this->m_availableDatatypes[i - ParamStart] + " " +
+            TempList.value(j);
     }
   }
 
   //...Remove the leading number
-  for (i = 0; i < this->Parameters.length(); i++)
-    Parameters[i] = Parameters[i].mid(6).simplified();
+  for (i = 0; i < this->m_availableDatatypes.length(); i++)
+    m_availableDatatypes[i] = m_availableDatatypes[i].mid(6).simplified();
 
   //...Find out where the header ends
   for (i = 0; i < SplitByLine.length(); i++) {
@@ -314,19 +314,19 @@ int Usgs::formatUSGSDailyResponse(QByteArray Input) {
   }
 
   //...Delete the old data
-  for (i = 0; i < this->CurrentUSGSStation.length(); i++) {
-    this->CurrentUSGSStation[i].Data.clear();
-    this->CurrentUSGSStation[i].Date.clear();
-    this->CurrentUSGSStation[i].NumDataPoints = 0;
+  for (i = 0; i < this->m_selectedProductData.length(); i++) {
+    this->m_selectedProductData[i].m_data.clear();
+    this->m_selectedProductData[i].m_date.clear();
+    this->m_selectedProductData[i].m_numDataPoints = 0;
   }
-  this->CurrentUSGSStation.clear();
+  this->m_selectedProductData.clear();
 
   //...Initialize the array
-  this->CurrentUSGSStation.resize(Parameters.length());
+  this->m_selectedProductData.resize(m_availableDatatypes.length());
 
   //...Zero counters
-  for (i = 0; i < this->CurrentUSGSStation.length(); i++)
-    this->CurrentUSGSStation[i].NumDataPoints = 0;
+  for (i = 0; i < this->m_selectedProductData.length(); i++)
+    this->m_selectedProductData[i].m_numDataPoints = 0;
 
   //...Read the data into the array
   for (i = HeaderEnd; i < SplitByLine.length(); i++) {
@@ -335,24 +335,26 @@ int Usgs::formatUSGSDailyResponse(QByteArray Input) {
     TempDateString = TempList.value(2);
     CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd");
     CurrentDate.setTimeSpec(Qt::UTC);
-    for (j = 0; j < Parameters.length(); j++) {
+    for (j = 0; j < m_availableDatatypes.length(); j++) {
       TempData = TempList.value(2 * j + 3).toDouble(&doubleok);
       if (!TempList.value(2 * j + 3).isNull() && doubleok) {
-        this->CurrentUSGSStation[j].NumDataPoints =
-            this->CurrentUSGSStation[j].NumDataPoints + 1;
-        this->CurrentUSGSStation[j].Data.resize(
-            this->CurrentUSGSStation[j].Data.length() + 1);
-        this->CurrentUSGSStation[j].Date.resize(
-            this->CurrentUSGSStation[j].Date.length() + 1);
-        this->CurrentUSGSStation[j]
-            .Data[this->CurrentUSGSStation[j].Data.length() - 1] = TempData;
-        this->CurrentUSGSStation[j]
-            .Date[this->CurrentUSGSStation[j].Date.length() - 1] = CurrentDate;
+        this->m_selectedProductData[j].m_numDataPoints =
+            this->m_selectedProductData[j].m_numDataPoints + 1;
+        this->m_selectedProductData[j].m_data.resize(
+            this->m_selectedProductData[j].m_data.length() + 1);
+        this->m_selectedProductData[j].m_date.resize(
+            this->m_selectedProductData[j].m_date.length() + 1);
+        this->m_selectedProductData[j]
+            .m_data[this->m_selectedProductData[j].m_data.length() - 1] =
+            TempData;
+        this->m_selectedProductData[j]
+            .m_date[this->m_selectedProductData[j].m_date.length() - 1] =
+            CurrentDate;
       }
     }
   }
 
-  this->USGSDataReady = true;
+  this->m_usgsDataReady = true;
 
   return 0;
 }
@@ -363,9 +365,11 @@ int Usgs::getDataBounds(double &ymin, double &ymax) {
   ymin = 999999999.0;
   ymax = -999999999.0;
 
-  for (j = 0; j < this->USGSPlot.length(); j++) {
-    if (this->USGSPlot[j].value < ymin) ymin = this->USGSPlot[j].value;
-    if (this->USGSPlot[j].value > ymax) ymax = this->USGSPlot[j].value;
+  for (j = 0; j < this->m_allStationData.length(); j++) {
+    if (this->m_allStationData[j].m_data < ymin)
+      ymin = this->m_allStationData[j].m_data;
+    if (this->m_allStationData[j].m_data > ymax)
+      ymax = this->m_allStationData[j].m_data;
   }
   return 0;
 }
@@ -388,22 +392,22 @@ int Usgs::plotNewUSGSStation() {
         this->m_stationModel->findStation(*(this->m_selectedStation));
 
     //...Check the data type
-    if (instantButton->isChecked())
-      this->USGSdataMethod = 1;
-    else if (dailyButton->isChecked())
-      this->USGSdataMethod = 2;
+    if (m_buttonInstant->isChecked())
+      this->m_usgsDataMethod = 1;
+    else if (m_buttonDaily->isChecked())
+      this->m_usgsDataMethod = 2;
     else
-      this->USGSdataMethod = 0;
+      this->m_usgsDataMethod = 0;
 
     //...Set status bar
-    this->statusBar->showMessage(tr("Downloading data from USGS..."));
+    this->m_statusBar->showMessage(tr("Downloading data from USGS..."));
 
     //...Wipe out the combo box
-    this->productBox->clear();
+    this->m_comboProduct->clear();
 
     //...Get the time period for the data
-    this->requestEndDate = endDateEdit->dateTime();
-    this->requestStartDate = startDateEdit->dateTime();
+    this->m_requestEndDate = m_endDateEdit->dateTime();
+    this->m_requestStartDate = m_startDateEdit->dateTime();
 
     //...Grab the data from the server
     ierr = this->fetchUSGSData();
@@ -414,13 +418,13 @@ int Usgs::plotNewUSGSStation() {
 
 int Usgs::replotCurrentUSGSStation(int index) {
   int ierr;
-  if (this->USGSDataReady) {
-    this->ProductIndex = index;
-    this->ProductName = productBox->currentText();
+  if (this->m_usgsDataReady) {
+    this->m_productIndex = index;
+    this->m_productName = m_comboProduct->currentText();
     ierr = this->plotUSGS();
-    statusBar->clearMessage();
+    m_statusBar->clearMessage();
     if (ierr != 0) {
-      this->USGSErrorString = tr("No data available for this selection.");
+      this->m_errorString = tr("No data available for this selection.");
       return ierr;
     }
     return 0;
@@ -434,48 +438,54 @@ int Usgs::plotUSGS() {
   QString format;
 
   // Put the data into a plotting object
-  this->USGSPlot.resize(
-      this->CurrentUSGSStation[this->ProductIndex].Date.length());
+  this->m_allStationData.resize(
+      this->m_selectedProductData[this->m_productIndex].m_date.length());
   for (int i = 0;
-       i < this->CurrentUSGSStation[this->ProductIndex].Date.length(); i++) {
-    this->USGSPlot[i].Date =
-        this->CurrentUSGSStation[this->ProductIndex].Date[i].date();
-    this->USGSPlot[i].Time =
-        this->CurrentUSGSStation[this->ProductIndex].Date[i].time();
-    this->USGSPlot[i].value =
-        this->CurrentUSGSStation[this->ProductIndex].Data[i];
+       i < this->m_selectedProductData[this->m_productIndex].m_date.length();
+       i++) {
+    this->m_allStationData[i].m_date =
+        this->m_selectedProductData[this->m_productIndex].m_date[i].date();
+    this->m_allStationData[i].m_time =
+        this->m_selectedProductData[this->m_productIndex].m_date[i].time();
+    this->m_allStationData[i].m_data =
+        this->m_selectedProductData[this->m_productIndex].m_data[i];
   }
 
-  if (this->USGSPlot.length() < 5) return -1;
+  if (this->m_allStationData.length() < 5) return -1;
 
   //...Create the line series
   ierr = this->getDataBounds(ymin, ymax);
 
   QLineSeries *series1 = new QLineSeries(this);
-  series1->setName(this->ProductName);
+  series1->setName(this->m_productName);
   series1->setPen(
       QPen(QColor(0, 0, 255), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
   //...Create the chart
-  this->chart->m_chart = new QChart();
-  this->chart->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->chart->m_chart->legend()->setAlignment(Qt::AlignBottom);
+  this->m_chartView->m_chart = new QChart();
+  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
+  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
 
-  for (j = 0; j < this->USGSPlot.length(); j++) {
-    if (QDateTime(this->USGSPlot[j].Date, this->USGSPlot[j].Time).isValid()) {
-      series1->append(QDateTime(this->USGSPlot[j].Date, this->USGSPlot[j].Time)
+  for (j = 0; j < this->m_allStationData.length(); j++) {
+    if (QDateTime(this->m_allStationData[j].m_date,
+                  this->m_allStationData[j].m_time)
+            .isValid()) {
+      series1->append(QDateTime(this->m_allStationData[j].m_date,
+                                this->m_allStationData[j].m_time)
                           .toMSecsSinceEpoch(),
-                      this->USGSPlot[j].value);
+                      this->m_allStationData[j].m_data);
     }
   }
-  this->chart->m_chart->addSeries(series1);
+  this->m_chartView->m_chart->addSeries(series1);
 
-  this->chart->clear();
-  this->chart->addSeries(series1, this->ProductName);
+  this->m_chartView->clear();
+  this->m_chartView->addSeries(series1, this->m_productName);
 
-  QDateTime minDateTime = QDateTime(USGSPlot[0].Date, USGSPlot[0].Time);
-  QDateTime maxDateTime = QDateTime(USGSPlot[USGSPlot.length() - 1].Date,
-                                    USGSPlot[USGSPlot.length() - 1].Time);
+  QDateTime minDateTime =
+      QDateTime(m_allStationData[0].m_date, m_allStationData[0].m_time);
+  QDateTime maxDateTime =
+      QDateTime(m_allStationData[m_allStationData.length() - 1].m_date,
+                m_allStationData[m_allStationData.length() - 1].m_time);
   minDateTime.setTimeSpec(Qt::UTC);
   maxDateTime.setTimeSpec(Qt::UTC);
 
@@ -486,24 +496,24 @@ int Usgs::plotUSGS() {
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
-  if (this->requestStartDate.daysTo(this->requestEndDate) > 90)
+  if (this->m_requestStartDate.daysTo(this->m_requestEndDate) > 90)
     axisX->setFormat("MM/yyyy");
-  else if (this->requestStartDate.daysTo(this->requestEndDate) > 4)
+  else if (this->m_requestStartDate.daysTo(this->m_requestEndDate) > 4)
     axisX->setFormat("MM/dd/yyyy");
   else
     axisX->setFormat("MM/dd/yyyy hh:mm");
-  axisX->setTitleText("Date (" + this->tz->abbreviation() + ")");
+  axisX->setTitleText("Date (" + this->m_tz->abbreviation() + ")");
   axisX->setMin(minDateTime);
   axisX->setMax(maxDateTime);
-  this->chart->m_chart->addAxis(axisX, Qt::AlignBottom);
+  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
   series1->attachAxis(axisX);
 
   QValueAxis *axisY = new QValueAxis(this);
   axisY->setLabelFormat(format);
-  axisY->setTitleText(this->ProductName.split("),QStringLiteral(").value(0));
+  axisY->setTitleText(this->m_productName.split("),QStringLiteral(").value(0));
   axisY->setMin(ymin);
   axisY->setMax(ymax);
-  this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
+  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
   series1->attachAxis(axisY);
 
   axisY->setTickCount(10);
@@ -516,29 +526,33 @@ int Usgs::plotUSGS() {
   axisY->applyNiceNumbers();
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->chart->m_chart->legend()->markers().at(0)->setFont(
+  this->m_chartView->m_chart->legend()->markers().at(0)->setFont(
       QFont("Helvetica", 10, QFont::Bold));
 
-  this->chart->m_chart->setTitle(tr("USGS Station ") + this->USGSMarkerID +
-                                 ": " + this->CurrentUSGSStationName);
-  this->chart->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  chart->setRenderHint(QPainter::Antialiasing);
-  chart->setChart(this->chart->m_chart);
+  this->m_chartView->m_chart->setTitle(tr("USGS Station ") +
+                                       this->m_currentStation.id() + ": " +
+                                       this->m_currentStation.name());
+  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+  m_chartView->setRenderHint(QPainter::Antialiasing);
+  m_chartView->setChart(this->m_chartView->m_chart);
 
-  foreach (QLegendMarker *marker, this->chart->m_chart->legend()->markers()) {
+  foreach (QLegendMarker *marker,
+           this->m_chartView->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->chart,
+    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
                         SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->chart,
+    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
                      SLOT(handleLegendMarkerClicked()));
   }
 
-  this->chart->m_style = 1;
-  this->chart->m_coord = new QGraphicsSimpleTextItem(this->chart->m_chart);
-  this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
-                               this->chart->size().height() - 20);
-  this->chart->initializeAxisLimits();
-  this->chart->setStatusBar(this->statusBar);
+  this->m_chartView->m_style = 1;
+  this->m_chartView->m_coord =
+      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
+  this->m_chartView->m_coord->setPos(
+      this->m_chartView->size().width() / 2 - 100,
+      this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeAxisLimits();
+  this->m_chartView->setStatusBar(this->m_statusBar);
 
   this->setUSGSBeenPlotted(true);
 
@@ -549,7 +563,7 @@ int Usgs::readUSGSDataFinished(QNetworkReply *reply) {
   int ierr;
 
   if (reply->error() != QNetworkReply::NoError) {
-    this->USGSErrorString = reply->errorString();
+    this->m_errorString = reply->errorString();
     return MetOceanViewer::Error::USGS_SERVERREADERROR;
   }
 
@@ -557,13 +571,13 @@ int Usgs::readUSGSDataFinished(QNetworkReply *reply) {
   QByteArray RawUSGSData = reply->readAll();
 
   // Put the data into an array with all variables
-  if (this->USGSdataMethod == 0 || this->USGSdataMethod == 1)
+  if (this->m_usgsDataMethod == 0 || this->m_usgsDataMethod == 1)
     ierr = this->formatUSGSInstantResponse(RawUSGSData);
   else
     ierr = this->formatUSGSDailyResponse(RawUSGSData);
   if (ierr != 0) return MetOceanViewer::Error::USGS_FORMATTING;
 
-  this->USGSDataReady = true;
+  this->m_usgsDataReady = true;
 
   // Delete the QNetworkReply object off the heap
   reply->deleteLater();
@@ -585,11 +599,11 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
     painter.begin(&printer);
 
     //...Page 1 - Chart
-    this->chart->render(&painter);
+    this->m_chartView->render(&painter);
 
     //...Page 2 - Map
     printer.newPage();
-    QPixmap renderedMap = this->map->grab();
+    QPixmap renderedMap = this->m_quickMap->grab();
     QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
     if (mapScaled.height() > printer.height())
       mapScaled = renderedMap.scaledToHeight(printer.height());
@@ -601,10 +615,12 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
     painter.end();
   } else if (filter == "JPG (*.jpg *.jpeg)") {
     QFile outputFile(filename);
-    QSize imageSize(this->map->size().width() + this->chart->size().width(),
-                    this->map->size().height());
-    QRect chartRect(this->map->size().width(), 0, this->chart->size().width(),
-                    this->chart->size().height());
+    QSize imageSize(
+        this->m_quickMap->size().width() + this->m_chartView->size().width(),
+        this->m_quickMap->size().height());
+    QRect chartRect(this->m_quickMap->size().width(), 0,
+                    this->m_chartView->size().width(),
+                    this->m_chartView->size().height());
 
     QImage pixmap(imageSize, QImage::Format_ARGB32);
     pixmap.fill(Qt::white);
@@ -613,7 +629,7 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
                                 QPainter::TextAntialiasing |
                                 QPainter::SmoothPixmapTransform);
     // this->map->render(&imagePainter, QPoint(0, 0));
-    this->chart->render(&imagePainter, chartRect);
+    this->m_chartView->render(&imagePainter, chartRect);
 
     outputFile.open(QIODevice::WriteOnly);
     pixmap.save(&outputFile, "JPG", 100);
@@ -628,31 +644,36 @@ int Usgs::saveUSGSData(QString filename, QString format) {
   USGSOutput.open(QIODevice::WriteOnly);
 
   if (format.compare("CSV") == 0) {
-    Output << "Station: " + this->USGSMarkerID + "\n";
+    Output << "Station: " + this->m_currentStation.id() + "\n";
     Output << "Datum: N/A\n";
     Output << "Units: N/A\n";
     Output << "\n";
-    for (int i = 0; i < this->USGSPlot.length(); i++) {
-      Output << this->USGSPlot[i].Date.toString("MM/dd/yyyy") +
+    for (int i = 0; i < this->m_allStationData.length(); i++) {
+      Output << this->m_allStationData[i].m_date.toString("MM/dd/yyyy") +
                     "),QStringLiteral(" +
-                    this->USGSPlot[i].Time.toString("hh:mm") +
+                    this->m_allStationData[i].m_time.toString("hh:mm") +
                     "),QStringLiteral(" +
-                    QString::number(this->USGSPlot[i].value) + "\n";
+                    QString::number(this->m_allStationData[i].m_data) + "\n";
     }
   } else if (format.compare("IMEDS") == 0) {
     Output << "% IMEDS generic format - Water Level\n";
     Output << "% year month day hour min sec value\n";
     Output << "USGS   UTC    N/A\n";
-    Output << "USGS_" + this->USGSMarkerID + "   " +
-                  QString::number(this->CurrentUSGSLat) + "   " +
-                  QString::number(this->CurrentUSGSLon) + "\n";
-    for (int i = 0; i < this->USGSPlot.length(); i++) {
-      Output << this->USGSPlot[i].Date.toString("yyyy") + "    " +
-                    this->USGSPlot[i].Date.toString("MM") + "    " +
-                    this->USGSPlot[i].Date.toString("dd") + "    " +
-                    this->USGSPlot[i].Time.toString("hh") + "    " +
-                    this->USGSPlot[i].Time.toString("mm") + "    " + "00" +
-                    "    " + QString::number(this->USGSPlot[i].value) + "\n";
+    Output << "USGS_" + this->m_currentStation.id() + "   " +
+                  QString::number(
+                      this->m_currentStation.coordinate().latitude()) +
+                  "   " +
+                  QString::number(
+                      this->m_currentStation.coordinate().longitude()) +
+                  "\n";
+    for (int i = 0; i < this->m_allStationData.length(); i++) {
+      Output << this->m_allStationData[i].m_date.toString("yyyy") + "    " +
+                    this->m_allStationData[i].m_date.toString("MM") + "    " +
+                    this->m_allStationData[i].m_date.toString("dd") + "    " +
+                    this->m_allStationData[i].m_time.toString("hh") + "    " +
+                    this->m_allStationData[i].m_time.toString("mm") + "    " +
+                    "00" + "    " +
+                    QString::number(this->m_allStationData[i].m_data) + "\n";
     }
   }
   USGSOutput.close();
@@ -661,7 +682,7 @@ int Usgs::saveUSGSData(QString filename, QString format) {
 }
 
 int Usgs::setUSGSBeenPlotted(bool input) {
-  this->USGSBeenPlotted = input;
+  this->m_usgsBeenPlotted = input;
   return 0;
 }
 
@@ -669,20 +690,20 @@ QString Usgs::getClickedUSGSStation() { return *(this->m_selectedStation); }
 
 QString Usgs::getLoadedUSGSStation() { return this->m_currentStation.id(); }
 
-bool Usgs::getUSGSBeenPlotted() { return this->USGSBeenPlotted; }
+bool Usgs::getUSGSBeenPlotted() { return this->m_usgsBeenPlotted; }
 
-QString Usgs::getUSGSErrorString() { return this->USGSErrorString; }
+QString Usgs::getUSGSErrorString() { return this->m_errorString; }
 
 int Usgs::replotChart(Timezone *newTimezone) {
   int offset = newTimezone->utcOffset() * 1000;
-  int totalOffset = -this->priorOffsetSeconds + offset;
+  int totalOffset = -this->m_priorOffsetSeconds + offset;
 
   QVector<QLineSeries *> series;
-  series.resize(this->chart->m_chart->series().length());
+  series.resize(this->m_chartView->m_chart->series().length());
 
-  for (int i = 0; i < this->chart->m_chart->series().length(); i++) {
+  for (int i = 0; i < this->m_chartView->m_chart->series().length(); i++) {
     series[i] =
-        static_cast<QLineSeries *>(this->chart->m_chart->series().at(i));
+        static_cast<QLineSeries *>(this->m_chartView->m_chart->series().at(i));
   }
   for (int i = 0; i < series.length(); i++) {
     QList<QPointF> data = series[i]->points();
@@ -693,9 +714,11 @@ int Usgs::replotChart(Timezone *newTimezone) {
     series[i]->append(data);
   }
 
-  QDateTime minDateTime = QDateTime(USGSPlot[0].Date, USGSPlot[0].Time);
-  QDateTime maxDateTime = QDateTime(USGSPlot[USGSPlot.length() - 1].Date,
-                                    USGSPlot[USGSPlot.length() - 1].Time);
+  QDateTime minDateTime =
+      QDateTime(m_allStationData[0].m_date, m_allStationData[0].m_time);
+  QDateTime maxDateTime =
+      QDateTime(m_allStationData[m_allStationData.length() - 1].m_date,
+                m_allStationData[m_allStationData.length() - 1].m_time);
   minDateTime.setTimeSpec(Qt::UTC);
   maxDateTime.setTimeSpec(Qt::UTC);
 
@@ -707,18 +730,18 @@ int Usgs::replotChart(Timezone *newTimezone) {
   minDateTime = minDateTime.addMSecs(totalOffset);
   maxDateTime = maxDateTime.addMSecs(totalOffset);
 
-  this->chart->m_chart->axisX()->setTitleText(
+  this->m_chartView->m_chart->axisX()->setTitleText(
       "Date (" + newTimezone->abbreviation() + ")");
-  this->chart->m_chart->axisX()->setMin(minDateTime);
-  this->chart->m_chart->axisX()->setMax(maxDateTime);
+  this->m_chartView->m_chart->axisX()->setMin(minDateTime);
+  this->m_chartView->m_chart->axisX()->setMax(maxDateTime);
 
-  this->priorOffsetSeconds = offset;
+  this->m_priorOffsetSeconds = offset;
 
-  this->chart->rebuild();
+  this->m_chartView->rebuild();
 
-  this->chart->update();
+  this->m_chartView->update();
 
-  this->chart->m_chart->zoomReset();
+  this->m_chartView->m_chart->zoomReset();
 
   return 0;
 }
