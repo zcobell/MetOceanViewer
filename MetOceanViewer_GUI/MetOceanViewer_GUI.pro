@@ -27,76 +27,75 @@ TARGET = MetOceanViewer
 TEMPLATE = app
 
 SOURCES +=\
-    src/movAboutDialog.cpp \
-    src/movAdcircStationOutput.cpp \
-    src/movAddTimeseriesData.cpp \
-    src/movColors.cpp \
-    src/movDflow.cpp \
-    src/movFiletypes.cpp \
-    src/movGeneric.cpp \
-    src/movHwm.cpp \
-    src/movImeds.cpp \
-    src/movImedsStation.cpp \
-    src/movInitUI.cpp \
-    src/movJavascriptAsyncReturn.cpp \
-    src/movKeyhandler.cpp \
-    src/movMain.cpp \
-    src/movNoaa.cpp \
-    src/movQChartView.cpp \
-    src/movSession.cpp \
-    src/movStartup.cpp \
-    src/movUserTimeseries.cpp \
-    src/movUiHwmTab.cpp \
-    src/movUiNoaaTab.cpp \
-    src/movUiTimeseriesTab.cpp \
-    src/movUiUsgsTab.cpp \
-    src/movUiXTideTab.cpp \
-    src/movUpdateDialog.cpp \
-    src/movUsgs.cpp \
-    src/movXtide.cpp \
-    src/movErrors.cpp \
-    src/movusertimeseriesoptions.cpp \
-    src/movNetcdfTimeseries.cpp \
     src/stationmodel.cpp \
-    src/station.cpp
+    src/station.cpp \
+    src/colors.cpp \
+    src/dflow.cpp \
+    src/errors.cpp \
+    src/filetypes.cpp \
+    src/generic.cpp \
+    src/hwm.cpp \
+    src/imeds.cpp \
+    src/keyhandler.cpp \
+    src/noaa.cpp \
+    src/session.cpp \
+    src/usgs.cpp \
+    src/xtide.cpp \
+    src/chartview.cpp \
+    src/aboutdialog.cpp \
+    src/adcircstationoutput.cpp \
+    src/imedsstation.cpp \
+    src/javascriptasyncreturn.cpp \
+    src/netcdftimeseries.cpp \
+    src/uihwmtab.cpp \
+    src/uinoaatab.cpp \
+    src/uitimeseriestab.cpp \
+    src/uiusgstab.cpp \
+    src/updatedialog.cpp \
+    src/usertimeseries.cpp \
+    src/uxtidetab.cpp \
+    src/mainwindow.cpp \
+    src/main.cpp \
+    src/addtimeseriesdialog.cpp \
+    src/timeseriesoptionsdialog.cpp
 
 HEADERS  += \
-    src/movAdcircStationOutput.h \
-    src/movColors.h \
-    src/movDflow.h \
-    src/movErrors.h \
-    src/movFiletypes.h \
-    src/movGeneric.h \
-    src/movHwm.h \
-    src/movImeds.h \
-    src/movImedsStation.h \
-    src/movJavascriptAsyncReturn.h \
-    src/movKeyhandler.h \
-    src/movNoaa.h \
-    src/movQChartView.h \
-    src/movQWebEnginePage.h \
-    src/movSession.h \
-    src/movUserTimeseries.h \
-    src/movUsgs.h \
-    src/movXtide.h \
-    movVersion.h \
-    src/mov_dialog_addtimeseriesdata.h \
-    src/mov_dialog_about.h \
-    src/mov_dialog_update.h \
-    src/movusertimeseriesoptions.h \
-    src/MainWindow.h \
-    src/movQWebEngineView.h \
     src/metoceanviewer.h \
-    src/movNetcdfTimeseries.h \
     src/stationmodel.h \
-    src/station.h
+    src/station.h \
+    src/colors.h \
+    src/dflow.h \
+    src/errors.h \
+    src/filetypes.h \
+    src/generic.h \
+    src/hwm.h \
+    src/imeds.h \
+    src/keyhandler.h \
+    src/noaa.h \
+    src/session.h \
+    src/usgs.h \
+    src/xtide.h \
+    src/chartview.h \
+    src/webenginepage.h \
+    src/webengineview.h \
+    src/aboutdialog.h \
+    src/adcircstationoutput.h \
+    src/addtimeseriesdialog.h \
+    src/imedsstation.h \
+    src/javascriptasyncreturn.h \
+    src/mainwindow.h \
+    src/netcdftimeseries.h \
+    src/updatedialog.h \
+    src/usertimeseries.h \
+    src/timeseriesoptionsdialog.h \
+    version.h
 
 FORMS    += \
-    ui/mov_dialog_about.ui \
-    ui/mov_dialog_addtimeseries.ui \
-    ui/mov_window_main.ui \
-    ui/mov_dialog_update.ui \
-    ui/movusertimeseriesoptions.ui
+    ui/aboutdialog.ui \
+    ui/addtimeseriesdialog.ui \
+    ui/updatedialog.ui \
+    ui/mainwindow.ui \
+    ui/timeseriesoptionsdialog.ui
 
 OTHER_FILES +=
 
