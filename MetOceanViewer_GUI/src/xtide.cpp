@@ -156,8 +156,8 @@ int XTide::calculateXTides() {
                      startDateString + "\"" + " -e \"" + endDateString + "\"" +
                      " -s \"00:30\" -z -m m";
 #else
-  QString xTideCmd = this->xTideExe + " -l \"" + this->m_station.name() + "\"" +
-                     " -b \"" + startDateString + "\"" + " -e \"" +
+  QString xTideCmd = this->m_xtideexe + " -l \"" + this->m_station.name() +
+                     "\"" + " -b \"" + startDateString + "\"" + " -e \"" +
                      endDateString + "\"" + " -s \"00:30\" -z -m m";
 #endif
 
@@ -321,13 +321,15 @@ int XTide::plotChart() {
 
   this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-  this->m_chartView->m_chart->setTitle("XTide Station: " + this->m_station.name());
+  this->m_chartView->m_chart->setTitle("XTide Station: " +
+                                       this->m_station.name());
   this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_chartView->setRenderHint(QPainter::Antialiasing);
   this->m_chartView->setChart(this->m_chartView->m_chart);
 
   this->m_chartView->m_style = 1;
-  this->m_chartView->m_coord = new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
+  this->m_chartView->m_coord =
+      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
   this->m_chartView->m_coord->setPos(
       this->m_chartView->size().width() / 2 - 100,
       this->m_chartView->size().height() - 20);
@@ -336,7 +338,8 @@ int XTide::plotChart() {
   this->m_chartView->m_chart->legend()->markers().at(0)->setFont(
       QFont("Helvetica", 10, QFont::Bold));
 
-  foreach (QLegendMarker *marker, this->m_chartView->m_chart->legend()->markers()) {
+  foreach (QLegendMarker *marker,
+           this->m_chartView->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
     QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
                         SLOT(handleLegendMarkerClicked()));
