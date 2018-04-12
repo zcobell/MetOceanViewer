@@ -37,22 +37,22 @@ UserTimeseries::UserTimeseries(
     QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
     StationModel *inStationModel, QString *inSelectedStation, QObject *parent)
     : QObject(parent) {
-  this->table = inTable;
-  this->xAxisCheck = inXAxisCheck;
-  this->yAxisCheck = inYAxisCheck;
-  this->startDate = inStartDate;
-  this->endDate = inEndDate;
-  this->yMaxEdit = inYMaxEdit;
-  this->yMinEdit = inYMinEdit;
-  this->plotTitle = inPlotTitle;
-  this->xLabelEdit = inXLabelEdit;
-  this->yLabelEdit = inYLabelEdit;
-  this->map = inMap;
-  this->chart = inChart;
-  this->statusBar = inStatusBar;
-  this->randomColorList = inRandomColorList;
-  this->markerID = 0;
-  this->chart->m_chart = nullptr;
+  this->m_table = inTable;
+  this->m_checkXaxis = inXAxisCheck;
+  this->m_checkYaxis = inYAxisCheck;
+  this->m_startDateEdit = inStartDate;
+  this->m_endDateEdit = inEndDate;
+  this->m_yMaxEdit = inYMaxEdit;
+  this->m_yMinEdit = inYMinEdit;
+  this->m_plotTitle = inPlotTitle;
+  this->m_xLabelEdit = inXLabelEdit;
+  this->m_yLabelEdit = inYLabelEdit;
+  this->m_quickMap = inMap;
+  this->m_chartView = inChart;
+  this->m_statusBar = inStatusBar;
+  this->m_randomColorList = inRandomColorList;
+  this->m_markerId = 0;
+  this->m_chartView->m_chart = nullptr;
   this->m_stationmodel = inStationModel;
   this->m_currentStation = inSelectedStation;
 }
@@ -73,55 +73,67 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
   long long maxDate =
       QDateTime(QDate(1500, 1, 1), QTime(0, 0, 0)).toMSecsSinceEpoch();
 
-  for (i = 0; i < this->fileDataUnique.length(); i++) {
-    unitConversion = this->table->item(i, 3)->text().toDouble();
-    addY = this->table->item(i, 5)->text().toDouble();
-    for (k = 0; k < this->selectedStations.length(); k++) {
-      if (!this->fileDataUnique[i]
-               ->station[this->selectedStations[k]]
+  for (i = 0; i < this->m_fileDataUnique.length(); i++) {
+    unitConversion = this->m_table->item(i, 3)->text().toDouble();
+    addY = this->m_table->item(i, 5)->text().toDouble();
+    for (k = 0; k < this->m_selectedStations.length(); k++) {
+      if (!this->m_fileDataUnique[i]
+               ->station[this->m_selectedStations[k]]
                .isNull()) {
-        for (j = 0; j < this->fileDataUnique[i]
-                            ->station[this->selectedStations[k]]
+        for (j = 0; j < this->m_fileDataUnique[i]
+                            ->station[this->m_selectedStations[k]]
                             .numSnaps();
              j++) {
-          if (this->fileDataUnique[i]->station[this->selectedStations[k]].data(
-                  j) * unitConversion +
+          if (this->m_fileDataUnique[i]
+                              ->station[this->m_selectedStations[k]]
+                              .data(j) *
+                          unitConversion +
                       addY <
                   ymin &&
-              this->fileDataUnique[i]->station[this->selectedStations[k]].data(
-                  j) != MetOceanViewer::NULL_TS)
-            ymin = this->fileDataUnique[i]
-                           ->station[this->selectedStations[k]]
+              this->m_fileDataUnique[i]
+                      ->station[this->m_selectedStations[k]]
+                      .data(j) != MetOceanViewer::NULL_TS)
+            ymin = this->m_fileDataUnique[i]
+                           ->station[this->m_selectedStations[k]]
                            .data(j) *
                        unitConversion +
                    addY;
-          if (this->fileDataUnique[i]->station[this->selectedStations[k]].data(
-                  j) * unitConversion +
+          if (this->m_fileDataUnique[i]
+                              ->station[this->m_selectedStations[k]]
+                              .data(j) *
+                          unitConversion +
                       addY >
                   ymax &&
-              this->fileDataUnique[i]->station[this->selectedStations[k]].data(
-                  j) != MetOceanViewer::NULL_TS)
-            ymax = this->fileDataUnique[i]
-                           ->station[this->selectedStations[k]]
+              this->m_fileDataUnique[i]
+                      ->station[this->m_selectedStations[k]]
+                      .data(j) != MetOceanViewer::NULL_TS)
+            ymax = this->m_fileDataUnique[i]
+                           ->station[this->m_selectedStations[k]]
                            .data(j) *
                        unitConversion +
                    addY;
-          if (this->fileDataUnique[i]->station[this->selectedStations[k]].date(
-                  j) + (timeAddList[i] * 3600.0) <
+          if (this->m_fileDataUnique[i]
+                          ->station[this->m_selectedStations[k]]
+                          .date(j) +
+                      (timeAddList[i] * 3600.0) <
                   minDate &&
-              this->fileDataUnique[i]->station[this->selectedStations[k]].date(
-                  j) != nullDate)
-            minDate = this->fileDataUnique[i]
-                          ->station[this->selectedStations[k]]
+              this->m_fileDataUnique[i]
+                      ->station[this->m_selectedStations[k]]
+                      .date(j) != nullDate)
+            minDate = this->m_fileDataUnique[i]
+                          ->station[this->m_selectedStations[k]]
                           .date(j) +
                       (timeAddList[i] * 3600.0);
-          if (this->fileDataUnique[i]->station[this->selectedStations[k]].date(
-                  j) + (timeAddList[i] * 3600.0) >
+          if (this->m_fileDataUnique[i]
+                          ->station[this->m_selectedStations[k]]
+                          .date(j) +
+                      (timeAddList[i] * 3600.0) >
                   maxDate &&
-              this->fileDataUnique[i]->station[this->selectedStations[k]].date(
-                  j) != nullDate)
-            maxDate = this->fileDataUnique[i]
-                          ->station[this->selectedStations[k]]
+              this->m_fileDataUnique[i]
+                      ->station[this->m_selectedStations[k]]
+                      .date(j) != nullDate)
+            maxDate = this->m_fileDataUnique[i]
+                          ->station[this->m_selectedStations[k]]
                           .date(j) +
                       (timeAddList[i] * 3600.0);
         }
@@ -149,11 +161,11 @@ int UserTimeseries::saveImage(QString filename, QString filter) {
     painter.begin(&printer);
 
     //...Page 1 - Chart
-    this->chart->render(&painter);
+    this->m_chartView->render(&painter);
 
     //...Page 2 - Map
     printer.newPage();
-    QPixmap renderedMap = this->map->grab();
+    QPixmap renderedMap = this->m_quickMap->grab();
     QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
     if (mapScaled.height() > printer.height())
       mapScaled = renderedMap.scaledToHeight(printer.height());
@@ -165,10 +177,12 @@ int UserTimeseries::saveImage(QString filename, QString filter) {
     painter.end();
   } else if (filter == "JPG (*.jpg *.jpeg)") {
     QFile outputFile(filename);
-    QSize imageSize(this->map->size().width() + this->chart->size().width(),
-                    this->map->size().height());
-    QRect chartRect(this->map->size().width(), 0, this->chart->size().width(),
-                    this->chart->size().height());
+    QSize imageSize(
+        this->m_quickMap->size().width() + this->m_chartView->size().width(),
+        this->m_quickMap->size().height());
+    QRect chartRect(this->m_quickMap->size().width(), 0,
+                    this->m_chartView->size().width(),
+                    this->m_chartView->size().height());
 
     QImage pixmap(imageSize, QImage::Format_ARGB32);
     pixmap.fill(Qt::white);
@@ -176,8 +190,8 @@ int UserTimeseries::saveImage(QString filename, QString filter) {
     imagePainter.setRenderHints(QPainter::Antialiasing |
                                 QPainter::TextAntialiasing |
                                 QPainter::SmoothPixmapTransform);
-    this->map->render(&imagePainter, QPoint(0, 0));
-    this->chart->render(&imagePainter, chartRect);
+    this->m_quickMap->render(&imagePainter, QPoint(0, 0));
+    this->m_chartView->render(&imagePainter, chartRect);
 
     outputFile.open(QIODevice::WriteOnly);
     pixmap.save(&outputFile, "JPG", 100);
@@ -186,10 +200,10 @@ int UserTimeseries::saveImage(QString filename, QString filter) {
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::getCurrentMarkerID() { return this->markerID; }
+int UserTimeseries::getCurrentMarkerID() { return this->m_markerId; }
 
 int UserTimeseries::setMarkerID() {
-  this->markerID = this->getMarkerIDFromMap();
+  this->m_markerId = this->getMarkerIDFromMap();
   return MetOceanViewer::Error::NOERR;
 }
 
@@ -207,10 +221,10 @@ int UserTimeseries::getMultipleMarkersFromMap() {
   int nMarkers = tempString.toInt();
 
   if (nMarkers > 0) {
-    this->selectedStations.resize(nMarkers);
+    this->m_selectedStations.resize(nMarkers);
     for (i = 1; i <= nMarkers; i++) {
       tempString = dataList.value(i);
-      this->selectedStations[i - 1] = tempString.toInt();
+      this->m_selectedStations[i - 1] = tempString.toInt();
     }
   } else
     return MetOceanViewer::Error::MARKERSELECTION;
@@ -253,51 +267,52 @@ void UserTimeseries::plot() {
   tempString = dataList.value(0);
   int nMarkers = dataList.length();
 
-  long long endDate = this->endDate->dateTime().toMSecsSinceEpoch();
-  long long startDate = this->startDate->dateTime().toMSecsSinceEpoch();
+  long long endDate = this->m_endDateEdit->dateTime().toMSecsSinceEpoch();
+  long long startDate = this->m_startDateEdit->dateTime().toMSecsSinceEpoch();
 
   if (nMarkers > 0) {
-    this->selectedStations.resize(nMarkers);
+    this->m_selectedStations.resize(nMarkers);
     for (i = 0; i < nMarkers; i++) {
       tempString = dataList.value(i);
-      this->selectedStations[i] = tempString.toInt();
+      this->m_selectedStations[i] = tempString.toInt();
     }
   } else {
     emit timeseriesError(tr("No stations selected"));
     return;
   }
 
-  addXList.resize(this->fileDataUnique.length());
-  for (i = 0; i < this->fileDataUnique.length(); i++)
-    addXList[i] = this->table->item(i, 4)->text().toDouble();
+  addXList.resize(this->m_fileDataUnique.length());
+  for (i = 0; i < this->m_fileDataUnique.length(); i++)
+    addXList[i] = this->m_table->item(i, 4)->text().toDouble();
 
-  this->markerID = this->selectedStations[0];
+  this->m_markerId = this->m_selectedStations[0];
   ierr = this->getDataBounds(ymin, ymax, minDate, maxDate, addXList);
 
   QDateTimeAxis *axisX;
   QValueAxis *axisY;
 
-  if (this->chart->m_chart == nullptr) {
-    this->chart->m_chart = new QChart();
-    axisX = new QDateTimeAxis(this->chart->m_chart);
-    axisY = new QValueAxis(this->chart->m_chart);
-    this->chart->m_coord = new QGraphicsSimpleTextItem(this->chart->m_chart);
-    this->chart->m_chart->addAxis(axisX, Qt::AlignBottom);
-    this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
+  if (this->m_chartView->m_chart == nullptr) {
+    this->m_chartView->m_chart = new QChart();
+    axisX = new QDateTimeAxis(this->m_chartView->m_chart);
+    axisY = new QValueAxis(this->m_chartView->m_chart);
+    this->m_chartView->m_coord =
+        new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
+    this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
+    this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
   } else {
-    this->chart->m_chart->removeAllSeries();
-    axisX = static_cast<QDateTimeAxis *>(this->chart->m_chart->axisX());
-    axisY = static_cast<QValueAxis *>(this->chart->m_chart->axisY());
+    this->m_chartView->m_chart->removeAllSeries();
+    axisX = static_cast<QDateTimeAxis *>(this->m_chartView->m_chart->axisX());
+    axisY = static_cast<QValueAxis *>(this->m_chartView->m_chart->axisY());
   }
 
-  this->chart->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->chart->m_chart->legend()->setAlignment(Qt::AlignBottom);
+  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
+  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
 
   axisX->setTickCount(5);
   axisX->setTitleText("Date");
-  if (!this->xAxisCheck->isChecked()) {
-    axisX->setMin(this->startDate->dateTime());
-    axisX->setMax(this->endDate->dateTime());
+  if (!this->m_checkXaxis->isChecked()) {
+    axisX->setMin(this->m_startDateEdit->dateTime());
+    axisX->setMax(this->m_endDateEdit->dateTime());
   } else {
     minDate = minDate.addSecs(-offset / 1000);
     maxDate = maxDate.addSecs(-offset / 1000);
@@ -308,10 +323,10 @@ void UserTimeseries::plot() {
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
 
   axisY->setTickCount(5);
-  axisY->setTitleText(this->yLabelEdit->text());
-  if (!this->yAxisCheck->isChecked()) {
-    axisY->setMin(this->yMinEdit->value());
-    axisY->setMax(this->yMaxEdit->value());
+  axisY->setTitleText(this->m_yLabelEdit->text());
+  if (!this->m_checkYaxis->isChecked()) {
+    axisY->setMin(this->m_yMinEdit->value());
+    axisY->setMax(this->m_yMaxEdit->value());
   } else {
     axisY->setMin(ymin);
     axisY->setMax(ymax);
@@ -327,98 +342,101 @@ void UserTimeseries::plot() {
 
   seriesCounter = 0;
 
-  this->chart->clear();
+  this->m_chartView->clear();
 
-  for (i = 0; i < this->fileDataUnique.length(); i++) {
-    if (this->selectedStations.length() == 1) {
+  for (i = 0; i < this->m_fileDataUnique.length(); i++) {
+    if (this->m_selectedStations.length() == 1) {
       seriesCounter = seriesCounter + 1;
       series.resize(seriesCounter);
-      series[seriesCounter - 1] = new QLineSeries(this->chart->m_chart);
+      series[seriesCounter - 1] = new QLineSeries(this->m_chartView->m_chart);
       series[seriesCounter - 1]->setName(
-          this->table->item(seriesCounter - 1, 1)->text());
+          this->m_table->item(seriesCounter - 1, 1)->text());
       seriesColor.setNamedColor(
-          this->table->item(seriesCounter - 1, 2)->text());
+          this->m_table->item(seriesCounter - 1, 2)->text());
       series[seriesCounter - 1]->setPen(
           QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
       unitConversion =
-          this->table->item(seriesCounter - 1, 3)->text().toDouble();
+          this->m_table->item(seriesCounter - 1, 3)->text().toDouble();
       addX =
-          this->table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6;
-      addY = this->table->item(seriesCounter - 1, 5)->text().toDouble();
+          this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6;
+      addY = this->m_table->item(seriesCounter - 1, 5)->text().toDouble();
       for (j = 0;
-           j < this->fileDataUnique[i]->station[this->markerID].numSnaps();
+           j < this->m_fileDataUnique[i]->station[this->m_markerId].numSnaps();
            j++) {
-        if (this->fileDataUnique[i]->station[this->markerID].data(j) !=
+        if (this->m_fileDataUnique[i]->station[this->m_markerId].data(j) !=
                 MetOceanViewer::NULL_TS &&
-            this->fileDataUnique[i]->station[this->markerID].date(j) >=
+            this->m_fileDataUnique[i]->station[this->m_markerId].date(j) >=
                 startDate &&
-            this->fileDataUnique[i]->station[this->markerID].date(j) <=
+            this->m_fileDataUnique[i]->station[this->m_markerId].date(j) <=
                 endDate) {
-          TempDate = this->fileDataUnique[i]->station[this->markerID].date(j) +
-                     addX - offset;
-          TempValue = this->fileDataUnique[i]->station[this->markerID].data(j) *
-                          unitConversion +
-                      addY;
+          TempDate =
+              this->m_fileDataUnique[i]->station[this->m_markerId].date(j) +
+              addX - offset;
+          TempValue =
+              this->m_fileDataUnique[i]->station[this->m_markerId].data(j) *
+                  unitConversion +
+              addY;
           series[seriesCounter - 1]->append(TempDate, TempValue);
         }
       }
 
       if (series[seriesCounter - 1]->points().size() > 0) {
-        this->chart->m_chart->addSeries(series[seriesCounter - 1]);
-        this->chart->m_chart->legend()
+        this->m_chartView->m_chart->addSeries(series[seriesCounter - 1]);
+        this->m_chartView->m_chart->legend()
             ->markers()
             .at(seriesCounter - 1)
             ->setFont(QFont("Helvetica", 10, QFont::Bold));
         series[seriesCounter - 1]->attachAxis(axisX);
         series[seriesCounter - 1]->attachAxis(axisY);
-        this->chart->addSeries(series[seriesCounter - 1],
-                               series[seriesCounter - 1]->name());
+        this->m_chartView->addSeries(series[seriesCounter - 1],
+                                     series[seriesCounter - 1]->name());
       }
     } else {
       //...Plot multiple stations. We use random colors and append the station
       // number
-      for (k = 0; k < this->selectedStations.length(); k++) {
-        if (!this->fileDataUnique[i]
-                 ->station[this->selectedStations[k]]
+      for (k = 0; k < this->m_selectedStations.length(); k++) {
+        if (!this->m_fileDataUnique[i]
+                 ->station[this->m_selectedStations[k]]
                  .isNull()) {
           seriesCounter = seriesCounter + 1;
           colorCounter = colorCounter + 1;
 
           //...Loop the colors
-          if (colorCounter >= this->randomColorList.length()) colorCounter = 0;
+          if (colorCounter >= this->m_randomColorList.length())
+            colorCounter = 0;
 
           series.resize(seriesCounter);
-          series[seriesCounter - 1] = new QLineSeries(this->chart);
+          series[seriesCounter - 1] = new QLineSeries(this->m_chartView);
           series[seriesCounter - 1]->setName(
-              this->fileDataUnique[i]
-                  ->station[this->selectedStations[k]]
+              this->m_fileDataUnique[i]
+                  ->station[this->m_selectedStations[k]]
                   .name() +
-              ": " + this->table->item(i, 1)->text());
-          seriesColor = this->randomColorList[colorCounter];
+              ": " + this->m_table->item(i, 1)->text());
+          seriesColor = this->m_randomColorList[colorCounter];
           series[seriesCounter - 1]->setPen(
               QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-          unitConversion = this->table->item(i, 3)->text().toDouble();
-          addX = this->table->item(i, 4)->text().toDouble() * 3.6e+6;
-          addY = this->table->item(i, 5)->text().toDouble();
-          for (j = 0; j < this->fileDataUnique[i]
-                              ->station[this->selectedStations[k]]
+          unitConversion = this->m_table->item(i, 3)->text().toDouble();
+          addX = this->m_table->item(i, 4)->text().toDouble() * 3.6e+6;
+          addY = this->m_table->item(i, 5)->text().toDouble();
+          for (j = 0; j < this->m_fileDataUnique[i]
+                              ->station[this->m_selectedStations[k]]
                               .numSnaps();
                j++) {
-            if (this->fileDataUnique[i]
-                        ->station[this->selectedStations[k]]
+            if (this->m_fileDataUnique[i]
+                        ->station[this->m_selectedStations[k]]
                         .data(j) != MetOceanViewer::NULL_TS &&
-                this->fileDataUnique[i]
-                        ->station[this->selectedStations[k]]
+                this->m_fileDataUnique[i]
+                        ->station[this->m_selectedStations[k]]
                         .date(j) >= startDate &&
-                this->fileDataUnique[i]
-                        ->station[this->selectedStations[k]]
+                this->m_fileDataUnique[i]
+                        ->station[this->m_selectedStations[k]]
                         .date(j) <= endDate) {
-              TempDate = this->fileDataUnique[i]
-                             ->station[this->selectedStations[k]]
+              TempDate = this->m_fileDataUnique[i]
+                             ->station[this->m_selectedStations[k]]
                              .date(j) +
                          addX - offset;
-              TempValue = this->fileDataUnique[i]
-                                  ->station[this->selectedStations[k]]
+              TempValue = this->m_fileDataUnique[i]
+                                  ->station[this->m_selectedStations[k]]
                                   .data(j) *
                               unitConversion +
                           addY;
@@ -427,15 +445,15 @@ void UserTimeseries::plot() {
           }
 
           if (series[seriesCounter - 1]->points().size() > 0) {
-            this->chart->m_chart->addSeries(series[seriesCounter - 1]);
-            this->chart->m_chart->legend()
+            this->m_chartView->m_chart->addSeries(series[seriesCounter - 1]);
+            this->m_chartView->m_chart->legend()
                 ->markers()
                 .at(seriesCounter - 1)
                 ->setFont(QFont("Helvetica", 10, QFont::Bold));
             series[seriesCounter - 1]->attachAxis(axisX);
             series[seriesCounter - 1]->attachAxis(axisY);
-            this->chart->addSeries(series[seriesCounter - 1],
-                                   series[seriesCounter - 1]->name());
+            this->m_chartView->addSeries(series[seriesCounter - 1],
+                                         series[seriesCounter - 1]->name());
           }
         }
       }
@@ -451,35 +469,37 @@ void UserTimeseries::plot() {
   axisY->setShadesVisible(true);
   axisY->applyNiceNumbers();
 
-  if (this->selectedStations.length() == 1)
-    this->chart->m_chart->setTitle(
-        this->plotTitle->text() + ": " +
-        this->fileDataUnique[0]->station[this->markerID].name());
+  if (this->m_selectedStations.length() == 1)
+    this->m_chartView->m_chart->setTitle(
+        this->m_plotTitle->text() + ": " +
+        this->m_fileDataUnique[0]->station[this->m_markerId].name());
   else
-    this->chart->m_chart->setTitle(this->plotTitle->text());
+    this->m_chartView->m_chart->setTitle(this->m_plotTitle->text());
 
-  this->chart->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->chart->setRenderHint(QPainter::Antialiasing);
-  this->chart->setChart(this->chart->m_chart);
+  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+  this->m_chartView->setRenderHint(QPainter::Antialiasing);
+  this->m_chartView->setChart(this->m_chartView->m_chart);
 
-  foreach (QLegendMarker *marker, this->chart->m_chart->legend()->markers()) {
+  foreach (QLegendMarker *marker,
+           this->m_chartView->m_chart->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
-    disconnect(marker, SIGNAL(clicked()), this->chart,
+    disconnect(marker, SIGNAL(clicked()), this->m_chartView,
                SLOT(handleLegendMarkerClicked()));
-    connect(marker, SIGNAL(clicked()), this->chart,
+    connect(marker, SIGNAL(clicked()), this->m_chartView,
             SLOT(handleLegendMarkerClicked()));
   }
 
-  this->chart->m_style = 1;
-  this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
-                               this->chart->size().height() - 20);
-  this->chart->initializeAxisLimits();
-  this->chart->setStatusBar(this->statusBar);
+  this->m_chartView->m_style = 1;
+  this->m_chartView->m_coord->setPos(
+      this->m_chartView->size().width() / 2 - 100,
+      this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeAxisLimits();
+  this->m_chartView->setStatusBar(this->m_statusBar);
 
   return;
 }
 
-QString UserTimeseries::getErrorString() { return this->errorString; }
+QString UserTimeseries::getErrorString() { return this->m_errorString; }
 
 int UserTimeseries::processData() {
   int ierr, i, j, nRow, InputFileType, dflowLayer;
@@ -488,67 +508,67 @@ int UserTimeseries::processData() {
   QDateTime ColdStart;
   AdcircStationOutput *adcircData;
 
-  nRow = this->table->rowCount();
+  nRow = this->m_table->rowCount();
 
   j = 0;
 
   for (i = 0; i < nRow; i++) {
-    TempFile = this->table->item(i, 6)->text();
+    TempFile = this->m_table->item(i, 6)->text();
     InputFileType = Filetypes::getIntegerFiletype(TempFile);
-    this->fileData.resize(j + 1);
-    this->epsg.resize(j + 1);
-    this->epsg[j] = this->table->item(i, 11)->text().toInt();
+    this->m_allFileData.resize(j + 1);
+    this->m_epsg.resize(j + 1);
+    this->m_epsg[j] = this->m_table->item(i, 11)->text().toInt();
 
     if (InputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
-      this->fileData[j] = new Imeds(this);
-      ierr = this->fileData[j]->read(TempFile);
+      this->m_allFileData[j] = new Imeds(this);
+      ierr = this->m_allFileData[j]->read(TempFile);
       if (ierr != MetOceanViewer::Error::NOERR) {
-        this->errorString = tr("Error reading file: ") + TempFile;
+        this->m_errorString = tr("Error reading file: ") + TempFile;
         return MetOceanViewer::Error::IMEDS_FILEREADERROR;
       }
-      this->fileData[j]->success = true;
+      this->m_allFileData[j]->success = true;
 
     } else if (InputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
-      ColdStart = QDateTime::fromString(this->table->item(i, 7)->text(),
+      ColdStart = QDateTime::fromString(this->m_table->item(i, 7)->text(),
                                         "yyyy-MM-dd hh:mm:ss");
       adcircData = new AdcircStationOutput(this);
       ierr = adcircData->read(TempFile, ColdStart);
       if (ierr != MetOceanViewer::Error::NOERR) {
-        this->errorString = tr("Error reading file: ") + TempFile;
+        this->m_errorString = tr("Error reading file: ") + TempFile;
         return MetOceanViewer::Error::ADCIRC_NETCDFREADERROR;
       }
 
-      this->fileData[j] = adcircData->toIMEDS();
-      if (!this->fileData[j]->success)
+      this->m_allFileData[j] = adcircData->toIMEDS();
+      if (!this->m_allFileData[j]->success)
         return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
-      this->fileData[j]->success = true;
+      this->m_allFileData[j]->success = true;
 
       delete adcircData;
 
     } else if (InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
-      ColdStart = QDateTime::fromString(this->table->item(i, 7)->text(),
+      ColdStart = QDateTime::fromString(this->m_table->item(i, 7)->text(),
                                         "yyyy-MM-dd hh:mm:ss");
-      TempStationFile = this->table->item(i, 10)->text();
+      TempStationFile = this->m_table->item(i, 10)->text();
       adcircData = new AdcircStationOutput(this);
       ierr = adcircData->read(TempFile, TempStationFile, ColdStart);
       if (ierr != MetOceanViewer::Error::NOERR) {
-        this->errorString = tr("Error reading file: ") + TempFile;
+        this->m_errorString = tr("Error reading file: ") + TempFile;
         return MetOceanViewer::Error::ADCIRC_ASCIIREADERROR;
       }
-      this->fileData[j] = adcircData->toIMEDS();
+      this->m_allFileData[j] = adcircData->toIMEDS();
       delete adcircData;
 
-      if (!this->fileData[j]->success)
+      if (!this->m_allFileData[j]->success)
         return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
 
     } else if (InputFileType == MetOceanViewer::FileType::NETCDF_DFLOW) {
-      this->fileData[j] = new Imeds(this);
+      this->m_allFileData[j] = new Imeds(this);
       Dflow *dflow = new Dflow(TempFile, this);
-      dflowVar = this->table->item(i, 12)->text();
-      dflowLayer = this->table->item(i, 13)->text().toInt();
-      ierr = dflow->getVariable(dflowVar, dflowLayer, this->fileData[j]);
+      dflowVar = this->m_table->item(i, 12)->text();
+      dflowLayer = this->m_table->item(i, 13)->text().toInt();
+      ierr = dflow->getVariable(dflowVar, dflowLayer, this->m_allFileData[j]);
       if (ierr != MetOceanViewer::Error::NOERR) {
-        this->errorString =
+        this->m_errorString =
             tr("Error processing DFlow: ") + dflow->error->toString();
         return MetOceanViewer::Error::DFLOW_FILEREADERROR;
       }
@@ -556,78 +576,78 @@ int UserTimeseries::processData() {
       delete dflow;
 
     } else if (InputFileType == MetOceanViewer::FileType::NETCDF_GENERIC) {
-      this->fileData[j] = new Imeds(this);
+      this->m_allFileData[j] = new Imeds(this);
       NetcdfTimeseries *genericNetcdf = new NetcdfTimeseries(this);
       genericNetcdf->setFilename(TempFile);
       ierr = genericNetcdf->read();
       if (ierr != 0) {
-        this->errorString = "Error processing generic netcdf file.";
+        this->m_errorString = "Error processing generic netcdf file.";
         return MetOceanViewer::Error::GENERICNETCDFERROR;
       }
-      ierr = genericNetcdf->toImeds(this->fileData[j]);
+      ierr = genericNetcdf->toImeds(this->m_allFileData[j]);
 
       delete genericNetcdf;
 
     } else {
-      this->errorString = tr("Invalid file format");
+      this->m_errorString = tr("Invalid file format");
       return MetOceanViewer::Error::INVALIDFILEFORMAT;
     }
 
-    if (this->fileData[j]->success)
+    if (this->m_allFileData[j]->success)
       j = j + 1;
     else
       return MetOceanViewer::Error::GENERICFILEREADERROR;
   }
 
   //...Project the data to WGS84
-  ierr = this->projectStations(this->epsg, this->fileData);
+  ierr = this->projectStations(this->m_epsg, this->m_allFileData);
   if (ierr != 0) {
-    this->errorString = tr("Error projecting the station locations");
+    this->m_errorString = tr("Error projecting the station locations");
     return MetOceanViewer::Error::PROJECTSTATIONS;
   }
 
   //...Build a unique set of timeseries data
-  if (this->fileData.length() == 1) {
-    for (i = 0; i < this->fileData[0]->nstations; i++) {
-      this->StationXLocs.push_back(
-          this->fileData[0]->station[i].coordinate()->longitude());
-      this->StationYLocs.push_back(
-          this->fileData[0]->station[i].coordinate()->latitude());
-      this->fileDataUnique = this->fileData;
+  if (this->m_allFileData.length() == 1) {
+    for (i = 0; i < this->m_allFileData[0]->nstations; i++) {
+      this->m_xLocations.push_back(
+          this->m_allFileData[0]->station[i].coordinate()->longitude());
+      this->m_yLocations.push_back(
+          this->m_allFileData[0]->station[i].coordinate()->latitude());
+      this->m_fileDataUnique = this->m_allFileData;
     }
   } else {
-    ierr = this->getUniqueStationList(this->fileData, this->StationXLocs,
-                                      this->StationYLocs);
+    ierr = this->getUniqueStationList(this->m_allFileData, this->m_xLocations,
+                                      this->m_yLocations);
     if (ierr != MetOceanViewer::Error::NOERR) {
-      this->errorString = tr("Error building the station list");
+      this->m_errorString = tr("Error building the station list");
       return MetOceanViewer::Error::BUILDSTATIONLIST;
     }
   }
-  ierr = this->buildRevisedIMEDS(this->fileData, this->StationXLocs,
-                                 this->StationYLocs, this->fileDataUnique);
+  ierr = this->buildRevisedIMEDS(this->m_allFileData, this->m_xLocations,
+                                 this->m_yLocations, this->m_fileDataUnique);
   if (ierr != 0) {
-    this->errorString = tr("Error building the unique dataset");
+    this->m_errorString = tr("Error building the unique dataset");
     return MetOceanViewer::Error::BUILDREVISEDIMEDS;
   }
 
   //...Delete the data we're done with
-  for (i = 0; i < this->fileData.size(); i++) {
-    delete this->fileData[i];
+  for (i = 0; i < this->m_allFileData.size(); i++) {
+    delete this->m_allFileData[i];
   }
 
   //...Add the markers to the map
-  for (i = 0; i < this->fileDataUnique[0]->nstations; i++) {
+  for (i = 0; i < this->m_fileDataUnique[0]->nstations; i++) {
     x = -1.0;
     y = -1.0;
     StationName = "NONAME";
 
     // Check that we aren't sending a null location to
     // the backend
-    for (j = 0; j < this->fileDataUnique.length(); j++) {
-      if (!this->fileDataUnique[j]->station[i].isNull()) {
-        StationName = this->fileDataUnique[j]->station[i].name();
-        x = this->fileDataUnique[j]->station[i].coordinate()->longitude();
-        y = this->fileDataUnique[j]->station[i].coordinate()->latitude();
+    for (j = 0; j < this->m_fileDataUnique.length(); j++) {
+      if (!this->m_fileDataUnique[j]->station[i].isNull()) {
+        StationName = this->m_fileDataUnique[j]->station[i].name();
+        x = this->m_fileDataUnique[j]->station[i].coordinate()->longitude();
+        y = this->m_fileDataUnique[j]->station[i].coordinate()->latitude();
         break;
       }
     }

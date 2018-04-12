@@ -77,29 +77,29 @@ class UserTimeseries : public QObject {
   int projectStations(QVector<int> epsg, QVector<Imeds *> &projectedStations);
 
   //...Private Variables
-  int markerID;
-  QString errorString;
-  QVector<Imeds *> fileData, fileDataUnique;
-  QVector<double> StationXLocs;
-  QVector<double> StationYLocs;
-  QVector<int> selectedStations;
-  QVector<QColor> randomColorList;
-  QVector<int> epsg;
+  int m_markerId;
+  QString m_errorString;
+  QVector<Imeds *> m_allFileData, m_fileDataUnique;
+  QVector<double> m_xLocations;
+  QVector<double> m_yLocations;
+  QVector<int> m_selectedStations;
+  QVector<QColor> m_randomColorList;
+  QVector<int> m_epsg;
 
   //...Widgets we'll need
-  QTableWidget *table;
-  QCheckBox *xAxisCheck;
-  QCheckBox *yAxisCheck;
-  QDateEdit *startDate;
-  QDateEdit *endDate;
-  QDoubleSpinBox *yMinEdit;
-  QDoubleSpinBox *yMaxEdit;
-  QLineEdit *plotTitle;
-  QLineEdit *xLabelEdit;
-  QLineEdit *yLabelEdit;
-  QQuickWidget *map;
-  ChartView *chart;
-  QStatusBar *statusBar;
+  QTableWidget *m_table;
+  QCheckBox *m_checkXaxis;
+  QCheckBox *m_checkYaxis;
+  QDateEdit *m_startDateEdit;
+  QDateEdit *m_endDateEdit;
+  QDoubleSpinBox *m_yMinEdit;
+  QDoubleSpinBox *m_yMaxEdit;
+  QLineEdit *m_plotTitle;
+  QLineEdit *m_xLabelEdit;
+  QLineEdit *m_yLabelEdit;
+  QQuickWidget *m_quickMap;
+  ChartView *m_chartView;
+  QStatusBar *m_statusBar;
   StationModel *m_stationmodel;
   QString *m_currentStation;
 };
