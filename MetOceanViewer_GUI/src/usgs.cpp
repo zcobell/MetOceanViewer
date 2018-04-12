@@ -36,8 +36,8 @@ Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
   this->m_productIndex = 0;
   this->m_productName = "none";
   this->m_usgsDataMethod = 0;
-  this->m_currentStation.coordinate().setLatitude(0.0);
-  this->m_currentStation.coordinate().setLongitude(0.0);
+  this->m_currentStation.setLatitude(0.0);
+  this->m_currentStation.setLongitude(0.0);
   this->m_stationModel = stationModel;
   this->m_selectedStation = inSelectedStation;
 

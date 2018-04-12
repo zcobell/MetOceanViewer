@@ -184,29 +184,46 @@ void MainWindow::setLoadSessionFile(bool toggle, QString sessionFile) {
 
 void MainWindow::changeNoaaMarker(QString markerId) {
   this->noaaSelectedStation = markerId;
+  return;
 }
 
 void MainWindow::changeUsgsMarker(QString markerId) {
   this->usgsSelectedStation = markerId;
+  return;
 }
 
 void MainWindow::changeXtideMarker(QString markerId) {
   this->xtideSelectedStation = markerId;
+  return;
+}
+
+void MainWindow::changeUserMarker(QString markerId) {
+  this->userSelectedStations = markerId;
+  return;
 }
 
 void MainWindow::changeNoaaMaptype() {
   ui->quick_noaaMap->rootContext()->setContextProperty(
       "mapType", ui->Combo_NOAAPanTo->currentIndex());
+  return;
 }
 
 void MainWindow::changeUsgsMaptype() {
   ui->quick_usgsMap->rootContext()->setContextProperty(
       "mapType", ui->combo_usgs_panto->currentIndex());
+  return;
 }
 
 void MainWindow::changeXtideMaptype() {
   ui->quick_xtideMap->rootContext()->setContextProperty(
       "mapType", ui->combo_xtide_panto->currentIndex());
+  return;
+}
+
+void MainWindow::changeUserMaptype() {
+  ui->quick_timeseriesMap->rootContext()->setContextProperty(
+      "mapType", ui->combo_user_maptype->currentIndex());
+  return;
 }
 
 void MainWindow::setupMetOceanViewerUI() {
@@ -276,8 +293,8 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->date_xtide_end->setDateTime(QDateTime::currentDateTime());
   this->xtideDisplayValues = false;
   this->xtideStationModel = new StationModel(this);
-  ui->quick_xtideMap->rootContext()->setContextProperty("stationModel",
-                                                       this->xtideStationModel);
+  ui->quick_xtideMap->rootContext()->setContextProperty(
+      "stationModel", this->xtideStationModel);
   Generic::setEsriMapTypes(ui->combo_xtide_panto);
   ui->combo_xtide_panto->setCurrentIndex(0);
   this->changeXtideMaptype();
@@ -289,9 +306,15 @@ void MainWindow::setupMetOceanViewerUI() {
 
   //-------------------------------------------//
   // Set up the time series tab for the user
-
-  // Load the selected web page file from the resource
-  ui->timeseries_map->load(QUrl("qrc:/rsc/html/timeseries_maps.html"));
+  this->userDataStationModel = new StationModel(this);
+  ui->quick_timeseriesMap->rootContext()->setContextProperty(
+      "stationModel", this->userDataStationModel);
+  Generic::setEsriMapTypes(ui->combo_user_maptype);
+  this->changeUserMaptype();
+  ui->quick_timeseriesMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
+  QObject *userTimeseriesItem = ui->quick_timeseriesMap->rootObject();
+  QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
+                   SLOT(changeUserMarker(QString)));
 
   // Set the minimum and maximum times that can be selected
   ui->date_TimeseriesStartDate->setDateTime(
@@ -367,9 +390,6 @@ void MainWindow::setupMetOceanViewerUI() {
   this->PreviousDirectory = this->PreviousDirectory + "/Desktop";
 #endif
 
-  ui->map_hwm->setContextMenuPolicy(Qt::CustomContextMenu);
-  ui->timeseries_map->setContextMenuPolicy(Qt::CustomContextMenu);
-
   Keyhandler *key = new Keyhandler(this);
   this->centralWidget()->installEventFilter(key);
   connect(key, SIGNAL(enterKeyPressed()), this, SLOT(handleEnterKey()));
@@ -424,4 +444,9 @@ void MainWindow::setupMetOceanViewerUI() {
 void MainWindow::on_combo_xtide_panto_currentIndexChanged(int index) {
   Q_UNUSED(index);
   this->changeXtideMaptype();
+}
+
+void MainWindow::on_combo_user_maptype_currentIndexChanged(int index) {
+  Q_UNUSED(index);
+  this->changeUserMaptype();
 }

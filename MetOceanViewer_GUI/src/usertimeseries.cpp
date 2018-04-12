@@ -33,8 +33,9 @@ UserTimeseries::UserTimeseries(
     QTableWidget *inTable, QCheckBox *inXAxisCheck, QCheckBox *inYAxisCheck,
     QDateEdit *inStartDate, QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
     QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle, QLineEdit *inXLabelEdit,
-    QLineEdit *inYLabelEdit, QWebEngineView *inMap, ChartView *inChart,
-    QStatusBar *inStatusBar, QVector<QColor> inRandomColorList, QObject *parent)
+    QLineEdit *inYLabelEdit, QQuickWidget *inMap, ChartView *inChart,
+    QStatusBar *inStatusBar, QVector<QColor> inRandomColorList,
+    StationModel *inStationModel, QString *inSelectedStation, QObject *parent)
     : QObject(parent) {
   this->table = inTable;
   this->xAxisCheck = inXAxisCheck;
@@ -52,6 +53,8 @@ UserTimeseries::UserTimeseries(
   this->randomColorList = inRandomColorList;
   this->markerID = 0;
   this->chart->m_chart = nullptr;
+  this->m_stationmodel = inStationModel;
+  this->m_currentStation = inSelectedStation;
 }
 
 UserTimeseries::~UserTimeseries() {}
@@ -192,20 +195,10 @@ int UserTimeseries::setMarkerID() {
 
 int UserTimeseries::getClickedMarkerID() { return this->getMarkerIDFromMap(); }
 
-int UserTimeseries::getMarkerIDFromMap() {
-  QVariant eval = QVariant();
-  this->map->page()->runJavaScript("getMarker()",
-                                   [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull()) Generic::delayM(5);
-  return eval.toInt();
-}
+int UserTimeseries::getMarkerIDFromMap() { return 0; }
 
 int UserTimeseries::getMultipleMarkersFromMap() {
   QVariant eval = QVariant();
-  this->map->page()->runJavaScript("getMarkers()",
-                                   [&eval](const QVariant &v) { eval = v; });
-  while (eval.isNull()) Generic::delayM(5);
-
   int i;
   QString tempString;
   QString data = eval.toString();
@@ -226,16 +219,16 @@ int UserTimeseries::getMultipleMarkersFromMap() {
 }
 
 int UserTimeseries::getAsyncMultipleMarkersFromMap() {
-  JavascriptAsyncReturn *javaReturn = new JavascriptAsyncReturn(this);
-  connect(javaReturn, SIGNAL(valueChanged(QString)), this,
-          SLOT(javascriptDataReturned(QString)));
-  this->map->page()->runJavaScript(
-      "getMarkers()",
-      [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
+  //  JavascriptAsyncReturn *javaReturn = new JavascriptAsyncReturn(this);
+  //  connect(javaReturn, SIGNAL(valueChanged(QString)), this,
+  //          SLOT(javascriptDataReturned(QString)));
+  //  this->map->page()->runJavaScript(
+  //      "getMarkers()",
+  //      [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
   return 0;
 }
 
-void UserTimeseries::javascriptDataReturned(QString data) {
+void UserTimeseries::plot() {
   int i, j, k, ierr, seriesCounter, colorCounter;
   qint64 TempDate;
   qreal TempValue;
@@ -256,18 +249,18 @@ void UserTimeseries::javascriptDataReturned(QString data) {
   qint64 offset = now.offsetFromUtc() * qint64(1000);
 
   QString tempString;
-  QStringList dataList = data.split(",");
+  QStringList dataList = this->m_currentStation->split(",");
   tempString = dataList.value(0);
-  int nMarkers = tempString.toInt();
+  int nMarkers = dataList.length();
 
   long long endDate = this->endDate->dateTime().toMSecsSinceEpoch();
   long long startDate = this->startDate->dateTime().toMSecsSinceEpoch();
 
   if (nMarkers > 0) {
     this->selectedStations.resize(nMarkers);
-    for (i = 1; i <= nMarkers; i++) {
+    for (i = 0; i < nMarkers; i++) {
       tempString = dataList.value(i);
-      this->selectedStations[i - 1] = tempString.toInt();
+      this->selectedStations[i] = tempString.toInt();
     }
   } else {
     emit timeseriesError(tr("No stations selected"));
@@ -281,14 +274,25 @@ void UserTimeseries::javascriptDataReturned(QString data) {
   this->markerID = this->selectedStations[0];
   ierr = this->getDataBounds(ymin, ymax, minDate, maxDate, addXList);
 
-  if (this->chart->m_chart != nullptr) delete this->chart->m_chart;
+  QDateTimeAxis *axisX;
+  QValueAxis *axisY;
 
-  this->chart->m_chart = new QChart();
+  if (this->chart->m_chart == nullptr) {
+    this->chart->m_chart = new QChart();
+    axisX = new QDateTimeAxis(this->chart->m_chart);
+    axisY = new QValueAxis(this->chart->m_chart);
+    this->chart->m_coord = new QGraphicsSimpleTextItem(this->chart->m_chart);
+    this->chart->m_chart->addAxis(axisX, Qt::AlignBottom);
+    this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
+  } else {
+    this->chart->m_chart->removeAllSeries();
+    axisX = static_cast<QDateTimeAxis *>(this->chart->m_chart->axisX());
+    axisY = static_cast<QValueAxis *>(this->chart->m_chart->axisY());
+  }
 
   this->chart->m_chart->setAnimationOptions(QChart::SeriesAnimations);
   this->chart->m_chart->legend()->setAlignment(Qt::AlignBottom);
 
-  QDateTimeAxis *axisX = new QDateTimeAxis(this->chart);
   axisX->setTickCount(5);
   axisX->setTitleText("Date");
   if (!this->xAxisCheck->isChecked()) {
@@ -302,9 +306,7 @@ void UserTimeseries::javascriptDataReturned(QString data) {
   }
 
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->chart->m_chart->addAxis(axisX, Qt::AlignBottom);
 
-  QValueAxis *axisY = new QValueAxis(this->chart);
   axisY->setTickCount(5);
   axisY->setTitleText(this->yLabelEdit->text());
   if (!this->yAxisCheck->isChecked()) {
@@ -315,7 +317,6 @@ void UserTimeseries::javascriptDataReturned(QString data) {
     axisY->setMax(ymax);
   }
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->chart->m_chart->addAxis(axisY, Qt::AlignLeft);
 
   if (axisX->min().daysTo(axisX->max()) > 90)
     axisX->setFormat("MM/yyyy");
@@ -470,7 +471,6 @@ void UserTimeseries::javascriptDataReturned(QString data) {
   }
 
   this->chart->m_style = 1;
-  this->chart->m_coord = new QGraphicsSimpleTextItem(this->chart->m_chart);
   this->chart->m_coord->setPos(this->chart->size().width() / 2 - 100,
                                this->chart->size().height() - 20);
   this->chart->initializeAxisLimits();
@@ -484,12 +484,11 @@ QString UserTimeseries::getErrorString() { return this->errorString; }
 int UserTimeseries::processData() {
   int ierr, i, j, nRow, InputFileType, dflowLayer;
   double x, y;
-  QString javascript, StationName, TempFile, TempStationFile, dflowVar;
+  QString StationName, TempFile, TempStationFile, dflowVar;
   QDateTime ColdStart;
   AdcircStationOutput *adcircData;
 
   nRow = this->table->rowCount();
-  this->map->reload();
 
   j = 0;
 
@@ -591,9 +590,9 @@ int UserTimeseries::processData() {
   if (this->fileData.length() == 1) {
     for (i = 0; i < this->fileData[0]->nstations; i++) {
       this->StationXLocs.push_back(
-          this->fileData[0]->station[i].coordinate().longitude());
+          this->fileData[0]->station[i].coordinate()->longitude());
       this->StationYLocs.push_back(
-          this->fileData[0]->station[i].coordinate().latitude());
+          this->fileData[0]->station[i].coordinate()->latitude());
       this->fileDataUnique = this->fileData;
     }
   } else {
@@ -616,14 +615,7 @@ int UserTimeseries::processData() {
     delete this->fileData[i];
   }
 
-  //...Check that the page is finished loading
-  QEventLoop loop;
-  connect(this->map->page(), SIGNAL(loadFinished(bool)), &loop, SLOT(quit()));
-  loop.exec();
-
   //...Add the markers to the map
-  this->map->page()->runJavaScript(
-      "allocateData(" + QString::number(this->fileDataUnique.length()) + ")");
   for (i = 0; i < this->fileDataUnique[0]->nstations; i++) {
     x = -1.0;
     y = -1.0;
@@ -634,18 +626,15 @@ int UserTimeseries::processData() {
     for (j = 0; j < this->fileDataUnique.length(); j++) {
       if (!this->fileDataUnique[j]->station[i].isNull()) {
         StationName = this->fileDataUnique[j]->station[i].name();
-        x = this->fileDataUnique[j]->station[i].coordinate().longitude();
-        y = this->fileDataUnique[j]->station[i].coordinate().latitude();
+        x = this->fileDataUnique[j]->station[i].coordinate()->longitude();
+        y = this->fileDataUnique[j]->station[i].coordinate()->latitude();
         break;
       }
     }
 
-    javascript = "SetMarkerLocations(" + QString::number(i) + "," +
-                 QString::number(x) + "," + QString::number(y) + ",'" +
-                 StationName + "')";
-    this->map->page()->runJavaScript(javascript);
+    this->m_stationmodel->addMarker(
+        Station(QGeoCoordinate(y, x), QString::number(i), StationName));
   }
-  this->map->page()->runJavaScript("AddToMap()");
 
   return MetOceanViewer::Error::NOERR;
 }
@@ -675,8 +664,8 @@ int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
       found = false;
       for (k = 0; k < X.length(); k++) {
         d = qSqrt(
-            qPow(Data[i]->station[j].coordinate().longitude() - X[k], 2.0) +
-            qPow(Data[i]->station[j].coordinate().latitude() - Y[k], 2.0));
+            qPow(Data[i]->station[j].coordinate()->longitude() - X[k], 2.0) +
+            qPow(Data[i]->station[j].coordinate()->latitude() - Y[k], 2.0));
         if (d < _DUPLICATE_STATION_TOL) {
           found = true;
           break;
@@ -685,8 +674,8 @@ int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
       if (!found) {
         X.resize(X.length() + 1);
         Y.resize(Y.length() + 1);
-        X[X.length() - 1] = Data[i]->station[j].coordinate().longitude();
-        Y[Y.length() - 1] = Data[i]->station[j].coordinate().latitude();
+        X[X.length() - 1] = Data[i]->station[j].coordinate()->longitude();
+        Y[Y.length() - 1] = Data[i]->station[j].coordinate()->latitude();
       }
     }
   }
@@ -717,8 +706,8 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
     DataOut[i]->header3 = Data[i]->header3;
     DataOut[i]->station.resize(X.length());
     for (j = 0; j < X.length(); j++) {
-      DataOut[i]->station[j].coordinate().setLongitude(X[j]);
-      DataOut[i]->station[j].coordinate().setLatitude(Y[j]);
+      DataOut[i]->station[j].setLongitude(X[j]);
+      DataOut[i]->station[j].setLatitude(Y[j]);
     }
   }
 
@@ -726,11 +715,11 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
     for (j = 0; j < DataOut[i]->nstations; j++) {
       found = false;
       for (k = 0; k < Data[i]->nstations; k++) {
-        d = qSqrt(qPow(Data[i]->station[k].coordinate().longitude() -
-                           DataOut[i]->station[j].coordinate().longitude(),
+        d = qSqrt(qPow(Data[i]->station[k].coordinate()->longitude() -
+                           DataOut[i]->station[j].coordinate()->longitude(),
                        2.0) +
-                  qPow(Data[i]->station[k].coordinate().latitude() -
-                           DataOut[i]->station[j].coordinate().latitude(),
+                  qPow(Data[i]->station[k].coordinate()->latitude() -
+                           DataOut[i]->station[j].coordinate()->latitude(),
                        2.0));
         if (d < _DUPLICATE_STATION_TOL) {
           DataOut[i]->station[j].setNumSnaps(Data[i]->station[k].numSnaps());
@@ -765,12 +754,12 @@ int UserTimeseries::projectStations(QVector<int> epsg,
   for (i = 0; i < projectedStations.length(); i++) {
     if (epsg[i] != 4326) {
       for (j = 0; j < projectedStations[i]->nstations; j++) {
-        x = projectedStations[i]->station[j].coordinate().longitude();
-        y = projectedStations[i]->station[j].coordinate().latitude();
+        x = projectedStations[i]->station[j].coordinate()->longitude();
+        y = projectedStations[i]->station[j].coordinate()->latitude();
         ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
         if (ierr != 0) return MetOceanViewer::Error::PROJECTSTATIONS;
-        projectedStations[i]->station[j].coordinate().setLongitude(x2);
-        projectedStations[i]->station[j].coordinate().setLatitude(y2);
+        projectedStations[i]->station[j].setLongitude(x2);
+        projectedStations[i]->station[j].setLatitude(y2);
       }
     }
   }

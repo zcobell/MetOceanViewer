@@ -438,18 +438,18 @@ int Noaa::plotNOAAStation() {
         this->m_stationModel->findStation(*(this->m_selectedStation));
     this->m_station.id() = this->m_station.id().toInt();
 
-    this->m_currentStationData[0]->station[0].coordinate().setLongitude(
+    this->m_currentStationData[0]->station[0].coordinate()->setLongitude(
         this->m_station.coordinate().longitude());
-    this->m_currentStationData[0]->station[0].coordinate().setLatitude(
+    this->m_currentStationData[0]->station[0].setLatitude(
         this->m_station.coordinate().latitude());
     this->m_currentStationData[0]->station[0].setName(this->m_station.name());
     this->m_currentStationData[0]->station[0].setId("NOAA_" +
                                                     this->m_station.id());
     this->m_currentStationData[0]->station[0].setStationIndex(0);
 
-    this->m_currentStationData[1]->station[0].coordinate().setLongitude(
+    this->m_currentStationData[1]->station[0].coordinate()->setLongitude(
         this->m_station.coordinate().longitude());
-    this->m_currentStationData[1]->station[0].coordinate().setLatitude(
+    this->m_currentStationData[1]->station[0].setLatitude(
         this->m_station.coordinate().latitude());
     this->m_currentStationData[1]->station[0].setName(this->m_station.name());
     this->m_currentStationData[1]->station[0].setId("NOAA_" +

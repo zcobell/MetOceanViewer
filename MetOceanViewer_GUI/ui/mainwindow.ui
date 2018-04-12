@@ -2479,26 +2479,15 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_30">
               <item>
-               <widget class="WebEngineView" name="timeseries_map" native="true">
+               <widget class="QQuickWidget" name="quick_timeseriesMap">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>2</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>2</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="statusTip">
-                 <string>Click markers to select a station, CTRL+Click to select multiple stations</string>
-                </property>
-                <property name="url" stdset="0">
-                 <url>
-                  <string>qrc:/rsc/html/timeseries_maps.html</string>
-                 </url>
+                <property name="resizeMode">
+                 <enum>QQuickWidget::SizeRootObjectToView</enum>
                 </property>
                </widget>
               </item>
@@ -2525,6 +2514,46 @@
             </item>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <item>
+               <widget class="QComboBox" name="combo_user_maptype">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>200</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>22</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Type an address or location to go to that area</string>
+                </property>
+                <property name="statusTip">
+                 <string>Type an address or location to go to that area</string>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>false</bool>
+                </property>
+                <property name="editable">
+                 <bool>false</bool>
+                </property>
+                <property name="currentIndex">
+                 <number>-1</number>
+                </property>
+                <property name="insertPolicy">
+                 <enum>QComboBox::NoInsert</enum>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QPushButton" name="button_plotTimeseriesStation">
                 <property name="text">

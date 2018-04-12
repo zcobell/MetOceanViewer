@@ -32,7 +32,7 @@ ImedsStation::ImedsStation() {
   this->m_isNull = false;
 }
 
-QGeoCoordinate ImedsStation::coordinate() const { return this->m_coordinate; }
+QGeoCoordinate *ImedsStation::coordinate() { return &this->m_coordinate; }
 
 void ImedsStation::setCoordinate(const QGeoCoordinate &coordinate) {
   this->m_coordinate = coordinate;
@@ -111,3 +111,11 @@ void ImedsStation::setNext(const qint64 &date, const double &data) {
 QVector<qint64> ImedsStation::allDate() const { return this->m_date; }
 
 QVector<double> ImedsStation::allData() const { return this->m_data; }
+
+void ImedsStation::setLatitude(const double latitude) {
+  this->m_coordinate.setLatitude(latitude);
+}
+
+void ImedsStation::setLongitude(const double longitude) {
+  this->m_coordinate.setLongitude(longitude);
+}

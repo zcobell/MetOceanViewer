@@ -195,13 +195,19 @@ private slots:
 
   void changeXtideMarker(QString markerId);
 
+  void changeUserMarker(QString markerId);
+
   void changeNoaaMaptype();
 
   void changeUsgsMaptype();
 
   void changeXtideMaptype();
 
+  void changeUserMaptype();
+
   void on_combo_xtide_panto_currentIndexChanged(int index);
+
+  void on_combo_user_maptype_currentIndexChanged(int index);
 
 private:
   Ui::MainWindow *ui;
@@ -254,9 +260,12 @@ private:
 
   StationModel *xtideStationModel;
 
+  StationModel *userDataStationModel;
+
   QString noaaSelectedStation;
   QString usgsSelectedStation;
   QString xtideSelectedStation;
+  QString userSelectedStations;
 
   bool processCommandLine;
   bool timeseriesDisplayValues;

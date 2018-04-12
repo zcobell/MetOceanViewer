@@ -344,8 +344,8 @@ Imeds *AdcircStationOutput::toIMEDS() {
   for (int i = 0; i < outputIMEDS->nstations; ++i) {
     outputIMEDS->station[i].setNumSnaps(this->nSnaps);
     outputIMEDS->station[i].setName(this->station_name[i]);
-    outputIMEDS->station[i].coordinate().setLongitude(this->longitude[i]);
-    outputIMEDS->station[i].coordinate().setLatitude(this->latitude[i]);
+    outputIMEDS->station[i].setLongitude(this->longitude[i]);
+    outputIMEDS->station[i].setLatitude(this->latitude[i]);
     outputIMEDS->station[i].setStationIndex(i);
     for (int j = 0; j < this->nSnaps; ++j) {
       outputIMEDS->station[i].setDate(

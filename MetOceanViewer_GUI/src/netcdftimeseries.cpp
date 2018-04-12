@@ -172,8 +172,8 @@ int NetcdfTimeseries::toImeds(Imeds *imeds) {
     imeds->station[i].setNumSnaps(this->m_time[i].size());
     imeds->station[i].setDate(this->m_time[i]);
     imeds->station[i].setData(this->m_data[i]);
-    imeds->station[i].coordinate().setLatitude(this->m_ycoor[i]);
-    imeds->station[i].coordinate().setLongitude(this->m_xcoor[i]);
+    imeds->station[i].setLatitude(this->m_ycoor[i]);
+    imeds->station[i].coordinate()->setLongitude(this->m_xcoor[i]);
     imeds->station[i].setName(this->m_stationName[i]);
     imeds->station[i].setId(this->m_stationName[i]);
     imeds->station[i].setStationIndex(i);

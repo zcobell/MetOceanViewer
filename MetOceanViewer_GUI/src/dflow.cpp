@@ -244,8 +244,8 @@ int Dflow::getVariable(QString variable, int layer, Imeds *imeds) {
     imeds->station[i].setDate(time);
     imeds->station[i].setData(data[i]);
 
-    imeds->station[i].coordinate().setLatitude(this->_yCoordinates[i]);
-    imeds->station[i].coordinate().setLongitude(this->_xCoordinates[i]);
+    imeds->station[i].setLatitude(this->_yCoordinates[i]);
+    imeds->station[i].setLongitude(this->_xCoordinates[i]);
     imeds->station[i].setStationIndex(i);
     imeds->station[i].setId(QString::number(i));
     imeds->station[i].setName(this->_stationNames[i]);

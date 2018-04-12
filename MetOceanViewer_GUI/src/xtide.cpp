@@ -33,8 +33,8 @@ XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
   this->m_endDateEdit = inEndDateEdit;
   this->m_comboUnits = inUnits;
   this->m_statusBar = inStatusBar;
-  this->m_station.coordinate().setLatitude(0.0);
-  this->m_station.coordinate().setLongitude(0.0);
+  this->m_station.setLatitude(0.0);
+  this->m_station.setLongitude(0.0);
   this->m_station.name() = QString();
   this->m_currentStation = inCurrentStation;
   this->m_stationModel = inStationModel;

@@ -24,29 +24,28 @@
 #include <QDateTime>
 #include <QObject>
 #include <QPrinter>
+#include <QQuickWidget>
 #include <QTableWidget>
 #include <QVector>
-#include <QWebEngineView>
 #include <QtCharts>
-#include <QtWebEngine/QtWebEngine>
+#include "chartview.h"
 #include "generic.h"
 #include "imeds.h"
-#include "chartview.h"
 #include "netcdftimeseries.h"
+#include "stationmodel.h"
 
 class UserTimeseries : public QObject {
   Q_OBJECT
 
  public:
-  explicit UserTimeseries(QTableWidget *inTable, QCheckBox *inXAxisCheck,
-                             QCheckBox *inYAxisCheck, QDateEdit *inStartDate,
-                             QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
-                             QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
-                             QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit,
-                             QWebEngineView *inMap, ChartView *inChart,
-                             QStatusBar *inStatusBar,
-                             QVector<QColor> inRandomColorList,
-                             QObject *parent = nullptr);
+  explicit UserTimeseries(
+      QTableWidget *inTable, QCheckBox *inXAxisCheck, QCheckBox *inYAxisCheck,
+      QDateEdit *inStartDate, QDateEdit *inEndDate, QDoubleSpinBox *inYMinEdit,
+      QDoubleSpinBox *inYMaxEdit, QLineEdit *inPlotTitle,
+      QLineEdit *inXLabelEdit, QLineEdit *inYLabelEdit, QQuickWidget *inMap,
+      ChartView *inChart, QStatusBar *inStatusBar,
+      QVector<QColor> inRandomColorList, StationModel *inStationModel,
+      QString *inSelectedStation, QObject *parent = nullptr);
 
   ~UserTimeseries();
 
@@ -58,9 +57,7 @@ class UserTimeseries : public QObject {
   int getAsyncClickedMarkerID();
   int saveImage(QString filename, QString filter);
   QString getErrorString();
-
- private slots:
-  void javascriptDataReturned(QString);
+  void plot();
 
  signals:
   void timeseriesError(QString);
@@ -77,8 +74,7 @@ class UserTimeseries : public QObject {
                     QDateTime &maxDateOut, QVector<double> timeAddList);
   int getMultipleMarkersFromMap();
   int getAsyncMultipleMarkersFromMap();
-  int projectStations(QVector<int> epsg,
-                      QVector<Imeds *> &projectedStations);
+  int projectStations(QVector<int> epsg, QVector<Imeds *> &projectedStations);
 
   //...Private Variables
   int markerID;
@@ -101,9 +97,11 @@ class UserTimeseries : public QObject {
   QLineEdit *plotTitle;
   QLineEdit *xLabelEdit;
   QLineEdit *yLabelEdit;
-  QWebEngineView *map;
+  QQuickWidget *map;
   ChartView *chart;
   QStatusBar *statusBar;
+  StationModel *m_stationmodel;
+  QString *m_currentStation;
 };
 
 #endif  // USERTIMESERIES_H

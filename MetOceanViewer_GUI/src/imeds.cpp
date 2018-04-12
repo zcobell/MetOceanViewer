@@ -206,9 +206,9 @@ int Imeds::write(QString filename) {
 
   for (int s = 0; s < this->nstations; s++) {
     outputFile.write(QString(this->station[s].id() + "   " +
-                             QString::number(this->station[s].coordinate().latitude()) +
+                             QString::number(this->station[s].coordinate()->latitude()) +
                              "   " +
-                             QString::number(this->station[s].coordinate().longitude()) + "\n")
+                             QString::number(this->station[s].coordinate()->longitude()) + "\n")
                          .toUtf8());
 
     for (int i = 0; i < this->station[s].numSnaps(); i++) {

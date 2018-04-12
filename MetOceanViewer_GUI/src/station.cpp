@@ -35,6 +35,14 @@ Station::~Station() {}
 
 QGeoCoordinate Station::coordinate() const { return this->m_coordinate; }
 
+void Station::setLatitude(const double latitude) {
+  this->m_coordinate.setLatitude(latitude);
+}
+
+void Station::setLongitude(const double longitude) {
+  this->m_coordinate.setLongitude(longitude);
+}
+
 void Station::setCoordinate(const QGeoCoordinate &coordinate) {
   this->m_coordinate = coordinate;
 }

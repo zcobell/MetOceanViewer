@@ -18,11 +18,11 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "mainwindow.h"
-#include "usertimeseries.h"
 #include "addtimeseriesdialog.h"
+#include "mainwindow.h"
 #include "timeseriesoptionsdialog.h"
 #include "ui_mainwindow.h"
+#include "usertimeseries.h"
 
 //-------------------------------------------//
 // Called when the user tries to save the
@@ -35,8 +35,7 @@ void MainWindow::on_button_saveTimeseriesImage_clicked() {
       this, tr("Save as..."), PreviousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL)
-    return;
+  if (TempString == NULL) return;
 
   Generic::splitPath(TempString, Filename, PreviousDirectory);
 
@@ -60,8 +59,7 @@ void MainWindow::on_check_TimeseriesYauto_toggled(bool checked) {
 // data into the timeseries variable
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesAddRow_clicked() {
-  QPointer<AddTimeseriesDialog> AddWindow =
-      new AddTimeseriesDialog(this);
+  QPointer<AddTimeseriesDialog> AddWindow = new AddTimeseriesDialog(this);
   QColor CellColor;
 
   int NumberOfRows = ui->table_TimeseriesData->rowCount();
@@ -74,7 +72,6 @@ void MainWindow::on_button_TimeseriesAddRow_clicked() {
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
   if (WindowStatus == 1) {
-
     NumberOfRows = NumberOfRows + 1;
 
     //...Update the table
@@ -200,8 +197,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked() {
   QString Filename, Filepath, SeriesName, StationFilePath, dflowVariable;
   QDateTime ColdStart;
   Qt::CheckState CheckState;
-  QPointer<AddTimeseriesDialog> AddWindow =
-      new AddTimeseriesDialog(this);
+  QPointer<AddTimeseriesDialog> AddWindow = new AddTimeseriesDialog(this);
 
   if (ui->table_TimeseriesData->rowCount() == 0) {
     QMessageBox::critical(this, tr("ERROR"), tr("Insert a dataset first."));
@@ -314,8 +310,7 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
   // Change the mouse pointer
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  if (!this->thisTimeseries.isNull())
-    delete this->thisTimeseries;
+  if (!this->thisTimeseries.isNull()) delete this->thisTimeseries;
 
   this->thisTimeseries = new UserTimeseries(
       ui->table_TimeseriesData, ui->check_TimeseriesAllData,
@@ -323,8 +318,9 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
       ui->date_TimeseriesEndDate, ui->spin_TimeseriesYmin,
       ui->spin_TimeseriesYmax, ui->text_TimeseriesPlotTitle,
       ui->text_TimeseriesXaxisLabel, ui->text_TimeseriesYaxisLabel,
-      ui->timeseries_map, ui->timeseries_graphics, ui->statusBar,
-      this->randomColors, this);
+      ui->quick_timeseriesMap, ui->timeseries_graphics, ui->statusBar,
+      this->randomColors, this->userDataStationModel,
+      &this->userSelectedStations, this);
   connect(this->thisTimeseries, SIGNAL(timeseriesError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -335,7 +331,6 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
   else {
     ui->MainTabs->setCurrentIndex(1);
     ui->subtab_timeseries->setCurrentIndex(1);
-    ui->timeseries_map->page()->runJavaScript("fitMarkers()");
   }
 
   QApplication::restoreOverrideCursor();
@@ -359,7 +354,7 @@ void MainWindow::on_check_TimeseriesAllData_toggled(bool checked) {
 // to the viewport
 //-------------------------------------------//
 void MainWindow::on_button_fitTimeseries_clicked() {
-  ui->timeseries_map->page()->runJavaScript("fitMarkers()");
+  // ui->timeseries_map->page()->runJavaScript("fitMarkers()");
   return;
 }
 //-------------------------------------------//
@@ -370,7 +365,7 @@ void MainWindow::on_button_fitTimeseries_clicked() {
 // key is pressed
 //-------------------------------------------//
 void MainWindow::on_button_plotTimeseriesStation_clicked() {
-  this->thisTimeseries->plotData();
+  this->thisTimeseries->plot();
   return;
 }
 //-------------------------------------------//
@@ -411,8 +406,7 @@ void MainWindow::on_button_TimeseriesCopyRow_clicked() {
 void MainWindow::on_button_moveRowUp_clicked() {
   int currentRow = ui->table_TimeseriesData->currentRow();
 
-  if (currentRow < 1)
-    return;
+  if (currentRow < 1) return;
 
   //...Grab the rows
   QList<QTableWidgetItem *> row1 = grabTableRow(currentRow);
@@ -435,8 +429,7 @@ void MainWindow::on_button_moveRowUp_clicked() {
 void MainWindow::on_button_moveRowDown_clicked() {
   int currentRow = ui->table_TimeseriesData->currentRow();
 
-  if (currentRow == ui->table_TimeseriesData->rowCount() - 1)
-    return;
+  if (currentRow == ui->table_TimeseriesData->rowCount() - 1) return;
 
   //...Grab the rows
   QList<QTableWidgetItem *> row1 = grabTableRow(currentRow);
@@ -477,8 +470,7 @@ void MainWindow::setTableRow(int row,
 //-------------------------------------------//
 
 void MainWindow::on_button_usertimeseriesResetZoom_clicked() {
-  if (!this->thisTimeseries.isNull())
-    ui->timeseries_graphics->resetZoom();
+  if (!this->thisTimeseries.isNull()) ui->timeseries_graphics->resetZoom();
   return;
 }
 
@@ -494,10 +486,10 @@ void MainWindow::on_pushButton_displayOptions_clicked() {
     this->timeseriesHideInfoWindows = optionsWindow->hideInfoWindows();
     ui->timeseries_graphics->setDisplayValues(this->timeseriesDisplayValues);
 
-    if (this->timeseriesHideInfoWindows)
-      ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('false')");
-    else
-      ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('true')");
+    //    if (this->timeseriesHideInfoWindows)
+    //      ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('false')");
+    //    else
+    //      ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('true')");
   }
 
   return;

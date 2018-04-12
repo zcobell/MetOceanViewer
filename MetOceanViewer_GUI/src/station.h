@@ -31,6 +31,8 @@ class Station {
 
   QGeoCoordinate coordinate() const;
   void setCoordinate(const QGeoCoordinate &coordinate);
+  void setLatitude(const double latitude);
+  void setLongitude(const double longitude);
 
   QString name() const;
   void setName(const QString &name);

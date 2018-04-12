@@ -1019,7 +1019,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>mov_dialog_addtimeseries</receiver>
+   <receiver>AddTimeseriesDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -1035,7 +1035,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>mov_dialog_addtimeseries</receiver>
+   <receiver>AddTimeseriesDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
