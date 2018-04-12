@@ -27,7 +27,7 @@
 //-------------------------------------------//
 // Send the data to the panTo function
 //-------------------------------------------//
-void MainWindow::on_combo_usgs_panto_currentIndexChanged(int index) {
+void MainWindow::on_combo_usgs_maptype_currentIndexChanged(int index) {
   Q_UNUSED(index);
   this->changeUsgsMaptype();
   return;

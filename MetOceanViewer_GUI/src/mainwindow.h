@@ -71,7 +71,7 @@ private slots:
 
   void on_Button_FetchData_clicked();
 
-  void on_Combo_NOAAPanTo_currentIndexChanged(int index);
+  void on_combo_noaa_maptype_currentIndexChanged(int index);
 
   void on_button_noaasavechart_clicked();
 
@@ -125,7 +125,7 @@ private slots:
 
   void on_actionSave_Session_As_triggered();
 
-  void on_combo_usgs_panto_currentIndexChanged(int index);
+  void on_combo_usgs_maptype_currentIndexChanged(int index);
 
   void on_button_usgs_fetch_clicked();
 
@@ -205,7 +205,7 @@ private slots:
 
   void changeUserMaptype();
 
-  void on_combo_xtide_panto_currentIndexChanged(int index);
+  void on_combo_xtide_maptype_currentIndexChanged(int index);
 
   void on_combo_user_maptype_currentIndexChanged(int index);
 

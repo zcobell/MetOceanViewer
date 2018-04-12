@@ -28,7 +28,7 @@
 //-------------------------------------------//
 // Called when the pan to combo box is updated
 //-------------------------------------------//
-void MainWindow::on_Combo_NOAAPanTo_currentIndexChanged(int index) {
+void MainWindow::on_combo_noaa_maptype_currentIndexChanged(int index) {
   Q_UNUSED(index);
   this->changeNoaaMaptype();
   return;

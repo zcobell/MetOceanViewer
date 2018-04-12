@@ -204,19 +204,19 @@ void MainWindow::changeUserMarker(QString markerId) {
 
 void MainWindow::changeNoaaMaptype() {
   ui->quick_noaaMap->rootContext()->setContextProperty(
-      "mapType", ui->Combo_NOAAPanTo->currentIndex());
+      "mapType", ui->combo_noaa_maptype->currentIndex());
   return;
 }
 
 void MainWindow::changeUsgsMaptype() {
   ui->quick_usgsMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_usgs_panto->currentIndex());
+      "mapType", ui->combo_usgs_maptype->currentIndex());
   return;
 }
 
 void MainWindow::changeXtideMaptype() {
   ui->quick_xtideMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_xtide_panto->currentIndex());
+      "mapType", ui->combo_xtide_maptype->currentIndex());
   return;
 }
 
@@ -235,8 +235,8 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
                                                        this->noaaStationModel);
 
-  Generic::setEsriMapTypes(ui->Combo_NOAAPanTo);
-  ui->Combo_NOAAPanTo->setCurrentIndex(0);
+  Generic::setEsriMapTypes(ui->combo_noaa_maptype);
+  ui->combo_noaa_maptype->setCurrentIndex(0);
   this->changeNoaaMaptype();
   ui->quick_noaaMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
   Noaa::addStationsToModel(this->noaaStationModel);
@@ -278,8 +278,8 @@ void MainWindow::setupMetOceanViewerUI() {
   this->usgsStationModel = new StationModel(this);
   ui->quick_usgsMap->rootContext()->setContextProperty("stationModel",
                                                        this->usgsStationModel);
-  Generic::setEsriMapTypes(ui->combo_usgs_panto);
-  ui->combo_usgs_panto->setCurrentIndex(0);
+  Generic::setEsriMapTypes(ui->combo_usgs_maptype);
+  ui->combo_usgs_maptype->setCurrentIndex(0);
   this->changeUsgsMaptype();
   ui->quick_usgsMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
   Usgs::addStationsToModel(this->usgsStationModel);
@@ -295,8 +295,8 @@ void MainWindow::setupMetOceanViewerUI() {
   this->xtideStationModel = new StationModel(this);
   ui->quick_xtideMap->rootContext()->setContextProperty(
       "stationModel", this->xtideStationModel);
-  Generic::setEsriMapTypes(ui->combo_xtide_panto);
-  ui->combo_xtide_panto->setCurrentIndex(0);
+  Generic::setEsriMapTypes(ui->combo_xtide_maptype);
+  ui->combo_xtide_maptype->setCurrentIndex(0);
   this->changeXtideMaptype();
   ui->quick_xtideMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
   XTide::addStationsToModel(this->xtideStationModel);
@@ -441,7 +441,7 @@ void MainWindow::setupMetOceanViewerUI() {
   return;
 }
 
-void MainWindow::on_combo_xtide_panto_currentIndexChanged(int index) {
+void MainWindow::on_combo_xtide_maptype_currentIndexChanged(int index) {
   Q_UNUSED(index);
   this->changeXtideMaptype();
 }

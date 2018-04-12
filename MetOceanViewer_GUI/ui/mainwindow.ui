@@ -767,7 +767,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_15">
                  <item>
-                  <widget class="QComboBox" name="Combo_NOAAPanTo">
+                  <widget class="QComboBox" name="combo_noaa_maptype">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -1345,7 +1345,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout">
                  <item>
-                  <widget class="QComboBox" name="combo_usgs_panto">
+                  <widget class="QComboBox" name="combo_usgs_maptype">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -1678,7 +1678,7 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_40">
                  <item>
-                  <widget class="QComboBox" name="combo_xtide_panto">
+                  <widget class="QComboBox" name="combo_xtide_maptype">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
