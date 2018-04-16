@@ -40,10 +40,14 @@ class Station {
   QString id() const;
   void setId(const QString &id);
 
- private:
+  double value() const;
+  void setValue(double value);
+
+private:
   QGeoCoordinate m_coordinate;
   QString m_name;
   QString m_id;
+  double m_value;
 };
 Q_DECLARE_METATYPE(Station)
 

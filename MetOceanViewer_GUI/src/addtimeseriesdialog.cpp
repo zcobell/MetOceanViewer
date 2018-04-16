@@ -37,7 +37,7 @@ AddTimeseriesDialog::AddTimeseriesDialog(QWidget *parent)
   ui->text_unitconvert->setValidator(new QDoubleValidator(this));
   ui->text_xadjust->setValidator(new QDoubleValidator(this));
   ui->text_yadjust->setValidator(new QDoubleValidator(this));
-  this->PreviousDirectory = ((MainWindow *)parent)->PreviousDirectory;
+  this->PreviousDirectory = ((MainWindow *)parent)->previousDirectory;
   connect(this, SIGNAL(addTimeseriesError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
   this->NumIMEDSFiles = 0;

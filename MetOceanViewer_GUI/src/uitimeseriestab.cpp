@@ -32,12 +32,12 @@ void MainWindow::on_button_saveTimeseriesImage_clicked() {
   QString Filename;
   QString filter = "JPG (*.jpg *.jpeg)";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), PreviousDirectory,
+      this, tr("Save as..."), previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, Filename, PreviousDirectory);
+  Generic::splitPath(TempString, Filename, previousDirectory);
 
   this->thisTimeseries->saveImage(TempString, filter);
 }
@@ -126,7 +126,7 @@ void MainWindow::on_button_TimeseriesAddRow_clicked() {
     ui->table_TimeseriesData->item(NumberOfRows - 1, 1)
         ->setToolTip(AddWindow->InputSeriesName);
 
-    this->PreviousDirectory = AddWindow->PreviousDirectory;
+    this->previousDirectory = AddWindow->PreviousDirectory;
   }
 
   QApplication::restoreOverrideCursor();
@@ -160,7 +160,7 @@ void MainWindow::on_button_TimeseriesDeleteRow_clicked() {
 //-------------------------------------------//
 // Set up the table of time series files
 //-------------------------------------------//
-void MainWindow::SetupTimeseriesTable() {
+void MainWindow::setupTimeseriesTable() {
   QString HeaderString =
       tr("Filename;Series Name;Color;Unit Conversion;"
          "x-shift;y-shift;FullPathToFile;Cold Start;"
@@ -293,7 +293,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked() {
         ->setBackgroundColor(CellColor);
     ui->table_TimeseriesData->item(CurrentRow, 2)->setTextColor(CellColor);
 
-    this->PreviousDirectory = AddWindow->PreviousDirectory;
+    this->previousDirectory = AddWindow->PreviousDirectory;
   }
   AddWindow->close();
   return;

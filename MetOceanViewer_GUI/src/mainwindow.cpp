@@ -35,8 +35,6 @@
 #include "webenginepage.h"
 #include "xtide.h"
 
-//-------------------------------------------//
-// Main routine which will intialize all the tabs
 MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
                        QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -44,17 +42,35 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
   ui->setupUi(this);
   this->processCommandLine = processCommandLine;
   this->commandLineFile = commandLineFile;
-  setupMetOceanViewerUI();
+  this->setupMetOceanViewerUI();
 }
 
-// Main destructor routine
 MainWindow::~MainWindow() { delete ui; }
 
-//-------------------------------------------//
-// Terminates the application when quit button clicked
-//-------------------------------------------//
+void MainWindow::setupMetOceanViewerUI() {
+  this->setupNoaaMap();
+  this->setupUsgsMap();
+  this->setupXTideMap();
+  this->setupUserTimeseriesMap();
+  this->setupTimeseriesTable();
+  this->setupRandomColors();
+  this->installKeyhandlers();
+
+  this->localTimezoneOffset = Generic::getLocalTimzoneOffset();
+  this->localTimeUTC = QDateTime::currentDateTimeUtc();
+
+  this->previousDirectory = QDir::homePath();
+#ifdef Q_OS_WIN
+  this->PreviousDirectory = this->PreviousDirectory + "/Desktop";
+#endif
+
+  this->initializeSessionHandler();
+  this->parseCommandLine();
+
+  return;
+}
+
 void MainWindow::on_actionQuit_triggered() { this->close(); }
-//-------------------------------------------//
 
 void MainWindow::closeEvent(QCloseEvent *event) {
   if (confirmClose())
@@ -71,20 +87,13 @@ bool MainWindow::confirmClose() {
   return (answer == QMessageBox::Yes);
 }
 
-//-------------------------------------------//
-// Bring up the about dialog box
-//-------------------------------------------//
 void MainWindow::on_actionAbout_triggered() {
   QPointer<AboutDialog> aboutWindow = new AboutDialog(this);
   aboutWindow->setModal(false);
   aboutWindow->exec();
   return;
 }
-//-------------------------------------------//
 
-//-------------------------------------------//
-// Bring up the update dialog
-//-------------------------------------------//
 void MainWindow::on_actionCheck_For_Updates_triggered() {
   QPointer<UpdateDialog> updateWindow = new UpdateDialog(this);
   updateWindow->setModal(false);
@@ -92,21 +101,16 @@ void MainWindow::on_actionCheck_For_Updates_triggered() {
   updateWindow->exec();
   return;
 }
-//-------------------------------------------//
 
-//-------------------------------------------//
-// Use of the load session button from the
-// menu is triggered here
-//-------------------------------------------//
 void MainWindow::on_actionLoad_Session_triggered() {
   QString BaseFile;
   QString LoadFile = QFileDialog::getOpenFileName(
-      this, tr("Open Session..."), this->PreviousDirectory,
+      this, tr("Open Session..."), this->previousDirectory,
       tr("MetOcean Viewer Sessions (*.mvs)"));
 
   if (LoadFile == NULL) return;
 
-  Generic::splitPath(LoadFile, BaseFile, this->PreviousDirectory);
+  Generic::splitPath(LoadFile, BaseFile, this->previousDirectory);
   int ierr = this->sessionState->open(LoadFile);
 
   if (ierr == 0) {
@@ -116,12 +120,7 @@ void MainWindow::on_actionLoad_Session_triggered() {
 
   return;
 }
-//-------------------------------------------//
 
-//-------------------------------------------//
-// The save session button from the file menu
-// is triggered here
-//-------------------------------------------//
 void MainWindow::on_actionSave_Session_triggered() {
   if (this->sessionState->getSessionFilename() != QString())
     this->sessionState->save();
@@ -129,15 +128,10 @@ void MainWindow::on_actionSave_Session_triggered() {
     on_actionSave_Session_As_triggered();
   return;
 }
-//-------------------------------------------//
 
-//-------------------------------------------//
-// The save as session button from the file
-// menu is triggered here
-//-------------------------------------------//
 void MainWindow::on_actionSave_Session_As_triggered() {
   QString SaveFile = QFileDialog::getSaveFileName(
-      this, tr("Save Session..."), this->PreviousDirectory,
+      this, tr("Save Session..."), this->previousDirectory,
       tr("MetOcean Viewer Sessions (*.mvs)"));
   if (SaveFile != NULL) {
     this->sessionState->setSessionFilename(SaveFile);
@@ -145,7 +139,6 @@ void MainWindow::on_actionSave_Session_As_triggered() {
   }
   return;
 }
-//-------------------------------------------//
 
 void MainWindow::handleEnterKey() {
   // Events for "ENTER" on the Live Data tabs
@@ -226,15 +219,16 @@ void MainWindow::changeUserMaptype() {
   return;
 }
 
-void MainWindow::setupMetOceanViewerUI() {
-  //-------------------------------------------//
-  // Setting up the NOAA tab for the user
+void MainWindow::setHwmMarkerCategories() {
 
-  // Define which web page we will use from the resource included
+  return;
+}
+
+void MainWindow::setupNoaaMap() {
   this->noaaStationModel = new StationModel(this);
   ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
                                                        this->noaaStationModel);
-
+  ui->quick_noaaMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
   Generic::setEsriMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(0);
   this->changeNoaaMaptype();
@@ -243,12 +237,6 @@ void MainWindow::setupMetOceanViewerUI() {
   QObject *noaaItem = ui->quick_noaaMap->rootObject();
   QObject::connect(noaaItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeNoaaMarker(QString)));
-
-  // Get the local timezone offset
-  this->LocalTimezoneOffset = Generic::getLocalTimzoneOffset();
-  this->LocalTimeUTC = QDateTime::currentDateTimeUtc();
-
-  // For NOAA, set the default date/time to today and today minus 1
   ui->Date_StartTime->setDateTime(QDateTime::currentDateTimeUtc().addDays(-1));
   ui->Date_EndTime->setDateTime(QDateTime::currentDateTimeUtc());
   ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
@@ -257,13 +245,10 @@ void MainWindow::setupMetOceanViewerUI() {
   ui->combo_noaaTimezoneLocation->setCurrentIndex(12);
   MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(
       ui->combo_noaaTimezoneLocation->currentIndex());
+  return;
+}
 
-  //-------------------------------------------//
-  // Set up the USGS tab for the user
-
-  // Set the dates used and the minimum and maximum dates that can be selected
-  // Since data is more sparse from USGS, the default range is the last 7 days
-  // of data
+void MainWindow::setupUsgsMap() {
   ui->Date_usgsStart->setDateTime(QDateTime::currentDateTime().addDays(-7));
   ui->Date_usgsEnd->setDateTime(QDateTime::currentDateTime());
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
@@ -278,6 +263,7 @@ void MainWindow::setupMetOceanViewerUI() {
   this->usgsStationModel = new StationModel(this);
   ui->quick_usgsMap->rootContext()->setContextProperty("stationModel",
                                                        this->usgsStationModel);
+  ui->quick_usgsMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
   Generic::setEsriMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(0);
   this->changeUsgsMaptype();
@@ -286,15 +272,17 @@ void MainWindow::setupMetOceanViewerUI() {
   QObject *usgsItem = ui->quick_usgsMap->rootObject();
   QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeUsgsMarker(QString)));
+  return;
+}
 
-  //-------------------------------------------//
-  // Set up the XTide tab for the user
+void MainWindow::setupXTideMap() {
   ui->date_xtide_start->setDateTime(QDateTime::currentDateTime().addDays(-7));
   ui->date_xtide_end->setDateTime(QDateTime::currentDateTime());
   this->xtideDisplayValues = false;
   this->xtideStationModel = new StationModel(this);
   ui->quick_xtideMap->rootContext()->setContextProperty(
       "stationModel", this->xtideStationModel);
+  ui->quick_xtideMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
   Generic::setEsriMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(0);
   this->changeXtideMaptype();
@@ -303,12 +291,14 @@ void MainWindow::setupMetOceanViewerUI() {
   QObject *xtideItem = ui->quick_xtideMap->rootObject();
   QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeXtideMarker(QString)));
+  return;
+}
 
-  //-------------------------------------------//
-  // Set up the time series tab for the user
+void MainWindow::setupUserTimeseriesMap() {
   this->userDataStationModel = new StationModel(this);
   ui->quick_timeseriesMap->rootContext()->setContextProperty(
       "stationModel", this->userDataStationModel);
+  ui->quick_timeseriesMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
   Generic::setEsriMapTypes(ui->combo_user_maptype);
   this->changeUserMaptype();
   ui->quick_timeseriesMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
@@ -316,7 +306,6 @@ void MainWindow::setupMetOceanViewerUI() {
   QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeUserMarker(QString)));
 
-  // Set the minimum and maximum times that can be selected
   ui->date_TimeseriesStartDate->setDateTime(
       ui->date_TimeseriesStartDate->minimumDateTime());
   ui->date_TimeseriesEndDate->setDateTime(
@@ -324,30 +313,10 @@ void MainWindow::setupMetOceanViewerUI() {
 
   this->timeseriesDisplayValues = false;
   this->timeseriesHideInfoWindows = true;
+  return;
+}
 
-  //...Build a table of random colors
-  this->randomColors.resize(16);
-  this->randomColors[0] = QColor(Qt::GlobalColor::green);
-  this->randomColors[1] = QColor(Qt::GlobalColor::red);
-  this->randomColors[2] = QColor(Qt::GlobalColor::blue);
-  this->randomColors[3] = QColor(Qt::GlobalColor::yellow);
-  this->randomColors[4] = QColor(Qt::GlobalColor::magenta);
-  this->randomColors[5] = QColor(Qt::GlobalColor::cyan);
-  this->randomColors[6] = QColor(Qt::GlobalColor::black);
-  this->randomColors[7] = QColor(Qt::GlobalColor::darkRed);
-  this->randomColors[8] = QColor(Qt::GlobalColor::darkGreen);
-  this->randomColors[9] = QColor(Qt::GlobalColor::darkBlue);
-  this->randomColors[10] = QColor(Qt::GlobalColor::darkCyan);
-  this->randomColors[11] = QColor(Qt::GlobalColor::darkMagenta);
-  this->randomColors[12] = QColor(Qt::GlobalColor::darkYellow);
-  this->randomColors[13] = QColor(Qt::GlobalColor::darkGray);
-  this->randomColors[14] = QColor(Qt::GlobalColor::lightGray);
-  this->randomColors[15] = QColor(Qt::GlobalColor::gray);
-
-  //-------------------------------------------//
-  // Load the High Water Mark Map and Regression Chart
-
-  // Set the web pages used
+void MainWindow::setupHighWaterMarkMap() {
   ui->map_hwm->load(QUrl("qrc:/rsc/html/hwm_map.html"));
 
   // Set the colors that are being used on the display page for various
@@ -377,19 +346,42 @@ void MainWindow::setupMetOceanViewerUI() {
   ButtonStyle = Colors::MakeColorString(this->LineColorBounds);
   ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
   ui->button_boundlinecolor->update();
+}
 
-  //-------------------------------------------//
-  // Setup the Table
-  SetupTimeseriesTable();
+void MainWindow::setupRandomColors() {
+  //...Build a table of random colors
+  this->randomColors.resize(16);
+  this->randomColors[0] = QColor(Qt::GlobalColor::green);
+  this->randomColors[1] = QColor(Qt::GlobalColor::red);
+  this->randomColors[2] = QColor(Qt::GlobalColor::blue);
+  this->randomColors[3] = QColor(Qt::GlobalColor::yellow);
+  this->randomColors[4] = QColor(Qt::GlobalColor::magenta);
+  this->randomColors[5] = QColor(Qt::GlobalColor::cyan);
+  this->randomColors[6] = QColor(Qt::GlobalColor::black);
+  this->randomColors[7] = QColor(Qt::GlobalColor::darkRed);
+  this->randomColors[8] = QColor(Qt::GlobalColor::darkGreen);
+  this->randomColors[9] = QColor(Qt::GlobalColor::darkBlue);
+  this->randomColors[10] = QColor(Qt::GlobalColor::darkCyan);
+  this->randomColors[11] = QColor(Qt::GlobalColor::darkMagenta);
+  this->randomColors[12] = QColor(Qt::GlobalColor::darkYellow);
+  this->randomColors[13] = QColor(Qt::GlobalColor::darkGray);
+  this->randomColors[14] = QColor(Qt::GlobalColor::lightGray);
+  this->randomColors[15] = QColor(Qt::GlobalColor::gray);
+  return;
+}
 
-  // Get the directory path to start in
-  // For Mac/Unix, use the user's home directory.
-  // For Windows, use the user's desktop
-  this->PreviousDirectory = QDir::homePath();
-#ifdef Q_OS_WIN
-  this->PreviousDirectory = this->PreviousDirectory + "/Desktop";
-#endif
+void MainWindow::checkForUpdate() {
+  //...Check for updates and alert the user if there is a new version
+  QPointer<UpdateDialog> update = new UpdateDialog(this);
+  bool doUpdate = update->checkForUpdate();
+  if (doUpdate) {
+    update->runUpdater();
+    update->exec();
+  }
+  return;
+}
 
+void MainWindow::installKeyhandlers() {
   Keyhandler *key = new Keyhandler(this);
   this->centralWidget()->installEventFilter(key);
   connect(key, SIGNAL(enterKeyPressed()), this, SLOT(handleEnterKey()));
@@ -409,27 +401,10 @@ void MainWindow::setupMetOceanViewerUI() {
   connect(ui->xtide_map, SIGNAL(enterKeyPressed()), this,
           SLOT(handleEnterKey()));
 #endif
+  return;
+}
 
-  //...Check for updates and alert the user if there is a new version
-  QPointer<UpdateDialog> update = new UpdateDialog(this);
-  bool doUpdate = update->checkForUpdate();
-  if (doUpdate) {
-    update->runUpdater();
-    update->exec();
-  }
-
-  //...Build the session object
-  this->sessionState =
-      new Session(ui->table_TimeseriesData, ui->text_TimeseriesPlotTitle,
-                  ui->text_TimeseriesXaxisLabel, ui->text_TimeseriesYaxisLabel,
-                  ui->date_TimeseriesStartDate, ui->date_TimeseriesEndDate,
-                  ui->spin_TimeseriesYmin, ui->spin_TimeseriesYmax,
-                  ui->check_TimeseriesAllData, ui->check_TimeseriesYauto,
-                  this->PreviousDirectory, this);
-
-  connect(this->sessionState, SIGNAL(sessionError(QString)), this,
-          SLOT(throwErrorMessageBox(QString)));
-
+void MainWindow::parseCommandLine() {
   if (this->processCommandLine) {
     int ierr = this->sessionState->open(this->commandLineFile);
     if (ierr == 0) {
@@ -437,7 +412,20 @@ void MainWindow::setupMetOceanViewerUI() {
       ui->subtab_timeseries->setCurrentIndex(0);
     }
   }
+  return;
+}
 
+void MainWindow::initializeSessionHandler() {
+  this->sessionState =
+      new Session(ui->table_TimeseriesData, ui->text_TimeseriesPlotTitle,
+                  ui->text_TimeseriesXaxisLabel, ui->text_TimeseriesYaxisLabel,
+                  ui->date_TimeseriesStartDate, ui->date_TimeseriesEndDate,
+                  ui->spin_TimeseriesYmin, ui->spin_TimeseriesYmax,
+                  ui->check_TimeseriesAllData, ui->check_TimeseriesYauto,
+                  this->previousDirectory, this);
+
+  connect(this->sessionState, SIGNAL(sessionError(QString)), this,
+          SLOT(throwErrorMessageBox(QString)));
   return;
 }
 

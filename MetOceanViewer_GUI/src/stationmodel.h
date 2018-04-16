@@ -38,7 +38,8 @@ class StationModel : public QAbstractListModel {
     stationIDRole,
     stationNameRole,
     longitudeRole,
-    latitudeRole
+    latitudeRole,
+    valueRole
   };
 
   StationModel(QObject *parent = Q_NULLPTR);

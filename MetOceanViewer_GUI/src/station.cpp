@@ -54,3 +54,7 @@ void Station::setName(const QString &name) { this->m_name = name; }
 QString Station::id() const { return this->m_id; }
 
 void Station::setId(const QString &id) { this->m_id = id; }
+
+double Station::value() const { return this->m_value; }
+
+void Station::setValue(double value) { this->m_value = value; }

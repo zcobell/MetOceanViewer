@@ -149,12 +149,12 @@ void MainWindow::on_button_usgssavemap_clicked() {
   QString filter = "JPG (*.jpg *.jpeg)";
   QString DefaultFile = "/USGS_" + MarkerID + ".jpg";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), PreviousDirectory + DefaultFile,
+      this, tr("Save as..."), previousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, PreviousDirectory);
+  Generic::splitPath(TempString, filename, previousDirectory);
 
   thisUSGS->saveUSGSImage(TempString, filter);
 
@@ -195,7 +195,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
   QString DefaultFile = "/USGS_" + MarkerID + ".imeds";
 
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), PreviousDirectory + DefaultFile,
+      this, tr("Save as..."), previousDirectory + DefaultFile,
       "IMEDS (*.imeds);;CSV (*.csv)", &filter);
 
   QStringList filter2 = filter.split(" ");
@@ -203,7 +203,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, PreviousDirectory);
+  Generic::splitPath(TempString, filename, previousDirectory);
 
   thisUSGS->saveUSGSData(TempString, format);
 

@@ -1,5 +1,5 @@
 <RCC>
-    <qresource lang="Generic Resources" prefix="/rsc">
+    <qresource prefix="/rsc" lang="Generic Resources">
         <file>html/hwm_map.html</file>
         <file>img/mm_20_darkblue.png</file>
         <file>img/mm_20_darkgreen.png</file>
@@ -19,11 +19,12 @@
         <file>img/arrow_up.png</file>
         <file>js/hwm_map.js</file>
     </qresource>
-    <qresource lang="QML" prefix="/qml">
+    <qresource prefix="/qml" lang="QML">
         <file>qml/MovMapItem.qml</file>
         <file>qml/MapViewer.qml</file>
+        <file>qml/InfoWindow.qml</file>
     </qresource>
-    <qresource lang="csv" prefix="/stations">
+    <qresource prefix="/stations" lang="csv">
         <file>data/noaa_stations.csv</file>
         <file>data/usgs_stations.csv</file>
         <file>data/xtide_stations.csv</file>

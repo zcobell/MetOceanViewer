@@ -61,12 +61,12 @@ void MainWindow::on_button_noaasavechart_clicked() {
   QString filter = "JPG (*.jpg *.jpeg)";
   QString DefaultFile = "/NOAA_" + QString::number(MarkerID) + ".jpg";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), this->PreviousDirectory + DefaultFile,
+      this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, this->PreviousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
   ierr = this->thisNOAA->saveNOAAImage(TempString, filter);
 
@@ -99,16 +99,16 @@ void MainWindow::on_button_noaasavedata_clicked() {
   QString filter;
   QString DefaultFile = "/NOAA_" + QString::number(MarkerID) + ".imeds";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), this->PreviousDirectory + DefaultFile,
+      this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "IMEDS (*.imeds);;CSV (*.csv)", &filter);
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, this->PreviousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  thisNOAA->saveNOAAData(filename, this->PreviousDirectory, format);
+  thisNOAA->saveNOAAData(filename, this->previousDirectory, format);
 
   return;
 }

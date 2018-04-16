@@ -25,12 +25,12 @@
 #include <QFileDialog>
 #include <QMainWindow>
 #include <QNetworkInterface>
+#include <QQuickWidget>
 #include <QUrl>
 #include <QVector>
 #include <QtCharts>
 #include <QtNetwork>
 #include <QtWebEngineWidgets>
-#include <QQuickWidget>
 #include "stationmodel.h"
 
 //...Forward declarations of classes
@@ -53,7 +53,7 @@ class MainWindow;
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
-public:
+ public:
   explicit MainWindow(bool processCommandLine, QString commandLineFile,
                       QWidget *parent = nullptr);
 
@@ -61,9 +61,9 @@ public:
 
   void setLoadSessionFile(bool toggle, QString sessionFile = QString());
 
-  QString PreviousDirectory;
+  QString previousDirectory;
 
-private slots:
+ private slots:
 
   void throwErrorMessageBox(QString);
 
@@ -209,14 +209,38 @@ private slots:
 
   void on_combo_user_maptype_currentIndexChanged(int index);
 
-private:
+ private:
+  enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
+
   Ui::MainWindow *ui;
 
   QList<QTableWidgetItem *> grabTableRow(int row);
 
   void setTableRow(int row, const QList<QTableWidgetItem *> &rowItems);
 
-  void SetupTimeseriesTable();
+  void setupTimeseriesTable();
+
+  void setupNoaaMap();
+
+  void setupUsgsMap();
+
+  void setupXTideMap();
+
+  void setupUserTimeseriesMap();
+
+  void setupHighWaterMarkMap();
+
+  void setupRandomColors();
+
+  void setHwmMarkerCategories();
+
+  void checkForUpdate();
+
+  void installKeyhandlers();
+
+  void parseCommandLine();
+
+  void initializeSessionHandler();
 
   bool confirmClose();
 
@@ -244,9 +268,9 @@ private:
 
   QColor DotColorHWM, LineColorRegression, LineColor121Line, LineColorBounds;
 
-  int LocalTimezoneOffset;
+  int localTimezoneOffset;
 
-  QDateTime LocalTimeUTC;
+  QDateTime localTimeUTC;
 
   QString SessionFile;
 
@@ -275,9 +299,8 @@ private:
   bool xtideDisplayValues;
   bool hwmDisplayValues;
 
-protected:
+ protected:
   void closeEvent(QCloseEvent *);
-
 };
 
-#endif // MAINWINDOW_H
+#endif  // MAINWINDOW_H

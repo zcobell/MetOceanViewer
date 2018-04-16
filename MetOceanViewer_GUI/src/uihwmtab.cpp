@@ -36,11 +36,11 @@
 void MainWindow::on_browse_hwm_clicked() {
   QString filename;
   QString HighWaterMarkFile = QFileDialog::getOpenFileName(
-      this, tr("Select High Water Mark File"), this->PreviousDirectory,
+      this, tr("Select High Water Mark File"), this->previousDirectory,
       tr("High Water Mark File (*.csv) ;; All Files (*.*)"));
   if (HighWaterMarkFile == NULL) return;
 
-  Generic::splitPath(HighWaterMarkFile, filename, this->PreviousDirectory);
+  Generic::splitPath(HighWaterMarkFile, filename, this->previousDirectory);
   ui->Text_HWMFile->setText(HighWaterMarkFile);
 }
 //-------------------------------------------//
@@ -138,12 +138,12 @@ void MainWindow::on_button_saveHWMMap_clicked() {
   QString filename;
   QString filter = "JPG (*.jpg *.jpeg)";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), this->PreviousDirectory,
+      this, tr("Save as..."), this->previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, this->PreviousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
   thisHWM->saveHWMMap(TempString, filter);
@@ -262,12 +262,12 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
   QString filename;
   QString filter = "JPG (*.jpg *.jpeg)";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), this->PreviousDirectory,
+      this, tr("Save as..."), this->previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, this->PreviousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
   thisHWM->saveRegressionPlot(TempString, filter);

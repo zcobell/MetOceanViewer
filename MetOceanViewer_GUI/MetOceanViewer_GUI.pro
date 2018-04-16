@@ -240,4 +240,5 @@ else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/libtimezone.a
 
 DISTFILES += \
     qml/MovMapItem.qml \
-    qml/MapViewer.qml
+    qml/MapViewer.qml \
+    qml/InfoWindow.qml

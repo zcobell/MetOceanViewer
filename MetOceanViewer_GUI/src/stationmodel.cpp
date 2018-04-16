@@ -50,6 +50,8 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
   } else if (role == StationModel::longitudeRole) {
     return QVariant::fromValue(
         this->m_stations[index.row()].coordinate().longitude());
+  } else if (role == StationModel::valueRole) {
+    return QVariant::fromValue(this->m_stations[index.row()].value());
   } else {
     return QVariant();
   }
@@ -62,6 +64,7 @@ QHash<int, QByteArray> StationModel::roleNames() const {
   roles[stationNameRole] = "name";
   roles[latitudeRole] = "latitude";
   roles[longitudeRole] = "longitude";
+  roles[valueRole] = "value";
   return roles;
 }
 
