@@ -35,7 +35,7 @@ public:
   int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
   QString errorString();
   int error();
-  Imeds *toIMEDS();
+  int toIMEDS(Imeds *outputImeds);
 
 private:
   int readAscii(QString AdcircOutputFile, QString AdcircStationFile);

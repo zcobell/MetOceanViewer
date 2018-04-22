@@ -1,9 +1,3 @@
-#ifndef STATIONMODEL_H
-#define STATIONMODEL_H
-
-#include <QAbstractListModel>
-#include <QDebug>
-#include <QGeoCoordinate>
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
@@ -23,6 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
+#ifndef STATIONMODEL_H
+#define STATIONMODEL_H
+
+#include <QAbstractListModel>
+#include <QDebug>
+#include <QGeoCoordinate>
 #include <QHash>
 #include <QObject>
 #include "station.h"
@@ -39,7 +39,9 @@ class StationModel : public QAbstractListModel {
     stationNameRole,
     longitudeRole,
     latitudeRole,
-    valueRole
+    modeledRole,
+    measuredRole,
+    selectedRole
   };
 
   StationModel(QObject *parent = Q_NULLPTR);
@@ -55,9 +57,16 @@ class StationModel : public QAbstractListModel {
 
   Station findStation(QString stationName) const;
 
+ public slots:
+
+  void selectStation(QString name);
+
+  void deselectStation(QString name);
+
  private:
   QList<Station> m_stations;
   QHash<QString, Station> m_stationMap;
+  QHash<QString, int> m_stationLocationMap;
 };
 
 #endif  // STATIONMODEL_H

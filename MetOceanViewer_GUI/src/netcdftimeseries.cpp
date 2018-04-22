@@ -37,7 +37,7 @@ int NetcdfTimeseries::read() {
   int dimid_nstations, dimidStationLength, dimid_stationNameLen;
   int varid_time, varid_data, varid_xcoor, varid_ycoor, varid_stationName;
   int epsg;
-  long long *timeData;
+  qint64 *timeData;
   char timeChar[80];
   char *stationName;
   double *varData, *xcoor, *ycoor;
@@ -120,7 +120,7 @@ int NetcdfTimeseries::read() {
     refTime = QDateTime::fromString(timeString, "yyyy-MM-dd hh:mm:ss");
     refTime.setTimeSpec(Qt::UTC);
 
-    timeData = (long long *)malloc(sizeof(long long) * length);
+    timeData = (qint64 *)malloc(sizeof(qint64) * length);
     varData = (double *)malloc(sizeof(double) * length);
 
     start = 0;

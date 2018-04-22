@@ -662,9 +662,8 @@ int Usgs::saveUSGSData(QString filename, QString format) {
     Output << "USGS_" + this->m_currentStation.id() + "   " +
                   QString::number(
                       this->m_currentStation.coordinate().latitude()) +
-                  "   " +
-                  QString::number(
-                      this->m_currentStation.coordinate().longitude()) +
+                  "   " + QString::number(
+                              this->m_currentStation.coordinate().longitude()) +
                   "\n";
     for (int i = 0; i < this->m_allStationData.length(); i++) {
       Output << this->m_allStationData[i].m_date.toString("yyyy") + "    " +
@@ -751,17 +750,22 @@ void Usgs::addStationsToModel(StationModel *model) {
 
   if (!stationFile.open(QIODevice::ReadOnly)) return;
 
+  int index = 0;
+
   while (!stationFile.atEnd()) {
     QString line = stationFile.readLine().simplified();
-    QStringList list = line.split(";");
-    QString id = list.value(0);
-    QString name = list.value(1);
-    name = name.simplified();
-    QString temp = list.value(2);
-    double lat = temp.toDouble();
-    temp = list.value(3);
-    double lon = temp.toDouble();
-    model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+    index++;
+    if (index > 1) {
+      QStringList list = line.split(";");
+      QString id = list.value(0);
+      QString name = list.value(1);
+      name = name.simplified();
+      QString temp = list.value(2);
+      double lat = temp.toDouble();
+      temp = list.value(3);
+      double lon = temp.toDouble();
+      model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+    }
   }
 
   stationFile.close();

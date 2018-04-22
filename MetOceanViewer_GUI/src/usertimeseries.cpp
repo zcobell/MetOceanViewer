@@ -27,7 +27,7 @@
 #include "metoceanviewer.h"
 #include "netcdf.h"
 #include "proj4.h"
-#define _DUPLICATE_STATION_TOL 0.00001
+#include "rectangle.h"
 
 UserTimeseries::UserTimeseries(
     QTableWidget *inTable, QCheckBox *inXAxisCheck, QCheckBox *inYAxisCheck,
@@ -62,27 +62,26 @@ UserTimeseries::~UserTimeseries() {}
 int UserTimeseries::getDataBounds(double &ymin, double &ymax,
                                   QDateTime &minDateOut, QDateTime &maxDateOut,
                                   QVector<double> timeAddList) {
-  int i, j, k;
   double unitConversion, addY;
-  long long nullDate = 0;
+  qint64 nullDate = 0;
 
   ymin = DBL_MAX;
   ymax = DBL_MIN;
-  long long minDate =
+  qint64 minDate =
       QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0)).toMSecsSinceEpoch();
-  long long maxDate =
+  qint64 maxDate =
       QDateTime(QDate(1500, 1, 1), QTime(0, 0, 0)).toMSecsSinceEpoch();
 
-  for (i = 0; i < this->m_fileDataUnique.length(); i++) {
+  for (int i = 0; i < this->m_fileDataUnique.length(); i++) {
     unitConversion = this->m_table->item(i, 3)->text().toDouble();
     addY = this->m_table->item(i, 5)->text().toDouble();
-    for (k = 0; k < this->m_selectedStations.length(); k++) {
+    for (int k = 0; k < this->m_selectedStations.length(); k++) {
       if (!this->m_fileDataUnique[i]
                ->station[this->m_selectedStations[k]]
                .isNull()) {
-        for (j = 0; j < this->m_fileDataUnique[i]
-                            ->station[this->m_selectedStations[k]]
-                            .numSnaps();
+        for (int j = 0; j < this->m_fileDataUnique[i]
+                                ->station[this->m_selectedStations[k]]
+                                .numSnaps();
              j++) {
           if (this->m_fileDataUnique[i]
                               ->station[this->m_selectedStations[k]]
@@ -202,48 +201,36 @@ int UserTimeseries::saveImage(QString filename, QString filter) {
 
 int UserTimeseries::getCurrentMarkerID() { return this->m_markerId; }
 
-int UserTimeseries::setMarkerID() {
-  this->m_markerId = this->getMarkerIDFromMap();
-  return MetOceanViewer::Error::NOERR;
+int UserTimeseries::getClickedMarkerID() {
+  return this->m_currentStation->split(",").value(0).toInt();
 }
 
-int UserTimeseries::getClickedMarkerID() { return this->getMarkerIDFromMap(); }
+int UserTimeseries::getStationSelections() {
+  if (this->m_currentStation == QString()) {
+    emit timeseriesError(tr("No stations selected!"));
+    return 1;
+  }
 
-int UserTimeseries::getMarkerIDFromMap() { return 0; }
-
-int UserTimeseries::getMultipleMarkersFromMap() {
-  QVariant eval = QVariant();
-  int i;
   QString tempString;
-  QString data = eval.toString();
-  QStringList dataList = data.split(",");
+  QStringList dataList = this->m_currentStation->split(",");
   tempString = dataList.value(0);
-  int nMarkers = tempString.toInt();
+  int nMarkers = dataList.length();
 
   if (nMarkers > 0) {
     this->m_selectedStations.resize(nMarkers);
-    for (i = 1; i <= nMarkers; i++) {
+    for (int i = 0; i < nMarkers; i++) {
       tempString = dataList.value(i);
-      this->m_selectedStations[i - 1] = tempString.toInt();
+      this->m_selectedStations[i] = tempString.toInt();
     }
-  } else
-    return MetOceanViewer::Error::MARKERSELECTION;
-
+  } else {
+    emit timeseriesError(tr("No stations selected"));
+    return 1;
+  }
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::getAsyncMultipleMarkersFromMap() {
-  //  JavascriptAsyncReturn *javaReturn = new JavascriptAsyncReturn(this);
-  //  connect(javaReturn, SIGNAL(valueChanged(QString)), this,
-  //          SLOT(javascriptDataReturned(QString)));
-  //  this->map->page()->runJavaScript(
-  //      "getMarkers()",
-  //      [javaReturn](const QVariant &v) { javaReturn->setValue(v); });
-  return 0;
-}
-
 void UserTimeseries::plot() {
-  int i, j, k, ierr, seriesCounter, colorCounter;
+  int i, j, k, ierr, colorCounter;
   qint64 TempDate;
   qreal TempValue;
   double unitConversion, addX, addY;
@@ -261,25 +248,11 @@ void UserTimeseries::plot() {
   //   time, which can show an offset when converting to mSecSinceEpoch
   QDateTime now = QDateTime::currentDateTime();
   qint64 offset = now.offsetFromUtc() * qint64(1000);
+  qint64 endDate = this->m_endDateEdit->dateTime().toMSecsSinceEpoch();
+  qint64 startDate = this->m_startDateEdit->dateTime().toMSecsSinceEpoch();
 
-  QString tempString;
-  QStringList dataList = this->m_currentStation->split(",");
-  tempString = dataList.value(0);
-  int nMarkers = dataList.length();
-
-  long long endDate = this->m_endDateEdit->dateTime().toMSecsSinceEpoch();
-  long long startDate = this->m_startDateEdit->dateTime().toMSecsSinceEpoch();
-
-  if (nMarkers > 0) {
-    this->m_selectedStations.resize(nMarkers);
-    for (i = 0; i < nMarkers; i++) {
-      tempString = dataList.value(i);
-      this->m_selectedStations[i] = tempString.toInt();
-    }
-  } else {
-    emit timeseriesError(tr("No stations selected"));
-    return;
-  }
+  ierr = this->getStationSelections();
+  if (ierr != MetOceanViewer::Error::NOERR) return;
 
   addXList.resize(this->m_fileDataUnique.length());
   for (i = 0; i < this->m_fileDataUnique.length(); i++)
@@ -314,8 +287,8 @@ void UserTimeseries::plot() {
     axisX->setMin(this->m_startDateEdit->dateTime());
     axisX->setMax(this->m_endDateEdit->dateTime());
   } else {
-    minDate = minDate.addSecs(-offset / 1000);
-    maxDate = maxDate.addSecs(-offset / 1000);
+    minDate = minDate.addMSecs(-offset);
+    maxDate = maxDate.addMSecs(-offset);
     axisX->setMin(minDate);
     axisX->setMax(maxDate);
   }
@@ -340,7 +313,8 @@ void UserTimeseries::plot() {
   else
     axisX->setFormat("MM/dd/yyyy hh:mm");
 
-  seriesCounter = 0;
+  int seriesCounter = 0;
+  int plottedSeriesCounter = 0;
 
   this->m_chartView->clear();
 
@@ -381,10 +355,11 @@ void UserTimeseries::plot() {
       }
 
       if (series[seriesCounter - 1]->points().size() > 0) {
+        plottedSeriesCounter = plottedSeriesCounter + 1;
         this->m_chartView->m_chart->addSeries(series[seriesCounter - 1]);
         this->m_chartView->m_chart->legend()
             ->markers()
-            .at(seriesCounter - 1)
+            .at(plottedSeriesCounter - 1)
             ->setFont(QFont("Helvetica", 10, QFont::Bold));
         series[seriesCounter - 1]->attachAxis(axisX);
         series[seriesCounter - 1]->attachAxis(axisY);
@@ -501,114 +476,143 @@ void UserTimeseries::plot() {
 
 QString UserTimeseries::getErrorString() { return this->m_errorString; }
 
-int UserTimeseries::processData() {
-  int ierr, i, j, nRow, InputFileType, dflowLayer;
-  double x, y;
-  QString StationName, TempFile, TempStationFile, dflowVar;
-  QDateTime ColdStart;
-  AdcircStationOutput *adcircData;
+int UserTimeseries::processImedsData(int tableIndex, Imeds *data) {
+  QString tempFile = this->m_table->item(tableIndex, 6)->text();
 
-  nRow = this->m_table->rowCount();
+  int ierr = data->read(tempFile);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->m_errorString = tr("Error reading file: ") + tempFile;
+    return MetOceanViewer::Error::IMEDS_FILEREADERROR;
+  }
+  data->success = true;
+  return MetOceanViewer::Error::NOERR;
+}
 
-  j = 0;
+int UserTimeseries::processAdcircNetcdfData(int tableIndex, Imeds *data) {
+  QString tempFile = this->m_table->item(tableIndex, 6)->text();
+  QDateTime coldStart = QDateTime::fromString(
+      this->m_table->item(tableIndex, 7)->text(), "yyyy-MM-dd hh:mm:ss");
+  AdcircStationOutput *adcircData = new AdcircStationOutput(this);
+  int ierr = adcircData->read(tempFile, coldStart);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->m_errorString = tr("Error reading file: ") + tempFile;
+    return MetOceanViewer::Error::ADCIRC_NETCDFREADERROR;
+  }
 
-  for (i = 0; i < nRow; i++) {
-    TempFile = this->m_table->item(i, 6)->text();
-    InputFileType = Filetypes::getIntegerFiletype(TempFile);
-    this->m_allFileData.resize(j + 1);
-    this->m_epsg.resize(j + 1);
-    this->m_epsg[j] = this->m_table->item(i, 11)->text().toInt();
+  ierr = adcircData->toIMEDS(data);
+  delete adcircData;
 
-    if (InputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
-      this->m_allFileData[j] = new Imeds(this);
-      ierr = this->m_allFileData[j]->read(TempFile);
-      if (ierr != MetOceanViewer::Error::NOERR) {
-        this->m_errorString = tr("Error reading file: ") + TempFile;
-        return MetOceanViewer::Error::IMEDS_FILEREADERROR;
-      }
-      this->m_allFileData[j]->success = true;
+  if (!data->success) return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
+  return MetOceanViewer::Error::NOERR;
+}
 
-    } else if (InputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
-      ColdStart = QDateTime::fromString(this->m_table->item(i, 7)->text(),
-                                        "yyyy-MM-dd hh:mm:ss");
-      adcircData = new AdcircStationOutput(this);
-      ierr = adcircData->read(TempFile, ColdStart);
-      if (ierr != MetOceanViewer::Error::NOERR) {
-        this->m_errorString = tr("Error reading file: ") + TempFile;
-        return MetOceanViewer::Error::ADCIRC_NETCDFREADERROR;
-      }
+int UserTimeseries::processAdcircAsciiData(int tableIndex, Imeds *data) {
+  QString tempFile = this->m_table->item(tableIndex, 6)->text();
+  QDateTime coldStart = QDateTime::fromString(
+      this->m_table->item(tableIndex, 7)->text(), "yyyy-MM-dd hh:mm:ss");
+  QString tempStationFile = this->m_table->item(tableIndex, 10)->text();
+  AdcircStationOutput *adcircData = new AdcircStationOutput(this);
 
-      this->m_allFileData[j] = adcircData->toIMEDS();
-      if (!this->m_allFileData[j]->success)
-        return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
-      this->m_allFileData[j]->success = true;
+  int ierr = adcircData->read(tempFile, tempStationFile, coldStart);
 
-      delete adcircData;
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->m_errorString = tr("Error reading file: ") + tempFile;
+    return MetOceanViewer::Error::ADCIRC_ASCIIREADERROR;
+  }
 
-    } else if (InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
-      ColdStart = QDateTime::fromString(this->m_table->item(i, 7)->text(),
-                                        "yyyy-MM-dd hh:mm:ss");
-      TempStationFile = this->m_table->item(i, 10)->text();
-      adcircData = new AdcircStationOutput(this);
-      ierr = adcircData->read(TempFile, TempStationFile, ColdStart);
-      if (ierr != MetOceanViewer::Error::NOERR) {
-        this->m_errorString = tr("Error reading file: ") + TempFile;
-        return MetOceanViewer::Error::ADCIRC_ASCIIREADERROR;
-      }
-      this->m_allFileData[j] = adcircData->toIMEDS();
-      delete adcircData;
+  ierr = adcircData->toIMEDS(data);
+  delete adcircData;
 
-      if (!this->m_allFileData[j]->success)
-        return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
+  if (!data->success) return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
+  return MetOceanViewer::Error::NOERR;
+}
 
-    } else if (InputFileType == MetOceanViewer::FileType::NETCDF_DFLOW) {
-      this->m_allFileData[j] = new Imeds(this);
-      Dflow *dflow = new Dflow(TempFile, this);
-      dflowVar = this->m_table->item(i, 12)->text();
-      dflowLayer = this->m_table->item(i, 13)->text().toInt();
-      ierr = dflow->getVariable(dflowVar, dflowLayer, this->m_allFileData[j]);
-      if (ierr != MetOceanViewer::Error::NOERR) {
-        this->m_errorString =
-            tr("Error processing DFlow: ") + dflow->error->toString();
-        return MetOceanViewer::Error::DFLOW_FILEREADERROR;
-      }
+int UserTimeseries::processDflowData(int tableIndex, Imeds *data) {
+  QString tempFile = this->m_table->item(tableIndex, 6)->text();
 
-      delete dflow;
+  Dflow *dflow = new Dflow(tempFile, this);
+  QString dflowVar = this->m_table->item(tableIndex, 12)->text();
+  int dflowLayer = this->m_table->item(tableIndex, 13)->text().toInt();
+  int ierr = dflow->getVariable(dflowVar, dflowLayer, data);
+  delete dflow;
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    this->m_errorString =
+        tr("Error processing DFlow: ") + dflow->error->toString();
+    return MetOceanViewer::Error::DFLOW_FILEREADERROR;
+  }
+  return MetOceanViewer::Error::NOERR;
+}
 
-    } else if (InputFileType == MetOceanViewer::FileType::NETCDF_GENERIC) {
-      this->m_allFileData[j] = new Imeds(this);
-      NetcdfTimeseries *genericNetcdf = new NetcdfTimeseries(this);
-      genericNetcdf->setFilename(TempFile);
-      ierr = genericNetcdf->read();
-      if (ierr != 0) {
-        this->m_errorString = "Error processing generic netcdf file.";
-        return MetOceanViewer::Error::GENERICNETCDFERROR;
-      }
-      ierr = genericNetcdf->toImeds(this->m_allFileData[j]);
+int UserTimeseries::processGenericNetcdfData(int tableIndex, Imeds *data) {
+  QString tempFile = this->m_table->item(tableIndex, 6)->text();
 
-      delete genericNetcdf;
+  NetcdfTimeseries *genericNetcdf = new NetcdfTimeseries(this);
+  genericNetcdf->setFilename(tempFile);
+  int ierr = genericNetcdf->read();
+  if (ierr != 0) {
+    this->m_errorString = "Error processing generic netcdf file.";
+    return MetOceanViewer::Error::GENERICNETCDFERROR;
+  }
+  ierr = genericNetcdf->toImeds(data);
+  delete genericNetcdf;
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    return MetOceanViewer::Error::GENERICFILEREADERROR;
+  }
+  return MetOceanViewer::Error::NOERR;
+}
 
-    } else {
-      this->m_errorString = tr("Invalid file format");
-      return MetOceanViewer::Error::INVALIDFILEFORMAT;
+int UserTimeseries::processDataFiles() {
+  int ierr;
+
+  for (int i = 0; i < this->m_table->rowCount(); i++) {
+    int inputFileType =
+        Filetypes::getIntegerFiletype(this->m_table->item(i, 6)->text());
+    this->m_epsg.push_back(this->m_table->item(i, 11)->text().toInt());
+
+    switch (inputFileType) {
+      case MetOceanViewer::FileType::ASCII_IMEDS:
+        this->m_allFileData.push_back(new Imeds(this));
+        ierr = this->processImedsData(
+            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        break;
+      case MetOceanViewer::FileType::NETCDF_ADCIRC:
+        this->m_allFileData.push_back(new Imeds(this));
+        ierr = this->processAdcircNetcdfData(
+            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        break;
+      case MetOceanViewer::FileType::ASCII_ADCIRC:
+        this->m_allFileData.push_back(new Imeds(this));
+        ierr = this->processAdcircAsciiData(
+            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        break;
+      case MetOceanViewer::FileType::NETCDF_DFLOW:
+        this->m_allFileData.push_back(new Imeds(this));
+        ierr = this->processDflowData(
+            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        break;
+      case MetOceanViewer::FileType::NETCDF_GENERIC:
+        this->m_allFileData.push_back(new Imeds(this));
+        ierr = this->processGenericNetcdfData(
+            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        break;
+      default:
+        this->m_errorString = QStringLiteral("Invalid file format");
+        return MetOceanViewer::Error::INVALIDFILEFORMAT;
     }
 
-    if (this->m_allFileData[j]->success)
-      j = j + 1;
-    else
+    if (!this->m_allFileData[this->m_allFileData.length() - 1]->success ||
+        ierr != MetOceanViewer::Error::NOERR) {
+      this->m_allFileData.pop_back();
       return MetOceanViewer::Error::GENERICFILEREADERROR;
+    }
   }
+  return MetOceanViewer::Error::NOERR;
+}
 
-  //...Project the data to WGS84
-  ierr = this->projectStations(this->m_epsg, this->m_allFileData);
-  if (ierr != 0) {
-    this->m_errorString = tr("Error projecting the station locations");
-    return MetOceanViewer::Error::PROJECTSTATIONS;
-  }
-
+int UserTimeseries::processStationLocations() {
   //...Build a unique set of timeseries data
   if (this->m_allFileData.length() == 1) {
-    for (i = 0; i < this->m_allFileData[0]->nstations; i++) {
+    for (int i = 0; i < this->m_allFileData[0]->nstations; i++) {
       this->m_xLocations.push_back(
           this->m_allFileData[0]->station[i].coordinate()->longitude());
       this->m_yLocations.push_back(
@@ -616,34 +620,42 @@ int UserTimeseries::processData() {
       this->m_fileDataUnique = this->m_allFileData;
     }
   } else {
-    ierr = this->getUniqueStationList(this->m_allFileData, this->m_xLocations,
-                                      this->m_yLocations);
+    int ierr = this->getUniqueStationList(
+        this->m_allFileData, this->m_xLocations, this->m_yLocations);
     if (ierr != MetOceanViewer::Error::NOERR) {
       this->m_errorString = tr("Error building the station list");
       return MetOceanViewer::Error::BUILDSTATIONLIST;
     }
   }
-  ierr = this->buildRevisedIMEDS(this->m_allFileData, this->m_xLocations,
-                                 this->m_yLocations, this->m_fileDataUnique);
+
+  int ierr =
+      this->buildRevisedIMEDS(this->m_allFileData, this->m_xLocations,
+                              this->m_yLocations, this->m_fileDataUnique);
+
   if (ierr != 0) {
     this->m_errorString = tr("Error building the unique dataset");
     return MetOceanViewer::Error::BUILDREVISEDIMEDS;
   }
 
   //...Delete the data we're done with
-  for (i = 0; i < this->m_allFileData.size(); i++) {
+  for (int i = 0; i < this->m_allFileData.size(); i++) {
     delete this->m_allFileData[i];
   }
+  return MetOceanViewer::Error::NOERR;
+}
+
+int UserTimeseries::addMarkersToMap() {
+  Rectangle boundingBox;
 
   //...Add the markers to the map
-  for (i = 0; i < this->m_fileDataUnique[0]->nstations; i++) {
-    x = -1.0;
-    y = -1.0;
-    StationName = "NONAME";
+  for (int i = 0; i < this->m_fileDataUnique[0]->nstations; i++) {
+    double x = -1.0;
+    double y = -1.0;
+    QString StationName = "NONAME";
 
     // Check that we aren't sending a null location to
     // the backend
-    for (j = 0; j < this->m_fileDataUnique.length(); j++) {
+    for (int j = 0; j < this->m_fileDataUnique.length(); j++) {
       if (!this->m_fileDataUnique[j]->station[i].isNull()) {
         StationName = this->m_fileDataUnique[j]->station[i].name();
         x = this->m_fileDataUnique[j]->station[i].coordinate()->longitude();
@@ -654,14 +666,48 @@ int UserTimeseries::processData() {
 
     this->m_stationmodel->addMarker(
         Station(QGeoCoordinate(y, x), QString::number(i), StationName));
+
+    if (i == 0) {
+      boundingBox.setBottomLeft(QPointF(x, y));
+      boundingBox.setTopRight(QPointF(x, y));
+    } else {
+      boundingBox.extend(QPointF(x, y));
+    }
   }
+
+  QObject *mapObject = this->m_quickMap->rootObject();
+  QMetaObject::invokeMethod(mapObject, "setViewport",
+                            Q_ARG(QVariant, boundingBox.center().x()),
+                            Q_ARG(QVariant, boundingBox.center().y()));
 
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::plotData() {
-  //...Get the current marker selections, multiple if user ctrl+click selects
-  this->getAsyncMultipleMarkersFromMap();
+int UserTimeseries::processData() {
+  //...Process the data files
+  int ierr = this->processDataFiles();
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    return ierr;
+  }
+
+  //...Project the data to WGS84
+  ierr = this->projectStations(this->m_epsg, this->m_allFileData);
+  if (ierr != 0) {
+    this->m_errorString = tr("Error projecting the station locations");
+    return MetOceanViewer::Error::PROJECTSTATIONS;
+  }
+
+  //...Perform data organization
+  ierr = this->processStationLocations();
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    return ierr;
+  }
+
+  //...Add the markers
+  ierr = this->addMarkersToMap();
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    return ierr;
+  }
 
   return MetOceanViewer::Error::NOERR;
 }
@@ -686,7 +732,7 @@ int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
         d = qSqrt(
             qPow(Data[i]->station[j].coordinate()->longitude() - X[k], 2.0) +
             qPow(Data[i]->station[j].coordinate()->latitude() - Y[k], 2.0));
-        if (d < _DUPLICATE_STATION_TOL) {
+        if (d < this->m_duplicateStationTolerance) {
           found = true;
           break;
         }
@@ -741,7 +787,7 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
                   qPow(Data[i]->station[k].coordinate()->latitude() -
                            DataOut[i]->station[j].coordinate()->latitude(),
                        2.0));
-        if (d < _DUPLICATE_STATION_TOL) {
+        if (d < this->m_duplicateStationTolerance) {
           DataOut[i]->station[j].setNumSnaps(Data[i]->station[k].numSnaps());
           DataOut[i]->station[j].setName(Data[i]->station[k].name());
           DataOut[i]->station[j].setData(Data[i]->station[k].allData());

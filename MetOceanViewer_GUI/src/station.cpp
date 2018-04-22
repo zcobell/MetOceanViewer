@@ -23,12 +23,19 @@ Station::Station() {
   this->m_coordinate = QGeoCoordinate();
   this->m_id = QString();
   this->m_name = QString();
+  this->m_measured = 0.0;
+  this->m_modeled = 0.0;
+  this->m_selected = false;
 }
 
-Station::Station(QGeoCoordinate coordinate, QString id, QString name) {
+Station::Station(QGeoCoordinate coordinate, QString id, QString name,
+                 double measured, double modeled) {
   this->m_coordinate = coordinate;
   this->m_id = id;
   this->m_name = name;
+  this->m_measured = measured;
+  this->m_modeled = modeled;
+  this->m_selected = false;
 }
 
 Station::~Station() {}
@@ -55,6 +62,14 @@ QString Station::id() const { return this->m_id; }
 
 void Station::setId(const QString &id) { this->m_id = id; }
 
-double Station::value() const { return this->m_value; }
+bool Station::selected() const { return this->m_selected; }
 
-void Station::setValue(double value) { this->m_value = value; }
+void Station::setSelected(bool selected) { this->m_selected = selected; }
+
+double Station::modeled() const { return m_modeled; }
+
+void Station::setModeled(double modeled) { m_modeled = modeled; }
+
+double Station::measured() const { return m_measured; }
+
+void Station::setMeasured(double measured) { m_measured = measured; }

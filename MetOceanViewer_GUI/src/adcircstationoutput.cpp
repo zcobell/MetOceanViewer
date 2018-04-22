@@ -335,24 +335,22 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   return 0;
 }
 
-Imeds *AdcircStationOutput::toIMEDS() {
-  Imeds *outputIMEDS = new Imeds(this);
+int AdcircStationOutput::toIMEDS(Imeds *outputImeds) {
 
-  outputIMEDS->nstations = this->nStations;
-  outputIMEDS->station.resize(outputIMEDS->nstations);
+  outputImeds->nstations = this->nStations;
+  outputImeds->station.resize(outputImeds->nstations);
 
-  for (int i = 0; i < outputIMEDS->nstations; ++i) {
-    outputIMEDS->station[i].setNumSnaps(this->nSnaps);
-    outputIMEDS->station[i].setName(this->station_name[i]);
-    outputIMEDS->station[i].setLongitude(this->longitude[i]);
-    outputIMEDS->station[i].setLatitude(this->latitude[i]);
-    outputIMEDS->station[i].setStationIndex(i);
+  for (int i = 0; i < outputImeds->nstations; ++i) {
+    outputImeds->station[i].setNumSnaps(this->nSnaps);
+    outputImeds->station[i].setName(this->station_name[i]);
+    outputImeds->station[i].setLongitude(this->longitude[i]);
+    outputImeds->station[i].setLatitude(this->latitude[i]);
+    outputImeds->station[i].setStationIndex(i);
     for (int j = 0; j < this->nSnaps; ++j) {
-      outputIMEDS->station[i].setDate(
+      outputImeds->station[i].setDate(
           this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch(), j);
-      outputIMEDS->station[i].setData(this->data[i][j], j);
+      outputImeds->station[i].setData(this->data[i][j], j);
     }
   }
-  outputIMEDS->success = true;
-  return outputIMEDS;
+  outputImeds->success = true;
 }

@@ -24,6 +24,8 @@
 #include <QDateTime>
 #include <QObject>
 #include <QPrinter>
+#include <QQuickItem>
+#include <QQuickView>
 #include <QQuickWidget>
 #include <QTableWidget>
 #include <QVector>
@@ -54,7 +56,6 @@ class UserTimeseries : public QObject {
   int plotData();
   int getCurrentMarkerID();
   int getClickedMarkerID();
-  int getAsyncClickedMarkerID();
   int saveImage(QString filename, QString filter);
   QString getErrorString();
   void plot();
@@ -64,7 +65,7 @@ class UserTimeseries : public QObject {
 
  private:
   //...Private functions
-  int getMarkerIDFromMap();
+  int getStationSelections();
   int setMarkerID();
   int getUniqueStationList(QVector<Imeds *> Data, QVector<double> &X,
                            QVector<double> &Y);
@@ -76,6 +77,15 @@ class UserTimeseries : public QObject {
   int getAsyncMultipleMarkersFromMap();
   int projectStations(QVector<int> epsg, QVector<Imeds *> &projectedStations);
 
+  int processDataFiles();
+  int processImedsData(int tableIndex, Imeds *data);
+  int processAdcircAsciiData(int tableIndex, Imeds *data);
+  int processAdcircNetcdfData(int tableIndex, Imeds *data);
+  int processDflowData(int tableIndex, Imeds *data);
+  int processGenericNetcdfData(int tableIndex, Imeds *data);
+  int processStationLocations();
+  int addMarkersToMap();
+
   //...Private Variables
   int m_markerId;
   QString m_errorString;
@@ -85,8 +95,9 @@ class UserTimeseries : public QObject {
   QVector<int> m_selectedStations;
   QVector<QColor> m_randomColorList;
   QVector<int> m_epsg;
+  const double m_duplicateStationTolerance = 0.00001;
 
-  //...Widgets we'll need
+  //...Widgets
   QTableWidget *m_table;
   QCheckBox *m_checkXaxis;
   QCheckBox *m_checkYaxis;

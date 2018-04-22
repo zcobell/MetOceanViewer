@@ -716,17 +716,22 @@ void Noaa::addStationsToModel(StationModel *model) {
 
   if (!stationFile.open(QIODevice::ReadOnly)) return;
 
+  int index = 0;
+
   while (!stationFile.atEnd()) {
     QString line = stationFile.readLine().simplified();
-    QStringList list = line.split(";");
-    QString id = list.value(0);
-    QString name = list.value(3);
-    name = name.simplified();
-    QString temp = list.value(1);
-    double lat = temp.toDouble();
-    temp = list.value(2);
-    double lon = temp.toDouble();
-    model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+    index++;
+    if (index > 1) {
+      QStringList list = line.split(";");
+      QString id = list.value(0);
+      QString name = list.value(3);
+      name = name.simplified();
+      QString temp = list.value(1);
+      double lat = temp.toDouble();
+      temp = list.value(2);
+      double lon = temp.toDouble();
+      model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+    }
   }
 
   stationFile.close();

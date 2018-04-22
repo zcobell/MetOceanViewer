@@ -226,6 +226,8 @@ class MainWindow : public QMainWindow {
 
   void setupXTideMap();
 
+  void setupMarkerClasses(QQuickWidget *widget);
+
   void setupUserTimeseriesMap();
 
   void setupHighWaterMarkMap();

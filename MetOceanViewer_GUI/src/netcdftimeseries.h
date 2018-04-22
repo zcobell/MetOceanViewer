@@ -35,7 +35,7 @@ class NetcdfTimeseries : public QObject {
   QVector<double> m_ycoor;
   QVector<size_t> m_stationLength;
   QVector<QString> m_stationName;
-  QVector<QVector<long long> > m_time;
+  QVector<QVector<qint64> > m_time;
   QVector<QVector<double> > m_data;
 };
 

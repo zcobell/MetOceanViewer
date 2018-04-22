@@ -69,7 +69,7 @@ class XTide : public QObject {
 
   // Structures
   struct XTideStationData {
-    long long m_date;
+    qint64 m_date;
     double m_value;
   };
 

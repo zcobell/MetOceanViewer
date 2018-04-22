@@ -205,7 +205,7 @@ int Dflow::_getWindDirection(QVector<QVector<double>> &data) {
 
 int Dflow::getVariable(QString variable, int layer, Imeds *imeds) {
   int i, ierr;
-  QVector<long long> time;
+  QVector<qint64> time;
   QVector<QVector<double>> data;
 
   ierr = this->_getTime(time);
@@ -500,7 +500,7 @@ int Dflow::_getStations() {
   return 0;
 }
 
-int Dflow::_getTime(QVector<long long> &timeList) {
+int Dflow::_getTime(QVector<qint64> &timeList) {
   int i, ierr, ncid;
   size_t nsteps, unitsLen;
   double *time;

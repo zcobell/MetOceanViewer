@@ -145,9 +145,9 @@ int XTide::calculateXTides() {
   QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
   env.insert("HFILE_PATH", this->m_harmfile);
 
-  //...Build a calling string. For windows, quote the executable
-  //   to avoid issues with path names like "Program Files". We'll
-  //   assume Linux users aren't dumb enough to do such a thing
+//...Build a calling string. For windows, quote the executable
+//   to avoid issues with path names like "Program Files". We'll
+//   assume Linux users aren't dumb enough to do such a thing
 #ifdef _WIN32
   QString xTideCmd = "\"" + this->m_xtideexe.replace(" ", "\ ") +
                      "\""
@@ -462,17 +462,22 @@ void XTide::addStationsToModel(StationModel *model) {
 
   if (!stationFile.open(QIODevice::ReadOnly)) return;
 
+  int index = 0;
+
   while (!stationFile.atEnd()) {
     QString line = stationFile.readLine().simplified();
-    QStringList list = line.split(";");
-    QString id = list.value(3);
-    QString name = list.value(4);
-    name = name.simplified();
-    QString temp = list.value(0);
-    double lat = temp.toDouble();
-    temp = list.value(1);
-    double lon = temp.toDouble();
-    model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+    index++;
+    if (index > 1) {
+      QStringList list = line.split(";");
+      QString id = list.value(3);
+      QString name = list.value(4);
+      name = name.simplified();
+      QString temp = list.value(0);
+      double lat = temp.toDouble();
+      temp = list.value(1);
+      double lon = temp.toDouble();
+      model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
+    }
   }
 
   stationFile.close();

@@ -35,7 +35,7 @@ class Dflow : public QObject {
   int _getPlottingVariables();
   int _getStations();
   int _get3d();
-  int _getTime(QVector<long long> &timeList);
+  int _getTime(QVector<qint64> &timeList);
   int _getVar(QString variable, int layer, QVector<QVector<double>> &data);
   int _getVar2D(QString variable, QVector<QVector<double>> &data);
   int _getVar3D(QString variable, int layer, QVector<QVector<double>> &data);

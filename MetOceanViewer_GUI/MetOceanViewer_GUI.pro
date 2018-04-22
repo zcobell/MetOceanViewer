@@ -57,7 +57,8 @@ SOURCES +=\
     src/mainwindow.cpp \
     src/main.cpp \
     src/addtimeseriesdialog.cpp \
-    src/timeseriesoptionsdialog.cpp
+    src/timeseriesoptionsdialog.cpp \
+    src/rectangle.cpp
 
 HEADERS  += \
     src/metoceanviewer.h \
@@ -88,7 +89,8 @@ HEADERS  += \
     src/updatedialog.h \
     src/usertimeseries.h \
     src/timeseriesoptionsdialog.h \
-    version.h
+    version.h \
+    src/rectangle.h
 
 FORMS    += \
     ui/aboutdialog.ui \

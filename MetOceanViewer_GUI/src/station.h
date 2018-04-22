@@ -25,7 +25,8 @@
 class Station {
  public:
   Station();
-  Station(QGeoCoordinate coordinate, QString id, QString name);
+  Station(QGeoCoordinate coordinate, QString id, QString name,
+          double measured = 0.0, double modeled = 0.0);
 
   ~Station();
 
@@ -40,14 +41,22 @@ class Station {
   QString id() const;
   void setId(const QString &id);
 
-  double value() const;
-  void setValue(double value);
+  bool selected() const;
+  void setSelected(bool selcted);
 
-private:
+  double modeled() const;
+  void setModeled(double modeled);
+
+  double measured() const;
+  void setMeasured(double measured);
+
+ private:
   QGeoCoordinate m_coordinate;
   QString m_name;
   QString m_id;
-  double m_value;
+  double m_modeled;
+  double m_measured;
+  bool m_selected;
 };
 Q_DECLARE_METATYPE(Station)
 

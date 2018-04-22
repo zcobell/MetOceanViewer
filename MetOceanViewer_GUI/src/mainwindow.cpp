@@ -19,8 +19,6 @@
 //-----------------------------------------------------------------------*/
 
 #include "mainwindow.h"
-#include <QDebug>
-#include <QtGlobal>
 #include "aboutdialog.h"
 #include "colors.h"
 #include "dflow.h"
@@ -38,7 +36,6 @@
 MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
                        QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
-  // Setup UI
   ui->setupUi(this);
   this->processCommandLine = processCommandLine;
   this->commandLineFile = commandLineFile;
@@ -61,7 +58,7 @@ void MainWindow::setupMetOceanViewerUI() {
 
   this->previousDirectory = QDir::homePath();
 #ifdef Q_OS_WIN
-  this->PreviousDirectory = this->PreviousDirectory + "/Desktop";
+  this->previousDirectory = this->previousDirectory + "/Desktop";
 #endif
 
   this->initializeSessionHandler();
@@ -219,16 +216,15 @@ void MainWindow::changeUserMaptype() {
   return;
 }
 
-void MainWindow::setHwmMarkerCategories() {
-
-  return;
-}
+void MainWindow::setHwmMarkerCategories() { return; }
 
 void MainWindow::setupNoaaMap() {
   this->noaaStationModel = new StationModel(this);
   ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
                                                        this->noaaStationModel);
-  ui->quick_noaaMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
+  ui->quick_noaaMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::SingleSelect);
+  this->setupMarkerClasses(ui->quick_noaaMap);
   Generic::setEsriMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(0);
   this->changeNoaaMaptype();
@@ -245,6 +241,10 @@ void MainWindow::setupNoaaMap() {
   ui->combo_noaaTimezoneLocation->setCurrentIndex(12);
   MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(
       ui->combo_noaaTimezoneLocation->currentIndex());
+  QMetaObject::invokeMethod(noaaItem, "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
+
   return;
 }
 
@@ -263,7 +263,9 @@ void MainWindow::setupUsgsMap() {
   this->usgsStationModel = new StationModel(this);
   ui->quick_usgsMap->rootContext()->setContextProperty("stationModel",
                                                        this->usgsStationModel);
-  ui->quick_usgsMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
+  ui->quick_usgsMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::SingleSelect);
+  this->setupMarkerClasses(ui->quick_usgsMap);
   Generic::setEsriMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(0);
   this->changeUsgsMaptype();
@@ -272,6 +274,10 @@ void MainWindow::setupUsgsMap() {
   QObject *usgsItem = ui->quick_usgsMap->rootObject();
   QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeUsgsMarker(QString)));
+  QMetaObject::invokeMethod(usgsItem, "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
+
   return;
 }
 
@@ -282,7 +288,9 @@ void MainWindow::setupXTideMap() {
   this->xtideStationModel = new StationModel(this);
   ui->quick_xtideMap->rootContext()->setContextProperty(
       "stationModel", this->xtideStationModel);
-  ui->quick_xtideMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
+  ui->quick_xtideMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::SingleSelect);
+  this->setupMarkerClasses(ui->quick_xtideMap);
   Generic::setEsriMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(0);
   this->changeXtideMaptype();
@@ -291,6 +299,27 @@ void MainWindow::setupXTideMap() {
   QObject *xtideItem = ui->quick_xtideMap->rootObject();
   QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeXtideMarker(QString)));
+  QMetaObject::invokeMethod(xtideItem, "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
+  return;
+}
+
+void MainWindow::setupMarkerClasses(QQuickWidget *widget) {
+  widget->rootContext()->setContextProperty(QString("hwmClass0"),
+                                            ui->spin_class0->value());
+  widget->rootContext()->setContextProperty(QString("hwmClass1"),
+                                            ui->spin_class1->value());
+  widget->rootContext()->setContextProperty(QString("hwmClass2"),
+                                            ui->spin_class2->value());
+  widget->rootContext()->setContextProperty(QString("hwmClass3"),
+                                            ui->spin_class3->value());
+  widget->rootContext()->setContextProperty(QString("hwmClass4"),
+                                            ui->spin_class4->value());
+  widget->rootContext()->setContextProperty(QString("hwmClass5"),
+                                            ui->spin_class5->value());
+  widget->rootContext()->setContextProperty(QString("hwmClass6"),
+                                            ui->spin_class6->value());
   return;
 }
 
@@ -298,18 +327,23 @@ void MainWindow::setupUserTimeseriesMap() {
   this->userDataStationModel = new StationModel(this);
   ui->quick_timeseriesMap->rootContext()->setContextProperty(
       "stationModel", this->userDataStationModel);
-  ui->quick_timeseriesMap->rootContext()->setContextProperty("markerMode", MapViewerMarkerModes::SingleSelect);
+  ui->quick_timeseriesMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::MultipleSelect);
   Generic::setEsriMapTypes(ui->combo_user_maptype);
+  this->setupMarkerClasses(ui->quick_timeseriesMap);
   this->changeUserMaptype();
   ui->quick_timeseriesMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
   QObject *userTimeseriesItem = ui->quick_timeseriesMap->rootObject();
   QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeUserMarker(QString)));
-
   ui->date_TimeseriesStartDate->setDateTime(
       ui->date_TimeseriesStartDate->minimumDateTime());
   ui->date_TimeseriesEndDate->setDateTime(
       ui->date_TimeseriesEndDate->maximumDateTime());
+
+  QMetaObject::invokeMethod(userTimeseriesItem, "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
 
   this->timeseriesDisplayValues = false;
   this->timeseriesHideInfoWindows = true;
