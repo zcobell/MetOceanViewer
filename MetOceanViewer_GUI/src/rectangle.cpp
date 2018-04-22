@@ -26,48 +26,11 @@ Rectangle::Rectangle() : QRectF() {}
  **/
 //-----------------------------------------------------------------------------------------//
 int Rectangle::extend(QPointF point) {
-  qreal xmin, ymin, xmax, ymax;
-  qreal x, y;
-  qreal xmin_new, ymin_new;
-  qreal xmax_new, ymax_new;
-
-  //...Get coordinates
-  xmin = this->bottomLeft().x();
-  ymin = this->bottomLeft().y();
-  xmax = this->topRight().x();
-  ymax = this->topRight().y();
-  x = point.x();
-  y = point.y();
-
-  if (!this->isEmpty()) {
-    //...Compare bounding box coordinates
-    if (x > xmax)
-      xmax_new = x;
-    else
-      xmax_new = xmax;
-
-    if (x < xmin)
-      xmin_new = x;
-    else
-      xmin_new = xmin;
-
-    if (y > ymax)
-      ymax_new = y;
-    else
-      ymax_new = ymax;
-
-    if (y < ymin)
-      ymin_new = y;
-    else
-      ymin_new = ymin;
-
-    //...Set the new bounding box
-    this->setBottomLeft(QPointF(xmin_new, ymin_new));
-    this->setTopRight(QPointF(xmax_new, ymax_new));
-
-    return 0;
-  } else
-    return -1;
+  this->setBottomLeft(QPointF(std::min(point.x(), this->bottomLeft().x()),
+                              std::min(point.y(), this->bottomLeft().y())));
+  this->setTopRight(QPointF(std::max(point.x(), this->topRight().x()),
+                            std::max(point.y(), this->topRight().y())));
+  return 0;
 }
 //-----------------------------------------------------------------------------------------//
 

@@ -349,15 +349,6 @@ void MainWindow::on_check_TimeseriesAllData_toggled(bool checked) {
 }
 //-------------------------------------------//
 
-//-------------------------------------------//
-// A button to fit the time series locations
-// to the viewport
-//-------------------------------------------//
-void MainWindow::on_button_fitTimeseries_clicked() {
-  // ui->timeseries_map->page()->runJavaScript("fitMarkers()");
-  return;
-}
-//-------------------------------------------//
 
 //-------------------------------------------//
 // Function called when the button to plot time

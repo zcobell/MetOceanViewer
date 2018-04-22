@@ -113,8 +113,6 @@ class MainWindow : public QMainWindow {
 
   void on_button_fitHWM_clicked();
 
-  void on_button_fitTimeseries_clicked();
-
   void on_button_plotTimeseriesStation_clicked();
 
   void on_actionAbout_triggered();
@@ -209,7 +207,9 @@ class MainWindow : public QMainWindow {
 
   void on_combo_user_maptype_currentIndexChanged(int index);
 
- private:
+  void on_button_usertimeseries_fitMarkers_clicked();
+
+private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
   Ui::MainWindow *ui;

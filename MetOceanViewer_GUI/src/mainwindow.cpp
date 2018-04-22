@@ -472,3 +472,8 @@ void MainWindow::on_combo_user_maptype_currentIndexChanged(int index) {
   Q_UNUSED(index);
   this->changeUserMaptype();
 }
+
+void MainWindow::on_button_usertimeseries_fitMarkers_clicked() {
+  StationModel::fitMarkers(ui->quick_timeseriesMap, this->userDataStationModel);
+  return;
+}

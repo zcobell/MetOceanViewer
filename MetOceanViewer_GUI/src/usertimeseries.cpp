@@ -645,8 +645,6 @@ int UserTimeseries::processStationLocations() {
 }
 
 int UserTimeseries::addMarkersToMap() {
-  Rectangle boundingBox;
-
   //...Add the markers to the map
   for (int i = 0; i < this->m_fileDataUnique[0]->nstations; i++) {
     double x = -1.0;
@@ -666,19 +664,10 @@ int UserTimeseries::addMarkersToMap() {
 
     this->m_stationmodel->addMarker(
         Station(QGeoCoordinate(y, x), QString::number(i), StationName));
-
-    if (i == 0) {
-      boundingBox.setBottomLeft(QPointF(x, y));
-      boundingBox.setTopRight(QPointF(x, y));
-    } else {
-      boundingBox.extend(QPointF(x, y));
-    }
   }
 
-  QObject *mapObject = this->m_quickMap->rootObject();
-  QMetaObject::invokeMethod(mapObject, "setViewport",
-                            Q_ARG(QVariant, boundingBox.center().x()),
-                            Q_ARG(QVariant, boundingBox.center().y()));
+  //...Fit the viewport to the markers
+  StationModel::fitMarkers(this->m_quickMap, this->m_stationmodel);
 
   return MetOceanViewer::Error::NOERR;
 }

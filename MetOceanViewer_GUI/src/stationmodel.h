@@ -25,6 +25,10 @@
 #include <QGeoCoordinate>
 #include <QHash>
 #include <QObject>
+#include <QQuickItem>
+#include <QQuickView>
+#include <QQuickWidget>
+#include "rectangle.h"
 #include "station.h"
 
 class StationModel : public QAbstractListModel {
@@ -56,6 +60,10 @@ class StationModel : public QAbstractListModel {
   QHash<int, QByteArray> roleNames() const;
 
   Station findStation(QString stationName) const;
+
+  Rectangle boundingBox();
+
+  static void fitMarkers(QQuickWidget *quickWidget, StationModel *model);
 
  public slots:
 

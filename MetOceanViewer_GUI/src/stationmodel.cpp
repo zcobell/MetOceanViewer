@@ -96,3 +96,33 @@ void StationModel::deselectStation(QString name) {
   }
   return;
 }
+
+Rectangle StationModel::boundingBox() {
+  Rectangle box;
+
+  for (int i = 0; i < this->m_stations.length(); i++) {
+    if (i == 0) {
+      box.setTopLeft(QPointF(this->m_stations[i].coordinate().longitude(),
+                             this->m_stations[i].coordinate().latitude()));
+      box.setBottomRight(box.topLeft());
+    } else {
+      box.extend(QPointF(this->m_stations[i].coordinate().longitude(),
+                         this->m_stations[i].coordinate().latitude()));
+    }
+  }
+  return box;
+}
+
+void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
+  //...Generate the bounding box, expand by 10% to give some margin
+  Rectangle boundingBox = model->boundingBox();
+  boundingBox.expand(10);
+
+  QObject *mapObject = quickWidget->rootObject();
+  QMetaObject::invokeMethod(mapObject, "setVisibleRegion",
+                            Q_ARG(QVariant, boundingBox.topLeft().x()),
+                            Q_ARG(QVariant, boundingBox.topLeft().y()),
+                            Q_ARG(QVariant, boundingBox.bottomRight().x()),
+                            Q_ARG(QVariant, boundingBox.bottomRight().y()));
+  return;
+}
