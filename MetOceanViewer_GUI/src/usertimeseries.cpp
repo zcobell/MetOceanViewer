@@ -666,9 +666,6 @@ int UserTimeseries::addMarkersToMap() {
         Station(QGeoCoordinate(y, x), QString::number(i), StationName));
   }
 
-  //...Fit the viewport to the markers
-  StationModel::fitMarkers(this->m_quickMap, this->m_stationmodel);
-
   return MetOceanViewer::Error::NOERR;
 }
 

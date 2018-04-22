@@ -18,13 +18,8 @@ Rectangle {
         var xmax = Math.max(x1,x2);
         var ymin = Math.min(y1,y2);
         var ymax = Math.max(y1,y2);
-        map.visibleRegion = QtPositioning.rectangle(QtPositioning.coordinate(ymax,xmin),QtPositioning.coordinate(ymin,xmax));
-        return;
-    }
-
-    function setViewport(x,y){
-        map.center = QtPositioning.coordinate(y,x);
-        map.zoomLevel = 5;
+        map.visibleRegion = QtPositioning.rectangle(QtPositioning.coordinate(ymax,xmin),
+                                                    QtPositioning.coordinate(ymin,xmax));
         return;
     }
 

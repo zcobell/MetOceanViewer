@@ -333,6 +333,9 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
     ui->subtab_timeseries->setCurrentIndex(1);
   }
 
+  //...Fit the viewport to the markers
+  StationModel::fitMarkers(ui->quick_timeseriesMap, this->userDataStationModel);
+
   QApplication::restoreOverrideCursor();
 }
 //-------------------------------------------//
@@ -348,7 +351,6 @@ void MainWindow::on_check_TimeseriesAllData_toggled(bool checked) {
   return;
 }
 //-------------------------------------------//
-
 
 //-------------------------------------------//
 // Function called when the button to plot time
@@ -374,9 +376,8 @@ void MainWindow::on_button_TimeseriesCopyRow_clicked() {
 
   for (int i = 0; i < ui->table_TimeseriesData->columnCount(); i++)
     ui->table_TimeseriesData->setItem(
-        row, i,
-        new QTableWidgetItem(
-            ui->table_TimeseriesData->item(currentRow, i)->text()));
+        row, i, new QTableWidgetItem(
+                    ui->table_TimeseriesData->item(currentRow, i)->text()));
 
   CellColor.setNamedColor(
       ui->table_TimeseriesData->item(currentRow, 2)->text());
