@@ -22,7 +22,6 @@
 #include <QDesktopServices>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-#include <QWebEnginePage>
 
 // The name of the session file
 QString SessionFile;

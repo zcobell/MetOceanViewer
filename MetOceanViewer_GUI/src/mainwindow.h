@@ -30,7 +30,6 @@
 #include <QVector>
 #include <QtCharts>
 #include <QtNetwork>
-#include <QtWebEngineWidgets>
 #include "stationmodel.h"
 
 //...Forward declarations of classes
@@ -203,13 +202,15 @@ class MainWindow : public QMainWindow {
 
   void changeUserMaptype();
 
+  void changeHwmMaptype();
+
   void on_combo_xtide_maptype_currentIndexChanged(int index);
 
   void on_combo_user_maptype_currentIndexChanged(int index);
 
   void on_button_usertimeseries_fitMarkers_clicked();
 
-private:
+ private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
   Ui::MainWindow *ui;
@@ -287,6 +288,8 @@ private:
   StationModel *xtideStationModel;
 
   StationModel *userDataStationModel;
+
+  StationModel *hwmMarkerModel;
 
   QString noaaSelectedStation;
   QString usgsSelectedStation;

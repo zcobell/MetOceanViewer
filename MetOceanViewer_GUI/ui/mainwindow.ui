@@ -3801,16 +3801,60 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
-             <widget class="WebEngineView" name="map_hwm" native="true">
-              <property name="url" stdset="0">
-               <url>
-                <string>qrc:/rsc/html/hwm_map.html</string>
-               </url>
+             <widget class="QQuickWidget" name="quick_hwmMap">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="resizeMode">
+               <enum>QQuickWidget::SizeRootObjectToView</enum>
               </property>
              </widget>
             </item>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <widget class="QComboBox" name="combo_hwmMaptype">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>200</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>200</width>
+                  <height>22</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Type an address or location to go to that area</string>
+                </property>
+                <property name="statusTip">
+                 <string>Type an address or location to go to that area</string>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>false</bool>
+                </property>
+                <property name="editable">
+                 <bool>false</bool>
+                </property>
+                <property name="currentIndex">
+                 <number>-1</number>
+                </property>
+                <property name="insertPolicy">
+                 <enum>QComboBox::NoInsert</enum>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QPushButton" name="button_saveHWMMap">
                 <property name="minimumSize">
@@ -4012,11 +4056,6 @@
    <class>QQuickWidget</class>
    <extends>QWidget</extends>
    <header>QtQuickWidgets/QQuickWidget</header>
-  </customwidget>
-  <customwidget>
-   <class>WebEngineView</class>
-   <extends>QWidget</extends>
-   <header>webengineview.h</header>
   </customwidget>
   <customwidget>
    <class>ChartView</class>

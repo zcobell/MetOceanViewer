@@ -18,7 +18,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT  += core gui webenginewidgets network xml charts printsupport
+QT  += core gui network xml charts printsupport
 QT  += qml quick positioning location quickwidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -45,7 +45,6 @@ SOURCES +=\
     src/aboutdialog.cpp \
     src/adcircstationoutput.cpp \
     src/imedsstation.cpp \
-    src/javascriptasyncreturn.cpp \
     src/netcdftimeseries.cpp \
     src/uihwmtab.cpp \
     src/uinoaatab.cpp \
@@ -77,13 +76,10 @@ HEADERS  += \
     src/usgs.h \
     src/xtide.h \
     src/chartview.h \
-    src/webenginepage.h \
-    src/webengineview.h \
     src/aboutdialog.h \
     src/adcircstationoutput.h \
     src/addtimeseriesdialog.h \
     src/imedsstation.h \
-    src/javascriptasyncreturn.h \
     src/mainwindow.h \
     src/netcdftimeseries.h \
     src/updatedialog.h \

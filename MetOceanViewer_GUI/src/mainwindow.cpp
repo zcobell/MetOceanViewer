@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 
 #include "mainwindow.h"
+#include <QQmlContext>
 #include "aboutdialog.h"
 #include "colors.h"
 #include "dflow.h"
@@ -30,7 +31,6 @@
 #include "ui_mainwindow.h"
 #include "updatedialog.h"
 #include "usgs.h"
-#include "webenginepage.h"
 #include "xtide.h"
 
 MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
@@ -49,6 +49,7 @@ void MainWindow::setupMetOceanViewerUI() {
   this->setupUsgsMap();
   this->setupXTideMap();
   this->setupUserTimeseriesMap();
+  this->setupHighWaterMarkMap();
   this->setupTimeseriesTable();
   this->setupRandomColors();
   this->installKeyhandlers();
@@ -216,6 +217,12 @@ void MainWindow::changeUserMaptype() {
   return;
 }
 
+void MainWindow::changeHwmMaptype() {
+  ui->quick_hwmMap->rootContext()->setContextProperty(
+      "mapType", ui->combo_hwmMaptype->currentIndex());
+  return;
+}
+
 void MainWindow::setHwmMarkerCategories() { return; }
 
 void MainWindow::setupNoaaMap() {
@@ -350,7 +357,19 @@ void MainWindow::setupUserTimeseriesMap() {
 }
 
 void MainWindow::setupHighWaterMarkMap() {
-  ui->map_hwm->load(QUrl("qrc:/rsc/html/hwm_map.html"));
+  this->hwmMarkerModel = new StationModel(this);
+  ui->quick_hwmMap->rootContext()->setContextProperty("stationModel",
+                                                      this->hwmMarkerModel);
+  ui->quick_hwmMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::ColoredMarkers);
+  Generic::setEsriMapTypes(ui->combo_hwmMaptype);
+  this->setupMarkerClasses(ui->quick_hwmMap);
+  this->changeHwmMaptype();
+  ui->quick_hwmMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
+
+  QObject *hwmItem = ui->quick_hwmMap->rootObject();
+  QMetaObject::invokeMethod(hwmItem, "setMapLocation", Q_ARG(QVariant, -124.66),
+                            Q_ARG(QVariant, 36.88), Q_ARG(QVariant, 1.69));
 
   // Set the colors that are being used on the display page for various
   // things that will be displayed

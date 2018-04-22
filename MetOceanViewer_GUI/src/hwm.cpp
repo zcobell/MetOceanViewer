@@ -30,7 +30,7 @@ Hwm::Hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
                QPushButton *inButtonBoundingLineColor,
                QPushButton *inButtonRegLineColor, QLineEdit *inModeledAxisLabel,
                QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
-               QSpinBox *inBoundingLinesValue, QWebEngineView *inMap,
+               QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
                ChartView *inChartView, QStatusBar *inStatusBar,
                QVector<double> &inClassValues, QObject *parent)
     : QObject(parent) {
@@ -206,12 +206,6 @@ int Hwm::plotHWMMap() {
   ModeledString = "";
   MaximumValue = 0;
 
-  // Make sure we are fresh for if this is a second round of plotting
-  this->map->page()->runJavaScript("clearMarkers()");
-
-  // Give the browsers a chance to catch up to us
-  Generic::delay(1);
-
   for (i = 0; i < this->highWaterMarks.length(); i++) {
     x = this->highWaterMarks[i].lon;
     y = this->highWaterMarks[i].lat;
@@ -233,7 +227,7 @@ int Hwm::plotHWMMap() {
              QString::number(i) + "," + QString::number(modeled) + "," +
              QString::number(measurement) + "," + QString::number(error) + "," +
              QString::number(classification) + "," + unitString + ")";
-    this->map->page()->runJavaScript(Marker);
+    //this->map->page()->runJavaScript(Marker);
     if (i == 0) {
       ModeledString = QString::number(modeled);
       MeasuredString = QString::number(measurement);
@@ -251,7 +245,7 @@ int Hwm::plotHWMMap() {
                 QString::number(classes[4], 'f', 2) + ":" +
                 QString::number(classes[5], 'f', 2) + ":" +
                 QString::number(classes[6], 'f', 2) + "')";
-  this->map->page()->runJavaScript(MyClassList);
+  //this->map->page()->runJavaScript(MyClassList);
 
   return 0;
 }
@@ -520,7 +514,7 @@ int Hwm::processHWMData() {
   else
     unitString = "'m'";
 
-  this->map->page()->runJavaScript("clearMarkers()");
+  //this->map->page()->runJavaScript("clearMarkers()");
 
   // Sanity check on classes
   if (this->manualClassificationCheckbox->isChecked()) {

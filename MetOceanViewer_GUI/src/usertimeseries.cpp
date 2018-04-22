@@ -23,7 +23,6 @@
 #include "errors.h"
 #include "filetypes.h"
 #include "generic.h"
-#include "javascriptasyncreturn.h"
 #include "metoceanviewer.h"
 #include "netcdf.h"
 #include "proj4.h"

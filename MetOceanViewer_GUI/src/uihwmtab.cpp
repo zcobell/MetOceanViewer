@@ -94,7 +94,7 @@ void MainWindow::on_button_processHWM_clicked() {
               ui->button_121linecolor, ui->button_boundlinecolor,
               ui->button_reglinecolor, ui->text_adchwmaxislabel,
               ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
-              ui->spin_upperlowervalue, ui->map_hwm, ui->graphics_hwm,
+              ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
               ui->statusBar, classes, this);
 
   ierr = thisHWM->processHWMData();
@@ -108,7 +108,7 @@ void MainWindow::on_button_processHWM_clicked() {
 
   ui->subtab_hwm->setCurrentIndex(1);
 
-  ui->map_hwm->page()->runJavaScript("fitMarkers()");
+  StationModel::fitMarkers(ui->quick_hwmMap, this->hwmMarkerModel);
 
   return;
 }
@@ -242,7 +242,7 @@ void MainWindow::on_button_boundlinecolor_clicked() {
 // marks to the current view
 //-------------------------------------------//
 void MainWindow::on_button_fitHWM_clicked() {
-  ui->map_hwm->page()->runJavaScript("fitMarkers()");
+  StationModel::fitMarkers(ui->quick_hwmMap, this->hwmMarkerModel);
   return;
 }
 //-------------------------------------------//

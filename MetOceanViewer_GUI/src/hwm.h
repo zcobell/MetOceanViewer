@@ -23,7 +23,7 @@
 #include <QChartView>
 #include <QFile>
 #include <QObject>
-#include <QWebEngineView>
+#include <QQuickWidget>
 #include <QtCharts>
 #include <QtMath>
 #include <QtWidgets>
@@ -39,7 +39,7 @@ class Hwm : public QObject {
                QPushButton *inButtonBoundingLineColor,
                QPushButton *inButtonRegLineColor, QLineEdit *inModeledAxisLabel,
                QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
-               QSpinBox *inBoundingLinesValue, QWebEngineView *inMap,
+               QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
                ChartView *inChartView, QStatusBar *inStatusBar,
                QVector<double> &inClassValues, QObject *parent = nullptr);
 
@@ -84,7 +84,7 @@ class Hwm : public QObject {
   QSpinBox *boundingLinesValue;
   QComboBox *unitComboBox;
   ChartView *chartView;
-  QWebEngineView *map;
+  QQuickWidget *map;
   QChart *thisChart;
   QStatusBar *statusBar;
 };
