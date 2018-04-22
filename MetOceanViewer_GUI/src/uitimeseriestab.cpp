@@ -468,19 +468,12 @@ void MainWindow::on_button_usertimeseriesResetZoom_clicked() {
 void MainWindow::on_pushButton_displayOptions_clicked() {
   TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
   optionsWindow->setDisplayValues(this->timeseriesDisplayValues);
-  optionsWindow->setHideInfoWindows(this->timeseriesHideInfoWindows);
 
   int ierr = optionsWindow->exec();
 
   if (ierr == QDialog::Accepted) {
     this->timeseriesDisplayValues = optionsWindow->displayValues();
-    this->timeseriesHideInfoWindows = optionsWindow->hideInfoWindows();
     ui->timeseries_graphics->setDisplayValues(this->timeseriesDisplayValues);
-
-    //    if (this->timeseriesHideInfoWindows)
-    //      ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('false')");
-    //    else
-    //      ui->timeseries_map->page()->runJavaScript("toggleInfoWindows('true')");
   }
 
   return;

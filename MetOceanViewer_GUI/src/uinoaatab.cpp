@@ -167,7 +167,6 @@ void MainWindow::on_button_noaaresetzoom_clicked() {
 void MainWindow::on_button_noaaOptions_clicked() {
   TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
   optionsWindow->setDisplayValues(this->noaaDisplayValues);
-  optionsWindow->setShowHideInfoWindowOption(false);
 
   int ierr = optionsWindow->exec();
 

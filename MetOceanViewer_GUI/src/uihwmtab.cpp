@@ -284,7 +284,6 @@ void MainWindow::on_button_hwmResetZoom_clicked() {
 void MainWindow::on_button_hwmOptions_clicked() {
   TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
   optionsWindow->setDisplayValues(this->hwmDisplayValues);
-  optionsWindow->setShowHideInfoWindowOption(false);
 
   int ierr = optionsWindow->exec();
 

@@ -295,7 +295,6 @@ private:
 
   bool processCommandLine;
   bool timeseriesDisplayValues;
-  bool timeseriesHideInfoWindows;
   bool noaaDisplayValues;
   bool usgsDisplayValues;
   bool xtideDisplayValues;

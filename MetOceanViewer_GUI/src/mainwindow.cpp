@@ -346,7 +346,6 @@ void MainWindow::setupUserTimeseriesMap() {
                             Q_ARG(QVariant, 1.69));
 
   this->timeseriesDisplayValues = false;
-  this->timeseriesHideInfoWindows = true;
   return;
 }
 

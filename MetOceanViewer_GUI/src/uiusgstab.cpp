@@ -219,7 +219,6 @@ void MainWindow::on_button_usgsresetzoom_clicked() {
 void MainWindow::on_button_usgsOptions_clicked() {
   TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
   optionsWindow->setDisplayValues(this->usgsDisplayValues);
-  optionsWindow->setShowHideInfoWindowOption(false);
 
   int ierr = optionsWindow->exec();
 

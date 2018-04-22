@@ -125,7 +125,6 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 void MainWindow::on_button_xTideOptions_clicked() {
   TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
   optionsWindow->setDisplayValues(this->xtideDisplayValues);
-  optionsWindow->setShowHideInfoWindowOption(false);
 
   int ierr = optionsWindow->exec();
 
