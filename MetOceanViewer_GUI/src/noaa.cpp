@@ -271,14 +271,14 @@ QString Noaa::getDatumLabel() {
 }
 
 int Noaa::generateLabels() {
-  if (this->m_productIndex == 1) {
+  if (this->m_productIndex == 0) {
     this->m_ylabel = tr("Water Level (") + this->getUnitsLabel() + ", " +
                      this->getDatumLabel() + ")";
   } else {
     QString product;
     int ierr = this->getNoaaProductLabel(product);
-    this->m_ylabel =
-        product + this->getUnitsLabel() + ", " + this->getDatumLabel() + ")";
+    this->m_ylabel = product + " (" + this->getUnitsLabel() + ", " +
+                     this->getDatumLabel() + ")";
   }
   this->m_plotTitle = tr("Station ") + this->m_station.id() + ": " +
                       this->m_currentStationData[0]->station[0].name();
