@@ -30,6 +30,8 @@ INCLUDEPATH += $$PROJ4PATH
 
 DEFINES      = PROJ4_LIBRARY
 
+CONFIG      += staticlib
+
 #...PROJ Sources
 SOURCES_PROJ4 = \
     $$PROJ4PATH/pj_list.h $$PROJ4PATH/PJ_aeqd.c $$PROJ4PATH/PJ_gnom.c $$PROJ4PATH/PJ_laea.c $$PROJ4PATH/PJ_mod_ster.c \

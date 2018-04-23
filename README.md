@@ -19,13 +19,10 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 ![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer_GUI/screenshots/mov_ss3.JPG)
 
 # Compiling
-To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.6.0 on Windows, Mac OSX, and Linux.
+To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.10.1 on Windows, Mac OSX, and Linux. Prior versions of Qt should work, but have not been tested.
 
 ## netCDF
 You will need to have netCDF version 4+ installed on your system with acccess to the headers and libraries. You may need to edit the netCDF path in MetOceanViewer.pro to correctly locate these files. When compiling for Windows, these libraries are already included in the package. However, Unix/Mac users will need to ensure they are in their LD_LIBRARY_PATH variable or configure the .pro file accordingly.
-
-## OpenSSL
-You will need a version of OpenSSL installed to correctly run this program. Note that the since these libraries are linked at execution time instead of compile time, the code will compile without OpenSSL. Windows libraries are automatically included when installing the program via NSIS. Unix/Mac users will need to ensure they have OpenSSL installed on their system. If there is an issue with the OpenSSL library, you likely will not be able to recieve web content (Google Maps, update notifications).
 
 # Credits
 The following external libraries/APIs are used in this software
@@ -35,8 +32,6 @@ The following external libraries/APIs are used in this software
 | Qt | http://www.qt.io |
 | NOAA CO-OPS API | http://tidesandcurrents.noaa.gov|
 | USGS Waterdata API | http://waterdata.usgs.gov|
-| Google Maps v3.x API | http://maps.google.com|
-| Google Fusion Tables API | http://tables.googlelabs.com|
 | netCDF v4.3.3 | http://www.unidata.ucar.edu/software/netcdf)
 | HDF5 v1.8.14 | http://www.hdfgroup.org/HDF5 |
 | Curl v7.35.0 |http://curl.haxx.se |

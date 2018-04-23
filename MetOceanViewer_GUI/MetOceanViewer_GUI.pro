@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
 # MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-# Copyright (C) 2015  Zach Cobell
+# Copyright (C) 2018  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,8 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core gui webenginewidgets network xml charts printsupport
+QT  += core gui network xml charts printsupport
+QT  += qml quick positioning location quickwidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -26,72 +27,68 @@ TARGET = MetOceanViewer
 TEMPLATE = app
 
 SOURCES +=\
-    src/movAboutDialog.cpp \
-    src/movAdcircStationOutput.cpp \
-    src/movAddTimeseriesData.cpp \
-    src/movColors.cpp \
-    src/movDflow.cpp \
-    src/movFiletypes.cpp \
-    src/movGeneric.cpp \
-    src/movHwm.cpp \
-    src/movImeds.cpp \
-    src/movImedsStation.cpp \
-    src/movInitUI.cpp \
-    src/movJavascriptAsyncReturn.cpp \
-    src/movKeyhandler.cpp \
-    src/movMain.cpp \
-    src/movNoaa.cpp \
-    src/movQChartView.cpp \
-    src/movSession.cpp \
-    src/movStartup.cpp \
-    src/movUserTimeseries.cpp \
-    src/movUiHwmTab.cpp \
-    src/movUiNoaaTab.cpp \
-    src/movUiTimeseriesTab.cpp \
-    src/movUiUsgsTab.cpp \
-    src/movUiXTideTab.cpp \
-    src/movUpdateDialog.cpp \
-    src/movUsgs.cpp \
-    src/movXtide.cpp \
-    src/movErrors.cpp \
-    src/movusertimeseriesoptions.cpp \
-    src/movNetcdfTimeseries.cpp \
+    src/stationmodel.cpp \
+    src/station.cpp \
+    src/colors.cpp \
+    src/dflow.cpp \
+    src/errors.cpp \
+    src/filetypes.cpp \
+    src/generic.cpp \
+    src/hwm.cpp \
+    src/imeds.cpp \
+    src/keyhandler.cpp \
+    src/noaa.cpp \
+    src/session.cpp \
+    src/usgs.cpp \
+    src/xtide.cpp \
+    src/chartview.cpp \
+    src/aboutdialog.cpp \
+    src/adcircstationoutput.cpp \
+    src/imedsstation.cpp \
+    src/netcdftimeseries.cpp \
+    src/uihwmtab.cpp \
+    src/uinoaatab.cpp \
+    src/uitimeseriestab.cpp \
+    src/uiusgstab.cpp \
+    src/updatedialog.cpp \
+    src/usertimeseries.cpp \
+    src/mainwindow.cpp \
+    src/main.cpp \
+    src/addtimeseriesdialog.cpp \
+    src/uixtidetab.cpp
 
 HEADERS  += \
-    src/movAdcircStationOutput.h \
-    src/movColors.h \
-    src/movDflow.h \
-    src/movErrors.h \
-    src/movFiletypes.h \
-    src/movGeneric.h \
-    src/movHwm.h \
-    src/movImeds.h \
-    src/movImedsStation.h \
-    src/movJavascriptAsyncReturn.h \
-    src/movKeyhandler.h \
-    src/movNoaa.h \
-    src/movQChartView.h \
-    src/movQWebEnginePage.h \
-    src/movSession.h \
-    src/movUserTimeseries.h \
-    src/movUsgs.h \
-    src/movXtide.h \
-    movVersion.h \
-    src/mov_dialog_addtimeseriesdata.h \
-    src/mov_dialog_about.h \
-    src/mov_dialog_update.h \
-    src/movusertimeseriesoptions.h \
-    src/MainWindow.h \
-    src/movQWebEngineView.h \
     src/metoceanviewer.h \
-    src/movNetcdfTimeseries.h \
+    src/stationmodel.h \
+    src/station.h \
+    src/colors.h \
+    src/dflow.h \
+    src/errors.h \
+    src/filetypes.h \
+    src/generic.h \
+    src/hwm.h \
+    src/imeds.h \
+    src/keyhandler.h \
+    src/noaa.h \
+    src/session.h \
+    src/usgs.h \
+    src/xtide.h \
+    src/chartview.h \
+    src/aboutdialog.h \
+    src/adcircstationoutput.h \
+    src/addtimeseriesdialog.h \
+    src/imedsstation.h \
+    src/mainwindow.h \
+    src/netcdftimeseries.h \
+    src/updatedialog.h \
+    src/usertimeseries.h \
+    version.h
 
 FORMS    += \
-    ui/mov_dialog_about.ui \
-    ui/mov_dialog_addtimeseries.ui \
-    ui/mov_window_main.ui \
-    ui/mov_dialog_update.ui \
-    ui/movusertimeseriesoptions.ui
+    ui/aboutdialog.ui \
+    ui/addtimeseriesdialog.ui \
+    ui/updatedialog.ui \
+    ui/mainwindow.ui
 
 OTHER_FILES +=
 
@@ -188,13 +185,6 @@ RC_FILE = resources.rc
 GIT_VERSION = $$system(git --git-dir $$PWD/../.git --work-tree $$PWD/.. describe --always --tags)
 DEFINES += GIT_VERSION=\\\"$$GIT_VERSION\\\"
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/release/ -lmovProj4
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/debug/ -lmovProj4
-else:unix: LIBS += -L$$OUT_PWD/../libraries/libproj4/ -lmovProj4
-
-INCLUDEPATH += $$PWD/../libraries/libproj4
-DEPENDPATH += $$PWD/../libraries/libproj4
-
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/release/ -lnetcdfcxx
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/debug/ -lnetcdfcxx
 else:unix: LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/ -lnetcdfcxx
@@ -233,3 +223,22 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libr
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/release/timezone.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/debug/timezone.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/libtimezone.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/release/ -lmovProj4
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/debug/ -lmovProj4
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libproj4/ -lmovProj4
+
+INCLUDEPATH += $$PWD/../libraries/libproj4
+DEPENDPATH += $$PWD/../libraries/libproj4
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/release/libmovProj4.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/debug/libmovProj4.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/release/movProj4.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/debug/movProj4.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/libmovProj4.a
+
+DISTFILES += \
+    qml/MovMapItem.qml \
+    qml/MapViewer.qml \
+    qml/InfoWindow.qml \
+    qml/MapLegend.qml

@@ -11,7 +11,7 @@ before_install:
 - sudo apt-get update  -qq
 - sudo apt-get install -qq libsqlite3-dev libnetcdf-dev
 - sudo apt-cache search qt59
-- sudo apt-get install -qq qt59base qt59charts-no-lgpl qt59webengine qt59imageformats qt59connectivity qt59graphicaleffects qt59script qt59sensors qt59webchannel qt59svg qt59xmlpatterns qt59location 
+- sudo apt-get install -qq qt59base qt59charts-no-lgpl qt59webengine qt59imageformats qt59connectivity qt59graphicaleffects qt59script qt59sensors qt59webchannel qt59svg qt59xmlpatterns qt59location qt59quickcontrols2 qt59quickcontrols 
 - export PATH=/opt/qt59/bin:$PATH
 
 script:

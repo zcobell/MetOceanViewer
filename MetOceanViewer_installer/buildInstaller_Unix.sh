@@ -1,10 +1,8 @@
 #!/bin/bash
 
 QtHome=/opt/Qt
-QtLibDir=/opt/Qt/5.9.1/gcc_64/lib
-executable=../../build-MetOceanViewer-Desktop_Qt_5_9_1_GCC_64bit-Release/MetOceanViewer_GUI/MetOceanViewer
-webenginelib=/opt/Qt/5.9.1/gcc_64/lib/libQt5WebEngineCore.so.5
-proj4lib=../../build-MetOceanViewer-Desktop_Qt_5_9_1_GCC_64bit-Release/libraries/libproj4/libmovProj4.so.1
+QtLibDir=/opt/Qt/5.10.0/gcc_64/lib
+executable=../../build-MetOceanViewer-Desktop_Qt_5_10_1_GCC_64bit-Release/MetOceanViewer_GUI/MetOceanViewer
 xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
 version=$(git describe --always --tags)
@@ -25,21 +23,19 @@ if [ ! -s $harmonics ] ; then
     exit 1
 fi
 
-if [ ! -s $QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator ] ; then
+if [ ! -s $QtHome/Tools/QtInstallerFramework/3.0/bin/binarycreator ] ; then
     echo "ERROR: Qt Installer Framework not found"
     exit 1
 fi
 
 echo "Gathering libraries..."
 ldd $executable    > liblist.txt
-ldd $webenginelib >> liblist.txt
 
 mkdir -p ./packages_unix/com.zachcobell.metoceanviewer/data
 mkdir -p ./packages_unix/com.qt.qtsharedlibraries/data
 mkdir -p ./packages_unix/com.unidata.netcdf/data 
 
 cp $executable ./packages_unix/com.zachcobell.metoceanviewer/data/.
-cp $proj4lib ./packages_unix/com.zachcobell.metoceanviewer/data/.
 cp $xtide ./packages_unix/com.zachcobell.metoceanviewer/data/.
 cp $harmonics ./packages_unix/com.zachcobell.metoceanviewer/data/.
 
@@ -66,4 +62,4 @@ done < liblist.txt
 rm liblist.txt
 
 echo "Building Installer..."
-$QtHome/Tools/QtInstallerFramework/2.0/bin/binarycreator -c config/config.xml -p packages_unix MetOceanViewer_Unix_Installer_$version.bin
+$QtHome/Tools/QtInstallerFramework/3.0/bin/binarycreator -c config/config.xml -p packages_unix MetOceanViewer_Unix_Installer_$version.bin
