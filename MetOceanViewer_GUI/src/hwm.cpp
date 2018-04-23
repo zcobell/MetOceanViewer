@@ -81,8 +81,6 @@ int Hwm::computeLinearRegression() {
     double B = 0;
     double N = static_cast<double>(this->m_highWaterMarks.size());
     double NDry = 0;
-    double SSE = 0;
-    double SSTOT = 0;
     double SumErr = 0;
     for (int i = 0; i < N; i++) {
       // We ditch points that didn't wet since they
@@ -107,6 +105,7 @@ int Hwm::computeLinearRegression() {
 
     double R2, MeanErr, StdDev;
 
+
     // Calculate the slope (M) and Correllation (R2)
     if (this->m_checkForceZero->isChecked()) {
       // Slope
@@ -119,16 +118,17 @@ int Hwm::computeLinearRegression() {
       double YBar = SumY / N2;
 
       // Calculate Total Sum of Squares
+      double SSTOT = 0.0;
       for (int i = 0; i < N; i++) {
         // We ditch points that didn't wet since they
         // skew calculation
         if (this->m_highWaterMarks[i].modeled > -9999) {
-          SSTOT = SSTOT + qPow((this->m_highWaterMarks[i].modeled - YBar), 2.0);
+          double SSTOT = SSTOT + qPow((this->m_highWaterMarks[i].modeled - YBar), 2.0);
         }
       }
 
       // Sum of square errors
-      SSE = SumY2 - M * M * SumX2;
+      double SSE = SumY2 - M * M * SumX2;
 
       // R2
       R2 = 1 - (SSE / SSTOT);
@@ -432,7 +432,6 @@ int Hwm::plotRegression() {
 }
 
 int Hwm::processHWMData() {
-  QString unitString;
 
   int ierr = this->readHWMData();
   if (ierr != 0) {
@@ -445,12 +444,6 @@ int Hwm::processHWMData() {
     this->m_errorString = tr("Could not calculate the regression function.");
     return -1;
   }
-
-  int unit = this->m_comboUnits->currentIndex();
-  if (unit == 0)
-    unitString = "'ft'";
-  else
-    unitString = "'m'";
 
   // Sanity check on classes
   if (this->m_checkUserClasses->isChecked()) {
