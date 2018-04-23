@@ -42,8 +42,7 @@ class Hwm : public QObject {
                QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
                QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
                ChartView *inChartView, QStatusBar *inStatusBar,
-               QVector<double> &inClassValues, QQuickWidget *quickWidget,
-               StationModel *stationModel, QObject *parent = nullptr);
+               QVector<double> &inClassValues,                StationModel *stationModel, QObject *parent = nullptr);
 
   //...Public Functions
   int processHWMData();
@@ -63,11 +62,11 @@ class Hwm : public QObject {
   };
 
   //...Private Variables
-  double regLineSlope, regLineIntercept;
-  double regCorrelation, regStdDev;
-  QString hwmErrorString;
-  QVector<double> classes;
-  QVector<hwm_data> highWaterMarks;
+  double m_regLineSlope, m_regLineIntercept;
+  double m_regCorrelation, m_regStdDev;
+  QString m_errorString;
+  QVector<double> m_classes;
+  QVector<hwm_data> m_highWaterMarks;
 
   //...Private Functions
   int readHWMData();
@@ -77,19 +76,17 @@ class Hwm : public QObject {
   int plotRegression();
 
   //...Pointers to widgets
-  QLineEdit *fileBox, *modeledAxisLabelBox;
-  QLineEdit *measuredAxisLabelBox, *plotTitleBox;
-  QPushButton *buttonHWMColor, *button121LineColor;
-  QPushButton *buttonBoundingLinecolor, *buttonRegLineColor;
-  QCheckBox *manualClassificationCheckbox, *forceThroughZeroCheckbox;
-  QCheckBox *upperLowerLinesCheckbox, *colorHWMDotsCheckbox;
-  QSpinBox *boundingLinesValue;
-  QComboBox *unitComboBox;
-  ChartView *chartView;
-  QQuickWidget *map;
-  QChart *thisChart;
-  QStatusBar *statusBar;
+  QLineEdit *m_fileBox, *m_modeledAxisLabelBox;
+  QLineEdit *m_measuredAxisLabelBox, *m_plotTitleBox;
+  QPushButton *m_buttonColorHwm, *m_buttonColor121Line;
+  QPushButton *m_buttonColorBoundingLine, *m_buttonColorRegLine;
+  QCheckBox *m_checkUserClasses, *m_checkForceZero;
+  QCheckBox *m_checkStdDevLines, *m_checkColorDots;
+  QSpinBox *m_boundingLineValue;
+  QComboBox *m_comboUnits;
+  ChartView *m_chartView;
   QQuickWidget *m_quickMap;
+  QStatusBar *m_statusBar;
   StationModel *m_stationModel;
 };
 

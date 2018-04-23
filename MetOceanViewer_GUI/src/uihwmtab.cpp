@@ -95,7 +95,7 @@ void MainWindow::on_button_processHWM_clicked() {
       ui->button_reglinecolor, ui->text_adchwmaxislabel,
       ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
       ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
-      ui->statusBar, classes, ui->quick_hwmMap, this->hwmMarkerModel, this);
+      ui->statusBar, classes, this->hwmMarkerModel, this);
 
   ierr = thisHWM->processHWMData();
 
