@@ -71,28 +71,24 @@ int Hwm::classifyHWM(double diff) {
 }
 
 int Hwm::computeLinearRegression() {
-  double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar, SumErr,
-      MeanErr;
-  double M, B, R2, StdDev;
-  int i;
-
-  bool ForceThroughZero = this->m_checkForceZero->isChecked();
-
-  SumXY = 0;
-  SumX2 = 0;
-  SumY2 = 0;
-  SumY = 0;
-  SumX = 0;
-  M = 0;
-  B = 0;
-  N = static_cast<double>(this->m_highWaterMarks.size());
-  NDry = 0;
-  SSE = 0;
-  SSTOT = 0;
-  SumErr = 0;
-
   try {
-    for (i = 0; i < N; i++) {
+    double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar,
+        SumErr, MeanErr;
+    double M, B, R2, StdDev;
+
+    SumXY = 0;
+    SumX2 = 0;
+    SumY2 = 0;
+    SumY = 0;
+    SumX = 0;
+    M = 0;
+    B = 0;
+    N = static_cast<double>(this->m_highWaterMarks.size());
+    NDry = 0;
+    SSE = 0;
+    SSTOT = 0;
+    SumErr = 0;
+    for (int i = 0; i < N; i++) {
       // We ditch points that didn't wet since they
       // skew calculation
       if (this->m_highWaterMarks[i].modeled > -9999) {
@@ -113,7 +109,7 @@ int Hwm::computeLinearRegression() {
     N2 = N - NDry;
 
     // Calculate the slope (M) and Correllation (R2)
-    if (ForceThroughZero) {
+    if (this->m_checkForceZero->isChecked()) {
       // Slope
       M = SumXY / SumX2;
 
@@ -124,7 +120,7 @@ int Hwm::computeLinearRegression() {
       YBar = SumY / N2;
 
       // Calculate Total Sum of Squares
-      for (i = 0; i < N; i++) {
+      for (int i = 0; i < N; i++) {
         // We ditch points that didn't wet since they
         // skew calculation
         if (this->m_highWaterMarks[i].modeled > -9999) {
@@ -154,27 +150,26 @@ int Hwm::computeLinearRegression() {
     // Calculate Standard Deviation
     MeanErr = SumErr / N2;
     SumErr = 0;
-    for (i = 0; i < N; i++)
+    for (int i = 0; i < N; i++)
       if (this->m_highWaterMarks[i].modeled > -9999)
         SumErr = SumErr + qPow(this->m_highWaterMarks[i].error - MeanErr, 2.0);
 
     StdDev = qSqrt(SumErr / N2);
 
+    this->m_regLineSlope = M;
+    this->m_regLineIntercept = B;
+    this->m_regCorrelation = R2;
+    this->m_regStdDev = StdDev;
+
   } catch (...) {
     return 1;
   }
-
-  this->m_regLineSlope = M;
-  this->m_regLineIntercept = B;
-  this->m_regCorrelation = R2;
-  this->m_regStdDev = StdDev;
 
   return 0;
 }
 
 int Hwm::plotHWMMap() {
   QString unitString;
-  int classification;
 
   if (this->m_comboUnits->currentIndex() == 1)
     unitString = "m";
@@ -182,6 +177,7 @@ int Hwm::plotHWMMap() {
     unitString = "ft";
 
   for (int i = 0; i < this->m_highWaterMarks.length(); i++) {
+    int classification;
     if (this->m_highWaterMarks[i].modeled < -9999)
       classification = -1;
     else
@@ -439,10 +435,8 @@ int Hwm::plotRegression() {
 
 int Hwm::processHWMData() {
   QString unitString;
-  double c0, c1, c2, c3, c4, c5, c6;
-  int unit, ierr;
 
-  ierr = this->readHWMData();
+  int ierr = this->readHWMData();
   if (ierr != 0) {
     this->m_errorString = tr("Could not read the high water mark file.");
     return -1;
@@ -454,7 +448,7 @@ int Hwm::processHWMData() {
     return -1;
   }
 
-  unit = this->m_comboUnits->currentIndex();
+  int unit = this->m_comboUnits->currentIndex();
   if (unit == 0)
     unitString = "'ft'";
   else
@@ -462,13 +456,13 @@ int Hwm::processHWMData() {
 
   // Sanity check on classes
   if (this->m_checkUserClasses->isChecked()) {
-    c0 = this->m_classes[0];
-    c1 = this->m_classes[1];
-    c2 = this->m_classes[2];
-    c3 = this->m_classes[3];
-    c4 = this->m_classes[4];
-    c5 = this->m_classes[5];
-    c6 = this->m_classes[6];
+    double c0 = this->m_classes[0];
+    double c1 = this->m_classes[1];
+    double c2 = this->m_classes[2];
+    double c3 = this->m_classes[3];
+    double c4 = this->m_classes[4];
+    double c5 = this->m_classes[5];
+    double c6 = this->m_classes[6];
 
     if (c1 <= c0) {
       this->m_errorString = tr("Your classifications are invalid.");

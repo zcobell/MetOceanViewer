@@ -210,6 +210,12 @@ class MainWindow : public QMainWindow {
 
   void on_button_hwmDisplayValues_toggled(bool checked);
 
+  void on_check_usgsShowStations_toggled(bool checked);
+
+  void on_check_xtideShowStations_toggled(bool checked);
+
+  void on_check_noaaShowStations_toggled(bool checked);
+
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 

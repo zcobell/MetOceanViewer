@@ -275,7 +275,6 @@ void MainWindow::setupUsgsMap() {
   ui->combo_usgs_maptype->setCurrentIndex(0);
   this->changeUsgsMaptype();
   ui->quick_usgsMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
-  Usgs::addStationsToModel(this->usgsStationModel);
   QObject *usgsItem = ui->quick_usgsMap->rootObject();
   QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeUsgsMarker(QString)));
@@ -299,7 +298,6 @@ void MainWindow::setupXTideMap() {
   ui->combo_xtide_maptype->setCurrentIndex(0);
   this->changeXtideMaptype();
   ui->quick_xtideMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
-  XTide::addStationsToModel(this->xtideStationModel);
   QObject *xtideItem = ui->quick_xtideMap->rootObject();
   QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeXtideMarker(QString)));
@@ -508,4 +506,31 @@ void MainWindow::on_button_timeseriesDisplayValues_toggled(bool checked) {
 
 void MainWindow::on_button_hwmDisplayValues_toggled(bool checked) {
   ui->graphics_hwm->setDisplayValues(checked);
+}
+
+void MainWindow::on_check_usgsShowStations_toggled(bool checked) {
+  if (checked) {
+    Usgs::addStationsToModel(this->usgsStationModel);
+  } else {
+    this->usgsStationModel->clear();
+  }
+  return;
+}
+
+void MainWindow::on_check_xtideShowStations_toggled(bool checked) {
+  if (checked) {
+    XTide::addStationsToModel(this->xtideStationModel);
+  } else {
+    this->xtideStationModel->clear();
+  }
+  return;
+}
+
+void MainWindow::on_check_noaaShowStations_toggled(bool checked) {
+  if (checked) {
+    Noaa::addStationsToModel(this->noaaStationModel);
+  } else {
+    this->noaaStationModel->clear();
+  }
+  return;
 }

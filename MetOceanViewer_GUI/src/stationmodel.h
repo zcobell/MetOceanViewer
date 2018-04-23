@@ -28,7 +28,6 @@
 #include <QQuickItem>
 #include <QQuickView>
 #include <QQuickWidget>
-#include "rectangle.h"
 #include "station.h"
 
 class StationModel : public QAbstractListModel {
@@ -63,7 +62,9 @@ class StationModel : public QAbstractListModel {
 
   Station findStation(QString stationName) const;
 
-  Rectangle boundingBox();
+  void boundingBox(QRectF &box);
+
+  void clear();
 
   static void fitMarkers(QQuickWidget *quickWidget, StationModel *model);
 

@@ -418,11 +418,10 @@ int Usgs::plotNewUSGSStation() {
 }
 
 int Usgs::replotCurrentUSGSStation(int index) {
-  int ierr;
   if (this->m_usgsDataReady) {
     this->m_productIndex = index;
     this->m_productName = m_comboProduct->currentText();
-    ierr = this->plotUSGS();
+    int ierr = this->plotUSGS();
     m_statusBar->clearMessage();
     if (ierr != 0) {
       this->m_errorString = tr("No data available for this selection.");
@@ -663,8 +662,9 @@ int Usgs::saveUSGSData(QString filename, QString format) {
     Output << "USGS_" + this->m_currentStation.id() + "   " +
                   QString::number(
                       this->m_currentStation.coordinate().latitude()) +
-                  "   " + QString::number(
-                              this->m_currentStation.coordinate().longitude()) +
+                  "   " +
+                  QString::number(
+                      this->m_currentStation.coordinate().longitude()) +
                   "\n";
     for (int i = 0; i < this->m_allStationData.length(); i++) {
       Output << this->m_allStationData[i].m_date.toString("yyyy") + "    " +

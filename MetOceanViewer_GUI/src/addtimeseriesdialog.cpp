@@ -18,13 +18,13 @@
 //
 //-----------------------------------------------------------------------*/
 
+#include "addtimeseriesdialog.h"
 #include <QMessageBox>
-#include "mainwindow.h"
 #include "colors.h"
 #include "filetypes.h"
 #include "generic.h"
+#include "mainwindow.h"
 #include "netcdftimeseries.h"
-#include "addtimeseriesdialog.h"
 #include "ui_addtimeseriesdialog.h"
 
 //-------------------------------------------//
@@ -37,7 +37,8 @@ AddTimeseriesDialog::AddTimeseriesDialog(QWidget *parent)
   ui->text_unitconvert->setValidator(new QDoubleValidator(this));
   ui->text_xadjust->setValidator(new QDoubleValidator(this));
   ui->text_yadjust->setValidator(new QDoubleValidator(this));
-  this->PreviousDirectory = ((MainWindow *)parent)->previousDirectory;
+  this->PreviousDirectory =
+      static_cast<MainWindow *>(parent)->previousDirectory;
   connect(this, SIGNAL(addTimeseriesError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
   this->NumIMEDSFiles = 0;
@@ -71,8 +72,7 @@ AddTimeseriesDialog::~AddTimeseriesDialog() { delete ui; }
 // Set the default elements with a series name,
 // a blank filename, and a randomly generated color
 //-------------------------------------------//
-void AddTimeseriesDialog::set_default_dialog_box_elements(
-    int NumRowsInTable) {
+void AddTimeseriesDialog::set_default_dialog_box_elements(int NumRowsInTable) {
   QString ButtonStyle;
   this->InputFileColdStart.setTimeSpec(Qt::UTC);
   ui->text_seriesname->setText(tr("Series ") +
@@ -304,8 +304,7 @@ void AddTimeseriesDialog::on_browse_filebrowse_clicked() {
     ui->text_filename->setText(TempFile);
 
     this->FileReadError = false;
-    this->InputFileType =
-        Filetypes::getIntegerFiletype(this->CurrentFileName);
+    this->InputFileType = Filetypes::getIntegerFiletype(this->CurrentFileName);
 
     this->setItemsByFiletype();
   }

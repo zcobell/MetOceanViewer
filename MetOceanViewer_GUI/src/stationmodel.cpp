@@ -23,7 +23,7 @@ StationModel::StationModel(QObject *parent) : QAbstractListModel(parent) {
   this->buildRoles();
 }
 
-void StationModel::buildRoles(){
+void StationModel::buildRoles() {
   this->m_roles[positionRole] = "position";
   this->m_roles[stationIDRole] = "id";
   this->m_roles[stationNameRole] = "name";
@@ -82,9 +82,7 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
   }
 }
 
-QHash<int, QByteArray> StationModel::roleNames() const {
-  return this->m_roles;
-}
+QHash<int, QByteArray> StationModel::roleNames() const { return this->m_roles; }
 
 Station StationModel::findStation(QString stationName) const {
   if (this->m_stationMap.contains(stationName)) {
@@ -108,26 +106,39 @@ void StationModel::deselectStation(QString name) {
   return;
 }
 
-Rectangle StationModel::boundingBox() {
-  Rectangle box;
-
+void StationModel::boundingBox(QRectF &box) {
   for (int i = 0; i < this->m_stations.length(); i++) {
     if (i == 0) {
       box.setTopLeft(QPointF(this->m_stations[i].coordinate().longitude(),
                              this->m_stations[i].coordinate().latitude()));
       box.setBottomRight(box.topLeft());
     } else {
-      box.extend(QPointF(this->m_stations[i].coordinate().longitude(),
-                         this->m_stations[i].coordinate().latitude()));
+      box.setBottomLeft(
+          QPointF(std::min(this->m_stations[i].coordinate().longitude(),
+                           box.bottomLeft().x()),
+                  std::min(this->m_stations[i].coordinate().latitude(),
+                           box.bottomLeft().y())));
+      box.setTopRight(
+          QPointF(std::max(this->m_stations[i].coordinate().longitude(),
+                           box.topRight().x()),
+                  std::max(this->m_stations[i].coordinate().latitude(),
+                           box.topRight().y())));
     }
   }
-  return box;
+  return;
 }
 
 void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
   //...Generate the bounding box, expand by 10% to give some margin
-  Rectangle boundingBox = model->boundingBox();
-  boundingBox.expand(10);
+  QRectF boundingBox;
+  model->boundingBox(boundingBox);
+
+  double percent = 10;
+  double width_new = boundingBox.width() * (1.0 + (percent / 100.0));
+  double height_new = boundingBox.height() * (1.0 + (percent / 100.0));
+  double dx = (width_new - boundingBox.width()) / 2.0;
+  double dy = (height_new - boundingBox.height()) / 2.0;
+  boundingBox.adjust(-dx, -dy, dx, dy);
 
   QObject *mapObject = quickWidget->rootObject();
   QMetaObject::invokeMethod(mapObject, "setVisibleRegion",
@@ -136,4 +147,10 @@ void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
                             Q_ARG(QVariant, boundingBox.bottomRight().x()),
                             Q_ARG(QVariant, boundingBox.bottomRight().y()));
   return;
+}
+
+void StationModel::clear(){
+  this->beginResetModel();
+  this->m_stations.clear();
+  this->endResetModel();
 }

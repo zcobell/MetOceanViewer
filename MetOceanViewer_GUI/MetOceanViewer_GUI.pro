@@ -55,7 +55,6 @@ SOURCES +=\
     src/mainwindow.cpp \
     src/main.cpp \
     src/addtimeseriesdialog.cpp \
-    src/rectangle.cpp \
     src/uixtidetab.cpp
 
 HEADERS  += \
@@ -83,8 +82,7 @@ HEADERS  += \
     src/netcdftimeseries.h \
     src/updatedialog.h \
     src/usertimeseries.h \
-    version.h \
-    src/rectangle.h
+    version.h
 
 FORMS    += \
     ui/aboutdialog.ui \

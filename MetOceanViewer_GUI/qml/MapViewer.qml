@@ -32,6 +32,11 @@ Rectangle {
 
     property string stationText;
 
+    function clearMarkers(){
+        map.clearMapItems();
+        return;
+    }
+
     function setVisibleRegion(x1,y1,x2,y2){
         var xmin = Math.min(x1,x2);
         var xmax = Math.max(x1,x2);

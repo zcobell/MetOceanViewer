@@ -26,7 +26,6 @@
 #include "metoceanviewer.h"
 #include "netcdf.h"
 #include "proj4.h"
-#include "rectangle.h"
 
 UserTimeseries::UserTimeseries(
     QTableWidget *inTable, QCheckBox *inXAxisCheck, QCheckBox *inYAxisCheck,
@@ -524,6 +523,9 @@ int UserTimeseries::processAdcircAsciiData(int tableIndex, Imeds *data) {
 
   ierr = adcircData->toIMEDS(data);
   delete adcircData;
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    return ierr;
+  }
 
   if (!data->success) return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
   return MetOceanViewer::Error::NOERR;
@@ -649,6 +651,8 @@ int UserTimeseries::processStationLocations() {
 }
 
 int UserTimeseries::addMarkersToMap() {
+  this->m_stationmodel->clear();
+
   //...Add the markers to the map
   for (int i = 0; i < this->m_fileDataUnique[0]->nstations; i++) {
     double x = -1.0;
