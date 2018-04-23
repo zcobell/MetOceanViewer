@@ -52,10 +52,10 @@ cp ../thirdparty/openssl/bin_64/*.dll $winPackDir/com.zachcobell.metoceanviewer/
 #...Run the deployment script
 cd $winPackDir/com.zachcobell.metoceanviewer/data
 if [ $autoredist == 1 ] ; then
-    $winDeployQtBinary --compiler-runtime -release MetOceanViewer.exe
+    $winDeployQtBinary --compiler-runtime --qmldir=../../../../MetOceanViewer_GUI/qml -release MetOceanViewer.exe
     $winDeployQtBinary --compiler-runtime -release movProj4.dll
 else
-    $winDeployQtBinary -release MetOceanViewer.exe
+    $winDeployQtBinary -release --qmldir=../../../../MetOceanViewer_GUI/qml MetOceanViewer.exe
     $winDeployQtBinary -release movProj4.dll
 fi
 cd ../../..
