@@ -33,9 +33,6 @@ mkdir -p $winPackDir/com.zachcobell.metoceanviewer/data
 #...Grab the MetOceanViewer executable
 cp $compileDirectory/MetOceanViewer_GUI/release/MetOceanViewer.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 
-#...Grab the proj4 library
-cp $compileDirectory/libraries/libproj4/release/movProj4.dll $winPackDir/com.zachcobell.metoceanviewer/data/.
-
 #...Grab the Windows XTide executable
 cp ../thirdparty/xtide-2.15.1/tide.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 
@@ -53,10 +50,8 @@ cp ../thirdparty/openssl/bin_64/*.dll $winPackDir/com.zachcobell.metoceanviewer/
 cd $winPackDir/com.zachcobell.metoceanviewer/data
 if [ $autoredist == 1 ] ; then
     $winDeployQtBinary --compiler-runtime --qmldir=../../../../MetOceanViewer_GUI/qml -release MetOceanViewer.exe
-    $winDeployQtBinary --compiler-runtime -release movProj4.dll
 else
     $winDeployQtBinary -release --qmldir=../../../../MetOceanViewer_GUI/qml MetOceanViewer.exe
-    $winDeployQtBinary -release movProj4.dll
 fi
 cd ../../..
 
