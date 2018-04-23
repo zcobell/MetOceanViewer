@@ -244,7 +244,6 @@ void MainWindow::setupNoaaMap() {
   ui->Date_EndTime->setDateTime(QDateTime::currentDateTimeUtc());
   ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
   ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
-  this->noaaDisplayValues = false;
   ui->combo_noaaTimezoneLocation->setCurrentIndex(12);
   MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(
       ui->combo_noaaTimezoneLocation->currentIndex());
@@ -262,7 +261,6 @@ void MainWindow::setupUsgsMap() {
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
   ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
-  this->usgsDisplayValues = false;
   ui->combo_usgsTimezoneLocation->setCurrentIndex(12);
   MainWindow::on_combo_usgsTimezoneLocation_currentIndexChanged(
       ui->combo_usgsTimezoneLocation->currentIndex());
@@ -291,7 +289,6 @@ void MainWindow::setupUsgsMap() {
 void MainWindow::setupXTideMap() {
   ui->date_xtide_start->setDateTime(QDateTime::currentDateTime().addDays(-7));
   ui->date_xtide_end->setDateTime(QDateTime::currentDateTime());
-  this->xtideDisplayValues = false;
   this->xtideStationModel = new StationModel(this);
   ui->quick_xtideMap->rootContext()->setContextProperty(
       "stationModel", this->xtideStationModel);
@@ -351,8 +348,6 @@ void MainWindow::setupUserTimeseriesMap() {
   QMetaObject::invokeMethod(userTimeseriesItem, "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
-
-  this->timeseriesDisplayValues = false;
   return;
 }
 
@@ -377,7 +372,6 @@ void MainWindow::setupHighWaterMarkMap() {
   this->LineColorRegression.setRgb(7, 145, 0);
   this->LineColor121Line.setRgb(255, 0, 0);
   this->LineColorBounds.setRgb(0, 0, 0);
-  this->hwmDisplayValues = false;
 
   // Set the button color for high water marks
   QString ButtonStyle = Colors::MakeColorString(this->DotColorHWM);
@@ -494,4 +488,24 @@ void MainWindow::on_combo_user_maptype_currentIndexChanged(int index) {
 void MainWindow::on_button_usertimeseries_fitMarkers_clicked() {
   StationModel::fitMarkers(ui->quick_timeseriesMap, this->userDataStationModel);
   return;
+}
+
+void MainWindow::on_button_noaaDisplayValues_toggled(bool checked) {
+  ui->noaa_graphics->setDisplayValues(checked);
+}
+
+void MainWindow::on_button_usgsDisplayValues_toggled(bool checked) {
+  ui->usgs_graphics->setDisplayValues(checked);
+}
+
+void MainWindow::on_button_xtideDisplayValues_toggled(bool checked) {
+  ui->xtide_graphics->setDisplayValues(checked);
+}
+
+void MainWindow::on_button_timeseriesDisplayValues_toggled(bool checked) {
+  ui->timeseries_graphics->setDisplayValues(checked);
+}
+
+void MainWindow::on_button_hwmDisplayValues_toggled(bool checked) {
+  ui->graphics_hwm->setDisplayValues(checked);
 }

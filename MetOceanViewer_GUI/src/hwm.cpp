@@ -58,33 +58,16 @@ Hwm::Hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
   this->m_regStdDev = 0.0;
   this->m_chartView->m_chart = nullptr;
   this->m_stationModel = stationModel;
-
-  this->m_classes.resize(inClassValues.length());
-  for (int i = 0; i < this->m_classes.length(); i++)
-    m_classes[i] = inClassValues[i];
+  this->m_classes = inClassValues;
 }
 
 QString Hwm::getErrorString() { return this->m_errorString; }
 
 int Hwm::classifyHWM(double diff) {
-  int color;
-  if (diff < this->m_classes[0])
-    color = 1;
-  else if (diff < this->m_classes[1])
-    color = 2;
-  else if (diff < this->m_classes[2])
-    color = 3;
-  else if (diff < this->m_classes[3])
-    color = 4;
-  else if (diff < this->m_classes[4])
-    color = 5;
-  else if (diff < this->m_classes[5])
-    color = 6;
-  else if (diff < this->m_classes[6])
-    color = 7;
-  else
-    color = 8;
-  return color;
+  for (int i = 0; i < 7; i++) {
+    if (diff < this->m_classes[i]) return i + 1;
+  }
+  return 8;
 }
 
 int Hwm::computeLinearRegression() {
@@ -306,6 +289,7 @@ int Hwm::plotRegression() {
   QValueAxis *axisY = new QValueAxis(this);
   axisX->setTitleText(XLabel);
   axisY->setTitleText(YLabel);
+  this->m_chartView->m_chart = new QChart();
   this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 

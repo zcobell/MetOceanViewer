@@ -20,7 +20,6 @@
 
 #include "addtimeseriesdialog.h"
 #include "mainwindow.h"
-#include "timeseriesoptionsdialog.h"
 #include "ui_mainwindow.h"
 #include "usertimeseries.h"
 
@@ -463,19 +462,5 @@ void MainWindow::setTableRow(int row,
 
 void MainWindow::on_button_usertimeseriesResetZoom_clicked() {
   if (!this->thisTimeseries.isNull()) ui->timeseries_graphics->resetZoom();
-  return;
-}
-
-void MainWindow::on_pushButton_displayOptions_clicked() {
-  TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
-  optionsWindow->setDisplayValues(this->timeseriesDisplayValues);
-
-  int ierr = optionsWindow->exec();
-
-  if (ierr == QDialog::Accepted) {
-    this->timeseriesDisplayValues = optionsWindow->displayValues();
-    ui->timeseries_graphics->setDisplayValues(this->timeseriesDisplayValues);
-  }
-
   return;
 }

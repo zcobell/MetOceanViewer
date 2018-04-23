@@ -26,7 +26,6 @@
 #include "generic.h"
 #include "hwm.h"
 #include "mainwindow.h"
-#include "timeseriesoptionsdialog.h"
 #include "ui_mainwindow.h"
 
 //-------------------------------------------//
@@ -87,15 +86,15 @@ void MainWindow::on_button_processHWM_clicked() {
 
   if (!thisHWM.isNull()) delete thisHWM;
 
-  thisHWM = new Hwm(
-      ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
-      ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
-      ui->check_regressionColorMatch, ui->button_hwmcolor,
-      ui->button_121linecolor, ui->button_boundlinecolor,
-      ui->button_reglinecolor, ui->text_adchwmaxislabel,
-      ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
-      ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
-      ui->statusBar, classes, this->hwmMarkerModel, this);
+  thisHWM =
+      new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
+              ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
+              ui->check_regressionColorMatch, ui->button_hwmcolor,
+              ui->button_121linecolor, ui->button_boundlinecolor,
+              ui->button_reglinecolor, ui->text_adchwmaxislabel,
+              ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
+              ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
+              ui->statusBar, classes, this->hwmMarkerModel, this);
 
   ierr = thisHWM->processHWMData();
 
@@ -278,18 +277,5 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
 
 void MainWindow::on_button_hwmResetZoom_clicked() {
   if (!this->thisHWM.isNull()) ui->graphics_hwm->resetZoom();
-  return;
-}
-
-void MainWindow::on_button_hwmOptions_clicked() {
-  TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
-  optionsWindow->setDisplayValues(this->hwmDisplayValues);
-
-  int ierr = optionsWindow->exec();
-
-  if (ierr == QDialog::Accepted) {
-    this->hwmDisplayValues = optionsWindow->displayValues();
-    ui->graphics_hwm->setDisplayValues(this->hwmDisplayValues);
-  }
   return;
 }

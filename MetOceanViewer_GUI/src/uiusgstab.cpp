@@ -19,7 +19,6 @@
 //-----------------------------------------------------------------------*/
 
 #include "mainwindow.h"
-#include "timeseriesoptionsdialog.h"
 #include "timezone.h"
 #include "ui_mainwindow.h"
 #include "usgs.h"
@@ -213,19 +212,6 @@ void MainWindow::on_button_usgssavedata_clicked() {
 
 void MainWindow::on_button_usgsresetzoom_clicked() {
   if (!this->thisUSGS.isNull()) ui->usgs_graphics->resetZoom();
-  return;
-}
-
-void MainWindow::on_button_usgsOptions_clicked() {
-  TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
-  optionsWindow->setDisplayValues(this->usgsDisplayValues);
-
-  int ierr = optionsWindow->exec();
-
-  if (ierr == QDialog::Accepted) {
-    this->usgsDisplayValues = optionsWindow->displayValues();
-    ui->usgs_graphics->setDisplayValues(this->usgsDisplayValues);
-  }
   return;
 }
 

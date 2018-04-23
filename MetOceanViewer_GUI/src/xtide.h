@@ -54,6 +54,7 @@ class XTide : public QObject {
   int saveXTideData(QString filename, QString format);
   int saveXTidePlot(QString filename, QString filter);
   QString getErrorString();
+  ChartView *chartview();
 
   static void addStationsToModel(StationModel *model);
 

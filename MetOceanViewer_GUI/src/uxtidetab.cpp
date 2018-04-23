@@ -18,7 +18,6 @@
 //
 //-----------------------------------------------------------------------*/
 #include "mainwindow.h"
-#include "timeseriesoptionsdialog.h"
 #include "ui_mainwindow.h"
 #include "xtide.h"
 
@@ -119,18 +118,5 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 
   thisXTide->saveXTideData(TempString, format);
 
-  return;
-}
-
-void MainWindow::on_button_xTideOptions_clicked() {
-  TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
-  optionsWindow->setDisplayValues(this->xtideDisplayValues);
-
-  int ierr = optionsWindow->exec();
-
-  if (ierr == QDialog::Accepted) {
-    this->xtideDisplayValues = optionsWindow->displayValues();
-    ui->xtide_graphics->setDisplayValues(this->xtideDisplayValues);
-  }
   return;
 }

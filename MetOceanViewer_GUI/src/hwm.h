@@ -42,7 +42,8 @@ class Hwm : public QObject {
                QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
                QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
                ChartView *inChartView, QStatusBar *inStatusBar,
-               QVector<double> &inClassValues,                StationModel *stationModel, QObject *parent = nullptr);
+               QVector<double> &inClassValues, StationModel *stationModel,
+               QObject *parent = nullptr);
 
   //...Public Functions
   int processHWMData();

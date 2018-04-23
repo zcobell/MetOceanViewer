@@ -21,7 +21,6 @@
 #include "mainwindow.h"
 #include "generic.h"
 #include "noaa.h"
-#include "timeseriesoptionsdialog.h"
 #include "timezone.h"
 #include "ui_mainwindow.h"
 
@@ -161,19 +160,6 @@ void MainWindow::plotNOAAStation() {
 
 void MainWindow::on_button_noaaresetzoom_clicked() {
   if (!this->thisNOAA.isNull()) ui->noaa_graphics->resetZoom();
-  return;
-}
-
-void MainWindow::on_button_noaaOptions_clicked() {
-  TimeseriesOptionsDialog *optionsWindow = new TimeseriesOptionsDialog(this);
-  optionsWindow->setDisplayValues(this->noaaDisplayValues);
-
-  int ierr = optionsWindow->exec();
-
-  if (ierr == QDialog::Accepted) {
-    this->noaaDisplayValues = optionsWindow->displayValues();
-    ui->noaa_graphics->setDisplayValues(this->noaaDisplayValues);
-  }
   return;
 }
 

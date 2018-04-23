@@ -852,7 +852,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="button_noaaOptions">
+                  <widget class="QPushButton" name="button_noaaDisplayValues">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -861,7 +861,7 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>75</width>
+                     <width>110</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -872,7 +872,10 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Options</string>
+                    <string>Display Values</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -1442,7 +1445,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="button_usgsOptions">
+                  <widget class="QPushButton" name="button_usgsDisplayValues">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>75</horstretch>
@@ -1451,12 +1454,15 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>75</width>
+                     <width>110</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Options</string>
+                    <string>Display Values</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -1775,7 +1781,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="button_xTideOptions">
+                  <widget class="QPushButton" name="button_xtideDisplayValues">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>75</horstretch>
@@ -1784,12 +1790,15 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>75</width>
+                     <width>110</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Options</string>
+                    <string>Display Values</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -2595,7 +2604,7 @@
                  <item>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
                    <item>
-                    <widget class="QPushButton" name="pushButton_displayOptions">
+                    <widget class="QPushButton" name="button_timeseriesDisplayValues">
                      <property name="minimumSize">
                       <size>
                        <width>0</width>
@@ -2609,10 +2618,10 @@
                       </size>
                      </property>
                      <property name="text">
-                      <string>Options</string>
+                      <string>Display Values</string>
                      </property>
                      <property name="checkable">
-                      <bool>false</bool>
+                      <bool>true</bool>
                      </property>
                      <property name="checked">
                       <bool>false</bool>
@@ -3488,7 +3497,7 @@
                        <widget class="QLabel" name="label_modeledhwmlabel">
                         <property name="minimumSize">
                          <size>
-                          <width>130</width>
+                          <width>180</width>
                           <height>30</height>
                          </size>
                         </property>
@@ -3546,7 +3555,7 @@
                        <widget class="QLabel" name="label_measuredhwmlabel">
                         <property name="minimumSize">
                          <size>
-                          <width>130</width>
+                          <width>180</width>
                           <height>30</height>
                          </size>
                         </property>
@@ -3604,7 +3613,7 @@
                        <widget class="QLabel" name="label_hwmplottitle">
                         <property name="minimumSize">
                          <size>
-                          <width>130</width>
+                          <width>180</width>
                           <height>30</height>
                          </size>
                         </property>
@@ -3662,7 +3671,7 @@
                        <widget class="QLabel" name="label_upperlowervalue">
                         <property name="minimumSize">
                          <size>
-                          <width>130</width>
+                          <width>180</width>
                           <height>30</height>
                          </size>
                         </property>
@@ -3998,9 +4007,12 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_hwmOptions">
+               <widget class="QPushButton" name="button_hwmDisplayValues">
                 <property name="text">
-                 <string>Options</string>
+                 <string>Display Values</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>

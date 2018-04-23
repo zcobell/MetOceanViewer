@@ -168,16 +168,6 @@ class MainWindow : public QMainWindow {
 
   void on_button_xtide_savedata_clicked();
 
-  void on_pushButton_displayOptions_clicked();
-
-  void on_button_noaaOptions_clicked();
-
-  void on_button_usgsOptions_clicked();
-
-  void on_button_xTideOptions_clicked();
-
-  void on_button_hwmOptions_clicked();
-
   void on_combo_noaaTimezoneLocation_currentIndexChanged(int index);
 
   void on_combo_usgsTimezoneLocation_currentIndexChanged(int index);
@@ -210,7 +200,17 @@ class MainWindow : public QMainWindow {
 
   void on_button_usertimeseries_fitMarkers_clicked();
 
- private:
+  void on_button_noaaDisplayValues_toggled(bool checked);
+
+  void on_button_usgsDisplayValues_toggled(bool checked);
+
+  void on_button_xtideDisplayValues_toggled(bool checked);
+
+  void on_button_timeseriesDisplayValues_toggled(bool checked);
+
+  void on_button_hwmDisplayValues_toggled(bool checked);
+
+private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
   Ui::MainWindow *ui;
@@ -297,11 +297,6 @@ class MainWindow : public QMainWindow {
   QString userSelectedStations;
 
   bool processCommandLine;
-  bool timeseriesDisplayValues;
-  bool noaaDisplayValues;
-  bool usgsDisplayValues;
-  bool xtideDisplayValues;
-  bool hwmDisplayValues;
 
  protected:
   void closeEvent(QCloseEvent *);

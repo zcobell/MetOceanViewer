@@ -45,6 +45,8 @@ XTide::~XTide() {}
 
 QString XTide::getErrorString() { return this->m_errorString; }
 
+ChartView *XTide::chartview() { return this->m_chartView; }
+
 //...Overall routine for plotting XTide
 int XTide::plotXTideStation() {
   int ierr;
