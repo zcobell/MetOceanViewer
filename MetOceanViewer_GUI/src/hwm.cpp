@@ -72,22 +72,18 @@ int Hwm::classifyHWM(double diff) {
 
 int Hwm::computeLinearRegression() {
   try {
-    double SumXY, SumX2, SumX, SumY, SumY2, N, NDry, N2, SSE, SSTOT, YBar,
-        SumErr, MeanErr;
-    double M, B, R2, StdDev;
-
-    SumXY = 0;
-    SumX2 = 0;
-    SumY2 = 0;
-    SumY = 0;
-    SumX = 0;
-    M = 0;
-    B = 0;
-    N = static_cast<double>(this->m_highWaterMarks.size());
-    NDry = 0;
-    SSE = 0;
-    SSTOT = 0;
-    SumErr = 0;
+    double SumXY = 0;
+    double SumX2 = 0;
+    double SumY2 = 0;
+    double SumY = 0;
+    double SumX = 0;
+    double M = 0;
+    double B = 0;
+    double N = static_cast<double>(this->m_highWaterMarks.size());
+    double NDry = 0;
+    double SSE = 0;
+    double SSTOT = 0;
+    double SumErr = 0;
     for (int i = 0; i < N; i++) {
       // We ditch points that didn't wet since they
       // skew calculation
@@ -101,12 +97,15 @@ int Hwm::computeLinearRegression() {
         SumY2 = SumY2 + (this->m_highWaterMarks[i].modeled *
                          this->m_highWaterMarks[i].modeled);
         SumErr = SumErr + this->m_highWaterMarks[i].error;
-      } else
+      } else {
         NDry = NDry + 1;
+      }
     }
 
     // Number of points that we'll end up using
-    N2 = N - NDry;
+    double N2 = N - NDry;
+
+    double R2, MeanErr, StdDev;
 
     // Calculate the slope (M) and Correllation (R2)
     if (this->m_checkForceZero->isChecked()) {
@@ -117,7 +116,7 @@ int Hwm::computeLinearRegression() {
       B = 0;
 
       // Average Y
-      YBar = SumY / N2;
+      double YBar = SumY / N2;
 
       // Calculate Total Sum of Squares
       for (int i = 0; i < N; i++) {
@@ -207,7 +206,6 @@ int Hwm::plotRegression() {
   QString RegressionTitle, XLabel, YLabel;
   QString RegressionString, CorrelationString, StandardDeviationString;
   QColor HWMColor, One2OneColor, BoundColor, RegColor;
-  int classification;
   double boundValue, min, max;
   bool displayBoundingLines, doColorDots;
   QVector<QColor> dotColors;
@@ -283,7 +281,7 @@ int Hwm::plotRegression() {
   max = DBL_MIN;
 
   for (int i = 0; i < this->m_highWaterMarks.length(); i++) {
-    classification = this->classifyHWM(this->m_highWaterMarks[i].error);
+    int classification = this->classifyHWM(this->m_highWaterMarks[i].error);
 
     if (this->m_highWaterMarks[i].modeled > -900)
       scatterSeries[classification - 1]->append(
