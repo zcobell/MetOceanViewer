@@ -24,6 +24,7 @@ TimezoneStruct::TimezoneStruct() {
   this->m_location = "Worldwide";
   this->m_name = "Universal Time Coordinated";
   this->m_offsetSeconds = 0;
+  this->m_locationCode = TZData::Worldwide;
 }
 
 TimezoneStruct::TimezoneStruct(TZData::Location locationCode, TZData::Abbreviation abbreviationCode,

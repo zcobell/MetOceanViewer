@@ -111,7 +111,6 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
   QString dateString;
   QDateTime date;
   qreal x, y;
-  int i_min = 0;
   qreal y_dum = 0.0;
 
   if (this->m_coord) {
@@ -122,6 +121,7 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
       if (x < this->current_x_axis_max && x > this->current_x_axis_min &&
           y < this->current_y_axis_max && y > this->current_y_axis_min) {
         if (this->m_style == 1) {
+          int i_min = 0;
           for (int i = 0; i < this->m_series.length(); i++) {
             this->m_kdtree.at(i)->findNearest(x, y_dum, i_min);
             this->chart()->series().at(i)->setName(

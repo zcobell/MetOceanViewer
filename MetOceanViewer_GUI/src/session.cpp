@@ -328,7 +328,6 @@ int Session::save() {
         nc_put_var1_string(ncid, varid_filename, start, mydatastring));
     if (ierr != NC_NOERR)
       return 1;
-    mydatastring[0] = NULL;
 
     tempString = seriesname_ts[(int)iu];
     tempByte = tempString.toUtf8();
@@ -434,21 +433,17 @@ int Session::open(QString openFilename) {
   const char *mydatachar[1];
   double mydatadouble[1];
   int mydataint[1];
-  int type;
-  int epsg, layer;
   QMessageBox::StandardButton reply;
-  QString filelocation, filename, series_name, color;
-  QString coldstartstring, stationfile, stationfilepath;
+  QString filename;
+  QString stationfile;
   QString BaseFile, NewFile, TempFile, BaseDir;
-  QString dflowvar;
-  double unitconvert, xshift, yshift;
   size_t temp_size_t;
   size_t start[1];
   QDate tempstartdate, tempenddate;
   QString tempstring;
   QColor CellColor;
   QDateTime ColdStart;
-  bool continueToLoad, hasCheckInfo;
+  bool hasCheckInfo;
   Qt::CheckState checkState;
 
   QFile Session(openFilename);
@@ -660,75 +655,75 @@ int Session::open(QString openFilename) {
         nc_get_var1(ncid, varid_filename, start, &mydatachar));
     if (ierr != NC_NOERR)
       return 1;
-    filelocation = QString(mydatachar[0]);
+    QString filelocation = QString(mydatachar[0]);
     Generic::splitPath(filelocation, filename, TempFile);
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_names, start, &mydatachar));
     if (ierr != NC_NOERR)
       return 1;
-    series_name = QString(mydatachar[0]);
+    QString series_name = QString(mydatachar[0]);
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_type, start, &mydataint));
     if (ierr != NC_NOERR)
       return 1;
-    type = mydataint[0];
+    int type = mydataint[0];
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_colors, start, &mydatachar));
     if (ierr != NC_NOERR)
       return 1;
-    color = QString(mydatachar[0]);
+    QString color = QString(mydatachar[0]);
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_units, start, &mydatadouble));
     if (ierr != NC_NOERR)
       return 1;
-    unitconvert = mydatadouble[0];
+    double unitconvert = mydatadouble[0];
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_coldstart, start, &mydatachar));
     if (ierr != NC_NOERR)
       return 1;
-    coldstartstring = QString(mydatachar[0]);
+    QString coldstartstring = QString(mydatachar[0]);
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_xshift, start, &mydatadouble));
     if (ierr != NC_NOERR)
       return 1;
-    xshift = mydatadouble[0];
+    double xshift = mydatadouble[0];
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_yshift, start, &mydatadouble));
     if (ierr != NC_NOERR)
       return 1;
-    yshift = mydatadouble[0];
+    double yshift = mydatadouble[0];
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_stationfile, start, &mydatachar));
     if (ierr != NC_NOERR)
       return 1;
-    stationfilepath = QString(mydatachar[0]);
+    QString stationfilepath = QString(mydatachar[0]);
     Generic::splitPath(stationfilepath, stationfile, TempFile);
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_dflowvar, start, &mydatachar));
     if (ierr != NC_NOERR)
       return 1;
-    dflowvar = QString(mydatachar[0]);
+    QString dflowvar = QString(mydatachar[0]);
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_epsg, start, &mydataint));
     if (ierr != NC_NOERR)
       return 1;
-    epsg = mydataint[0];
+    int epsg = mydataint[0];
 
     ierr = Generic::NETCDF_ERR(
         nc_get_var1(ncid, varid_dflowlayer, start, &mydataint));
     if (ierr != NC_NOERR)
       return 1;
-    layer = mydataint[0];
+    int layer = mydataint[0];
 
     if (hasCheckInfo) {
       ierr = Generic::NETCDF_ERR(
@@ -742,7 +737,7 @@ int Session::open(QString openFilename) {
     } else
       checkState = Qt::Checked;
 
-    continueToLoad = false;
+    bool continueToLoad = false;
 
     filelocation = this->currentDirectory + "/" + filelocation;
     Generic::splitPath(filelocation, BaseFile, BaseDir);

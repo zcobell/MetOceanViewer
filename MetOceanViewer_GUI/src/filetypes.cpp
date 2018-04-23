@@ -77,7 +77,7 @@ bool Filetypes::_checkNetcdfAdcirc(QString filename) {
     ierr = nc_close(ncid);
     return false;
   }
-  ierr = nc_close(ncid);
+  nc_close(ncid);
 
   models = QString(model).mid(0, (int)attlen);
 

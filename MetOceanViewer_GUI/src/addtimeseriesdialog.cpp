@@ -293,12 +293,14 @@ void AddTimeseriesDialog::on_browse_filebrowse_clicked() {
          "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
   this->InputFilePath = TempPath;
-  if (TempPath != NULL || (TempPath == NULL && this->CurrentFileName != NULL)) {
-    if (TempPath == NULL) {
+
+  if (TempPath != QString() || this->CurrentFileName != QString()) {
+    if (TempPath == QString()) {
       TempPath = this->CurrentFileName;
       this->InputFilePath = this->CurrentFileName;
-    } else
+    } else {
       this->CurrentFileName = TempPath;
+    }
 
     Generic::splitPath(TempPath, TempFile, this->PreviousDirectory);
     ui->text_filename->setText(TempFile);

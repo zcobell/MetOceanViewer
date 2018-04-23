@@ -127,7 +127,7 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
 
 int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   size_t station_size, time_size, startIndex;
-  int i, j, ierr, time_size_int, station_size_int;
+  int time_size_int, station_size_int;
   int ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
   int dimid_time, dimid_station;
   bool isVector;
@@ -188,8 +188,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   time_size_int = static_cast<unsigned int>(time_size);
 
   // Find the variable in the NetCDF file
-  for (i = 0; i < 6; i++) {
-    ierr = nc_inq_varid(ncid, netcdf_types[i].toUtf8(), &varid_zeta);
+  for (int i = 0; i < 6; i++) {
+    int ierr = nc_inq_varid(ncid, netcdf_types[i].toUtf8(), &varid_zeta);
 
     // If we found the variable, we're done
     if (ierr == NC_NOERR) {
@@ -220,7 +220,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->nSnaps = time_size_int;
   this->time.resize(time_size_int);
   this->data.resize(station_size_int);
-  for (i = 0; i < station_size_int; ++i) this->data[i].resize(time_size_int);
+  for (int i = 0; i < station_size_int; ++i) this->data[i].resize(time_size_int);
 
   // Read the station locations and times
   this->_error = nc_inq_varid(ncid, "time", &varid_time);
@@ -244,7 +244,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     return this->_error;
   }
 
-  for (j = 0; j < time_size_int; j++) {
+  for (int j = 0; j < time_size_int; j++) {
     startIndex = static_cast<size_t>(j);
     this->_error = nc_get_var1(ncid, varid_time, &startIndex, &Temp);
     if (this->_error != NC_NOERR) {
@@ -256,7 +256,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     this->time[j] = Temp;
   }
 
-  for (j = 0; j < station_size_int; j++) {
+  for (int j = 0; j < station_size_int; j++) {
     startIndex = static_cast<size_t>(j);
     this->_error = nc_get_var1(ncid, varid_lon, &startIndex, &Temp);
     if (this->_error != NC_NOERR) {
@@ -281,7 +281,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   double *tempVar2 = (double *)malloc(sizeof(double) * time_size_int);
 
   // Loop over the stations, reading the data into memory
-  for (i = 0; i < station_size_int; ++i) {
+  for (int i = 0; i < station_size_int; ++i) {
     // Read from netCDF
     start[0] = static_cast<size_t>(0);
     start[1] = static_cast<size_t>(i);
@@ -305,12 +305,12 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
         this->_error = MetOceanViewer::Error::NETCDF;
         return this->_error;
       }
-      for (j = 0; j < time_size_int; j++)
+      for (int j = 0; j < time_size_int; j++)
         this->data[i][j] =
             qSqrt(qPow(tempVar1[j], 2.0) + qPow(tempVar2[j], 2.0));
     } else {
       // Place in the output variable
-      for (j = 0; j < time_size_int; ++j) this->data[i][j] = tempVar1[j];
+      for (int j = 0; j < time_size_int; ++j) this->data[i][j] = tempVar1[j];
     }
   }
   this->_error = nc_close(ncid);
@@ -326,7 +326,7 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   // we can get fancy and try to get the ADCIRC written names in
   // the NetCDF file
   this->station_name.resize(station_size_int);
-  for (i = 0; i < station_size_int; ++i)
+  for (int i = 0; i < station_size_int; ++i)
     this->station_name[i] = tr("Station ") + QString::number(i);
 
   free(tempVar1);

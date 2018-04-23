@@ -63,26 +63,26 @@ QColor Colors::styleSheetToColor(QString stylesheet) {
 // type color. This is turned off by default
 //-------------------------------------------//
 QColor Colors::GenerateRandomColor() {
-  QColor MyColor, Mix;
+  QColor MyColor;
   QTime SeedTime;
-  const bool DoMix = false;
 
   SeedTime = QTime::currentTime();
   qsrand((uint)SeedTime.msec());
 
-  if (DoMix) {
-    Mix.setRed(255);
-    Mix.setGreen(255);
-    Mix.setBlue(255);
+#if 0
+  QColor Mix;
+  Mix.setRed(255);
+  Mix.setGreen(255);
+  Mix.setBlue(255);
 
-    MyColor.setRed((qrand() % 255 + Mix.red()) / 2);
-    MyColor.setGreen((qrand() % 255 + Mix.green()) / 2);
-    MyColor.setBlue((qrand() % 255 + Mix.blue()) / 2);
-  } else {
-    MyColor.setRed(qrand() % 255);
-    MyColor.setGreen(qrand() % 255);
-    MyColor.setBlue(qrand() % 255);
-  }
+  MyColor.setRed((qrand() % 255 + Mix.red()) / 2);
+  MyColor.setGreen((qrand() % 255 + Mix.green()) / 2);
+  MyColor.setBlue((qrand() % 255 + Mix.blue()) / 2);
+#else
+  MyColor.setRed(qrand() % 255);
+  MyColor.setGreen(qrand() % 255);
+  MyColor.setBlue(qrand() % 255);
+#endif
 
   return MyColor;
 }
