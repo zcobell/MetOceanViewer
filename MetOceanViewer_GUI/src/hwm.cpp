@@ -18,23 +18,23 @@
 //
 //-----------------------------------------------------------------------*/
 #include "hwm.h"
+#include <float.h>
+#include <QPrinter>
 #include "colors.h"
 #include "generic.h"
-#include <QPrinter>
-#include <float.h>
 
 Hwm::Hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
-               QComboBox *inUnitCombobox, QCheckBox *inForceThroughZero,
-               QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,
-               QPushButton *inHWMColor, QPushButton *inButton121LineColor,
-               QPushButton *inButtonBoundingLineColor,
-               QPushButton *inButtonRegLineColor, QLineEdit *inModeledAxisLabel,
-               QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
-               QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
-               ChartView *inChartView, QStatusBar *inStatusBar,
-               QVector<double> &inClassValues, QObject *parent)
+         QComboBox *inUnitCombobox, QCheckBox *inForceThroughZero,
+         QCheckBox *inUpperLowerLines, QCheckBox *inColorHWMDots,
+         QPushButton *inHWMColor, QPushButton *inButton121LineColor,
+         QPushButton *inButtonBoundingLineColor,
+         QPushButton *inButtonRegLineColor, QLineEdit *inModeledAxisLabel,
+         QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
+         QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
+         ChartView *inChartView, QStatusBar *inStatusBar,
+         QVector<double> &inClassValues, QQuickWidget *quickWidget,
+         StationModel *stationModel, QObject *parent)
     : QObject(parent) {
-
   this->fileBox = inFilebox;
   this->manualClassificationCheckbox = inManualCheck;
   this->unitComboBox = inUnitCombobox;
@@ -57,6 +57,8 @@ Hwm::Hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
   this->regLineSlope = 0.0;
   this->regStdDev = 0.0;
   this->thisChart = nullptr;
+  this->m_quickMap = quickWidget;
+  this->m_stationModel = stationModel;
 
   this->classes.resize(inClassValues.length());
   for (int i = 0; i < this->classes.length(); i++)
@@ -189,69 +191,41 @@ int Hwm::computeLinearRegression() {
 }
 
 int Hwm::plotHWMMap() {
-
-  QString MeasuredString, ModeledString, Marker, MyClassList;
   QString unitString;
-  double x, y, measurement, modeled, error, MaximumValue;
-  int i, classification, units;
+  int classification;
 
-  units = this->unitComboBox->currentIndex();
-  if (units == 1)
-    unitString = "'m'";
+  if (this->unitComboBox->currentIndex() == 1)
+    unitString = "m";
   else
-    unitString = "'ft'";
+    unitString = "ft";
 
-  // Plot the high water mark map
-  MeasuredString = "";
-  ModeledString = "";
-  MaximumValue = 0;
-
-  for (i = 0; i < this->highWaterMarks.length(); i++) {
-    x = this->highWaterMarks[i].lon;
-    y = this->highWaterMarks[i].lat;
-    measurement = this->highWaterMarks[i].measured;
-    modeled = this->highWaterMarks[i].modeled;
-    error = this->highWaterMarks[i].error;
-
-    if (modeled < -9999)
+  for (int i = 0; i < this->highWaterMarks.length(); i++) {
+    if (this->highWaterMarks[i].modeled < -9999)
       classification = -1;
     else
-      classification = this->classifyHWM(error);
+      classification = this->classifyHWM(this->highWaterMarks[i].error);
 
-    if (measurement > MaximumValue)
-      MaximumValue = measurement + 1;
-    else if (modeled > MaximumValue)
-      MaximumValue = modeled + 1;
-
-    Marker = "addHWM(" + QString::number(x) + "," + QString::number(y) + "," +
-             QString::number(i) + "," + QString::number(modeled) + "," +
-             QString::number(measurement) + "," + QString::number(error) + "," +
-             QString::number(classification) + "," + unitString + ")";
-    //this->map->page()->runJavaScript(Marker);
-    if (i == 0) {
-      ModeledString = QString::number(modeled);
-      MeasuredString = QString::number(measurement);
-    } else {
-      ModeledString = ModeledString + ":" + QString::number(modeled);
-      MeasuredString = MeasuredString + ":" + QString::number(measurement);
-    }
+    this->m_stationModel->addMarker(
+        Station(QGeoCoordinate(this->highWaterMarks[i].lat,
+                               this->highWaterMarks[i].lon),
+                QString::number(i), "hwm", this->highWaterMarks[i].measured,
+                this->highWaterMarks[i].modeled, classification));
   }
 
-  MyClassList = "addLegend(" + unitString + ",'" +
-                QString::number(classes[0], 'f', 2) + ":" +
-                QString::number(classes[1], 'f', 2) + ":" +
-                QString::number(classes[2], 'f', 2) + ":" +
-                QString::number(classes[3], 'f', 2) + ":" +
-                QString::number(classes[4], 'f', 2) + ":" +
-                QString::number(classes[5], 'f', 2) + ":" +
-                QString::number(classes[6], 'f', 2) + "')";
-  //this->map->page()->runJavaScript(MyClassList);
+  StationModel::fitMarkers(this->m_quickMap, this->m_stationModel);
+
+  QObject *mapObject = this->m_quickMap->rootObject();
+  QMetaObject::invokeMethod(
+      mapObject, "showLegend", Q_ARG(QVariant, this->classes[0]),
+      Q_ARG(QVariant, this->classes[1]), Q_ARG(QVariant, this->classes[2]),
+      Q_ARG(QVariant, this->classes[3]), Q_ARG(QVariant, this->classes[4]),
+      Q_ARG(QVariant, this->classes[5]), Q_ARG(QVariant, this->classes[6]),
+      Q_ARG(QVariant, unitString));
 
   return 0;
 }
 
 int Hwm::plotRegression() {
-
   QString RegressionTitle, XLabel, YLabel;
   QString RegressionString, CorrelationString, StandardDeviationString;
   QColor HWMColor, One2OneColor, BoundColor, RegColor;
@@ -286,8 +260,7 @@ int Hwm::plotRegression() {
       Colors::styleSheetToColor(this->button121LineColor->styleSheet());
   BoundColor =
       Colors::styleSheetToColor(this->buttonBoundingLinecolor->styleSheet());
-  RegColor =
-      Colors::styleSheetToColor(this->buttonRegLineColor->styleSheet());
+  RegColor = Colors::styleSheetToColor(this->buttonRegLineColor->styleSheet());
 
   boundValue = this->boundingLinesValue->value() * this->regStdDev;
   numSD = this->boundingLinesValue->value();
@@ -305,8 +278,7 @@ int Hwm::plotRegression() {
 
   QVector<QScatterSeries *> scatterSeries;
   scatterSeries.resize(8);
-  for (i = 0; i < 8; i++)
-    scatterSeries[i] = new QScatterSeries(this);
+  for (i = 0; i < 8; i++) scatterSeries[i] = new QScatterSeries(this);
 
   if (doColorDots) {
     dotColors.resize(8);
@@ -318,8 +290,7 @@ int Hwm::plotRegression() {
     dotColors[5].setNamedColor("#CCCC00");
     dotColors[6].setNamedColor("#FF9933");
     dotColors[7].setNamedColor("#FF0000");
-    for (i = 0; i < 8; i++)
-      scatterSeries[i]->setColor(dotColors[i]);
+    for (i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
   } else {
     dotColors.resize(8);
     dotColors[0].setNamedColor("#B8B8B8");
@@ -330,8 +301,7 @@ int Hwm::plotRegression() {
     dotColors[5] = HWMColor;
     dotColors[6] = HWMColor;
     dotColors[7] = HWMColor;
-    for (i = 0; i < 8; i++)
-      scatterSeries[i]->setColor(dotColors[i]);
+    for (i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
   }
 
   QValueAxis *axisX = new QValueAxis(this);
@@ -514,7 +484,7 @@ int Hwm::processHWMData() {
   else
     unitString = "'m'";
 
-  //this->map->page()->runJavaScript("clearMarkers()");
+  // this->map->page()->runJavaScript("clearMarkers()");
 
   // Sanity check on classes
   if (this->manualClassificationCheckbox->isChecked()) {
@@ -638,7 +608,6 @@ int Hwm::saveHWMMap(QString outputFile, QString filter) {
 }
 
 int Hwm::saveRegressionPlot(QString outputFile, QString filter) {
-
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
     printer.setPageSize(QPrinter::Letter);

@@ -44,6 +44,34 @@ Rectangle {
         return nSelected;
     }
 
+    function numSelectedMarkers(){
+        var nSelected = 0;
+        for(var i=0;i<map.children.length;i++){
+            if(map.children[i].selected===true){
+                nSelected = nSelected + 1;
+            }
+        }
+        return nSelected;
+    }
+
+    function showLegend(c0,c1,c2,c3,c4,c5,c6,units){
+        legend.c0=c0;
+        legend.c1=c1;
+        legend.c2=c2;
+        legend.c3=c3;
+        legend.c4=c4;
+        legend.c5=c5;
+        legend.c6=c6;
+        legend.units=units;
+        legend.visible = true;
+        return;
+    }
+
+    function hideLegend(){
+        legend.visible = false
+        return;
+    }
+
     Plugin {
        id: esriPlugin
        name: "esri"
@@ -83,6 +111,12 @@ Rectangle {
                     }
                     selectedMarkers();
                     infoWindow.state = "hidden"
+                } else if (markerMode===2) {
+                    if(map.previousMarker){
+                        map.previousMarker.deselect()
+                        map.previousMarker = null
+                    }
+                    infoWindow.state = "hidden"
                 }
             }
             onDoubleClicked: {
@@ -99,20 +133,40 @@ Rectangle {
             id: mapcomponent
             MovMapItem {
                 mode: markerMode
-                markerClass0: hwmClass0
-                markerClass1: hwmClass1
-                markerClass2: hwmClass2
-                markerClass3: hwmClass3
-                markerClass4: hwmClass4
-                markerClass5: hwmClass5
-                markerClass6: hwmClass6
-                diff: measured - modeled
-
                 id: markerid
                 stationId: id
-                anchorPoint.x: sourceImage.width/4
-                anchorPoint.y: sourceImage.height
                 coordinate: position
+                markerCategory: category
+
+                function generateInfoWindowText(){
+                    var text;
+                    if(markerMode===0){
+                        text =
+                            "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                            "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
+                            "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
+                    }else if (markerMode===1){
+                        text =
+                            "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                            "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
+                            "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
+                    }else if(markerMode===2){
+                        var diff;
+                        var modeledText;
+                        if(modeled<-900){
+                            modeledText = "Dry";
+                            diff = "n/a";
+                        } else {
+                            modeledText = modeled.toFixed(2);
+                            diff = (Math.round((-difference)*100)/100).toFixed(2);
+                        }
+
+                        text = "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
+                               "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
+                               "<b>Difference:</b> "+diff
+                    }
+                    return text;
+                }
 
                 MouseArea{
 
@@ -129,12 +183,7 @@ Rectangle {
                             selectedMarkers();
                             map.previousMarker = markerid
                             window.markerChanged(id);
-
-                            stationText =
-                                "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
-                                "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
-                                "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
-
+                            stationText = parent.generateInfoWindowText()
                             infoWindow.state = "shown"
                         }
                     }
@@ -142,13 +191,19 @@ Rectangle {
                     function multipleMarkerSelection(){
                         markerid.select()
                         selectedMarkers()
-                        infoWindow.state = "hidden"
+
+                        if(numSelectedMarkers()===1){
+                            infoWindow.state = "shown"
+                            stationText = parent.generateInfoWindowText()
+                        } else {
+                            infoWindow.state = "hidden"
+                        }
                     }
 
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        if(markerMode===0) {
+                        if(markerMode===0 || markerMode===2) {
                             singleMarkerSelection();
                         } else if(markerMode===1) {
                             if(markerid.selected){
@@ -171,6 +226,11 @@ Rectangle {
     InfoWindow {
         id: infoWindow
         mode: markerMode
+    }
+
+    MapLegend {
+        id: legend
+        visible: false
     }
 
 }

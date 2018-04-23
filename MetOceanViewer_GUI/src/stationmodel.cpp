@@ -19,7 +19,23 @@
 //-----------------------------------------------------------------------*/
 #include "stationmodel.h"
 
-StationModel::StationModel(QObject *parent) : QAbstractListModel(parent) {}
+StationModel::StationModel(QObject *parent) : QAbstractListModel(parent) {
+  this->buildRoles();
+}
+
+void StationModel::buildRoles(){
+  this->m_roles[positionRole] = "position";
+  this->m_roles[stationIDRole] = "id";
+  this->m_roles[stationNameRole] = "name";
+  this->m_roles[latitudeRole] = "latitude";
+  this->m_roles[longitudeRole] = "longitude";
+  this->m_roles[modeledRole] = "modeled";
+  this->m_roles[measuredRole] = "measured";
+  this->m_roles[selectedRole] = "selected";
+  this->m_roles[differenceRole] = "difference";
+  this->m_roles[categoryRole] = "category";
+  return;
+}
 
 void StationModel::addMarker(const Station &station) {
   this->beginInsertRows(QModelIndex(), rowCount(), rowCount());
@@ -55,6 +71,10 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
     return QVariant::fromValue(this->m_stations[index.row()].measured());
   } else if (role == StationModel::modeledRole) {
     return QVariant::fromValue(this->m_stations[index.row()].modeled());
+  } else if (role == StationModel::differenceRole) {
+    return QVariant::fromValue(this->m_stations[index.row()].difference());
+  } else if (role == StationModel::categoryRole) {
+    return QVariant::fromValue(this->m_stations[index.row()].category());
   } else if (role == StationModel::selectedRole) {
     return QVariant::fromValue(this->m_stations[index.row()].selected());
   } else {
@@ -63,16 +83,7 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
 }
 
 QHash<int, QByteArray> StationModel::roleNames() const {
-  QHash<int, QByteArray> roles;
-  roles[positionRole] = "position";
-  roles[stationIDRole] = "id";
-  roles[stationNameRole] = "name";
-  roles[latitudeRole] = "latitude";
-  roles[longitudeRole] = "longitude";
-  roles[modeledRole] = "modeled";
-  roles[measuredRole] = "measured";
-  roles[selectedRole] = "selected";
-  return roles;
+  return this->m_roles;
 }
 
 Station StationModel::findStation(QString stationName) const {

@@ -45,6 +45,8 @@ class StationModel : public QAbstractListModel {
     latitudeRole,
     modeledRole,
     measuredRole,
+    differenceRole,
+    categoryRole,
     selectedRole
   };
 
@@ -72,9 +74,13 @@ class StationModel : public QAbstractListModel {
   void deselectStation(QString name);
 
  private:
+  void buildRoles();
+
   QList<Station> m_stations;
   QHash<QString, Station> m_stationMap;
   QHash<QString, int> m_stationLocationMap;
+  QHash<int, QByteArray> m_roles;
+
 };
 
 #endif  // STATIONMODEL_H

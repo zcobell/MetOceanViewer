@@ -2602,6 +2602,12 @@
                        <height>27</height>
                       </size>
                      </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>27</height>
+                      </size>
+                     </property>
                      <property name="text">
                       <string>Options</string>
                      </property>
@@ -2615,6 +2621,18 @@
                    </item>
                    <item>
                     <widget class="QPushButton" name="button_saveTimeseriesImage">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>27</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>27</height>
+                      </size>
+                     </property>
                      <property name="text">
                       <string>Save Map and Chart</string>
                      </property>
@@ -2632,6 +2650,12 @@
                        <height>27</height>
                       </size>
                      </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>27</height>
+                      </size>
+                     </property>
                      <property name="text">
                       <string>Reset Plot Zoom</string>
                      </property>
@@ -2642,6 +2666,12 @@
                      <property name="minimumSize">
                       <size>
                        <width>0</width>
+                       <height>27</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
                        <height>27</height>
                       </size>
                      </property>
@@ -2657,6 +2687,12 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
+                     <height>54</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
                      <height>54</height>
                     </size>
                    </property>

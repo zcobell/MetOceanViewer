@@ -92,11 +92,6 @@ QString AboutDialog::generateAboutText() {
       "tidesandcurrents.noaa.gov</a><br>" +
       "USGS Waterdata API - <a "
       "href=\"http://waterdata.usgs.gov\">http://waterdata.usgs.gov</a><br>" +
-      "Google Maps v3.x API - <a "
-      "href=\"http://maps.google.com\">http://maps.google.com</a><br>" +
-      "Google Fusion Tables API - <a "
-      "href=\"http://tables.googlelabs.com\">http://tables.googlelabs.com</"
-      "a><br>" +
       "netCDF v4.3.3 - <a "
       "href=\"http://www.unidata.ucar.edu/software/netcdf/\">http://"
       "www.unidata.ucar.edu/software/netcdf/</a><br>" +
@@ -117,7 +112,6 @@ QString AboutDialog::generateAboutText() {
       "KDTree2 - Matthew Kennel (Institute for Nonlinear Science)<br>" +
       "Boost v1.6 - <a "
       "href=\"http://www.boost.org/\">http://www.boost.org/</a>" +
-
       "</p></body></html>";
 
   return text;
@@ -139,7 +133,7 @@ QString AboutDialog::generateLicenseText() {
       "margin-right:0px; -qt-block-indent:0; text-indent:0px;\">" +
       "<b>MetOcean Viewer</b> <br>" +
       "<i>A simple interface for viewing hydrodynamic model data</i> <br><br>" +
-      "Copyright (C) 2017  Zach Cobell <br><br>" +
+      "Copyright (C) 2018  Zach Cobell <br><br>" +
       "This program is free software: you can redistribute it and/or modify it "
       "under the terms of the GNU General Public License" +
       " as published by the Free Software Foundation, either version 3 of the "

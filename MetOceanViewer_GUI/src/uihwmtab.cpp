@@ -87,15 +87,15 @@ void MainWindow::on_button_processHWM_clicked() {
 
   if (!thisHWM.isNull()) delete thisHWM;
 
-  thisHWM =
-      new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
-              ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
-              ui->check_regressionColorMatch, ui->button_hwmcolor,
-              ui->button_121linecolor, ui->button_boundlinecolor,
-              ui->button_reglinecolor, ui->text_adchwmaxislabel,
-              ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
-              ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
-              ui->statusBar, classes, this);
+  thisHWM = new Hwm(
+      ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
+      ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
+      ui->check_regressionColorMatch, ui->button_hwmcolor,
+      ui->button_121linecolor, ui->button_boundlinecolor,
+      ui->button_reglinecolor, ui->text_adchwmaxislabel,
+      ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
+      ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
+      ui->statusBar, classes, ui->quick_hwmMap, this->hwmMarkerModel, this);
 
   ierr = thisHWM->processHWMData();
 

@@ -28,6 +28,7 @@
 #include <QtMath>
 #include <QtWidgets>
 #include "chartview.h"
+#include "stationmodel.h"
 
 class Hwm : public QObject {
   Q_OBJECT
@@ -41,7 +42,8 @@ class Hwm : public QObject {
                QLineEdit *inMeasuredAxisLabel, QLineEdit *inPlotTitle,
                QSpinBox *inBoundingLinesValue, QQuickWidget *inMap,
                ChartView *inChartView, QStatusBar *inStatusBar,
-               QVector<double> &inClassValues, QObject *parent = nullptr);
+               QVector<double> &inClassValues, QQuickWidget *quickWidget,
+               StationModel *stationModel, QObject *parent = nullptr);
 
   //...Public Functions
   int processHWMData();
@@ -87,6 +89,8 @@ class Hwm : public QObject {
   QQuickWidget *map;
   QChart *thisChart;
   QStatusBar *statusBar;
+  QQuickWidget *m_quickMap;
+  StationModel *m_stationModel;
 };
 
 #endif  // HWM_H
