@@ -123,7 +123,7 @@ int Hwm::computeLinearRegression() {
         // We ditch points that didn't wet since they
         // skew calculation
         if (this->m_highWaterMarks[i].modeled > -9999) {
-          double SSTOT = SSTOT + qPow((this->m_highWaterMarks[i].modeled - YBar), 2.0);
+          SSTOT = SSTOT + qPow((this->m_highWaterMarks[i].modeled - YBar), 2.0);
         }
       }
 
