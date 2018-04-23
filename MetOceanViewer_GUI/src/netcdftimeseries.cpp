@@ -37,11 +37,9 @@ int NetcdfTimeseries::read() {
   int dimid_nstations, dimidStationLength, dimid_stationNameLen;
   int varid_time, varid_data, varid_xcoor, varid_ycoor, varid_stationName;
   int epsg;
-  qint64 *timeData;
   char timeChar[80];
   char *stationName;
   double *varData, *xcoor, *ycoor;
-  const size_t *start, *count;
 
   NCCHECK(nc_open(this->m_filename.toStdString().c_str(), NC_NOWRITE, &ncid));
   NCCHECK(nc_inq_dimid(ncid, "numStations", &dimid_nstations));
@@ -120,11 +118,8 @@ int NetcdfTimeseries::read() {
     refTime = QDateTime::fromString(timeString, "yyyy-MM-dd hh:mm:ss");
     refTime.setTimeSpec(Qt::UTC);
 
-    timeData = (qint64 *)malloc(sizeof(qint64) * length);
+    qint64 *timeData = (qint64 *)malloc(sizeof(qint64) * length);
     varData = (double *)malloc(sizeof(double) * length);
-
-    start = 0;
-    count = &length;
 
     ierr = nc_get_var_double(ncid, varid_data, varData);
     if (ierr != NC_NOERR) {

@@ -24,8 +24,8 @@
 #include "ui_updatedialog.h"
 #include "version.h"
 
-bool operator>(const UpdateDialog::gitVersion version1,
-               const UpdateDialog::gitVersion version2) {
+bool operator>(const UpdateDialog::gitVersion &version1,
+               const UpdateDialog::gitVersion &version2) {
   if (version1.versionMajor > version2.versionMajor)
     return true;
   else if (version1.versionMajor < version2.versionMajor)
@@ -56,8 +56,8 @@ bool operator>(const UpdateDialog::gitVersion version1,
   }
 }
 
-bool operator<(const UpdateDialog::gitVersion version1,
-               const UpdateDialog::gitVersion version2) {
+bool operator<(const UpdateDialog::gitVersion &version1,
+               const UpdateDialog::gitVersion &version2) {
   if (version1.versionMajor < version2.versionMajor)
     return true;
   else if (version1.versionMajor > version2.versionMajor)
@@ -88,8 +88,8 @@ bool operator<(const UpdateDialog::gitVersion version1,
   }
 }
 
-bool operator==(const UpdateDialog::gitVersion version1,
-                const UpdateDialog::gitVersion version2) {
+bool operator==(const UpdateDialog::gitVersion &version1,
+                const UpdateDialog::gitVersion &version2) {
   if (version1.versionMajor == version2.versionMajor &&
       version1.versionMinor == version2.versionMinor &&
       version1.versionRev == version2.versionRev &&
@@ -149,11 +149,10 @@ int UpdateDialog::getLatestVersionData() {
 }
 
 void UpdateDialog::parseUpdateData() {
-  int ierr;
   gitVersion versionMe, versionWeb;
 
-  ierr = parseGitVersion(this->currentVersion, versionMe);
-  ierr = parseGitVersion(this->latestVersion, versionWeb);
+  this->parseGitVersion(this->currentVersion, versionMe);
+  this->parseGitVersion(this->latestVersion, versionWeb);
 
   if (versionMe < versionWeb)
     this->hasNewVersion = true;
@@ -164,8 +163,6 @@ void UpdateDialog::parseUpdateData() {
 }
 
 void UpdateDialog::runUpdater() {
-  int ierr;
-
   this->hasNewVersion = false;
 
   //...Check if the version is available from Git,
@@ -175,9 +172,7 @@ void UpdateDialog::runUpdater() {
   else
     this->currentVersion = QString(VER_FILEVERSION_STR);
 
-  ierr = this->getLatestVersionData();
-
-  if (ierr == 0) {
+  if (this->getLatestVersionData() == 0) {
     this->parseUpdateData();
     this->setDialogText();
   } else
@@ -187,11 +182,9 @@ void UpdateDialog::runUpdater() {
 }
 
 bool UpdateDialog::checkForUpdate() {
-  int ierr;
-
   this->currentVersion = QString(GIT_VERSION);
 
-  ierr = this->getLatestVersionData();
+  int ierr = this->getLatestVersionData();
 
   this->hasNewVersion = false;
 

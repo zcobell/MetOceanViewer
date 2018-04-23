@@ -144,7 +144,7 @@ int Usgs::fetchUSGSData() {
 
 int Usgs::formatUSGSInstantResponse(QByteArray Input) {
   bool doubleok;
-  int i, j, ParamStart, ParamStop, OffsetHours;
+  int ParamStart, ParamStop;
   int HeaderEnd;
   double TempData;
   QStringList TempList;
@@ -169,14 +169,14 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
   this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
 
   //...Start by finding the header and reading the parameters from it
-  for (i = 0; i < SplitByLine.length(); i++) {
+  for (int i = 0; i < SplitByLine.length(); i++) {
     if (SplitByLine.value(i).left(15) == "# Data provided") {
       ParamStart = i + 2;
       break;
     }
   }
 
-  for (i = ParamStart; i < SplitByLine.length(); i++) {
+  for (int i = ParamStart; i < SplitByLine.length(); i++) {
     TempLine = SplitByLine.value(i);
     if (TempLine == "#") {
       ParamStop = i - 1;
@@ -186,11 +186,11 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
 
   this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
 
-  for (i = ParamStart; i <= ParamStop; i++) {
+  for (int i = ParamStart; i <= ParamStop; i++) {
     TempLine = SplitByLine.value(i);
     TempList = TempLine.split(" ", QString::SkipEmptyParts);
     this->m_availableDatatypes[i - ParamStart] = QString();
-    for (j = 3; j < TempList.length(); j++) {
+    for (int j = 3; j < TempList.length(); j++) {
       if (j == 3)
         this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
       else
@@ -201,7 +201,7 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
   }
 
   //...Find out where the header ends
-  for (i = 0; i < SplitByLine.length(); i++) {
+  for (int i = 0; i < SplitByLine.length(); i++) {
     if (SplitByLine.value(i).left(1) != "#") {
       HeaderEnd = i + 2;
       break;
@@ -215,20 +215,20 @@ int Usgs::formatUSGSInstantResponse(QByteArray Input) {
   if (this->m_selectedProductData.length() == 0) return -1;
 
   //...Zero counters
-  for (i = 0; i < this->m_selectedProductData.length(); i++)
+  for (int i = 0; i < this->m_selectedProductData.length(); i++)
     this->m_selectedProductData[i].m_numDataPoints = 0;
 
   //...Read the data into the array
-  for (i = HeaderEnd; i < SplitByLine.length(); i++) {
+  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
     TempLine = SplitByLine.value(i);
     TempList = TempLine.split(QRegExp("[\t]"));
     TempDateString = TempList.value(2);
     TempTimeZoneString = TempList.value(3);
     CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
     CurrentDate.setTimeSpec(Qt::UTC);
-    OffsetHours = this->getTimezoneOffset(TempTimeZoneString);
+    int OffsetHours = this->getTimezoneOffset(TempTimeZoneString);
     CurrentDate = CurrentDate.addSecs(-3600 * OffsetHours);
-    for (j = 0; j < this->m_availableDatatypes.length(); j++) {
+    for (int j = 0; j < this->m_availableDatatypes.length(); j++) {
       TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
       if (!TempList.value(2 * j + 4).isNull() && doubleok) {
         this->m_selectedProductData[j].m_numDataPoints =
@@ -411,6 +411,7 @@ int Usgs::plotNewUSGSStation() {
 
     //...Grab the data from the server
     ierr = this->fetchUSGSData();
+    if (ierr != 0) return ierr;
   }
 
   return 0;
@@ -433,7 +434,6 @@ int Usgs::replotCurrentUSGSStation(int index) {
 }
 
 int Usgs::plotUSGS() {
-  int j, ierr;
   double ymin, ymax;
   QString format;
 
@@ -454,7 +454,8 @@ int Usgs::plotUSGS() {
   if (this->m_allStationData.length() < 5) return -1;
 
   //...Create the line series
-  ierr = this->getDataBounds(ymin, ymax);
+  int ierr = this->getDataBounds(ymin, ymax);
+  if (ierr != 0) return ierr;
 
   QLineSeries *series1 = new QLineSeries(this);
   series1->setName(this->m_productName);
@@ -466,7 +467,7 @@ int Usgs::plotUSGS() {
   this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
 
-  for (j = 0; j < this->m_allStationData.length(); j++) {
+  for (int j = 0; j < this->m_allStationData.length(); j++) {
     if (QDateTime(this->m_allStationData[j].m_date,
                   this->m_allStationData[j].m_time)
             .isValid()) {

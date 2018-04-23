@@ -38,7 +38,6 @@ void MainWindow::on_combo_usgs_maptype_currentIndexChanged(int index) {
 // server
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked() {
-  int ierr;
 
   //...Create a new USGS object
   if (!thisUSGS.isNull()) delete thisUSGS;
@@ -51,7 +50,7 @@ void MainWindow::on_button_usgs_fetch_clicked() {
   connect(thisUSGS, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
-  ierr = thisUSGS->plotNewUSGSStation();
+  this->thisUSGS->plotNewUSGSStation();
 
   return;
 }
@@ -109,9 +108,8 @@ void MainWindow::on_radio_usgshistoric_clicked() {
 // plots the data immediately
 //-------------------------------------------//
 void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index) {
-  int ierr;
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  ierr = thisUSGS->replotCurrentUSGSStation(index);
+  this->thisUSGS->replotCurrentUSGSStation(index);
   QApplication::restoreOverrideCursor();
   return;
 }

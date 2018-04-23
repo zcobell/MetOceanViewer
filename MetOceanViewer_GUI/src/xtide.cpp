@@ -177,7 +177,7 @@ int XTide::calculateXTides() {
   //...Grab the output from XTide and send to the parse routine
   ierr = this->parseXTideResponse(xTideRun.readAllStandardOutput());
 
-  return 0;
+  return ierr;
 }
 
 int XTide::parseXTideResponse(QString xTideResponse) {
@@ -252,7 +252,6 @@ int XTide::getDataBounds(double &min, double &max) {
 }
 
 int XTide::plotChart() {
-  int i, ierr;
   double ymin, ymax;
   QString format;
   QDateTime minDateTime, maxDateTime, startDate, endDate;
@@ -263,7 +262,8 @@ int XTide::plotChart() {
   startDate = this->m_startDateEdit->dateTime();
   endDate = this->m_endDateEdit->dateTime();
 
-  ierr = this->getDataBounds(ymin, ymax);
+  int ierr = this->getDataBounds(ymin, ymax);
+  if (ierr != 0) return ierr;
 
   if (this->m_comboUnits->currentIndex() == 1)
     this->m_ylabel = tr("Water Surface Elevation (ft, MLLW)");
@@ -305,7 +305,7 @@ int XTide::plotChart() {
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (i = 0; i < this->m_stationData.length(); i++)
+  for (int i = 0; i < this->m_stationData.length(); i++)
     series1->append(this->m_stationData[i].m_date,
                     this->m_stationData[i].m_value);
   this->m_chartView->m_chart->addSeries(series1);

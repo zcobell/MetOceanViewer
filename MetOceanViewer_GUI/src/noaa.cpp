@@ -93,6 +93,7 @@ int Noaa::fetchNOAAData() {
   }
 
   ierr = this->getNoaaProductId(Product1, Product2);
+  if (ierr != 0) return ierr;
 
   if (this->m_productIndex == 0)
     NumData = 2;
@@ -169,8 +170,6 @@ int Noaa::fetchNOAAData() {
 
 int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
                              int index) {
-  int i, j, k;
-  int dataCount;
   QString TempData, DateS, YearS, MonthS, DayS, HourMinS, HourS, MinS, WLS;
   QStringList TimeSnap;
   QVector<QString> InputData;
@@ -182,7 +181,7 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
   DataList.resize(input.length());
   Temp.resize(input.length());
 
-  for (i = 0; i < DataList.length(); i++) {
+  for (int i = 0; i < DataList.length(); i++) {
     InputData[i] = QString(input[i]);
     DataList[i] =
         InputData[i].split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
@@ -190,13 +189,8 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
     error = Temp[i] + "\n";
   }
 
-  dataCount = 0;
-  for (i = 0; i < DataList.length(); i++)
-    dataCount = dataCount + DataList[i].length() - 1;
-
-  k = 0;
-  for (j = 0; j < DataList.length(); j++) {
-    for (i = 1; i < DataList[j].length(); i++) {
+  for (int j = 0; j < DataList.length(); j++) {
+    for (int i = 1; i < DataList[j].length(); i++) {
       TempData = DataList[j].value(i);
       TimeSnap = TempData.split(",");
       DateS = TimeSnap.value(0);
@@ -211,7 +205,6 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
       tempDate.setTime(QTime(HourS.toInt(), MinS.toInt(), 0));
       this->m_currentStationData[index]->station[0].setNext(
           tempDate.toMSecsSinceEpoch(), WLS.toDouble());
-      k = k + 1;
     }
   }
 
@@ -219,13 +212,12 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
 }
 
 int Noaa::getDataBounds(double &ymin, double &ymax) {
-  int i, j;
-
   ymin = DBL_MAX;
   ymax = -DBL_MAX;
 
-  for (i = 0; i < this->m_currentStationData.length(); i++) {
-    for (j = 0; j < this->m_currentStationData[i]->station[0].numSnaps(); j++) {
+  for (int i = 0; i < this->m_currentStationData.length(); i++) {
+    for (int j = 0; j < this->m_currentStationData[i]->station[0].numSnaps();
+         j++) {
       if (this->m_currentStationData[i]->station[0].data(j) != 0.0) {
         if (this->m_currentStationData[i]->station[0].data(j) < ymin)
           ymin = this->m_currentStationData[i]->station[0].data(j);
@@ -276,7 +268,7 @@ int Noaa::generateLabels() {
                      this->getDatumLabel() + ")";
   } else {
     QString product;
-    int ierr = this->getNoaaProductLabel(product);
+    this->getNoaaProductLabel(product);
     this->m_ylabel = product + " (" + this->getUnitsLabel() + ", " +
                      this->getDatumLabel() + ")";
   }
@@ -292,7 +284,6 @@ int Noaa::getLoadedNOAAStation() { return this->m_loadedStationId; }
 int Noaa::getClickedNOAAStation() { return this->m_station.id().toInt(); }
 
 int Noaa::plotChart() {
-  int i, j, ierr;
   double ymin, ymax;
   QString S1, S2, format;
   QDateTime minDateTime, maxDateTime;
@@ -301,9 +292,9 @@ int Noaa::plotChart() {
   minDateTime = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
 
   //...Create the line series
-  ierr = this->generateLabels();
-  ierr = this->getNoaaProductSeriesNaming(S1, S2);
-  ierr = this->getDataBounds(ymin, ymax);
+  this->generateLabels();
+  this->getNoaaProductSeriesNaming(S1, S2);
+  this->getDataBounds(ymin, ymax);
 
   this->m_currentStationData[0]->units = this->m_units;
   this->m_currentStationData[0]->datum = this->m_datum;
@@ -350,7 +341,8 @@ int Noaa::plotChart() {
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (j = 0; j < this->m_currentStationData[0]->station[0].numSnaps(); j++) {
+  for (int j = 0; j < this->m_currentStationData[0]->station[0].numSnaps();
+       j++) {
     if (QDateTime::fromMSecsSinceEpoch(
             this->m_currentStationData[0]->station[0].date(j) +
             this->m_offsetSeconds)
@@ -368,7 +360,8 @@ int Noaa::plotChart() {
   this->m_chartView->addSeries(series1, series1->name());
 
   if (this->m_productIndex == 0) {
-    for (j = 0; j < this->m_currentStationData[1]->station[0].numSnaps(); j++)
+    for (int j = 0; j < this->m_currentStationData[1]->station[0].numSnaps();
+         j++)
       if (QDateTime::fromMSecsSinceEpoch(
               this->m_currentStationData[1]->station[0].date(j) +
               this->m_offsetSeconds)
@@ -384,7 +377,8 @@ int Noaa::plotChart() {
     series2->attachAxis(axisY);
   }
 
-  for (i = 0; i < this->m_chartView->m_chart->legend()->markers().length(); i++)
+  for (int i = 0; i < this->m_chartView->m_chart->legend()->markers().length();
+       i++)
     this->m_chartView->m_chart->legend()->markers().at(i)->setFont(
         QFont("Helvetica", 10, QFont::Bold));
 
@@ -432,8 +426,6 @@ int Noaa::plotNOAAStation() {
     emit noaaError(tr("You must select a station"));
     return 1;
   } else {
-    int ierr;
-
     this->m_station =
         this->m_stationModel->findStation(*(this->m_selectedStation));
     this->m_station.id() = this->m_station.id().toInt();
@@ -469,13 +461,15 @@ int Noaa::plotNOAAStation() {
     // Update status
     this->m_statusBar->showMessage(tr("Downloading data from NOAA...", 0));
 
-    ierr = this->fetchNOAAData();
+    int ierr = this->fetchNOAAData();
+    if (ierr != MetOceanViewer::Error::NOERR) return ierr;
 
     //...Update the status bar
-    m_statusBar->showMessage(tr("Plotting the data from NOAA..."));
+    this->m_statusBar->showMessage(tr("Plotting the data from NOAA..."));
 
     //...Generate prep the data for plotting
     ierr = this->prepNOAAResponse();
+    if (ierr != MetOceanViewer::Error::NOERR) return ierr;
 
     //...Check for valid data
     if (this->m_currentStationData[0]->station[0].numSnaps() < 5) {
@@ -485,6 +479,7 @@ int Noaa::plotNOAAStation() {
 
     //...Plot the chart
     ierr = this->plotChart();
+    if (ierr != MetOceanViewer::Error::NOERR) return ierr;
 
     this->m_statusBar->clearMessage();
 

@@ -27,7 +27,6 @@ void MainWindow::on_button_xtide_compute_clicked() {
 }
 
 void MainWindow::plotXTideStation() {
-  int ierr;
 
   //...Create an xTide object
   if (!this->thisXTide.isNull()) delete this->thisXTide;
@@ -39,7 +38,7 @@ void MainWindow::plotXTideStation() {
           SLOT(throwErrorMessageBox(QString)));
 
   //...Call the plotting routine
-  ierr = this->thisXTide->plotXTideStation();
+  this->thisXTide->plotXTideStation();
 
   return;
 }

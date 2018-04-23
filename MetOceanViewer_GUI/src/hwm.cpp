@@ -211,8 +211,8 @@ int Hwm::plotRegression() {
   QString RegressionTitle, XLabel, YLabel;
   QString RegressionString, CorrelationString, StandardDeviationString;
   QColor HWMColor, One2OneColor, BoundColor, RegColor;
-  int i, numSD, classification;
-  double boundValue, confidence, min, max;
+  int classification;
+  double boundValue, min, max;
   bool displayBoundingLines, doColorDots;
   QVector<QColor> dotColors;
 
@@ -244,22 +244,12 @@ int Hwm::plotRegression() {
       Colors::styleSheetToColor(this->m_buttonColorRegLine->styleSheet());
 
   boundValue = this->m_boundingLineValue->value() * this->m_regStdDev;
-  numSD = this->m_boundingLineValue->value();
 
   doColorDots = this->m_checkColorDots->isChecked();
 
-  if (numSD == 1)
-    confidence = 68.0;
-  else if (numSD == 2)
-    confidence = 95.0;
-  else if (numSD == 3)
-    confidence = 99.7;
-  else
-    confidence = 0.0;
-
   QVector<QScatterSeries *> scatterSeries;
   scatterSeries.resize(8);
-  for (i = 0; i < 8; i++) scatterSeries[i] = new QScatterSeries(this);
+  for (int i = 0; i < 8; i++) scatterSeries[i] = new QScatterSeries(this);
 
   if (doColorDots) {
     dotColors.resize(8);
@@ -271,7 +261,7 @@ int Hwm::plotRegression() {
     dotColors[5].setNamedColor("#CCCC00");
     dotColors[6].setNamedColor("#FF9933");
     dotColors[7].setNamedColor("#FF0000");
-    for (i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
+    for (int i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
   } else {
     dotColors.resize(8);
     dotColors[0].setNamedColor("#B8B8B8");
@@ -282,7 +272,7 @@ int Hwm::plotRegression() {
     dotColors[5] = HWMColor;
     dotColors[6] = HWMColor;
     dotColors[7] = HWMColor;
-    for (i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
+    for (int i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
   }
 
   QValueAxis *axisX = new QValueAxis(this);
@@ -296,7 +286,7 @@ int Hwm::plotRegression() {
   min = DBL_MAX;
   max = DBL_MIN;
 
-  for (i = 0; i < this->m_highWaterMarks.length(); i++) {
+  for (int i = 0; i < this->m_highWaterMarks.length(); i++) {
     classification = this->classifyHWM(this->m_highWaterMarks[i].error);
 
     if (this->m_highWaterMarks[i].modeled > -900)
@@ -332,7 +322,7 @@ int Hwm::plotRegression() {
   axisX->applyNiceNumbers();
   axisY->applyNiceNumbers();
 
-  for (i = 0; i < 8; i++) {
+  for (int i = 0; i < 8; i++) {
     this->m_chartView->m_chart->addSeries(scatterSeries[i]);
     scatterSeries[i]->attachAxis(axisX);
     scatterSeries[i]->attachAxis(axisY);
@@ -340,7 +330,7 @@ int Hwm::plotRegression() {
   }
 
   //...Don't display all the HWM series
-  for (i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++)
     this->m_chartView->m_chart->legend()->markers().at(i)->setVisible(false);
 
   //...1:1 line
@@ -400,7 +390,8 @@ int Hwm::plotRegression() {
   axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
   axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
 
-  for (i = 0; i < this->m_chartView->m_chart->legend()->markers().length(); i++)
+  for (int i = 0; i < this->m_chartView->m_chart->legend()->markers().length();
+       i++)
     this->m_chartView->m_chart->legend()->markers().at(i)->setFont(
         QFont("Helvetica", 10, QFont::Bold));
 
@@ -450,9 +441,6 @@ int Hwm::processHWMData() {
   QString unitString;
   double c0, c1, c2, c3, c4, c5, c6;
   int unit, ierr;
-  bool ThroughZero;
-
-  ThroughZero = this->m_checkForceZero->isChecked();
 
   ierr = this->readHWMData();
   if (ierr != 0) {
@@ -504,8 +492,10 @@ int Hwm::processHWMData() {
   }
 
   ierr = this->plotHWMMap();
+  if (ierr != 0) return ierr;
 
   ierr = this->plotRegression();
+  if (ierr != 0) return ierr;
 
   return 0;
 }
@@ -513,7 +503,6 @@ int Hwm::processHWMData() {
 int Hwm::readHWMData() {
   QString Line;
   QStringList List;
-  int nLines;
 
   QFile MyFile(this->m_fileBox->text());
 
@@ -524,7 +513,7 @@ int Hwm::readHWMData() {
   }
 
   try {
-    nLines = 0;
+    int nLines = 0;
     while (!MyFile.atEnd()) {
       Line = MyFile.readLine();
       nLines = nLines + 1;

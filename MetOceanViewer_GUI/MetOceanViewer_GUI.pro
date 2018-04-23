@@ -52,11 +52,11 @@ SOURCES +=\
     src/uiusgstab.cpp \
     src/updatedialog.cpp \
     src/usertimeseries.cpp \
-    src/uxtidetab.cpp \
     src/mainwindow.cpp \
     src/main.cpp \
     src/addtimeseriesdialog.cpp \
-    src/rectangle.cpp
+    src/rectangle.cpp \
+    src/uixtidetab.cpp
 
 HEADERS  += \
     src/metoceanviewer.h \

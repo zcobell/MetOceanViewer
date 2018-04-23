@@ -18,8 +18,8 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "mainwindow.h"
 #include "generic.h"
+#include "mainwindow.h"
 #include "noaa.h"
 #include "timezone.h"
 #include "ui_mainwindow.h"
@@ -39,7 +39,6 @@ void MainWindow::on_combo_noaa_maptype_currentIndexChanged(int index) {
 //-------------------------------------------//
 void MainWindow::on_button_noaasavechart_clicked() {
   QString filename;
-  int ierr;
 
   int MarkerID = this->thisNOAA->getLoadedNOAAStation();
   int MarkerID2 = this->thisNOAA->getClickedNOAAStation();
@@ -67,7 +66,7 @@ void MainWindow::on_button_noaasavechart_clicked() {
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  ierr = this->thisNOAA->saveNOAAImage(TempString, filter);
+  this->thisNOAA->saveNOAAImage(TempString, filter);
 
   return;
 }
@@ -140,21 +139,20 @@ void MainWindow::on_Button_FetchData_clicked() {
 //-------------------------------------------//
 
 void MainWindow::plotNOAAStation() {
-  int ierr;
 
   //...Create a new NOAA object
   if (!this->thisNOAA.isNull()) delete this->thisNOAA;
   this->thisNOAA =
       new Noaa(ui->quick_noaaMap, ui->noaa_graphics, ui->Date_StartTime,
-                  ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
-                  ui->combo_noaadatum, ui->statusBar,
-                  ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone,
-                  this->noaaStationModel, &this->noaaSelectedStation, this);
+               ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
+               ui->combo_noaadatum, ui->statusBar,
+               ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone,
+               this->noaaStationModel, &this->noaaSelectedStation, this);
 
   connect(this->thisNOAA, SIGNAL(noaaError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
-  ierr = this->thisNOAA->plotNOAAStation();
+  this->thisNOAA->plotNOAAStation();
   return;
 }
 

@@ -353,4 +353,5 @@ int AdcircStationOutput::toIMEDS(Imeds *outputImeds) {
     }
   }
   outputImeds->success = true;
+  return 0;
 }

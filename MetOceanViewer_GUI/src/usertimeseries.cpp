@@ -61,7 +61,6 @@ UserTimeseries::~UserTimeseries() {}
 int UserTimeseries::getDataBounds(double &ymin, double &ymax,
                                   QDateTime &minDateOut, QDateTime &maxDateOut,
                                   QVector<double> timeAddList) {
-  double unitConversion, addY;
   qint64 nullDate = 0;
 
   ymin = DBL_MAX;
@@ -72,8 +71,8 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
       QDateTime(QDate(1500, 1, 1), QTime(0, 0, 0)).toMSecsSinceEpoch();
 
   for (int i = 0; i < this->m_fileDataUnique.length(); i++) {
-    unitConversion = this->m_table->item(i, 3)->text().toDouble();
-    addY = this->m_table->item(i, 5)->text().toDouble();
+    double unitConversion = this->m_table->item(i, 3)->text().toDouble();
+    double addY = this->m_table->item(i, 5)->text().toDouble();
     for (int k = 0; k < this->m_selectedStations.length(); k++) {
       if (!this->m_fileDataUnique[i]
                ->station[this->m_selectedStations[k]]
@@ -499,6 +498,10 @@ int UserTimeseries::processAdcircNetcdfData(int tableIndex, Imeds *data) {
   }
 
   ierr = adcircData->toIMEDS(data);
+  if (ierr != MetOceanViewer::Error::NOERR) {
+    delete adcircData;
+    return ierr;
+  }
   delete adcircData;
 
   if (!data->success) return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
@@ -533,12 +536,14 @@ int UserTimeseries::processDflowData(int tableIndex, Imeds *data) {
   QString dflowVar = this->m_table->item(tableIndex, 12)->text();
   int dflowLayer = this->m_table->item(tableIndex, 13)->text().toInt();
   int ierr = dflow->getVariable(dflowVar, dflowLayer, data);
-  delete dflow;
+
   if (ierr != MetOceanViewer::Error::NOERR) {
     this->m_errorString =
         tr("Error processing DFlow: ") + dflow->error->toString();
+    delete dflow;
     return MetOceanViewer::Error::DFLOW_FILEREADERROR;
   }
+  delete dflow;
   return MetOceanViewer::Error::NOERR;
 }
 

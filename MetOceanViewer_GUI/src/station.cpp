@@ -26,6 +26,7 @@ Station::Station() {
   this->m_measured = 0.0;
   this->m_modeled = 0.0;
   this->m_selected = false;
+  this->m_category = 0;
 }
 
 Station::Station(QGeoCoordinate coordinate, QString id, QString name,
