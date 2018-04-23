@@ -1,7 +1,7 @@
 //-----GPL----------------------------------------------------------------------
 //
 // This file is part of MetOceanViewer
-// Copyright (C) 2015-2017 Zach Cobell
+// Copyright (C) 2018 Zach Cobell
 //
 //
 //  This program is free software: you can redistribute it and/or modify
