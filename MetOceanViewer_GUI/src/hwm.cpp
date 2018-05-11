@@ -65,9 +65,9 @@ QString Hwm::getErrorString() { return this->m_errorString; }
 
 int Hwm::classifyHWM(double diff) {
   for (int i = 0; i < 7; i++) {
-    if (diff < this->m_classes[i]) return i + 1;
+    if (diff < this->m_classes[i]) return i;
   }
-  return 8;
+  return 7;
 }
 
 int Hwm::computeLinearRegression() {
@@ -284,11 +284,11 @@ int Hwm::plotRegression() {
     int classification = this->classifyHWM(this->m_highWaterMarks[i].error);
 
     if (this->m_highWaterMarks[i].modeled > -900)
-      scatterSeries[classification - 1]->append(
+      scatterSeries[classification]->append(
           QPointF(this->m_highWaterMarks[i].measured,
                   this->m_highWaterMarks[i].modeled));
     else
-      scatterSeries[classification - 1]->append(
+      scatterSeries[classification]->append(
           QPointF(this->m_highWaterMarks[i].measured,
                   this->m_highWaterMarks[i].measured));
 

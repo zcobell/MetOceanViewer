@@ -38,7 +38,6 @@
 #ifndef PROJ4_H
 #define PROJ4_H
 
-#include "proj4_global.h"
 #include <QMap>
 #include <QtCore>
 
@@ -48,7 +47,7 @@
 #define ERROR_PROJ4_NOSUCHPROJECTION -999905002
 #define ERROR_PROJ4_INTERNAL -999905003
 
-class PROJ4SHARED_EXPORT proj4 : public QObject {
+class proj4 : public QObject {
   Q_OBJECT
 public:
   explicit proj4(QObject *parent = nullptr);
@@ -63,7 +62,7 @@ public:
 private:
   int _initEpsgMapping();
 
-  QMap<int, QString> _epsgMapping;
+  QMap<int, QString> m_epsgMapping;
 };
 
 #endif // PROJ4_H

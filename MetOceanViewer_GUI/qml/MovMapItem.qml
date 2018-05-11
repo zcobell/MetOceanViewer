@@ -29,8 +29,8 @@ MapQuickItem {
     property string defaultImage: "qrc:/rsc/img/mm_20_darkgreen.png"
     property string selectedImage: "qrc:/rsc/img/mm_20_red.png"
     property string markerWhite: "qrc:/rsc/img/mm_20_white.png"
-    property string markerPurple: "qrc:/rsc/img/mm_20_purple.png"
-    property var markerColors: [ "qrc:/rsc/img/mm_20_darkblue.png",
+    property var markerColors: [ "qrc:/rsc/img/mm_20_purple.png",
+                                 "qrc:/rsc/img/mm_20_darkblue.png",
                                  "qrc:/rsc/img/mm_20_lightblue.png",
                                  "qrc:/rsc/img/mm_20_darkgreen.png",
                                  "qrc:/rsc/img/mm_20_lightgreen.png",
@@ -43,12 +43,7 @@ MapQuickItem {
         if(modeled<-900){
             image.source = markerWhite
         } else {
-            if(markerCategory<1)
-                image.source = markerPurple
-            else if(markerCategory>6)
-                image.source = markerColors[6]
-            else
-                image.source = markerColors[markerCategory-2];
+            image.source = markerColors[markerCategory];
         }
     }
 

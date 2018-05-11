@@ -105,7 +105,7 @@ int proj4::transform(int inputEPSG, int outputEPSG, double x_in, double y_in,
  **/
 //-----------------------------------------------------------------------------------------//
 bool proj4::containsEPSG(int epsg) {
-  if (this->_epsgMapping.contains(epsg))
+  if (this->m_epsgMapping.contains(epsg))
     return true;
   else
     return false;
@@ -123,7 +123,7 @@ bool proj4::containsEPSG(int epsg) {
 //-----------------------------------------------------------------------------------------//
 QString proj4::coordinateSystemString(int epsg) {
   if (this->containsEPSG(epsg))
-    return this->_epsgMapping[epsg];
+    return this->m_epsgMapping[epsg];
   else
     return QStringLiteral("ERROR: No such epsg");
 }
