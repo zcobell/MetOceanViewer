@@ -98,6 +98,7 @@ OTHER_FILES +=
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
+DEFINES += USE_ANGLE
 
 #...Microsoft Visual C++ compilers
 *msvc* {

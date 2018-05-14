@@ -27,6 +27,12 @@ int main(int argc, char *argv[]) {
   QString sessionFile;
   bool doSession;
 
+#ifdef _WIN32
+#ifdef USE_ANGLE
+  QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
+#endif
+#endif
+
   //...Display the splash screen
   QPixmap pixmap(":/rsc/img/logo_full.png");
   QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
