@@ -56,8 +56,6 @@ class XTide : public QObject {
   QString getErrorString();
   ChartView *chartview();
 
-  static void addStationsToModel(StationModel *model);
-
  signals:
   void xTideError(QString);
 

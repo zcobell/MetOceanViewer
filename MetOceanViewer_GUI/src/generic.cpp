@@ -101,21 +101,3 @@ int Generic::getLocalTimzoneOffset() {
   dt1.setTimeSpec(Qt::UTC);
   return dt2.secsTo(dt1) / 3600;
 }
-
-void Generic::setEsriMapTypes(QComboBox *comboBox) {
-  QStringList esriList = QStringList() << "World Street Map"
-                                       << "World Imagery"
-                                       << "World Terrain Base"
-                                       << "World Topography"
-                                       << "USA Topo Map"
-                                       << "National Geographic World Map"
-                                       << "Light Gray Canvas"
-                                       << "World Physical Map"
-                                       << "World Shaded Relief"
-                                       << "World Ocean Base"
-                                       << "Dark Gray Canvas"
-                                       << "DeLorme World Basemap";
-  comboBox->clear();
-  comboBox->addItems(esriList);
-  return;
-}

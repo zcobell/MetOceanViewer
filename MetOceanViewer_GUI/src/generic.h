@@ -37,7 +37,6 @@ public:
   static int NETCDF_ERR(int status);
   static bool isConnectedToNetwork();
   static int getLocalTimzoneOffset();
-  static void setEsriMapTypes(QComboBox *comboBox);
 };
 
 #endif // GENERIC_H

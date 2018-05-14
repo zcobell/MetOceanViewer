@@ -708,12 +708,15 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QCheckBox" name="check_noaaShowStations">
-                   <property name="text">
-                    <string>Show Stations</string>
+                  <widget class="QPushButton" name="button_refreshNoaaStations">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>27</height>
+                    </size>
                    </property>
-                   <property name="checked">
-                    <bool>true</bool>
+                   <property name="text">
+                    <string>Refresh Stations</string>
                    </property>
                   </widget>
                  </item>
@@ -1299,9 +1302,21 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QCheckBox" name="check_usgsShowStations">
+                  <widget class="QPushButton" name="button_refreshUsgsStations">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>120</width>
+                     <height>27</height>
+                    </size>
+                   </property>
                    <property name="text">
-                    <string>Show Stations</string>
+                    <string>Refresh Stations</string>
                    </property>
                   </widget>
                  </item>
@@ -1517,7 +1532,7 @@
                <widget class="QLabel" name="label_xtide_startdate">
                 <property name="minimumSize">
                  <size>
-                  <width>75</width>
+                  <width>65</width>
                   <height>27</height>
                  </size>
                 </property>
@@ -1561,7 +1576,7 @@
                <widget class="QLabel" name="label_xtide_enddate">
                 <property name="minimumSize">
                  <size>
-                  <width>75</width>
+                  <width>65</width>
                   <height>27</height>
                  </size>
                 </property>
@@ -1613,6 +1628,18 @@
               </item>
               <item>
                <widget class="QComboBox" name="combo_xtide_units">
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>27</height>
+                 </size>
+                </property>
                 <item>
                  <property name="text">
                   <string>meters</string>
@@ -1645,9 +1672,21 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="check_xtideShowStations">
+               <widget class="QPushButton" name="button_refreshXtideStations">
+                <property name="minimumSize">
+                 <size>
+                  <width>120</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>120</width>
+                  <height>27</height>
+                 </size>
+                </property>
                 <property name="text">
-                 <string>Show Stations</string>
+                 <string>Refresh Stations</string>
                 </property>
                </widget>
               </item>

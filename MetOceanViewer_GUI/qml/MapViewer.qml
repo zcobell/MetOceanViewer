@@ -32,12 +32,16 @@ Rectangle {
 
     property string stationText;
 
-    function clearMarkers(){
+    function clearMarkers() {
         map.clearMapItems();
         return;
     }
 
-    function setVisibleRegion(x1,y1,x2,y2){
+    function getVisibleRegion() {
+        return map.visibleRegion;
+    }
+
+    function setVisibleRegion(x1,y1,x2,y2) {
         var xmin = Math.min(x1,x2);
         var xmax = Math.max(x1,x2);
         var ymin = Math.min(y1,y2);
@@ -47,12 +51,12 @@ Rectangle {
         return;
     }
 
-    function setMapLocation(x,y,zoom){
+    function setMapLocation(x,y,zoom) {
         map.center = QtPositioning.coordinate(y,x);
         map.zoomLevel = zoom;
     }
 
-    function selectedMarkers(){
+    function selectedMarkers() {
         var selectedList = "";
         var nSelected = 0;
         for(var i=0;i<map.children.length;i++){
@@ -68,7 +72,7 @@ Rectangle {
         return nSelected;
     }
 
-    function numSelectedMarkers(){
+    function numSelectedMarkers() {
         var nSelected = 0;
         for(var i=0;i<map.children.length;i++){
             if(map.children[i].selected===true){
@@ -78,7 +82,7 @@ Rectangle {
         return nSelected;
     }
 
-    function showLegend(c0,c1,c2,c3,c4,c5,c6,units){
+    function showLegend(c0,c1,c2,c3,c4,c5,c6,units) {
         legend.c0=c0;
         legend.c1=c1;
         legend.c2=c2;
@@ -91,7 +95,7 @@ Rectangle {
         return;
     }
 
-    function hideLegend(){
+    function hideLegend() {
         legend.visible = false
         return;
     }

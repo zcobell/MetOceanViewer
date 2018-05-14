@@ -19,13 +19,17 @@
 //-----------------------------------------------------------------------*/
 
 #include "mainwindow.h"
+#include <QGeoRectangle>
+#include <QGeoShape>
 #include <QQmlContext>
+#include <algorithm>
 #include "aboutdialog.h"
 #include "colors.h"
 #include "dflow.h"
 #include "generic.h"
 #include "keyhandler.h"
 #include "mainwindow.h"
+#include "mapfunctions.h"
 #include "noaa.h"
 #include "session.h"
 #include "ui_mainwindow.h"
@@ -232,11 +236,11 @@ void MainWindow::setupNoaaMap() {
   ui->quick_noaaMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::SingleSelect);
   this->setupMarkerClasses(ui->quick_noaaMap);
-  Generic::setEsriMapTypes(ui->combo_noaa_maptype);
+  MapFunctions::setEsriMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(0);
   this->changeNoaaMaptype();
   ui->quick_noaaMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
-  Noaa::addStationsToModel(this->noaaStationModel);
+  this->noaaMarkerLocations = MapFunctions::readMarkers(MapFunctions::NOAA);
   QObject *noaaItem = ui->quick_noaaMap->rootObject();
   QObject::connect(noaaItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeNoaaMarker(QString)));
@@ -250,6 +254,7 @@ void MainWindow::setupNoaaMap() {
   QMetaObject::invokeMethod(noaaItem, "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
+  this->on_button_refreshNoaaStations_clicked();
 
   return;
 }
@@ -271,7 +276,8 @@ void MainWindow::setupUsgsMap() {
   ui->quick_usgsMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::SingleSelect);
   this->setupMarkerClasses(ui->quick_usgsMap);
-  Generic::setEsriMapTypes(ui->combo_usgs_maptype);
+  this->usgsMarkerLocations = MapFunctions::readMarkers(MapFunctions::USGS);
+  MapFunctions::setEsriMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(0);
   this->changeUsgsMaptype();
   ui->quick_usgsMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
@@ -294,7 +300,8 @@ void MainWindow::setupXTideMap() {
   ui->quick_xtideMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::SingleSelect);
   this->setupMarkerClasses(ui->quick_xtideMap);
-  Generic::setEsriMapTypes(ui->combo_xtide_maptype);
+  this->xtideMarkerLocations = MapFunctions::readMarkers(MapFunctions::XTIDE);
+  MapFunctions::setEsriMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(0);
   this->changeXtideMaptype();
   ui->quick_xtideMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
@@ -331,7 +338,7 @@ void MainWindow::setupUserTimeseriesMap() {
       "stationModel", this->userDataStationModel);
   ui->quick_timeseriesMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::MultipleSelect);
-  Generic::setEsriMapTypes(ui->combo_user_maptype);
+  MapFunctions::setEsriMapTypes(ui->combo_user_maptype);
   this->setupMarkerClasses(ui->quick_timeseriesMap);
   this->changeUserMaptype();
   ui->quick_timeseriesMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
@@ -355,7 +362,7 @@ void MainWindow::setupHighWaterMarkMap() {
                                                       this->hwmMarkerModel);
   ui->quick_hwmMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::ColoredMarkers);
-  Generic::setEsriMapTypes(ui->combo_hwmMaptype);
+  MapFunctions::setEsriMapTypes(ui->combo_hwmMaptype);
   this->setupMarkerClasses(ui->quick_hwmMap);
   this->changeHwmMaptype();
   ui->quick_hwmMap->setSource(QUrl("qrc:/qml/qml/MapViewer.qml"));
@@ -508,29 +515,34 @@ void MainWindow::on_button_hwmDisplayValues_toggled(bool checked) {
   ui->graphics_hwm->setDisplayValues(checked);
 }
 
-void MainWindow::on_check_usgsShowStations_toggled(bool checked) {
-  if (checked) {
-    Usgs::addStationsToModel(this->usgsStationModel);
-  } else {
-    this->usgsStationModel->clear();
-  }
+void MainWindow::on_button_refreshUsgsStations_clicked() {
+  int n = MapFunctions::refreshMarkers(
+      this->usgsStationModel, ui->quick_usgsMap, this->usgsMarkerLocations);
+  this->stationDisplayWarning(n);
   return;
 }
 
-void MainWindow::on_check_xtideShowStations_toggled(bool checked) {
-  if (checked) {
-    XTide::addStationsToModel(this->xtideStationModel);
-  } else {
-    this->xtideStationModel->clear();
-  }
+void MainWindow::on_button_refreshNoaaStations_clicked() {
+  int n = MapFunctions::refreshMarkers(
+      this->noaaStationModel, ui->quick_noaaMap, this->noaaMarkerLocations);
+  this->stationDisplayWarning(n);
   return;
 }
 
-void MainWindow::on_check_noaaShowStations_toggled(bool checked) {
-  if (checked) {
-    Noaa::addStationsToModel(this->noaaStationModel);
-  } else {
-    this->noaaStationModel->clear();
+void MainWindow::on_button_refreshXtideStations_clicked() {
+  int n = MapFunctions::refreshMarkers(
+      this->xtideStationModel, ui->quick_xtideMap, this->xtideMarkerLocations);
+  this->stationDisplayWarning(n);
+  return;
+}
+
+void MainWindow::stationDisplayWarning(int n) {
+  if (n > MAX_NUM_DISPLAYED_STATIONS) {
+    QMessageBox::critical(this, "Error",
+                          QString::number(n) +
+                              " stations in current view (max: " +
+                              QString::number(MAX_NUM_DISPLAYED_STATIONS) +
+                              "). Zoom in and try again.");
   }
   return;
 }

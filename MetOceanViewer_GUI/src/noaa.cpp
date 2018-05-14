@@ -21,6 +21,8 @@
 #include "chartview.h"
 #include "generic.h"
 #include "imeds.h"
+#include <QGeoShape>
+#include <QGeoRectangle>
 
 Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
            QDateEdit *inEndDateEdit, QComboBox *inNoaaProduct,
@@ -704,32 +706,4 @@ int Noaa::replotChart(Timezone *newTimezone) {
   this->m_chartView->m_chart->zoomReset();
 
   return 0;
-}
-
-void Noaa::addStationsToModel(StationModel *model) {
-  QFile stationFile(":/stations/data/noaa_stations.csv");
-
-  if (!stationFile.open(QIODevice::ReadOnly)) return;
-
-  int index = 0;
-
-  while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
-    index++;
-    if (index > 1) {
-      QStringList list = line.split(";");
-      QString id = list.value(0);
-      QString name = list.value(3);
-      name = name.simplified();
-      QString temp = list.value(1);
-      double lat = temp.toDouble();
-      temp = list.value(2);
-      double lon = temp.toDouble();
-      model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
-    }
-  }
-
-  stationFile.close();
-
-  return;
 }

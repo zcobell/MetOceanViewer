@@ -210,11 +210,11 @@ class MainWindow : public QMainWindow {
 
   void on_button_hwmDisplayValues_toggled(bool checked);
 
-  void on_check_usgsShowStations_toggled(bool checked);
+  void on_button_refreshUsgsStations_clicked();
 
-  void on_check_xtideShowStations_toggled(bool checked);
+  void on_button_refreshNoaaStations_clicked();
 
-  void on_check_noaaShowStations_toggled(bool checked);
+  void on_button_refreshXtideStations_clicked();
 
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
@@ -257,6 +257,8 @@ private:
 
   void plotXTideStation();
 
+  void stationDisplayWarning(int n);
+
   QPointer<Noaa> thisNOAA;
 
   QPointer<Usgs> thisUSGS;
@@ -296,6 +298,10 @@ private:
   StationModel *userDataStationModel;
 
   StationModel *hwmMarkerModel;
+
+  QVector<Station> xtideMarkerLocations;
+  QVector<Station> noaaMarkerLocations;
+  QVector<Station> usgsMarkerLocations;
 
   QString noaaSelectedStation;
   QString usgsSelectedStation;

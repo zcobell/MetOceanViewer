@@ -64,7 +64,6 @@ class Noaa : public QObject {
   QString getNOAAErrorString();
   int replotChart(Timezone *newTimezone);
   void setActiveMarker(QString marker);
-  static void addStationsToModel(StationModel *model);
 
  signals:
   void noaaError(QString);

@@ -46,6 +46,13 @@ void StationModel::addMarker(const Station &station) {
   this->endInsertRows();
 }
 
+void StationModel::addMarkers(QVector<Station> &stations) {
+  for (int i = 0; i < stations.size(); i++) {
+    this->addMarker(stations[i]);
+  }
+  return;
+}
+
 int StationModel::rowCount(const QModelIndex &parent) const {
   Q_UNUSED(parent)
   return this->m_stations.count();
@@ -149,7 +156,7 @@ void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
   return;
 }
 
-void StationModel::clear(){
+void StationModel::clear() {
   this->beginResetModel();
   this->m_stations.clear();
   this->endResetModel();

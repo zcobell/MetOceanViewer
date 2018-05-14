@@ -53,6 +53,8 @@ class StationModel : public QAbstractListModel {
 
   Q_INVOKABLE void addMarker(const Station &station);
 
+  void addMarkers(QVector<Station> &stations);
+
   int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
   QVariant data(const QModelIndex &index,

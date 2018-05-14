@@ -55,7 +55,9 @@ SOURCES +=\
     src/mainwindow.cpp \
     src/main.cpp \
     src/addtimeseriesdialog.cpp \
-    src/uixtidetab.cpp
+    src/uixtidetab.cpp \
+    src/mapfunctions.cpp \
+    src/mapfunctionsprivate.cpp
 
 HEADERS  += \
     src/metoceanviewer.h \
@@ -82,7 +84,9 @@ HEADERS  += \
     src/netcdftimeseries.h \
     src/updatedialog.h \
     src/usertimeseries.h \
-    version.h
+    version.h \
+    src/mapfunctions.h \
+    src/mapfunctionsprivate.h
 
 FORMS    += \
     ui/aboutdialog.ui \

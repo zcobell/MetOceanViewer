@@ -458,31 +458,3 @@ int XTide::saveXTidePlot(QString filename, QString filter) {
 
   return 0;
 }
-
-void XTide::addStationsToModel(StationModel *model) {
-  QFile stationFile(":/stations/data/xtide_stations.csv");
-
-  if (!stationFile.open(QIODevice::ReadOnly)) return;
-
-  int index = 0;
-
-  while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
-    index++;
-    if (index > 1) {
-      QStringList list = line.split(";");
-      QString id = list.value(3);
-      QString name = list.value(4);
-      name = name.simplified();
-      QString temp = list.value(0);
-      double lat = temp.toDouble();
-      temp = list.value(1);
-      double lon = temp.toDouble();
-      model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
-    }
-  }
-
-  stationFile.close();
-
-  return;
-}

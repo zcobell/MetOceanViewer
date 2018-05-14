@@ -18,6 +18,8 @@
 //
 //-----------------------------------------------------------------------*/
 #include "usgs.h"
+#include <QGeoRectangle>
+#include <QGeoShape>
 #include "station.h"
 
 Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
@@ -744,32 +746,4 @@ int Usgs::replotChart(Timezone *newTimezone) {
   this->m_chartView->m_chart->zoomReset();
 
   return 0;
-}
-
-void Usgs::addStationsToModel(StationModel *model) {
-  QFile stationFile(":/stations/data/usgs_stations.csv");
-
-  if (!stationFile.open(QIODevice::ReadOnly)) return;
-
-  int index = 0;
-
-  while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
-    index++;
-    if (index > 1) {
-      QStringList list = line.split(";");
-      QString id = list.value(0);
-      QString name = list.value(1);
-      name = name.simplified();
-      QString temp = list.value(2);
-      double lat = temp.toDouble();
-      temp = list.value(3);
-      double lon = temp.toDouble();
-      model->addMarker(Station(QGeoCoordinate(lat, lon), id, name));
-    }
-  }
-
-  stationFile.close();
-
-  return;
 }

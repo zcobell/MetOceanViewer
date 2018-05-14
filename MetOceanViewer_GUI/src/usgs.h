@@ -61,8 +61,6 @@ class Usgs : public QObject {
   QString getClickedUSGSStation();
   int replotChart(Timezone *newTimezone);
 
-  static void addStationsToModel(StationModel *model);
-
  signals:
   void usgsError(QString);
 
