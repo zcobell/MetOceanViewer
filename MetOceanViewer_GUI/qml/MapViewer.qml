@@ -189,7 +189,8 @@ Rectangle {
                             diff = (Math.round((-difference)*100)/100).toFixed(2);
                         }
 
-                        text = "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
+                        text = "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                               "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
                                "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
                                "<b>Difference:</b> "+diff
                     }

@@ -105,7 +105,6 @@ int Hwm::computeLinearRegression() {
 
     double R2, MeanErr, StdDev;
 
-
     // Calculate the slope (M) and Correllation (R2)
     if (this->m_checkForceZero->isChecked()) {
       // Slope
@@ -169,6 +168,8 @@ int Hwm::computeLinearRegression() {
 
 int Hwm::plotHWMMap() {
   QString unitString;
+
+  this->m_stationModel->clear();
 
   if (this->m_comboUnits->currentIndex() == 1)
     unitString = "m";
@@ -432,7 +433,6 @@ int Hwm::plotRegression() {
 }
 
 int Hwm::processHWMData() {
-
   int ierr = this->readHWMData();
   if (ierr != 0) {
     this->m_errorString = tr("Could not read the high water mark file.");
