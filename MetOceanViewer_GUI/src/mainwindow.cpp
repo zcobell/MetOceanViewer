@@ -546,3 +546,8 @@ void MainWindow::stationDisplayWarning(int n) {
   }
   return;
 }
+
+void MainWindow::on_combo_hwmMaptype_currentIndexChanged(int index) {
+  Q_UNUSED(index);
+  this->changeHwmMaptype();
+}

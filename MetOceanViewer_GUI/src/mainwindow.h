@@ -216,6 +216,8 @@ class MainWindow : public QMainWindow {
 
   void on_button_refreshXtideStations_clicked();
 
+  void on_combo_hwmMaptype_currentIndexChanged(int index);
+
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
