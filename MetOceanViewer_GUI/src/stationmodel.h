@@ -21,7 +21,6 @@
 #define STATIONMODEL_H
 
 #include <QAbstractListModel>
-#include <QDebug>
 #include <QGeoCoordinate>
 #include <QHash>
 #include <QObject>

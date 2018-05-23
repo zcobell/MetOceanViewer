@@ -263,6 +263,6 @@ enum Abbreviation {
   Z
 };
 
-}  // namespace TZ
+}  // namespace TZData
 
 #endif  // TZDATA_H

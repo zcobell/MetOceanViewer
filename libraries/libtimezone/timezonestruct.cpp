@@ -21,13 +21,15 @@
 
 TimezoneStruct::TimezoneStruct() {
   this->m_abbreviation = "UTC";
+  this->m_abbreviationCode = TZData::UTC;
   this->m_location = "Worldwide";
   this->m_name = "Universal Time Coordinated";
   this->m_offsetSeconds = 0;
   this->m_locationCode = TZData::Worldwide;
 }
 
-TimezoneStruct::TimezoneStruct(TZData::Location locationCode, TZData::Abbreviation abbreviationCode,
+TimezoneStruct::TimezoneStruct(TZData::Location locationCode,
+                               TZData::Abbreviation abbreviationCode,
                                QString abbreviation, QString name,
                                QString location, int offsetSeconds) {
   this->m_locationCode = locationCode;
@@ -60,22 +62,19 @@ void TimezoneStruct::setLocation(const QString &location) {
   this->m_location = location;
 }
 
-TZData::Location TimezoneStruct::getLocationCode() const
-{
-  return m_locationCode;
+TZData::Location TimezoneStruct::getLocationCode() const {
+  return this->m_locationCode;
 }
 
-void TimezoneStruct::setLocationCode(const TZData::Location &locationCode)
-{
-  m_locationCode = locationCode;
+void TimezoneStruct::setLocationCode(const TZData::Location &locationCode) {
+  this->m_locationCode = locationCode;
 }
 
-TZData::Abbreviation TimezoneStruct::getAbbreviationCode() const
-{
-  return m_abbreviationCode;
+TZData::Abbreviation TimezoneStruct::getAbbreviationCode() const {
+  return this->m_abbreviationCode;
 }
 
-void TimezoneStruct::setAbbreviationCode(const TZData::Abbreviation &abbreviationCode)
-{
-  m_abbreviationCode = abbreviationCode;
+void TimezoneStruct::setAbbreviationCode(
+    const TZData::Abbreviation &abbreviationCode) {
+  this->m_abbreviationCode = abbreviationCode;
 }

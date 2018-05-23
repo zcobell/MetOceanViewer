@@ -49,7 +49,7 @@ class TimezoneStruct {
   TZData::Abbreviation getAbbreviationCode() const;
   void setAbbreviationCode(const TZData::Abbreviation &abbreviationCode);
 
-private:
+ private:
   TZData::Location m_locationCode;
   TZData::Abbreviation m_abbreviationCode;
   QString m_location;
