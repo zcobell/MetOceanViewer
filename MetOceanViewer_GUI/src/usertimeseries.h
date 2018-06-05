@@ -32,8 +32,7 @@
 #include <QtCharts>
 #include "chartview.h"
 #include "generic.h"
-#include "imeds.h"
-#include "netcdftimeseries.h"
+#include "hmdf.h"
 #include "stationmodel.h"
 
 class UserTimeseries : public QObject {
@@ -67,29 +66,29 @@ class UserTimeseries : public QObject {
   //...Private functions
   int getStationSelections();
   int setMarkerID();
-  int getUniqueStationList(QVector<Imeds *> Data, QVector<double> &X,
+  int getUniqueStationList(QVector<Hmdf *> Data, QVector<double> &X,
                            QVector<double> &Y);
-  int buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
-                        QVector<double> Y, QVector<Imeds *> &DataOut);
+  int buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
+                        QVector<double> Y, QVector<Hmdf *> &DataOut);
   int getDataBounds(double &ymin, double &ymax, QDateTime &minDateOut,
                     QDateTime &maxDateOut, QVector<double> timeAddList);
   int getMultipleMarkersFromMap();
   int getAsyncMultipleMarkersFromMap();
-  int projectStations(QVector<int> epsg, QVector<Imeds *> &projectedStations);
+  int projectStations(QVector<int> epsg, QVector<Hmdf *> &projectedStations);
 
   int processDataFiles();
-  int processImedsData(int tableIndex, Imeds *data);
-  int processAdcircAsciiData(int tableIndex, Imeds *data);
-  int processAdcircNetcdfData(int tableIndex, Imeds *data);
-  int processDflowData(int tableIndex, Imeds *data);
-  int processGenericNetcdfData(int tableIndex, Imeds *data);
+  int processImedsData(int tableIndex, Hmdf *data);
+  int processAdcircAsciiData(int tableIndex, Hmdf *data);
+  int processAdcircNetcdfData(int tableIndex, Hmdf *data);
+  int processDflowData(int tableIndex, Hmdf *data);
+  int processGenericNetcdfData(int tableIndex, Hmdf *data);
   int processStationLocations();
   int addMarkersToMap();
 
   //...Private Variables
   int m_markerId;
   QString m_errorString;
-  QVector<Imeds *> m_allFileData, m_fileDataUnique;
+  QVector<Hmdf *> m_allFileData, m_fileDataUnique;
   QVector<double> m_xLocations;
   QVector<double> m_yLocations;
   QVector<int> m_selectedStations;

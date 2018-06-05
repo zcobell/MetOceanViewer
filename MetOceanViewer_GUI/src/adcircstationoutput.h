@@ -23,8 +23,7 @@
 #include <QDateTime>
 #include <QObject>
 #include <QVector>
-
-class Imeds;
+#include "hmdf.h"
 
 class AdcircStationOutput : public QObject {
   Q_OBJECT
@@ -35,7 +34,7 @@ public:
   int read(QString AdcircFile, QString AdcircStationFile, QDateTime coldStart);
   QString errorString();
   int error();
-  int toIMEDS(Imeds *outputImeds);
+  int toHmdf(Hmdf *outputHmdf);
 
 private:
   int readAscii(QString AdcircOutputFile, QString AdcircStationFile);

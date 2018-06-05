@@ -7,7 +7,7 @@
 #include <QObject>
 #include <QVector>
 #include "errors.h"
-#include "imeds.h"
+#include "hmdf.h"
 
 class Dflow : public QObject {
   Q_OBJECT
@@ -20,7 +20,7 @@ class Dflow : public QObject {
 
   int getStations();
 
-  int getVariable(QString variable, int layer, Imeds *imeds);
+  int getVariable(QString variable, int layer, Hmdf *hmdf);
 
   int getNumLayers();
 

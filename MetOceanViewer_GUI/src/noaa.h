@@ -32,10 +32,10 @@
 #include "errors.h"
 #include "stationmodel.h"
 #include "timezone.h"
+#include "hmdf.h"
 
 //...Forward declare classes
 class ChartView;
-class Imeds;
 
 using namespace QtCharts;
 
@@ -96,7 +96,7 @@ class Noaa : public QObject {
   QDateTime m_startDate;
   QDateTime m_endDate;
 
-  QVector<Imeds *> m_currentStationData;
+  QVector<Hmdf*> m_currentStationData;
   QVector<QString> m_errorStringVec;
 
   Timezone *tz;
