@@ -181,9 +181,8 @@ int NetcdfTimeseries::toHmdf(Hmdf *hmdf) {
   hmdf->setHeader3("none");
   hmdf->setSuccess(false);
 
-  HmdfStation *station;
   for (size_t i = 0; i < this->m_numStations; i++) {
-    station = new HmdfStation(hmdf);
+    HmdfStation *station = new HmdfStation(hmdf);
     station->setDate(this->m_time[i]);
     station->setData(this->m_data[i]);
     station->setLatitude(this->m_ycoor[i]);

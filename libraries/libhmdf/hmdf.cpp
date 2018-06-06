@@ -118,13 +118,11 @@ int Hmdf::readImeds(QString filename) {
   this->m_header3 =
       QString::fromStdString(StringUtil::sanitizeString(templine));
 
-  HmdfStation *station;
-
   //...Read Body
   std::getline(fid, templine);
 
   while (!fid.eof()) {
-    station = new HmdfStation(this);
+    HmdfStation *station = new HmdfStation(this);
 
     templine = StringUtil::sanitizeString(templine);
 

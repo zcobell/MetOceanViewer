@@ -68,7 +68,7 @@ int StringUtil::stringToInt(string a, bool &ok) {
   }
 }
 
-string StringUtil::sanitizeString(string a) {
+string StringUtil::sanitizeString(string &a) {
   string b = a;
   boost::algorithm::trim(b);
   b.erase(std::remove(b.begin(), b.end(), '\r'), b.end());

@@ -33,7 +33,7 @@ public:
   static int stringToInt(std::string a, bool &ok);
   static float stringToFloat(std::string a, bool &ok);
   static double stringToDouble(std::string a, bool &ok);
-  static std::string sanitizeString(std::string a);
+  static std::string sanitizeString(std::string &a);
 };
 
 #endif // STRINGUTIL_H
