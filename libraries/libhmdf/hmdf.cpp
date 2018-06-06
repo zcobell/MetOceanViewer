@@ -20,6 +20,7 @@
 #include "hmdf.h"
 #include <assert.h>
 #include <QFile>
+#include <QFileInfo>
 #include <QHostInfo>
 #include <fstream>
 #include "hmdfasciiparser.h"
@@ -404,4 +405,27 @@ int Hmdf::writeNetcdf(QString filename) {
   nc_close(ncid);
 
   return 0;
+}
+
+int Hmdf::write(QString filename, HmdfFileType fileType) {
+  if (fileType == HmdfImeds) {
+    return this->writeImeds(filename);
+  } else if (fileType == HmdfCsv) {
+    return this->writeCsv(filename);
+  } else if (fileType == HmdfNetCdf) {
+    return this->writeNetcdf(filename);
+  }
+  return 1;
+}
+
+int Hmdf::write(QString filename) {
+  QFileInfo info(filename);
+  if (info.suffix().toLower() == "imeds") {
+    return this->write(filename, HmdfImeds);
+  } else if (info.suffix().toLower() == "csv") {
+    return this->write(filename, HmdfCsv);
+  } else if (info.suffix().toLower() == "nc") {
+    return this->write(filename, HmdfNetCdf);
+  }
+  return 1;
 }

@@ -633,10 +633,9 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
 
 int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
                        QString format) {
-  int ierr, index;
   QString filename2;
 
-  for (index = 0; index < this->m_currentStationData.length(); index++) {
+  for (int index = 0; index < this->m_currentStationData.length(); index++) {
     if (this->m_currentStationData.length() == 2) {
       if (index == 0)
         filename2 = PreviousDirectory + "/Observation_" + filename;
@@ -645,17 +644,8 @@ int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
     } else
       filename2 = PreviousDirectory + "/" + filename;
 
-    if (format.compare("CSV") == 0) {
-      ierr = this->m_currentStationData[index]->writeCsv(filename2);
-      if (ierr != 0) emit noaaError("Error writing CSV file");
-    } else if (format.compare("IMEDS") == 0) {
-      ierr = this->m_currentStationData[index]->writeImeds(filename2);
-      if (ierr != 0) emit noaaError("Error writing IMEDS file");
-    } else if (format.compare("netCDF") == 0) {
-      ierr = this->m_currentStationData[index]->writeNetcdf(filename2);
-      qDebug() << ierr;
-      if (ierr != 0) emit noaaError("Error writing netCDF file");
-    }
+    int ierr = this->m_currentStationData[index]->write(filename2);
+    if (ierr != 0) emit noaaError("Error writing NOAA data to file");
   }
 
   return 0;

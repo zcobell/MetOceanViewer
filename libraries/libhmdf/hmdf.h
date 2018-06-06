@@ -39,6 +39,10 @@ class Hmdf : public QObject {
 
   void clear();
 
+  enum HmdfFileType { HmdfImeds, HmdfCsv, HmdfNetCdf };
+
+  int write(QString filename, HmdfFileType fileType);
+  int write(QString filename);
   int writeImeds(QString filename);
   int writeCsv(QString filename);
   int writeNetcdf(QString filename);
