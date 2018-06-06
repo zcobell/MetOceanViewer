@@ -38,7 +38,6 @@ void MainWindow::on_combo_usgs_maptype_currentIndexChanged(int index) {
 // server
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked() {
-
   //...Create a new USGS object
   if (!thisUSGS.isNull()) delete thisUSGS;
   thisUSGS = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
@@ -119,6 +118,12 @@ void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index) {
 // Function to save the map and chart as a jpg
 //-------------------------------------------//
 void MainWindow::on_button_usgssavemap_clicked() {
+  if (this->thisUSGS == nullptr) {
+    QMessageBox::critical(this, tr("ERROR"),
+                          tr("No station has been downloaded."));
+    return;
+  }
+
   QString filename;
 
   QString MarkerID = thisUSGS->getLoadedUSGSStation();
@@ -126,7 +131,7 @@ void MainWindow::on_button_usgssavemap_clicked() {
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
-                          tr("No Station has been selected."));
+                          tr("No station has been selected."));
     return;
   }
 
@@ -164,6 +169,10 @@ void MainWindow::on_button_usgssavemap_clicked() {
 // or a CSV
 //-------------------------------------------//
 void MainWindow::on_button_usgssavedata_clicked() {
+  if (this->thisUSGS == nullptr) {
+    return;
+  }
+
   QString filename;
 
   QString MarkerID = thisUSGS->getLoadedUSGSStation();
@@ -193,7 +202,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
 
   QString TempString = QFileDialog::getSaveFileName(
       this, tr("Save as..."), previousDirectory + DefaultFile,
-      "IMEDS (*.imeds);;CSV (*.csv)", &filter);
+      "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
 
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);

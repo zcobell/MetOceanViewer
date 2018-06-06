@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
-# QADCModules - A library for working with ADCIRC models
-# Copyright (C) 2016  Zach Cobell
+# MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+# Copyright (C) 2015-2017  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,5 +23,6 @@ TEMPLATE = subdirs
 SUBDIRS  = libproj4 \
            libnetcdfcxx \
            libkdtree2 \
-           libtimezone 
+           libtimezone \ 
+           libhmdf
 CONFIG += ordered           

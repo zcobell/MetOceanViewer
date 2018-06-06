@@ -20,6 +20,7 @@
 #include "usgs.h"
 #include <QGeoRectangle>
 #include <QGeoShape>
+#include "hmdf.h"
 #include "station.h"
 
 Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
@@ -641,46 +642,30 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
 }
 
 int Usgs::saveUSGSData(QString filename, QString format) {
-  QFile USGSOutput(filename);
-  QTextStream Output(&USGSOutput);
-  USGSOutput.open(QIODevice::WriteOnly);
+  Hmdf *usgsOut = new Hmdf(this);
+  HmdfStation *station = new HmdfStation(usgsOut);
 
-  if (format.compare("CSV") == 0) {
-    Output << "Station: " + this->m_currentStation.id() + "\n";
-    Output << "Datum: N/A\n";
-    Output << "Units: N/A\n";
-    Output << "\n";
-    for (int i = 0; i < this->m_allStationData.length(); i++) {
-      Output << this->m_allStationData[i].m_date.toString("MM/dd/yyyy") +
-                    "),QStringLiteral(" +
-                    this->m_allStationData[i].m_time.toString("hh:mm") +
-                    "),QStringLiteral(" +
-                    QString::number(this->m_allStationData[i].m_data) + "\n";
-    }
-  } else if (format.compare("IMEDS") == 0) {
-    Output << "% IMEDS generic format - Water Level\n";
-    Output << "% year month day hour min sec value\n";
-    Output << "USGS   UTC    N/A\n";
-    Output << "USGS_" + this->m_currentStation.id() + "   " +
-                  QString::number(
-                      this->m_currentStation.coordinate().latitude()) +
-                  "   " +
-                  QString::number(
-                      this->m_currentStation.coordinate().longitude()) +
-                  "\n";
-    for (int i = 0; i < this->m_allStationData.length(); i++) {
-      Output << this->m_allStationData[i].m_date.toString("yyyy") + "    " +
-                    this->m_allStationData[i].m_date.toString("MM") + "    " +
-                    this->m_allStationData[i].m_date.toString("dd") + "    " +
-                    this->m_allStationData[i].m_time.toString("hh") + "    " +
-                    this->m_allStationData[i].m_time.toString("mm") + "    " +
-                    "00" + "    " +
-                    QString::number(this->m_allStationData[i].m_data) + "\n";
-    }
+  station->setLongitude(this->m_currentStation.coordinate().longitude());
+  station->setLatitude(this->m_currentStation.coordinate().latitude());
+  station->setName(this->m_currentStation.name().replace(" ", "_"));
+  station->setId(this->m_currentStation.id());
+  station->setStationIndex(1);
+  for (int i = 0; i < this->m_allStationData.length(); i++) {
+    long long t = QDateTime(this->m_allStationData[i].m_date,
+                            this->m_allStationData[i].m_time)
+                      .toMSecsSinceEpoch();
+    station->setNext(t, this->m_allStationData[i].m_data);
   }
-  USGSOutput.close();
+  usgsOut->addStation(station);
 
-  return 0;
+  int ierr = usgsOut->write(filename);
+  if (ierr != 0) {
+    emit usgsError("Error writing USGS data to file.");
+  }
+
+  delete usgsOut;
+
+  return ierr;
 }
 
 int Usgs::setUSGSBeenPlotted(bool input) {

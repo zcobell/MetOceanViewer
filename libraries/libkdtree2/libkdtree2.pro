@@ -27,7 +27,7 @@ TEMPLATE     = lib
 CONFIG      += staticlib
 
 #...Include Boost
-INCLUDEPATH += $$PWD/../../thirdparty/boost-library
+INCLUDEPATH += $$PWD/../../thirdparty/boost_1_67_0
 
 #...Include KDTREE2
 INCLUDEPATH += $$PWD/../../thirdparty/kdtree

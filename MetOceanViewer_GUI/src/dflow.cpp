@@ -1,7 +1,7 @@
 #include "dflow.h"
 #include <QtMath>
 #include "errors.h"
-#include "imeds.h"
+#include "hmdf.h"
 #include "metoceanviewer.h"
 #include "netcdf"
 
@@ -203,7 +203,7 @@ int Dflow::_getWindDirection(QVector<QVector<double>> &data) {
   return MetOceanViewer::Error::NOERR;
 }
 
-int Dflow::getVariable(QString variable, int layer, Imeds *imeds) {
+int Dflow::getVariable(QString variable, int layer, Hmdf *hmdf) {
   int i, ierr;
   QVector<qint64> time;
   QVector<QVector<double>> data;
@@ -232,25 +232,24 @@ int Dflow::getVariable(QString variable, int layer, Imeds *imeds) {
     return this->error->errorCode();
   }
 
-  imeds->success = false;
-  imeds->nstations = this->_nStations;
-  imeds->datum = QStringLiteral("dflowfm_datum");
-  imeds->station.resize(this->_nStations);
-  imeds->header1 = QStringLiteral("DFlowFM");
-  imeds->header2 = QStringLiteral("DFlowFM");
-  imeds->header3 = QStringLiteral("DFlowFM");
-  for (i = 0; i < this->_nStations; i++) {
-    imeds->station[i].setNumSnaps(this->_nSteps);
-    imeds->station[i].setDate(time);
-    imeds->station[i].setData(data[i]);
+  hmdf->setSuccess(false);
+  hmdf->setDatum("dflowfm_datum");
+  hmdf->setHeader1("DFlowFM");
+  hmdf->setHeader2("DFlowFM");
+  hmdf->setHeader3("DFlowFM");
 
-    imeds->station[i].setLatitude(this->_yCoordinates[i]);
-    imeds->station[i].setLongitude(this->_xCoordinates[i]);
-    imeds->station[i].setStationIndex(i);
-    imeds->station[i].setId(QString::number(i));
-    imeds->station[i].setName(this->_stationNames[i]);
+  HmdfStation *station = new HmdfStation(hmdf);
+
+  for (i = 0; i < this->_nStations; i++) {
+    station->setDate(time);
+    station->setData(data[i]);
+    station->setLatitude(this->_yCoordinates[i]);
+    station->setLongitude(this->_xCoordinates[i]);
+    station->setStationIndex(i);
+    station->setId(QString::number(i));
+    station->setName(this->_stationNames[i]);
   }
-  imeds->success = true;
+  hmdf->setSuccess(true);
 
   return MetOceanViewer::Error::NOERR;
 }

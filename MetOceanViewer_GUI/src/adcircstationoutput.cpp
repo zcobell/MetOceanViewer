@@ -22,7 +22,7 @@
 #include <QFile>
 #include <QtMath>
 #include "errors.h"
-#include "imeds.h"
+#include "hmdf.h"
 
 AdcircStationOutput::AdcircStationOutput(QObject *parent) : QObject(parent) {
   this->_error = MetOceanViewer::Error::NOERR;
@@ -220,7 +220,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   this->nSnaps = time_size_int;
   this->time.resize(time_size_int);
   this->data.resize(station_size_int);
-  for (int i = 0; i < station_size_int; ++i) this->data[i].resize(time_size_int);
+  for (int i = 0; i < station_size_int; ++i)
+    this->data[i].resize(time_size_int);
 
   // Read the station locations and times
   this->_error = nc_inq_varid(ncid, "time", &varid_time);
@@ -335,23 +336,23 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   return 0;
 }
 
-int AdcircStationOutput::toIMEDS(Imeds *outputImeds) {
+int AdcircStationOutput::toHmdf(Hmdf *outputHmdf) {
+  HmdfStation *tempStation;
 
-  outputImeds->nstations = this->nStations;
-  outputImeds->station.resize(outputImeds->nstations);
-
-  for (int i = 0; i < outputImeds->nstations; ++i) {
-    outputImeds->station[i].setNumSnaps(this->nSnaps);
-    outputImeds->station[i].setName(this->station_name[i]);
-    outputImeds->station[i].setLongitude(this->longitude[i]);
-    outputImeds->station[i].setLatitude(this->latitude[i]);
-    outputImeds->station[i].setStationIndex(i);
+  for (int i = 0; i < this->nStations; ++i) {
+    tempStation = new HmdfStation(outputHmdf);
+    tempStation->setName(this->station_name[i]);
+    tempStation->setId(this->station_name[i]);
+    tempStation->setLongitude(this->longitude[i]);
+    tempStation->setLatitude(this->latitude[i]);
+    tempStation->setStationIndex(i);
     for (int j = 0; j < this->nSnaps; ++j) {
-      outputImeds->station[i].setDate(
-          this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch(), j);
-      outputImeds->station[i].setData(this->data[i][j], j);
+      tempStation->setNext(
+          this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch(),
+          this->data[i][j]);
     }
+    outputHmdf->addStation(tempStation);
   }
-  outputImeds->success = true;
+  outputHmdf->setSuccess(true);
   return 0;
 }

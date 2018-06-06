@@ -1,7 +1,7 @@
 #!/bin/bash
 
 QtHome=/opt/Qt
-QtLibDir=/opt/Qt/5.10.0/gcc_64/lib
+QtLibDir=/opt/Qt/5.10.1/gcc_64/lib
 executable=../../build-MetOceanViewer-Desktop_Qt_5_10_1_GCC_64bit-Release/MetOceanViewer_GUI/MetOceanViewer
 xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd

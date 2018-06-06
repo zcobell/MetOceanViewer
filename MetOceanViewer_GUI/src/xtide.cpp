@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "xtide.h"
 #include <float.h>
+#include "hmdf.h"
 
 //...Constructor
 XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
@@ -353,55 +354,27 @@ int XTide::plotChart() {
 }
 
 int XTide::saveXTideData(QString filename, QString format) {
-  QFile XTideOutput(filename);
-  QTextStream Output(&XTideOutput);
-  XTideOutput.open(QIODevice::WriteOnly);
+  Hmdf *xtideOut = new Hmdf(this);
+  HmdfStation *station = new HmdfStation(xtideOut);
 
-  if (format.compare("CSV") == 0) {
-    Output << "Station: " + this->m_station.name().replace(" ", "_") + "\n";
-    Output << "Datum: MLLW\n";
-    Output << "Units: N/A\n";
-    Output << "\n";
-    for (int i = 0; i < this->m_stationData.length(); i++) {
-      Output << QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
-                        .toString("MM/dd/yyyy") +
-                    "," +
-                    QDateTime::fromMSecsSinceEpoch(
-                        this->m_stationData[i].m_date)
-                        .toString("hh:mm") +
-                    "," + QString::number(this->m_stationData[i].m_value) +
-                    "\n";
-    }
-  } else if (format.compare("IMEDS") == 0) {
-    Output << "% IMEDS generic format - Water Level\n";
-    Output << "% year month day hour min sec value\n";
-    Output << "XTide   UTC    MLLW\n";
-    Output << "XTide_" + this->m_station.name().replace(" ", "_") + "   " +
-                  QString::number(this->m_station.coordinate().latitude()) +
-                  "   " +
-                  QString::number(this->m_station.coordinate().longitude()) +
-                  "\n";
-    for (int i = 0; i < this->m_stationData.length(); i++) {
-      Output
-          << QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
-                     .toString("yyyy") +
-                 "    " +
-                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
-                     .toString("MM") +
-                 "    " +
-                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
-                     .toString("dd") +
-                 "    " +
-                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
-                     .toString("hh") +
-                 "    " +
-                 QDateTime::fromMSecsSinceEpoch(this->m_stationData[i].m_date)
-                     .toString("mm") +
-                 "    " + "00" + "    " +
-                 QString::number(this->m_stationData[i].m_value) + "\n";
-    }
+  station->setLongitude(this->m_station.coordinate().longitude());
+  station->setLatitude(this->m_station.coordinate().latitude());
+  station->setName(this->m_station.name());
+  station->setName(this->m_station.name().replace(" ", "_"));
+  station->setId(this->m_station.id());
+  station->setStationIndex(1);
+  for (int i = 0; i < this->m_stationData.length(); i++) {
+    station->setNext(this->m_stationData[i].m_date,
+                     this->m_stationData[i].m_value);
   }
-  XTideOutput.close();
+
+  xtideOut->addStation(station);
+  int ierr = xtideOut->write(filename);
+  if (ierr != 0) {
+    emit xTideError("Error writing XTide data to file.");
+  }
+
+  delete xtideOut;
 
   return 0;
 }

@@ -76,6 +76,12 @@ void MainWindow::on_button_noaasavechart_clicked() {
 // Called when the user tries to save the NOAA data
 //-------------------------------------------//
 void MainWindow::on_button_noaasavedata_clicked() {
+  if (this->thisNOAA == nullptr) {
+    QMessageBox::critical(this, tr("ERROR"),
+                          tr("No station has been downloaded."));
+    return;
+  };
+
   QString filename;
 
   int MarkerID = this->thisNOAA->getLoadedNOAAStation();
@@ -83,7 +89,7 @@ void MainWindow::on_button_noaasavedata_clicked() {
 
   if (MarkerID == -1) {
     QMessageBox::critical(this, tr("ERROR"),
-                          tr("No Station has been selected."));
+                          tr("No station has been selected."));
     return;
   }
 
@@ -98,7 +104,7 @@ void MainWindow::on_button_noaasavedata_clicked() {
   QString DefaultFile = "/NOAA_" + QString::number(MarkerID) + ".imeds";
   QString TempString = QFileDialog::getSaveFileName(
       this, tr("Save as..."), this->previousDirectory + DefaultFile,
-      "IMEDS (*.imeds);;CSV (*.csv)", &filter);
+      "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);
 
@@ -139,7 +145,6 @@ void MainWindow::on_Button_FetchData_clicked() {
 //-------------------------------------------//
 
 void MainWindow::plotNOAAStation() {
-
   //...Create a new NOAA object
   if (!this->thisNOAA.isNull()) delete this->thisNOAA;
   this->thisNOAA =

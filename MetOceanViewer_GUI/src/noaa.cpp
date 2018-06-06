@@ -18,11 +18,11 @@
 //
 //-----------------------------------------------------------------------*/
 #include "noaa.h"
+#include <QGeoRectangle>
+#include <QGeoShape>
 #include "chartview.h"
 #include "generic.h"
-#include "imeds.h"
-#include <QGeoShape>
-#include <QGeoRectangle>
+#include "hmdf.h"
 
 Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
            QDateEdit *inEndDateEdit, QComboBox *inNoaaProduct,
@@ -46,14 +46,10 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
   this->m_selectedStation = inSelectedStation;
   this->m_chartView->m_chart = nullptr;
 
-  //...Initialize the IMEDS object
+  //...Initialize the station object
   this->m_currentStationData.resize(2);
-  this->m_currentStationData[0] = new Imeds(this);
-  this->m_currentStationData[1] = new Imeds(this);
-  this->m_currentStationData[0]->station.resize(1);
-  this->m_currentStationData[1]->station.resize(1);
-  this->m_currentStationData[0]->nstations = 1;
-  this->m_currentStationData[1]->nstations = 1;
+  this->m_currentStationData[0] = new Hmdf(this);
+  this->m_currentStationData[1] = new Hmdf(this);
 
   //...Initialize the timezone
   this->tz = new Timezone(this);
@@ -205,10 +201,11 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
       WLS = TimeSnap.value(1);
       tempDate.setDate(QDate(YearS.toInt(), MonthS.toInt(), DayS.toInt()));
       tempDate.setTime(QTime(HourS.toInt(), MinS.toInt(), 0));
-      this->m_currentStationData[index]->station[0].setNext(
+      this->m_currentStationData[index]->station(0)->setNext(
           tempDate.toMSecsSinceEpoch(), WLS.toDouble());
     }
   }
+  this->m_currentStationData[index]->setNull(false);
 
   return 0;
 }
@@ -218,13 +215,13 @@ int Noaa::getDataBounds(double &ymin, double &ymax) {
   ymax = -DBL_MAX;
 
   for (int i = 0; i < this->m_currentStationData.length(); i++) {
-    for (int j = 0; j < this->m_currentStationData[i]->station[0].numSnaps();
+    for (int j = 0; j < this->m_currentStationData[i]->station(0)->numSnaps();
          j++) {
-      if (this->m_currentStationData[i]->station[0].data(j) != 0.0) {
-        if (this->m_currentStationData[i]->station[0].data(j) < ymin)
-          ymin = this->m_currentStationData[i]->station[0].data(j);
-        if (this->m_currentStationData[i]->station[0].data(j) > ymax)
-          ymax = this->m_currentStationData[i]->station[0].data(j);
+      if (this->m_currentStationData[i]->station(0)->data(j) != 0.0) {
+        if (this->m_currentStationData[i]->station(0)->data(j) < ymin)
+          ymin = this->m_currentStationData[i]->station(0)->data(j);
+        if (this->m_currentStationData[i]->station(0)->data(j) > ymax)
+          ymax = this->m_currentStationData[i]->station(0)->data(j);
       }
     }
   }
@@ -275,7 +272,7 @@ int Noaa::generateLabels() {
                      this->getDatumLabel() + ")";
   }
   this->m_plotTitle = tr("Station ") + this->m_station.id() + ": " +
-                      this->m_currentStationData[0]->station[0].name();
+                      this->m_currentStationData[0]->station(0)->name();
   return 0;
 }
 
@@ -298,10 +295,10 @@ int Noaa::plotChart() {
   this->getNoaaProductSeriesNaming(S1, S2);
   this->getDataBounds(ymin, ymax);
 
-  this->m_currentStationData[0]->units = this->m_units;
-  this->m_currentStationData[0]->datum = this->m_datum;
-  this->m_currentStationData[1]->units = this->m_units;
-  this->m_currentStationData[1]->datum = this->m_datum;
+  this->m_currentStationData[0]->units() = this->m_units;
+  this->m_currentStationData[0]->datum() = this->m_datum;
+  this->m_currentStationData[1]->units() = this->m_units;
+  this->m_currentStationData[1]->datum() = this->m_datum;
 
   //...Create the chart
   this->m_chartView->m_chart = new QChart();
@@ -343,16 +340,16 @@ int Noaa::plotChart() {
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (int j = 0; j < this->m_currentStationData[0]->station[0].numSnaps();
+  for (int j = 0; j < this->m_currentStationData[0]->station(0)->numSnaps();
        j++) {
     if (QDateTime::fromMSecsSinceEpoch(
-            this->m_currentStationData[0]->station[0].date(j) +
+            this->m_currentStationData[0]->station(0)->date(j) +
             this->m_offsetSeconds)
             .isValid()) {
-      if (this->m_currentStationData[0]->station[0].data(j) != 0.0)
-        series1->append(this->m_currentStationData[0]->station[0].date(j) +
+      if (this->m_currentStationData[0]->station(0)->data(j) != 0.0)
+        series1->append(this->m_currentStationData[0]->station(0)->date(j) +
                             this->m_offsetSeconds,
-                        this->m_currentStationData[0]->station[0].data(j));
+                        this->m_currentStationData[0]->station(0)->data(j));
     }
   }
   this->m_chartView->m_chart->addSeries(series1);
@@ -362,16 +359,16 @@ int Noaa::plotChart() {
   this->m_chartView->addSeries(series1, series1->name());
 
   if (this->m_productIndex == 0) {
-    for (int j = 0; j < this->m_currentStationData[1]->station[0].numSnaps();
+    for (int j = 0; j < this->m_currentStationData[1]->station(0)->numSnaps();
          j++)
       if (QDateTime::fromMSecsSinceEpoch(
-              this->m_currentStationData[1]->station[0].date(j) +
+              this->m_currentStationData[1]->station(0)->date(j) +
               this->m_offsetSeconds)
               .isValid()) {
-        if (this->m_currentStationData[1]->station[0].data(j) != 0.0)
-          series2->append(this->m_currentStationData[1]->station[0].date(j) +
+        if (this->m_currentStationData[1]->station(0)->data(j) != 0.0)
+          series2->append(this->m_currentStationData[1]->station(0)->date(j) +
                               this->m_offsetSeconds,
-                          this->m_currentStationData[1]->station[0].data(j));
+                          this->m_currentStationData[1]->station(0)->data(j));
       }
     this->m_chartView->m_chart->addSeries(series2);
     this->m_chartView->addSeries(series2, series2->name());
@@ -396,7 +393,7 @@ int Noaa::plotChart() {
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
   this->m_chartView->m_chart->setTitle(
       tr("NOAA Station ") + this->m_station.id() + ": " +
-      this->m_currentStationData[0]->station[0].name());
+      this->m_currentStationData[0]->station(0)->name());
   this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_chartView->setRenderHint(QPainter::Antialiasing);
 
@@ -432,23 +429,23 @@ int Noaa::plotNOAAStation() {
         this->m_stationModel->findStation(*(this->m_selectedStation));
     this->m_station.id() = this->m_station.id().toInt();
 
-    this->m_currentStationData[0]->station[0].coordinate()->setLongitude(
-        this->m_station.coordinate().longitude());
-    this->m_currentStationData[0]->station[0].setLatitude(
-        this->m_station.coordinate().latitude());
-    this->m_currentStationData[0]->station[0].setName(this->m_station.name());
-    this->m_currentStationData[0]->station[0].setId("NOAA_" +
-                                                    this->m_station.id());
-    this->m_currentStationData[0]->station[0].setStationIndex(0);
+    HmdfStation *station1 = new HmdfStation(this);
+    HmdfStation *station2 = new HmdfStation(this);
 
-    this->m_currentStationData[1]->station[0].coordinate()->setLongitude(
-        this->m_station.coordinate().longitude());
-    this->m_currentStationData[1]->station[0].setLatitude(
-        this->m_station.coordinate().latitude());
-    this->m_currentStationData[1]->station[0].setName(this->m_station.name());
-    this->m_currentStationData[1]->station[0].setId("NOAA_" +
-                                                    this->m_station.id());
-    this->m_currentStationData[1]->station[0].setStationIndex(0);
+    station1->setLongitude(this->m_station.coordinate().longitude());
+    station1->setLatitude(this->m_station.coordinate().latitude());
+    station1->setName(this->m_station.name());
+    station1->setId("NOAA_" + this->m_station.id());
+    station1->setStationIndex(0);
+
+    station2->setLongitude(this->m_station.coordinate().longitude());
+    station2->setLatitude(this->m_station.coordinate().latitude());
+    station2->setName(this->m_station.name());
+    station2->setId("NOAA_" + this->m_station.id());
+    station2->setStationIndex(0);
+
+    this->m_currentStationData[0]->addStation(station1);
+    this->m_currentStationData[1]->addStation(station2);
 
     //...Grab the options from the UI
     this->m_startDate = this->m_startDateEdit->dateTime();
@@ -474,7 +471,7 @@ int Noaa::plotNOAAStation() {
     if (ierr != MetOceanViewer::Error::NOERR) return ierr;
 
     //...Check for valid data
-    if (this->m_currentStationData[0]->station[0].numSnaps() < 5) {
+    if (this->m_currentStationData[0]->station(0)->numSnaps() < 5) {
       emit noaaError(this->m_errorStringVec[0]);
       return 1;
     }
@@ -637,25 +634,22 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
 
 int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
                        QString format) {
-  int ierr, index;
   QString filename2;
 
-  for (index = 0; index < this->m_currentStationData.length(); index++) {
-    if (this->m_currentStationData.length() == 2) {
+  if (!this->m_currentStationData[0]->null() &&
+      !this->m_currentStationData[1]->null()) {
+    for (int index = 0; index < this->m_currentStationData.length(); index++) {
       if (index == 0)
         filename2 = PreviousDirectory + "/Observation_" + filename;
       else
         filename2 = PreviousDirectory + "/Predictions_" + filename;
-    } else
-      filename2 = PreviousDirectory + "/" + filename;
-
-    if (format.compare("CSV") == 0) {
-      ierr = this->m_currentStationData[index]->writeCSV(filename2);
-      if (ierr != 0) emit noaaError("Error writing CSV file");
-    } else if (format.compare("IMEDS") == 0) {
-      ierr = this->m_currentStationData[index]->write(filename2);
-      if (ierr != 0) emit noaaError("Error writing IMEDS file");
+      int ierr = this->m_currentStationData[index]->write(filename2);
+      if (ierr != 0) emit noaaError("Error writing NOAA data to file");
     }
+  } else {
+    filename2 = PreviousDirectory + "/" + filename;
+    int ierr = this->m_currentStationData[0]->write(filename2);
+    if (ierr != 0) emit noaaError("Error writing NOAA data to file");
   }
 
   return 0;

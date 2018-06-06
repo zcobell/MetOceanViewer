@@ -74,63 +74,63 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
     double addY = this->m_table->item(i, 5)->text().toDouble();
     for (int k = 0; k < this->m_selectedStations.length(); k++) {
       if (!this->m_fileDataUnique[i]
-               ->station[this->m_selectedStations[k]]
-               .isNull()) {
+               ->station(this->m_selectedStations[k])
+               ->isNull()) {
         for (int j = 0; j < this->m_fileDataUnique[i]
-                                ->station[this->m_selectedStations[k]]
-                                .numSnaps();
+                                ->station(this->m_selectedStations[k])
+                                ->numSnaps();
              j++) {
           if (this->m_fileDataUnique[i]
-                              ->station[this->m_selectedStations[k]]
-                              .data(j) *
+                              ->station(this->m_selectedStations[k])
+                              ->data(j) *
                           unitConversion +
                       addY <
                   ymin &&
               this->m_fileDataUnique[i]
-                      ->station[this->m_selectedStations[k]]
-                      .data(j) != MetOceanViewer::NULL_TS)
+                      ->station(this->m_selectedStations[k])
+                      ->data(j) != MetOceanViewer::NULL_TS)
             ymin = this->m_fileDataUnique[i]
-                           ->station[this->m_selectedStations[k]]
-                           .data(j) *
+                           ->station(this->m_selectedStations[k])
+                           ->data(j) *
                        unitConversion +
                    addY;
           if (this->m_fileDataUnique[i]
-                              ->station[this->m_selectedStations[k]]
-                              .data(j) *
+                              ->station(this->m_selectedStations[k])
+                              ->data(j) *
                           unitConversion +
                       addY >
                   ymax &&
               this->m_fileDataUnique[i]
-                      ->station[this->m_selectedStations[k]]
-                      .data(j) != MetOceanViewer::NULL_TS)
+                      ->station(this->m_selectedStations[k])
+                      ->data(j) != MetOceanViewer::NULL_TS)
             ymax = this->m_fileDataUnique[i]
-                           ->station[this->m_selectedStations[k]]
-                           .data(j) *
+                           ->station(this->m_selectedStations[k])
+                           ->data(j) *
                        unitConversion +
                    addY;
           if (this->m_fileDataUnique[i]
-                          ->station[this->m_selectedStations[k]]
-                          .date(j) +
+                          ->station(this->m_selectedStations[k])
+                          ->date(j) +
                       (timeAddList[i] * 3600.0) <
                   minDate &&
               this->m_fileDataUnique[i]
-                      ->station[this->m_selectedStations[k]]
-                      .date(j) != nullDate)
+                      ->station(this->m_selectedStations[k])
+                      ->date(j) != nullDate)
             minDate = this->m_fileDataUnique[i]
-                          ->station[this->m_selectedStations[k]]
-                          .date(j) +
+                          ->station(this->m_selectedStations[k])
+                          ->date(j) +
                       (timeAddList[i] * 3600.0);
           if (this->m_fileDataUnique[i]
-                          ->station[this->m_selectedStations[k]]
-                          .date(j) +
+                          ->station(this->m_selectedStations[k])
+                          ->date(j) +
                       (timeAddList[i] * 3600.0) >
                   maxDate &&
               this->m_fileDataUnique[i]
-                      ->station[this->m_selectedStations[k]]
-                      .date(j) != nullDate)
+                      ->station(this->m_selectedStations[k])
+                      ->date(j) != nullDate)
             maxDate = this->m_fileDataUnique[i]
-                          ->station[this->m_selectedStations[k]]
-                          .date(j) +
+                          ->station(this->m_selectedStations[k])
+                          ->date(j) +
                       (timeAddList[i] * 3600.0);
         }
       }
@@ -332,19 +332,19 @@ void UserTimeseries::plot() {
           this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6;
       addY = this->m_table->item(seriesCounter - 1, 5)->text().toDouble();
       for (j = 0;
-           j < this->m_fileDataUnique[i]->station[this->m_markerId].numSnaps();
+           j < this->m_fileDataUnique[i]->station(this->m_markerId)->numSnaps();
            j++) {
-        if (this->m_fileDataUnique[i]->station[this->m_markerId].data(j) !=
+        if (this->m_fileDataUnique[i]->station(this->m_markerId)->data(j) !=
                 MetOceanViewer::NULL_TS &&
-            this->m_fileDataUnique[i]->station[this->m_markerId].date(j) >=
+            this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) >=
                 startDate &&
-            this->m_fileDataUnique[i]->station[this->m_markerId].date(j) <=
+            this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) <=
                 endDate) {
           TempDate =
-              this->m_fileDataUnique[i]->station[this->m_markerId].date(j) +
+              this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) +
               addX - offset;
           TempValue =
-              this->m_fileDataUnique[i]->station[this->m_markerId].data(j) *
+              this->m_fileDataUnique[i]->station(this->m_markerId)->data(j) *
                   unitConversion +
               addY;
           series[seriesCounter - 1]->append(TempDate, TempValue);
@@ -368,8 +368,8 @@ void UserTimeseries::plot() {
       // number
       for (k = 0; k < this->m_selectedStations.length(); k++) {
         if (!this->m_fileDataUnique[i]
-                 ->station[this->m_selectedStations[k]]
-                 .isNull()) {
+                 ->station(this->m_selectedStations[k])
+                 ->isNull()) {
           seriesCounter = seriesCounter + 1;
           colorCounter = colorCounter + 1;
 
@@ -381,9 +381,9 @@ void UserTimeseries::plot() {
           series[seriesCounter - 1] = new QLineSeries(this->m_chartView);
           series[seriesCounter - 1]->setName(
               this->m_fileDataUnique[i]
-                  ->station[this->m_selectedStations[k]]
-                  .name() +
-              ": " + this->m_table->item(i, 1)->text());
+                  ->station(this->m_selectedStations[k])
+                  ->name() +
+              QStringLiteral(": ") + this->m_table->item(i, 1)->text());
           seriesColor = this->m_randomColorList[colorCounter];
           series[seriesCounter - 1]->setPen(
               QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
@@ -391,25 +391,25 @@ void UserTimeseries::plot() {
           addX = this->m_table->item(i, 4)->text().toDouble() * 3.6e+6;
           addY = this->m_table->item(i, 5)->text().toDouble();
           for (j = 0; j < this->m_fileDataUnique[i]
-                              ->station[this->m_selectedStations[k]]
-                              .numSnaps();
+                              ->station(this->m_selectedStations[k])
+                              ->numSnaps();
                j++) {
             if (this->m_fileDataUnique[i]
-                        ->station[this->m_selectedStations[k]]
-                        .data(j) != MetOceanViewer::NULL_TS &&
+                        ->station(this->m_selectedStations[k])
+                        ->data(j) != MetOceanViewer::NULL_TS &&
                 this->m_fileDataUnique[i]
-                        ->station[this->m_selectedStations[k]]
-                        .date(j) >= startDate &&
+                        ->station(this->m_selectedStations[k])
+                        ->date(j) >= startDate &&
                 this->m_fileDataUnique[i]
-                        ->station[this->m_selectedStations[k]]
-                        .date(j) <= endDate) {
+                        ->station(this->m_selectedStations[k])
+                        ->date(j) <= endDate) {
               TempDate = this->m_fileDataUnique[i]
-                             ->station[this->m_selectedStations[k]]
-                             .date(j) +
+                             ->station(this->m_selectedStations[k])
+                             ->date(j) +
                          addX - offset;
               TempValue = this->m_fileDataUnique[i]
-                                  ->station[this->m_selectedStations[k]]
-                                  .data(j) *
+                                  ->station(this->m_selectedStations[k])
+                                  ->data(j) *
                               unitConversion +
                           addY;
               series[seriesCounter - 1]->append(TempDate, TempValue);
@@ -444,7 +444,7 @@ void UserTimeseries::plot() {
   if (this->m_selectedStations.length() == 1)
     this->m_chartView->m_chart->setTitle(
         this->m_plotTitle->text() + ": " +
-        this->m_fileDataUnique[0]->station[this->m_markerId].name());
+        this->m_fileDataUnique[0]->station(this->m_markerId)->name());
   else
     this->m_chartView->m_chart->setTitle(this->m_plotTitle->text());
 
@@ -473,19 +473,22 @@ void UserTimeseries::plot() {
 
 QString UserTimeseries::getErrorString() { return this->m_errorString; }
 
-int UserTimeseries::processImedsData(int tableIndex, Imeds *data) {
+int UserTimeseries::processImedsData(int tableIndex, Hmdf *data) {
   QString tempFile = this->m_table->item(tableIndex, 6)->text();
 
-  int ierr = data->read(tempFile);
+  int ierr = data->readImeds(tempFile);
+
   if (ierr != MetOceanViewer::Error::NOERR) {
     this->m_errorString = tr("Error reading file: ") + tempFile;
     return MetOceanViewer::Error::IMEDS_FILEREADERROR;
   }
-  data->success = true;
+
+  data->setSuccess(true);
+
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::processAdcircNetcdfData(int tableIndex, Imeds *data) {
+int UserTimeseries::processAdcircNetcdfData(int tableIndex, Hmdf *data) {
   QString tempFile = this->m_table->item(tableIndex, 6)->text();
   QDateTime coldStart = QDateTime::fromString(
       this->m_table->item(tableIndex, 7)->text(), "yyyy-MM-dd hh:mm:ss");
@@ -496,18 +499,18 @@ int UserTimeseries::processAdcircNetcdfData(int tableIndex, Imeds *data) {
     return MetOceanViewer::Error::ADCIRC_NETCDFREADERROR;
   }
 
-  ierr = adcircData->toIMEDS(data);
+  ierr = adcircData->toHmdf(data);
   if (ierr != MetOceanViewer::Error::NOERR) {
     delete adcircData;
     return ierr;
   }
   delete adcircData;
 
-  if (!data->success) return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
+  if (!data->success()) return MetOceanViewer::Error::ADCIRC_NETCDFTOIMEDS;
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::processAdcircAsciiData(int tableIndex, Imeds *data) {
+int UserTimeseries::processAdcircAsciiData(int tableIndex, Hmdf *data) {
   QString tempFile = this->m_table->item(tableIndex, 6)->text();
   QDateTime coldStart = QDateTime::fromString(
       this->m_table->item(tableIndex, 7)->text(), "yyyy-MM-dd hh:mm:ss");
@@ -521,17 +524,17 @@ int UserTimeseries::processAdcircAsciiData(int tableIndex, Imeds *data) {
     return MetOceanViewer::Error::ADCIRC_ASCIIREADERROR;
   }
 
-  ierr = adcircData->toIMEDS(data);
+  ierr = adcircData->toHmdf(data);
   delete adcircData;
   if (ierr != MetOceanViewer::Error::NOERR) {
     return ierr;
   }
 
-  if (!data->success) return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
+  if (!data->success()) return MetOceanViewer::Error::ADCIRC_ASCIITOIMEDS;
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::processDflowData(int tableIndex, Imeds *data) {
+int UserTimeseries::processDflowData(int tableIndex, Hmdf *data) {
   QString tempFile = this->m_table->item(tableIndex, 6)->text();
 
   Dflow *dflow = new Dflow(tempFile, this);
@@ -549,20 +552,13 @@ int UserTimeseries::processDflowData(int tableIndex, Imeds *data) {
   return MetOceanViewer::Error::NOERR;
 }
 
-int UserTimeseries::processGenericNetcdfData(int tableIndex, Imeds *data) {
+int UserTimeseries::processGenericNetcdfData(int tableIndex, Hmdf *data) {
   QString tempFile = this->m_table->item(tableIndex, 6)->text();
 
-  NetcdfTimeseries *genericNetcdf = new NetcdfTimeseries(this);
-  genericNetcdf->setFilename(tempFile);
-  int ierr = genericNetcdf->read();
+  int ierr = data->readNetcdf(tempFile);
   if (ierr != 0) {
     this->m_errorString = "Error processing generic netcdf file.";
     return MetOceanViewer::Error::GENERICNETCDFERROR;
-  }
-  ierr = genericNetcdf->toImeds(data);
-  delete genericNetcdf;
-  if (ierr != MetOceanViewer::Error::NOERR) {
-    return MetOceanViewer::Error::GENERICFILEREADERROR;
   }
   return MetOceanViewer::Error::NOERR;
 }
@@ -575,38 +571,35 @@ int UserTimeseries::processDataFiles() {
         Filetypes::getIntegerFiletype(this->m_table->item(i, 6)->text());
     this->m_epsg.push_back(this->m_table->item(i, 11)->text().toInt());
 
+    Hmdf *stationData = new Hmdf(this);
+
     switch (inputFileType) {
       case MetOceanViewer::FileType::ASCII_IMEDS:
-        this->m_allFileData.push_back(new Imeds(this));
-        ierr = this->processImedsData(
-            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        ierr = this->processImedsData(i, stationData);
+        this->m_allFileData.push_back(stationData);
         break;
       case MetOceanViewer::FileType::NETCDF_ADCIRC:
-        this->m_allFileData.push_back(new Imeds(this));
-        ierr = this->processAdcircNetcdfData(
-            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        ierr = this->processAdcircNetcdfData(i, stationData);
+        this->m_allFileData.push_back(stationData);
         break;
       case MetOceanViewer::FileType::ASCII_ADCIRC:
-        this->m_allFileData.push_back(new Imeds(this));
-        ierr = this->processAdcircAsciiData(
-            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        ierr = this->processAdcircAsciiData(i, stationData);
+        this->m_allFileData.push_back(stationData);
         break;
       case MetOceanViewer::FileType::NETCDF_DFLOW:
-        this->m_allFileData.push_back(new Imeds(this));
-        ierr = this->processDflowData(
-            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        ierr = this->processDflowData(i, stationData);
+        this->m_allFileData.push_back(stationData);
         break;
       case MetOceanViewer::FileType::NETCDF_GENERIC:
-        this->m_allFileData.push_back(new Imeds(this));
-        ierr = this->processGenericNetcdfData(
-            i, this->m_allFileData[this->m_allFileData.length() - 1]);
+        ierr = this->processGenericNetcdfData(i, stationData);
+        this->m_allFileData.push_back(stationData);
         break;
       default:
         this->m_errorString = QStringLiteral("Invalid file format");
         return MetOceanViewer::Error::INVALIDFILEFORMAT;
     }
 
-    if (!this->m_allFileData[this->m_allFileData.length() - 1]->success ||
+    if (!this->m_allFileData.last()->success() ||
         ierr != MetOceanViewer::Error::NOERR) {
       this->m_allFileData.pop_back();
       return MetOceanViewer::Error::GENERICFILEREADERROR;
@@ -618,11 +611,11 @@ int UserTimeseries::processDataFiles() {
 int UserTimeseries::processStationLocations() {
   //...Build a unique set of timeseries data
   if (this->m_allFileData.length() == 1) {
-    for (int i = 0; i < this->m_allFileData[0]->nstations; i++) {
+    for (int i = 0; i < this->m_allFileData[0]->nstations(); i++) {
       this->m_xLocations.push_back(
-          this->m_allFileData[0]->station[i].coordinate()->longitude());
+          this->m_allFileData[0]->station(i)->longitude());
       this->m_yLocations.push_back(
-          this->m_allFileData[0]->station[i].coordinate()->latitude());
+          this->m_allFileData[0]->station(i)->latitude());
       this->m_fileDataUnique = this->m_allFileData;
     }
   } else {
@@ -643,10 +636,8 @@ int UserTimeseries::processStationLocations() {
     return MetOceanViewer::Error::BUILDREVISEDIMEDS;
   }
 
-  //...Delete the data we're done with
-  for (int i = 0; i < this->m_allFileData.size(); i++) {
-    delete this->m_allFileData[i];
-  }
+  this->m_allFileData.clear();
+
   return MetOceanViewer::Error::NOERR;
 }
 
@@ -654,7 +645,7 @@ int UserTimeseries::addMarkersToMap() {
   this->m_stationmodel->clear();
 
   //...Add the markers to the map
-  for (int i = 0; i < this->m_fileDataUnique[0]->nstations; i++) {
+  for (int i = 0; i < this->m_fileDataUnique[0]->nstations(); i++) {
     double x = -1.0;
     double y = -1.0;
     QString StationName = "NONAME";
@@ -662,10 +653,10 @@ int UserTimeseries::addMarkersToMap() {
     // Check that we aren't sending a null location to
     // the backend
     for (int j = 0; j < this->m_fileDataUnique.length(); j++) {
-      if (!this->m_fileDataUnique[j]->station[i].isNull()) {
-        StationName = this->m_fileDataUnique[j]->station[i].name();
-        x = this->m_fileDataUnique[j]->station[i].coordinate()->longitude();
-        y = this->m_fileDataUnique[j]->station[i].coordinate()->latitude();
+      if (!this->m_fileDataUnique[j]->station(i)->isNull()) {
+        StationName = this->m_fileDataUnique[j]->station(i)->name();
+        x = this->m_fileDataUnique[j]->station(i)->longitude();
+        y = this->m_fileDataUnique[j]->station(i)->latitude();
         break;
       }
     }
@@ -712,7 +703,7 @@ int UserTimeseries::processData() {
 // and not show data where it doesn't exist for
 // certain files
 //-------------------------------------------//
-int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
+int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
                                          QVector<double> &X,
                                          QVector<double> &Y) {
   int i, j, k;
@@ -720,12 +711,12 @@ int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
   double d;
 
   for (i = 0; i < Data.length(); i++) {
-    for (j = 0; j < Data[i]->nstations; j++) {
+    for (j = 0; j < Data[i]->nstations(); j++) {
       found = false;
       for (k = 0; k < X.length(); k++) {
         d = qSqrt(
-            qPow(Data[i]->station[j].coordinate()->longitude() - X[k], 2.0) +
-            qPow(Data[i]->station[j].coordinate()->latitude() - Y[k], 2.0));
+            qPow(Data[i]->station(j)->longitude() - X[k], 2.0) +
+            qPow(Data[i]->station(j)->latitude() - Y[k], 2.0));
         if (d < this->m_duplicateStationTolerance) {
           found = true;
           break;
@@ -734,8 +725,8 @@ int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
       if (!found) {
         X.resize(X.length() + 1);
         Y.resize(Y.length() + 1);
-        X[X.length() - 1] = Data[i]->station[j].coordinate()->longitude();
-        Y[Y.length() - 1] = Data[i]->station[j].coordinate()->latitude();
+        X[X.length() - 1] = Data[i]->station(j)->longitude();
+        Y[Y.length() - 1] = Data[i]->station(j)->latitude();
       }
     }
   }
@@ -748,9 +739,9 @@ int UserTimeseries::getUniqueStationList(QVector<Imeds *> Data,
 // which will have null data where there was
 // not data in the file
 //-------------------------------------------//
-int UserTimeseries::buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
+int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
                                       QVector<double> Y,
-                                      QVector<Imeds *> &DataOut) {
+                                      QVector<Hmdf *> &DataOut) {
   int i, j, k;
   bool found;
   double d;
@@ -758,46 +749,41 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
   DataOut.resize(Data.length());
 
   for (i = 0; i < Data.length(); i++) {
-    DataOut[i] = new Imeds(this);
+    DataOut[i]->setNstations(X.length());
+    DataOut[i]->setHeader1(Data[i]->header1());
+    DataOut[i]->setHeader2(Data[i]->header2());
+    DataOut[i]->setHeader3(Data[i]->header3());
 
-    DataOut[i]->nstations = X.length();
-    DataOut[i]->header1 = Data[i]->header1;
-    DataOut[i]->header2 = Data[i]->header2;
-    DataOut[i]->header3 = Data[i]->header3;
-    DataOut[i]->station.resize(X.length());
     for (j = 0; j < X.length(); j++) {
-      DataOut[i]->station[j].setLongitude(X[j]);
-      DataOut[i]->station[j].setLatitude(Y[j]);
+      DataOut[i]->station(j)->setLongitude(X[j]);
+      DataOut[i]->station(j)->setLatitude(Y[j]);
     }
   }
 
   for (i = 0; i < Data.length(); i++) {
-    for (j = 0; j < DataOut[i]->nstations; j++) {
+    for (j = 0; j < DataOut[i]->nstations(); j++) {
       found = false;
-      for (k = 0; k < Data[i]->nstations; k++) {
-        d = qSqrt(qPow(Data[i]->station[k].coordinate()->longitude() -
-                           DataOut[i]->station[j].coordinate()->longitude(),
+      for (k = 0; k < Data[i]->nstations(); k++) {
+        d = qSqrt(qPow(Data[i]->station(k)->longitude() -
+                           DataOut[i]->station(j)->longitude(),
                        2.0) +
-                  qPow(Data[i]->station[k].coordinate()->latitude() -
-                           DataOut[i]->station[j].coordinate()->latitude(),
+                  qPow(Data[i]->station(k)->latitude() -
+                           DataOut[i]->station(j)->latitude(),
                        2.0));
         if (d < this->m_duplicateStationTolerance) {
-          DataOut[i]->station[j].setNumSnaps(Data[i]->station[k].numSnaps());
-          DataOut[i]->station[j].setName(Data[i]->station[k].name());
-          DataOut[i]->station[j].setData(Data[i]->station[k].allData());
-          DataOut[i]->station[j].setDate(Data[i]->station[k].allDate());
-          DataOut[i]->station[j].setIsNull(false);
+          DataOut[i]->station(j)->setName(Data[i]->station(k)->name());
+          DataOut[i]->station(j)->setData(Data[i]->station(k)->allData());
+          DataOut[i]->station(j)->setDate(Data[i]->station(k)->allDate());
+          DataOut[i]->station(j)->setIsNull(false);
           found = true;
           break;
         }
       }
       if (!found) {
         // Build a station with a null dataset we can find later
-        DataOut[i]->station[j].setNumSnaps(1);
-        DataOut[i]->station[j].setName("NONAME");
-        DataOut[i]->station[j].setData(MetOceanViewer::NULL_TS, 0);
-        DataOut[i]->station[j].setDate(0, 0);
-        DataOut[i]->station[j].setIsNull(true);
+        DataOut[i]->station(j)->setName("NONAME");
+        DataOut[i]->station(j)->setNext(MetOceanViewer::NULL_TS, 0.0);
+        DataOut[i]->station(j)->setIsNull(true);
       }
     }
   }
@@ -805,7 +791,7 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Imeds *> &Data, QVector<double> X,
 }
 
 int UserTimeseries::projectStations(QVector<int> epsg,
-                                    QVector<Imeds *> &projectedStations) {
+                                    QVector<Hmdf *> &projectedStations) {
   int i, j, ierr;
   double x, y, x2, y2;
   bool isLatLon;
@@ -813,13 +799,13 @@ int UserTimeseries::projectStations(QVector<int> epsg,
 
   for (i = 0; i < projectedStations.length(); i++) {
     if (epsg[i] != 4326) {
-      for (j = 0; j < projectedStations[i]->nstations; j++) {
-        x = projectedStations[i]->station[j].coordinate()->longitude();
-        y = projectedStations[i]->station[j].coordinate()->latitude();
+      for (j = 0; j < projectedStations[i]->nstations(); j++) {
+        x = projectedStations[i]->station(j)->longitude();
+        y = projectedStations[i]->station(j)->latitude();
         ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
         if (ierr != 0) return MetOceanViewer::Error::PROJECTSTATIONS;
-        projectedStations[i]->station[j].setLongitude(x2);
-        projectedStations[i]->station[j].setLatitude(y2);
+        projectedStations[i]->station(j)->setLongitude(x2);
+        projectedStations[i]->station(j)->setLatitude(y2);
       }
     }
   }
