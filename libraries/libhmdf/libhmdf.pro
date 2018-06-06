@@ -18,7 +18,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core positioning
+QT       += core positioning network
 
 TARGET = hmdf
 TEMPLATE = lib

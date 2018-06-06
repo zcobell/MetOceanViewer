@@ -651,6 +651,10 @@ int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
     } else if (format.compare("IMEDS") == 0) {
       ierr = this->m_currentStationData[index]->writeImeds(filename2);
       if (ierr != 0) emit noaaError("Error writing IMEDS file");
+    } else if (format.compare("netCDF") == 0) {
+      ierr = this->m_currentStationData[index]->writeNetcdf(filename2);
+      qDebug() << ierr;
+      if (ierr != 0) emit noaaError("Error writing netCDF file");
     }
   }
 

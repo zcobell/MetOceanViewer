@@ -20,10 +20,19 @@
 #include "hmdf.h"
 #include <assert.h>
 #include <QFile>
+#include <QHostInfo>
 #include <fstream>
 #include "hmdfasciiparser.h"
+#include "netcdf.h"
 #include "netcdftimeseries.h"
 #include "stringutil.h"
+
+#define NCCHECK(ierr)              \
+  if (ierr != NC_NOERR) {          \
+    nc_close(ncid);                \
+    qDebug() << nc_strerror(ierr); \
+    return ierr;                   \
+  }
 
 Hmdf::Hmdf(QObject *parent) : QObject(parent) {
   this->setHeader1("");
@@ -33,7 +42,7 @@ Hmdf::Hmdf(QObject *parent) : QObject(parent) {
   this->setNstations(0);
   this->setSuccess(false);
   this->setUnits("");
-  // this->m_tz = Timezone(this);
+  // this->m_tz = new Timezone(this);
 }
 
 void Hmdf::clear() {
@@ -217,10 +226,8 @@ int Hmdf::writeImeds(QString filename) {
   for (int s = 0; s < this->nstations(); s++) {
     outputFile.write(
         QString(this->station(s)->name() + "   " +
-                QString::number(this->station(s)->latitude()) +
-                "   " +
-                QString::number(this->station(s)->longitude()) +
-                "\n")
+                QString::number(this->station(s)->latitude()) + "   " +
+                QString::number(this->station(s)->longitude()) + "\n")
             .toUtf8());
 
     for (int i = 0; i < this->station(s)->numSnaps(); i++) {
@@ -238,4 +245,163 @@ int Hmdf::writeImeds(QString filename) {
   return 0;
 }
 
-int Hmdf::writeNetcdf(QString filename) { return 0; }
+int Hmdf::writeNetcdf(QString filename) {
+  int ncid;
+  int dimid_nstations, dimid_stationNameLength;
+  int varid_stationName, varid_stationx, varid_stationy;
+
+  QVector<int> dimid_stationLength;
+  QVector<int> varid_stationDate, varid_stationData;
+
+  //...Open file
+  NCCHECK(nc_create(filename.toStdString().c_str(), NC_NETCDF4, &ncid));
+
+  //...Dimensions
+  NCCHECK(nc_def_dim(ncid, "numStations", this->nstations(), &dimid_nstations));
+  NCCHECK(nc_def_dim(ncid, "stationNameLength", 200, &dimid_stationNameLength));
+  for (int i = 0; i < this->nstations(); i++) {
+    QString dimname;
+    int d;
+    dimname.sprintf("%s%4.4i", "stationLength_", i);
+    NCCHECK(nc_def_dim(ncid, dimname.toStdString().c_str(),
+                       this->station(i)->numSnaps(), &d));
+    dimid_stationLength.push_back(d);
+  }
+
+  //...Variables
+  int stationNameDims[2] = {dimid_nstations, dimid_stationNameLength};
+  int nstationDims[1] = {dimid_nstations};
+  int wgs84[1] = {4326};
+
+  NCCHECK(nc_def_var(ncid, "stationName", NC_CHAR, 2, stationNameDims,
+                     &varid_stationName));
+  NCCHECK(nc_def_var(ncid, "stationXCoordinate", NC_DOUBLE, 1, nstationDims,
+                     &varid_stationx));
+  NCCHECK(nc_def_var(ncid, "stationYCoordinate", NC_DOUBLE, 1, nstationDims,
+                     &varid_stationy));
+
+  NCCHECK(nc_put_att_text(ncid, varid_stationx, "HorizontalProjectionName", 5,
+                          "WGS84"));
+  NCCHECK(nc_put_att_text(ncid, varid_stationy, "HorizontalProjectionName", 5,
+                          "WGS84"));
+
+  NCCHECK(nc_put_att_int(ncid, varid_stationx, "HorizontalProjectionEPSG",
+                         NC_INT, 1, wgs84));
+  NCCHECK(nc_put_att_int(ncid, varid_stationy, "HorizontalProjectionEPSG",
+                         NC_INT, 1, wgs84));
+
+  for (int i = 0; i < this->nstations(); i++) {
+    QString stationName, timeVarName, dataVarName;
+    int d[1] = {dimid_stationLength[i]};
+    char epoch[20] = "1970-01-01 00:00:00";
+    char utc[4] = "utc";
+    int v;
+
+    stationName.sprintf("%s%4.4i", "station_", i);
+    timeVarName = "time_" + stationName;
+    dataVarName = "data_" + stationName;
+
+    NCCHECK(nc_def_var(ncid, timeVarName.toStdString().c_str(), NC_INT64, 1, d,
+                       &v));
+    NCCHECK(nc_put_att_text(ncid, v, "referenceDate", 20, epoch));
+    NCCHECK(nc_put_att_text(ncid, v, "timezone", 3, utc));
+    NCCHECK(nc_put_att_text(ncid, v, "StationName",
+                            this->station(i)->name().length(),
+                            this->station(i)->name().toStdString().c_str()));
+
+    NCCHECK(nc_def_var_deflate(ncid, v, 1, 1, 2));
+    NCCHECK(nc_put_att_text(ncid, v, "StationName",
+                            this->station(i)->name().length(),
+                            this->station(i)->name().toStdString().c_str()));
+    NCCHECK(nc_def_var_deflate(ncid, v, 1, 1, 2));
+    varid_stationDate.push_back(v);
+
+    NCCHECK(nc_def_var(ncid, dataVarName.toStdString().c_str(), NC_DOUBLE, 1, d,
+                       &v));
+    varid_stationData.push_back(v);
+  }
+
+  //...Metadata
+  QString name = qgetenv("USER");
+  if (name.isEmpty()) name = qgetenv("USERNAME");
+  QString host = QHostInfo::localHostName();
+  QString createTime =
+      QDateTime::currentDateTimeUtc().toString("yyyy-MM-dd hh:mm:ss");
+  QString source = "MetOceanViewer";
+  QString ncVersion = QString(nc_inq_libvers());
+  QString format = "20180123";
+
+  NCCHECK(nc_put_att(ncid, NC_GLOBAL, "source", NC_CHAR, source.length(),
+                     source.toStdString().c_str()));
+  NCCHECK(nc_put_att(ncid, NC_GLOBAL, "creation_date", NC_CHAR,
+                     createTime.length(), createTime.toStdString().c_str()));
+  NCCHECK(nc_put_att(ncid, NC_GLOBAL, "created_by", NC_CHAR, name.length(),
+                     name.toStdString().c_str()));
+  NCCHECK(nc_put_att(ncid, NC_GLOBAL, "host", NC_CHAR, host.length(),
+                     host.toStdString().c_str()));
+  NCCHECK(nc_put_att(ncid, NC_GLOBAL, "netCDF_version", NC_CHAR,
+                     ncVersion.length(), ncVersion.toStdString().c_str()));
+  NCCHECK(nc_put_att(ncid, NC_GLOBAL, "fileformat", NC_CHAR, format.length(),
+                     format.toStdString().c_str()));
+
+  NCCHECK(nc_enddef(ncid));
+
+  for (int i = 0; i < this->nstations(); i++) {
+    size_t index[2] = {i, 0};
+    size_t stindex[1] = {i};
+    size_t count[2] = {1, 200};
+    double lat[1] = {this->station(i)->latitude()};
+    double lon[1] = {this->station(i)->longitude()};
+
+    int64_t *time =
+        (int64_t *)malloc(this->station(i)->numSnaps() * sizeof(int64_t));
+    double *data =
+        (double *)malloc(this->station(i)->numSnaps() * sizeof(double));
+    char *name = (char *)malloc(200 * sizeof(char));
+    memset(name, ' ', 200);
+    this->station(i)->name().toStdString().copy(name, 200, 0);
+
+    for (int j = 0; j < this->station(i)->numSnaps(); j++) {
+      time[j] = this->station(i)->date(j);
+      data[j] = this->station(i)->data(j);
+    }
+
+    NCCHECK(nc_put_var1_double(ncid, varid_stationx, stindex, lon));
+    NCCHECK(nc_put_var1_double(ncid, varid_stationy, stindex, lat));
+
+    int status = nc_put_var_longlong(ncid, varid_stationDate[i], time);
+    if (status != NC_NOERR) {
+      free(time);
+      free(data);
+      free(name);
+      nc_close(ncid);
+      return status;
+    }
+
+    status = nc_put_var_double(ncid, varid_stationData[i], data);
+    if (status != NC_NOERR) {
+      free(time);
+      free(data);
+      free(name);
+      nc_close(ncid);
+      return status;
+    }
+
+    status = nc_put_vara_text(ncid, varid_stationName, index, count, name);
+    if (status != NC_NOERR) {
+      free(time);
+      free(data);
+      free(name);
+      nc_close(ncid);
+      return status;
+    }
+
+    free(time);
+    free(data);
+    free(name);
+  }
+
+  nc_close(ncid);
+
+  return 0;
+}

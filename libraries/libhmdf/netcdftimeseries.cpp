@@ -41,9 +41,9 @@ void NetcdfTimeseries::setFilename(const QString &filename) {
   this->m_filename = filename;
 }
 
-int NetcdfTimeseries::epsg() const { return m_epsg; }
+int NetcdfTimeseries::epsg() const { return this->m_epsg; }
 
-void NetcdfTimeseries::setEpsg(int epsg) { m_epsg = epsg; }
+void NetcdfTimeseries::setEpsg(int epsg) { this->m_epsg = epsg; }
 
 int NetcdfTimeseries::read() {
   if (this->m_filename == QString()) return 1;

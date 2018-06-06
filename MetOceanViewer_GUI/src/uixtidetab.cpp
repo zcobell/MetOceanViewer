@@ -83,6 +83,13 @@ void MainWindow::on_button_xtide_savemap_clicked() {
 }
 
 void MainWindow::on_button_xtide_savedata_clicked() {
+
+  if(this->thisXTide==nullptr){
+    QMessageBox::critical(this, tr("ERROR"),
+                          tr("No station has been calculated."));
+    return;
+  }
+
   QString filename;
 
   QString MarkerID = thisXTide->getLoadedXTideStation();
@@ -106,7 +113,7 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 
   QString TempString = QFileDialog::getSaveFileName(
       this, tr("Save as..."), previousDirectory + DefaultFile,
-      "IMEDS (*.imeds);;CSV (*.csv)", &filter);
+      "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
 
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);

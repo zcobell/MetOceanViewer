@@ -677,6 +677,8 @@ int Usgs::saveUSGSData(QString filename, QString format) {
                     "00" + "    " +
                     QString::number(this->m_allStationData[i].m_data) + "\n";
     }
+  } else if (format.compare("netCDF") == 0) {
+    emit usgsError("netCDF format not implemented yet.");
   }
   USGSOutput.close();
 
