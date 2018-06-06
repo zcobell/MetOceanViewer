@@ -20,10 +20,10 @@
 #ifndef HMDFSTATION
 #define HMDFSTATION
 
+#include <QGeoCoordinate>
 #include <QObject>
 #include <QString>
 #include <QVector>
-#include "coordinate.h"
 
 class HmdfStation : public QObject {
   Q_OBJECT
@@ -33,8 +33,12 @@ class HmdfStation : public QObject {
 
   void clear();
 
-  Coordinate *coordinate();
-  void setCoordinate(const Coordinate &coordinate);
+  QGeoCoordinate *coordinate();
+  void setCoordinate(const QGeoCoordinate coordinate);
+
+  double latitude() const;
+  double longitude() const;
+
   void setLatitude(const double latitude);
   void setLongitude(const double longitude);
 
@@ -66,7 +70,7 @@ class HmdfStation : public QObject {
   QVector<double> allData() const;
 
  private:
-  Coordinate m_coordinate;
+  QGeoCoordinate m_coordinate;
 
   QString m_name;
   QString m_id;

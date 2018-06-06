@@ -18,7 +18,7 @@
 #
 #-----------------------------------------------------------------------#
 
-QT       += core
+QT       += core positioning
 
 TARGET = hmdf
 TEMPLATE = lib
@@ -27,7 +27,6 @@ CONFIG += staticlib
 SOURCES += \
         hmdf.cpp \
     hmdfstation.cpp \
-    coordinate.cpp \
     stringutil.cpp \
     hmdfasciiparser.cpp \
     netcdftimeseries.cpp
@@ -35,7 +34,6 @@ SOURCES += \
 HEADERS += \
         hmdf.h \
     hmdfstation.h \
-    coordinate.h \
     stringutil.h \
     hmdfasciiparser.h \
     netcdftimeseries.h

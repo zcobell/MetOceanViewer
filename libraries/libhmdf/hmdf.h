@@ -82,7 +82,7 @@ class Hmdf : public QObject {
   QString m_header3;
   QString m_units;
   QString m_datum;
-  QVector<HmdfStation*> m_station;
+  QVector<HmdfStation *> m_station;
 };
 
 #endif  // HMDF_H

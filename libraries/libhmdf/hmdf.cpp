@@ -217,9 +217,9 @@ int Hmdf::writeImeds(QString filename) {
   for (int s = 0; s < this->nstations(); s++) {
     outputFile.write(
         QString(this->station(s)->name() + "   " +
-                QString::number(this->station(s)->coordinate()->latitude()) +
+                QString::number(this->station(s)->latitude()) +
                 "   " +
-                QString::number(this->station(s)->coordinate()->longitude()) +
+                QString::number(this->station(s)->longitude()) +
                 "\n")
             .toUtf8());
 

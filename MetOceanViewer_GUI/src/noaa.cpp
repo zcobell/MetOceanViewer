@@ -431,15 +431,13 @@ int Noaa::plotNOAAStation() {
     HmdfStation *station1 = new HmdfStation(this);
     HmdfStation *station2 = new HmdfStation(this);
 
-    station1->coordinate()->setLongitude(
-        this->m_station.coordinate().longitude());
+    station1->setLongitude(this->m_station.coordinate().longitude());
     station1->setLatitude(this->m_station.coordinate().latitude());
     station1->setName(this->m_station.name());
     station1->setId("NOAA_" + this->m_station.id());
     station1->setStationIndex(0);
 
-    station2->coordinate()->setLongitude(
-        this->m_station.coordinate().longitude());
+    station2->setLongitude(this->m_station.coordinate().longitude());
     station2->setLatitude(this->m_station.coordinate().latitude());
     station2->setName(this->m_station.name());
     station2->setId("NOAA_" + this->m_station.id());

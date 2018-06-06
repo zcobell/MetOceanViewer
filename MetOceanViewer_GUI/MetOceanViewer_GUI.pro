@@ -242,8 +242,8 @@ DISTFILES += \
     qml/InfoWindow.qml \
     qml/MapLegend.qml
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/hmdf/release/ -lhmdf
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/hmdf/debug/ -lhmdf
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/release/ -lhmdf
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/debug/ -lhmdf
 else:unix: LIBS += -L$$OUT_PWD/../libraries/libhmdf/ -lhmdf
 
 INCLUDEPATH += $$PWD/../libraries/libhmdf

@@ -21,7 +21,7 @@
 #include <assert.h>
 
 HmdfStation::HmdfStation(QObject *parent) : QObject(parent) {
-  this->m_coordinate = Coordinate();
+  this->m_coordinate = QGeoCoordinate();
   this->m_name = "noname";
   this->m_id = "noid";
   this->m_isNull = true;
@@ -29,7 +29,7 @@ HmdfStation::HmdfStation(QObject *parent) : QObject(parent) {
 }
 
 void HmdfStation::clear() {
-  this->m_coordinate = Coordinate();
+  this->m_coordinate = QGeoCoordinate();
   this->m_name = "noname";
   this->m_id = "noid";
   this->m_isNull = true;
@@ -37,12 +37,6 @@ void HmdfStation::clear() {
   this->m_data.clear();
   this->m_date.clear();
   return;
-}
-
-Coordinate *HmdfStation::coordinate() { return &this->m_coordinate; }
-
-void HmdfStation::setCoordinate(const Coordinate &coordinate) {
-  this->m_coordinate = coordinate;
 }
 
 QString HmdfStation::name() const { return this->m_name; }
@@ -117,3 +111,13 @@ void HmdfStation::setLatitude(const double latitude) {
 void HmdfStation::setLongitude(const double longitude) {
   this->m_coordinate.setLongitude(longitude);
 }
+
+double HmdfStation::latitude() const { return this->m_coordinate.latitude(); }
+
+double HmdfStation::longitude() const { return this->m_coordinate.longitude(); }
+
+void HmdfStation::setCoordinate(const QGeoCoordinate coordinate) {
+  this->m_coordinate = coordinate;
+}
+
+QGeoCoordinate *HmdfStation::coordinate() { return &this->m_coordinate; }

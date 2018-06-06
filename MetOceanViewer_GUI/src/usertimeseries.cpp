@@ -613,9 +613,9 @@ int UserTimeseries::processStationLocations() {
   if (this->m_allFileData.length() == 1) {
     for (int i = 0; i < this->m_allFileData[0]->nstations(); i++) {
       this->m_xLocations.push_back(
-          this->m_allFileData[0]->station(i)->coordinate()->longitude());
+          this->m_allFileData[0]->station(i)->longitude());
       this->m_yLocations.push_back(
-          this->m_allFileData[0]->station(i)->coordinate()->latitude());
+          this->m_allFileData[0]->station(i)->latitude());
       this->m_fileDataUnique = this->m_allFileData;
     }
   } else {
@@ -655,8 +655,8 @@ int UserTimeseries::addMarkersToMap() {
     for (int j = 0; j < this->m_fileDataUnique.length(); j++) {
       if (!this->m_fileDataUnique[j]->station(i)->isNull()) {
         StationName = this->m_fileDataUnique[j]->station(i)->name();
-        x = this->m_fileDataUnique[j]->station(i)->coordinate()->longitude();
-        y = this->m_fileDataUnique[j]->station(i)->coordinate()->latitude();
+        x = this->m_fileDataUnique[j]->station(i)->longitude();
+        y = this->m_fileDataUnique[j]->station(i)->latitude();
         break;
       }
     }
@@ -715,8 +715,8 @@ int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
       found = false;
       for (k = 0; k < X.length(); k++) {
         d = qSqrt(
-            qPow(Data[i]->station(j)->coordinate()->longitude() - X[k], 2.0) +
-            qPow(Data[i]->station(j)->coordinate()->latitude() - Y[k], 2.0));
+            qPow(Data[i]->station(j)->longitude() - X[k], 2.0) +
+            qPow(Data[i]->station(j)->latitude() - Y[k], 2.0));
         if (d < this->m_duplicateStationTolerance) {
           found = true;
           break;
@@ -725,8 +725,8 @@ int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
       if (!found) {
         X.resize(X.length() + 1);
         Y.resize(Y.length() + 1);
-        X[X.length() - 1] = Data[i]->station(j)->coordinate()->longitude();
-        Y[Y.length() - 1] = Data[i]->station(j)->coordinate()->latitude();
+        X[X.length() - 1] = Data[i]->station(j)->longitude();
+        Y[Y.length() - 1] = Data[i]->station(j)->latitude();
       }
     }
   }
@@ -764,11 +764,11 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
     for (j = 0; j < DataOut[i]->nstations(); j++) {
       found = false;
       for (k = 0; k < Data[i]->nstations(); k++) {
-        d = qSqrt(qPow(Data[i]->station(k)->coordinate()->longitude() -
-                           DataOut[i]->station(j)->coordinate()->longitude(),
+        d = qSqrt(qPow(Data[i]->station(k)->longitude() -
+                           DataOut[i]->station(j)->longitude(),
                        2.0) +
-                  qPow(Data[i]->station(k)->coordinate()->latitude() -
-                           DataOut[i]->station(j)->coordinate()->latitude(),
+                  qPow(Data[i]->station(k)->latitude() -
+                           DataOut[i]->station(j)->latitude(),
                        2.0));
         if (d < this->m_duplicateStationTolerance) {
           DataOut[i]->station(j)->setName(Data[i]->station(k)->name());
@@ -800,8 +800,8 @@ int UserTimeseries::projectStations(QVector<int> epsg,
   for (i = 0; i < projectedStations.length(); i++) {
     if (epsg[i] != 4326) {
       for (j = 0; j < projectedStations[i]->nstations(); j++) {
-        x = projectedStations[i]->station(j)->coordinate()->longitude();
-        y = projectedStations[i]->station(j)->coordinate()->latitude();
+        x = projectedStations[i]->station(j)->longitude();
+        y = projectedStations[i]->station(j)->latitude();
         ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
         if (ierr != 0) return MetOceanViewer::Error::PROJECTSTATIONS;
         projectedStations[i]->station(j)->setLongitude(x2);
