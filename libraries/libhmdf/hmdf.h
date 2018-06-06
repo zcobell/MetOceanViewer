@@ -75,10 +75,13 @@ class Hmdf : public QObject {
   bool success() const;
   void setSuccess(bool success);
 
- private:
+  bool null() const;
+  void setNull(bool null);
+
+private:
   //...Variables
   int m_nstations;
-  bool m_success;
+  bool m_success, m_null;
 
   Timezone m_tz;
   QString m_header1;

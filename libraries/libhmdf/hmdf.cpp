@@ -43,6 +43,7 @@ Hmdf::Hmdf(QObject *parent) : QObject(parent) {
   this->setNstations(0);
   this->setSuccess(false);
   this->setUnits("");
+  this->setNull(true);
   // this->m_tz = new Timezone(this);
 }
 
@@ -105,6 +106,10 @@ bool Hmdf::success() const { return this->m_success; }
 
 void Hmdf::setSuccess(bool success) { this->m_success = success; }
 
+bool Hmdf::null() const { return this->m_null; }
+
+void Hmdf::setNull(bool null) { this->m_null = null; }
+
 int Hmdf::readImeds(QString filename) {
   std::fstream fid(filename.toStdString().c_str());
   if (fid.bad()) return -1;
@@ -163,6 +168,8 @@ int Hmdf::readImeds(QString filename) {
     this->addStation(station);
   }
 
+  this->setNull(false);
+
   return 0;
 }
 
@@ -178,6 +185,8 @@ int Hmdf::readNetcdf(QString filename) {
   delete ncts;
 
   if (ierr != 0) return 1;
+
+  this->setNull(false);
 
   return 0;
 }
@@ -217,16 +226,16 @@ int Hmdf::writeImeds(QString filename) {
 
   if (!outputFile.open(QIODevice::WriteOnly)) return -1;
 
-  outputFile.write(QString("% IMEDS generic format - Water Level\n").toUtf8());
+  outputFile.write(QString("% IMEDS generic format\n").toUtf8());
   outputFile.write(
-      QString("% year month day hour min sec watlev(" + this->units() + ")\n")
+      QString("% year month day hour min sec value\n")
           .toUtf8());
   outputFile.write(
       QString("MetOceanViewer    UTC    " + this->datum() + "\n").toUtf8());
 
   for (int s = 0; s < this->nstations(); s++) {
     outputFile.write(
-        QString(this->station(s)->name() + "   " +
+        QString(this->station(s)->name().replace(" ", "_") + "   " +
                 QString::number(this->station(s)->latitude()) + "   " +
                 QString::number(this->station(s)->longitude()) + "\n")
             .toUtf8());

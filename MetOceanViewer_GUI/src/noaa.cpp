@@ -205,6 +205,7 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
           tempDate.toMSecsSinceEpoch(), WLS.toDouble());
     }
   }
+  this->m_currentStationData[index]->setNull(false);
 
   return 0;
 }
@@ -635,16 +636,19 @@ int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
                        QString format) {
   QString filename2;
 
-  for (int index = 0; index < this->m_currentStationData.length(); index++) {
-    if (this->m_currentStationData.length() == 2) {
+  if (!this->m_currentStationData[0]->null() &&
+      !this->m_currentStationData[1]->null()) {
+    for (int index = 0; index < this->m_currentStationData.length(); index++) {
       if (index == 0)
         filename2 = PreviousDirectory + "/Observation_" + filename;
       else
         filename2 = PreviousDirectory + "/Predictions_" + filename;
-    } else
-      filename2 = PreviousDirectory + "/" + filename;
-
-    int ierr = this->m_currentStationData[index]->write(filename2);
+      int ierr = this->m_currentStationData[index]->write(filename2);
+      if (ierr != 0) emit noaaError("Error writing NOAA data to file");
+    }
+  } else {
+    filename2 = PreviousDirectory + "/" + filename;
+    int ierr = this->m_currentStationData[0]->write(filename2);
     if (ierr != 0) emit noaaError("Error writing NOAA data to file");
   }
 
