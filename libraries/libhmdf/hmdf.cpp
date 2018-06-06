@@ -353,8 +353,8 @@ int Hmdf::writeNetcdf(QString filename) {
     double lat[1] = {this->station(i)->latitude()};
     double lon[1] = {this->station(i)->longitude()};
 
-    int64_t *time =
-        (int64_t *)malloc(this->station(i)->numSnaps() * sizeof(int64_t));
+    long long *time =
+        (long long *)malloc(this->station(i)->numSnaps() * sizeof(long long));
     double *data =
         (double *)malloc(this->station(i)->numSnaps() * sizeof(double));
     char *name = (char *)malloc(200 * sizeof(char));
