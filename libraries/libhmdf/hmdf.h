@@ -80,7 +80,6 @@ class Hmdf : public QObject {
 
 private:
   //...Variables
-  int m_nstations;
   bool m_success, m_null;
 
   Timezone m_tz;
