@@ -28,11 +28,10 @@
 #include "netcdftimeseries.h"
 #include "stringutil.h"
 
-#define NCCHECK(ierr)              \
-  if (ierr != NC_NOERR) {          \
-    nc_close(ncid);                \
-    qDebug() << nc_strerror(ierr); \
-    return ierr;                   \
+#define NCCHECK(ierr)     \
+  if (ierr != NC_NOERR) { \
+    nc_close(ncid);       \
+    return ierr;          \
   }
 
 Hmdf::Hmdf(QObject *parent) : QObject(parent) {
@@ -40,7 +39,6 @@ Hmdf::Hmdf(QObject *parent) : QObject(parent) {
   this->setHeader2("");
   this->setHeader3("");
   this->setDatum("");
-  this->setNstations(0);
   this->setSuccess(false);
   this->setUnits("");
   this->setNull(true);
@@ -55,18 +53,12 @@ void Hmdf::clear() {
   this->setHeader2("");
   this->setHeader3("");
   this->setDatum("");
-  this->setNstations(0);
   this->setSuccess(false);
   this->setUnits("");
   return;
 }
 
 size_t Hmdf::nstations() const { return this->m_station.size(); }
-
-void Hmdf::setNstations(size_t nstations) {
-  this->m_station.resize(nstations);
-  return;
-}
 
 QString Hmdf::header1() const { return this->m_header1; }
 
@@ -153,9 +145,11 @@ int Hmdf::readImeds(QString filename) {
           templine, year, month, day, hour, minute, second, value);
 
       if (status) {
-        qint64 secs =
-            QDateTime(QDate(year, month, day), QTime(hour, minute, second))
-                .toMSecsSinceEpoch();
+        QDateTime datetime;
+        datetime.setTimeSpec(Qt::UTC);
+        datetime.setDate(QDate(year, month, day));
+        datetime.setTime(QTime(hour, minute, second));
+        qint64 secs = datetime.toMSecsSinceEpoch();
 
         //...Append to the station data
         station->setNext(secs, value);
@@ -227,9 +221,7 @@ int Hmdf::writeImeds(QString filename) {
   if (!outputFile.open(QIODevice::WriteOnly)) return -1;
 
   outputFile.write(QString("% IMEDS generic format\n").toUtf8());
-  outputFile.write(
-      QString("% year month day hour min sec value\n")
-          .toUtf8());
+  outputFile.write(QString("% year month day hour min sec value\n").toUtf8());
   outputFile.write(
       QString("MetOceanViewer    UTC    " + this->datum() + "\n").toUtf8());
 

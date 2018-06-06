@@ -49,6 +49,7 @@ int NetcdfTimeseries::read() {
   if (this->m_filename == QString()) return 1;
 
   QDateTime refTime;
+  refTime.setTimeSpec(Qt::UTC);
   QString station_dim_string, station_time_var_string, station_data_var_string,
       stationNameString;
   size_t stationNameLength, length;

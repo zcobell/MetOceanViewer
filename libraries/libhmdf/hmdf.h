@@ -51,7 +51,7 @@ class Hmdf : public QObject {
   int readNetcdf(QString filename);
 
   size_t nstations() const;
-  void setNstations(size_t nstations);
+  //void setNstations(size_t nstations);
 
   QString header1() const;
   void setHeader1(const QString &header1);

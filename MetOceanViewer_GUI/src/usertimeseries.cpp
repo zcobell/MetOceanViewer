@@ -706,27 +706,21 @@ int UserTimeseries::processData() {
 int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
                                          QVector<double> &X,
                                          QVector<double> &Y) {
-  int i, j, k;
-  bool found;
-  double d;
-
-  for (i = 0; i < Data.length(); i++) {
-    for (j = 0; j < Data[i]->nstations(); j++) {
-      found = false;
-      for (k = 0; k < X.length(); k++) {
-        d = qSqrt(
-            qPow(Data[i]->station(j)->longitude() - X[k], 2.0) +
-            qPow(Data[i]->station(j)->latitude() - Y[k], 2.0));
+  for (int i = 0; i < Data.length(); i++) {
+    for (int j = 0; j < Data[i]->nstations(); j++) {
+      bool found = false;
+      for (int k = 0; k < X.length(); k++) {
+        double dx = Data[i]->station(j)->longitude() - X[k];
+        double dy = Data[i]->station(j)->latitude() - Y[k];
+        double d = qSqrt(qPow(dx, 2.0) + qPow(dy, 2.0));
         if (d < this->m_duplicateStationTolerance) {
           found = true;
           break;
         }
       }
       if (!found) {
-        X.resize(X.length() + 1);
-        Y.resize(Y.length() + 1);
-        X[X.length() - 1] = Data[i]->station(j)->longitude();
-        Y[Y.length() - 1] = Data[i]->station(j)->latitude();
+        X.push_back(Data[i]->station(j)->longitude());
+        Y.push_back(Data[i]->station(j)->latitude());
       }
     }
   }
@@ -742,34 +736,31 @@ int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
 int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
                                       QVector<double> Y,
                                       QVector<Hmdf *> &DataOut) {
-  int i, j, k;
-  bool found;
-  double d;
-
   DataOut.resize(Data.length());
 
-  for (i = 0; i < Data.length(); i++) {
-    DataOut[i]->setNstations(X.length());
+  for (int i = 0; i < Data.length(); i++) {
+    DataOut[i] = new Hmdf(this);
     DataOut[i]->setHeader1(Data[i]->header1());
     DataOut[i]->setHeader2(Data[i]->header2());
     DataOut[i]->setHeader3(Data[i]->header3());
 
-    for (j = 0; j < X.length(); j++) {
-      DataOut[i]->station(j)->setLongitude(X[j]);
-      DataOut[i]->station(j)->setLatitude(Y[j]);
+    for (int j = 0; j < X.length(); j++) {
+      HmdfStation *station = new HmdfStation(DataOut[i]);
+      station->setLongitude(X[j]);
+      station->setLatitude(Y[j]);
+      DataOut[i]->addStation(station);
     }
   }
 
-  for (i = 0; i < Data.length(); i++) {
-    for (j = 0; j < DataOut[i]->nstations(); j++) {
-      found = false;
-      for (k = 0; k < Data[i]->nstations(); k++) {
-        d = qSqrt(qPow(Data[i]->station(k)->longitude() -
-                           DataOut[i]->station(j)->longitude(),
-                       2.0) +
-                  qPow(Data[i]->station(k)->latitude() -
-                           DataOut[i]->station(j)->latitude(),
-                       2.0));
+  for (int i = 0; i < Data.length(); i++) {
+    for (int j = 0; j < DataOut[i]->nstations(); j++) {
+      bool found = false;
+      for (int k = 0; k < Data[i]->nstations(); k++) {
+        double dx = Data[i]->station(k)->longitude() -
+                    DataOut[i]->station(j)->longitude();
+        double dy = Data[i]->station(k)->latitude() -
+                    DataOut[i]->station(j)->latitude();
+        double d = qSqrt(qPow(dx, 2.0) + qPow(dy, 2.0));
         if (d < this->m_duplicateStationTolerance) {
           DataOut[i]->station(j)->setName(Data[i]->station(k)->name());
           DataOut[i]->station(j)->setData(Data[i]->station(k)->allData());
