@@ -142,6 +142,9 @@ unix:!macx{
     QMAKE_CXXFLAGS_RELEASE +=
     QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
+    #...Prevent executable from being recognized as a shared lib
+    QMAKE_LFLAGS += -no-pie
+
     #...Define a variable for the about dialog
     DEFINES += MOV_COMPILER=\\\"gpp\\\"
 }

@@ -1,12 +1,18 @@
 #!/bin/bash
 
+static=1
 QtHome=/opt/Qt
-QtLibDir=/opt/Qt/5.10.1/gcc_64/lib
-executable=../../build-MetOceanViewer-Desktop_Qt_5_10_1_GCC_64bit-Release/MetOceanViewer_GUI/MetOceanViewer
+QtLibDir=/opt/Qt/5.11.0/gcc_64/lib
+executable=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_GUI/MetOceanViewer
 xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
 harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
 version=$(git describe --always --tags)
 
+if [ $static == 1 ] ; then
+    bindir=packages_unix_static
+else
+    bindir=packages_unix
+fi
 
 if [ ! -s $executable ] ; then
     echo "ERROR: executable not found."
@@ -29,15 +35,18 @@ if [ ! -s $QtHome/Tools/QtInstallerFramework/3.0/bin/binarycreator ] ; then
 fi
 
 echo "Gathering libraries..."
-ldd $executable    > liblist.txt
+ldd $executable > liblist.txt
 
-mkdir -p ./packages_unix/com.zachcobell.metoceanviewer/data
-mkdir -p ./packages_unix/com.qt.qtsharedlibraries/data
-mkdir -p ./packages_unix/com.unidata.netcdf/data 
+mkdir -p ./$bindir/com.zachcobell.metoceanviewer/data
+mkdir -p ./$bindir/com.unidata.netcdf/data 
+if [ $static == 0 ] ; then
+    mkdir -p ./$bindir/com.qt.qtsharedlibraries/data
+fi
 
-cp $executable ./packages_unix/com.zachcobell.metoceanviewer/data/.
-cp $xtide ./packages_unix/com.zachcobell.metoceanviewer/data/.
-cp $harmonics ./packages_unix/com.zachcobell.metoceanviewer/data/.
+cp $executable ./$bindir/com.zachcobell.metoceanviewer/data/.
+cp $xtide      ./$bindir/com.zachcobell.metoceanviewer/data/.
+cp $harmonics  ./$bindir/com.zachcobell.metoceanviewer/data/.
+cp ../MetOceanViewer_GUI/img/logo_small.png ./$bindir/com.zachcobell.metoceanviewer/data/MetOceanViewer.png
 
 while read LIB
 do
@@ -50,11 +59,13 @@ do
     LIBDIR=$(dirname $LOCATION 2>/dev/null)
     
     if [ "x$LIBDIR" == "x$QtLibDir" ] ; then
-        cp $LOCATION ./packages_unix/com.qt.qtsharedlibraries/data/.
+        if [ $static == 0 ] ; then
+            cp $LOCATION ./$bindir/com.qt.qtsharedlibraries/data/.
+        fi
     elif [ $SHORTNAME2 == "libnetcdf" ] ; then
-        cp $LOCATION ./packages_unix/com.unidata.netcdf/data/.
+        cp $LOCATION ./$bindir/com.unidata.netcdf/data/.
     elif [ $SHORTNAME3 == "libhdf5" ] ; then
-        cp $LOCATION ./packages_unix/com.unidata.netcdf/data/.
+        cp $LOCATION ./$bindir/com.unidata.netcdf/data/.
     fi
 
 done < liblist.txt
@@ -62,4 +73,4 @@ done < liblist.txt
 rm liblist.txt
 
 echo "Building Installer..."
-$QtHome/Tools/QtInstallerFramework/3.0/bin/binarycreator -c config/config.xml -p packages_unix MetOceanViewer_Unix_Installer_$version.bin
+$QtHome/Tools/QtInstallerFramework/3.0/bin/binarycreator -c config/config.xml -p $bindir MetOceanViewer_Unix_Installer_$version.bin
