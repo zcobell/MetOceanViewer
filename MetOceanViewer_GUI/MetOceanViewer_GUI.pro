@@ -92,7 +92,10 @@ OTHER_FILES +=
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\" 
-DEFINES += USE_ANGLE
+
+win32{
+    DEFINES += USE_ANGLE
+}
 
 #...Microsoft Visual C++ compilers
 *msvc* {
@@ -128,10 +131,6 @@ DEFINES += USE_ANGLE
 
 }
 
-#...MinGW 32 bit compiler, throw error
-win32-g++{
-    error("MinGW not compatible with this project. See the Qt documentation for QtWebEngine.")
-}
 
 #...Unix - We assume static library for NetCDF installed
 #          in the system path already
@@ -142,11 +141,15 @@ unix:!macx{
     QMAKE_CXXFLAGS_RELEASE +=
     QMAKE_CXXFLAGS_DEBUG += -O0 -DEBUG
 
-    #...Prevent executable from being recognized as a shared lib
-    QMAKE_LFLAGS += -no-pie
+    #...The flag --no-pie is for linux systems to correctly
+    #   recognize the output as an executable and not a shared lib
+    #   Some versions of g++ don't require/have this option so check here
+    #   for the configuration of the compiler
+    GV = $$system(g++ --help --verbose 2>&1 >/dev/null | grep "enable-default-pie" | wc -l)
+    greaterThan(GV, 0): QMAKE_LFLAGS += -no-pie
 
     #...Define a variable for the about dialog
-    DEFINES += MOV_COMPILER=\\\"gpp\\\"
+    DEFINES += MOV_COMPILER=\\\"g++\\\"
 }
 
 #...Mac - Assume static libs for netCDF in this path

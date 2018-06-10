@@ -142,7 +142,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QDateEdit" name="Date_StartTime">
+                  <widget class="QDateTimeEdit" name="Date_StartTime">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -151,13 +151,13 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>115</width>
+                     <width>160</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>115</width>
+                     <width>160</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -165,7 +165,7 @@
                     <bool>false</bool>
                    </property>
                    <property name="displayFormat">
-                    <string>MM/dd/yyyy</string>
+                    <string>MM/dd/yyyy hh:mm</string>
                    </property>
                    <property name="calendarPopup">
                     <bool>true</bool>
@@ -204,7 +204,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QDateEdit" name="Date_EndTime">
+                  <widget class="QDateTimeEdit" name="Date_EndTime">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -213,13 +213,13 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>115</width>
+                     <width>160</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>115</width>
+                     <width>160</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -230,7 +230,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="displayFormat">
-                    <string>MM/dd/yyyy</string>
+                    <string>MM/dd/yyyy hh:mm</string>
                    </property>
                    <property name="calendarPopup">
                     <bool>true</bool>
@@ -4100,7 +4100,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

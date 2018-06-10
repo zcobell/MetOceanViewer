@@ -24,12 +24,13 @@
 #include "generic.h"
 #include "hmdf.h"
 
-Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart, QDateEdit *inStartDateEdit,
-           QDateEdit *inEndDateEdit, QComboBox *inNoaaProduct,
-           QComboBox *inNoaaUnits, QComboBox *inNoaaDatum,
-           QStatusBar *inStatusBar, QComboBox *inNoaaTimezoneLocation,
-           QComboBox *inNoaaTimezone, StationModel *inStationModel,
-           QString *inSelectedStation, QObject *parent)
+Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
+           QDateTimeEdit *inStartDateEdit, QDateTimeEdit *inEndDateEdit,
+           QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
+           QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
+           QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
+           StationModel *inStationModel, QString *inSelectedStation,
+           QObject *parent)
     : QObject(parent) {
   this->m_quickMap = inMap;
   this->m_chartView = inChart;
@@ -76,6 +77,7 @@ int Noaa::fetchNOAAData() {
   // Begin organizing the dates for download
   QDateTime localStartDate = this->m_startDate.addMSecs(-this->m_offsetSeconds);
   QDateTime localEndDate = this->m_endDate.addMSecs(-this->m_offsetSeconds);
+
   Duration = localStartDate.daysTo(localEndDate);
   NumDownloads = (Duration / 30) + 1;
   StartDateList.resize(NumDownloads);
@@ -84,9 +86,9 @@ int Noaa::fetchNOAAData() {
   // Build the list of dates in 30 day intervals
   for (i = 0; i < NumDownloads; i++) {
     StartDateList[i] = localStartDate.addDays(i * 30).addDays(i);
-    StartDateList[i].setTime(QTime(0, 0, 0));
+    StartDateList[i].setTime(localStartDate.time());
     EndDateList[i] = StartDateList[i].addDays(30);
-    EndDateList[i].setTime(QTime(23, 59, 59));
+    EndDateList[i].setTime(localEndDate.time());
     if (EndDateList[i] > localEndDate) EndDateList[i] = localEndDate;
   }
 
@@ -313,10 +315,7 @@ int Noaa::plotChart() {
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
   minDateTime = this->m_startDateEdit->dateTime();
-  maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
-
-  minDateTime.setTime(QTime(0, 0, 0));
-  maxDateTime.setTime(QTime(0, 0, 0));
+  maxDateTime = this->m_endDateEdit->dateTime();
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
@@ -449,10 +448,7 @@ int Noaa::plotNOAAStation() {
 
     //...Grab the options from the UI
     this->m_startDate = this->m_startDateEdit->dateTime();
-    this->m_startDate.setTime(QTime(0, 0, 0));
     this->m_endDate = this->m_endDateEdit->dateTime();
-    this->m_endDate = this->m_endDate.addDays(1);
-    this->m_endDate.setTime(QTime(0, 0, 0));
     this->m_units = this->m_comboUnits->currentText();
     this->m_datum = this->m_comboDatum->currentText();
     this->m_productIndex = this->m_comboProduct->currentIndex();
@@ -677,9 +673,7 @@ int Noaa::replotChart(Timezone *newTimezone) {
   }
 
   QDateTime minDateTime = this->m_startDateEdit->dateTime();
-  QDateTime maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
-  minDateTime.setTime(QTime(0, 0, 0));
-  maxDateTime.setTime(QTime(0, 0, 0));
+  QDateTime maxDateTime = this->m_endDateEdit->dateTime();
   minDateTime.setTimeSpec(Qt::UTC);
   maxDateTime.setTimeSpec(Qt::UTC);
 

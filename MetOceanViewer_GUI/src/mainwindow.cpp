@@ -246,8 +246,7 @@ void MainWindow::setupNoaaMap() {
                    SLOT(changeNoaaMarker(QString)));
   ui->Date_StartTime->setDateTime(QDateTime::currentDateTimeUtc().addDays(-1));
   ui->Date_EndTime->setDateTime(QDateTime::currentDateTimeUtc());
-  ui->Date_StartTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
-  ui->Date_EndTime->setMaximumDateTime(QDateTime::currentDateTimeUtc());
+
   ui->combo_noaaTimezoneLocation->setCurrentIndex(12);
   MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(
       ui->combo_noaaTimezoneLocation->currentIndex());

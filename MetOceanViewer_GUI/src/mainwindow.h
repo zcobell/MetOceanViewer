@@ -144,8 +144,6 @@ class MainWindow : public QMainWindow {
 
   void on_button_moveRowDown_clicked();
 
-  void on_combo_NOAAProduct_currentIndexChanged(int index);
-
   void handleEnterKey();
 
   void on_button_saveHWMScatter_clicked();

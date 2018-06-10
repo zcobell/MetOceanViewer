@@ -45,7 +45,7 @@ class Noaa : public QObject {
  public:
   //...Constructor
   explicit Noaa(QQuickWidget *inMap, ChartView *inChart,
-                   QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                   QDateTimeEdit *inStartDateEdit, QDateTimeEdit *inEndDateEdit,
                    QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
                    QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
                    QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
@@ -107,7 +107,7 @@ class Noaa : public QObject {
   //...Pointers to GUI elements
   QQuickWidget *m_quickMap;
   ChartView *m_chartView;
-  QDateEdit *m_startDateEdit, *m_endDateEdit;
+  QDateTimeEdit *m_startDateEdit, *m_endDateEdit;
   QComboBox *m_comboProduct, *m_comboUnits, *m_comboDatum,
       *m_comboTimezoneLocation, *m_comboTimezone;
   QStatusBar *m_statusBar;
