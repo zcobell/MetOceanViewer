@@ -525,6 +525,7 @@ void Noaa::readNOAAResponse(QNetworkReply *reply, int index, int index2) {
 
 int Noaa::getNoaaProductId(QString &product1, QString &product2) {
   static QStringList noaaProductCode = QStringList() << "water_level"
+                                                     << "water_level"
                                                      << "hourly_height"
                                                      << "predictions"
                                                      << "air_temperature"
