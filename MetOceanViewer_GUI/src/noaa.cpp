@@ -20,6 +20,7 @@
 #include "noaa.h"
 #include <QGeoRectangle>
 #include <QGeoShape>
+#include <limits>
 #include "chartview.h"
 #include "generic.h"
 #include "hmdf.h"
@@ -146,6 +147,7 @@ int Noaa::fetchNOAAData() {
       connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
               SLOT(quit()));
       loop.exec();
+
       //...Check for a redirect from NOAA. This fixes bug #26
       QVariant redirectionTargetURL =
           reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
@@ -175,7 +177,6 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
   QVector<QString> InputData;
   QVector<QStringList> DataList;
   QVector<QString> Temp;
-  QDateTime tempDate;
 
   InputData.resize(input.length());
   DataList.resize(input.length());
@@ -201,10 +202,15 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
       HourS = HourMinS.mid(0, 2);
       MinS = HourMinS.mid(3, 2);
       WLS = TimeSnap.value(1);
+
+      QDateTime tempDate;
       tempDate.setDate(QDate(YearS.toInt(), MonthS.toInt(), DayS.toInt()));
       tempDate.setTime(QTime(HourS.toInt(), MinS.toInt(), 0));
-      this->m_currentStationData[index]->station(0)->setNext(
-          tempDate.toMSecsSinceEpoch(), WLS.toDouble());
+      double tempData = WLS.toDouble();
+
+      if (tempData != 0.0)
+        this->m_currentStationData[index]->station(0)->setNext(
+            tempDate.toMSecsSinceEpoch(), WLS.toDouble());
     }
   }
   this->m_currentStationData[index]->setNull(false);
@@ -213,19 +219,15 @@ int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
 }
 
 int Noaa::getDataBounds(double &ymin, double &ymax) {
-  ymin = DBL_MAX;
-  ymax = -DBL_MAX;
+  ymax = std::numeric_limits<double>::min();
+  ymin = std::numeric_limits<double>::max();
 
   for (int i = 0; i < this->m_currentStationData.length(); i++) {
-    for (int j = 0; j < this->m_currentStationData[i]->station(0)->numSnaps();
-         j++) {
-      if (this->m_currentStationData[i]->station(0)->data(j) != 0.0) {
-        if (this->m_currentStationData[i]->station(0)->data(j) < ymin)
-          ymin = this->m_currentStationData[i]->station(0)->data(j);
-        if (this->m_currentStationData[i]->station(0)->data(j) > ymax)
-          ymax = this->m_currentStationData[i]->station(0)->data(j);
-      }
-    }
+    QVector<double> data = this->m_currentStationData[i]->station(0)->allData();
+    double min = *std::min_element(data.begin(), data.end());
+    double max = *std::max_element(data.begin(), data.end());
+    ymin = std::min(ymin, min);
+    ymax = std::max(ymax, max);
   }
   return 0;
 }

@@ -3,9 +3,9 @@ redist=1
 autoredist=1
 redistexe='/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/VC/redist/vcredist.x64.exe'
 msvcVersion=2017
-QtVersion=5_10_1
+QtVersion=5_11_0
 compileDirectory="../../build-MetOceanViewer-Desktop_Qt_"$QtVersion"_MSVC"$msvcVersion"_64bit-Release"
-winDeployQtBinary=/cygdrive/c/Qt/5.10.1/msvc2017_64/bin/windeployqt.exe
+winDeployQtBinary=/cygdrive/c/Qt/5.11.0/msvc2017_64/bin/windeployqt.exe
 binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator.exe
 version=$(git describe --always --tags)
 

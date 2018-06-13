@@ -44,7 +44,7 @@ void NetcdfTimeseries::setFilename(const QString &filename) {
 int NetcdfTimeseries::epsg() const { return this->m_epsg; }
 
 void NetcdfTimeseries::setEpsg(int epsg) { this->m_epsg = epsg; }
-
+#include <QDebug>
 int NetcdfTimeseries::read() {
   if (this->m_filename == QString()) return 1;
 
