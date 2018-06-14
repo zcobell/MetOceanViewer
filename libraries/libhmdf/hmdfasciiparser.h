@@ -20,13 +20,13 @@
 #ifndef HMDFASCIIPARSER_H
 #define HMDFASCIIPARSER_H
 
-#include <QString>
+#include <string>
 
-class HmdfAsciiParser
-{
-public:
-  static bool splitStringHmdfFormat(std::string &data, int &yr, int &month, int &day,
-                                int &hr, int &min, int &sec, double &value);
+class HmdfAsciiParser {
+ public:
+  static bool splitStringHmdfFormat(std::string &data, int &yr, int &month,
+                                    int &day, int &hr, int &min, int &sec,
+                                    double &value);
 };
 
-#endif // HMDFASCIIPARSER_H
+#endif  // HMDFASCIIPARSER_H

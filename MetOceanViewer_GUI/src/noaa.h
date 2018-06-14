@@ -70,8 +70,6 @@ class Noaa : public QObject {
 
  private:
   //...Private Functions
-  int formatNOAAResponse(QVector<QByteArray> input, QString &error, int index);
-  void readNOAAResponse(QNetworkReply *reply, int index, int index2);
   int fetchNOAAData();
   int prepNOAAResponse();
   int getNoaaProductId(QString &product1, QString &product2);
