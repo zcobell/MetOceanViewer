@@ -84,24 +84,23 @@ void MainWindow::on_button_processHWM_clicked() {
     }
   }
 
-  if (!thisHWM.isNull()) delete thisHWM;
+  if (!m_hwm.isNull()) delete m_hwm;
 
-  thisHWM =
-      new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
-              ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
-              ui->check_regressionColorMatch, ui->button_hwmcolor,
-              ui->button_121linecolor, ui->button_boundlinecolor,
-              ui->button_reglinecolor, ui->text_adchwmaxislabel,
-              ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
-              ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
-              ui->statusBar, classes, this->hwmMarkerModel, this);
+  m_hwm = new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
+                  ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
+                  ui->check_regressionColorMatch, ui->button_hwmcolor,
+                  ui->button_121linecolor, ui->button_boundlinecolor,
+                  ui->button_reglinecolor, ui->text_adchwmaxislabel,
+                  ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
+                  ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
+                  ui->statusBar, classes, this->hwmMarkerModel, this);
 
-  ierr = thisHWM->processHWMData();
+  ierr = m_hwm->processHWMData();
 
   QApplication::restoreOverrideCursor();
 
   if (ierr != 0) {
-    QMessageBox::critical(this, tr("ERROR"), thisHWM->getErrorString());
+    QMessageBox::critical(this, tr("ERROR"), m_hwm->getErrorString());
     return;
   }
 
@@ -145,7 +144,7 @@ void MainWindow::on_button_saveHWMMap_clicked() {
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  thisHWM->saveHWMMap(TempString, filter);
+  this->m_hwm->saveHWMMap(TempString, filter);
   QApplication::restoreOverrideCursor();
 
   return;
@@ -157,18 +156,7 @@ void MainWindow::on_button_saveHWMMap_clicked() {
 // used for plotting high water marks
 //-------------------------------------------//
 void MainWindow::on_button_hwmcolor_clicked() {
-  QString ButtonStyle;
-  QColor TempColor;
-
-  TempColor = QColorDialog::getColor(DotColorHWM);
-  if (TempColor.isValid())
-    DotColorHWM = TempColor;
-  else
-    return;
-
-  ButtonStyle = Colors::MakeColorString(DotColorHWM);
-  ui->button_hwmcolor->setStyleSheet(ButtonStyle);
-  ui->button_hwmcolor->update();
+  Colors::selectButtonColor(ui->button_hwmcolor);
   return;
 }
 //-------------------------------------------//
@@ -178,18 +166,7 @@ void MainWindow::on_button_hwmcolor_clicked() {
 // 1:1 color
 //-------------------------------------------//
 void MainWindow::on_button_121linecolor_clicked() {
-  QString ButtonStyle;
-  QColor TempColor;
-
-  TempColor = QColorDialog::getColor(LineColor121Line);
-  if (TempColor.isValid())
-    LineColor121Line = TempColor;
-  else
-    return;
-
-  ButtonStyle = Colors::MakeColorString(LineColor121Line);
-  ui->button_121linecolor->setStyleSheet(ButtonStyle);
-  ui->button_121linecolor->update();
+  Colors::selectButtonColor(ui->button_121linecolor);
   return;
 }
 //-------------------------------------------//
@@ -199,18 +176,7 @@ void MainWindow::on_button_121linecolor_clicked() {
 // regression line color
 //-------------------------------------------//
 void MainWindow::on_button_reglinecolor_clicked() {
-  QString ButtonStyle;
-  QColor TempColor;
-
-  TempColor = QColorDialog::getColor(LineColorRegression);
-  if (TempColor.isValid())
-    LineColorRegression = TempColor;
-  else
-    return;
-
-  ButtonStyle = Colors::MakeColorString(LineColorRegression);
-  ui->button_reglinecolor->setStyleSheet(ButtonStyle);
-  ui->button_reglinecolor->update();
+  Colors::selectButtonColor(ui->button_reglinecolor);
   return;
 }
 //-------------------------------------------//
@@ -220,18 +186,7 @@ void MainWindow::on_button_reglinecolor_clicked() {
 // standard deviation bounding line color
 //-------------------------------------------//
 void MainWindow::on_button_boundlinecolor_clicked() {
-  QString ButtonStyle;
-  QColor TempColor;
-
-  TempColor = QColorDialog::getColor(LineColorBounds);
-  if (TempColor.isValid())
-    LineColorBounds = TempColor;
-  else
-    return;
-
-  ButtonStyle = Colors::MakeColorString(LineColorBounds);
-  ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
-  ui->button_boundlinecolor->update();
+  Colors::selectButtonColor(ui->button_boundlinecolor);
   return;
 }
 //-------------------------------------------//
@@ -269,13 +224,13 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  thisHWM->saveRegressionPlot(TempString, filter);
+  this->m_hwm->saveRegressionPlot(TempString, filter);
   QApplication::restoreOverrideCursor();
 
   return;
 }
 
 void MainWindow::on_button_hwmResetZoom_clicked() {
-  if (!this->thisHWM.isNull()) ui->graphics_hwm->resetZoom();
+  if (!this->m_hwm.isNull()) ui->graphics_hwm->resetZoom();
   return;
 }

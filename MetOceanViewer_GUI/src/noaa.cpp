@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "noaa.h"
+#include <QFileInfo>
 #include <QGeoRectangle>
 #include <QGeoShape>
 #include <limits>
@@ -118,7 +119,6 @@ int Noaa::fetchNOAAData() {
   return 0;
 }
 
-
 int Noaa::getDataBounds(double &ymin, double &ymax) {
   ymax = std::numeric_limits<double>::min();
   ymin = std::numeric_limits<double>::max();
@@ -190,20 +190,16 @@ int Noaa::getClickedNOAAStation() { return this->m_station.id().toInt(); }
 int Noaa::plotChart() {
   double ymin, ymax;
   QString S1, S2, format;
-  QDateTime minDateTime, maxDateTime;
-
-  maxDateTime = QDateTime(QDate(1000, 1, 1), QTime(0, 0, 0));
-  minDateTime = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
 
   //...Create the line series
   this->generateLabels();
   this->getNoaaProductSeriesNaming(S1, S2);
   this->getDataBounds(ymin, ymax);
 
-  this->m_currentStationData[0]->units() = this->m_units;
-  this->m_currentStationData[0]->datum() = this->m_datum;
-  this->m_currentStationData[1]->units() = this->m_units;
-  this->m_currentStationData[1]->datum() = this->m_datum;
+  this->m_currentStationData[0]->setUnits(this->m_units);
+  this->m_currentStationData[0]->setDatum(this->m_datum);
+  this->m_currentStationData[1]->setUnits(this->m_units);
+  this->m_currentStationData[1]->setDatum(this->m_datum);
 
   //...Create the chart
   this->m_chartView->m_chart = new QChart();
@@ -217,8 +213,8 @@ int Noaa::plotChart() {
   series2->setPen(
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
-  minDateTime = this->m_startDateEdit->dateTime();
-  maxDateTime = this->m_endDateEdit->dateTime();
+  QDateTime minDateTime = this->m_startDateEdit->dateTime();
+  QDateTime maxDateTime = this->m_endDateEdit->dateTime();
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
@@ -487,23 +483,24 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
   return 0;
 }
 
-int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
-                       QString format) {
-  QString filename2;
-
+int Noaa::saveNOAAData(QString filename) {
   if (!this->m_currentStationData[0]->null() &&
       !this->m_currentStationData[1]->null()) {
-    for (int index = 0; index < this->m_currentStationData.length(); index++) {
-      if (index == 0)
-        filename2 = PreviousDirectory + "/Observation_" + filename;
-      else
-        filename2 = PreviousDirectory + "/Predictions_" + filename;
-      int ierr = this->m_currentStationData[index]->write(filename2);
-      if (ierr != 0) emit noaaError("Error writing NOAA data to file");
-    }
+
+    QFileInfo fn(filename);
+    QString directory = fn.absoluteDir().absolutePath();
+    QString file = fn.fileName();
+    QString obs = directory + "/Observations_" + file;
+    QString pre = directory + "/Predictions_" + file;
+
+    int ierr = this->m_currentStationData[0]->write(obs);
+    if (ierr != 0)
+      emit noaaError("Error writing NOAA observation data to file");
+
+    ierr = this->m_currentStationData[1]->write(pre);
+    if (ierr != 0) emit noaaError("Error writing NOAA prediction data to file");
   } else {
-    filename2 = PreviousDirectory + "/" + filename;
-    int ierr = this->m_currentStationData[0]->write(filename2);
+    int ierr = this->m_currentStationData[0]->write(filename);
     if (ierr != 0) emit noaaError("Error writing NOAA data to file");
   }
 

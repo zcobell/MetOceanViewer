@@ -30,6 +30,8 @@ class Timezone : public QObject {
  public:
   explicit Timezone(QObject *parent = nullptr);
 
+  static int localMachineOffsetFromUtc();
+
   bool fromAbbreviation(QString value,
                         TZData::Location location = TZData::NorthAmerica);
 

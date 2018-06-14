@@ -23,19 +23,24 @@
 #include <QColor>
 #include <QObject>
 #include <QTime>
+#include <QPushButton>
 
 class Colors : public QObject {
   Q_OBJECT
 public:
   explicit Colors(QObject *parent = nullptr);
 
-  static QString MakeColorString(QColor InputColor);
+  static QString makeColorString(QColor InputColor);
 
-  static QColor GenerateRandomColor();
+  static QColor generateRandomColor();
 
   static QColor styleSheetToColor(QString stylesheet);
 
   static QString getHexColor(QColor InputColor);
+
+  static void selectButtonColor(QPushButton *button);
+
+  static void changeButtonColor(QPushButton *button, QColor color);
 };
 
 #endif // COLORS_H

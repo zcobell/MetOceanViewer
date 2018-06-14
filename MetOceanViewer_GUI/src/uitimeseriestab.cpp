@@ -31,14 +31,14 @@ void MainWindow::on_button_saveTimeseriesImage_clicked() {
   QString Filename;
   QString filter = "JPG (*.jpg *.jpeg)";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), previousDirectory,
+      this, tr("Save as..."), this->previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, Filename, previousDirectory);
+  Generic::splitPath(TempString, Filename, this->previousDirectory);
 
-  this->thisTimeseries->saveImage(TempString, filter);
+  this->m_userTimeseries->saveImage(TempString, filter);
 }
 //-------------------------------------------//
 
@@ -59,73 +59,19 @@ void MainWindow::on_check_TimeseriesYauto_toggled(bool checked) {
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesAddRow_clicked() {
   QPointer<AddTimeseriesDialog> AddWindow = new AddTimeseriesDialog(this);
-  QColor CellColor;
 
-  int NumberOfRows = ui->table_TimeseriesData->rowCount();
   AddWindow->setModal(false);
-  AddWindow->EditBox = false;
-  AddWindow->set_default_dialog_box_elements(NumberOfRows);
+  AddWindow->setEditBox(false);
+  AddWindow->set_default_dialog_box_elements(
+      ui->table_TimeseriesData->rowCount());
 
   int WindowStatus = AddWindow->exec();
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
   if (WindowStatus == 1) {
-    NumberOfRows = NumberOfRows + 1;
-
-    //...Update the table
-    ui->table_TimeseriesData->setRowCount(NumberOfRows);
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 0, new QTableWidgetItem(AddWindow->InputFileName));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 1, new QTableWidgetItem(AddWindow->InputSeriesName));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 2, new QTableWidgetItem(AddWindow->InputColorString));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 3,
-        new QTableWidgetItem(QString::number(AddWindow->UnitConversion)));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 4,
-        new QTableWidgetItem(QString::number(AddWindow->xadjust)));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 5,
-        new QTableWidgetItem(QString::number(AddWindow->yadjust)));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 6, new QTableWidgetItem(AddWindow->InputFilePath));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 7,
-        new QTableWidgetItem(
-            AddWindow->InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 8,
-        new QTableWidgetItem(QString::number(AddWindow->InputFileType)));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 9, new QTableWidgetItem(AddWindow->InputStationFile));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 10, new QTableWidgetItem(AddWindow->StationFilePath));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 11,
-        new QTableWidgetItem(QString::number(AddWindow->epsg)));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 12, new QTableWidgetItem(AddWindow->dFlowVariable));
-    ui->table_TimeseriesData->setItem(
-        NumberOfRows - 1, 13,
-        new QTableWidgetItem(QString::number(AddWindow->layer)));
-    CellColor.setNamedColor(AddWindow->InputColorString);
-    ui->table_TimeseriesData->item(NumberOfRows - 1, 2)
-        ->setBackgroundColor(CellColor);
-    ui->table_TimeseriesData->item(NumberOfRows - 1, 2)
-        ->setTextColor(CellColor);
-    ui->table_TimeseriesData->item(NumberOfRows - 1, 0)
-        ->setCheckState(Qt::Checked);
-
-    // Tooltips in table cells
-    ui->table_TimeseriesData->item(NumberOfRows - 1, 0)
-        ->setToolTip(AddWindow->InputFilePath);
-    ui->table_TimeseriesData->item(NumberOfRows - 1, 1)
-        ->setToolTip(AddWindow->InputSeriesName);
-
-    this->previousDirectory = AddWindow->PreviousDirectory;
+    this->setTimeseriesTableRow(ui->table_TimeseriesData->rowCount(),
+                                AddWindow);
   }
 
   QApplication::restoreOverrideCursor();
@@ -133,6 +79,55 @@ void MainWindow::on_button_TimeseriesAddRow_clicked() {
   return;
 }
 //-------------------------------------------//
+
+void MainWindow::setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog) {
+  if (row >= ui->table_TimeseriesData->rowCount())
+    ui->table_TimeseriesData->setRowCount(row + 1);
+
+  ui->table_TimeseriesData->setItem(
+      row, 0, new QTableWidgetItem(dialog->inputFileName()));
+  ui->table_TimeseriesData->setItem(
+      row, 1, new QTableWidgetItem(dialog->inputSeriesName()));
+  ui->table_TimeseriesData->setItem(
+      row, 2, new QTableWidgetItem(dialog->inputColorString()));
+  ui->table_TimeseriesData->setItem(
+      row, 3, new QTableWidgetItem(QString::number(dialog->unitConversion())));
+  ui->table_TimeseriesData->setItem(
+      row, 4, new QTableWidgetItem(QString::number(dialog->xadjust())));
+  ui->table_TimeseriesData->setItem(
+      row, 5, new QTableWidgetItem(QString::number(dialog->yadjust())));
+  ui->table_TimeseriesData->setItem(
+      row, 6, new QTableWidgetItem(dialog->inputFilePath()));
+  ui->table_TimeseriesData->setItem(
+      row, 7,
+      new QTableWidgetItem(
+          dialog->inputFileColdstart().toString("yyyy-MM-dd hh:mm:ss")));
+  ui->table_TimeseriesData->setItem(
+      row, 8, new QTableWidgetItem(QString::number(dialog->inputFileType())));
+  ui->table_TimeseriesData->setItem(
+      row, 9, new QTableWidgetItem(dialog->inputStationFile()));
+  ui->table_TimeseriesData->setItem(
+      row, 10, new QTableWidgetItem(dialog->stationFilePath()));
+  ui->table_TimeseriesData->setItem(
+      row, 11, new QTableWidgetItem(QString::number(dialog->epsg())));
+  ui->table_TimeseriesData->setItem(
+      row, 12, new QTableWidgetItem(dialog->dflowVariable()));
+  ui->table_TimeseriesData->setItem(
+      row, 13, new QTableWidgetItem(QString::number(dialog->layer())));
+
+  QColor cellColor;
+  cellColor.setNamedColor(dialog->inputColorString());
+
+  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(cellColor);
+  ui->table_TimeseriesData->item(row, 2)->setTextColor(cellColor);
+  ui->table_TimeseriesData->item(row, 0)->setCheckState(Qt::Checked);
+
+  // Tooltips in table cells
+  ui->table_TimeseriesData->item(row, 0)->setToolTip(dialog->inputFilePath());
+  ui->table_TimeseriesData->item(row, 1)->setToolTip(dialog->inputSeriesName());
+
+  this->previousDirectory = dialog->previousDirectory();
+}
 
 //-------------------------------------------//
 // Called when the delete row button is
@@ -209,7 +204,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked() {
   }
 
   AddWindow->setModal(false);
-  AddWindow->EditBox = true;
+  AddWindow->setEditBox(true);
   CurrentRow = ui->table_TimeseriesData->currentRow();
   Filename = ui->table_TimeseriesData->item(CurrentRow, 0)->text();
   Filepath = ui->table_TimeseriesData->item(CurrentRow, 6)->text();
@@ -238,61 +233,7 @@ void MainWindow::on_button_TimeseriesEditRow_clicked() {
   int WindowStatus = AddWindow->exec();
 
   if (WindowStatus == 1) {
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 0, new QTableWidgetItem(AddWindow->InputFileName));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 1, new QTableWidgetItem(AddWindow->InputSeriesName));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 3,
-        new QTableWidgetItem(QString::number(AddWindow->UnitConversion)));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 4,
-        new QTableWidgetItem(QString::number(AddWindow->xadjust)));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 5,
-        new QTableWidgetItem(QString::number(AddWindow->yadjust)));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 6, new QTableWidgetItem(AddWindow->InputFilePath));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 7,
-        new QTableWidgetItem(
-            AddWindow->InputFileColdStart.toString("yyyy-MM-dd hh:mm:ss")));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 8,
-        new QTableWidgetItem(QString::number(AddWindow->InputFileType)));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 9, new QTableWidgetItem(AddWindow->InputStationFile));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 10, new QTableWidgetItem(AddWindow->StationFilePath));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 11, new QTableWidgetItem(QString::number(AddWindow->epsg)));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 12, new QTableWidgetItem(AddWindow->dFlowVariable));
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 13,
-        new QTableWidgetItem(QString::number(AddWindow->layer)));
-
-    // Tooltips in table cells
-    ui->table_TimeseriesData->item(CurrentRow, 0)
-        ->setToolTip(AddWindow->InputFilePath);
-    ui->table_TimeseriesData->item(CurrentRow, 1)
-        ->setToolTip(AddWindow->InputSeriesName);
-    ui->table_TimeseriesData->item(CurrentRow, 3)
-        ->setToolTip(QString::number(AddWindow->UnitConversion));
-    ui->table_TimeseriesData->item(CurrentRow, 4)
-        ->setToolTip(QString::number(AddWindow->xadjust));
-    ui->table_TimeseriesData->item(CurrentRow, 5)
-        ->setToolTip(QString::number(AddWindow->yadjust));
-    ui->table_TimeseriesData->item(CurrentRow, 0)->setCheckState(CheckState);
-
-    ui->table_TimeseriesData->setItem(
-        CurrentRow, 2, new QTableWidgetItem(AddWindow->InputColorString));
-    CellColor.setNamedColor(AddWindow->InputColorString);
-    ui->table_TimeseriesData->item(CurrentRow, 2)
-        ->setBackgroundColor(CellColor);
-    ui->table_TimeseriesData->item(CurrentRow, 2)->setTextColor(CellColor);
-
-    this->previousDirectory = AddWindow->PreviousDirectory;
+    this->setTimeseriesTableRow(CurrentRow, AddWindow);
   }
   AddWindow->close();
   return;
@@ -309,9 +250,9 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
   // Change the mouse pointer
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  if (!this->thisTimeseries.isNull()) delete this->thisTimeseries;
+  if (!this->m_userTimeseries.isNull()) delete this->m_userTimeseries;
 
-  this->thisTimeseries = new UserTimeseries(
+  this->m_userTimeseries = new UserTimeseries(
       ui->table_TimeseriesData, ui->check_TimeseriesAllData,
       ui->check_TimeseriesYauto, ui->date_TimeseriesStartDate,
       ui->date_TimeseriesEndDate, ui->spin_TimeseriesYmin,
@@ -320,13 +261,13 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
       ui->quick_timeseriesMap, ui->timeseries_graphics, ui->statusBar,
       this->randomColors, this->userDataStationModel,
       &this->userSelectedStations, this);
-  connect(this->thisTimeseries, SIGNAL(timeseriesError(QString)), this,
+  connect(this->m_userTimeseries, SIGNAL(timeseriesError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
-  ierr = this->thisTimeseries->processData();
+  ierr = this->m_userTimeseries->processData();
   if (ierr != 0)
     QMessageBox::critical(this, tr("ERROR"),
-                          this->thisTimeseries->getErrorString());
+                          this->m_userTimeseries->getErrorString());
   else {
     ui->MainTabs->setCurrentIndex(1);
     ui->subtab_timeseries->setCurrentIndex(1);
@@ -357,7 +298,7 @@ void MainWindow::on_check_TimeseriesAllData_toggled(bool checked) {
 // key is pressed
 //-------------------------------------------//
 void MainWindow::on_button_plotTimeseriesStation_clicked() {
-  this->thisTimeseries->plot();
+  this->m_userTimeseries->plot();
   return;
 }
 //-------------------------------------------//
@@ -375,8 +316,9 @@ void MainWindow::on_button_TimeseriesCopyRow_clicked() {
 
   for (int i = 0; i < ui->table_TimeseriesData->columnCount(); i++)
     ui->table_TimeseriesData->setItem(
-        row, i, new QTableWidgetItem(
-                    ui->table_TimeseriesData->item(currentRow, i)->text()));
+        row, i,
+        new QTableWidgetItem(
+            ui->table_TimeseriesData->item(currentRow, i)->text()));
 
   CellColor.setNamedColor(
       ui->table_TimeseriesData->item(currentRow, 2)->text());
@@ -461,6 +403,6 @@ void MainWindow::setTableRow(int row,
 //-------------------------------------------//
 
 void MainWindow::on_button_usertimeseriesResetZoom_clicked() {
-  if (!this->thisTimeseries.isNull()) ui->timeseries_graphics->resetZoom();
+  if (!this->m_userTimeseries.isNull()) ui->timeseries_graphics->resetZoom();
   return;
 }

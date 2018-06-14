@@ -58,7 +58,7 @@ class Noaa : public QObject {
   //...Public Functions
   int plotNOAAStation();
   int saveNOAAImage(QString filename, QString filter);
-  int saveNOAAData(QString filename, QString PreviousDirectory, QString format);
+  int saveNOAAData(QString filename);
   int getLoadedNOAAStation();
   int getClickedNOAAStation();
   QString getNOAAErrorString();

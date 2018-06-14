@@ -31,6 +31,7 @@
 #include <QtCharts>
 #include <QtNetwork>
 #include "stationmodel.h"
+#include "addtimeseriesdialog.h"
 
 //...Forward declarations of classes
 class Noaa;
@@ -259,31 +260,21 @@ private:
 
   void stationDisplayWarning(int n);
 
-  QPointer<Noaa> thisNOAA;
+  void setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog);
 
-  QPointer<Usgs> thisUSGS;
+  QPointer<Noaa> m_noaa;
 
-  QPointer<Hwm> thisHWM;
+  QPointer<Usgs> m_usgs;
 
-  QPointer<XTide> thisXTide;
+  QPointer<Hwm> m_hwm;
+
+  QPointer<XTide> m_xtide;
+
+  QPointer<UserTimeseries> m_userTimeseries;
 
   Session *sessionState;
 
-  QPointer<UserTimeseries> thisTimeseries;
-
-  QPointer<WebEnginePage> noaa_page;
-
-  QPointer<WebEnginePage> usgs_page;
-
-  QPointer<WebEnginePage> xtide_page;
-
-  QColor DotColorHWM, LineColorRegression, LineColor121Line, LineColorBounds;
-
-  int localTimezoneOffset;
-
-  QDateTime localTimeUTC;
-
-  QString SessionFile;
+  QString sessionFile;
 
   QVector<QColor> randomColors;
 

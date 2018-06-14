@@ -40,8 +40,8 @@ void MainWindow::on_combo_noaa_maptype_currentIndexChanged(int index) {
 void MainWindow::on_button_noaasavechart_clicked() {
   QString filename;
 
-  int MarkerID = this->thisNOAA->getLoadedNOAAStation();
-  int MarkerID2 = this->thisNOAA->getClickedNOAAStation();
+  int MarkerID = this->m_noaa->getLoadedNOAAStation();
+  int MarkerID2 = this->m_noaa->getClickedNOAAStation();
 
   if (MarkerID == -1) {
     QMessageBox::critical(this, tr("ERROR"),
@@ -66,7 +66,7 @@ void MainWindow::on_button_noaasavechart_clicked() {
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  this->thisNOAA->saveNOAAImage(TempString, filter);
+  this->m_noaa->saveNOAAImage(TempString, filter);
 
   return;
 }
@@ -76,16 +76,14 @@ void MainWindow::on_button_noaasavechart_clicked() {
 // Called when the user tries to save the NOAA data
 //-------------------------------------------//
 void MainWindow::on_button_noaasavedata_clicked() {
-  if (this->thisNOAA == nullptr) {
+  if (this->m_noaa == nullptr) {
     QMessageBox::critical(this, tr("ERROR"),
                           tr("No station has been downloaded."));
     return;
   };
 
-  QString filename;
-
-  int MarkerID = this->thisNOAA->getLoadedNOAAStation();
-  int MarkerID2 = this->thisNOAA->getClickedNOAAStation();
+  int MarkerID = this->m_noaa->getLoadedNOAAStation();
+  int MarkerID2 = this->m_noaa->getClickedNOAAStation();
 
   if (MarkerID == -1) {
     QMessageBox::critical(this, tr("ERROR"),
@@ -100,24 +98,18 @@ void MainWindow::on_button_noaasavedata_clicked() {
     return;
   }
 
-  QString filter;
   QString DefaultFile = "/NOAA_" + QString::number(MarkerID) + ".imeds";
   QString TempString = QFileDialog::getSaveFileName(
       this, tr("Save as..."), this->previousDirectory + DefaultFile,
-      "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
-  QStringList filter2 = filter.split(" ");
-  QString format = filter2.value(0);
+      "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)");
 
-  if (TempString == NULL) return;
+  if (TempString == QString()) return;
 
-  Generic::splitPath(TempString, filename, this->previousDirectory);
-
-  thisNOAA->saveNOAAData(filename, this->previousDirectory, format);
+  this->m_noaa->saveNOAAData(TempString);
 
   return;
 }
 //-------------------------------------------//
-
 
 //-------------------------------------------//
 // Called when the NOAA fetch data button is clicked
@@ -130,23 +122,23 @@ void MainWindow::on_Button_FetchData_clicked() {
 
 void MainWindow::plotNOAAStation() {
   //...Create a new NOAA object
-  if (!this->thisNOAA.isNull()) delete this->thisNOAA;
-  this->thisNOAA =
+  if (!this->m_noaa.isNull()) delete this->m_noaa;
+  this->m_noaa =
       new Noaa(ui->quick_noaaMap, ui->noaa_graphics, ui->Date_StartTime,
                ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
                ui->combo_noaadatum, ui->statusBar,
                ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone,
                this->noaaStationModel, &this->noaaSelectedStation, this);
 
-  connect(this->thisNOAA, SIGNAL(noaaError(QString)), this,
+  connect(this->m_noaa, SIGNAL(noaaError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
-  this->thisNOAA->plotNOAAStation();
+  this->m_noaa->plotNOAAStation();
   return;
 }
 
 void MainWindow::on_button_noaaresetzoom_clicked() {
-  if (!this->thisNOAA.isNull()) ui->noaa_graphics->resetZoom();
+  if (!this->m_noaa.isNull()) ui->noaa_graphics->resetZoom();
   return;
 }
 
@@ -162,14 +154,14 @@ void MainWindow::on_combo_noaaTimezoneLocation_currentIndexChanged(int index) {
 
 void MainWindow::on_combo_noaaTimezone_currentIndexChanged(
     const QString &arg1) {
-  if (this->thisNOAA == nullptr) return;
+  if (this->m_noaa == nullptr) return;
 
   Timezone *t = new Timezone(this);
   if (!t->fromAbbreviation(arg1,
                            static_cast<TZData::Location>(
                                ui->combo_noaaTimezoneLocation->currentIndex())))
     return;
-  this->thisNOAA->replotChart(t);
+  this->m_noaa->replotChart(t);
   delete t;
   return;
 }

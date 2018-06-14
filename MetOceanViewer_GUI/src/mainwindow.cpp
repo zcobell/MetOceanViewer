@@ -58,9 +58,6 @@ void MainWindow::setupMetOceanViewerUI() {
   this->setupRandomColors();
   this->installKeyhandlers();
 
-  this->localTimezoneOffset = Generic::getLocalTimzoneOffset();
-  this->localTimeUTC = QDateTime::currentDateTimeUtc();
-
   this->previousDirectory = QDir::homePath();
 #ifdef Q_OS_WIN
   this->previousDirectory = this->previousDirectory + "/Desktop";
@@ -370,32 +367,12 @@ void MainWindow::setupHighWaterMarkMap() {
   QMetaObject::invokeMethod(hwmItem, "setMapLocation", Q_ARG(QVariant, -124.66),
                             Q_ARG(QVariant, 36.88), Q_ARG(QVariant, 1.69));
 
-  // Set the colors that are being used on the display page for various
-  // things that will be displayed
-  this->DotColorHWM.setRgb(11, 84, 255);
-  this->LineColorRegression.setRgb(7, 145, 0);
-  this->LineColor121Line.setRgb(255, 0, 0);
-  this->LineColorBounds.setRgb(0, 0, 0);
+  Colors::changeButtonColor(ui->button_hwmcolor, QColor(11,84,255));
+  Colors::changeButtonColor(ui->button_121linecolor, QColor(7,145,0));
+  Colors::changeButtonColor(ui->button_reglinecolor, QColor(255,0,0));
+  Colors::changeButtonColor(ui->button_boundlinecolor, QColor(0,0,0));
 
-  // Set the button color for high water marks
-  QString ButtonStyle = Colors::MakeColorString(this->DotColorHWM);
-  ui->button_hwmcolor->setStyleSheet(ButtonStyle);
-  ui->button_hwmcolor->update();
-
-  // Set the button color for the 1:1 line
-  ButtonStyle = Colors::MakeColorString(this->LineColor121Line);
-  ui->button_121linecolor->setStyleSheet(ButtonStyle);
-  ui->button_121linecolor->update();
-
-  // Set the button color for the linear regression line
-  ButtonStyle = Colors::MakeColorString(this->LineColorRegression);
-  ui->button_reglinecolor->setStyleSheet(ButtonStyle);
-  ui->button_reglinecolor->update();
-
-  // Set the button color for StdDev bounding lines
-  ButtonStyle = Colors::MakeColorString(this->LineColorBounds);
-  ui->button_boundlinecolor->setStyleSheet(ButtonStyle);
-  ui->button_boundlinecolor->update();
+  return;
 }
 
 void MainWindow::setupRandomColors() {
@@ -422,7 +399,7 @@ void MainWindow::setupRandomColors() {
 
 void MainWindow::checkForUpdate() {
   //...Check for updates and alert the user if there is a new version
-  QPointer<UpdateDialog> update = new UpdateDialog(this);
+  UpdateDialog *update = new UpdateDialog(this);
   bool doUpdate = update->checkForUpdate();
   if (doUpdate) {
     update->runUpdater();
