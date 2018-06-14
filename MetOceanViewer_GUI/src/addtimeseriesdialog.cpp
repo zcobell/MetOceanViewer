@@ -526,24 +526,32 @@ void AddTimeseriesDialog::on_button_presetColor1_clicked() {
   Colors::changeButtonColor(
       ui->button_seriesColor,
       ui->button_presetColor1->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_presetColor2_clicked() {
   Colors::changeButtonColor(
       ui->button_seriesColor,
       ui->button_presetColor2->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_presetColor3_clicked() {
   Colors::changeButtonColor(
       ui->button_seriesColor,
       ui->button_presetColor3->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_presetColor4_clicked() {
   Colors::changeButtonColor(
       ui->button_seriesColor,
       ui->button_presetColor4->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_describeepsg_clicked() {

@@ -89,7 +89,7 @@ void MainWindow::setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog) {
   ui->table_TimeseriesData->setItem(
       row, 1, new QTableWidgetItem(dialog->inputSeriesName()));
   ui->table_TimeseriesData->setItem(
-      row, 2, new QTableWidgetItem(dialog->inputColorString()));
+      row, 2, new QTableWidgetItem(dialog->randomButtonColor().name()));
   ui->table_TimeseriesData->setItem(
       row, 3, new QTableWidgetItem(QString::number(dialog->unitConversion())));
   ui->table_TimeseriesData->setItem(
@@ -115,11 +115,8 @@ void MainWindow::setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog) {
   ui->table_TimeseriesData->setItem(
       row, 13, new QTableWidgetItem(QString::number(dialog->layer())));
 
-  QColor cellColor;
-  cellColor.setNamedColor(dialog->inputColorString());
-
-  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(cellColor);
-  ui->table_TimeseriesData->item(row, 2)->setTextColor(cellColor);
+  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(dialog->randomButtonColor());
+  ui->table_TimeseriesData->item(row, 2)->setTextColor(dialog->randomButtonColor());
   ui->table_TimeseriesData->item(row, 0)->setCheckState(Qt::Checked);
 
   // Tooltips in table cells
