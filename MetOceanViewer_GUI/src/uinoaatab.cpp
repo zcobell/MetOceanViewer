@@ -107,6 +107,9 @@ void MainWindow::on_button_noaasavedata_clicked() {
 
   this->m_noaa->saveNOAAData(TempString);
 
+  QString file;
+  Generic::splitPath(TempString, file, this->previousDirectory);
+
   return;
 }
 //-------------------------------------------//

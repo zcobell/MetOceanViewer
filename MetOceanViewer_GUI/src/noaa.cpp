@@ -94,6 +94,7 @@ int Noaa::fetchNOAAData() {
     this->m_errorString = coops->errorString();
     emit noaaError(this->m_errorString);
     delete coops;
+    return ierr;
   }
 
   delete coops;
@@ -108,6 +109,7 @@ int Noaa::fetchNOAAData() {
       this->m_errorString = coops->errorString();
       emit noaaError(this->m_errorString);
       delete coops;
+      return ierr;
     }
 
     delete coops;
@@ -356,14 +358,18 @@ int Noaa::plotNOAAStation() {
     this->m_statusBar->showMessage(tr("Downloading data from NOAA...", 0));
 
     int ierr = this->fetchNOAAData();
-    if (ierr != MetOceanViewer::Error::NOERR) return ierr;
+    if (ierr != MetOceanViewer::Error::NOERR) {
+      this->m_statusBar->clearMessage();
+      return ierr;
+    }
 
     //...Update the status bar
     this->m_statusBar->showMessage(tr("Plotting the data from NOAA..."));
 
     //...Check for valid data
     if (this->m_currentStationData[0]->station(0)->numSnaps() < 5) {
-      emit noaaError(this->m_errorStringVec[0]);
+      emit noaaError(this->m_errorString);
+      this->m_statusBar->clearMessage();
       return 1;
     }
 
@@ -486,7 +492,6 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
 int Noaa::saveNOAAData(QString filename) {
   if (!this->m_currentStationData[0]->null() &&
       !this->m_currentStationData[1]->null()) {
-
     QFileInfo fn(filename);
     QString directory = fn.absoluteDir().absolutePath();
     QString file = fn.fileName();

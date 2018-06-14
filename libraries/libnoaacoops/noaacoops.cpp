@@ -181,5 +181,10 @@ int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
   }
   outputData->addStation(station);
 
+  if (outputData->station(0)->numSnaps() < 5) {
+    this->m_errorString = "No valid data";
+    return 1;
+  }
+
   return 0;
 }

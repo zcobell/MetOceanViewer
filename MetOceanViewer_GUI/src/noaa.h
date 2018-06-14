@@ -95,7 +95,6 @@ class Noaa : public QObject {
   QDateTime m_endDate;
 
   QVector<Hmdf*> m_currentStationData;
-  QVector<QString> m_errorStringVec;
 
   Timezone *tz;
   int m_offsetSeconds;
