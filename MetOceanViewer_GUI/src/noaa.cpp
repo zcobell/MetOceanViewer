@@ -86,9 +86,12 @@ int Noaa::fetchNOAAData() {
       this->m_productIndex == 8)
     this->m_datum = "Stnd";
 
-  NoaaCoOps *coops = new NoaaCoOps(
-      this->m_station.id(), this->m_station.coordinate(), product1,
-      this->m_datum, this->m_units, localStartDate, localEndDate, this);
+  NoaaCoOps *coops =
+      new NoaaCoOps(this->m_station.id(),
+                    QStringLiteral("NOAA_") + this->m_station.id() +
+                        QStringLiteral("_") + this->m_station.name(),
+                    this->m_station.coordinate(), product1, this->m_datum,
+                    this->m_units, localStartDate, localEndDate, this);
   ierr = coops->get(this->m_currentStationData[0]);
   if (ierr != 0) {
     this->m_errorString = coops->errorString();
@@ -101,9 +104,12 @@ int Noaa::fetchNOAAData() {
   this->m_currentStationData[0]->setNull(false);
 
   if (this->m_productIndex == 0) {
-    NoaaCoOps *coops = new NoaaCoOps(
-        this->m_station.id(), this->m_station.coordinate(), product2,
-        this->m_datum, this->m_units, localStartDate, localEndDate, this);
+    NoaaCoOps *coops =
+        new NoaaCoOps(this->m_station.id(),
+                      QStringLiteral("NOAA_") + this->m_station.id() +
+                          QStringLiteral("_") + this->m_station.name(),
+                      this->m_station.coordinate(), product2, this->m_datum,
+                      this->m_units, localStartDate, localEndDate, this);
     ierr = coops->get(this->m_currentStationData[1]);
     if (ierr != 0) {
       this->m_errorString = coops->errorString();
@@ -328,24 +334,6 @@ int Noaa::plotNOAAStation() {
     this->m_station =
         this->m_stationModel->findStation(*(this->m_selectedStation));
     this->m_station.id() = this->m_station.id().toInt();
-
-    HmdfStation *station1 = new HmdfStation(this);
-    HmdfStation *station2 = new HmdfStation(this);
-
-    station1->setLongitude(this->m_station.coordinate().longitude());
-    station1->setLatitude(this->m_station.coordinate().latitude());
-    station1->setName(this->m_station.name());
-    station1->setId("NOAA_" + this->m_station.id());
-    station1->setStationIndex(0);
-
-    station2->setLongitude(this->m_station.coordinate().longitude());
-    station2->setLatitude(this->m_station.coordinate().latitude());
-    station2->setName(this->m_station.name());
-    station2->setId("NOAA_" + this->m_station.id());
-    station2->setStationIndex(0);
-
-    this->m_currentStationData[0]->addStation(station1);
-    this->m_currentStationData[1]->addStation(station2);
 
     //...Grab the options from the UI
     this->m_startDate = this->m_startDateEdit->dateTime();

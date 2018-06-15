@@ -27,8 +27,9 @@
 class NoaaCoOps : public QObject {
   Q_OBJECT
  public:
-  NoaaCoOps(QString station, QGeoCoordinate location, QString product, QString datum, QString units,
-            QDateTime startDate, QDateTime endDate, QObject *parent = nullptr);
+  NoaaCoOps(QString stationId, QString stationName, QGeoCoordinate location,
+            QString product, QString datum, QString units, QDateTime startDate,
+            QDateTime endDate, QObject *parent = nullptr);
 
   int get(Hmdf *data);
 
@@ -49,6 +50,7 @@ class NoaaCoOps : public QObject {
   int formatNoaaResponse(QVector<QByteArray> &downloadedData, Hmdf *outputData);
 
   QString m_stationId;
+  QString m_stationName;
   QString m_product;
   QString m_datum;
   QString m_units;
