@@ -26,6 +26,7 @@
 
 MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_mapSource = 0;
+  this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
 }
 

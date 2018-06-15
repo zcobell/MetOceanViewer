@@ -630,7 +630,7 @@ void MainWindow::on_actionEnter_MapBox_API_Key_triggered() {
 }
 
 void MainWindow::on_actionSave_Default_Map_Settings_triggered() {
-  int mapIndex;
+  int mapIndex = 0;
   if (ui->MainTabs->currentIndex() == 0) {
     if (ui->subtab_livedata->currentIndex() == 0)
       mapIndex = ui->combo_noaa_maptype->currentIndex();
