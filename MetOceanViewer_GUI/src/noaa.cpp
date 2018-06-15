@@ -57,10 +57,11 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
 
   //...Initialize the timezone
   this->tz = new Timezone(this);
-  tz->fromAbbreviation(this->m_comboTimezone->currentText(),
-                       static_cast<TZData::Location>(
-                           this->m_comboTimezoneLocation->currentIndex()));
-  this->m_offsetSeconds = tz->utcOffset() * 1000;
+  this->tz->fromAbbreviation(
+      this->m_comboTimezone->currentText(),
+      static_cast<TZData::Location>(
+          this->m_comboTimezoneLocation->currentIndex()));
+  this->m_offsetSeconds = this->tz->utcOffset() * 1000;
   this->m_priorOffsetSeconds = this->m_offsetSeconds;
 }
 
@@ -132,11 +133,14 @@ int Noaa::getDataBounds(double &ymin, double &ymax) {
   ymin = std::numeric_limits<double>::max();
 
   for (int i = 0; i < this->m_currentStationData.length(); i++) {
-    QVector<double> data = this->m_currentStationData[i]->station(0)->allData();
-    double min = *std::min_element(data.begin(), data.end());
-    double max = *std::max_element(data.begin(), data.end());
-    ymin = std::min(ymin, min);
-    ymax = std::max(ymax, max);
+    if (!this->m_currentStationData[i]->null()) {
+      QVector<double> data =
+          this->m_currentStationData[i]->station(0)->allData();
+      double min = *std::min_element(data.begin(), data.end());
+      double max = *std::max_element(data.begin(), data.end());
+      ymin = std::min(ymin, min);
+      ymax = std::max(ymax, max);
+    }
   }
   return 0;
 }
@@ -299,7 +303,7 @@ int Noaa::plotChart() {
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
   this->m_chartView->m_chart->setTitle(
       tr("NOAA Station ") + this->m_station.id() + ": " +
-      this->m_currentStationData[0]->station(0)->name());
+      this->m_station.name());
   this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_chartView->setRenderHint(QPainter::Antialiasing);
 

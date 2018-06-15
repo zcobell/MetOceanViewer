@@ -59,9 +59,19 @@ int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
                                   QVector<QDateTime> &endDateList) {
   int numDownloads = (this->m_startDate.daysTo(this->m_endDate) / 30) + 1;
 
+  this->m_startDate.setTime(QTime(this->m_startDate.time().hour(),
+                                  this->m_startDate.time().minute(), 0));
+  this->m_endDate.setTime(
+      QTime(this->m_endDate.time().hour(), this->m_endDate.time().minute(), 0));
+
   // Build the list of dates in 30 day intervals
   for (int i = 0; i < numDownloads; i++) {
-    QDateTime startDate = this->m_startDate.addDays(i * 30).addDays(i);
+    QDateTime startDate;
+    if (i == 0)
+      startDate = this->m_startDate.addDays(i * 30).addDays(i);
+    else
+      startDate = endDateList.last();
+
     QDateTime endDate = startDate.addDays(30);
     if (endDate > this->m_endDate) endDate = this->m_endDate;
     startDateList.push_back(startDate);
@@ -77,8 +87,10 @@ int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
 
   for (int i = 0; i < startDateList.length(); i++) {
     // Make the date string
-    QString startString = startDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
-    QString endString = endDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
+    QString startString =
+        startDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
+    QString endString =
+        endDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
 
     // Build the URL to request data from the NOAA CO-OPS API
     QString requestURL =
@@ -158,6 +170,8 @@ int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
   station->setId(this->m_stationId);
   station->setStationIndex(0);
 
+  QDateTime tempDate = QDateTime();
+
   for (int i = 0; i < data.size(); i++) {
     if (data[i].size() > 3) {
       for (int j = 1; j < data[i].size(); j++) {
@@ -172,8 +186,12 @@ int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
         int minute = d[4].toInt();
         double value = t[1].toDouble();
 
-        QDateTime tempDate =
-            QDateTime(QDate(year, month, day), QTime(hour, minute, 0));
+        //...Remove duplicates when sets are downloaded back to back
+        if (QDateTime(QDate(year, month, day), QTime(hour, minute, 0)) ==
+            tempDate)
+          continue;
+
+        tempDate = QDateTime(QDate(year, month, day), QTime(hour, minute, 0));
         if (value != 0.0 && tempDate.isValid()) {
           station->setNext(tempDate.toMSecsSinceEpoch(), value);
         }
