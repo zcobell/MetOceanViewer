@@ -22,6 +22,8 @@
         <file>qml/MapViewer.qml</file>
         <file>qml/InfoWindow.qml</file>
         <file>qml/MapLegend.qml</file>
+        <file>qml/EsriMapViewer.qml</file>
+        <file>qml/MapboxMapViewer.qml</file>
     </qresource>
     <qresource prefix="/stations" lang="csv">
         <file>data/noaa_stations.csv</file>

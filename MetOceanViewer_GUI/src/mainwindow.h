@@ -32,6 +32,7 @@
 #include <QtNetwork>
 #include "stationmodel.h"
 #include "addtimeseriesdialog.h"
+#include "mapfunctions.h"
 
 //...Forward declarations of classes
 class Noaa;
@@ -217,6 +218,14 @@ class MainWindow : public QMainWindow {
 
   void on_combo_hwmMaptype_currentIndexChanged(int index);
 
+  void on_actionESRI_toggled(bool arg1);
+
+  void on_actionMapBox_toggled(bool arg1);
+
+  void on_actionEnter_MapBox_API_Key_triggered();
+
+  void on_actionSave_Default_Map_Settings_triggered();
+
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
@@ -262,6 +271,8 @@ private:
 
   void setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog);
 
+  void resetMapSource(MapFunctions::MapSource source);
+
   QPointer<Noaa> m_noaa;
 
   QPointer<Usgs> m_usgs;
@@ -290,6 +301,8 @@ private:
 
   StationModel *hwmMarkerModel;
 
+  MapFunctions *mapFunctions;
+
   QVector<Station> xtideMarkerLocations;
   QVector<Station> noaaMarkerLocations;
   QVector<Station> usgsMarkerLocations;
@@ -300,6 +313,7 @@ private:
   QString userSelectedStations;
 
   bool processCommandLine;
+  bool initialized;
 
  protected:
   void closeEvent(QCloseEvent *);

@@ -30,14 +30,38 @@ class MapFunctions : public QObject {
  public:
   enum MarkerType { NOAA, USGS, XTIDE };
 
+  enum MapSource { ESRI, MapBox };
+
   explicit MapFunctions(QObject *parent = nullptr);
 
-  static QVector<Station> readMarkers(MapFunctions::MarkerType markerType);
+  QVector<Station> readMarkers(MapFunctions::MarkerType markerType);
 
-  static int refreshMarkers(StationModel *model, QQuickWidget *map,
-                            QVector<Station> &locations);
+  int refreshMarkers(StationModel *model, QQuickWidget *map,
+                     QVector<Station> &locations);
 
-  static void setEsriMapTypes(QComboBox *comboBox);
+  void setMapTypes(QComboBox *comboBox);
+
+  int mapSource() const;
+  void setMapSource(int mapSource);
+
+  void setMapQmlFile(QQuickWidget *map);
+
+  QString mapboxApiKey() const;
+  void setMapboxApiKey(const QString &mapboxApiKey);
+
+  void getMapboxKeyFromDisk();
+  void saveMapboxKeyToDisk();
+
+  void getDefaultMapTypeFromDisk();
+  void saveDefaultMapTypeToDisk();
+
+  int getDefaultMapIndex() const;
+  void setDefaultMapIndex(int defaultMapIndex);
+
+private:
+  int m_mapSource;
+  int m_defaultMapIndex;
+  QString m_mapboxApiKey;
 };
 
 #endif  // MAPFUNCTIONS_H

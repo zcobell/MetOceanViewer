@@ -20,10 +20,14 @@
 #include "mapfunctions.h"
 #include <QGeoRectangle>
 #include <QGeoShape>
+#include <QQmlContext>
 #include "errors.h"
 #include "mapfunctionsprivate.h"
 
-MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {}
+MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
+  this->m_mapSource = 0;
+  this->m_mapboxApiKey = "";
+}
 
 QVector<Station> MapFunctions::readMarkers(
     MapFunctions::MarkerType markerType) {
@@ -84,7 +88,7 @@ int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
   return visibleMarkers.length();
 }
 
-void MapFunctions::setEsriMapTypes(QComboBox *comboBox) {
+void MapFunctions::setMapTypes(QComboBox *comboBox) {
   QStringList esriList = QStringList() << "World Street Map"
                                        << "World Imagery"
                                        << "World Terrain Base"
@@ -97,7 +101,102 @@ void MapFunctions::setEsriMapTypes(QComboBox *comboBox) {
                                        << "World Ocean Base"
                                        << "Dark Gray Canvas"
                                        << "DeLorme World Basemap";
+  QStringList mapboxList = QStringList() << "Streets"
+                                         << "Light"
+                                         << "Dark"
+                                         << "Satellite"
+                                         << "Streets-Satellite"
+                                         << "Wheatpaste"
+                                         << "Streets-Basic"
+                                         << "Comic"
+                                         << "Outdoors"
+                                         << "Run-Bike-Hike"
+                                         << "Pencil"
+                                         << "Pirates"
+                                         << "Emerald"
+                                         << "High-Contrast";
   comboBox->clear();
-  comboBox->addItems(esriList);
+  if (this->m_mapSource == 0) {
+    comboBox->addItems(esriList);
+  } else {
+    comboBox->addItems(mapboxList);
+  }
   return;
+}
+
+int MapFunctions::mapSource() const { return this->m_mapSource; }
+
+void MapFunctions::setMapSource(int mapSource) {
+  this->m_mapSource = mapSource;
+}
+
+void MapFunctions::setMapQmlFile(QQuickWidget *map) {
+  if (this->m_mapSource == MapSource::ESRI)
+    map->setSource(QUrl("qrc:/qml/qml/EsriMapViewer.qml"));
+  else if (this->m_mapSource == MapSource::MapBox) {
+    map->rootContext()->setContextProperty("mapboxKey", this->m_mapboxApiKey);
+    map->setSource(QUrl("qrc:/qml/qml/MapboxMapViewer.qml"));
+  }
+  return;
+}
+
+QString MapFunctions::mapboxApiKey() const { return this->m_mapboxApiKey; }
+
+void MapFunctions::setMapboxApiKey(const QString &mapboxApiKey) {
+  this->m_mapboxApiKey = mapboxApiKey;
+  this->saveMapboxKeyToDisk();
+}
+
+void MapFunctions::getMapboxKeyFromDisk() {
+  QString path = qApp->applicationDirPath();
+  QFile apiKeyFile(path + "/mapbox.key");
+  if (apiKeyFile.exists()) {
+    apiKeyFile.open(QIODevice::ReadOnly);
+    QString key = apiKeyFile.readLine();
+    this->m_mapboxApiKey = key;
+    apiKeyFile.close();
+  }
+  return;
+}
+
+void MapFunctions::saveMapboxKeyToDisk() {
+  QString path = qApp->applicationDirPath();
+  QFile apiKeyFile(path + QStringLiteral("/mapbox.key"));
+  apiKeyFile.open(QIODevice::WriteOnly);
+  apiKeyFile.write(this->m_mapboxApiKey.toStdString().c_str());
+  apiKeyFile.close();
+  return;
+}
+
+void MapFunctions::getDefaultMapTypeFromDisk() {
+  QString path = qApp->applicationDirPath();
+  QFile defaultMapFile(path + QStringLiteral("/default.map"));
+  if (defaultMapFile.exists()) {
+    defaultMapFile.open(QIODevice::ReadOnly);
+    QString typeString = defaultMapFile.readLine().simplified();
+    QString indexString = defaultMapFile.readLine().simplified();
+    defaultMapFile.close();
+    this->m_defaultMapIndex = indexString.toInt();
+    this->m_mapSource = typeString.toInt();
+  }
+  return;
+}
+
+void MapFunctions::saveDefaultMapTypeToDisk() {
+  QString path = qApp->applicationDirPath();
+  QFile defaultMapFile(path + QStringLiteral("/default.map"));
+  defaultMapFile.open(QIODevice::WriteOnly);
+  defaultMapFile.write(
+      QString(QString::number(this->m_mapSource) + QStringLiteral("\n"))
+          .toStdString()
+          .c_str());
+  defaultMapFile.write(
+      QString::number(this->m_defaultMapIndex).toStdString().c_str());
+  defaultMapFile.close();
+}
+
+int MapFunctions::getDefaultMapIndex() const { return this->m_defaultMapIndex; }
+
+void MapFunctions::setDefaultMapIndex(int defaultMapIndex) {
+  this->m_defaultMapIndex = defaultMapIndex;
 }
