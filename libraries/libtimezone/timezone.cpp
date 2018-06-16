@@ -18,12 +18,18 @@
 //
 //-----------------------------------------------------------------------*/
 #include "timezone.h"
+#include <QDateTime>
 
 Timezone::Timezone(QObject *parent) : QObject(parent) {
   this->m_initialized = false;
   this->build();
   this->m_zone =
       this->m_timezones[std::make_pair(TZData::Worldwide, TZData::UTC)];
+}
+
+int Timezone::localMachineOffsetFromUtc() {
+  QDateTime now = QDateTime::currentDateTime();
+  return now.offsetFromUtc();
 }
 
 bool Timezone::fromAbbreviation(QString value, TZData::Location location) {

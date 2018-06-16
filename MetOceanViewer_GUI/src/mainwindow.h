@@ -21,6 +21,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QActionGroup>
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QMainWindow>
@@ -30,6 +31,8 @@
 #include <QVector>
 #include <QtCharts>
 #include <QtNetwork>
+#include "addtimeseriesdialog.h"
+#include "mapfunctions.h"
 #include "stationmodel.h"
 
 //...Forward declarations of classes
@@ -216,6 +219,16 @@ class MainWindow : public QMainWindow {
 
   void on_combo_hwmMaptype_currentIndexChanged(int index);
 
+  void on_actionESRI_toggled(bool arg1);
+
+  void on_actionMapBox_toggled(bool arg1);
+
+  void on_actionEnter_MapBox_API_Key_triggered();
+
+  void on_actionSave_Default_Map_Settings_triggered();
+
+  void on_actionOpenStreetMap_toggled(bool arg1);
+
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
@@ -259,31 +272,23 @@ private:
 
   void stationDisplayWarning(int n);
 
-  QPointer<Noaa> thisNOAA;
+  void setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog);
 
-  QPointer<Usgs> thisUSGS;
+  void resetMapSource(MapFunctions::MapSource source);
 
-  QPointer<Hwm> thisHWM;
+  QPointer<Noaa> m_noaa;
 
-  QPointer<XTide> thisXTide;
+  QPointer<Usgs> m_usgs;
+
+  QPointer<Hwm> m_hwm;
+
+  QPointer<XTide> m_xtide;
+
+  QPointer<UserTimeseries> m_userTimeseries;
 
   Session *sessionState;
 
-  QPointer<UserTimeseries> thisTimeseries;
-
-  QPointer<WebEnginePage> noaa_page;
-
-  QPointer<WebEnginePage> usgs_page;
-
-  QPointer<WebEnginePage> xtide_page;
-
-  QColor DotColorHWM, LineColorRegression, LineColor121Line, LineColorBounds;
-
-  int localTimezoneOffset;
-
-  QDateTime localTimeUTC;
-
-  QString SessionFile;
+  QString sessionFile;
 
   QVector<QColor> randomColors;
 
@@ -299,6 +304,10 @@ private:
 
   StationModel *hwmMarkerModel;
 
+  MapFunctions *mapFunctions;
+
+  QActionGroup *mapActionGroup;
+
   QVector<Station> xtideMarkerLocations;
   QVector<Station> noaaMarkerLocations;
   QVector<Station> usgsMarkerLocations;
@@ -309,6 +318,7 @@ private:
   QString userSelectedStations;
 
   bool processCommandLine;
+  bool initialized;
 
  protected:
   void closeEvent(QCloseEvent *);

@@ -18,9 +18,9 @@
 //
 //-----------------------------------------------------------------------*/
 
-#include "version.h"
 #include "aboutdialog.h"
 #include "ui_aboutdialog.h"
+#include "version.h"
 
 AboutDialog::AboutDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::AboutDialog) {
@@ -111,7 +111,13 @@ QString AboutDialog::generateAboutText() {
       "a><br>" +
       "KDTree2 - Matthew Kennel (Institute for Nonlinear Science)<br>" +
       "Boost v1.6 - <a "
-      "href=\"http://www.boost.org/\">http://www.boost.org/</a>" +
+      "href=\"http://www.boost.org/\">http://www.boost.org/</a><br>" +
+      "OpenStreetMap - <a "
+      "href=\"https://www.openstreetmap.org/\">https://www.openstreetmap.org/</"
+      "a><br>" +
+      "MapBox - <a "
+      "href=\"http://www.mapbox.com\">http://www.mapbox.com</a><br>" +
+      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a>" +
       "</p></body></html>";
 
   return text;

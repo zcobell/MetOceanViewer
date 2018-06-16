@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "colors.h"
+#include <QColorDialog>
 
 Colors::Colors(QObject *parent) : QObject(parent) {}
 
@@ -25,7 +26,7 @@ Colors::Colors(QObject *parent) : QObject(parent) {}
 // Makes a string that sets the CSS style
 // according to the input color
 //-------------------------------------------//
-QString Colors::MakeColorString(QColor InputColor) {
+QString Colors::makeColorString(QColor InputColor) {
   QString S("background-color: #" + QString(InputColor.red() < 16 ? "0" : "") +
             QString::number(InputColor.red(), 16) +
             QString(InputColor.green() < 16 ? "0" : "") +
@@ -62,7 +63,7 @@ QColor Colors::styleSheetToColor(QString stylesheet) {
 // mixes in white to make it a more pastel
 // type color. This is turned off by default
 //-------------------------------------------//
-QColor Colors::GenerateRandomColor() {
+QColor Colors::generateRandomColor() {
   QColor MyColor;
   QTime SeedTime;
 
@@ -87,3 +88,19 @@ QColor Colors::GenerateRandomColor() {
   return MyColor;
 }
 //-------------------------------------------//
+
+void Colors::selectButtonColor(QPushButton *button) {
+  QPalette pal = button->palette();
+  QColor c = pal.color(QPalette::Button);
+  QColor n = QColorDialog::getColor(c);
+  if (!n.isValid()) return;
+  Colors::changeButtonColor(button, n);
+  return;
+}
+
+void Colors::changeButtonColor(QPushButton *button, QColor color) {
+  if (!color.isValid()) return;
+  QString styleSheet = Colors::makeColorString(color);
+  button->setStyleSheet(styleSheet);
+  return;
+}

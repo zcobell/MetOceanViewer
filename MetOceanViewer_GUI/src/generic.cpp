@@ -20,11 +20,9 @@
 #include "generic.h"
 #include <netcdf.h>
 #include <QDesktopServices>
+#include <QFileInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-
-// The name of the session file
-QString SessionFile;
 
 //-------------------------------------------//
 // Simple delay function which will pause
@@ -51,15 +49,9 @@ void Generic::delayM(int delayTime) {
 //-------------------------------------------//
 
 void Generic::splitPath(QString input, QString &filename, QString &directory) {
-  QRegExp rx("[/\\\\]");
-  QStringList parts = input.split(rx);
-  filename = parts.value(parts.length() - 1);
-  directory = "";
-  for (int i = 0; i < parts.length() - 1; i++)
-    if (i > 0)
-      directory = directory + "/" + parts.value(i);
-    else
-      directory = parts.value(i);
+  QFileInfo in(input);
+  filename = in.fileName();
+  directory = in.absoluteDir().absolutePath();
   return;
 }
 
@@ -93,11 +85,4 @@ bool Generic::isConnectedToNetwork() {
     return true;
   else
     return false;
-}
-
-int Generic::getLocalTimzoneOffset() {
-  QDateTime dt1 = QDateTime::currentDateTime();
-  QDateTime dt2 = dt1.toUTC();
-  dt1.setTimeSpec(Qt::UTC);
-  return dt2.secsTo(dt1) / 3600;
 }

@@ -39,17 +39,17 @@ void MainWindow::on_combo_usgs_maptype_currentIndexChanged(int index) {
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked() {
   //...Create a new USGS object
-  if (!thisUSGS.isNull()) delete thisUSGS;
-  thisUSGS = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
+  if (!m_usgs.isNull()) delete m_usgs;
+  m_usgs = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
                       ui->radio_usgshistoric, ui->radio_usgs_instant,
                       ui->combo_USGSProduct, ui->Date_usgsStart,
                       ui->Date_usgsEnd, ui->statusBar,
                       ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone,
                       this->usgsStationModel, &this->usgsSelectedStation, this);
-  connect(thisUSGS, SIGNAL(usgsError(QString)), this,
+  connect(m_usgs, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
-  this->thisUSGS->plotNewUSGSStation();
+  this->m_usgs->plotNewUSGSStation();
 
   return;
 }
@@ -61,7 +61,7 @@ void MainWindow::on_button_usgs_fetch_clicked() {
 // data is only available 120 days into the past
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked() {
-  if (!thisUSGS.isNull()) thisUSGS->setUSGSBeenPlotted(false);
+  if (!m_usgs.isNull()) m_usgs->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(
       QDateTime::currentDateTime().addDays(-120));
   ui->Date_usgsEnd->setMinimumDateTime(
@@ -83,7 +83,7 @@ void MainWindow::on_radio_usgs_instant_clicked() {
 // ago when using daily data from USGS
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked() {
-  if (!thisUSGS.isNull()) thisUSGS->setUSGSBeenPlotted(false);
+  if (!m_usgs.isNull()) m_usgs->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   return;
@@ -95,7 +95,7 @@ void MainWindow::on_radio_usgsDaily_clicked() {
 // ago when using daily data from USGS
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked() {
-  if (!thisUSGS.isNull()) thisUSGS->setUSGSBeenPlotted(false);
+  if (!m_usgs.isNull()) m_usgs->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   return;
@@ -108,7 +108,7 @@ void MainWindow::on_radio_usgshistoric_clicked() {
 //-------------------------------------------//
 void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index) {
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  this->thisUSGS->replotCurrentUSGSStation(index);
+  this->m_usgs->replotCurrentUSGSStation(index);
   QApplication::restoreOverrideCursor();
   return;
 }
@@ -118,7 +118,7 @@ void MainWindow::on_combo_USGSProduct_currentIndexChanged(int index) {
 // Function to save the map and chart as a jpg
 //-------------------------------------------//
 void MainWindow::on_button_usgssavemap_clicked() {
-  if (this->thisUSGS == nullptr) {
+  if (this->m_usgs == nullptr) {
     QMessageBox::critical(this, tr("ERROR"),
                           tr("No station has been downloaded."));
     return;
@@ -126,8 +126,8 @@ void MainWindow::on_button_usgssavemap_clicked() {
 
   QString filename;
 
-  QString MarkerID = thisUSGS->getLoadedUSGSStation();
-  QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+  QString MarkerID = m_usgs->getLoadedUSGSStation();
+  QString MarkerID2 = m_usgs->getClickedUSGSStation();
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
@@ -142,7 +142,7 @@ void MainWindow::on_button_usgssavemap_clicked() {
     return;
   }
 
-  if (!thisUSGS->getUSGSBeenPlotted()) {
+  if (!m_usgs->getUSGSBeenPlotted()) {
     QMessageBox::critical(this, tr("ERROR"),
                           tr("Plot the data before attempting to save."));
     return;
@@ -158,7 +158,7 @@ void MainWindow::on_button_usgssavemap_clicked() {
 
   Generic::splitPath(TempString, filename, previousDirectory);
 
-  thisUSGS->saveUSGSImage(TempString, filter);
+  m_usgs->saveUSGSImage(TempString, filter);
 
   return;
 }
@@ -169,14 +169,14 @@ void MainWindow::on_button_usgssavemap_clicked() {
 // or a CSV
 //-------------------------------------------//
 void MainWindow::on_button_usgssavedata_clicked() {
-  if (this->thisUSGS == nullptr) {
+  if (this->m_usgs == nullptr) {
     return;
   }
 
   QString filename;
 
-  QString MarkerID = thisUSGS->getLoadedUSGSStation();
-  QString MarkerID2 = thisUSGS->getClickedUSGSStation();
+  QString MarkerID = m_usgs->getLoadedUSGSStation();
+  QString MarkerID2 = m_usgs->getClickedUSGSStation();
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
@@ -191,7 +191,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
     return;
   }
 
-  if (!thisUSGS->getUSGSBeenPlotted()) {
+  if (!m_usgs->getUSGSBeenPlotted()) {
     QMessageBox::critical(this, tr("ERROR"),
                           tr("Plot the data before attempting to save."));
     return;
@@ -211,14 +211,14 @@ void MainWindow::on_button_usgssavedata_clicked() {
 
   Generic::splitPath(TempString, filename, previousDirectory);
 
-  thisUSGS->saveUSGSData(TempString, format);
+  m_usgs->saveUSGSData(TempString, format);
 
   return;
 }
 //-------------------------------------------//
 
 void MainWindow::on_button_usgsresetzoom_clicked() {
-  if (!this->thisUSGS.isNull()) ui->usgs_graphics->resetZoom();
+  if (!this->m_usgs.isNull()) ui->usgs_graphics->resetZoom();
   return;
 }
 
@@ -234,14 +234,14 @@ void MainWindow::on_combo_usgsTimezoneLocation_currentIndexChanged(int index) {
 
 void MainWindow::on_combo_usgsTimezone_currentIndexChanged(
     const QString &arg1) {
-  if (this->thisUSGS == nullptr) return;
+  if (this->m_usgs == nullptr) return;
 
   Timezone *t = new Timezone(this);
   if (!t->fromAbbreviation(arg1,
                            static_cast<TZData::Location>(
                                ui->combo_usgsTimezoneLocation->currentIndex())))
     return;
-  this->thisUSGS->replotChart(t);
+  this->m_usgs->replotChart(t);
   delete t;
   return;
 }

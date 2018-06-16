@@ -58,7 +58,7 @@ class Noaa : public QObject {
   //...Public Functions
   int plotNOAAStation();
   int saveNOAAImage(QString filename, QString filter);
-  int saveNOAAData(QString filename, QString PreviousDirectory, QString format);
+  int saveNOAAData(QString filename);
   int getLoadedNOAAStation();
   int getClickedNOAAStation();
   QString getNOAAErrorString();
@@ -70,8 +70,6 @@ class Noaa : public QObject {
 
  private:
   //...Private Functions
-  int formatNOAAResponse(QVector<QByteArray> input, QString &error, int index);
-  void readNOAAResponse(QNetworkReply *reply, int index, int index2);
   int fetchNOAAData();
   int prepNOAAResponse();
   int getNoaaProductId(QString &product1, QString &product2);
@@ -97,7 +95,6 @@ class Noaa : public QObject {
   QDateTime m_endDate;
 
   QVector<Hmdf*> m_currentStationData;
-  QVector<QString> m_errorStringVec;
 
   Timezone *tz;
   int m_offsetSeconds;

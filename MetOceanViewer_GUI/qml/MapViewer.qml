@@ -23,6 +23,7 @@ import QtQuick.Controls 1.4
 import QtLocation 5.9
 import QtPositioning 5.5
 
+
 Rectangle {
 
     id: window
@@ -100,17 +101,19 @@ Rectangle {
         return;
     }
 
-    Plugin {
-       id: esriPlugin
-       name: "esri"
+    function listMapTypes() {
+        for(var i=0;i<map.supportedMapTypes.length;i++){
+            console.log(map.supportedMapTypes[i].name);
+        }
+        return;
     }
 
     Map {
         id: map
         anchors.fill: parent
         activeMapType: supportedMapTypes[mapType]
-        plugin: esriPlugin
-        // copyrightsVisible: false
+        plugin: mapPlugin;
+        //copyrightsVisible: false
 
         property MovMapItem previousMarker
 
@@ -124,6 +127,9 @@ Rectangle {
             propagateComposedEvents: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: {
+
+                listMapTypes();
+
                 if(markerMode===0){
                     if(map.previousMarker){
                         map.previousMarker.deselect()
@@ -150,10 +156,12 @@ Rectangle {
             onDoubleClicked: {
                 if (mouse.button === Qt.RightButton) {
                     map.zoomLevel = map.zoomLevel-1;
+                    setMapPlugin(1);
                 } else if(mouse.button === Qt.LeftButton) {
                     map.zoomLevel = map.zoomLevel+1;
                 }
             }
+
 
         }
 

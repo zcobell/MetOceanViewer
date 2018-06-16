@@ -262,7 +262,7 @@ int Hmdf::writeNetcdf(QString filename) {
   for (int i = 0; i < this->nstations(); i++) {
     QString dimname;
     int d;
-    dimname.sprintf("%s%4.4i", "stationLength_", i+1);
+    dimname.sprintf("%s%4.4i", "stationLength_", i + 1);
     NCCHECK(nc_def_dim(ncid, dimname.toStdString().c_str(),
                        this->station(i)->numSnaps(), &d));
     dimid_stationLength.push_back(d);
@@ -297,7 +297,7 @@ int Hmdf::writeNetcdf(QString filename) {
     char utc[4] = "utc";
     int v;
 
-    stationName.sprintf("%s%4.4i", "station_", i+1);
+    stationName.sprintf("%s%4.4i", "station_", i + 1);
     timeVarName = "time_" + stationName;
     dataVarName = "data_" + stationName;
 
@@ -362,7 +362,7 @@ int Hmdf::writeNetcdf(QString filename) {
     this->station(i)->name().toStdString().copy(name, 200, 0);
 
     for (int j = 0; j < this->station(i)->numSnaps(); j++) {
-      time[j] = this->station(i)->date(j)/1000;
+      time[j] = this->station(i)->date(j) / 1000;
       data[j] = this->station(i)->data(j);
     }
 

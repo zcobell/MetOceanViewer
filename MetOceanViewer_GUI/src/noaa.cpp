@@ -18,12 +18,14 @@
 //
 //-----------------------------------------------------------------------*/
 #include "noaa.h"
+#include <QFileInfo>
 #include <QGeoRectangle>
 #include <QGeoShape>
 #include <limits>
 #include "chartview.h"
 #include "generic.h"
 #include "hmdf.h"
+#include "noaacoops.h"
 
 Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
            QDateTimeEdit *inStartDateEdit, QDateTimeEdit *inEndDateEdit,
@@ -55,22 +57,20 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
 
   //...Initialize the timezone
   this->tz = new Timezone(this);
-  tz->fromAbbreviation(this->m_comboTimezone->currentText(),
-                       static_cast<TZData::Location>(
-                           this->m_comboTimezoneLocation->currentIndex()));
-  this->m_offsetSeconds = tz->utcOffset() * 1000;
+  this->tz->fromAbbreviation(
+      this->m_comboTimezone->currentText(),
+      static_cast<TZData::Location>(
+          this->m_comboTimezoneLocation->currentIndex()));
+  this->m_offsetSeconds = this->tz->utcOffset() * 1000;
   this->m_priorOffsetSeconds = this->m_offsetSeconds;
 }
 
 Noaa::~Noaa() {}
 
 int Noaa::fetchNOAAData() {
-  QEventLoop loop;
-  qint64 Duration;
-  QString RequestURL, StartString, EndString, Product1, Product2;
-  int i, j, ierr, NumDownloads, NumData;
-  QVector<QDateTime> StartDateList, EndDateList;
+  QString product1, product2;
 
+  // Check for valid date range
   if (this->m_startDate.operator==(this->m_endDate) ||
       this->m_endDate.operator<(this->m_startDate))
     return MetOceanViewer::Error::NOAA_INVALIDDATERANGE;
@@ -79,141 +79,51 @@ int Noaa::fetchNOAAData() {
   QDateTime localStartDate = this->m_startDate.addMSecs(-this->m_offsetSeconds);
   QDateTime localEndDate = this->m_endDate.addMSecs(-this->m_offsetSeconds);
 
-  Duration = localStartDate.daysTo(localEndDate);
-  NumDownloads = (Duration / 30) + 1;
-  StartDateList.resize(NumDownloads);
-  EndDateList.resize(NumDownloads);
-
-  // Build the list of dates in 30 day intervals
-  for (i = 0; i < NumDownloads; i++) {
-    StartDateList[i] = localStartDate.addDays(i * 30).addDays(i);
-    StartDateList[i].setTime(localStartDate.time());
-    EndDateList[i] = StartDateList[i].addDays(30);
-    EndDateList[i].setTime(localEndDate.time());
-    if (EndDateList[i] > localEndDate) EndDateList[i] = localEndDate;
-  }
-
-  ierr = this->getNoaaProductId(Product1, Product2);
+  int ierr = this->getNoaaProductId(product1, product2);
   if (ierr != 0) return ierr;
-
-  if (this->m_productIndex == 0)
-    NumData = 2;
-  else
-    NumData = 1;
 
   if (this->m_productIndex == 4 || this->m_productIndex == 5 ||
       this->m_productIndex == 6 || this->m_productIndex == 7 ||
       this->m_productIndex == 8)
     this->m_datum = "Stnd";
 
-  // Allocate the NOAA array
-  this->m_webData.clear();
-  this->m_webData.resize(NumData);
-  for (i = 0; i < NumData; i++) this->m_webData[i].resize(NumDownloads);
+  NoaaCoOps *coops =
+      new NoaaCoOps(this->m_station.id(),
+                    QStringLiteral("NOAA_") + this->m_station.id() +
+                        QStringLiteral("_") + this->m_station.name(),
+                    this->m_station.coordinate(), product1, this->m_datum,
+                    this->m_units, localStartDate, localEndDate, this);
+  ierr = coops->get(this->m_currentStationData[0]);
+  if (ierr != 0) {
+    this->m_errorString = coops->errorString();
+    emit noaaError(this->m_errorString);
+    delete coops;
+    return ierr;
+  }
 
-  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+  delete coops;
+  this->m_currentStationData[0]->setNull(false);
 
-  for (j = 0; j < NumData; j++) {
-    for (i = 0; i < NumDownloads; i++) {
-      // Make the date string
-      StartString = StartDateList[i].toString("yyyyMMdd hh:mm");
-      EndString = EndDateList[i].toString("yyyyMMdd hh:mm");
-
-      // Build the URL to request data from the NOAA CO-OPS API
-      if (j == 0)
-        RequestURL =
-            QString("http://tidesandcurrents.noaa.gov/api/datagetter?") +
-            QString("product=" + Product1 + "&application=metoceanviewer") +
-            QString("&begin_date=") + StartString + QString("&end_date=") +
-            EndString + QString("&station=") + this->m_station.id() +
-            QString("&time_zone=GMT&units=") + this->m_units +
-            QString("&interval=&format=csv");
-      else
-        RequestURL =
-            QString("http://tidesandcurrents.noaa.gov/api/datagetter?") +
-            QString("product=" + Product2 + "&application=metoceanviewer") +
-            QString("&begin_date=") + StartString + QString("&end_date=") +
-            EndString + QString("&station=") + this->m_station.id() +
-            QString("&time_zone=GMT&units=") + this->m_units +
-            QString("&interval=&format=csv");
-
-      // Allow a different datum where allowed
-      if (this->m_datum != "Stnd")
-        RequestURL = RequestURL + QString("&datum=") + this->m_datum;
-
-      // Send the request
-      QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
-      connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-      connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-              SLOT(quit()));
-      loop.exec();
-
-      //...Check for a redirect from NOAA. This fixes bug #26
-      QVariant redirectionTargetURL =
-          reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
-      if (!redirectionTargetURL.isNull()) {
-        QNetworkReply *reply2 =
-            manager->get(QNetworkRequest(redirectionTargetURL.toUrl()));
-        connect(reply2, SIGNAL(finished()), &loop, SLOT(quit()));
-        connect(reply2, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-                SLOT(quit()));
-        loop.exec();
-        reply->deleteLater();
-        this->readNOAAResponse(reply2, i, j);
-      } else
-        this->readNOAAResponse(reply, i, j);
+  if (this->m_productIndex == 0) {
+    NoaaCoOps *coops =
+        new NoaaCoOps(this->m_station.id(),
+                      QStringLiteral("NOAA_") + this->m_station.id() +
+                          QStringLiteral("_") + this->m_station.name(),
+                      this->m_station.coordinate(), product2, this->m_datum,
+                      this->m_units, localStartDate, localEndDate, this);
+    ierr = coops->get(this->m_currentStationData[1]);
+    if (ierr != 0) {
+      this->m_errorString = coops->errorString();
+      emit noaaError(this->m_errorString);
+      delete coops;
+      return ierr;
     }
+
+    delete coops;
+    this->m_currentStationData[1]->setNull(false);
   }
 
   this->m_loadedStationId = this->m_station.id().toInt();
-
-  return 0;
-}
-
-int Noaa::formatNOAAResponse(QVector<QByteArray> input, QString &error,
-                             int index) {
-  QString TempData, DateS, YearS, MonthS, DayS, HourMinS, HourS, MinS, WLS;
-  QStringList TimeSnap;
-  QVector<QString> InputData;
-  QVector<QStringList> DataList;
-  QVector<QString> Temp;
-
-  InputData.resize(input.length());
-  DataList.resize(input.length());
-  Temp.resize(input.length());
-
-  for (int i = 0; i < DataList.length(); i++) {
-    InputData[i] = QString(input[i]);
-    DataList[i] =
-        InputData[i].split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
-    Temp[i] = QString(input[i]);
-    error = Temp[i] + "\n";
-  }
-
-  for (int j = 0; j < DataList.length(); j++) {
-    for (int i = 1; i < DataList[j].length(); i++) {
-      TempData = DataList[j].value(i);
-      TimeSnap = TempData.split(",");
-      DateS = TimeSnap.value(0);
-      YearS = DateS.mid(0, 4);
-      MonthS = DateS.mid(5, 2);
-      DayS = DateS.mid(8, 2);
-      HourMinS = DateS.mid(11, 5);
-      HourS = HourMinS.mid(0, 2);
-      MinS = HourMinS.mid(3, 2);
-      WLS = TimeSnap.value(1);
-
-      QDateTime tempDate;
-      tempDate.setDate(QDate(YearS.toInt(), MonthS.toInt(), DayS.toInt()));
-      tempDate.setTime(QTime(HourS.toInt(), MinS.toInt(), 0));
-      double tempData = WLS.toDouble();
-
-      if (tempData != 0.0)
-        this->m_currentStationData[index]->station(0)->setNext(
-            tempDate.toMSecsSinceEpoch(), WLS.toDouble());
-    }
-  }
-  this->m_currentStationData[index]->setNull(false);
 
   return 0;
 }
@@ -223,11 +133,14 @@ int Noaa::getDataBounds(double &ymin, double &ymax) {
   ymin = std::numeric_limits<double>::max();
 
   for (int i = 0; i < this->m_currentStationData.length(); i++) {
-    QVector<double> data = this->m_currentStationData[i]->station(0)->allData();
-    double min = *std::min_element(data.begin(), data.end());
-    double max = *std::max_element(data.begin(), data.end());
-    ymin = std::min(ymin, min);
-    ymax = std::max(ymax, max);
+    if (!this->m_currentStationData[i]->null()) {
+      QVector<double> data =
+          this->m_currentStationData[i]->station(0)->allData();
+      double min = *std::min_element(data.begin(), data.end());
+      double max = *std::max_element(data.begin(), data.end());
+      ymin = std::min(ymin, min);
+      ymax = std::max(ymax, max);
+    }
   }
   return 0;
 }
@@ -289,20 +202,16 @@ int Noaa::getClickedNOAAStation() { return this->m_station.id().toInt(); }
 int Noaa::plotChart() {
   double ymin, ymax;
   QString S1, S2, format;
-  QDateTime minDateTime, maxDateTime;
-
-  maxDateTime = QDateTime(QDate(1000, 1, 1), QTime(0, 0, 0));
-  minDateTime = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
 
   //...Create the line series
   this->generateLabels();
   this->getNoaaProductSeriesNaming(S1, S2);
   this->getDataBounds(ymin, ymax);
 
-  this->m_currentStationData[0]->units() = this->m_units;
-  this->m_currentStationData[0]->datum() = this->m_datum;
-  this->m_currentStationData[1]->units() = this->m_units;
-  this->m_currentStationData[1]->datum() = this->m_datum;
+  this->m_currentStationData[0]->setUnits(this->m_units);
+  this->m_currentStationData[0]->setDatum(this->m_datum);
+  this->m_currentStationData[1]->setUnits(this->m_units);
+  this->m_currentStationData[1]->setDatum(this->m_datum);
 
   //...Create the chart
   this->m_chartView->m_chart = new QChart();
@@ -316,8 +225,8 @@ int Noaa::plotChart() {
   series2->setPen(
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
-  minDateTime = this->m_startDateEdit->dateTime();
-  maxDateTime = this->m_endDateEdit->dateTime();
+  QDateTime minDateTime = this->m_startDateEdit->dateTime();
+  QDateTime maxDateTime = this->m_endDateEdit->dateTime();
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
@@ -394,7 +303,7 @@ int Noaa::plotChart() {
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
   this->m_chartView->m_chart->setTitle(
       tr("NOAA Station ") + this->m_station.id() + ": " +
-      this->m_currentStationData[0]->station(0)->name());
+      this->m_station.name());
   this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_chartView->setRenderHint(QPainter::Antialiasing);
 
@@ -430,24 +339,6 @@ int Noaa::plotNOAAStation() {
         this->m_stationModel->findStation(*(this->m_selectedStation));
     this->m_station.id() = this->m_station.id().toInt();
 
-    HmdfStation *station1 = new HmdfStation(this);
-    HmdfStation *station2 = new HmdfStation(this);
-
-    station1->setLongitude(this->m_station.coordinate().longitude());
-    station1->setLatitude(this->m_station.coordinate().latitude());
-    station1->setName(this->m_station.name());
-    station1->setId("NOAA_" + this->m_station.id());
-    station1->setStationIndex(0);
-
-    station2->setLongitude(this->m_station.coordinate().longitude());
-    station2->setLatitude(this->m_station.coordinate().latitude());
-    station2->setName(this->m_station.name());
-    station2->setId("NOAA_" + this->m_station.id());
-    station2->setStationIndex(0);
-
-    this->m_currentStationData[0]->addStation(station1);
-    this->m_currentStationData[1]->addStation(station2);
-
     //...Grab the options from the UI
     this->m_startDate = this->m_startDateEdit->dateTime();
     this->m_endDate = this->m_endDateEdit->dateTime();
@@ -459,18 +350,18 @@ int Noaa::plotNOAAStation() {
     this->m_statusBar->showMessage(tr("Downloading data from NOAA...", 0));
 
     int ierr = this->fetchNOAAData();
-    if (ierr != MetOceanViewer::Error::NOERR) return ierr;
+    if (ierr != MetOceanViewer::Error::NOERR) {
+      this->m_statusBar->clearMessage();
+      return ierr;
+    }
 
     //...Update the status bar
     this->m_statusBar->showMessage(tr("Plotting the data from NOAA..."));
 
-    //...Generate prep the data for plotting
-    ierr = this->prepNOAAResponse();
-    if (ierr != MetOceanViewer::Error::NOERR) return ierr;
-
     //...Check for valid data
     if (this->m_currentStationData[0]->station(0)->numSnaps() < 5) {
-      emit noaaError(this->m_errorStringVec[0]);
+      emit noaaError(this->m_errorString);
+      this->m_statusBar->clearMessage();
       return 1;
     }
 
@@ -482,47 +373,6 @@ int Noaa::plotNOAAStation() {
 
     return 0;
   }
-}
-
-int Noaa::prepNOAAResponse() {
-  QVector<QString> NOAAData;
-  int i;
-
-  NOAAData.resize(m_webData.length());
-  this->m_errorStringVec.resize(m_webData.length());
-  for (i = 0; i < m_webData.length(); i++) {
-    NOAAData[i] = this->formatNOAAResponse(this->m_webData[i],
-                                           this->m_errorStringVec[i], i);
-    this->m_errorStringVec[i].remove(QRegExp("[\\n\\t\\r]"));
-    if (this->m_errorStringVec[i] ==
-        QStringLiteral(
-            " Wrong Date: The end date should be greater than the begin date "))
-      this->m_errorStringVec[i] =
-          QStringLiteral("NOAA data unavailable for the specified dates");
-  }
-  return 0;
-}
-
-void Noaa::readNOAAResponse(QNetworkReply *reply, int index, int index2) {
-  QByteArray Data;
-
-  // Catch some errors during the download
-  if (reply->error() != 0) {
-    emit noaaError(tr("ERROR: ") + reply->errorString());
-    reply->deleteLater();
-    return;
-  }
-
-  // Read the data received from NOAA server
-  Data = reply->readAll();
-
-  // Save the data into an array and increment the counter
-  this->m_webData[index2][index] = Data;
-
-  // Delete this response
-  reply->deleteLater();
-
-  return;
 }
 
 int Noaa::getNoaaProductId(QString &product1, QString &product2) {
@@ -631,23 +481,23 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
   return 0;
 }
 
-int Noaa::saveNOAAData(QString filename, QString PreviousDirectory,
-                       QString format) {
-  QString filename2;
-
+int Noaa::saveNOAAData(QString filename) {
   if (!this->m_currentStationData[0]->null() &&
       !this->m_currentStationData[1]->null()) {
-    for (int index = 0; index < this->m_currentStationData.length(); index++) {
-      if (index == 0)
-        filename2 = PreviousDirectory + "/Observation_" + filename;
-      else
-        filename2 = PreviousDirectory + "/Predictions_" + filename;
-      int ierr = this->m_currentStationData[index]->write(filename2);
-      if (ierr != 0) emit noaaError("Error writing NOAA data to file");
-    }
+    QFileInfo fn(filename);
+    QString directory = fn.absoluteDir().absolutePath();
+    QString file = fn.fileName();
+    QString obs = directory + "/Observations_" + file;
+    QString pre = directory + "/Predictions_" + file;
+
+    int ierr = this->m_currentStationData[0]->write(obs);
+    if (ierr != 0)
+      emit noaaError("Error writing NOAA observation data to file");
+
+    ierr = this->m_currentStationData[1]->write(pre);
+    if (ierr != 0) emit noaaError("Error writing NOAA prediction data to file");
   } else {
-    filename2 = PreviousDirectory + "/" + filename;
-    int ierr = this->m_currentStationData[0]->write(filename2);
+    int ierr = this->m_currentStationData[0]->write(filename);
     if (ierr != 0) emit noaaError("Error writing NOAA data to file");
   }
 

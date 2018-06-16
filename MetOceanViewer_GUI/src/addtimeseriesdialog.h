@@ -48,23 +48,64 @@ class AddTimeseriesDialog : public QDialog {
                                QString StationPath, int epsg, QString varname,
                                int layer);
 
-  QString PreviousDirectory;
+  QString previousDirectory() const;
+  void setPreviousDirectory(const QString &previousDirectory);
 
-  int NumIMEDSFiles;
-  int CurrentRowsInTable;
-  bool ColorUpdated, FileReadError;
-  bool EditBox;
-  double UnitConversion, xadjust, yadjust;
-  QColor RandomButtonColor;
-  QString InputFileName, InputColorString;
-  QString InputSeriesName, InputFilePath;
-  QString StationFilePath, dFlowVariable;
-  QString InputStationFile, CurrentFileName;
-  QDateTime InputFileColdStart;
-  int InputFileType;
-  int epsg, layer;
+  bool fileReadError() const;
+  void setFileReadError(bool fileReadError);
 
- private slots:
+  bool editBox() const;
+  void setEditBox(bool editBox);
+
+  double unitConversion() const;
+  void setUnitConversion(double unitConversion);
+
+  double xadjust() const;
+  void setXadjust(double xadjust);
+
+  double yadjust() const;
+  void setYadjust(double yadjust);
+
+  QColor randomButtonColor() const;
+  void setRandomButtonColor(const QColor &randomButtonColor);
+
+  QString inputFileName() const;
+  void setInputFileName(const QString &inputFileName);
+
+  QString inputColorString() const;
+  void setInputColorString(const QString &inputColorString);
+
+  QString inputSeriesName() const;
+  void setInputSeriesName(const QString &inputSeriesName);
+
+  QString inputFilePath() const;
+  void setInputFilePath(const QString &inputFilePath);
+
+  QString stationFilePath() const;
+  void setStationFilePath(const QString &stationFilePath);
+
+  QString dflowVariable() const;
+  void setDflowVariable(const QString &dflowVariable);
+
+  QString inputStationFile() const;
+  void setInputStationFile(const QString &inputStationFile);
+
+  QString currentFileName() const;
+  void setCurrentFileName(const QString &currentFileName);
+
+  QDateTime inputFileColdstart() const;
+  void setInputFileColdstart(const QDateTime &inputFileColdstart);
+
+  int inputFileType() const;
+  void setInputFileType(int inputFileType);
+
+  int epsg() const;
+  void setEpsg(int epsg);
+
+  int layer() const;
+  void setLayer(int layer);
+
+private slots:
 
   void on_browse_filebrowse_clicked();
 
@@ -103,14 +144,22 @@ class AddTimeseriesDialog : public QDialog {
   void setVerticalLayerElements(bool enabled);
   void setItemsByFiletype();
 
+  QString m_previousDirectory;
+  bool m_fileReadError;
+  bool m_editBox;
+  double m_unitConversion, m_xadjust, m_yadjust;
+  QColor m_randomButtonColor;
+  QString m_inputFileName, m_inputColorString;
+  QString m_inputSeriesName, m_inputFilePath;
+  QString m_stationFilePath, m_dflowVariable;
+  QString m_inputStationFile, m_currentFileName;
+  QDateTime m_inputFileColdstart;
+  int m_inputFileType;
+  int m_epsg, m_layer;
+
   Dflow *dflow;
   proj4 *proj;
 
-  struct IMEDSList {
-    QString Filename;
-    QString Label;
-    QColor Color;
-  };
 };
 
 #endif // ADDTIMESERIESDIALOG_H

@@ -246,7 +246,10 @@ DISTFILES += \
     qml/MovMapItem.qml \
     qml/MapViewer.qml \
     qml/InfoWindow.qml \
-    qml/MapLegend.qml
+    qml/MapLegend.qml \
+    qml/MapboxMapViewer.qml \
+    qml/EsriMapViewer.qml \
+    qml/OsmMapViewer.qml
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/release/ -lhmdf
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/debug/ -lhmdf
@@ -260,3 +263,16 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libr
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/release/hmdf.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/debug/hmdf.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/libhmdf.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnoaacoops/release/ -lnoaacoops
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnoaacoops/debug/ -lnoaacoops
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libnoaacoops/ -lnoaacoops
+
+INCLUDEPATH += $$PWD/../libraries/libnoaacoops
+DEPENDPATH += $$PWD/../libraries/libnoaacoops
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/release/libnoaacoops.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/debug/libnoaacoops.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/release/noaacoops.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/debug/noaacoops.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/libnoaacoops.a

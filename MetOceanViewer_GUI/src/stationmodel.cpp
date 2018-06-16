@@ -114,6 +114,11 @@ void StationModel::deselectStation(QString name) {
 }
 
 void StationModel::boundingBox(QRectF &box) {
+  if (this->m_stations.length() == 0) {
+    box = QRectF();
+    return;
+  }
+
   for (int i = 0; i < this->m_stations.length(); i++) {
     if (i == 0) {
       box.setTopLeft(QPointF(this->m_stations[i].coordinate().longitude(),
@@ -139,6 +144,8 @@ void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
   //...Generate the bounding box, expand by 10% to give some margin
   QRectF boundingBox;
   model->boundingBox(boundingBox);
+
+  if (boundingBox == QRectF()) return;
 
   double percent = 10;
   double width_new = boundingBox.width() * (1.0 + (percent / 100.0));

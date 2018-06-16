@@ -36,7 +36,6 @@ public:
   static void delayM(int delayTime);
   static int NETCDF_ERR(int status);
   static bool isConnectedToNetwork();
-  static int getLocalTimzoneOffset();
 };
 
 #endif // GENERIC_H

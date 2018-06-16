@@ -24,5 +24,6 @@ SUBDIRS  = libproj4 \
            libnetcdfcxx \
            libkdtree2 \
            libtimezone \ 
-           libhmdf
+           libhmdf \
+           libnoaacoops
 CONFIG += ordered           

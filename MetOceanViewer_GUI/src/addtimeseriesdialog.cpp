@@ -37,21 +37,18 @@ AddTimeseriesDialog::AddTimeseriesDialog(QWidget *parent)
   ui->text_unitconvert->setValidator(new QDoubleValidator(this));
   ui->text_xadjust->setValidator(new QDoubleValidator(this));
   ui->text_yadjust->setValidator(new QDoubleValidator(this));
-  this->PreviousDirectory =
+  this->m_previousDirectory =
       static_cast<MainWindow *>(parent)->previousDirectory;
   connect(this, SIGNAL(addTimeseriesError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
-  this->NumIMEDSFiles = 0;
-  this->CurrentRowsInTable = 0;
-  this->ColorUpdated = false;
-  this->FileReadError = false;
-  this->EditBox = false;
-  this->UnitConversion = 1.0;
-  this->xadjust = 0.0;
-  this->yadjust = 0.0;
-  this->InputFileType = 0;
-  this->epsg = 4326;
-  this->layer = 0;
+  this->m_fileReadError = false;
+  this->m_editBox = false;
+  this->m_unitConversion = 1.0;
+  this->m_xadjust = 0.0;
+  this->m_yadjust = 0.0;
+  this->m_inputFileType = 0;
+  this->m_epsg = 4326;
+  this->m_layer = 0;
   this->dflow = nullptr;
   this->proj = new proj4(this);
 }
@@ -73,24 +70,21 @@ AddTimeseriesDialog::~AddTimeseriesDialog() { delete ui; }
 // a blank filename, and a randomly generated color
 //-------------------------------------------//
 void AddTimeseriesDialog::set_default_dialog_box_elements(int NumRowsInTable) {
-  QString ButtonStyle;
-  this->InputFileColdStart.setTimeSpec(Qt::UTC);
+  this->m_inputFileColdstart.setTimeSpec(Qt::UTC);
   ui->text_seriesname->setText(tr("Series ") +
                                QString::number(NumRowsInTable + 1));
   ui->text_unitconvert->setText("1.0");
   ui->text_xadjust->setText("0.0");
   ui->text_yadjust->setText("0.0");
   ui->date_coldstart->setDateTime(QDateTime::currentDateTime());
-  this->InputFileColdStart = ui->date_coldstart->dateTime();
-  this->RandomButtonColor = Colors::GenerateRandomColor();
-  this->InputColorString = Colors::getHexColor(this->RandomButtonColor);
-  ButtonStyle = Colors::MakeColorString(this->RandomButtonColor);
-  ui->button_seriesColor->setStyleSheet(ButtonStyle);
-  ui->button_seriesColor->update();
-  this->CurrentFileName = QString();
-  this->epsg = 4326;
-  this->dFlowVariable = QString();
-  this->layer = 1;
+  this->m_inputFileColdstart = ui->date_coldstart->dateTime();
+  this->m_randomButtonColor = Colors::generateRandomColor();
+  this->m_inputColorString = Colors::getHexColor(this->m_randomButtonColor);
+  Colors::changeButtonColor(ui->button_seriesColor, this->m_randomButtonColor);
+  this->m_currentFileName = QString();
+  this->m_epsg = 4326;
+  this->m_dflowVariable = QString();
+  this->m_layer = 1;
 
   this->setColdstartSelectElements(false);
   this->setStationSelectElements(false);
@@ -109,9 +103,9 @@ void AddTimeseriesDialog::set_dialog_box_elements(
     QString Filename, QString Filepath, QString SeriesName, double UnitConvert,
     double xmove, double ymove, QColor Color, QDateTime ColdStart, int FileType,
     QString StationPath, int epsg, QString varname, int layer) {
-  QString ButtonStyle, StationFile;
-  this->InputFileColdStart.setTimeSpec(Qt::UTC);
-  Generic::splitPath(StationPath, StationFile, this->PreviousDirectory);
+  QString StationFile;
+  this->m_inputFileColdstart.setTimeSpec(Qt::UTC);
+  Generic::splitPath(StationPath, StationFile, this->m_previousDirectory);
   ui->text_seriesname->setText(SeriesName);
   ui->text_filename->setText(Filename);
   ui->text_unitconvert->setText(QString::number(UnitConvert));
@@ -120,18 +114,15 @@ void AddTimeseriesDialog::set_dialog_box_elements(
   ui->text_filetype->setText(Filetypes::integerFiletypeToString(FileType));
   ui->date_coldstart->setDateTime(ColdStart);
   ui->text_stationfile->setText(StationFile);
-  this->InputFilePath = Filepath;
-  this->CurrentFileName = Filepath;
-  this->StationFilePath = StationPath;
-  this->InputFileType = FileType;
-  this->dFlowVariable = varname;
-  this->epsg = epsg;
-  this->layer = layer;
-  ButtonStyle = Colors::MakeColorString(Color);
-  this->RandomButtonColor = Color;
-  ui->button_seriesColor->setStyleSheet(ButtonStyle);
-  ui->button_seriesColor->update();
-
+  this->m_inputFilePath = Filepath;
+  this->m_currentFileName = Filepath;
+  this->m_stationFilePath = StationPath;
+  this->m_inputFileType = FileType;
+  this->m_dflowVariable = varname;
+  this->m_epsg = epsg;
+  this->m_layer = layer;
+  this->m_randomButtonColor = Color;
+  Colors::changeButtonColor(ui->button_seriesColor, this->m_randomButtonColor);
   this->setItemsByFiletype();
 
   return;
@@ -139,43 +130,43 @@ void AddTimeseriesDialog::set_dialog_box_elements(
 //-------------------------------------------//
 
 void AddTimeseriesDialog::setItemsByFiletype() {
-  if (this->InputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
+  if (this->m_inputFileType == MetOceanViewer::FileType::ASCII_IMEDS) {
     ui->text_filetype->setText("IMEDS");
     this->setColdstartSelectElements(false);
     this->setStationSelectElements(false);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
-    this->FileReadError = false;
-  } else if (this->InputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
+    this->m_fileReadError = false;
+  } else if (this->m_inputFileType == MetOceanViewer::FileType::NETCDF_ADCIRC) {
     ui->text_filetype->setText(QStringLiteral("ADCIRC netCDF"));
     ui->date_coldstart->setEnabled(true);
     this->setColdstartSelectElements(true);
     this->setStationSelectElements(true);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
-    this->FileReadError = false;
-  } else if (this->InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
+    this->m_fileReadError = false;
+  } else if (this->m_inputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
     ui->text_filetype->setText(QStringLiteral("ADCIRC ASCII"));
     this->setColdstartSelectElements(true);
     this->setStationSelectElements(true);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
-    this->FileReadError = false;
-  } else if (this->InputFileType == MetOceanViewer::FileType::NETCDF_DFLOW) {
-    QString variable = this->dFlowVariable;
+    this->m_fileReadError = false;
+  } else if (this->m_inputFileType == MetOceanViewer::FileType::NETCDF_DFLOW) {
+    QString variable = this->m_dflowVariable;
 
     ui->text_filetype->setText(QStringLiteral("DFlow-FM"));
-    this->FileReadError = false;
+    this->m_fileReadError = false;
 
     this->setColdstartSelectElements(false);
     this->setStationSelectElements(false);
     this->setVariableSelectElements(true);
 
-    this->dflow = new Dflow(this->InputFilePath, this);
+    this->dflow = new Dflow(this->m_inputFilePath, this);
 
     if (this->dflow->error->isError()) {
       emit addTimeseriesError(this->dflow->error->toString());
-      this->FileReadError = true;
+      this->m_fileReadError = true;
       return;
     }
 
@@ -183,7 +174,7 @@ void AddTimeseriesDialog::setItemsByFiletype() {
       this->setVerticalLayerElements(true);
       ui->spin_layer->setMinimum(1);
       ui->spin_layer->setMaximum(dflow->getNumLayers());
-      ui->spin_layer->setValue(this->layer);
+      ui->spin_layer->setValue(this->m_layer);
       ui->label_layerinfo->setText(tr("Layer 1 = bottom\nLayer ") +
                                    QString::number(dflow->getNumLayers()) +
                                    tr(" = top"));
@@ -201,24 +192,148 @@ void AddTimeseriesDialog::setItemsByFiletype() {
     else
       ui->combo_variableSelect->setCurrentIndex(0);
 
-    this->dFlowVariable = variable;
-  } else if (this->InputFileType == MetOceanViewer::FileType::NETCDF_GENERIC) {
+    this->m_dflowVariable = variable;
+  } else if (this->m_inputFileType ==
+             MetOceanViewer::FileType::NETCDF_GENERIC) {
     ui->text_filetype->setText("Generic netCDF");
     this->setColdstartSelectElements(false);
     this->setStationSelectElements(false);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
-    int epsg = NetcdfTimeseries::getEpsg(this->InputFilePath);
+    int epsg = NetcdfTimeseries::getEpsg(this->m_inputFilePath);
     if (epsg != 0)
       ui->spin_epsg->setValue(epsg);
     else
       ui->spin_epsg->setValue(4326);
-    this->FileReadError = false;
+    this->m_fileReadError = false;
   } else {
-    this->FileReadError = true;
+    this->m_fileReadError = true;
     emit addTimeseriesError(tr("No suitable filetype found."));
   }
   return;
+}
+
+int AddTimeseriesDialog::layer() const { return m_layer; }
+
+void AddTimeseriesDialog::setLayer(int layer) { m_layer = layer; }
+
+int AddTimeseriesDialog::epsg() const { return m_epsg; }
+
+void AddTimeseriesDialog::setEpsg(int epsg) { m_epsg = epsg; }
+
+int AddTimeseriesDialog::inputFileType() const { return m_inputFileType; }
+
+void AddTimeseriesDialog::setInputFileType(int inputFileType) {
+  m_inputFileType = inputFileType;
+}
+
+QDateTime AddTimeseriesDialog::inputFileColdstart() const {
+  return m_inputFileColdstart;
+}
+
+void AddTimeseriesDialog::setInputFileColdstart(
+    const QDateTime &inputFileColdstart) {
+  m_inputFileColdstart = inputFileColdstart;
+}
+
+QString AddTimeseriesDialog::currentFileName() const {
+  return m_currentFileName;
+}
+
+void AddTimeseriesDialog::setCurrentFileName(const QString &currentFileName) {
+  m_currentFileName = currentFileName;
+}
+
+QString AddTimeseriesDialog::inputStationFile() const {
+  return m_inputStationFile;
+}
+
+void AddTimeseriesDialog::setInputStationFile(const QString &inputStationFile) {
+  m_inputStationFile = inputStationFile;
+}
+
+QString AddTimeseriesDialog::dflowVariable() const { return m_dflowVariable; }
+
+void AddTimeseriesDialog::setDflowVariable(const QString &dflowVariable) {
+  m_dflowVariable = dflowVariable;
+}
+
+QString AddTimeseriesDialog::stationFilePath() const {
+  return m_stationFilePath;
+}
+
+void AddTimeseriesDialog::setStationFilePath(const QString &stationFilePath) {
+  m_stationFilePath = stationFilePath;
+}
+
+QString AddTimeseriesDialog::inputFilePath() const { return m_inputFilePath; }
+
+void AddTimeseriesDialog::setInputFilePath(const QString &inputFilePath) {
+  m_inputFilePath = inputFilePath;
+}
+
+QString AddTimeseriesDialog::inputSeriesName() const {
+  return m_inputSeriesName;
+}
+
+void AddTimeseriesDialog::setInputSeriesName(const QString &inputSeriesName) {
+  m_inputSeriesName = inputSeriesName;
+}
+
+QString AddTimeseriesDialog::inputColorString() const {
+  return m_inputColorString;
+}
+
+void AddTimeseriesDialog::setInputColorString(const QString &inputColorString) {
+  m_inputColorString = inputColorString;
+}
+
+QString AddTimeseriesDialog::inputFileName() const { return m_inputFileName; }
+
+void AddTimeseriesDialog::setInputFileName(const QString &inputFileName) {
+  m_inputFileName = inputFileName;
+}
+
+QColor AddTimeseriesDialog::randomButtonColor() const {
+  return m_randomButtonColor;
+}
+
+void AddTimeseriesDialog::setRandomButtonColor(
+    const QColor &randomButtonColor) {
+  m_randomButtonColor = randomButtonColor;
+}
+
+double AddTimeseriesDialog::yadjust() const { return m_yadjust; }
+
+void AddTimeseriesDialog::setYadjust(double yadjust) { m_yadjust = yadjust; }
+
+double AddTimeseriesDialog::xadjust() const { return m_xadjust; }
+
+void AddTimeseriesDialog::setXadjust(double xadjust) { m_xadjust = xadjust; }
+
+double AddTimeseriesDialog::unitConversion() const { return m_unitConversion; }
+
+void AddTimeseriesDialog::setUnitConversion(double unitConversion) {
+  m_unitConversion = unitConversion;
+}
+
+bool AddTimeseriesDialog::editBox() const { return m_editBox; }
+
+void AddTimeseriesDialog::setEditBox(bool editBox) { m_editBox = editBox; }
+
+bool AddTimeseriesDialog::fileReadError() const { return m_fileReadError; }
+
+void AddTimeseriesDialog::setFileReadError(bool fileReadError) {
+  m_fileReadError = fileReadError;
+}
+
+QString AddTimeseriesDialog::previousDirectory() const {
+  return m_previousDirectory;
+}
+
+void AddTimeseriesDialog::setPreviousDirectory(
+    const QString &previousDirectory) {
+  m_previousDirectory = previousDirectory;
 }
 
 void AddTimeseriesDialog::setVerticalLayerElements(bool enabled) {
@@ -280,10 +395,10 @@ void AddTimeseriesDialog::setVariableSelectElements(bool enabled) {
 void AddTimeseriesDialog::on_browse_filebrowse_clicked() {
   QString Directory, filename, TempFile;
 
-  if (this->EditBox)
-    Generic::splitPath(this->InputFilePath, filename, Directory);
+  if (this->m_editBox)
+    Generic::splitPath(this->m_inputFilePath, filename, Directory);
   else
-    Directory = this->PreviousDirectory;
+    Directory = this->m_previousDirectory;
 
   QString TempPath = QFileDialog::getOpenFileName(
       this, tr("Select File"), Directory,
@@ -292,21 +407,22 @@ void AddTimeseriesDialog::on_browse_filebrowse_clicked() {
          "DFlow-FM History Files (*_his.nc) ;; "
          "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)"));
 
-  this->InputFilePath = TempPath;
+  this->m_inputFilePath = TempPath;
 
-  if (TempPath != QString() || this->CurrentFileName != QString()) {
+  if (TempPath != QString() || this->m_currentFileName != QString()) {
     if (TempPath == QString()) {
-      TempPath = this->CurrentFileName;
-      this->InputFilePath = this->CurrentFileName;
+      TempPath = this->m_currentFileName;
+      this->m_inputFilePath = this->m_currentFileName;
     } else {
-      this->CurrentFileName = TempPath;
+      this->m_currentFileName = TempPath;
     }
 
-    Generic::splitPath(TempPath, TempFile, this->PreviousDirectory);
+    Generic::splitPath(TempPath, TempFile, this->m_previousDirectory);
     ui->text_filename->setText(TempFile);
 
-    this->FileReadError = false;
-    this->InputFileType = Filetypes::getIntegerFiletype(this->CurrentFileName);
+    this->m_fileReadError = false;
+    this->m_inputFileType =
+        Filetypes::getIntegerFiletype(this->m_currentFileName);
 
     this->setItemsByFiletype();
   }
@@ -319,19 +435,9 @@ void AddTimeseriesDialog::on_browse_filebrowse_clicked() {
 // in the dialog when return comes
 //-------------------------------------------//
 void AddTimeseriesDialog::on_button_seriesColor_clicked() {
-  QColor TempColor = QColorDialog::getColor(this->RandomButtonColor);
-  QString ButtonStyle;
-
-  this->ColorUpdated = false;
-
-  if (TempColor.isValid()) {
-    this->RandomButtonColor = TempColor;
-    this->ColorUpdated = true;
-    ButtonStyle = Colors::MakeColorString(this->RandomButtonColor);
-    ui->button_seriesColor->setStyleSheet(ButtonStyle);
-    ui->button_seriesColor->update();
-  }
-
+  Colors::selectButtonColor(ui->button_seriesColor);
+  this->m_randomButtonColor =
+      Colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
   return;
 }
 //-------------------------------------------//
@@ -342,12 +448,12 @@ void AddTimeseriesDialog::on_button_seriesColor_clicked() {
 void AddTimeseriesDialog::on_browse_stationfile_clicked() {
   QString TempFile;
   QString TempPath = QFileDialog::getOpenFileName(
-      this, tr("Select ADCIRC Station File"), this->PreviousDirectory,
+      this, tr("Select ADCIRC Station File"), this->m_previousDirectory,
       tr("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )"
          "Comma Separated File (*.csv) ;; All Files (*.*)"));
   if (TempPath != NULL) {
-    this->StationFilePath = TempPath;
-    Generic::splitPath(TempPath, TempFile, this->PreviousDirectory);
+    this->m_stationFilePath = TempPath;
+    Generic::splitPath(TempPath, TempFile, this->m_previousDirectory);
     ui->text_stationfile->setText(TempFile);
   }
   return;
@@ -361,54 +467,54 @@ void AddTimeseriesDialog::on_browse_stationfile_clicked() {
 void AddTimeseriesDialog::accept() {
   QString TempString;
 
-  this->InputFileName = ui->text_filename->text();
-  this->InputColorString = this->RandomButtonColor.name();
-  this->InputSeriesName = ui->text_seriesname->text();
-  this->InputFileColdStart = ui->date_coldstart->dateTime();
-  this->epsg = ui->spin_epsg->value();
-  this->layer = ui->spin_layer->value();
-  this->dFlowVariable = ui->combo_variableSelect->currentText();
+  this->m_inputFileName = ui->text_filename->text();
+  this->m_inputColorString = this->m_randomButtonColor.name();
+  this->m_inputSeriesName = ui->text_seriesname->text();
+  this->m_inputFileColdstart = ui->date_coldstart->dateTime();
+  this->m_epsg = ui->spin_epsg->value();
+  this->m_layer = ui->spin_layer->value();
+  this->m_dflowVariable = ui->combo_variableSelect->currentText();
   TempString = ui->text_unitconvert->text();
-  this->InputStationFile = ui->text_stationfile->text();
+  this->m_inputStationFile = ui->text_stationfile->text();
   if (TempString == NULL)
-    this->UnitConversion = 1.0;
+    this->m_unitConversion = 1.0;
   else
-    this->UnitConversion = TempString.toDouble();
+    this->m_unitConversion = TempString.toDouble();
 
   TempString = ui->text_xadjust->text();
   if (TempString == NULL)
-    this->xadjust = 0.0;
+    this->m_xadjust = 0.0;
   else
-    this->xadjust = TempString.toDouble();
+    this->m_xadjust = TempString.toDouble();
 
   //...Convert to other time units
   if (ui->combo_timeSelect->currentText() == "seconds")
-    this->xadjust = this->xadjust / 3600.0;
+    this->m_xadjust = this->m_xadjust / 3600.0;
   else if (ui->combo_timeSelect->currentText() == "minutes")
-    this->xadjust = this->xadjust / 60.0;
+    this->m_xadjust = this->m_xadjust / 60.0;
   else if (ui->combo_timeSelect->currentText() == "days")
-    this->xadjust = this->xadjust * 24.0;
+    this->m_xadjust = this->m_xadjust * 24.0;
 
   TempString = ui->text_yadjust->text();
   if (TempString == NULL)
-    this->yadjust = 0.0;
+    this->m_yadjust = 0.0;
   else
-    this->yadjust = TempString.toDouble();
+    this->m_yadjust = TempString.toDouble();
 
-  if (this->InputFileName == NULL) {
+  if (this->m_inputFileName == NULL) {
     emit addTimeseriesError(tr("Please select an input file."));
     return;
-  } else if (this->InputSeriesName == NULL) {
+  } else if (this->m_inputSeriesName == NULL) {
     emit addTimeseriesError(tr("Please input a series name."));
     return;
-  } else if (this->InputColorString == NULL) {
+  } else if (this->m_inputColorString == NULL) {
     emit addTimeseriesError(tr("Please select a valid color for this series."));
     return;
-  } else if (this->InputStationFile == NULL &&
-             this->InputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
+  } else if (this->m_inputStationFile == NULL &&
+             this->m_inputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
     emit addTimeseriesError(tr("You did not select a station file."));
     return;
-  } else if (!this->proj->containsEPSG(this->epsg)) {
+  } else if (!this->proj->containsEPSG(this->m_epsg)) {
     emit addTimeseriesError(
         tr("You did not enter a valid EPSG coordinate system."));
   } else
@@ -417,35 +523,35 @@ void AddTimeseriesDialog::accept() {
 //-------------------------------------------//
 
 void AddTimeseriesDialog::on_button_presetColor1_clicked() {
-  this->ColorUpdated = true;
-  ui->button_seriesColor->setStyleSheet(ui->button_presetColor1->styleSheet());
-  this->RandomButtonColor =
-      Colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
-  ui->button_seriesColor->update();
+  Colors::changeButtonColor(
+      ui->button_seriesColor,
+      ui->button_presetColor1->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_presetColor2_clicked() {
-  this->ColorUpdated = true;
-  ui->button_seriesColor->setStyleSheet(ui->button_presetColor2->styleSheet());
-  this->RandomButtonColor =
-      Colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
-  ui->button_seriesColor->update();
+  Colors::changeButtonColor(
+      ui->button_seriesColor,
+      ui->button_presetColor2->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_presetColor3_clicked() {
-  this->ColorUpdated = true;
-  ui->button_seriesColor->setStyleSheet(ui->button_presetColor3->styleSheet());
-  this->RandomButtonColor =
-      Colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
-  ui->button_seriesColor->update();
+  Colors::changeButtonColor(
+      ui->button_seriesColor,
+      ui->button_presetColor3->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_presetColor4_clicked() {
-  this->ColorUpdated = true;
-  ui->button_seriesColor->setStyleSheet(ui->button_presetColor4->styleSheet());
-  this->RandomButtonColor =
-      Colors::styleSheetToColor(ui->button_seriesColor->styleSheet());
-  ui->button_seriesColor->update();
+  Colors::changeButtonColor(
+      ui->button_seriesColor,
+      ui->button_presetColor4->palette().color(QPalette::Button));
+  this->m_randomButtonColor =
+      ui->button_seriesColor->palette().color(QPalette::Button);
 }
 
 void AddTimeseriesDialog::on_button_describeepsg_clicked() {
@@ -469,7 +575,7 @@ void AddTimeseriesDialog::on_spin_epsg_valueChanged(int arg1) {
 
 void AddTimeseriesDialog::on_combo_variableSelect_currentIndexChanged(
     const QString &arg1) {
-  this->dFlowVariable = arg1;
+  this->m_dflowVariable = arg1;
   if (this->dflow->variableIs3d(arg1)) {
     ui->spin_layer->show();
     ui->label_layer->show();

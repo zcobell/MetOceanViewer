@@ -29,30 +29,30 @@ void MainWindow::on_button_xtide_compute_clicked() {
 void MainWindow::plotXTideStation() {
 
   //...Create an xTide object
-  if (!this->thisXTide.isNull()) delete this->thisXTide;
-  this->thisXTide =
+  if (!this->m_xtide.isNull()) delete this->m_xtide;
+  this->m_xtide =
       new XTide(ui->quick_xtideMap, ui->xtide_graphics, ui->date_xtide_start,
                 ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar,
                 this->xtideStationModel, &this->xtideSelectedStation, this);
-  connect(thisXTide, SIGNAL(xTideError(QString)), this,
+  connect(m_xtide, SIGNAL(xTideError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
   //...Call the plotting routine
-  this->thisXTide->plotXTideStation();
+  this->m_xtide->plotXTideStation();
 
   return;
 }
 
 void MainWindow::on_button_xtide_resetzoom_clicked() {
-  if (!this->thisXTide.isNull()) ui->xtide_graphics->resetZoom();
+  if (!this->m_xtide.isNull()) ui->xtide_graphics->resetZoom();
   return;
 }
 
 void MainWindow::on_button_xtide_savemap_clicked() {
   QString filename;
 
-  QString MarkerID = thisXTide->getLoadedXTideStation();
-  QString MarkerID2 = thisXTide->getCurrentXTideStation();
+  QString MarkerID = m_xtide->getLoadedXTideStation();
+  QString MarkerID2 = m_xtide->getCurrentXTideStation();
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
@@ -77,14 +77,14 @@ void MainWindow::on_button_xtide_savemap_clicked() {
 
   Generic::splitPath(TempString, filename, previousDirectory);
 
-  thisXTide->saveXTidePlot(TempString, filter);
+  m_xtide->saveXTidePlot(TempString, filter);
 
   return;
 }
 
 void MainWindow::on_button_xtide_savedata_clicked() {
 
-  if(this->thisXTide==nullptr){
+  if(this->m_xtide==nullptr){
     QMessageBox::critical(this, tr("ERROR"),
                           tr("No station has been calculated."));
     return;
@@ -92,8 +92,8 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 
   QString filename;
 
-  QString MarkerID = thisXTide->getLoadedXTideStation();
-  QString MarkerID2 = thisXTide->getCurrentXTideStation();
+  QString MarkerID = m_xtide->getLoadedXTideStation();
+  QString MarkerID2 = m_xtide->getCurrentXTideStation();
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
@@ -122,7 +122,7 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 
   Generic::splitPath(TempString, filename, previousDirectory);
 
-  thisXTide->saveXTideData(TempString, format);
+  m_xtide->saveXTideData(TempString, format);
 
   return;
 }
