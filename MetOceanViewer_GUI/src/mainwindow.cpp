@@ -49,22 +49,20 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
 
 MainWindow::~MainWindow() { delete ui; }
 
-void MainWindow::resetMapSource(MapFunctions::MapSource source) {
-  this->mapFunctions->setDefaultMapIndex(0);
-  this->mapFunctions->setMapSource(source);
-  this->setupNoaaMap();
-  this->setupUsgsMap();
-  this->setupXTideMap();
-  this->setupUserTimeseriesMap();
-  this->setupHighWaterMarkMap();
-  return;
-}
-
 void MainWindow::setupMetOceanViewerUI() {
+  this->mapActionGroup = new QActionGroup(this);
+  this->mapActionGroup->addAction(ui->actionESRI);
+  this->mapActionGroup->addAction(ui->actionMapBox);
+  this->mapActionGroup->setExclusive(true);
+
   this->mapFunctions = new MapFunctions(this);
   this->mapFunctions->setMapSource(MapFunctions::MapSource::ESRI);
   this->mapFunctions->getMapboxKeyFromDisk();
-  this->mapFunctions->getDefaultMapTypeFromDisk();
+  this->mapFunctions->getConfigurationFromDisk();
+
+  if (this->mapFunctions->mapboxApiKey() == QString()) {
+    ui->actionMapBox->setEnabled(false);
+  }
 
   if (this->mapFunctions->mapSource() == MapFunctions::MapSource::MapBox &&
       this->mapFunctions->mapboxApiKey() == QString()) {
@@ -92,6 +90,7 @@ void MainWindow::setupMetOceanViewerUI() {
   this->setupUserTimeseriesMap();
   this->setupHighWaterMarkMap();
   this->setupTimeseriesTable();
+
   this->setupRandomColors();
   this->installKeyhandlers();
 
@@ -103,6 +102,19 @@ void MainWindow::setupMetOceanViewerUI() {
   this->initializeSessionHandler();
   this->parseCommandLine();
   this->initialized = true;
+
+  return;
+}
+
+void MainWindow::resetMapSource(MapFunctions::MapSource source) {
+  this->mapFunctions->setDefaultMapIndex(0);
+  this->mapFunctions->setMapSource(source);
+
+  this->setupNoaaMap();
+  this->setupUsgsMap();
+  this->setupXTideMap();
+  this->setupUserTimeseriesMap();
+  this->setupHighWaterMarkMap();
 
   return;
 }
@@ -233,32 +245,32 @@ void MainWindow::changeUserMarker(QString markerId) {
 }
 
 void MainWindow::changeNoaaMaptype() {
-  ui->quick_noaaMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_noaa_maptype->currentIndex());
+  this->mapFunctions->setMapType(ui->combo_noaa_maptype->currentIndex(),
+                                 ui->quick_noaaMap);
   return;
 }
 
 void MainWindow::changeUsgsMaptype() {
-  ui->quick_usgsMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_usgs_maptype->currentIndex());
+  this->mapFunctions->setMapType(ui->combo_usgs_maptype->currentIndex(),
+                                 ui->quick_usgsMap);
   return;
 }
 
 void MainWindow::changeXtideMaptype() {
-  ui->quick_xtideMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_xtide_maptype->currentIndex());
+  this->mapFunctions->setMapType(ui->combo_xtide_maptype->currentIndex(),
+                                 ui->quick_xtideMap);
   return;
 }
 
 void MainWindow::changeUserMaptype() {
-  ui->quick_timeseriesMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_user_maptype->currentIndex());
+  this->mapFunctions->setMapType(ui->combo_user_maptype->currentIndex(),
+                                 ui->quick_timeseriesMap);
   return;
 }
 
 void MainWindow::changeHwmMaptype() {
-  ui->quick_hwmMap->rootContext()->setContextProperty(
-      "mapType", ui->combo_hwmMaptype->currentIndex());
+  this->mapFunctions->setMapType(ui->combo_hwmMaptype->currentIndex(),
+                                 ui->quick_hwmMap);
   return;
 }
 
@@ -276,7 +288,6 @@ void MainWindow::setupNoaaMap() {
   this->mapFunctions->setMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-  this->changeNoaaMaptype();
   this->mapFunctions->setMapQmlFile(ui->quick_noaaMap);
   this->noaaMarkerLocations =
       this->mapFunctions->readMarkers(MapFunctions::NOAA);
@@ -321,7 +332,6 @@ void MainWindow::setupUsgsMap() {
   this->mapFunctions->setMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-  this->changeUsgsMaptype();
   this->mapFunctions->setMapQmlFile(ui->quick_usgsMap);
   QObject *usgsItem = ui->quick_usgsMap->rootObject();
   QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
@@ -351,7 +361,6 @@ void MainWindow::setupXTideMap() {
   this->mapFunctions->setMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-  this->changeXtideMaptype();
   this->mapFunctions->setMapQmlFile(ui->quick_xtideMap);
   QObject *xtideItem = ui->quick_xtideMap->rootObject();
   QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
@@ -393,7 +402,6 @@ void MainWindow::setupUserTimeseriesMap() {
   this->setupMarkerClasses(ui->quick_timeseriesMap);
   ui->combo_user_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-  this->changeUserMaptype();
   this->mapFunctions->setMapQmlFile(ui->quick_timeseriesMap);
   QObject *userTimeseriesItem = ui->quick_timeseriesMap->rootObject();
   QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
@@ -423,7 +431,6 @@ void MainWindow::setupHighWaterMarkMap() {
   this->setupMarkerClasses(ui->quick_hwmMap);
   ui->combo_hwmMaptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-  this->changeHwmMaptype();
 
   this->mapFunctions->setMapQmlFile(ui->quick_hwmMap);
 
@@ -594,30 +601,14 @@ void MainWindow::on_combo_hwmMaptype_currentIndexChanged(int index) {
 
 void MainWindow::on_actionESRI_toggled(bool arg1) {
   if (!this->initialized) return;
-  if (arg1) {
-    ui->actionMapBox->setChecked(false);
-    this->resetMapSource(MapFunctions::MapSource::ESRI);
-  }
-  if (!ui->actionESRI->isChecked() && !ui->actionMapBox->isChecked())
-    ui->actionESRI->setChecked(true);
+  ui->actionMapBox->setChecked(false);
+  if (arg1) this->resetMapSource(MapFunctions::MapSource::ESRI);
   return;
 }
 
 void MainWindow::on_actionMapBox_toggled(bool arg1) {
   if (!this->initialized) return;
-  if (arg1) {
-    if (this->mapFunctions->mapboxApiKey() == QString()) {
-      QMessageBox::warning(
-          this, "Missing API Key",
-          "Please provide a MapBox API key by registering at mapbox.org");
-      return;
-    } else {
-      ui->actionESRI->setChecked(false);
-      this->resetMapSource(MapFunctions::MapSource::MapBox);
-    }
-  }
-  if (!ui->actionESRI->isChecked() && !ui->actionMapBox->isChecked())
-    ui->actionMapBox->setChecked(true);
+  if (arg1) this->resetMapSource(MapFunctions::MapSource::MapBox);
   return;
 }
 
@@ -625,7 +616,12 @@ void MainWindow::on_actionEnter_MapBox_API_Key_triggered() {
   QString apiKey = QInputDialog::getText(this, "Enter MapBox API Key",
                                          "Key: ", QLineEdit::Normal,
                                          this->mapFunctions->mapboxApiKey());
-  if (apiKey != QString()) this->mapFunctions->setMapboxApiKey(apiKey);
+  if (apiKey != QString()) {
+    this->mapFunctions->setMapboxApiKey(apiKey);
+    ui->actionMapBox->setEnabled(true);
+  } else {
+    ui->actionMapBox->setEnabled(false);
+  }
   return;
 }
 
@@ -644,6 +640,6 @@ void MainWindow::on_actionSave_Default_Map_Settings_triggered() {
     mapIndex = ui->combo_hwmMaptype->currentIndex();
   }
   this->mapFunctions->setDefaultMapIndex(mapIndex);
-  this->mapFunctions->saveDefaultMapTypeToDisk();
+  this->mapFunctions->saveConfigurationToDisk();
   return;
 }

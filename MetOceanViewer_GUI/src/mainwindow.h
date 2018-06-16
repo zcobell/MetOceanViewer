@@ -21,6 +21,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QActionGroup>
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QMainWindow>
@@ -30,9 +31,9 @@
 #include <QVector>
 #include <QtCharts>
 #include <QtNetwork>
-#include "stationmodel.h"
 #include "addtimeseriesdialog.h"
 #include "mapfunctions.h"
+#include "stationmodel.h"
 
 //...Forward declarations of classes
 class Noaa;
@@ -226,7 +227,7 @@ class MainWindow : public QMainWindow {
 
   void on_actionSave_Default_Map_Settings_triggered();
 
-private:
+ private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
   Ui::MainWindow *ui;
@@ -302,6 +303,8 @@ private:
   StationModel *hwmMarkerModel;
 
   MapFunctions *mapFunctions;
+
+  QActionGroup *mapActionGroup;
 
   QVector<Station> xtideMarkerLocations;
   QVector<Station> noaaMarkerLocations;

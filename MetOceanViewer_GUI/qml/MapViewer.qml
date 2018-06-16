@@ -127,7 +127,7 @@ Rectangle {
             propagateComposedEvents: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: {
-                console.log(mapboxKey);
+
                 if(markerMode===0){
                     if(map.previousMarker){
                         map.previousMarker.deselect()

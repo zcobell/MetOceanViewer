@@ -18,16 +18,51 @@
 //
 //-----------------------------------------------------------------------*/
 #include "mapfunctions.h"
+#include <QDir>
 #include <QGeoRectangle>
 #include <QGeoShape>
 #include <QQmlContext>
+#include <QStandardPaths>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
 #include "errors.h"
 #include "mapfunctionsprivate.h"
+
+static QStringList esriList = QStringList() << "World Street Map"
+                                            << "World Imagery"
+                                            << "World Terrain Base"
+                                            << "World Topography"
+                                            << "USA Topo Map"
+                                            << "National Geographic World Map"
+                                            << "Light Gray Canvas"
+                                            << "World Physical Map"
+                                            << "World Shaded Relief"
+                                            << "World Ocean Base"
+                                            << "Dark Gray Canvas"
+                                            << "DeLorme World Basemap";
+static QStringList mapboxList = QStringList() << "Streets"
+                                              << "Light"
+                                              << "Dark"
+                                              << "Satellite"
+                                              << "Streets-Satellite"
+                                              << "Wheatpaste"
+                                              << "Streets-Basic"
+                                              << "Comic"
+                                              << "Outdoors"
+                                              << "Run-Bike-Hike"
+                                              << "Pencil"
+                                              << "Pirates"
+                                              << "Emerald"
+                                              << "High-Contrast";
 
 MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_mapSource = 0;
   this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
+  this->m_configDirectory =
+      QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
+          .at(0);
+  this->createConfigDirectory();
 }
 
 QVector<Station> MapFunctions::readMarkers(
@@ -90,32 +125,6 @@ int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
 }
 
 void MapFunctions::setMapTypes(QComboBox *comboBox) {
-  QStringList esriList = QStringList() << "World Street Map"
-                                       << "World Imagery"
-                                       << "World Terrain Base"
-                                       << "World Topography"
-                                       << "USA Topo Map"
-                                       << "National Geographic World Map"
-                                       << "Light Gray Canvas"
-                                       << "World Physical Map"
-                                       << "World Shaded Relief"
-                                       << "World Ocean Base"
-                                       << "Dark Gray Canvas"
-                                       << "DeLorme World Basemap";
-  QStringList mapboxList = QStringList() << "Streets"
-                                         << "Light"
-                                         << "Dark"
-                                         << "Satellite"
-                                         << "Streets-Satellite"
-                                         << "Wheatpaste"
-                                         << "Streets-Basic"
-                                         << "Comic"
-                                         << "Outdoors"
-                                         << "Run-Bike-Hike"
-                                         << "Pencil"
-                                         << "Pirates"
-                                         << "Emerald"
-                                         << "High-Contrast";
   comboBox->clear();
   if (this->m_mapSource == 0) {
     comboBox->addItems(esriList);
@@ -149,50 +158,81 @@ void MapFunctions::setMapboxApiKey(const QString &mapboxApiKey) {
 }
 
 void MapFunctions::getMapboxKeyFromDisk() {
-  QString path = qApp->applicationDirPath();
-  QFile apiKeyFile(path + "/mapbox.key");
+  QFile apiKeyFile(this->m_configDirectory + "/mapbox.xml");
   if (apiKeyFile.exists()) {
     apiKeyFile.open(QIODevice::ReadOnly);
-    QString key = apiKeyFile.readLine();
-    this->m_mapboxApiKey = key;
+    QXmlStreamReader xmlReader(&apiKeyFile);
+
+    while (!xmlReader.atEnd() && !xmlReader.hasError()) {
+      QXmlStreamReader::TokenType token = xmlReader.readNext();
+      if (token == QXmlStreamReader::StartDocument) continue;
+      if (token == QXmlStreamReader::StartElement) {
+        if (xmlReader.name() == "ApiKey") {
+          this->m_mapboxApiKey = xmlReader.readElementText();
+        }
+      }
+    }
     apiKeyFile.close();
   }
   return;
 }
 
 void MapFunctions::saveMapboxKeyToDisk() {
-  QString path = qApp->applicationDirPath();
-  QFile apiKeyFile(path + QStringLiteral("/mapbox.key"));
+  QFile apiKeyFile(this->m_configDirectory + QStringLiteral("/mapbox.xml"));
   apiKeyFile.open(QIODevice::WriteOnly);
-  apiKeyFile.write(this->m_mapboxApiKey.toStdString().c_str());
+  QXmlStreamWriter xmlWriter(&apiKeyFile);
+  xmlWriter.setAutoFormatting(true);
+  xmlWriter.setAutoFormattingIndent(2);
+  xmlWriter.writeStartDocument();
+  xmlWriter.writeStartElement("MetOceanViewer");
+  xmlWriter.writeStartElement("Mapbox");
+  xmlWriter.writeTextElement("ApiKey", this->m_mapboxApiKey);
+  xmlWriter.writeEndElement();
+  xmlWriter.writeEndElement();
+  xmlWriter.writeEndDocument();
   apiKeyFile.close();
   return;
 }
 
-void MapFunctions::getDefaultMapTypeFromDisk() {
-  QString path = qApp->applicationDirPath();
-  QFile defaultMapFile(path + QStringLiteral("/default.map"));
+void MapFunctions::getConfigurationFromDisk() {
+  QFile defaultMapFile(this->m_configDirectory +
+                       QStringLiteral("/defaultmap.xml"));
   if (defaultMapFile.exists()) {
-    defaultMapFile.open(QIODevice::ReadOnly);
-    QString typeString = defaultMapFile.readLine().simplified();
-    QString indexString = defaultMapFile.readLine().simplified();
+    defaultMapFile.open(QIODevice::ReadOnly | QFile::Text);
+    QXmlStreamReader xmlReader(&defaultMapFile);
+
+    while (!xmlReader.atEnd() && !xmlReader.hasError()) {
+      QXmlStreamReader::TokenType token = xmlReader.readNext();
+      if (token == QXmlStreamReader::StartDocument) continue;
+      if (token == QXmlStreamReader::StartElement) {
+        if (xmlReader.name() == "MapSource") {
+          this->m_mapSource = xmlReader.readElementText().toInt();
+        } else if (xmlReader.name() == "MapIndex") {
+          this->m_defaultMapIndex = xmlReader.readElementText().toInt();
+        }
+      }
+    }
     defaultMapFile.close();
-    this->m_defaultMapIndex = indexString.toInt();
-    this->m_mapSource = typeString.toInt();
   }
   return;
 }
 
-void MapFunctions::saveDefaultMapTypeToDisk() {
-  QString path = qApp->applicationDirPath();
-  QFile defaultMapFile(path + QStringLiteral("/default.map"));
+void MapFunctions::saveConfigurationToDisk() {
+  QFile defaultMapFile(this->m_configDirectory +
+                       QStringLiteral("/defaultmap.xml"));
   defaultMapFile.open(QIODevice::WriteOnly);
-  defaultMapFile.write(
-      QString(QString::number(this->m_mapSource) + QStringLiteral("\n"))
-          .toStdString()
-          .c_str());
-  defaultMapFile.write(
-      QString::number(this->m_defaultMapIndex).toStdString().c_str());
+  QXmlStreamWriter xmlWriter(&defaultMapFile);
+  xmlWriter.setAutoFormatting(true);
+  xmlWriter.setAutoFormattingIndent(2);
+  xmlWriter.writeStartDocument();
+  xmlWriter.writeStartElement("MetOceanViewer");
+  xmlWriter.writeStartElement("MapConfiguration");
+  xmlWriter.writeTextElement("MapSource", QString::number(this->m_mapSource));
+  xmlWriter.writeTextElement("MapIndex",
+                             QString::number(this->m_defaultMapIndex));
+  xmlWriter.writeEndElement();
+  xmlWriter.writeEndElement();
+  xmlWriter.writeEndDocument();
   defaultMapFile.close();
 }
 
@@ -200,4 +240,22 @@ int MapFunctions::getDefaultMapIndex() const { return this->m_defaultMapIndex; }
 
 void MapFunctions::setDefaultMapIndex(int defaultMapIndex) {
   this->m_defaultMapIndex = defaultMapIndex;
+}
+
+void MapFunctions::createConfigDirectory() {
+  if (!QDir(this->m_configDirectory).exists()) {
+    QDir().mkdir(this->m_configDirectory);
+  }
+}
+
+void MapFunctions::setMapType(int index, QQuickWidget *map) {
+  if (this->mapSource() == MapSource::ESRI) {
+    if (index < 0 || index >= esriList.length()) return;
+  } else if (this->mapSource() == MapSource::MapBox) {
+    if (index < 0 || index >= mapboxList.length()) return;
+  }
+
+  map->rootContext()->setContextProperty("mapType", index);
+
+  return;
 }

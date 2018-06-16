@@ -52,15 +52,20 @@ class MapFunctions : public QObject {
   void getMapboxKeyFromDisk();
   void saveMapboxKeyToDisk();
 
-  void getDefaultMapTypeFromDisk();
-  void saveDefaultMapTypeToDisk();
+  void getConfigurationFromDisk();
+  void saveConfigurationToDisk();
 
   int getDefaultMapIndex() const;
   void setDefaultMapIndex(int defaultMapIndex);
 
-private:
+  void setMapType(int index, QQuickWidget *map);
+
+ private:
+  void createConfigDirectory();
+
   int m_mapSource;
   int m_defaultMapIndex;
+  QString m_configDirectory;
   QString m_mapboxApiKey;
 };
 
