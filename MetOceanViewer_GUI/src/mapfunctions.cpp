@@ -55,6 +55,14 @@ static QStringList mapboxList = QStringList() << "Streets"
                                               << "Emerald"
                                               << "High-Contrast";
 
+static QStringList osmList = QStringList() << "Street Map";
+//                                           << "Satellite Map"
+//                                           << "Cycle Map"
+//                                           << "Transit Map"
+//                                           << "Night Transit Map"
+//                                           << "Terrain Map"
+//                                           << "Hiking Map";
+
 MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_mapSource = 0;
   this->m_defaultMapIndex = 0;
@@ -126,10 +134,12 @@ int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
 
 void MapFunctions::setMapTypes(QComboBox *comboBox) {
   comboBox->clear();
-  if (this->m_mapSource == 0) {
+  if (this->m_mapSource == ESRI) {
     comboBox->addItems(esriList);
-  } else {
+  } else if (this->m_mapSource == MapBox) {
     comboBox->addItems(mapboxList);
+  } else if (this->m_mapSource == OSM) {
+    comboBox->addItems(osmList);
   }
   return;
 }
@@ -146,6 +156,8 @@ void MapFunctions::setMapQmlFile(QQuickWidget *map) {
   else if (this->m_mapSource == MapSource::MapBox) {
     map->rootContext()->setContextProperty("mapboxKey", this->m_mapboxApiKey);
     map->setSource(QUrl("qrc:/qml/qml/MapboxMapViewer.qml"));
+  } else if (this->m_mapSource == MapSource::OSM) {
+    map->setSource(QUrl("qrc:/qml/qml/OsmMapViewer.qml"));
   }
   return;
 }

@@ -248,7 +248,8 @@ DISTFILES += \
     qml/InfoWindow.qml \
     qml/MapLegend.qml \
     qml/MapboxMapViewer.qml \
-    qml/EsriMapViewer.qml
+    qml/EsriMapViewer.qml \
+    qml/OsmMapViewer.qml
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/release/ -lhmdf
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/debug/ -lhmdf

@@ -53,10 +53,11 @@ void MainWindow::setupMetOceanViewerUI() {
   this->mapActionGroup = new QActionGroup(this);
   this->mapActionGroup->addAction(ui->actionESRI);
   this->mapActionGroup->addAction(ui->actionMapBox);
+  this->mapActionGroup->addAction(ui->actionOpenStreetMap);
   this->mapActionGroup->setExclusive(true);
 
   this->mapFunctions = new MapFunctions(this);
-  this->mapFunctions->setMapSource(MapFunctions::MapSource::ESRI);
+  this->mapFunctions->setMapSource(MapFunctions::MapSource::OSM);
   this->mapFunctions->getMapboxKeyFromDisk();
   this->mapFunctions->getConfigurationFromDisk();
 
@@ -67,15 +68,22 @@ void MainWindow::setupMetOceanViewerUI() {
   if (this->mapFunctions->mapSource() == MapFunctions::MapSource::MapBox &&
       this->mapFunctions->mapboxApiKey() == QString()) {
     this->mapFunctions->setDefaultMapIndex(0);
-    this->mapFunctions->setMapSource(MapFunctions::MapSource::ESRI);
+    this->mapFunctions->setMapSource(MapFunctions::MapSource::OSM);
   }
 
   if (this->mapFunctions->mapSource() == MapFunctions::MapSource::ESRI) {
     ui->actionESRI->setChecked(true);
     ui->actionMapBox->setChecked(false);
-  } else {
+    ui->actionOpenStreetMap->setChecked(false);
+  } else if (this->mapFunctions->mapSource() ==
+             MapFunctions::MapSource::MapBox) {
     ui->actionESRI->setChecked(false);
     ui->actionMapBox->setChecked(true);
+    ui->actionOpenStreetMap->setChecked(false);
+  } else if (this->mapFunctions->mapSource() == MapFunctions::MapSource::OSM) {
+    ui->actionESRI->setChecked(false);
+    ui->actionMapBox->setChecked(false);
+    ui->actionOpenStreetMap->setChecked(true);
   }
 
   this->noaaStationModel = nullptr;
@@ -538,6 +546,7 @@ void MainWindow::on_combo_user_maptype_currentIndexChanged(int index) {
 }
 
 void MainWindow::on_button_usertimeseries_fitMarkers_clicked() {
+  if (this->userDataStationModel == nullptr) return;
   StationModel::fitMarkers(ui->quick_timeseriesMap, this->userDataStationModel);
   return;
 }
@@ -603,6 +612,12 @@ void MainWindow::on_actionESRI_toggled(bool arg1) {
   if (!this->initialized) return;
   ui->actionMapBox->setChecked(false);
   if (arg1) this->resetMapSource(MapFunctions::MapSource::ESRI);
+  return;
+}
+
+void MainWindow::on_actionOpenStreetMap_toggled(bool arg1) {
+  if (!this->initialized) return;
+  if (arg1) this->resetMapSource(MapFunctions::MapSource::OSM);
   return;
 }
 

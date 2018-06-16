@@ -30,7 +30,7 @@ class MapFunctions : public QObject {
  public:
   enum MarkerType { NOAA, USGS, XTIDE };
 
-  enum MapSource { ESRI, MapBox };
+  enum MapSource { ESRI, MapBox, OSM };
 
   explicit MapFunctions(QObject *parent = nullptr);
 

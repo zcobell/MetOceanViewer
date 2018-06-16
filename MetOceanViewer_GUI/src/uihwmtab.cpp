@@ -196,6 +196,7 @@ void MainWindow::on_button_boundlinecolor_clicked() {
 // marks to the current view
 //-------------------------------------------//
 void MainWindow::on_button_fitHWM_clicked() {
+  if (this->hwmMarkerModel == nullptr) return;
   StationModel::fitMarkers(ui->quick_hwmMap, this->hwmMarkerModel);
   return;
 }

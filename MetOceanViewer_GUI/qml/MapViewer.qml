@@ -128,6 +128,8 @@ Rectangle {
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: {
 
+                listMapTypes();
+
                 if(markerMode===0){
                     if(map.previousMarker){
                         map.previousMarker.deselect()

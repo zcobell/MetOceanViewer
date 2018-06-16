@@ -227,7 +227,9 @@ class MainWindow : public QMainWindow {
 
   void on_actionSave_Default_Map_Settings_triggered();
 
- private:
+  void on_actionOpenStreetMap_toggled(bool arg1);
+
+private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
   Ui::MainWindow *ui;

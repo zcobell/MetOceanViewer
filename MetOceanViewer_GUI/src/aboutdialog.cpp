@@ -112,8 +112,12 @@ QString AboutDialog::generateAboutText() {
       "KDTree2 - Matthew Kennel (Institute for Nonlinear Science)<br>" +
       "Boost v1.6 - <a "
       "href=\"http://www.boost.org/\">http://www.boost.org/</a><br>" +
-      "MapBox - <a href=\"http://www.mapbox.com\">http://www.mapbox.com</a><br>" +
-      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a>"+
+      "OpenStreetMap - <a "
+      "href=\"https://www.openstreetmap.org/\">https://www.openstreetmap.org/</"
+      "a><br>" +
+      "MapBox - <a "
+      "href=\"http://www.mapbox.com\">http://www.mapbox.com</a><br>" +
+      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a>" +
       "</p></body></html>";
 
   return text;
