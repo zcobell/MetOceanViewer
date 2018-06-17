@@ -29,8 +29,11 @@ CONFIG      += staticlib
 NETCDFCXXPATH    = $$PWD/../../thirdparty/netcdf-cxx/cxx4
 
 INCLUDEPATH += $$NETCDFCXXPATH
+
+win32{
 INCLUDEPATH += $$PWD/../../thirdparty/netcdf/include
 LIBS += -L$$PWD/../../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+}
 
 DEFINES      = NETCDFCXX_LIBRARY
 

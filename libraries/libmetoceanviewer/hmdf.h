@@ -51,7 +51,7 @@ class Hmdf : public QObject {
   int readNetcdf(QString filename);
 
   size_t nstations() const;
-  //void setNstations(size_t nstations);
+  // void setNstations(size_t nstations);
 
   QString header1() const;
   void setHeader1(const QString &header1);
@@ -78,7 +78,10 @@ class Hmdf : public QObject {
   bool null() const;
   void setNull(bool null);
 
-private:
+  void dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
+                  double &maxValue);
+
+ private:
   //...Variables
   bool m_success, m_null;
 

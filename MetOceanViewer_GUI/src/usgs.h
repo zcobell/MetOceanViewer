@@ -31,6 +31,7 @@
 #include "errors.h"
 #include "generic.h"
 #include "stationmodel.h"
+#include "usgswaterdata.h"
 #include "timezone.h"
 
 using namespace QtCharts;
@@ -66,26 +67,7 @@ class Usgs : public QObject {
 
  private:
   int getTimezoneOffset(QString timezone);
-  int fetchUSGSData();
   int plotUSGS();
-  int readUSGSDataFinished(QNetworkReply *);
-  int formatUSGSInstantResponse(QByteArray Input);
-  int formatUSGSDailyResponse(QByteArray Input);
-  int getDataBounds(double &ymin, double &ymax);
-
-  //...Data structures
-  struct USGSData {
-    int m_numDataPoints;
-    QString m_description;
-    QVector<QDateTime> m_date;
-    QVector<double> m_data;
-  };
-
-  struct USGSStationData {
-    QDate m_date;
-    QTime m_time;
-    double m_data;
-  };
 
   //...Pointers to variables
   QQuickWidget *m_quickMap;
@@ -109,8 +91,7 @@ class Usgs : public QObject {
   QDateTime m_requestStartDate;
   QDateTime m_requestEndDate;
   QVector<QString> m_availableDatatypes;
-  QVector<USGSStationData> m_allStationData;
-  QVector<USGSData> m_selectedProductData;
+  Hmdf *m_allStationData;
   Timezone *m_tz;
   StationModel *m_stationModel;
   QString *m_selectedStation;

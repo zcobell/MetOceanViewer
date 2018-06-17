@@ -17,46 +17,31 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef TIMEZONE_H
-#define TIMEZONE_H
+#ifndef USGSWATERDATA_H
+#define USGSWATERDATA_H
 
-#include <QMap>
-#include <QObject>
-#include "timezonestruct.h"
+#include "waterdata.h"
 
-class Timezone : public QObject {
-  Q_OBJECT
-
+class UsgsWaterdata : public WaterData {
  public:
-  explicit Timezone(QObject *parent = nullptr);
+  UsgsWaterdata(Station station, QDateTime startDate, QDateTime endDate,
+                int databaseOption, QObject *parent = nullptr);
 
-  static int localMachineOffsetFromUtc();
-
-  bool fromAbbreviation(QString value,
-                        TZData::Location location = TZData::NorthAmerica);
-
-  bool initialized();
-
-  int utcOffset();
-
-  int offsetTo(Timezone &zone);
-
-  QString abbreviation();
-
-  QStringList getAllTimezoneAbbreviations();
-  QStringList getAllTimezoneNames();
-  QStringList getTimezoneAbbreviations(TZData::Location location);
-  QStringList getTimezoneNames(TZData::Location location);
+  int get(Hmdf *data);
 
  private:
-  void build();
+  int fetch(Hmdf *data);
 
-  bool m_initialized;
+  QUrl buildUrl();
 
-  TimezoneStruct m_zone;
+  int download(QUrl url, Hmdf *data);
 
-  QMap<std::pair<TZData::Location, TZData::Abbreviation>, TimezoneStruct>
-      m_timezones;
+  int readDownloadedData(QNetworkReply *reply, Hmdf *output);
+
+  int readUsgsInstantData(QByteArray &data, Hmdf *output);
+  int readUsgsDailyData(QByteArray &data, Hmdf *output);
+
+  int m_databaseOption;
 };
 
-#endif  // TIMEZONE_H
+#endif  // USGSWATERDATA_H

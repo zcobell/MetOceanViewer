@@ -121,6 +121,13 @@ QStringList Timezone::getTimezoneAbbreviations(TZData::Location location) {
   return list;
 }
 
+int Timezone::offsetFromUtc(QString value, TZData::Location location) {
+  if (value.isNull() || value.isEmpty()) return 0;
+  Timezone tempTZ;
+  tempTZ.fromAbbreviation(value, TZData::NorthAmerica);
+  return tempTZ.utcOffset();
+}
+
 void Timezone::build() {
   using namespace TZData;
   this->m_timezones.insert(std::make_pair<Location, Abbreviation>(Military, A),

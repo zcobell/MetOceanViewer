@@ -88,11 +88,8 @@ int Noaa::fetchNOAAData() {
     this->m_datum = "Stnd";
 
   NoaaCoOps *coops =
-      new NoaaCoOps(this->m_station.id(),
-                    QStringLiteral("NOAA_") + this->m_station.id() +
-                        QStringLiteral("_") + this->m_station.name(),
-                    this->m_station.coordinate(), product1, this->m_datum,
-                    this->m_units, localStartDate, localEndDate, this);
+      new NoaaCoOps(this->m_station, localStartDate, localEndDate, product1,
+                    this->m_datum, this->m_units, this);
   ierr = coops->get(this->m_currentStationData[0]);
   if (ierr != 0) {
     this->m_errorString = coops->errorString();
@@ -106,11 +103,8 @@ int Noaa::fetchNOAAData() {
 
   if (this->m_productIndex == 0) {
     NoaaCoOps *coops =
-        new NoaaCoOps(this->m_station.id(),
-                      QStringLiteral("NOAA_") + this->m_station.id() +
-                          QStringLiteral("_") + this->m_station.name(),
-                      this->m_station.coordinate(), product2, this->m_datum,
-                      this->m_units, localStartDate, localEndDate, this);
+        new NoaaCoOps(this->m_station, localStartDate, localEndDate, product2,
+                      this->m_datum, this->m_units, this);
     ierr = coops->get(this->m_currentStationData[1]);
     if (ierr != 0) {
       this->m_errorString = coops->errorString();
@@ -301,9 +295,9 @@ int Noaa::plotChart() {
 
   this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-  this->m_chartView->m_chart->setTitle(
-      tr("NOAA Station ") + this->m_station.id() + ": " +
-      this->m_station.name());
+  this->m_chartView->m_chart->setTitle(tr("NOAA Station ") +
+                                       this->m_station.id() + ": " +
+                                       this->m_station.name());
   this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_chartView->setRenderHint(QPainter::Antialiasing);
 

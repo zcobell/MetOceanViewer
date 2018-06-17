@@ -28,7 +28,6 @@ TEMPLATE = app
 
 SOURCES +=\
     src/stationmodel.cpp \
-    src/station.cpp \
     src/colors.cpp \
     src/dflow.cpp \
     src/errors.cpp \
@@ -59,7 +58,6 @@ SOURCES +=\
 HEADERS  += \
     src/metoceanviewer.h \
     src/stationmodel.h \
-    src/station.h \
     src/colors.h \
     src/dflow.h \
     src/errors.h \
@@ -190,6 +188,16 @@ RC_FILE = resources.rc
 GIT_VERSION = $$system(git --git-dir $$PWD/../.git --work-tree $$PWD/.. describe --always --tags)
 DEFINES += GIT_VERSION=\\\"$$GIT_VERSION\\\"
 
+DISTFILES += \
+    qml/MovMapItem.qml \
+    qml/MapViewer.qml \
+    qml/InfoWindow.qml \
+    qml/MapLegend.qml \
+    qml/MapboxMapViewer.qml \
+    qml/EsriMapViewer.qml \
+    qml/OsmMapViewer.qml
+
+#...Libraries
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/release/ -lnetcdfcxx
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/debug/ -lnetcdfcxx
 else:unix: LIBS += -L$$OUT_PWD/../libraries/libnetcdfcxx/ -lnetcdfcxx
@@ -202,32 +210,6 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libr
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/release/netcdfcxx.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/debug/netcdfcxx.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnetcdfcxx/libnetcdfcxx.a
-
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libkdtree2/release/ -lmovKdtree2
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libkdtree2/debug/ -lmovKdtree2
-else:unix: LIBS += -L$$OUT_PWD/../libraries/libkdtree2/ -lmovKdtree2
-
-INCLUDEPATH += $$PWD/../libraries/libkdtree2
-DEPENDPATH += $$PWD/../libraries/libkdtree2
-
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/release/libmovKdtree2.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/debug/libmovKdtree2.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/release/movKdtree2.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/debug/movKdtree2.lib
-else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libkdtree2/libmovKdtree2.a
-
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libtimezone/release/ -ltimezone
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libtimezone/debug/ -ltimezone
-else:unix: LIBS += -L$$OUT_PWD/../libraries/libtimezone/ -ltimezone
-
-INCLUDEPATH += $$PWD/../libraries/libtimezone
-DEPENDPATH += $$PWD/../libraries/libtimezone
-
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/release/libtimezone.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/debug/libtimezone.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/release/timezone.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/debug/timezone.lib
-else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtimezone/libtimezone.a
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/release/ -lmovProj4
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libproj4/debug/ -lmovProj4
@@ -242,37 +224,15 @@ else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PW
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/debug/movProj4.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libproj4/libmovProj4.a
 
-DISTFILES += \
-    qml/MovMapItem.qml \
-    qml/MapViewer.qml \
-    qml/InfoWindow.qml \
-    qml/MapLegend.qml \
-    qml/MapboxMapViewer.qml \
-    qml/EsriMapViewer.qml \
-    qml/OsmMapViewer.qml
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libmetoceanviewer/release/ -lmetoceanviewer
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libmetoceanviewer/debug/ -lmetoceanviewer
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libmetoceanviewer/ -lmetoceanviewer
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/release/ -lhmdf
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libhmdf/debug/ -lhmdf
-else:unix: LIBS += -L$$OUT_PWD/../libraries/libhmdf/ -lhmdf
+INCLUDEPATH += $$PWD/../libraries/libmetoceanviewer
+DEPENDPATH += $$PWD/../libraries/libmetoceanviewer
 
-INCLUDEPATH += $$PWD/../libraries/libhmdf
-DEPENDPATH += $$PWD/../libraries/libhmdf
-
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/release/libhmdf.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/debug/libhmdf.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/release/hmdf.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/debug/hmdf.lib
-else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libhmdf/libhmdf.a
-
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnoaacoops/release/ -lnoaacoops
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libnoaacoops/debug/ -lnoaacoops
-else:unix: LIBS += -L$$OUT_PWD/../libraries/libnoaacoops/ -lnoaacoops
-
-INCLUDEPATH += $$PWD/../libraries/libnoaacoops
-DEPENDPATH += $$PWD/../libraries/libnoaacoops
-
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/release/libnoaacoops.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/debug/libnoaacoops.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/release/noaacoops.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/debug/noaacoops.lib
-else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libnoaacoops/libnoaacoops.a
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/release/libmetoceanviewer.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/debug/libmetoceanviewer.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/release/metoceanviewer.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/debug/metoceanviewer.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/libmetoceanviewer.a

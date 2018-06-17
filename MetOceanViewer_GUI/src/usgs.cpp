@@ -20,8 +20,6 @@
 #include "usgs.h"
 #include <QGeoRectangle>
 #include <QGeoShape>
-#include "hmdf.h"
-#include "station.h"
 
 Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
            QRadioButton *inHistoricButton, QRadioButton *inInstantButton,
@@ -69,320 +67,298 @@ Usgs::Usgs(QQuickWidget *inMap, ChartView *inChart, QRadioButton *inDailyButton,
 
 Usgs::~Usgs() {}
 
-int Usgs::fetchUSGSData() {
-  //...Get the current marker
-  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-  QString endDateString1, startDateString1;
-  QString endDateString2, startDateString2;
-  QString RequestURL;
-  QEventLoop loop;
-  int i, ierr;
+// int Usgs::fetchUSGSData() {
+//  //...Get the current marker
+//  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+//  QString endDateString1, startDateString1;
+//  QString endDateString2, startDateString2;
+//  QString RequestURL;
+//  QEventLoop loop;
+//  int i, ierr;
 
-  if (this->m_currentStation.id() == QString()) {
-    emit usgsError("You must select a station");
-    return 1;
-  }
+//  if (this->m_currentStation.id() == QString()) {
+//    emit usgsError("You must select a station");
+//    return 1;
+//  }
 
-  //...Format the date strings
-  endDateString1 =
-      "&endDT=" + this->m_requestEndDate.addDays(1).toString("yyyy-MM-dd");
-  startDateString1 =
-      "&startDT=" + this->m_requestStartDate.toString("yyyy-MM-dd");
-  endDateString2 =
-      "&end_date=" + this->m_requestEndDate.addDays(1).toString("yyyy-MM-dd");
-  startDateString2 =
-      "&begin_date=" + this->m_requestStartDate.toString("yyyy-MM-dd");
+//  //...Format the date strings
+//  endDateString1 =
+//      "&endDT=" + this->m_requestEndDate.addDays(1).toString("yyyy-MM-dd");
+//  startDateString1 =
+//      "&startDT=" + this->m_requestStartDate.toString("yyyy-MM-dd");
+//  endDateString2 =
+//      "&end_date=" + this->m_requestEndDate.addDays(1).toString("yyyy-MM-dd");
+//  startDateString2 =
+//      "&begin_date=" + this->m_requestStartDate.toString("yyyy-MM-dd");
 
-  //...Construct the correct request URL
-  if (this->m_usgsDataMethod == 0)
-    RequestURL = "https://waterdata.usgs.gov/nwis/uv?format=rdb&site_no=" +
-                 this->m_currentStation.id() + startDateString2 +
-                 endDateString2;
-  else if (this->m_usgsDataMethod == 1)
-    RequestURL = "https://waterservices.usgs.gov/nwis/iv/?sites=" +
-                 this->m_currentStation.id() + startDateString1 +
-                 endDateString1 + "&format=rdb";
-  else
-    RequestURL = "https://waterservices.usgs.gov/nwis/dv/?sites=" +
-                 this->m_currentStation.id() + startDateString1 +
-                 endDateString1 + "&format=rdb";
+//  //...Construct the correct request URL
+//  if (this->m_usgsDataMethod == 0)
+//    RequestURL = "https://waterdata.usgs.gov/nwis/uv?format=rdb&site_no=" +
+//                 this->m_currentStation.id() + startDateString2 +
+//                 endDateString2;
+//  else if (this->m_usgsDataMethod == 1)
+//    RequestURL = "https://waterservices.usgs.gov/nwis/iv/?sites=" +
+//                 this->m_currentStation.id() + startDateString1 +
+//                 endDateString1 + "&format=rdb";
+//  else
+//    RequestURL = "https://waterservices.usgs.gov/nwis/dv/?sites=" +
+//                 this->m_currentStation.id() + startDateString1 +
+//                 endDateString1 + "&format=rdb";
 
-  //...Make the request to the server
-  QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
-  connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-  connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-          SLOT(quit()));
-  loop.exec();
+//  //...Make the request to the server
+//  QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(RequestURL)));
+//  connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+//  connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
+//          SLOT(quit()));
+//  loop.exec();
 
-  if (reply->error() != QNetworkReply::NoError) {
-    emit usgsError(tr("There was an error contacting the USGS data server"));
-    return 1;
-  }
+//  if (reply->error() != QNetworkReply::NoError) {
+//    emit usgsError(tr("There was an error contacting the USGS data server"));
+//    return 1;
+//  }
 
-  //...Read the response
-  ierr = this->readUSGSDataFinished(reply);
-  if (ierr != 0) {
-    emit usgsError(tr("Error reading the USGS data"));
-    return 1;
-  }
+//  //...Read the response
+//  ierr = this->readUSGSDataFinished(reply);
+//  if (ierr != 0) {
+//    emit usgsError(tr("Error reading the USGS data"));
+//    return 1;
+//  }
 
-  //...Update the combo box
-  for (i = 0; i < this->m_availableDatatypes.length(); i++)
-    m_comboProduct->addItem(this->m_availableDatatypes[i]);
-  m_comboProduct->setCurrentIndex(0);
-  this->m_productName = m_comboProduct->currentText();
+//  //...Update the combo box
+//  for (i = 0; i < this->m_availableDatatypes.length(); i++)
+//    m_comboProduct->addItem(this->m_availableDatatypes[i]);
+//  m_comboProduct->setCurrentIndex(0);
+//  this->m_productName = m_comboProduct->currentText();
 
-  //...Plot the first series
-  ierr = this->plotUSGS();
-  if (ierr != 0) {
-    emit usgsError(tr("No data available for this station"));
-    return 1;
-  }
+//  //...Plot the first series
+//  ierr = this->plotUSGS();
+//  if (ierr != 0) {
+//    emit usgsError(tr("No data available for this station"));
+//    return 1;
+//  }
 
-  //...Restore the status bar
-  this->m_statusBar->clearMessage();
+//  //...Restore the status bar
+//  this->m_statusBar->clearMessage();
 
-  return 0;
-}
+//  return 0;
+//}
 
-int Usgs::formatUSGSInstantResponse(QByteArray Input) {
-  bool doubleok;
-  int ParamStart, ParamStop;
-  int HeaderEnd;
-  double TempData;
-  QStringList TempList;
-  QString TempLine, TempDateString, TempTimeZoneString;
-  QDateTime CurrentDate;
+// int Usgs::formatUSGSInstantResponse(QByteArray Input) {
+//  bool doubleok;
+//  int ParamStart, ParamStop;
+//  int HeaderEnd;
+//  double TempData;
+//  QStringList TempList;
+//  QString TempLine, TempDateString, TempTimeZoneString;
+//  QDateTime CurrentDate;
 
-  QString InputData(Input);
-  QStringList SplitByLine =
-      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
+//  QString InputData(Input);
+//  QStringList SplitByLine =
+//      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
 
-  ParamStart = -1;
-  ParamStop = -1;
-  HeaderEnd = -1;
+//  ParamStart = -1;
+//  ParamStop = -1;
+//  HeaderEnd = -1;
 
-  if (InputData.isEmpty() || InputData.isNull()) {
-    this->m_errorString =
-        tr("This data is not available except from the USGS archive server.");
-    return MetOceanViewer::Error::USGS_ARCHIVEONLY;
-  }
+//  if (InputData.isEmpty() || InputData.isNull()) {
+//    this->m_errorString =
+//        tr("This data is not available except from the USGS archive server.");
+//    return MetOceanViewer::Error::USGS_ARCHIVEONLY;
+//  }
 
-  //...Save the potential error string
-  this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
+//  //...Save the potential error string
+//  this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
 
-  //...Start by finding the header and reading the parameters from it
-  for (int i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(15) == "# Data provided") {
-      ParamStart = i + 2;
-      break;
-    }
-  }
+//  //...Start by finding the header and reading the parameters from it
+//  for (int i = 0; i < SplitByLine.length(); i++) {
+//    if (SplitByLine.value(i).left(15) == "# Data provided") {
+//      ParamStart = i + 2;
+//      break;
+//    }
+//  }
 
-  for (int i = ParamStart; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    if (TempLine == "#") {
-      ParamStop = i - 1;
-      break;
-    }
-  }
+//  for (int i = ParamStart; i < SplitByLine.length(); i++) {
+//    TempLine = SplitByLine.value(i);
+//    if (TempLine == "#") {
+//      ParamStop = i - 1;
+//      break;
+//    }
+//  }
 
-  this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
+//  this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
 
-  for (int i = ParamStart; i <= ParamStop; i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(" ", QString::SkipEmptyParts);
-    this->m_availableDatatypes[i - ParamStart] = QString();
-    for (int j = 3; j < TempList.length(); j++) {
-      if (j == 3)
-        this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
-      else
-        this->m_availableDatatypes[i - ParamStart] =
-            this->m_availableDatatypes[i - ParamStart] + " " +
-            TempList.value(j);
-    }
-  }
+//  for (int i = ParamStart; i <= ParamStop; i++) {
+//    TempLine = SplitByLine.value(i);
+//    TempList = TempLine.split(" ", QString::SkipEmptyParts);
+//    this->m_availableDatatypes[i - ParamStart] = QString();
+//    for (int j = 3; j < TempList.length(); j++) {
+//      if (j == 3)
+//        this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
+//      else
+//        this->m_availableDatatypes[i - ParamStart] =
+//            this->m_availableDatatypes[i - ParamStart] + " " +
+//            TempList.value(j);
+//    }
+//  }
 
-  //...Find out where the header ends
-  for (int i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(1) != "#") {
-      HeaderEnd = i + 2;
-      break;
-    }
-  }
+//  //...Find out where the header ends
+//  for (int i = 0; i < SplitByLine.length(); i++) {
+//    if (SplitByLine.value(i).left(1) != "#") {
+//      HeaderEnd = i + 2;
+//      break;
+//    }
+//  }
 
-  //...Initialize the array
-  this->m_selectedProductData.resize(this->m_availableDatatypes.length());
+//  //...Initialize the array
+//  this->m_selectedProductData.resize(this->m_availableDatatypes.length());
 
-  //...Sanity check
-  if (this->m_selectedProductData.length() == 0) return -1;
+//  //...Sanity check
+//  if (this->m_selectedProductData.length() == 0) return -1;
 
-  //...Zero counters
-  for (int i = 0; i < this->m_selectedProductData.length(); i++)
-    this->m_selectedProductData[i].m_numDataPoints = 0;
+//  //...Zero counters
+//  for (int i = 0; i < this->m_selectedProductData.length(); i++)
+//    this->m_selectedProductData[i].m_numDataPoints = 0;
 
-  //...Read the data into the array
-  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(QRegExp("[\t]"));
-    TempDateString = TempList.value(2);
-    TempTimeZoneString = TempList.value(3);
-    CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
-    CurrentDate.setTimeSpec(Qt::UTC);
-    int OffsetHours = this->getTimezoneOffset(TempTimeZoneString);
-    CurrentDate = CurrentDate.addSecs(-3600 * OffsetHours);
-    for (int j = 0; j < this->m_availableDatatypes.length(); j++) {
-      TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
-      if (!TempList.value(2 * j + 4).isNull() && doubleok) {
-        this->m_selectedProductData[j].m_numDataPoints =
-            this->m_selectedProductData[j].m_numDataPoints + 1;
-        this->m_selectedProductData[j].m_data.resize(
-            this->m_selectedProductData[j].m_data.length() + 1);
-        this->m_selectedProductData[j].m_date.resize(
-            this->m_selectedProductData[j].m_date.length() + 1);
-        this->m_selectedProductData[j]
-            .m_data[this->m_selectedProductData[j].m_data.length() - 1] =
-            TempData;
-        this->m_selectedProductData[j]
-            .m_date[this->m_selectedProductData[j].m_date.length() - 1] =
-            CurrentDate;
-      }
-    }
-  }
+//  //...Read the data into the array
+//  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
+//    TempLine = SplitByLine.value(i);
+//    TempList = TempLine.split(QRegExp("[\t]"));
+//    TempDateString = TempList.value(2);
+//    TempTimeZoneString = TempList.value(3);
+//    CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
+//    CurrentDate.setTimeSpec(Qt::UTC);
+//    int OffsetHours = this->getTimezoneOffset(TempTimeZoneString);
+//    CurrentDate = CurrentDate.addSecs(-3600 * OffsetHours);
+//    for (int j = 0; j < this->m_availableDatatypes.length(); j++) {
+//      TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
+//      if (!TempList.value(2 * j + 4).isNull() && doubleok) {
+//        this->m_selectedProductData[j].m_numDataPoints =
+//            this->m_selectedProductData[j].m_numDataPoints + 1;
+//        this->m_selectedProductData[j].m_data.resize(
+//            this->m_selectedProductData[j].m_data.length() + 1);
+//        this->m_selectedProductData[j].m_date.resize(
+//            this->m_selectedProductData[j].m_date.length() + 1);
+//        this->m_selectedProductData[j]
+//            .m_data[this->m_selectedProductData[j].m_data.length() - 1] =
+//            TempData;
+//        this->m_selectedProductData[j]
+//            .m_date[this->m_selectedProductData[j].m_date.length() - 1] =
+//            CurrentDate;
+//      }
+//    }
+//  }
 
-  return 0;
-}
+//  return 0;
+//}
 
-int Usgs::formatUSGSDailyResponse(QByteArray Input) {
-  int i, j, ParamStart, ParamStop;
-  int HeaderEnd;
-  double TempData;
-  QStringList TempList;
-  QString TempLine, TempDateString;
-  QString InputData(Input);
-  QStringList SplitByLine =
-      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
-  QDateTime CurrentDate;
-  bool doubleok;
+// int Usgs::formatUSGSDailyResponse(QByteArray Input) {
+//  int i, j, ParamStart, ParamStop;
+//  int HeaderEnd;
+//  double TempData;
+//  QStringList TempList;
+//  QString TempLine, TempDateString;
+//  QString InputData(Input);
+//  QStringList SplitByLine =
+//      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
+//  QDateTime CurrentDate;
+//  bool doubleok;
 
-  ParamStart = -1;
-  ParamStop = -1;
-  HeaderEnd = -1;
+//  ParamStart = -1;
+//  ParamStop = -1;
+//  HeaderEnd = -1;
 
-  //...Save the potential error string
-  this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
+//  //...Save the potential error string
+//  this->m_errorString = InputData.remove(QRegExp("[\n\t\r]"));
 
-  //...Start by finding the header and reading the parameters from it
-  for (i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(15) == "# Data provided") {
-      ParamStart = i + 2;
-      break;
-    }
-  }
+//  //...Start by finding the header and reading the parameters from it
+//  for (i = 0; i < SplitByLine.length(); i++) {
+//    if (SplitByLine.value(i).left(15) == "# Data provided") {
+//      ParamStart = i + 2;
+//      break;
+//    }
+//  }
 
-  for (i = ParamStart; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    if (TempLine == "#") {
-      ParamStop = i - 1;
-      break;
-    }
-  }
+//  for (i = ParamStart; i < SplitByLine.length(); i++) {
+//    TempLine = SplitByLine.value(i);
+//    if (TempLine == "#") {
+//      ParamStop = i - 1;
+//      break;
+//    }
+//  }
 
-  this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
+//  this->m_availableDatatypes.resize(ParamStop - ParamStart + 1);
 
-  for (i = ParamStart; i <= ParamStop; i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(" ", QString::SkipEmptyParts);
-    this->m_availableDatatypes[i - ParamStart] = QString();
-    for (j = 3; j < TempList.length(); j++) {
-      if (j == 3)
-        this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
-      else
-        this->m_availableDatatypes[i - ParamStart] =
-            this->m_availableDatatypes[i - ParamStart] + " " +
-            TempList.value(j);
-    }
-  }
+//  for (i = ParamStart; i <= ParamStop; i++) {
+//    TempLine = SplitByLine.value(i);
+//    TempList = TempLine.split(" ", QString::SkipEmptyParts);
+//    this->m_availableDatatypes[i - ParamStart] = QString();
+//    for (j = 3; j < TempList.length(); j++) {
+//      if (j == 3)
+//        this->m_availableDatatypes[i - ParamStart] = TempList.value(j);
+//      else
+//        this->m_availableDatatypes[i - ParamStart] =
+//            this->m_availableDatatypes[i - ParamStart] + " " +
+//            TempList.value(j);
+//    }
+//  }
 
-  //...Remove the leading number
-  for (i = 0; i < this->m_availableDatatypes.length(); i++)
-    m_availableDatatypes[i] = m_availableDatatypes[i].mid(6).simplified();
+//  //...Remove the leading number
+//  for (i = 0; i < this->m_availableDatatypes.length(); i++)
+//    m_availableDatatypes[i] = m_availableDatatypes[i].mid(6).simplified();
 
-  //...Find out where the header ends
-  for (i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(1) != "#") {
-      HeaderEnd = i + 2;
-      break;
-    }
-  }
+//  //...Find out where the header ends
+//  for (i = 0; i < SplitByLine.length(); i++) {
+//    if (SplitByLine.value(i).left(1) != "#") {
+//      HeaderEnd = i + 2;
+//      break;
+//    }
+//  }
 
-  //...Delete the old data
-  for (i = 0; i < this->m_selectedProductData.length(); i++) {
-    this->m_selectedProductData[i].m_data.clear();
-    this->m_selectedProductData[i].m_date.clear();
-    this->m_selectedProductData[i].m_numDataPoints = 0;
-  }
-  this->m_selectedProductData.clear();
+//  //...Delete the old data
+//  for (i = 0; i < this->m_selectedProductData.length(); i++) {
+//    this->m_selectedProductData[i].m_data.clear();
+//    this->m_selectedProductData[i].m_date.clear();
+//    this->m_selectedProductData[i].m_numDataPoints = 0;
+//  }
+//  this->m_selectedProductData.clear();
 
-  //...Initialize the array
-  this->m_selectedProductData.resize(m_availableDatatypes.length());
+//  //...Initialize the array
+//  this->m_selectedProductData.resize(m_availableDatatypes.length());
 
-  //...Zero counters
-  for (i = 0; i < this->m_selectedProductData.length(); i++)
-    this->m_selectedProductData[i].m_numDataPoints = 0;
+//  //...Zero counters
+//  for (i = 0; i < this->m_selectedProductData.length(); i++)
+//    this->m_selectedProductData[i].m_numDataPoints = 0;
 
-  //...Read the data into the array
-  for (i = HeaderEnd; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(QRegExp("[\t]"));
-    TempDateString = TempList.value(2);
-    CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd");
-    CurrentDate.setTimeSpec(Qt::UTC);
-    for (j = 0; j < m_availableDatatypes.length(); j++) {
-      TempData = TempList.value(2 * j + 3).toDouble(&doubleok);
-      if (!TempList.value(2 * j + 3).isNull() && doubleok) {
-        this->m_selectedProductData[j].m_numDataPoints =
-            this->m_selectedProductData[j].m_numDataPoints + 1;
-        this->m_selectedProductData[j].m_data.resize(
-            this->m_selectedProductData[j].m_data.length() + 1);
-        this->m_selectedProductData[j].m_date.resize(
-            this->m_selectedProductData[j].m_date.length() + 1);
-        this->m_selectedProductData[j]
-            .m_data[this->m_selectedProductData[j].m_data.length() - 1] =
-            TempData;
-        this->m_selectedProductData[j]
-            .m_date[this->m_selectedProductData[j].m_date.length() - 1] =
-            CurrentDate;
-      }
-    }
-  }
+//  //...Read the data into the array
+//  for (i = HeaderEnd; i < SplitByLine.length(); i++) {
+//    TempLine = SplitByLine.value(i);
+//    TempList = TempLine.split(QRegExp("[\t]"));
+//    TempDateString = TempList.value(2);
+//    CurrentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd");
+//    CurrentDate.setTimeSpec(Qt::UTC);
+//    for (j = 0; j < m_availableDatatypes.length(); j++) {
+//      TempData = TempList.value(2 * j + 3).toDouble(&doubleok);
+//      if (!TempList.value(2 * j + 3).isNull() && doubleok) {
+//        this->m_selectedProductData[j].m_numDataPoints =
+//            this->m_selectedProductData[j].m_numDataPoints + 1;
+//        this->m_selectedProductData[j].m_data.resize(
+//            this->m_selectedProductData[j].m_data.length() + 1);
+//        this->m_selectedProductData[j].m_date.resize(
+//            this->m_selectedProductData[j].m_date.length() + 1);
+//        this->m_selectedProductData[j]
+//            .m_data[this->m_selectedProductData[j].m_data.length() - 1] =
+//            TempData;
+//        this->m_selectedProductData[j]
+//            .m_date[this->m_selectedProductData[j].m_date.length() - 1] =
+//            CurrentDate;
+//      }
+//    }
+//  }
 
-  this->m_usgsDataReady = true;
+//  this->m_usgsDataReady = true;
 
-  return 0;
-}
-
-int Usgs::getDataBounds(double &ymin, double &ymax) {
-  int j;
-
-  ymin = 999999999.0;
-  ymax = -999999999.0;
-
-  for (j = 0; j < this->m_allStationData.length(); j++) {
-    if (this->m_allStationData[j].m_data < ymin)
-      ymin = this->m_allStationData[j].m_data;
-    if (this->m_allStationData[j].m_data > ymax)
-      ymax = this->m_allStationData[j].m_data;
-  }
-  return 0;
-}
-
-int Usgs::getTimezoneOffset(QString timezone) {
-  if (timezone.isNull() || timezone.isEmpty()) return 0;
-  Timezone tempTZ;
-  tempTZ.fromAbbreviation(timezone, TZData::NorthAmerica);
-  return tempTZ.utcOffset();
-}
+//  return 0;
+//}
 
 int Usgs::plotNewUSGSStation() {
   if (*(this->m_selectedStation) == "-1") {
@@ -413,8 +389,22 @@ int Usgs::plotNewUSGSStation() {
     this->m_requestStartDate = m_startDateEdit->dateTime();
 
     //...Grab the data from the server
-    ierr = this->fetchUSGSData();
+    UsgsWaterdata *waterData =
+        new UsgsWaterdata(this->m_currentStation, this->m_requestStartDate,
+                          this->m_requestEndDate, this->m_usgsDataMethod, this);
+    this->m_allStationData = new Hmdf(this);
+    ierr = waterData->get(this->m_allStationData);
     if (ierr != 0) return ierr;
+
+    //...Update combo box
+    for (int i = 0; i < this->m_allStationData->nstations(); i++) {
+      this->m_comboProduct->addItem(this->m_allStationData->station(i)->name());
+    }
+
+    this->m_usgsDataReady = true;
+
+    //...Plot first series
+    this->plotUSGS();
   }
 
   return 0;
@@ -425,7 +415,7 @@ int Usgs::replotCurrentUSGSStation(int index) {
     this->m_productIndex = index;
     this->m_productName = m_comboProduct->currentText();
     int ierr = this->plotUSGS();
-    m_statusBar->clearMessage();
+    this->m_statusBar->clearMessage();
     if (ierr != 0) {
       this->m_errorString = tr("No data available for this selection.");
       return ierr;
@@ -436,28 +426,30 @@ int Usgs::replotCurrentUSGSStation(int index) {
 }
 
 int Usgs::plotUSGS() {
-  double ymin, ymax;
   QString format;
 
-  // Put the data into a plotting object
-  this->m_allStationData.resize(
-      this->m_selectedProductData[this->m_productIndex].m_date.length());
-  for (int i = 0;
-       i < this->m_selectedProductData[this->m_productIndex].m_date.length();
-       i++) {
-    this->m_allStationData[i].m_date =
-        this->m_selectedProductData[this->m_productIndex].m_date[i].date();
-    this->m_allStationData[i].m_time =
-        this->m_selectedProductData[this->m_productIndex].m_date[i].time();
-    this->m_allStationData[i].m_data =
-        this->m_selectedProductData[this->m_productIndex].m_data[i];
-  }
+  this->m_productIndex = this->m_comboProduct->currentIndex();
+  this->m_productName = this->m_comboProduct->currentText();
 
-  if (this->m_allStationData.length() < 5) return -1;
+  HmdfStation *station = this->m_allStationData->station(this->m_productIndex);
+
+  if (station->numSnaps() < 5) return 1;
 
   //...Create the line series
-  int ierr = this->getDataBounds(ymin, ymax);
-  if (ierr != 0) return ierr;
+  qint64 dateMin, dateMax;
+  double ymin, ymax;
+  station->dataBounds(dateMin, dateMax, ymin, ymax);
+
+  QDateTime minDateTime, maxDateTime;
+  minDateTime = QDateTime::fromMSecsSinceEpoch(dateMin);
+  maxDateTime = QDateTime::fromMSecsSinceEpoch(dateMax);
+  minDateTime.setTimeSpec(Qt::UTC);
+  maxDateTime.setTimeSpec(Qt::UTC);
+
+  minDateTime =
+      QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));
+  maxDateTime =
+      QDateTime(maxDateTime.date(), QTime(maxDateTime.time().hour() + 1, 0, 0));
 
   QLineSeries *series1 = new QLineSeries(this);
   series1->setName(this->m_productName);
@@ -469,33 +461,16 @@ int Usgs::plotUSGS() {
   this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
   this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
 
-  for (int j = 0; j < this->m_allStationData.length(); j++) {
-    if (QDateTime(this->m_allStationData[j].m_date,
-                  this->m_allStationData[j].m_time)
-            .isValid()) {
-      series1->append(QDateTime(this->m_allStationData[j].m_date,
-                                this->m_allStationData[j].m_time)
-                          .toMSecsSinceEpoch(),
-                      this->m_allStationData[j].m_data);
+  for (int j = 0; j < station->numSnaps(); j++) {
+    if (QDateTime::fromMSecsSinceEpoch(station->date(j)).isValid()) {
+      series1->append(station->date(j), station->data(j));
     }
   }
+
   this->m_chartView->m_chart->addSeries(series1);
 
   this->m_chartView->clear();
   this->m_chartView->addSeries(series1, this->m_productName);
-
-  QDateTime minDateTime =
-      QDateTime(m_allStationData[0].m_date, m_allStationData[0].m_time);
-  QDateTime maxDateTime =
-      QDateTime(m_allStationData[m_allStationData.length() - 1].m_date,
-                m_allStationData[m_allStationData.length() - 1].m_time);
-  minDateTime.setTimeSpec(Qt::UTC);
-  maxDateTime.setTimeSpec(Qt::UTC);
-
-  minDateTime =
-      QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));
-  maxDateTime =
-      QDateTime(maxDateTime.date(), QTime(maxDateTime.time().hour() + 1, 0, 0));
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
@@ -513,7 +488,7 @@ int Usgs::plotUSGS() {
 
   QValueAxis *axisY = new QValueAxis(this);
   axisY->setLabelFormat(format);
-  axisY->setTitleText(this->m_productName.split("),QStringLiteral(").value(0));
+  axisY->setTitleText(this->m_productName.split(",").value(0));
   axisY->setMin(ymin);
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
@@ -562,31 +537,31 @@ int Usgs::plotUSGS() {
   return 0;
 }
 
-int Usgs::readUSGSDataFinished(QNetworkReply *reply) {
-  int ierr;
+// int Usgs::readUSGSDataFinished(QNetworkReply *reply) {
+//  int ierr;
 
-  if (reply->error() != QNetworkReply::NoError) {
-    this->m_errorString = reply->errorString();
-    return MetOceanViewer::Error::USGS_SERVERREADERROR;
-  }
+//  if (reply->error() != QNetworkReply::NoError) {
+//    this->m_errorString = reply->errorString();
+//    return MetOceanViewer::Error::USGS_SERVERREADERROR;
+//  }
 
-  // Read the data that was received
-  QByteArray RawUSGSData = reply->readAll();
+//  // Read the data that was received
+//  QByteArray RawUSGSData = reply->readAll();
 
-  // Put the data into an array with all variables
-  if (this->m_usgsDataMethod == 0 || this->m_usgsDataMethod == 1)
-    ierr = this->formatUSGSInstantResponse(RawUSGSData);
-  else
-    ierr = this->formatUSGSDailyResponse(RawUSGSData);
-  if (ierr != 0) return MetOceanViewer::Error::USGS_FORMATTING;
+//  // Put the data into an array with all variables
+//  if (this->m_usgsDataMethod == 0 || this->m_usgsDataMethod == 1)
+//    ierr = this->formatUSGSInstantResponse(RawUSGSData);
+//  else
+//    ierr = this->formatUSGSDailyResponse(RawUSGSData);
+//  if (ierr != 0) return MetOceanViewer::Error::USGS_FORMATTING;
 
-  this->m_usgsDataReady = true;
+//  this->m_usgsDataReady = true;
 
-  // Delete the QNetworkReply object off the heap
-  reply->deleteLater();
+//  // Delete the QNetworkReply object off the heap
+//  reply->deleteLater();
 
-  return 0;
-}
+//  return 0;
+//}
 
 int Usgs::saveUSGSImage(QString filename, QString filter) {
   if (filter == "PDF (*.pdf)") {
@@ -643,20 +618,7 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
 
 int Usgs::saveUSGSData(QString filename, QString format) {
   Hmdf *usgsOut = new Hmdf(this);
-  HmdfStation *station = new HmdfStation(usgsOut);
-
-  station->setLongitude(this->m_currentStation.coordinate().longitude());
-  station->setLatitude(this->m_currentStation.coordinate().latitude());
-  station->setName(this->m_currentStation.name().replace(" ", "_"));
-  station->setId(this->m_currentStation.id());
-  station->setStationIndex(1);
-  for (int i = 0; i < this->m_allStationData.length(); i++) {
-    long long t = QDateTime(this->m_allStationData[i].m_date,
-                            this->m_allStationData[i].m_time)
-                      .toMSecsSinceEpoch();
-    station->setNext(t, this->m_allStationData[i].m_data);
-  }
-  usgsOut->addStation(station);
+  usgsOut->addStation(this->m_allStationData->station(this->m_productIndex));
 
   int ierr = usgsOut->write(filename);
   if (ierr != 0) {
@@ -701,11 +663,11 @@ int Usgs::replotChart(Timezone *newTimezone) {
     series[i]->append(data);
   }
 
-  QDateTime minDateTime =
-      QDateTime(m_allStationData[0].m_date, m_allStationData[0].m_time);
+  QDateTime minDateTime = QDateTime::fromMSecsSinceEpoch(
+      this->m_allStationData->station(0)->date(0));
   QDateTime maxDateTime =
-      QDateTime(m_allStationData[m_allStationData.length() - 1].m_date,
-                m_allStationData[m_allStationData.length() - 1].m_time);
+      QDateTime::fromMSecsSinceEpoch(this->m_allStationData->station(0)->date(
+          this->m_allStationData->station(0)->numSnaps()));
   minDateTime.setTimeSpec(Qt::UTC);
   maxDateTime.setTimeSpec(Qt::UTC);
 

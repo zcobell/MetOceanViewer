@@ -22,18 +22,14 @@
 
 #include <QNetworkReply>
 #include <QObject>
-#include "hmdf.h"
+#include "waterdata.h"
 
-class NoaaCoOps : public QObject {
+class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
-  NoaaCoOps(QString stationId, QString stationName, QGeoCoordinate location,
-            QString product, QString datum, QString units, QDateTime startDate,
-            QDateTime endDate, QObject *parent = nullptr);
-
-  int get(Hmdf *data);
-
-  QString errorString();
+  NoaaCoOps(Station station, QDateTime startDate, QDateTime endDate,
+            QString product, QString datum, QString units,
+            QObject *parent = nullptr);
 
  private:
   int downloadData(Hmdf *data);
@@ -49,15 +45,9 @@ class NoaaCoOps : public QObject {
 
   int formatNoaaResponse(QVector<QByteArray> &downloadedData, Hmdf *outputData);
 
-  QString m_stationId;
-  QString m_stationName;
   QString m_product;
   QString m_datum;
   QString m_units;
-  QString m_errorString;
-  QGeoCoordinate m_location;
-  QDateTime m_startDate;
-  QDateTime m_endDate;
 };
 
 #endif  // NOAACOOPS_H
