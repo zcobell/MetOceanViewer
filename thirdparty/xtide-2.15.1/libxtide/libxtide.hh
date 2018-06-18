@@ -146,7 +146,7 @@
 #include "SafeVector.hh"
 #include "BetterMap.hh"
 
-#ifdef HAVE_PNG_H}
+#ifdef HAVE_PNG_H
 #if PNG_LIBPNG_VER < 96
 #error Sorry, you must have libpng version 0.96 or newer.
 #endif
