@@ -84,7 +84,6 @@ int UsgsWaterdata::download(QUrl url, Hmdf *data) {
     return 1;
   }
 
-
   this->readDownloadedData(reply, data);
 
   reply->deleteLater();
@@ -192,8 +191,8 @@ int UsgsWaterdata::readUsgsInstantData(QByteArray &data, Hmdf *output) {
     QDateTime currentDate =
         QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
     currentDate.setTimeSpec(Qt::UTC);
-    int OffsetHours = Timezone::offsetFromUtc(TempTimeZoneString);
-    currentDate = currentDate.addSecs(-3600 * OffsetHours);
+    int offset = Timezone::offsetFromUtc(TempTimeZoneString);
+    currentDate = currentDate.addSecs(-offset);
     for (int j = 0; j < availableDatatypes.length(); j++) {
       double TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
       if (!TempList.value(2 * j + 4).isNull() && doubleok) {

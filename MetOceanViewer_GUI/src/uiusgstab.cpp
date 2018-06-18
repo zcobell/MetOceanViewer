@@ -49,7 +49,7 @@ void MainWindow::on_button_usgs_fetch_clicked() {
   connect(m_usgs, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
-  this->m_usgs->plotNewUSGSStation();
+  int ierr = this->m_usgs->plotNewUSGSStation();
 
   return;
 }
