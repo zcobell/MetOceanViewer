@@ -103,7 +103,7 @@ int Usgs::plotNewUSGSStation() {
     ierr = waterData->get(this->m_allStationData);
     this->m_statusBar->clearMessage();
     if (ierr != 0) {
-      emit usgsError(this->m_errorString);
+      emit usgsError(waterData->errorString());
       return ierr;
     }
 

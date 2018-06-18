@@ -84,13 +84,13 @@ int UsgsWaterdata::download(QUrl url, Hmdf *data) {
     return 1;
   }
 
-  this->readDownloadedData(reply, data);
+  int ierr = this->readDownloadedData(reply, data);
 
   reply->deleteLater();
 
   delete manager;
 
-  return 0;
+  return ierr;
 }
 
 int UsgsWaterdata::readDownloadedData(QNetworkReply *reply, Hmdf *output) {
@@ -199,6 +199,13 @@ int UsgsWaterdata::readUsgsInstantData(QByteArray &data, Hmdf *output) {
         stations[j]->setNext(currentDate.toMSecsSinceEpoch(), TempData);
       }
     }
+  }
+
+  if (stations[0]->numSnaps() < 3) {
+    this->setErrorString(
+        "No data available at this station for this time period\n" +
+        this->errorString());
+    return 1;
   }
 
   //...Add stations to object
