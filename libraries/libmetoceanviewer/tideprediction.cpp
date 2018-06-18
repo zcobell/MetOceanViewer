@@ -6,8 +6,8 @@
 TidePrediction::TidePrediction(QObject *parent) : QObject(parent) {}
 
 int TidePrediction::get(QString stationName, QDateTime startDate,
-                        QDateTime endDate, int interval,
-                        QVector<QDateTime> &date, QVector<double> &data) {
+                        QDateTime endDate, int interval, QVector<qint64> &date,
+                        QVector<double> &data) {
   using namespace libxtide;
 
   const StationRef *sr = Global::stationIndex().getStationRefByName(
@@ -37,12 +37,12 @@ int TidePrediction::get(QString stationName, QDateTime startDate,
 
     for (int i = 0; i < tide.length(); i++) {
       QString datestr = tide[i].mid(0, 20).simplified();
-      QString tz = tide[i].mid(20, 3).simplified();
+      // QString tz = tide[i].mid(20, 3).simplified(); //(always UTC)
       QString val = tide[i].mid(23, tide[i].length()).simplified();
       QDateTime d = QDateTime::fromString(datestr, "yyyy-MM-dd hh:mm AP");
       d.setTimeSpec(Qt::UTC);
       if (d.isValid()) {
-        date.push_back(d);
+        date.push_back(d.toMSecsSinceEpoch());
         data.push_back(val.toDouble());
       }
     }

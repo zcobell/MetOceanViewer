@@ -70,15 +70,19 @@ SOURCES += \
         $$PWD/../../thirdparty/xtide-2.15.1/libxtide/Year.cc
 
 INCLUDEPATH += $$PWD/../../thirdparty/xtide-2.15.1/libxtide
-INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7
 
-HEADERS +=
+win32{
+INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/VS
+}
+
+unix{
+INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/UNX
+}
 
 unix {
     target.path = /usr/lib
     INSTALLS += target
 }
-
 
 #...Defines
 DEFINES += HAVE_DIRENT_H HAVE_DLFCN_H HAVE_GOOD_STRFTIME HAVE_INTTYPES_H HAVE_LANGINFO_H HAVE_LIBPNG HAVE_LIBTCD HAVE_LIBZ \
@@ -86,5 +90,3 @@ DEFINES += HAVE_DIRENT_H HAVE_DLFCN_H HAVE_GOOD_STRFTIME HAVE_INTTYPES_H HAVE_LA
            HAVE_SYS_STAT_H HAVE_SYS_TYPES_H HAVE_UNISTD_H STDC_HEADERS X_DISPLAY_MISSING acceptarg3_t=socklen_t xttpd_group=\"nobody\" \
            xttpd_user=\"nobody\" VERSION=\"2.15.1\" PACKAGE_VERSION=\"2.15.1\" PACKAGE_NAME=\"XTide\" \
            PACKAGE_BUGREPORT=\"dave@flaterco.com\" PACKAGE=\"xtide\"
-
-RESOURCES +=

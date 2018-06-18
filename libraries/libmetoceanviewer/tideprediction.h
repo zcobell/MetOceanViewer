@@ -11,7 +11,7 @@ class TidePrediction : public QObject {
   explicit TidePrediction(QObject *parent = nullptr);
 
   static int get(QString stationName, QDateTime startDate, QDateTime endDate,
-                 int interval, QVector<QDateTime> &date, QVector<double> &data);
+                 int interval, QVector<qint64> &date, QVector<double> &data);
 };
 
 #endif  // TIDEPREDICTION_H
