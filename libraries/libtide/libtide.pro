@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       -= gui
+QT      -= core
 
 TARGET = tide
 TEMPLATE = lib
@@ -72,11 +72,24 @@ SOURCES += \
 INCLUDEPATH += $$PWD/../../thirdparty/xtide-2.15.1/libxtide
 
 win32{
-INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/VS
+  INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/VS
+
+  DEFINES += HAVE_INTTYPES_H HAVE_IO_H HAVE_LIBTCD HAVE_LLROUND HAVE_MEMORY_H HAVE_PROCESS_H \
+             HAVE_LIBTCD HAVE_LLROUND HAVE_MEMORY_H HAVE_PROCESS_H USE_PRAGMA_MESSAGE \
+             HAVE_STDINT_H HAVE_STDLIB_H HAVE_STRING_H HAVE_SYS_STAT_H HAVE_SYS_TYPES_H \
+             STDC_HEADERS USE_PRAGMA_MESSAGE UseLocalFiles UseSemicolonPathsep X_DISPLAY_MISSING \
+             acceptarg3_t=size_t xttpd_group=\"nobody\" xttpd_user=\"nobody\" VERSION=\"2.15.1\" \
+             PACKAGE_VERSION=\"2.15.1\" PACKAGE_NAME=\"XTide\" \ PACKAGE_BUGREPORT=\"dave@flaterco.com\" \
+             PACKAGE=\"xtide\"
 }
 
 unix{
-INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/UNX
+  INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/UNX
+  DEFINES += HAVE_DIRENT_H HAVE_DLFCN_H HAVE_GOOD_STRFTIME HAVE_INTTYPES_H HAVE_LANGINFO_H HAVE_LIBTCD \
+           HAVE_LLROUND HAVE_MEMORY_H HAVE_STDINT_H HAVE_STDLIB_H HAVE_STRINGS_H HAVE_STRING_H HAVE_SYSLOG_H HAVE_SYS_RESOURCE_H \
+           HAVE_SYS_STAT_H HAVE_SYS_TYPES_H HAVE_UNISTD_H STDC_HEADERS X_DISPLAY_MISSING acceptarg3_t=socklen_t xttpd_group=\"nobody\" \
+           xttpd_user=\"nobody\" VERSION=\"2.15.1\" PACKAGE_VERSION=\"2.15.1\" PACKAGE_NAME=\"XTide\" \
+           PACKAGE_BUGREPORT=\"dave@flaterco.com\" PACKAGE=\"xtide\"
 }
 
 unix {
@@ -84,9 +97,4 @@ unix {
     INSTALLS += target
 }
 
-#...Defines
-DEFINES += HAVE_DIRENT_H HAVE_DLFCN_H HAVE_GOOD_STRFTIME HAVE_INTTYPES_H HAVE_LANGINFO_H HAVE_LIBPNG HAVE_LIBTCD HAVE_LIBZ \
-           HAVE_LLROUND HAVE_MEMORY_H HAVE_STDINT_H HAVE_STDLIB_H HAVE_STRINGS_H HAVE_STRING_H HAVE_SYSLOG_H HAVE_SYS_RESOURCE_H \
-           HAVE_SYS_STAT_H HAVE_SYS_TYPES_H HAVE_UNISTD_H STDC_HEADERS X_DISPLAY_MISSING acceptarg3_t=socklen_t xttpd_group=\"nobody\" \
-           xttpd_user=\"nobody\" VERSION=\"2.15.1\" PACKAGE_VERSION=\"2.15.1\" PACKAGE_NAME=\"XTide\" \
-           PACKAGE_BUGREPORT=\"dave@flaterco.com\" PACKAGE=\"xtide\"
+

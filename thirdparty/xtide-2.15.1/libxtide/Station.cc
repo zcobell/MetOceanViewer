@@ -1149,13 +1149,14 @@ void Station::clockMode (Dstr &text_out, Format::Format form) {
   }
 }
 
-
+#ifdef HAVE_PNG_H
 void Station::graphModePNG (FILE *fp, Timestamp startTime) {
   RGBGraph g (Global::settings["gw"].u, Global::settings["gh"].u);
   g.drawTides (this, startTime);
   Global::PNGFile = fp;
   g.writeAsPNG (Global::writePNGToFile);
 }
+
 
 
 void Station::clockModePNG (FILE *fp) {
@@ -1166,7 +1167,7 @@ void Station::clockModePNG (FILE *fp) {
   Global::PNGFile = fp;
   g.writeAsPNG (Global::writePNGToFile);
 }
-
+#endif
 
 void Station::print (Dstr &text_out,
                      Timestamp startTime,

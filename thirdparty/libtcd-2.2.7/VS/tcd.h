@@ -405,6 +405,8 @@ NV_INT32 add_pedigree (const NV_CHAR *name, const DB_HEADER_PUBLIC *db);
 NV_BOOL check_simple (TIDE_RECORD rec);
 #endif
 
+#define ftruncate _chsize
+
 #ifdef  __cplusplus
 }
 #endif

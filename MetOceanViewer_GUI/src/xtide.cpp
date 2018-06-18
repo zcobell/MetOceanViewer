@@ -146,7 +146,7 @@ int XTide::calculateXTides() {
 
   QVector<qint64> date;
   QVector<double> data;
-  ierr = TidePrediction::get(this->m_station.name(), startDate, endDate, 30,
+  ierr = TidePrediction::get(this->m_station.name(), startDate, endDate, 600,
                              date, data);
 
   if (this->m_data != nullptr) delete this->m_data;
@@ -171,7 +171,16 @@ int XTide::plotChart() {
   qint64 minDate, maxDate;
   QString format;
 
+  double multiplier;
+  if (this->m_comboUnits->currentIndex() == 0)
+    multiplier = 1.0;
+  else
+    multiplier = 3.28084;
+
   this->m_data->dataBounds(minDate, maxDate, ymin, ymax);
+
+  ymin = ymin * multiplier;
+  ymax = ymax * multiplier;
 
   if (this->m_comboUnits->currentIndex() == 1)
     this->m_ylabel = tr("Water Surface Elevation (ft, MLLW)");
@@ -213,12 +222,10 @@ int XTide::plotChart() {
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  qDebug() << this->m_data->nstations();
-  qDebug() << this->m_data->station(0)->numSnaps();
-
-  for (int i = 0; i < this->m_data->station(0)->numSnaps(); i++)
+  for (int i = 0; i < this->m_data->station(0)->numSnaps(); i++) {
     series1->append(this->m_data->station(0)->date(i),
-                    this->m_data->station(0)->data(i));
+                    this->m_data->station(0)->data(i) * multiplier);
+  }
   this->m_chartView->m_chart->addSeries(series1);
   this->m_chartView->clear();
   this->m_chartView->addSeries(series1, series1->name());

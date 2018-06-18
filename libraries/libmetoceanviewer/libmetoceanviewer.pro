@@ -14,7 +14,7 @@ CONFIG += staticlib
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
-DEFINES += QT_DEPRECATED_WARNINGS
+DEFINES += QT_DEPRECATED_WARNINGS USE_PRAGMA_MESSAGE
 
 INCLUDEPATH += $$PWD/../../thirdparty/boost_1_67_0
 INCLUDEPATH += $$PWD/../../thirdparty/kdtree

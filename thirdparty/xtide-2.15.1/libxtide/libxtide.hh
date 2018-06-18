@@ -119,7 +119,9 @@
 #include <time.h>
 #include <ctype.h>
 #include <errno.h>
+#ifdef HAVE_PNG_H
 #include <png.h>
+#endif
 #include <limits.h>
 
 #ifdef HAVE_SYSLOG_H
@@ -144,9 +146,10 @@
 #include "SafeVector.hh"
 #include "BetterMap.hh"
 
-
+#ifdef HAVE_PNG_H}
 #if PNG_LIBPNG_VER < 96
 #error Sorry, you must have libpng version 0.96 or newer.
+#endif
 #endif
 
 
