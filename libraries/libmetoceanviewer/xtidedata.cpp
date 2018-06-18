@@ -17,32 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef USGSWATERDATA_H
-#define USGSWATERDATA_H
+#include "xtidedata.h"
 
-#include "waterdata.h"
+XtideData::XtideData(Station station, QDateTime startDate, QDateTime endDate,
+                     QObject *parent)
+    : WaterData(station, startDate, endDate, parent) {}
 
-class UsgsWaterdata : public WaterData {
-    Q_OBJECT
- public:
-  UsgsWaterdata(Station station, QDateTime startDate, QDateTime endDate,
-                int databaseOption, QObject *parent = nullptr);
-
-  int get(Hmdf *data);
-
- private:
-  int fetch(Hmdf *data);
-
-  QUrl buildUrl();
-
-  int download(QUrl url, Hmdf *data);
-
-  int readDownloadedData(QNetworkReply *reply, Hmdf *output);
-
-  int readUsgsInstantData(QByteArray &data, Hmdf *output);
-  int readUsgsDailyData(QByteArray &data, Hmdf *output);
-
-  int m_databaseOption;
-};
-
-#endif  // USGSWATERDATA_H
+int XtideData::retrieveData(Hmdf *data) { return 0; }

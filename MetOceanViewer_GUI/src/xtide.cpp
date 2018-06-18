@@ -20,6 +20,7 @@
 #include "xtide.h"
 #include <float.h>
 #include "hmdf.h"
+#include "tideprediction.h"
 
 //...Constructor
 XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
@@ -163,6 +164,12 @@ int XTide::calculateXTides() {
                      "\"" + " -b \"" + startDateString + "\"" + " -e \"" +
                      endDateString + "\"" + " -s \"00:30\" -z -m m";
 #endif
+
+  qputenv("HFILE_PATH",this->m_harmfile.toUtf8());
+  QVector<QDateTime> date;
+  QVector<double> data;
+  TidePrediction::get(this->m_station.name(), startDate, endDate, 30, date,
+                      data);
 
   QProcess xTideRun(this);
   xTideRun.setEnvironment(env.toStringList());

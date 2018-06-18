@@ -32,7 +32,7 @@ class NoaaCoOps : public WaterData {
             QObject *parent = nullptr);
 
  private:
-  int downloadData(Hmdf *data);
+  int retrieveData(Hmdf *data);
 
   int generateDateRanges(QVector<QDateTime> &startDateList,
                          QVector<QDateTime> &endDateList);
@@ -41,7 +41,7 @@ class NoaaCoOps : public WaterData {
                                  QVector<QDateTime> endDateList,
                                  QVector<QByteArray> &downloadedData);
 
-  int readNoaaResponse(QNetworkReply *reply, QVector<QByteArray> &downloadData);
+  int readNoaaResponse(QNetworkReply *reply, QVector<QByteArray> &retrieveData);
 
   int formatNoaaResponse(QVector<QByteArray> &downloadedData, Hmdf *outputData);
 

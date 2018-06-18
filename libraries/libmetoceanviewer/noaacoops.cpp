@@ -32,7 +32,7 @@ NoaaCoOps::NoaaCoOps(Station station, QDateTime startDate, QDateTime endDate,
   this->m_datum = datum;
 }
 
-int NoaaCoOps::downloadData(Hmdf *data) {
+int NoaaCoOps::retrieveData(Hmdf *data) {
   QVector<QDateTime> startDateList, endDateList;
   QVector<QByteArray> rawNoaaData;
   int ierr = this->generateDateRanges(startDateList, endDateList);

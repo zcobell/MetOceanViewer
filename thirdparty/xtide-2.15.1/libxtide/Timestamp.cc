@@ -717,8 +717,8 @@ static inline constString quirkTZ (constString TZ) {
 static void installTimeZone (const Dstr &timezone) {
   static Dstr currentTimezone;
   Dstr timezoneLocalVar ("UTC0");
-  if (Global::settings["z"].c == 'n')
-    timezoneLocalVar = timezone;
+  //if (Global::settings["z"].c == 'n')
+  //  timezoneLocalVar = timezone;
   if (currentTimezone == timezoneLocalVar)
     return;
   currentTimezone = timezoneLocalVar;

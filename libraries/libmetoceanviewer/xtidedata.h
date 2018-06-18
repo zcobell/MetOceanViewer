@@ -17,48 +17,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef WATERDATA_H
-#define WATERDATA_H
+#ifndef XTIDEDATA_H
+#define XTIDEDATA_H
 
-#include <QNetworkReply>
-#include <QObject>
-#include "hmdf.h"
-#include "station.h"
-#include "timezone.h"
+#include "waterdata.h"
 
-class WaterData : public QObject {
+class XtideData : public WaterData {
   Q_OBJECT
  public:
-  explicit WaterData(Station station, QDateTime startDate, QDateTime endDate,
-                     QObject *parent = nullptr);
-
-  int get(Hmdf *data);
-
-  QString errorString() const;
-
-  Timezone *getTimezone() const;
-  void setTimezone(Timezone *timezone);
-
-protected:
-  virtual int retrieveData(Hmdf *data);
-
-  void setErrorString(const QString &errorString);
-
-  Station station() const;
-  void setStation(const Station &station);
-
-  QDateTime startDate() const;
-  void setStartDate(const QDateTime &startDate);
-
-  QDateTime endDate() const;
-  void setEndDate(const QDateTime &endDate);
+  XtideData(Station station, QDateTime startDate, QDateTime endDate,
+            QObject *parent);
 
  private:
-  QString m_errorString;
-  Station m_station;
-  QDateTime m_startDate;
-  QDateTime m_endDate;
-  Timezone *m_timezone;
+  int retrieveData(Hmdf *data);
 };
 
-#endif  // WATERDATA_H
+#endif  // XTIDEDATA_H

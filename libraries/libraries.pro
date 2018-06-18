@@ -22,6 +22,7 @@ TEMPLATE = subdirs
 
 SUBDIRS  = libproj4 \
            libnetcdfcxx \
-           libmetoceanviewer
+           libmetoceanviewer \
+           libtide
 
 CONFIG += ordered           

@@ -236,3 +236,16 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libr
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/release/metoceanviewer.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/debug/metoceanviewer.lib
 else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libmetoceanviewer/libmetoceanviewer.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libtide/release/ -ltide
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libtide/debug/ -ltide
+else:unix: LIBS += -L$$OUT_PWD/../libraries/libtide/ -ltide
+
+INCLUDEPATH += $$PWD/../libraries/libtide
+DEPENDPATH += $$PWD/../libraries/libtide
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtide/release/libtide.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtide/debug/libtide.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtide/release/tide.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtide/debug/tide.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libraries/libtide/libtide.a
