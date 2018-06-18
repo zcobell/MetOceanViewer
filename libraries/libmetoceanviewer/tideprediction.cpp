@@ -15,6 +15,7 @@ int TidePrediction::get(QString stationName, QDateTime startDate,
 
   if (sr) {
     std::auto_ptr<Station> station(sr->load());
+
     station->step = interval;
 
     startDate.setTime(QTime(0, 0, 0));
@@ -39,7 +40,7 @@ int TidePrediction::get(QString stationName, QDateTime startDate,
       QString datestr = tide[i].mid(0, 20).simplified();
       // QString tz = tide[i].mid(20, 3).simplified(); //(always UTC)
       QString val = tide[i].mid(23, tide[i].length()).simplified();
-      QDateTime d = QDateTime::fromString(datestr, "yyyy-MM-dd hh:mm AP");
+      QDateTime d = QDateTime::fromString(datestr, "yyyy-MM-dd h:mm AP");
       d.setTimeSpec(Qt::UTC);
       if (d.isValid()) {
         date.push_back(d.toMSecsSinceEpoch());
