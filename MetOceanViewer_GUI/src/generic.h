@@ -30,12 +30,18 @@
 
 class Generic : public QObject {
   Q_OBJECT
-public:
+ public:
   static void splitPath(QString input, QString &filename, QString &directory);
   static void delay(int delayTime);
   static void delayM(int delayTime);
   static int NETCDF_ERR(int status);
   static bool isConnectedToNetwork();
+  static bool createConfigDirectory();
+  static bool createConfigDirectory(QString &configDirectory);
+  static QString configDirectory();
+
+ private:
+  static QString dummyConfigDir;
 };
 
-#endif // GENERIC_H
+#endif  // GENERIC_H

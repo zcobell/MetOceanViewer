@@ -26,6 +26,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 #include "errors.h"
+#include "generic.h"
 #include "mapfunctionsprivate.h"
 
 static QStringList esriList = QStringList() << "World Street Map"
@@ -67,10 +68,7 @@ MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_mapSource = 0;
   this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
-  this->m_configDirectory =
-      QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
-          .at(0);
-  this->createConfigDirectory();
+  this->m_configDirectory = Generic::configDirectory();
 }
 
 QVector<Station> MapFunctions::readMarkers(
@@ -252,12 +250,6 @@ int MapFunctions::getDefaultMapIndex() const { return this->m_defaultMapIndex; }
 
 void MapFunctions::setDefaultMapIndex(int defaultMapIndex) {
   this->m_defaultMapIndex = defaultMapIndex;
-}
-
-void MapFunctions::createConfigDirectory() {
-  if (!QDir(this->m_configDirectory).exists()) {
-    QDir().mkdir(this->m_configDirectory);
-  }
 }
 
 void MapFunctions::setMapType(int index, QQuickWidget *map) {

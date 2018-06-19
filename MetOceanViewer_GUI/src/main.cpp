@@ -39,6 +39,9 @@ int main(int argc, char *argv[]) {
   splash.setEnabled(false);
   splash.show();
 
+  //...Generate the config directory if required
+  Generic::createConfigDirectory();
+
   //...Check for the internet connection
   if (!Generic::isConnectedToNetwork()) {
     QMessageBox::critical(nullptr,

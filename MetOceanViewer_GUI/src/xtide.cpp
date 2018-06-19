@@ -85,7 +85,7 @@ int XTide::calculateXTides() {
 
   this->m_data = new Hmdf(this);
   XtideData *xtideData = new XtideData(this->m_station, startDate, endDate,
-                                       qApp->applicationDirPath(), this);
+                                       Generic::configDirectory(), this);
 
   ierr = xtideData->get(this->m_data);
 
