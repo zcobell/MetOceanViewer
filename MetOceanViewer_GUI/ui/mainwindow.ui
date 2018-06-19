@@ -498,6 +498,16 @@
                      <string>Air Pressure</string>
                     </property>
                    </item>
+                   <item>
+                    <property name="text">
+                     <string>Wind Direction</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Wind Gusts</string>
+                    </property>
+                   </item>
                   </widget>
                  </item>
                  <item>
@@ -4100,7 +4110,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

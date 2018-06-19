@@ -82,10 +82,7 @@ int Noaa::fetchNOAAData() {
   int ierr = this->getNoaaProductId(product1, product2);
   if (ierr != 0) return ierr;
 
-  if (this->m_productIndex == 4 || this->m_productIndex == 5 ||
-      this->m_productIndex == 6 || this->m_productIndex == 7 ||
-      this->m_productIndex == 8)
-    this->m_datum = "Stnd";
+  this->m_datum = this->getDatumLabel();
 
   NoaaCoOps *coops =
       new NoaaCoOps(this->m_station, localStartDate, localEndDate, product1,
@@ -148,7 +145,10 @@ QString Noaa::getUnitsLabel() {
                                                  << "C"
                                                  << "m/s"
                                                  << "%"
-                                                 << "mb";
+                                                 << "mb"
+                                                 << "deg"
+                                                 << "m/s";
+
   static QStringList unitsImperial = QStringList() << "ft"
                                                    << "ft"
                                                    << "ft"
@@ -157,7 +157,9 @@ QString Noaa::getUnitsLabel() {
                                                    << "F"
                                                    << "knot"
                                                    << "%"
-                                                   << "mb";
+                                                   << "mb"
+                                                   << "deg"
+                                                   << "knot";
   if (this->m_comboUnits->currentIndex() == 0) {
     return unitsMetric.at(this->m_productIndex);
   } else {
@@ -376,9 +378,12 @@ int Noaa::getNoaaProductId(QString &product1, QString &product2) {
                                                      << "predictions"
                                                      << "air_temperature"
                                                      << "water_temperature"
-                                                     << "wind"
+                                                     << "wind:speed"
                                                      << "humidity"
-                                                     << "air_pressure";
+                                                     << "air_pressure"
+                                                     << "wind:direction"
+                                                     << "wind:gusts";
+
   product1 = noaaProductCode.at(this->m_productIndex);
   if (this->m_productIndex == 0)
     product2 = "predictions";
@@ -397,7 +402,9 @@ int Noaa::getNoaaProductLabel(QString &product) {
                     << "Water Temperature"
                     << "Wind Speed"
                     << "Relative Humidity"
-                    << "Air Pressure";
+                    << "Air Pressure"
+                    << "Wind Direction"
+                    << "Wind Gusts";
   product = productString.at(this->m_productIndex);
   return 0;
 }
@@ -412,7 +419,9 @@ int Noaa::getNoaaProductSeriesNaming(QString &product1, QString &product2) {
                                     << "Water Temperature"
                                     << "Wind Speed"
                                     << "Humidity"
-                                    << "Air Pressure";
+                                    << "Air Pressure"
+                                    << "Wind Direction"
+                                    << "Wind Gusts";
   product1 = plotFileCode.at(this->m_productIndex);
   if (this->m_productIndex == 0) {
     product2 = "Predicted";

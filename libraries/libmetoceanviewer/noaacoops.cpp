@@ -30,6 +30,12 @@ NoaaCoOps::NoaaCoOps(Station station, QDateTime startDate, QDateTime endDate,
   this->m_product = product;
   this->m_units = units;
   this->m_datum = datum;
+  this->parseProduct();
+}
+
+int NoaaCoOps::parseProduct() {
+  this->m_productParsed = this->m_product.split(":");
+  return 0;
 }
 
 int NoaaCoOps::retrieveData(Hmdf *data) {
@@ -85,7 +91,7 @@ int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
     // Build the URL to request data from the NOAA CO-OPS API
     QString requestURL =
         QStringLiteral("http://tidesandcurrents.noaa.gov/api/datagetter?") +
-        QStringLiteral("product=") + this->m_product +
+        QStringLiteral("product=") + this->m_productParsed[0] +
         QStringLiteral("&application=metoceanviewer") +
         QStringLiteral("&begin_date=") + startString +
         QStringLiteral("&end_date=") + endString + QStringLiteral("&station=") +
@@ -174,7 +180,19 @@ int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
         int day = d[2].toInt();
         int hour = d[3].toInt();
         int minute = d[4].toInt();
-        double value = t[1].toDouble();
+
+        double value;
+        if (this->m_productParsed.size() > 1) {
+          if (this->m_productParsed[1] == "speed") {
+            value = t[1].toDouble();
+          } else if (this->m_productParsed[1] == "direction") {
+            value = t[2].toDouble();
+          } else if (this->m_productParsed[1] == "gusts") {
+            value = t[4].toDouble();
+          }
+        } else {
+          value = t[1].toDouble();
+        }
 
         //...Remove duplicates when sets are downloaded back to back
         if (QDateTime(QDate(year, month, day), QTime(hour, minute, 0)) ==

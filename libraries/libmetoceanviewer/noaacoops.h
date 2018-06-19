@@ -34,6 +34,8 @@ class NoaaCoOps : public WaterData {
  private:
   int retrieveData(Hmdf *data);
 
+  int parseProduct();
+
   int generateDateRanges(QVector<QDateTime> &startDateList,
                          QVector<QDateTime> &endDateList);
 
@@ -46,6 +48,7 @@ class NoaaCoOps : public WaterData {
   int formatNoaaResponse(QVector<QByteArray> &downloadedData, Hmdf *outputData);
 
   QString m_product;
+  QStringList m_productParsed;
   QString m_datum;
   QString m_units;
 };
