@@ -145,6 +145,7 @@ namespace Global {
 
   // Root station index is built on first access.
   StationIndex &stationIndex();
+  StationIndex &stationIndex(const char* hfile_path);
 
   // Don't know where else to put this:  already three different classes
   // need this sanity check, not counting Settings.

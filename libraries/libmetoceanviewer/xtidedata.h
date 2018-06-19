@@ -21,15 +21,23 @@
 #define XTIDEDATA_H
 
 #include "waterdata.h"
+#include "tideprediction.h"
 
 class XtideData : public WaterData {
   Q_OBJECT
  public:
   XtideData(Station station, QDateTime startDate, QDateTime endDate,
-            QObject *parent);
+            QString rootDriectory, QObject *parent);
 
- private:
+  int interval() const;
+  void setInterval(int interval);
+
+private:
   int retrieveData(Hmdf *data);
+
+  int m_interval;
+  QString m_rootDirectory;
+  TidePrediction *m_tidePrediction;
 };
 
 #endif  // XTIDEDATA_H

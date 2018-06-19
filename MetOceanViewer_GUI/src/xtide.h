@@ -61,7 +61,6 @@ class XTide : public QObject {
   void xTideError(QString);
 
  private:
-  int findXTideExe();
   int calculateXTides();
   int plotChart();
 
@@ -70,7 +69,6 @@ class XTide : public QObject {
   QString m_xlabel;
   QString m_plotTitle;
   QString m_errorString;
-  QString m_harmfile;
 
   //...Pointers to GUI elements
   QQuickWidget *m_quickMap;

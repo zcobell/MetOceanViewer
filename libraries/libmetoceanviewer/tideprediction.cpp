@@ -1,38 +1,71 @@
 #include "tideprediction.h"
+#include <QFile>
 #include <QStringList>
 #include "libxtide.hh"
+#include "station.h"
 #include "timezone.h"
 
-TidePrediction::TidePrediction(QObject *parent) : QObject(parent) {}
+TidePrediction::TidePrediction(QString root, QObject *parent)
+    : QObject(parent) {
+  this->m_harmonicsDatabase = root + "/harmonics.tcd";
+  this->initHarmonicsDatabase();
+}
 
-int TidePrediction::get(QString stationName, QDateTime startDate,
-                        QDateTime endDate, int interval, QVector<qint64> &date,
-                        QVector<double> &data) {
-  using namespace libxtide;
+TidePrediction::~TidePrediction() {
+  if (this->m_deleteHarmonicsOnExit) {
+    QFile file(this->m_harmonicsDatabase);
+    if (file.exists()) file.remove();
+  }
+  return;
+}
 
-  const StationRef *sr = Global::stationIndex().getStationRefByName(
-      stationName.toStdString().c_str());
+void TidePrediction::initHarmonicsDatabase() {
+  QFile harm(this->m_harmonicsDatabase);
+  if (!harm.exists()) {
+    Q_INIT_RESOURCE(resource_files);
+    QFile::copy(":/rsc/harmonics.tcd", this->m_harmonicsDatabase);
+  }
+  return;
+}
+
+void TidePrediction::deleteHarmonicsOnExit(bool b) {
+  this->m_deleteHarmonicsOnExit = b;
+}
+
+int TidePrediction::get(Station s, QDateTime startDate, QDateTime endDate,
+                        int interval, Hmdf *data) {
+  HmdfStation *st = new HmdfStation(data);
+
+  st->setName(s.name());
+  st->setId(s.id());
+  st->setCoordinate(s.coordinate());
+  st->setStationIndex(0);
+
+  const libxtide::StationRef *sr =
+      libxtide::Global::stationIndex(
+          this->m_harmonicsDatabase.toStdString().c_str())
+          .getStationRefByName(s.name().toStdString().c_str());
 
   if (sr) {
-    std::auto_ptr<Station> station(sr->load());
+    std::auto_ptr<libxtide::Station> station(sr->load());
 
     station->step = interval;
 
     startDate.setTime(QTime(0, 0, 0));
     endDate.setTime(QTime(0, 0, 0));
 
-    Timestamp startTime =
-        Timestamp(startDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
+    libxtide::Timestamp startTime =
+        libxtide::Timestamp(startDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
                   sr->timezone);
-    Timestamp endTime =
-        Timestamp(endDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
+    libxtide::Timestamp endTime =
+        libxtide::Timestamp(endDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
                   sr->timezone);
 
-    station->setUnits(Units::meters);
+    station->setUnits(libxtide::Units::meters);
 
     Dstr text_out;
-    station->print(text_out, startTime, endTime, Mode::mediumRare,
-                   Format::text);
+    station->print(text_out, startTime, endTime, libxtide::Mode::mediumRare,
+                   libxtide::Format::text);
 
     QStringList tide = QString(text_out.aschar()).split("\n");
 
@@ -43,9 +76,11 @@ int TidePrediction::get(QString stationName, QDateTime startDate,
       QDateTime d = QDateTime::fromString(datestr, "yyyy-MM-dd h:mm AP");
       d.setTimeSpec(Qt::UTC);
       if (d.isValid()) {
-        date.push_back(d.toMSecsSinceEpoch());
-        data.push_back(val.toDouble());
+        st->setNext(d.toMSecsSinceEpoch(), val.toDouble());
       }
+
+      st->setIsNull(false);
+      data->addStation(st);
     }
 
     return 0;

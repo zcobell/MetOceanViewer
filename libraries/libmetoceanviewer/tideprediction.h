@@ -4,14 +4,27 @@
 #include <QDateTime>
 #include <QObject>
 #include <QVector>
+#include "hmdf.h"
+#include "station.h"
 
 class TidePrediction : public QObject {
   Q_OBJECT
  public:
-  explicit TidePrediction(QObject *parent = nullptr);
+  explicit TidePrediction(QString root, QObject *parent = nullptr);
 
-  static int get(QString stationName, QDateTime startDate, QDateTime endDate,
-                 int interval, QVector<qint64> &date, QVector<double> &data);
+  ~TidePrediction();
+
+  void deleteHarmonicsOnExit(bool b);
+
+  int get(Station s, QDateTime startDate, QDateTime endDate, int interval,
+          Hmdf *data);
+
+ private:
+  void initHarmonicsDatabase();
+
+  bool m_deleteHarmonicsOnExit = true;
+
+  QString m_harmonicsDatabase;
 };
 
 #endif  // TIDEPREDICTION_H

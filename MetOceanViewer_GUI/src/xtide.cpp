@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "xtide.h"
 #include <float.h>
-#include "tideprediction.h"
+#include "xtidedata.h"
 
 //...Constructor
 XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
@@ -51,24 +51,15 @@ ChartView *XTide::chartview() { return this->m_chartView; }
 
 //...Overall routine for plotting XTide
 int XTide::plotXTideStation() {
-  int ierr;
-
-  //...Get the executables
-  ierr = this->findXTideExe();
-  if (ierr != 0) return 1;
-
   //...Check if there is a station selected
   if (this->m_currentStation == QString()) return 1;
-
-  //...Add to the environment
-  qputenv("HFILE_PATH", this->m_harmfile.toUtf8());
 
   //...Get the selected station
   this->m_station =
       this->m_stationModel->findStation(*(this->m_currentStation));
 
   //...Calculate the tide signal
-  ierr = this->calculateXTides();
+  int ierr = this->calculateXTides();
 
   if (ierr == 0) this->plotChart();
 
@@ -78,60 +69,6 @@ int XTide::plotXTideStation() {
 QString XTide::getLoadedXTideStation() { return this->m_station.id(); }
 
 QString XTide::getCurrentXTideStation() { return *(this->m_currentStation); }
-
-//...Find the xTide executable
-int XTide::findXTideExe() {
-  QString installLocation =
-      QApplication::applicationDirPath().replace(" ", "\ ");
-  QString buildLocationLinux =
-      QApplication::applicationDirPath() +
-      "/../../MetOceanViewer/MetOceanViewer_GUI/mov_libs/bin";
-  QString buildLocationWindows =
-      QApplication::applicationDirPath() +
-      "/../../../MetOceanViewer/thirdparty/xtide-2.15.1";
-  QString appLocationMacOSX = QApplication::applicationDirPath();
-
-  QFile location1(installLocation + "/harmonics.tcd");
-  QFile location2(buildLocationLinux + "/harmonics.tcd");
-  QFile location3(buildLocationWindows + "/harmonics.tcd");
-  QFile location4(buildLocationLinux + "/harmonics.tcd");
-  QFile location5(installLocation + "/harmonics.tcd");
-  QFile location6(appLocationMacOSX + "/harmonics.tcd");
-
-  if (location1.exists()) {
-    this->m_harmfile = installLocation + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location2.exists()) {
-    this->m_harmfile = buildLocationLinux + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location3.exists()) {
-    this->m_harmfile = buildLocationWindows + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location4.exists()) {
-    this->m_harmfile = buildLocationLinux + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location5.exists()) {
-    this->m_harmfile = installLocation + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location6.exists()) {
-    this->m_harmfile = appLocationMacOSX + "/XTide/bin/harmonics.tcd";
-    return 0;
-  }
-
-  emit xTideError(tr("The XTide harmonics database was not found"));
-
-  return -1;
-}
 
 //...Compute the tidal signal
 int XTide::calculateXTides() {
@@ -144,24 +81,15 @@ int XTide::calculateXTides() {
   endDate = endDate.addDays(1);
   endDate.setTime(QTime(0, 0, 0));
 
-  QVector<qint64> date;
-  QVector<double> data;
-  ierr = TidePrediction::get(this->m_station.name(), startDate, endDate, 600,
-                             date, data);
-
   if (this->m_data != nullptr) delete this->m_data;
 
   this->m_data = new Hmdf(this);
+  XtideData *xtideData = new XtideData(this->m_station, startDate, endDate,
+                                       qApp->applicationDirPath(), this);
 
-  HmdfStation *station = new HmdfStation(this->m_data);
-  station->setName(this->m_station.name());
-  station->setId(this->m_station.id());
-  station->setCoordinate(this->m_station.coordinate());
-  station->setIsNull(false);
-  station->setStationIndex(0);
-  station->setDate(date);
-  station->setData(data);
-  this->m_data->addStation(station);
+  ierr = xtideData->get(this->m_data);
+
+  delete xtideData;
 
   return ierr;
 }

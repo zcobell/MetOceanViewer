@@ -20,7 +20,24 @@
 #include "xtidedata.h"
 
 XtideData::XtideData(Station station, QDateTime startDate, QDateTime endDate,
-                     QObject *parent)
-    : WaterData(station, startDate, endDate, parent) {}
+                     QString rootDriectory, QObject *parent)
+    : WaterData(station, startDate, endDate, parent) {
+  //...Root application directory. We'll store the harmonics file here
+  this->m_rootDirectory = rootDriectory;
 
-int XtideData::retrieveData(Hmdf *data) { return 0; }
+  //...Creates the tide prediction object, tells it
+  this->m_tidePrediction = new TidePrediction(this->m_rootDirectory, this);
+  this->m_tidePrediction->deleteHarmonicsOnExit(false);
+
+  //...Default tide prediction interval in seconds, 5 minutes
+  this->m_interval = 600;
+}
+
+int XtideData::retrieveData(Hmdf *data) {
+  return this->m_tidePrediction->get(this->station(), this->startDate(),
+                                     this->endDate(), this->interval(), data);
+}
+
+int XtideData::interval() const { return this->m_interval; }
+
+void XtideData::setInterval(int interval) { this->m_interval = interval; }

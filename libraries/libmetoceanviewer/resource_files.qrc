@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/rsc">
+        <file>harmonics.tcd</file>
+    </qresource>
+</RCC>
