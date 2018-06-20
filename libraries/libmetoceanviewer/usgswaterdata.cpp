@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "usgswaterdata.h"
 #include <QEventLoop>
+#include <QMap>
 #include <QVector>
 
 UsgsWaterdata::UsgsWaterdata(Station &station, QDateTime startDate,
@@ -54,8 +55,9 @@ QUrl UsgsWaterdata::buildUrl() {
   //...Construct the correct request URL
   QString requestUrl;
   if (this->m_databaseOption == 0)
-    requestUrl = "https://waterdata.usgs.gov/nwis/uv?format=rdb&site_no=" +
-                 this->station().id() + startDateString2 + endDateString2;
+    requestUrl =
+        "https://nwis.waterdata.usgs.gov/usa/nwis/uv?format=rdb&site_no=" +
+        this->station().id() + startDateString2 + endDateString2;
   else if (this->m_databaseOption == 1)
     requestUrl = "https://waterservices.usgs.gov/nwis/iv/?sites=" +
                  this->station().id() + startDateString1 + endDateString1 +
@@ -94,25 +96,16 @@ int UsgsWaterdata::download(QUrl url, Hmdf *data) {
 }
 
 int UsgsWaterdata::readDownloadedData(QNetworkReply *reply, Hmdf *output) {
-  int ierr;
-
   QByteArray data = reply->readAll();
-
-  if (this->m_databaseOption == 0 || this->m_databaseOption == 1) {
-    ierr = this->readUsgsInstantData(data, output);
-  } else {
-    ierr = this->readUsgsDailyData(data, output);
-  }
-
-  return ierr;
+  return this->readUsgsData(data, output);
 }
 
-int UsgsWaterdata::readUsgsInstantData(QByteArray &data, Hmdf *output) {
+int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   bool doubleok;
   int ParamStart, ParamStop;
   int HeaderEnd;
-  QStringList TempList;
-  QString TempLine, TempDateString, TempTimeZoneString;
+  QStringList tempList;
+  QString tempLine, TempDateString, TempTimeZoneString;
 
   QString InputData(data);
   QStringList SplitByLine =
@@ -140,27 +133,42 @@ int UsgsWaterdata::readUsgsInstantData(QByteArray &data, Hmdf *output) {
   }
 
   for (int i = ParamStart; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    if (TempLine == "#") {
+    tempLine = SplitByLine.value(i);
+    if (tempLine == "#") {
       ParamStop = i - 1;
       break;
     }
   }
 
-  QVector<QString> availableDatatypes;
-  availableDatatypes.resize(ParamStop - ParamStart + 1);
+  struct UsgsParameter {
+    QString description;
+    QString ts;
+    QString statistic;
+    QString parameter;
+    QString code;
+  };
+  QVector<UsgsParameter> params;
 
   for (int i = ParamStart; i <= ParamStop; i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(" ", QString::SkipEmptyParts);
-    availableDatatypes[i - ParamStart] = QString();
-    for (int j = 3; j < TempList.length(); j++) {
-      if (j == 3)
-        availableDatatypes[i - ParamStart] = TempList.value(j);
-      else
-        availableDatatypes[i - ParamStart] =
-            availableDatatypes[i - ParamStart] + " " + TempList.value(j);
+    tempLine = SplitByLine.value(i);
+    tempList = tempLine.split("  ", QString::SkipEmptyParts);
+
+    UsgsParameter p;
+    p.ts = tempList.value(1).simplified();
+    p.parameter = tempList.value(2).simplified();
+    if (tempList.length() == 6) {
+      p.description = tempList.value(5).simplified();
+      p.statistic = tempList.value(3).simplified();
+      p.code = p.ts + "_" + p.parameter + "_" + p.statistic;
+    } else if (tempList.length() == 5) {
+      p.description = tempList.value(4);
+      p.statistic = tempList.value(3);
+      p.code = p.ts + "_" + p.parameter + "_" + p.statistic;
+    } else {
+      p.description = tempList.value(3).simplified();
+      p.code = p.ts + "_" + p.parameter;
     }
+    params.push_back(p);
   }
 
   //...Find out where the header ends
@@ -171,12 +179,25 @@ int UsgsWaterdata::readUsgsInstantData(QByteArray &data, Hmdf *output) {
     }
   }
 
+  //...Generate the mapping
+  QMap<int, int> parameterMapping, revParmeterMapping;
+  QString mapString = SplitByLine[HeaderEnd - 2];
+  QStringList mapList = mapString.split("\t");
+  for (int i = 4; i < mapList.length(); i++) {
+    for (int j = 0; j < params.length(); j++) {
+      if (mapList[i] == params[j].code) {
+        parameterMapping[i] = j;
+        revParmeterMapping[j] = i;
+      }
+    }
+  }
+
   //...Initialize the array
   QVector<HmdfStation *> stations;
-  stations.resize(availableDatatypes.length());
+  stations.resize(params.length());
   for (int i = 0; i < stations.length(); i++) {
     stations[i] = new HmdfStation(output);
-    stations[i]->setName(availableDatatypes[i]);
+    stations[i]->setName(params[i].description);
   }
 
   //...Sanity check
@@ -184,118 +205,44 @@ int UsgsWaterdata::readUsgsInstantData(QByteArray &data, Hmdf *output) {
 
   //...Read the data into the array
   for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(QRegExp("[\t]"));
-    TempDateString = TempList.value(2);
-    TempTimeZoneString = TempList.value(3);
+    tempLine = SplitByLine.value(i);
+    tempList = tempLine.split(QRegExp("[\t]"));
+    TempDateString = tempList.value(2);
+    TempTimeZoneString = tempList.value(3);
+
+    //...Account for both daily values (without time) and instant (with time)
     QDateTime currentDate =
         QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
+    if (!currentDate.isValid()) {
+      currentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd");
+    }
+
+    //...Convert to UTC from the source timezone
     currentDate.setTimeSpec(Qt::UTC);
     int offset = Timezone::offsetFromUtc(TempTimeZoneString);
     currentDate = currentDate.addSecs(-offset);
-    for (int j = 0; j < availableDatatypes.length(); j++) {
-      double TempData = TempList.value(2 * j + 4).toDouble(&doubleok);
-      if (!TempList.value(2 * j + 4).isNull() && doubleok) {
-        stations[j]->setNext(currentDate.toMSecsSinceEpoch(), TempData);
+
+    for (int j = 0; j < params.length(); j++) {
+      double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
+      if (doubleok) {
+        stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
       }
     }
   }
 
-  if (stations[0]->numSnaps() < 3) {
+  for (int i = stations.size() - 1; i >= 0; i--) {
+    if (stations[i]->numSnaps() < 3) {
+      delete stations[i];
+      stations.removeAt(i);
+    }
+  }
+
+  //...Sanity check
+  if (stations.length() == 0) {
     this->setErrorString(
         "No data available at this station for this time period\n" +
         this->errorString());
     return 1;
-  }
-
-  //...Add stations to object
-  for (int i = 0; i < stations.length(); i++) output->addStation(stations[i]);
-
-  return 0;
-}
-
-int UsgsWaterdata::readUsgsDailyData(QByteArray &data, Hmdf *output) {
-  int ParamStart, ParamStop;
-  int HeaderEnd;
-  QStringList TempList;
-  QString TempLine, TempDateString;
-  QString InputData(data);
-  QStringList SplitByLine =
-      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
-  bool doubleok;
-
-  ParamStart = -1;
-  ParamStop = -1;
-  HeaderEnd = -1;
-
-  //...Save the potential error string
-  this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
-
-  //...Start by finding the header and reading the parameters from it
-  for (int i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(15) == "# Data provided") {
-      ParamStart = i + 2;
-      break;
-    }
-  }
-
-  for (int i = ParamStart; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    if (TempLine == "#") {
-      ParamStop = i - 1;
-      break;
-    }
-  }
-
-  QVector<QString> availableDatatypes;
-  availableDatatypes.resize(ParamStop - ParamStart + 1);
-
-  for (int i = ParamStart; i <= ParamStop; i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(" ", QString::SkipEmptyParts);
-    availableDatatypes[i - ParamStart] = QString();
-    for (int j = 3; j < TempList.length(); j++) {
-      if (j == 3)
-        availableDatatypes[i - ParamStart] = TempList.value(j);
-      else
-        availableDatatypes[i - ParamStart] =
-            availableDatatypes[i - ParamStart] + " " + TempList.value(j);
-    }
-  }
-
-  //...Remove the leading number
-  for (int i = 0; i < availableDatatypes.length(); i++)
-    availableDatatypes[i] = availableDatatypes[i].mid(6).simplified();
-
-  //...Find out where the header ends
-  for (int i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(1) != "#") {
-      HeaderEnd = i + 2;
-      break;
-    }
-  }
-
-  //...Initialize the array
-  QVector<HmdfStation *> stations;
-  stations.resize(availableDatatypes.length());
-  for (int i = 0; i < availableDatatypes.length(); i++) {
-    stations[i] = new HmdfStation(output);
-    stations[i]->setName(availableDatatypes[i]);
-  }
-
-  //...Read the data into the array
-  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
-    TempLine = SplitByLine.value(i);
-    TempList = TempLine.split(QRegExp("[\t]"));
-    TempDateString = TempList.value(2);
-    QDateTime currentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd");
-    currentDate.setTimeSpec(Qt::UTC);
-    for (int j = 0; j < availableDatatypes.length(); j++) {
-      double tempData = TempList.value(2 * j + 3).toDouble(&doubleok);
-      if (!TempList.value(2 * j + 3).isNull() && doubleok) {
-        stations[j]->setNext(currentDate.toMSecsSinceEpoch(), tempData);
-      }
-    }
   }
 
   //...Add stations to object

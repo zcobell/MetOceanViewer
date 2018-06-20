@@ -39,8 +39,7 @@ class UsgsWaterdata : public WaterData {
 
   int readDownloadedData(QNetworkReply *reply, Hmdf *output);
 
-  int readUsgsInstantData(QByteArray &data, Hmdf *output);
-  int readUsgsDailyData(QByteArray &data, Hmdf *output);
+  int readUsgsData(QByteArray &data, Hmdf *output);
 
   int m_databaseOption;
 };
