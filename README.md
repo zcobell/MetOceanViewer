@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/zcobell/MetOceanViewer.svg?branch=master)](https://travis-ci.org/zcobell/MetOceanViewer)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2d817318594440a0834476c9b06de219)](https://www.codacy.com/app/zachary.cobell/MetOceanViewer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=zcobell/MetOceanViewer&amp;utm_campaign=Badge_Grade)
 
-Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gui interface. The code is written in Qt C++ and is designed to run on Windows, Mac OSX, and Linux systems.
+Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gui interface. The code is written in Qt C++ and is designed to run on Windows and Linux systems.
 
 # Feature List
 - [x] Access and view NOAA station data
@@ -19,7 +19,9 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 ![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer_GUI/screenshots/mov_ss3.JPG)
 
 # Compiling
-To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.10.1 on Windows, Mac OSX, and Linux. Prior versions of Qt should work, but have not been tested.
+To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.11.1 on Windows and Ubuntu Linux 18.04. It is expected that other versions and flavors of Linux should not pose an issue. Mac OSX is expected to work, however, some tweaks may be required. I don't currently have a development environment for Mac, so assistance with this would be appreciated. 
+
+Other versions of Qt that include the QtCharts library should work, but have not been tested.
 
 ## netCDF
 You will need to have netCDF version 4+ installed on your system with acccess to the headers and libraries. You may need to edit the netCDF path in MetOceanViewer.pro to correctly locate these files. When compiling for Windows, these libraries are already included in the package. However, Unix/Mac users will need to ensure they are in their LD_LIBRARY_PATH variable or configure the .pro file accordingly.
