@@ -30,7 +30,6 @@
 
 namespace libxtide {
 
-
 static bool haveInstance = false;
 
 

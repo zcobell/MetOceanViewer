@@ -17,31 +17,33 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef GENERIC_H
-#define GENERIC_H
+#ifndef TIDEPREDICTION_H
+#define TIDEPREDICTION_H
 
-#include <QColor>
 #include <QDateTime>
-#include <QMessageBox>
-#include <QNetworkInterface>
-#include <QString>
-#include <QtCore>
-#include <QtWidgets>
+#include <QObject>
+#include <QVector>
+#include "hmdf.h"
+#include "station.h"
 
-class Generic : public QObject {
+class TidePrediction : public QObject {
   Q_OBJECT
  public:
-  static void splitPath(QString input, QString &filename, QString &directory);
-  static void delay(int delayTime);
-  static void delayM(int delayTime);
-  static int NETCDF_ERR(int status);
-  static bool isConnectedToNetwork();
-  static bool createConfigDirectory();
-  static bool createConfigDirectory(QString &configDirectory);
-  static QString configDirectory();
+  explicit TidePrediction(QString root, QObject *parent = nullptr);
+
+  ~TidePrediction();
+
+  void deleteHarmonicsOnExit(bool b);
+
+  int get(Station &s, QDateTime startDate, QDateTime endDate, int interval,
+          Hmdf *data);
 
  private:
-  static QString dummyConfigDir;
+  void initHarmonicsDatabase();
+
+  bool m_deleteHarmonicsOnExit = true;
+
+  QString m_harmonicsDatabase;
 };
 
-#endif  // GENERIC_H
+#endif  // TIDEPREDICTION_H

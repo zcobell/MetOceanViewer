@@ -426,7 +426,7 @@ void MainWindow::setupUserTimeseriesMap() {
 }
 
 void MainWindow::setupHighWaterMarkMap() {
-  if (this->hwmMarkerModel != nullptr) {
+  if (this->hwmMarkerModel == nullptr) {
     this->hwmMarkerModel = new StationModel(this);
   }
 

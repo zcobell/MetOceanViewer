@@ -33,12 +33,6 @@ mkdir -p $winPackDir/com.zachcobell.metoceanviewer/data
 #...Grab the MetOceanViewer executable
 cp $compileDirectory/MetOceanViewer_GUI/release/MetOceanViewer.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 
-#...Grab the Windows XTide executable
-cp ../thirdparty/xtide-2.15.1/tide.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
-
-#...Grab the database
-cp ../thirdparty/xtide-2.15.1/harmonics.tcd $winPackDir/com.zachcobell.metoceanviewer/data/.
-
 #...Grab the icon
 cp ../MetOceanViewer_GUI/img/mov.ico $winPackDir/com.zachcobell.metoceanviewer/data/.
 

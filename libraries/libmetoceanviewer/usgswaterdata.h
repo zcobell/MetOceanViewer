@@ -17,31 +17,32 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef GENERIC_H
-#define GENERIC_H
+#ifndef USGSWATERDATA_H
+#define USGSWATERDATA_H
 
-#include <QColor>
-#include <QDateTime>
-#include <QMessageBox>
-#include <QNetworkInterface>
-#include <QString>
-#include <QtCore>
-#include <QtWidgets>
+#include "waterdata.h"
 
-class Generic : public QObject {
-  Q_OBJECT
+class UsgsWaterdata : public WaterData {
+    Q_OBJECT
  public:
-  static void splitPath(QString input, QString &filename, QString &directory);
-  static void delay(int delayTime);
-  static void delayM(int delayTime);
-  static int NETCDF_ERR(int status);
-  static bool isConnectedToNetwork();
-  static bool createConfigDirectory();
-  static bool createConfigDirectory(QString &configDirectory);
-  static QString configDirectory();
+  UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
+                int databaseOption, QObject *parent = nullptr);
+
+  int get(Hmdf *data);
 
  private:
-  static QString dummyConfigDir;
+  int fetch(Hmdf *data);
+
+  QUrl buildUrl();
+
+  int download(QUrl url, Hmdf *data);
+
+  int readDownloadedData(QNetworkReply *reply, Hmdf *output);
+
+  int readUsgsInstantData(QByteArray &data, Hmdf *output);
+  int readUsgsDailyData(QByteArray &data, Hmdf *output);
+
+  int m_databaseOption;
 };
 
-#endif  // GENERIC_H
+#endif  // USGSWATERDATA_H

@@ -110,7 +110,9 @@ namespace Global {
 
   // The user_io_ptr feature of libpng doesn't seem to work.
   // See writePNGToFile.
+#ifdef HAVE_PNG_H
   extern FILE *PNGFile;
+#endif  
 
   // Client-side font used in RGBGraph.
   extern ClientSide::Font graphFont;
@@ -143,6 +145,7 @@ namespace Global {
 
   // Root station index is built on first access.
   StationIndex &stationIndex();
+  StationIndex &stationIndex(const char* hfile_path);
 
   // Don't know where else to put this:  already three different classes
   // need this sanity check, not counting Settings.
@@ -158,9 +161,11 @@ namespace Global {
   const bool isValidEventMask (const Dstr &eventMask);
 
   // Function for libpng.  See also PNGFile.
+#ifdef HAVE_PNG_H 
   void writePNGToFile (png_structp png_ptr,
 		       png_bytep b_ptr,
 		       png_size_t sz);
+#endif
 
   // Rounding functions that round to the nearest integer and round
   // halfway cases toward positive infinity.  Oddly enough, none of

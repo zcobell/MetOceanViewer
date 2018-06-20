@@ -22,21 +22,19 @@
 
 #include <QNetworkReply>
 #include <QObject>
-#include "hmdf.h"
+#include "waterdata.h"
 
-class NoaaCoOps : public QObject {
+class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
-  NoaaCoOps(QString stationId, QString stationName, QGeoCoordinate location,
-            QString product, QString datum, QString units, QDateTime startDate,
-            QDateTime endDate, QObject *parent = nullptr);
-
-  int get(Hmdf *data);
-
-  QString errorString();
+  NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
+            QString product, QString datum, QString units,
+            QObject *parent = nullptr);
 
  private:
-  int downloadData(Hmdf *data);
+  int retrieveData(Hmdf *data);
+
+  int parseProduct();
 
   int generateDateRanges(QVector<QDateTime> &startDateList,
                          QVector<QDateTime> &endDateList);
@@ -45,19 +43,14 @@ class NoaaCoOps : public QObject {
                                  QVector<QDateTime> endDateList,
                                  QVector<QByteArray> &downloadedData);
 
-  int readNoaaResponse(QNetworkReply *reply, QVector<QByteArray> &downloadData);
+  int readNoaaResponse(QNetworkReply *reply, QVector<QByteArray> &retrieveData);
 
   int formatNoaaResponse(QVector<QByteArray> &downloadedData, Hmdf *outputData);
 
-  QString m_stationId;
-  QString m_stationName;
   QString m_product;
+  QStringList m_productParsed;
   QString m_datum;
   QString m_units;
-  QString m_errorString;
-  QGeoCoordinate m_location;
-  QDateTime m_startDate;
-  QDateTime m_endDate;
 };
 
 #endif  // NOAACOOPS_H

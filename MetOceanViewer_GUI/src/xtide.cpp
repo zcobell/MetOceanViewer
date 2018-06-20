@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "xtide.h"
 #include <float.h>
-#include "hmdf.h"
+#include "xtidedata.h"
 
 //...Constructor
 XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
@@ -39,6 +39,7 @@ XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
   this->m_station.name() = QString();
   this->m_currentStation = inCurrentStation;
   this->m_stationModel = inStationModel;
+  this->m_data = nullptr;
 }
 
 //...Destructor
@@ -50,18 +51,16 @@ ChartView *XTide::chartview() { return this->m_chartView; }
 
 //...Overall routine for plotting XTide
 int XTide::plotXTideStation() {
-  int ierr;
-
-  //...Get the executables
-  ierr = this->findXTideExe();
-  if (ierr != 0) return -1;
+  //...Check if there is a station selected
+  if (this->m_currentStation == QString()) return 1;
 
   //...Get the selected station
   this->m_station =
       this->m_stationModel->findStation(*(this->m_currentStation));
 
   //...Calculate the tide signal
-  ierr = this->calculateXTides();
+  int ierr = this->calculateXTides();
+
   if (ierr == 0) this->plotChart();
 
   return 0;
@@ -71,70 +70,9 @@ QString XTide::getLoadedXTideStation() { return this->m_station.id(); }
 
 QString XTide::getCurrentXTideStation() { return *(this->m_currentStation); }
 
-//...Find the xTide executable
-int XTide::findXTideExe() {
-  QString installLocation =
-      QApplication::applicationDirPath().replace(" ", "\ ");
-  QString buildLocationLinux =
-      QApplication::applicationDirPath() +
-      "/../../MetOceanViewer/MetOceanViewer_GUI/mov_libs/bin";
-  QString buildLocationWindows =
-      QApplication::applicationDirPath() +
-      "/../../../MetOceanViewer/thirdparty/xtide-2.15.1";
-  QString appLocationMacOSX = QApplication::applicationDirPath();
-
-  QFile location1(installLocation + "/tide");
-  QFile location2(buildLocationLinux + "/tide");
-  QFile location3(buildLocationWindows + "/tide.exe");
-  QFile location4(buildLocationLinux + "/tide.exe");
-  QFile location5(installLocation + "/tide.exe");
-  QFile location6(appLocationMacOSX + "/XTide/bin/tide");
-
-  if (location1.exists()) {
-    this->m_xtideexe = installLocation + "/tide";
-    this->m_harmfile = installLocation + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location2.exists()) {
-    this->m_xtideexe = buildLocationLinux + "/tide";
-    this->m_harmfile = buildLocationLinux + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location3.exists()) {
-    this->m_xtideexe = buildLocationWindows + "/tide";
-    this->m_harmfile = buildLocationWindows + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location4.exists()) {
-    this->m_xtideexe = buildLocationLinux + "/tide.exe";
-    this->m_harmfile = buildLocationLinux + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location5.exists()) {
-    this->m_xtideexe = installLocation + "/tide.exe";
-    this->m_harmfile = installLocation + "/harmonics.tcd";
-    return 0;
-  }
-
-  if (location6.exists()) {
-    this->m_xtideexe = appLocationMacOSX + "/XTide/bin/tide";
-    this->m_harmfile = appLocationMacOSX + "/XTide/bin/harmonics.tcd";
-    return 0;
-  }
-
-  emit xTideError(tr("The XTide executable was not found"));
-
-  return -1;
-}
-
 //...Compute the tidal signal
 int XTide::calculateXTides() {
   int ierr;
-  QEventLoop loop;
 
   //...Get the selected dates
   QDateTime startDate = this->m_startDateEdit->dateTime();
@@ -142,129 +80,35 @@ int XTide::calculateXTides() {
   startDate.setTime(QTime(0, 0, 0));
   endDate = endDate.addDays(1);
   endDate.setTime(QTime(0, 0, 0));
-  QString startDateString = startDate.toString("yyyy-MM-dd hh:mm");
-  QString endDateString = endDate.toString("yyyy-MM-dd hh:mm");
 
-  QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-  env.insert("HFILE_PATH", this->m_harmfile);
+  if (this->m_data != nullptr) delete this->m_data;
 
-//...Build a calling string. For windows, quote the executable
-//   to avoid issues with path names like "Program Files". We'll
-//   assume Linux users aren't dumb enough to do such a thing
-#ifdef _WIN32
-  QString xTideCmd = "\"" + this->m_xtideexe.replace(" ", "\ ") +
-                     "\""
-                     " -l \"" +
-                     this->m_station.name() + "\"" + " -b \"" +
-                     startDateString + "\"" + " -e \"" + endDateString + "\"" +
-                     " -s \"00:30\" -z -m m";
-#else
-  QString xTideCmd = this->m_xtideexe + " -l \"" + this->m_station.name() +
-                     "\"" + " -b \"" + startDateString + "\"" + " -e \"" +
-                     endDateString + "\"" + " -s \"00:30\" -z -m m";
-#endif
+  this->m_data = new Hmdf(this);
+  XtideData *xtideData = new XtideData(this->m_station, startDate, endDate,
+                                       Generic::configDirectory(), this);
 
-  QProcess xTideRun(this);
-  xTideRun.setEnvironment(env.toStringList());
-  xTideRun.start(xTideCmd);
-  connect(&xTideRun, SIGNAL(finished(int, QProcess::ExitStatus)), &loop,
-          SLOT(quit()));
-  loop.exec();
+  ierr = xtideData->get(this->m_data);
 
-  //...Check the error code
-  ierr = xTideRun.exitCode();
-  if (ierr != 0) return -1;
-
-  //...Grab the output from XTide and send to the parse routine
-  ierr = this->parseXTideResponse(xTideRun.readAllStandardOutput());
+  delete xtideData;
 
   return ierr;
 }
 
-int XTide::parseXTideResponse(QString xTideResponse) {
-  QString tempString, tempDate, tempTime, tempAMPM, tempElev;
-  QString tempHour, tempMinute;
-  QStringList tempList;
-  QStringList response = xTideResponse.split("\n");
-  QDate date;
-  QTime time;
-  XTideStationData thisData;
-  int hour, minute;
-  double elevation, unitConvert;
-
-  if (this->m_comboUnits->currentIndex() == 0)
-    unitConvert = 1.0 / 3.28084;
-  else
-    unitConvert = 1.0;
-
-  this->m_stationData.clear();
-
-  for (int i = 0; i < response.length(); i++) {
-    tempString = response.value(i);
-    tempString = tempString.simplified();
-    tempList = tempString.split(" ");
-
-    if (tempList.length() != 5) continue;
-
-    tempDate = tempList.value(0);
-    tempTime = tempList.value(1);
-    tempAMPM = tempList.value(2);
-    tempElev = tempList.value(4);
-
-    tempHour = tempTime.split(":").value(0);
-    tempMinute = tempTime.split(":").value(1);
-    hour = tempHour.toInt();
-    minute = tempMinute.toInt();
-
-    if (tempAMPM == "PM")
-      if (hour != 12)
-        hour = hour + 12;
-      else
-        hour = 12;
-    else if (hour == 12)
-      hour = 0;
-
-    date = QDate::fromString(tempDate, "yyyy-MM-dd");
-    time = QTime(hour, minute);
-    elevation = tempElev.toDouble();
-
-    thisData.m_date = QDateTime(date, time).toMSecsSinceEpoch();
-    thisData.m_value = elevation * unitConvert;
-
-    this->m_stationData.push_back(thisData);
-  }
-
-  return 0;
-}
-
-int XTide::getDataBounds(double &min, double &max) {
-  int j;
-
-  min = DBL_MAX;
-  max = -DBL_MAX;
-
-  for (j = 0; j < this->m_stationData.length(); j++) {
-    if (this->m_stationData[j].m_value < min)
-      min = this->m_stationData[j].m_value;
-    if (this->m_stationData[j].m_value > max)
-      max = this->m_stationData[j].m_value;
-  }
-  return 0;
-}
-
 int XTide::plotChart() {
   double ymin, ymax;
+  qint64 minDate, maxDate;
   QString format;
-  QDateTime minDateTime, maxDateTime, startDate, endDate;
 
-  maxDateTime = QDateTime(QDate(1000, 1, 1), QTime(0, 0, 0));
-  minDateTime = QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0));
+  double multiplier;
+  if (this->m_comboUnits->currentIndex() == 0)
+    multiplier = 1.0;
+  else
+    multiplier = 3.28084;
 
-  startDate = this->m_startDateEdit->dateTime();
-  endDate = this->m_endDateEdit->dateTime();
+  this->m_data->dataBounds(minDate, maxDate, ymin, ymax);
 
-  int ierr = this->getDataBounds(ymin, ymax);
-  if (ierr != 0) return ierr;
+  ymin = ymin * multiplier;
+  ymax = ymax * multiplier;
 
   if (this->m_comboUnits->currentIndex() == 1)
     this->m_ylabel = tr("Water Surface Elevation (ft, MLLW)");
@@ -275,20 +119,20 @@ int XTide::plotChart() {
   this->m_chartView->m_chart = new QChart();
 
   QLineSeries *series1 = new QLineSeries(this);
-  series1->setName(this->m_station.name());
+  series1->setName(this->m_data->station(0)->name());
   series1->setPen(
       QPen(QColor(0, 255, 0), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
-  minDateTime = this->m_startDateEdit->dateTime();
-  maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
+  QDateTime minDateTime = this->m_startDateEdit->dateTime();
+  QDateTime maxDateTime = this->m_endDateEdit->dateTime().addDays(1);
   minDateTime.setTime(QTime(0, 0, 0));
   maxDateTime.setTime(QTime(0, 0, 0));
 
   QDateTimeAxis *axisX = new QDateTimeAxis(this);
   axisX->setTickCount(5);
-  if (startDate.daysTo(endDate) > 90)
+  if (minDateTime.daysTo(maxDateTime) > 90)
     axisX->setFormat("MM/yyyy");
-  else if (startDate.daysTo(endDate) > 4)
+  else if (minDateTime.daysTo(maxDateTime) > 4)
     axisX->setFormat("MM/dd/yyyy");
   else
     axisX->setFormat("MM/dd/yyyy hh:mm");
@@ -306,9 +150,10 @@ int XTide::plotChart() {
   axisY->setMax(ymax);
   this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
 
-  for (int i = 0; i < this->m_stationData.length(); i++)
-    series1->append(this->m_stationData[i].m_date,
-                    this->m_stationData[i].m_value);
+  for (int i = 0; i < this->m_data->station(0)->numSnaps(); i++) {
+    series1->append(this->m_data->station(0)->date(i),
+                    this->m_data->station(0)->data(i) * multiplier);
+  }
   this->m_chartView->m_chart->addSeries(series1);
   this->m_chartView->clear();
   this->m_chartView->addSeries(series1, series1->name());
@@ -354,27 +199,12 @@ int XTide::plotChart() {
 }
 
 int XTide::saveXTideData(QString filename, QString format) {
-  Hmdf *xtideOut = new Hmdf(this);
-  HmdfStation *station = new HmdfStation(xtideOut);
+  if (this->m_data == nullptr) return 1;
 
-  station->setLongitude(this->m_station.coordinate().longitude());
-  station->setLatitude(this->m_station.coordinate().latitude());
-  station->setName(this->m_station.name());
-  station->setName(this->m_station.name().replace(" ", "_"));
-  station->setId(this->m_station.id());
-  station->setStationIndex(1);
-  for (int i = 0; i < this->m_stationData.length(); i++) {
-    station->setNext(this->m_stationData[i].m_date,
-                     this->m_stationData[i].m_value);
-  }
-
-  xtideOut->addStation(station);
-  int ierr = xtideOut->write(filename);
+  int ierr = this->m_data->write(filename);
   if (ierr != 0) {
     emit xTideError("Error writing XTide data to file.");
   }
-
-  delete xtideOut;
 
   return 0;
 }

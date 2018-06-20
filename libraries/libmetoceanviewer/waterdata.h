@@ -17,46 +17,48 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef TIMEZONE_H
-#define TIMEZONE_H
+#ifndef WATERDATA_H
+#define WATERDATA_H
 
-#include <QMap>
+#include <QNetworkReply>
 #include <QObject>
-#include "timezonestruct.h"
+#include "hmdf.h"
+#include "station.h"
+#include "timezone.h"
 
-class Timezone : public QObject {
+class WaterData : public QObject {
   Q_OBJECT
-
  public:
-  explicit Timezone(QObject *parent = nullptr);
+  explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
+                     QObject *parent = nullptr);
 
-  static int localMachineOffsetFromUtc();
+  int get(Hmdf *data);
 
-  bool fromAbbreviation(QString value,
-                        TZData::Location location = TZData::NorthAmerica);
+  QString errorString() const;
 
-  bool initialized();
+  Timezone *getTimezone() const;
+  void setTimezone(Timezone *timezone);
 
-  int utcOffset();
+protected:
+  virtual int retrieveData(Hmdf *data);
 
-  int offsetTo(Timezone &zone);
+  void setErrorString(const QString &errorString);
 
-  QString abbreviation();
+  Station station() const;
+  void setStation(const Station &station);
 
-  QStringList getAllTimezoneAbbreviations();
-  QStringList getAllTimezoneNames();
-  QStringList getTimezoneAbbreviations(TZData::Location location);
-  QStringList getTimezoneNames(TZData::Location location);
+  QDateTime startDate() const;
+  void setStartDate(const QDateTime &startDate);
+
+  QDateTime endDate() const;
+  void setEndDate(const QDateTime &endDate);
 
  private:
-  void build();
-
-  bool m_initialized;
-
-  TimezoneStruct m_zone;
-
-  QMap<std::pair<TZData::Location, TZData::Abbreviation>, TimezoneStruct>
-      m_timezones;
+  QString m_errorString;
+  Station m_station;
+  QDateTime m_startDate;
+  QDateTime m_endDate;
+  Timezone *m_timezone;
 };
 
-#endif  // TIMEZONE_H
+#endif  // WATERDATA_H

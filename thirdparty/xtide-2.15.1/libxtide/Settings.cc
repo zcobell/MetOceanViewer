@@ -36,14 +36,14 @@ static bool commandLineCached = false;
 
 
 static void setxmlfilename () {
-#ifdef UseLocalFiles
-  xmlfilename = ".xtide.xml";
-#else
-  xmlfilename = getenv ("HOME");
-  if (xmlfilename.isNull())
-    return;
-  xmlfilename += "/.xtide.xml";
-#endif
+//#ifdef UseLocalFiles
+//  xmlfilename = ".xtide.xml";
+//#else
+//  xmlfilename = getenv ("HOME");
+//  if (xmlfilename.isNull())
+//    return;
+//  xmlfilename += "/.xtide.xml";
+//#endif
 }
 
 
@@ -819,37 +819,37 @@ void Settings::apply (const Settings &settings) {
 
 
 void Settings::applyUserDefaults () {
-  setxmlfilename();
-  if (xmlfilename.isNull())
-    return;
+//  setxmlfilename();
+//  if (xmlfilename.isNull())
+//    return;
 
-  xmlparsetree = NULL;
-  if ((yyin = fopen (xmlfilename.aschar(), "rb"))) {
-    yyparse();
-    fclose (yyin);
-    xmltag *tag = xmlparsetree;
-    while (tag) {
-      if ((*(tag->name)) == "xtideoptions") {
-        xmlattribute *a = tag->attributes;
-        while (a) {
-          // Ignore any settings that we don't already have.
-          ConfigurablesMap::iterator it = find (*(a->name));
-          if (it != end()) {
-            Configurable &cfbl = it->second;
-            if (cfbl.kind == Configurable::settingKind) {
-              Dstr culprit ("the ~/.xtide.xml attribute for ");
-              culprit += cfbl.switchName;
-              install (cfbl, culprit, *(a->value));
-            }
-          }
-          a = a->next;
-        }
-      }
-      tag = tag->next;
-    }
-  }
-  freexml (xmlparsetree);
-  xmlparsetree = NULL;
+//  xmlparsetree = NULL;
+//  if ((yyin = fopen (xmlfilename.aschar(), "rb"))) {
+//    yyparse();
+//    fclose (yyin);
+//    xmltag *tag = xmlparsetree;
+//    while (tag) {
+//      if ((*(tag->name)) == "xtideoptions") {
+//        xmlattribute *a = tag->attributes;
+//        while (a) {
+//          // Ignore any settings that we don't already have.
+//          ConfigurablesMap::iterator it = find (*(a->name));
+//          if (it != end()) {
+//            Configurable &cfbl = it->second;
+//            if (cfbl.kind == Configurable::settingKind) {
+//              Dstr culprit ("the ~/.xtide.xml attribute for ");
+//              culprit += cfbl.switchName;
+//              install (cfbl, culprit, *(a->value));
+//            }
+//          }
+//          a = a->next;
+//        }
+//      }
+//      tag = tag->next;
+//    }
+//  }
+//  freexml (xmlparsetree);
+//  xmlparsetree = NULL;
 }
 
 
@@ -878,42 +878,42 @@ void Settings::applyXResources (
 
 
 void Settings::save() {
-  setxmlfilename();
-  if (xmlfilename.isNull())
-    Global::barf (Error::NOHOMEDIR);
+//  setxmlfilename();
+//  if (xmlfilename.isNull())
+//    Global::barf (Error::NOHOMEDIR);
 
-  FILE *fp = fopen (xmlfilename.aschar(), "wb");
-  if (!fp) {
-    Global::cantOpenFile (xmlfilename, Error::nonfatal);
-    return;
-  }
-  fprintf (fp, "<?xml version=\"1.0\"?>\n<xtideoptions ");
+//  FILE *fp = fopen (xmlfilename.aschar(), "wb");
+//  if (!fp) {
+//    Global::cantOpenFile (xmlfilename, Error::nonfatal);
+//    return;
+//  }
+//  fprintf (fp, "<?xml version=\"1.0\"?>\n<xtideoptions ");
 
-  for (ConfigurablesMap::iterator it = begin(); it != end(); ++it) {
-    Configurable &cfbl = it->second;
-    if (cfbl.kind == Configurable::settingKind && !cfbl.isNull) {
-      fprintf (fp, "%s=\"", cfbl.switchName.aschar());
-      switch (cfbl.representation) {
-      case Configurable::unsignedRep:
-        fprintf (fp, "%u", cfbl.u);
-        break;
-      case Configurable::doubleRep:
-        fprintf (fp, "%0.2f", cfbl.d);
-        break;
-      case Configurable::charRep:
-        fprintf (fp, "%c", cfbl.c);
-        break;
-      case Configurable::dstrRep:
-        fprintf (fp, "%s", cfbl.s.aschar());
-        break;
-      default:
-        assert (false);
-      }
-      fprintf (fp, "\"\n");
-    }
-  }
-  fprintf (fp, "/>\n");
-  fclose (fp);
+//  for (ConfigurablesMap::iterator it = begin(); it != end(); ++it) {
+//    Configurable &cfbl = it->second;
+//    if (cfbl.kind == Configurable::settingKind && !cfbl.isNull) {
+//      fprintf (fp, "%s=\"", cfbl.switchName.aschar());
+//      switch (cfbl.representation) {
+//      case Configurable::unsignedRep:
+//        fprintf (fp, "%u", cfbl.u);
+//        break;
+//      case Configurable::doubleRep:
+//        fprintf (fp, "%0.2f", cfbl.d);
+//        break;
+//      case Configurable::charRep:
+//        fprintf (fp, "%c", cfbl.c);
+//        break;
+//      case Configurable::dstrRep:
+//        fprintf (fp, "%s", cfbl.s.aschar());
+//        break;
+//      default:
+//        assert (false);
+//      }
+//      fprintf (fp, "\"\n");
+//    }
+//  }
+//  fprintf (fp, "/>\n");
+//  fclose (fp);
 }
 
 

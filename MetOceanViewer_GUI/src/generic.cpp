@@ -86,3 +86,24 @@ bool Generic::isConnectedToNetwork() {
   else
     return false;
 }
+
+bool Generic::createConfigDirectory() {
+  QString dmy;
+  return Generic::createConfigDirectory(dmy);
+}
+
+bool Generic::createConfigDirectory(QString &configDirectory) {
+  configDirectory =
+      QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
+          .at(0);
+  if (!QDir(configDirectory).exists()) {
+    return QDir().mkdir(configDirectory);
+  } else {
+    return true;
+  }
+}
+
+QString Generic::configDirectory() {
+  return QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
+      .at(0);
+}

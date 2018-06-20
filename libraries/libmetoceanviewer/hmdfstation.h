@@ -69,6 +69,9 @@ class HmdfStation : public QObject {
   QVector<qint64> allDate() const;
   QVector<double> allData() const;
 
+  void dataBounds(qint64 &minDate, qint64 &maxDate, double &minValue,
+                  double &maxValue);
+
  private:
   QGeoCoordinate m_coordinate;
 

@@ -99,6 +99,7 @@ void RGBGraph::drawStringP (int x, int y, const Dstr &s) {
 // This is a hacked-down version of write_png in example.c in libpng-0.99c.
 // 2010-06-30 Updated deprecated jmpbuf usage.
 // 2011-07-30 Turned off interlacing.
+#ifdef HAVE_PNG_H
 void RGBGraph::writeAsPNG (png_rw_ptr write_data_fn) {
 
   png_structp png_ptr;
@@ -169,5 +170,6 @@ void RGBGraph::writeAsPNG (png_rw_ptr write_data_fn) {
   /* clean up after the write, and free any memory allocated */
   png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
 }
+#endif
 
 }

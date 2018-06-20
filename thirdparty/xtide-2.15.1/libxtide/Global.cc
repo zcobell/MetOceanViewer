@@ -109,7 +109,9 @@ const unsigned Global::dialogLastYear
 Settings Global::settings;
 Dstr Global::codeset;
 constCharPointer Global::degreeSign ("°");
+#ifdef HAVE_PNG_H
 FILE *Global::PNGFile = NULL;
+#endif
 
 static bool _disclaimerDisabled;
 static Dstr disclaimerFileName;
@@ -118,7 +120,7 @@ static bool daemonMode = false;
 static void (*_errorCallback) (const Dstr &errorMessage,
                                Error::ErrType fatality) = NULL;
 
-
+#ifdef HAVE_PNG_H
 void Global::writePNGToFile (png_structp png_ptr unusedParameter,
                              png_bytep b_ptr,
                              png_size_t sz) {
@@ -126,6 +128,7 @@ void Global::writePNGToFile (png_structp png_ptr unusedParameter,
   if (fwriteReturn < sz)
     Global::barf (Error::PNG_WRITE_FAILURE);
 }
+#endif
 
 
 static void initDisclaimer() {
@@ -246,6 +249,79 @@ const Dstr &Global::getXtideConf (unsigned lineNo) {
 StationIndex &Global::stationIndex () {
   if (!_stationIndex) {
     Dstr unparsedHfilePath (getenv ("HFILE_PATH"));
+    if (unparsedHfilePath.isNull())
+      unparsedHfilePath = getXtideConf(0U);
+    HarmonicsPath harmonicsPath (unparsedHfilePath);
+    _stationIndex = new StationIndex();
+    for (unsigned i=0; i<harmonicsPath.size(); ++i) {
+      struct stat s;
+      if (stat (harmonicsPath[i].aschar(), &s) == 0) {
+#ifdef HAVE_DIRENT_H
+        if (S_ISDIR (s.st_mode)) {
+          Dstr dname (harmonicsPath[i]);
+          dname += '/';
+          DIR *dirp = opendir (dname.aschar());
+          if (!dirp)
+            xperror (dname.aschar());
+          else {
+            dirent *dp;
+	    for (dp = readdir(dirp); dp != NULL; dp = readdir(dirp)) {
+              Dstr fname (dp->d_name);
+	      if (fname[0] == '.') // Skip all hidden files
+		continue;
+	      else {
+                fname *= dname;
+                _stationIndex->addHarmonicsFile (fname);
+              }
+	    }
+	    closedir(dirp);
+          }
+#else
+	// Visual C++ land (code by Leonid Tochinski)
+        if (_S_IFDIR & s.st_mode) {
+          Dstr dname (harmonicsPath[i]);
+          if (dname.back() != '\\')
+             dname += '\\';
+          _finddata_t fileinfo;
+          memset(&fileinfo, 0 ,sizeof fileinfo);
+          Dstr mask (dname);
+          mask += "*.tcd";
+          intptr_t findptr = _findfirst(mask.aschar(), &fileinfo);
+          if (-1 != findptr) {
+            do {
+               Dstr fname (fileinfo.name);
+               if (fname[0] == '.') // Skip all hidden files
+                 continue;
+               else {
+                 fname *= dname;
+                 _stationIndex->addHarmonicsFile (fname);
+               }
+            } while (-1 != _findnext(findptr,&fileinfo));
+            _findclose(findptr);
+          }
+#endif
+        } else
+          _stationIndex->addHarmonicsFile (harmonicsPath[i]);
+      } else
+        xperror (harmonicsPath[i].aschar());
+    }
+    if (_stationIndex->empty()) {
+      if (harmonicsPath.noPathProvided())
+        Global::barf (Error::NO_HFILE_PATH);
+      else
+	Global::barf (Error::NO_HFILE_IN_PATH, harmonicsPath.origPath());
+      // Ignore the stupid case where the file exists but contains no
+      // stations.
+    }
+    _stationIndex->sort();
+    _stationIndex->setRootStationIndexIndices();
+  }
+  return *_stationIndex;
+}
+
+StationIndex &Global::stationIndex (const char* hfile_path) {
+  if (!_stationIndex) {
+    Dstr unparsedHfilePath = hfile_path;
     if (unparsedHfilePath.isNull())
       unparsedHfilePath = getXtideConf(0U);
     HarmonicsPath harmonicsPath (unparsedHfilePath);

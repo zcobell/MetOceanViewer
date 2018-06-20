@@ -18,7 +18,6 @@
 //
 //-----------------------------------------------------------------------*/
 #include "hmdfstation.h"
-#include <assert.h>
 
 HmdfStation::HmdfStation(QObject *parent) : QObject(parent) {
   this->m_coordinate = QGeoCoordinate();
@@ -56,7 +55,7 @@ void HmdfStation::setStationIndex(int stationIndex) {
 }
 
 qint64 HmdfStation::date(int index) const {
-  assert(index >= 0 && index < this->numSnaps());
+  Q_ASSERT(index >= 0 && index < this->numSnaps());
   if (index >= 0 || index < this->numSnaps())
     return this->m_date[index];
   else
@@ -64,7 +63,7 @@ qint64 HmdfStation::date(int index) const {
 }
 
 double HmdfStation::data(int index) const {
-  assert(index >= 0 && index < this->numSnaps());
+  Q_ASSERT(index >= 0 && index < this->numSnaps());
   if (index >= 0 || index < this->numSnaps())
     return this->m_data[index];
   else
@@ -72,12 +71,12 @@ double HmdfStation::data(int index) const {
 }
 
 void HmdfStation::setData(const double &data, int index) {
-  assert(index >= 0 && index < this->numSnaps());
+  Q_ASSERT(index >= 0 && index < this->numSnaps());
   if (index >= 0 || index < this->numSnaps()) this->m_data[index] = data;
 }
 
 void HmdfStation::setDate(const qint64 &date, int index) {
-  assert(index >= 0 && index < this->numSnaps());
+  Q_ASSERT(index >= 0 && index < this->numSnaps());
   if (index >= 0 || index < this->numSnaps()) this->m_date[index] = date;
 }
 
@@ -121,3 +120,12 @@ void HmdfStation::setCoordinate(const QGeoCoordinate coordinate) {
 }
 
 QGeoCoordinate *HmdfStation::coordinate() { return &this->m_coordinate; }
+
+void HmdfStation::dataBounds(qint64 &minDate, qint64 &maxDate, double &minValue,
+                             double &maxValue) {
+  minDate = *std::min_element(this->m_date.begin(), this->m_date.end());
+  maxDate = *std::max_element(this->m_date.begin(), this->m_date.end());
+  minValue = *std::min_element(this->m_data.begin(), this->m_data.end());
+  maxValue = *std::max_element(this->m_data.begin(), this->m_data.end());
+  return;
+}

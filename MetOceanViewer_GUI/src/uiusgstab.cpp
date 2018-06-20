@@ -40,13 +40,13 @@ void MainWindow::on_combo_usgs_maptype_currentIndexChanged(int index) {
 void MainWindow::on_button_usgs_fetch_clicked() {
   //...Create a new USGS object
   if (!m_usgs.isNull()) delete m_usgs;
-  m_usgs = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
+  this->m_usgs = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
                       ui->radio_usgshistoric, ui->radio_usgs_instant,
                       ui->combo_USGSProduct, ui->Date_usgsStart,
                       ui->Date_usgsEnd, ui->statusBar,
                       ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone,
                       this->usgsStationModel, &this->usgsSelectedStation, this);
-  connect(m_usgs, SIGNAL(usgsError(QString)), this,
+  connect(this->m_usgs, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
   this->m_usgs->plotNewUSGSStation();

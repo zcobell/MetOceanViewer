@@ -18,7 +18,6 @@
 //
 //-----------------------------------------------------------------------*/
 #include "hmdf.h"
-#include <assert.h>
 #include <QFile>
 #include <QFileInfo>
 #include <QHostInfo>
@@ -81,12 +80,12 @@ QString Hmdf::datum() const { return this->m_datum; }
 void Hmdf::setDatum(const QString &datum) { this->m_datum = datum; }
 
 HmdfStation *Hmdf::station(int index) {
-  assert(index >= 0 && index < this->m_station.size());
+  Q_ASSERT(index >= 0 && index < this->m_station.size());
   return this->m_station[index];
 }
 
 void Hmdf::setStation(int index, HmdfStation *station) {
-  assert(index >= 0 && index < this->m_station.size());
+  Q_ASSERT(index >= 0 && index < this->m_station.size());
   this->m_station[index] = station;
 }
 
@@ -427,4 +426,24 @@ int Hmdf::write(QString filename) {
     return this->write(filename, HmdfNetCdf);
   }
   return 1;
+}
+
+void Hmdf::dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
+                      double &maxValue) {
+  dateMax = std::numeric_limits<qint64>::min();
+  dateMin = std::numeric_limits<qint64>::max();
+  maxValue = std::numeric_limits<double>::min();
+  minValue = std::numeric_limits<double>::max();
+
+  for (int i = 0; i < this->nstations(); i++) {
+    qint64 tempDateMin, tempDateMax;
+    double tempMinValue, tempMaxValue;
+    this->station(i)->dataBounds(tempDateMin, tempDateMax, tempMinValue,
+                                 tempMaxValue);
+    dateMin = std::min(tempDateMin, dateMin);
+    dateMax = std::max(tempDateMax, dateMax);
+    minValue = std::min(tempMinValue, minValue);
+    maxValue = std::max(tempMaxValue, maxValue);
+  }
+  return;
 }

@@ -26,8 +26,7 @@
 namespace libxtide {
 
 class HarmonicsFile {
-public:
-
+ public:
   // libtcd is stateful and cannot handle multiple harmonics files
   // simultaneously.  XTide currently has no need to open multiple
   // harmonics files simultaneously, so for now, the constructor will
@@ -35,30 +34,30 @@ public:
   // time.  If this class is modified to deal with different
   // databases, that trap can be removed.
 
-  HarmonicsFile (const Dstr &filename);
+  HarmonicsFile(const Dstr &filename);
   ~HarmonicsFile();
 
   // Starting from the beginning of the file, allocate and return a
   // new StationRef for the next station.  Each StationRef gets a
   // reference to the filename Dstr passed in the constructor, so
   // don't destroy it.  Returns NULL on end of file.
-  StationRef * const getNextStationRef();
+  StationRef *const getNextStationRef();
 
   // Load the reffed station.  This is allowed to invalidate the
   // iterator for getNextStationRef.
-  Station * const getStation (const StationRef &stationRef);
+  Station *const getStation(const StationRef &stationRef);
 
   // Version string of the harmonics file.
   const Dstr &versionString();
 
-protected:
+ protected:
   const Dstr &_filename;
   Dstr _versionString;
 
-private:
+ private:
   // Prohibited operations not implemented.
-  HarmonicsFile (const HarmonicsFile &);
-  HarmonicsFile &operator= (const HarmonicsFile &);
+  HarmonicsFile(const HarmonicsFile &);
+  HarmonicsFile &operator=(const HarmonicsFile &);
 };
 
-}
+}  // namespace libxtide

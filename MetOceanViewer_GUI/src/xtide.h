@@ -29,6 +29,7 @@
 #include "chartview.h"
 #include "errors.h"
 #include "generic.h"
+#include "hmdf.h"
 #include "stationmodel.h"
 
 using namespace QtCharts;
@@ -60,28 +61,14 @@ class XTide : public QObject {
   void xTideError(QString);
 
  private:
-  int findXTideExe();
   int calculateXTides();
   int plotChart();
-  int getDataBounds(double &min, double &max);
-  int parseXTideResponse(QString xTideResponse);
-
-  // Structures
-  struct XTideStationData {
-    qint64 m_date;
-    double m_value;
-  };
-
-  //...Private Variables
-  QVector<XTideStationData> m_stationData;
 
   QString m_units;
   QString m_ylabel;
   QString m_xlabel;
   QString m_plotTitle;
   QString m_errorString;
-  QString m_xtideexe;
-  QString m_harmfile;
 
   //...Pointers to GUI elements
   QQuickWidget *m_quickMap;
@@ -92,6 +79,7 @@ class XTide : public QObject {
   StationModel *m_stationModel;
   Station m_station;
   QString *m_currentStation;
+  Hmdf *m_data;
 };
 
 #endif  // XTIDE_H

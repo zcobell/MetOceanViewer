@@ -1,4 +1,4 @@
-/* $Id: tcd.h 6245 2016-01-25 17:29:12Z flaterco $ */
+/* $Id: tcd.h.in 3744 2010-08-17 22:34:46Z flaterco $ */
 /* tcd.h.  Generated from tcd.h.in by configure. */
 
 #ifndef __OAML_TIDES_H__
@@ -73,7 +73,7 @@
 #undef COMPAT114
 
 /* Select #warning versus #pragma message (whichever works) */
-#define USE_PRAGMA_MESSAGE
+#undef USE_PRAGMA_MESSAGE
 
 #ifdef COMPAT114
 #ifdef USE_PRAGMA_MESSAGE
@@ -404,8 +404,6 @@ NV_INT32 find_pedigree (const NV_CHAR *name);
 NV_INT32 add_pedigree (const NV_CHAR *name, const DB_HEADER_PUBLIC *db);
 NV_BOOL check_simple (TIDE_RECORD rec);
 #endif
-
-#define ftruncate _chsize
 
 #ifdef  __cplusplus
 }

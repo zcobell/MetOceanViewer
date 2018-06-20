@@ -4,8 +4,6 @@ static=1
 QtHome=/opt/Qt
 QtLibDir=/opt/Qt/5.11.0/gcc_64/lib
 executable=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_GUI/MetOceanViewer
-xtide=../MetOceanViewer_GUI/mov_libs/bin/tide
-harmonics=../MetOceanViewer_GUI/mov_libs/bin/harmonics.tcd
 version=$(git describe --always --tags)
 
 if [ $static == 1 ] ; then
@@ -16,16 +14,6 @@ fi
 
 if [ ! -s $executable ] ; then
     echo "ERROR: executable not found."
-    exit 1
-fi
-
-if [ ! -s $xtide ] ; then
-    echo "ERROR: XTide executable not found."
-    exit 1
-fi
-
-if [ ! -s $harmonics ] ; then
-    echo "ERROR: Tidal database not found."
     exit 1
 fi
 
@@ -44,8 +32,6 @@ if [ $static == 0 ] ; then
 fi
 
 cp $executable ./$bindir/com.zachcobell.metoceanviewer/data/.
-cp $xtide      ./$bindir/com.zachcobell.metoceanviewer/data/.
-cp $harmonics  ./$bindir/com.zachcobell.metoceanviewer/data/.
 cp ../MetOceanViewer_GUI/img/logo_small.png ./$bindir/com.zachcobell.metoceanviewer/data/MetOceanViewer.png
 
 while read LIB

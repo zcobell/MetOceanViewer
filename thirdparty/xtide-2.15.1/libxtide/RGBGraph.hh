@@ -24,7 +24,9 @@ class RGBGraph: public PixelatedGraph {
 public:
   RGBGraph (unsigned xSize, unsigned ySize, GraphStyle style = normal);
 
+#ifdef HAVE_PNG_H
   void writeAsPNG (png_rw_ptr write_data_fn);
+#endif
 
   // xSize * ySize pixels, row major, starting at upper left.
   // One pixel = 8 bits R, 8 bits G, 8 bits B.

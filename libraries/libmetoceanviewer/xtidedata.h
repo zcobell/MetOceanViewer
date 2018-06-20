@@ -17,31 +17,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef GENERIC_H
-#define GENERIC_H
+#ifndef XTIDEDATA_H
+#define XTIDEDATA_H
 
-#include <QColor>
-#include <QDateTime>
-#include <QMessageBox>
-#include <QNetworkInterface>
-#include <QString>
-#include <QtCore>
-#include <QtWidgets>
+#include "waterdata.h"
+#include "tideprediction.h"
 
-class Generic : public QObject {
+class XtideData : public WaterData {
   Q_OBJECT
  public:
-  static void splitPath(QString input, QString &filename, QString &directory);
-  static void delay(int delayTime);
-  static void delayM(int delayTime);
-  static int NETCDF_ERR(int status);
-  static bool isConnectedToNetwork();
-  static bool createConfigDirectory();
-  static bool createConfigDirectory(QString &configDirectory);
-  static QString configDirectory();
+  XtideData(Station &station, QDateTime startDate, QDateTime endDate,
+            QString rootDriectory, QObject *parent);
 
- private:
-  static QString dummyConfigDir;
+  int interval() const;
+  void setInterval(int interval);
+
+private:
+  int retrieveData(Hmdf *data);
+
+  int m_interval;
+  QString m_rootDirectory;
+  TidePrediction *m_tidePrediction;
 };
 
-#endif  // GENERIC_H
+#endif  // XTIDEDATA_H
