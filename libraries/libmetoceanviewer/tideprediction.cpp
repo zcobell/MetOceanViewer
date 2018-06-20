@@ -32,7 +32,7 @@ void TidePrediction::deleteHarmonicsOnExit(bool b) {
   this->m_deleteHarmonicsOnExit = b;
 }
 
-int TidePrediction::get(Station s, QDateTime startDate, QDateTime endDate,
+int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
                         int interval, Hmdf *data) {
   HmdfStation *st = new HmdfStation(data);
 

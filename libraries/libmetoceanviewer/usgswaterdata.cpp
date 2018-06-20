@@ -21,7 +21,7 @@
 #include <QEventLoop>
 #include <QVector>
 
-UsgsWaterdata::UsgsWaterdata(Station station, QDateTime startDate,
+UsgsWaterdata::UsgsWaterdata(Station &station, QDateTime startDate,
                              QDateTime endDate, int databaseOption,
                              QObject *parent)
     : WaterData(station, startDate, endDate, parent) {

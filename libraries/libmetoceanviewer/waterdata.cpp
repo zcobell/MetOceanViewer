@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "waterdata.h"
 
-WaterData::WaterData(Station station, QDateTime startDate, QDateTime endDate,
+WaterData::WaterData(Station &station, QDateTime startDate, QDateTime endDate,
                      QObject *parent)
     : QObject(parent) {
   this->m_errorString = QString();

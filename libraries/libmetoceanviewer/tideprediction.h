@@ -16,7 +16,7 @@ class TidePrediction : public QObject {
 
   void deleteHarmonicsOnExit(bool b);
 
-  int get(Station s, QDateTime startDate, QDateTime endDate, int interval,
+  int get(Station &s, QDateTime startDate, QDateTime endDate, int interval,
           Hmdf *data);
 
  private:

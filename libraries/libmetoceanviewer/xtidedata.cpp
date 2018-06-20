@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "xtidedata.h"
 
-XtideData::XtideData(Station station, QDateTime startDate, QDateTime endDate,
+XtideData::XtideData(Station &station, QDateTime startDate, QDateTime endDate,
                      QString rootDriectory, QObject *parent)
     : WaterData(station, startDate, endDate, parent) {
   //...Root application directory. We'll store the harmonics file here
@@ -34,8 +34,9 @@ XtideData::XtideData(Station station, QDateTime startDate, QDateTime endDate,
 }
 
 int XtideData::retrieveData(Hmdf *data) {
-  return this->m_tidePrediction->get(this->station(), this->startDate(),
-                                     this->endDate(), this->interval(), data);
+  Station s = this->station();
+  return this->m_tidePrediction->get(s, this->startDate(), this->endDate(),
+                                     this->interval(), data);
 }
 
 int XtideData::interval() const { return this->m_interval; }

@@ -29,7 +29,7 @@
 class WaterData : public QObject {
   Q_OBJECT
  public:
-  explicit WaterData(Station station, QDateTime startDate, QDateTime endDate,
+  explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
                      QObject *parent = nullptr);
 
   int get(Hmdf *data);

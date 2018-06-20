@@ -25,7 +25,7 @@
 class UsgsWaterdata : public WaterData {
     Q_OBJECT
  public:
-  UsgsWaterdata(Station station, QDateTime startDate, QDateTime endDate,
+  UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
                 int databaseOption, QObject *parent = nullptr);
 
   int get(Hmdf *data);

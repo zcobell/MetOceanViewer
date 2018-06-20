@@ -27,7 +27,7 @@
 class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
-  NoaaCoOps(Station station, QDateTime startDate, QDateTime endDate,
+  NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
             QString product, QString datum, QString units,
             QObject *parent = nullptr);
 
