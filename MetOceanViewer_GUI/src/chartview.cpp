@@ -68,16 +68,12 @@ void ChartView::setDisplayValues(bool value) {
 }
 
 void ChartView::addSeries(QLineSeries *series, QString name) {
-  this->m_series.resize(this->m_series.length() + 1);
-  this->m_legendNames.resize(this->m_legendNames.length() + 1);
-  this->m_kdtree.resize(this->m_kdtree.length() + 1);
+  this->m_series.push_back(series);
+  this->m_legendNames.push_back(name);
 
-  this->m_series[this->m_series.length() - 1] = series;
-  this->m_legendNames[this->m_legendNames.length() - 1] = name;
-
-  this->m_kdtree[this->m_kdtree.length() - 1] = new qKdtree2(this->m_chart);
-  QList<QPointF> points = this->m_series[this->m_series.length() - 1]->points();
-  this->m_kdtree[this->m_kdtree.length() - 1]->build(points);
+  this->m_kdtree.push_back(new qKdtree2(this->m_chart));
+  QList<QPointF> points = this->m_series.last()->points();
+  this->m_kdtree.last()->build(points);
   return;
 }
 
