@@ -28,17 +28,31 @@
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QGraphicsTextItem>
 
-ChartView::ChartView(QWidget *parent) : QChartView(parent) {
-  setDragMode(QChartView::NoDrag);
-  setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
+  this->m_coord = new QGraphicsSimpleTextItem(this->chart());
+  this->m_yAxis = nullptr;
+  this->m_dateAxis = nullptr;
+  this->m_xAxis = nullptr;
+  this->m_statusBar = nullptr;
+  this->m_infoItem = nullptr;
+  this->m_infoRectItem = nullptr;
+
+  this->setDragMode(QChartView::NoDrag);
+  this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   this->setMouseTracking(true);
   this->setDisplayValues(false);
+  this->setRubberBand(QChartView::RectangleRubberBand);
+  this->setRenderHint(QPainter::Antialiasing);
 
-  this->m_chart = nullptr;
-  this->m_coord = nullptr;
-  this->m_info = nullptr;
-  this->m_statusBar = nullptr;
+  this->chart()->setAnimationOptions(QChart::SeriesAnimations);
+  this->chart()->legend()->setAlignment(Qt::AlignBottom);
+  this->chart()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
+
+  this->m_coord->setPos(this->size().width() / 2 - 100,
+                        this->size().height() - 20);
+
+  this->m_displayValues = false;
   this->m_style = 0;
   this->x_axis_max = 0.0;
   this->x_axis_min = 0.0;
@@ -48,14 +62,72 @@ ChartView::ChartView(QWidget *parent) : QChartView(parent) {
   this->current_x_axis_min = 0.0;
   this->current_y_axis_max = 0.0;
   this->current_y_axis_min = 0.0;
-  this->setRubberBand(QChartView::RectangleRubberBand);
 }
 
-ChartView::~ChartView() {
-  if (this->m_chart != nullptr) delete this->m_chart;
+ChartView::~ChartView() {}
+
+void ChartView::initializeAxis(int style) {
+  this->setStyle(style);
+  if (style == 1) {
+    if (this->m_dateAxis == nullptr) {
+      this->m_dateAxis = new QDateTimeAxis(this->chart());
+      this->chart()->addAxis(this->m_dateAxis, Qt::AlignBottom);
+      this->dateAxis()->setTickCount(5);
+      this->dateAxis()->setGridLineColor(QColor(200, 200, 200));
+      this->dateAxis()->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
+    }
+  } else if (style == 2) {
+    if (this->m_xAxis == nullptr) {
+      this->m_xAxis = new QValueAxis(this->chart());
+      this->chart()->addAxis(this->m_xAxis, Qt::AlignBottom);
+      this->xAxis()->setTickCount(5);
+      this->xAxis()->setGridLineColor(QColor(200, 200, 200));
+      this->xAxis()->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
+    }
+  }
+  if (this->m_yAxis == nullptr) {
+    this->m_yAxis = new QValueAxis(this->chart());
+    this->chart()->addAxis(this->m_yAxis, Qt::AlignLeft);
+    this->yAxis()->setTickCount(10);
+    this->yAxis()->setGridLineColor(QColor(200, 200, 200));
+    this->yAxis()->setShadesPen(Qt::NoPen);
+    this->yAxis()->setShadesBrush(QBrush(QColor(240, 240, 240)));
+    this->yAxis()->setShadesVisible(true);
+    this->yAxis()->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
+  }
+  return;
+}
+
+void ChartView::setDateFormat(QDateTime start, QDateTime end) {
+  if (start.daysTo(end) > 90)
+    this->dateAxis()->setFormat("MM/yyyy");
+  else if (start.daysTo(end) > 4)
+    this->dateAxis()->setFormat("MM/dd/yyyy");
+  else
+    this->dateAxis()->setFormat("MM/dd/yyyy hh:mm");
+  return;
+}
+
+void ChartView::setAxisLimits(double xmin, double xmax, double ymin,
+                              double ymax) {
+  this->xAxis()->setMin(xmin);
+  this->xAxis()->setMax(xmax);
+  this->yAxis()->setMin(ymin);
+  this->yAxis()->setMax(ymax);
+  return;
+}
+
+void ChartView::setAxisLimits(QDateTime startDate, QDateTime endDate,
+                              double ymin, double ymax) {
+  this->dateAxis()->setMin(startDate);
+  this->dateAxis()->setMax(endDate);
+  this->yAxis()->setMin(ymin);
+  this->yAxis()->setMax(ymax);
+  return;
 }
 
 void ChartView::clear() {
+  if (this->chart()->series().length() > 0) this->chart()->removeAllSeries();
   this->m_legendNames.clear();
   this->m_series.clear();
   this->m_kdtree.clear();
@@ -67,11 +139,26 @@ void ChartView::setDisplayValues(bool value) {
   return;
 }
 
+void ChartView::initializeLegendMarkers() {
+  for (int i = 0; i < this->chart()->legend()->markers().length(); i++)
+    this->chart()->legend()->markers().at(i)->setFont(
+        QFont("Helvetica", 10, QFont::Bold));
+
+  foreach (QLegendMarker *marker, this->chart()->legend()->markers()) {
+    // Disconnect possible existing connection to avoid multiple connections
+    QObject::disconnect(marker, SIGNAL(clicked()), this,
+                        SLOT(handleLegendMarkerClicked()));
+    QObject::connect(marker, SIGNAL(clicked()), this,
+                     SLOT(handleLegendMarkerClicked()));
+  }
+  return;
+}
+
 void ChartView::addSeries(QLineSeries *series, QString name) {
   this->m_series.push_back(series);
   this->m_legendNames.push_back(name);
 
-  this->m_kdtree.push_back(new qKdtree2(this->m_chart));
+  this->m_kdtree.push_back(new qKdtree2(this->chart()));
   QList<QPointF> points = this->m_series.last()->points();
   this->m_kdtree.last()->build(points);
   return;
@@ -89,14 +176,11 @@ void ChartView::rebuild() {
 void ChartView::resizeEvent(QResizeEvent *event) {
   if (scene()) {
     scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
-    if (this->m_chart != nullptr) {
+    if (this->chart()) {
       this->resetAxisLimits();
-      this->m_chart->resize(event->size());
-      this->m_coord->setPos(m_chart->size().width() / 2 - 100,
-                            m_chart->size().height() - 20);
-    }
-    if (this->m_info != nullptr) {
-      this->m_info->setPos(10, this->m_chart->size().height() - 50);
+      this->chart()->resize(event->size());
+      this->m_coord->setPos(this->chart()->size().width() / 2 - 100,
+                            this->chart()->size().height() - 20);
     }
   }
   QChartView::resizeEvent(event);
@@ -111,8 +195,8 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
 
   if (this->m_coord) {
     if (this->m_displayValues) {
-      x = this->m_chart->mapToValue(event->pos()).x();
-      y = this->m_chart->mapToValue(event->pos()).y();
+      x = this->chart()->mapToValue(event->pos()).x();
+      y = this->chart()->mapToValue(event->pos()).y();
 
       if (x < this->current_x_axis_max && x > this->current_x_axis_min &&
           y < this->current_y_axis_max && y > this->current_y_axis_min) {
@@ -158,23 +242,23 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
 
 void ChartView::mouseReleaseEvent(QMouseEvent *event) {
   QChartView::mouseReleaseEvent(event);
-  if (this->m_chart) this->resetAxisLimits();
+  if (this->chart()) this->resetAxisLimits();
   return;
 }
 
 void ChartView::mouseDoubleClickEvent(QMouseEvent *event) {
   QChartView::mouseDoubleClickEvent(event);
-  if (this->m_chart) this->resetZoom();
+  if (this->chart()) this->resetZoom();
   return;
 }
 
 void ChartView::wheelEvent(QWheelEvent *event) {
-  if (this->m_chart == nullptr) return;
+  if (this->chart() == nullptr) return;
 
   if (event->delta() > 0)
-    this->m_chart->zoomIn();
+    this->chart()->zoomIn();
   else if (event->delta() < 0)
-    this->m_chart->zoomOut();
+    this->chart()->zoomOut();
 
   QChartView::wheelEvent(event);
 
@@ -184,7 +268,7 @@ void ChartView::wheelEvent(QWheelEvent *event) {
 }
 
 void ChartView::resetZoom() {
-  if (this->m_chart) {
+  if (this->chart()) {
     this->chart()->zoomReset();
     this->resetAxisLimits();
   }
@@ -192,22 +276,76 @@ void ChartView::resetZoom() {
 }
 
 void ChartView::resetAxisLimits() {
-  if (this->m_chart) {
-    QRectF box = this->m_chart->plotArea();
-    this->current_x_axis_min = m_chart->mapToValue(box.bottomLeft()).x();
-    this->current_x_axis_max = m_chart->mapToValue(box.topRight()).x();
-    this->current_y_axis_min = m_chart->mapToValue(box.bottomLeft()).y();
-    this->current_y_axis_max = m_chart->mapToValue(box.topRight()).y();
+  if (this->chart()) {
+    QRectF box = this->chart()->plotArea();
+    this->current_x_axis_min = this->chart()->mapToValue(box.bottomLeft()).x();
+    this->current_x_axis_max = this->chart()->mapToValue(box.topRight()).x();
+    this->current_y_axis_min = this->chart()->mapToValue(box.bottomLeft()).y();
+    this->current_y_axis_max = this->chart()->mapToValue(box.topRight()).y();
   }
   return;
 }
 
+QGraphicsTextItem *ChartView::infoItem() const { return m_infoItem; }
+
+void ChartView::setInfoItem(QGraphicsTextItem *infoItem) {
+  if (this->m_infoItem != nullptr) {
+    this->scene()->removeItem(this->m_infoItem);
+    delete this->m_infoItem;
+  }
+  this->m_infoItem = infoItem;
+}
+
+QGraphicsRectItem *ChartView::infoRectItem() const { return m_infoRectItem; }
+
+void ChartView::setInfoRectItem(QGraphicsRectItem *infoRectItem) {
+  if (this->m_infoRectItem != nullptr) {
+    this->scene()->removeItem(this->m_infoRectItem);
+    delete this->m_infoRectItem;
+  }
+  this->m_infoRectItem = infoRectItem;
+}
+
+QValueAxis *ChartView::yAxis() const { return this->m_yAxis; }
+
+QValueAxis *ChartView::xAxis() const { return this->m_xAxis; }
+
+QDateTimeAxis *ChartView::dateAxis() const { return this->m_dateAxis; }
+
+QString ChartView::infoString() const { return this->m_infoString; }
+
+void ChartView::setInfoString(QString regressionString,
+                              QString correlationString,
+                              QString standardDeviationString) {
+  this->setInfoString(
+      "<table><tr><td align=\"right\"><b> " + tr("Regression Line") +
+      ": </b></td><td>" + regressionString + "</td></tr>" +
+      "<tr><td align=\"right\"><b> " + tr("Correlation") +
+      " (R&sup2;): </b></td><td>" + correlationString + "</td></tr>" +
+      "<tr><td align=\"right\"><b> " + tr("Standard Deviation:") +
+      " </b></td><td>" + standardDeviationString + "</td></tr></table>");
+  return;
+}
+
+void ChartView::setInfoString(QString infoString) {
+  this->m_infoString = infoString;
+}
+
+int ChartView::style() const { return this->m_style; }
+
+void ChartView::setStyle(int style) { this->m_style = style; }
+
+QGraphicsSimpleTextItem *ChartView::coord() const { return this->m_coord; }
+
 void ChartView::initializeAxisLimits() {
-  QRectF box = this->m_chart->plotArea();
-  this->x_axis_min = this->m_chart->mapToValue(box.bottomLeft()).x();
-  this->y_axis_min = this->m_chart->mapToValue(box.bottomLeft()).y();
-  this->x_axis_max = this->m_chart->mapToValue(box.topRight()).x();
-  this->y_axis_max = this->m_chart->mapToValue(box.topRight()).y();
+  this->yAxis()->applyNiceNumbers();
+  if (this->style() == 2) this->xAxis()->applyNiceNumbers();
+
+  QRectF box = this->chart()->plotArea();
+  this->x_axis_min = this->chart()->mapToValue(box.bottomLeft()).x();
+  this->y_axis_min = this->chart()->mapToValue(box.bottomLeft()).y();
+  this->x_axis_max = this->chart()->mapToValue(box.topRight()).x();
+  this->y_axis_max = this->chart()->mapToValue(box.topRight()).y();
   this->current_x_axis_min = this->x_axis_min;
   this->current_x_axis_max = this->x_axis_max;
   this->current_y_axis_min = this->y_axis_min;

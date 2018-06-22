@@ -56,7 +56,6 @@ Hwm::Hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
   this->m_regLineIntercept = 0.0;
   this->m_regLineSlope = 0.0;
   this->m_regStdDev = 0.0;
-  this->m_chartView->m_chart = nullptr;
   this->m_stationModel = stationModel;
   this->m_classes = inClassValues;
 }
@@ -211,19 +210,17 @@ int Hwm::plotRegression() {
   bool displayBoundingLines, doColorDots;
   QVector<QColor> dotColors;
 
-  if (this->m_checkForceZero->isChecked())
-    RegressionString =
-        QString("y = %1x").arg(qRound(this->m_regLineSlope * 100.0) / 100.0);
-  else
-    RegressionString =
-        QString("y = %1x + %2")
-            .arg(qRound(this->m_regLineSlope * 100.0) / 100.0)
-            .arg(qRound(this->m_regLineIntercept * 100.0) / 100.0);
+  this->m_chartView->clear();
+  this->m_chartView->initializeAxis(2);
 
-  CorrelationString =
-      QString::number(qRound(this->m_regCorrelation * 100.0) / 100.0);
-  StandardDeviationString =
-      QString::number(qRound(this->m_regStdDev * 100.0) / 100.0);
+  if (this->m_checkForceZero->isChecked())
+    RegressionString.sprintf("y = %0.2fx", this->m_regLineSlope);
+  else
+    RegressionString.sprintf("y = %0.2fx + %0.2f", this->m_regLineSlope,
+                             this->m_regLineIntercept);
+
+  CorrelationString.sprintf("%0.2f", this->m_regCorrelation);
+  StandardDeviationString.sprintf("%0.2f", this->m_regStdDev);
 
   RegressionTitle = this->m_plotTitleBox->text();
   YLabel = this->m_modeledAxisLabelBox->text();
@@ -244,7 +241,8 @@ int Hwm::plotRegression() {
 
   QVector<QScatterSeries *> scatterSeries;
   scatterSeries.resize(8);
-  for (int i = 0; i < 8; i++) scatterSeries[i] = new QScatterSeries(this);
+  for (int i = 0; i < 8; i++)
+    scatterSeries[i] = new QScatterSeries(this->m_chartView->chart());
 
   if (doColorDots) {
     dotColors.resize(8);
@@ -270,13 +268,8 @@ int Hwm::plotRegression() {
     for (int i = 0; i < 8; i++) scatterSeries[i]->setColor(dotColors[i]);
   }
 
-  QValueAxis *axisX = new QValueAxis(this);
-  QValueAxis *axisY = new QValueAxis(this);
-  axisX->setTitleText(XLabel);
-  axisY->setTitleText(YLabel);
-  this->m_chartView->m_chart = new QChart();
-  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
-  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
+  this->m_chartView->xAxis()->setTitleText(XLabel);
+  this->m_chartView->yAxis()->setTitleText(YLabel);
 
   min = DBL_MAX;
   max = DBL_MIN;
@@ -307,127 +300,86 @@ int Hwm::plotRegression() {
       min = this->m_highWaterMarks[i].measured;
   }
 
-  axisY->setMin(min);
-  axisY->setMax(max);
-  axisX->setMin(min);
-  axisX->setMax(max);
-  axisX->setTickCount(10);
-  axisY->setTickCount(10);
-
-  axisX->applyNiceNumbers();
-  axisY->applyNiceNumbers();
+  this->m_chartView->setAxisLimits(min, max, min, max);
 
   for (int i = 0; i < 8; i++) {
-    this->m_chartView->m_chart->addSeries(scatterSeries[i]);
-    scatterSeries[i]->attachAxis(axisX);
-    scatterSeries[i]->attachAxis(axisY);
+    this->m_chartView->chart()->addSeries(scatterSeries[i]);
+    scatterSeries[i]->attachAxis(this->m_chartView->xAxis());
+    scatterSeries[i]->attachAxis(this->m_chartView->yAxis());
     scatterSeries[i]->setName(tr("High Water Marks"));
   }
 
   //...Don't display all the HWM series
   for (int i = 0; i < 8; i++)
-    this->m_chartView->m_chart->legend()->markers().at(i)->setVisible(false);
+    this->m_chartView->chart()->legend()->markers().at(i)->setVisible(false);
 
   //...1:1 line
-  QLineSeries *One2OneLine = new QLineSeries(this);
+  QLineSeries *One2OneLine = new QLineSeries(this->m_chartView->chart());
   One2OneLine->append(-1000, -1000);
   One2OneLine->append(1000, 1000);
   One2OneLine->setPen(QPen(QBrush(One2OneColor), 3));
-  this->m_chartView->m_chart->addSeries(One2OneLine);
-  One2OneLine->attachAxis(axisX);
-  One2OneLine->attachAxis(axisY);
+  this->m_chartView->chart()->addSeries(One2OneLine);
+  One2OneLine->attachAxis(this->m_chartView->xAxis());
+  One2OneLine->attachAxis(this->m_chartView->yAxis());
   One2OneLine->setName("1:1 Line");
 
   //...Regression Line
-  QLineSeries *RegressionLine = new QLineSeries(this);
+  QLineSeries *RegressionLine = new QLineSeries(this->m_chartView->chart());
   RegressionLine->append(
       -1000, this->m_regLineSlope * -1000 + this->m_regLineIntercept);
   RegressionLine->append(
       1000, this->m_regLineSlope * 1000 + this->m_regLineIntercept);
   RegressionLine->setPen(QPen(QBrush(RegColor), 3));
-  this->m_chartView->m_chart->addSeries(RegressionLine);
-  RegressionLine->attachAxis(axisX);
-  RegressionLine->attachAxis(axisY);
+  this->m_chartView->chart()->addSeries(RegressionLine);
+  RegressionLine->attachAxis(this->m_chartView->xAxis());
+  RegressionLine->attachAxis(this->m_chartView->yAxis());
   RegressionLine->setName(tr("Regression Line"));
 
   //...Standard Deviation Lines
   if (displayBoundingLines) {
     //...Upper Bound Line
-    QLineSeries *UpperBoundLine = new QLineSeries(this);
+    QLineSeries *UpperBoundLine = new QLineSeries(this->m_chartView->chart());
     UpperBoundLine->append(-1000, -1000 + boundValue);
     UpperBoundLine->append(1000, 1000 + boundValue);
     UpperBoundLine->setPen(QPen(QBrush(BoundColor), 3));
-    this->m_chartView->m_chart->addSeries(UpperBoundLine);
-    UpperBoundLine->attachAxis(axisX);
-    UpperBoundLine->attachAxis(axisY);
+    this->m_chartView->chart()->addSeries(UpperBoundLine);
+    UpperBoundLine->attachAxis(this->m_chartView->xAxis());
+    UpperBoundLine->attachAxis(this->m_chartView->yAxis());
     UpperBoundLine->setName(tr("Standard Deviation Interval"));
 
     //...Lower Bound Line
-    QLineSeries *LowerBoundLine = new QLineSeries(this);
+    QLineSeries *LowerBoundLine = new QLineSeries(this->m_chartView->chart());
     LowerBoundLine->append(-1000, -1000 - boundValue);
     LowerBoundLine->append(1000, 1000 - boundValue);
     LowerBoundLine->setPen(QPen(QBrush(BoundColor), 3));
-    this->m_chartView->m_chart->addSeries(LowerBoundLine);
-    LowerBoundLine->attachAxis(axisX);
-    LowerBoundLine->attachAxis(axisY);
+    this->m_chartView->chart()->addSeries(LowerBoundLine);
+    LowerBoundLine->attachAxis(this->m_chartView->xAxis());
+    LowerBoundLine->attachAxis(this->m_chartView->yAxis());
     LowerBoundLine->setName(tr("Standard Deviation Interval"));
 
-    this->m_chartView->m_chart->legend()->markers().at(10)->setVisible(false);
-    this->m_chartView->m_chart->legend()->markers().at(11)->setVisible(false);
+    this->m_chartView->chart()->legend()->markers().at(10)->setVisible(false);
+    this->m_chartView->chart()->legend()->markers().at(11)->setVisible(false);
   }
 
-  axisX->setGridLineColor(QColor(200, 200, 200));
-  axisY->setGridLineColor(QColor(200, 200, 200));
-  axisY->setShadesPen(Qt::NoPen);
-  axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
-  axisY->setShadesVisible(true);
-
-  axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-
-  for (int i = 0; i < this->m_chartView->m_chart->legend()->markers().length();
-       i++)
-    this->m_chartView->m_chart->legend()->markers().at(i)->setFont(
-        QFont("Helvetica", 10, QFont::Bold));
-
-  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-  this->m_chartView->m_chart->setTitle(RegressionTitle);
-  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->m_chartView->setRenderHint(QPainter::Antialiasing);
-  this->m_chartView->setChart(this->m_chartView->m_chart);
-
-  this->m_chartView->m_style = 2;
-  this->m_chartView->m_coord =
-      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
-  this->m_chartView->m_coord->setPos(
-      this->m_chartView->size().width() / 2 - 100,
-      this->m_chartView->size().height() - 20);
-
-  this->m_chartView->m_infoString =
-      "<table><tr><td align=\"right\"><b> " + tr("Regression Line") +
-      ": </b></td><td>" + RegressionString + "</td></tr>" +
-      "<tr><td align=\"right\"><b> " + tr("Correlation") +
-      " (R&sup2;): </b></td><td>" + CorrelationString + "</td></tr>" +
-      "<tr><td align=\"right\"><b> " + tr("Standard Deviation:") +
-      " </b></td><td>" + StandardDeviationString + "</td></tr></table>";
-  QGraphicsTextItem *infoItem =
-      new QGraphicsTextItem(this->m_chartView->m_chart);
-  infoItem->setZValue(10);
-  infoItem->setHtml(this->m_chartView->m_infoString);
-  infoItem->setPos(90, 70);
-
+  this->m_chartView->chart()->setTitle(RegressionTitle);
   this->m_chartView->initializeAxisLimits();
+  this->m_chartView->initializeLegendMarkers();
   this->m_chartView->setStatusBar(this->m_statusBar);
+  this->m_chartView->setInfoString(RegressionString, CorrelationString,
+                                   StandardDeviationString);
 
-  foreach (QLegendMarker *marker,
-           this->m_chartView->m_chart->legend()->markers()) {
-    // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
-                        SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
-                     SLOT(handleLegendMarkerClicked()));
-  }
+  this->m_chartView->setInfoItem(
+      new QGraphicsTextItem(this->m_chartView->chart()));
+  this->m_chartView->infoItem()->setZValue(10);
+  this->m_chartView->infoItem()->setHtml(this->m_chartView->infoString());
+  this->m_chartView->infoItem()->setPos(90, 70);
+  this->m_chartView->setInfoRectItem(
+      new QGraphicsRectItem(this->m_chartView->chart()));
+  this->m_chartView->infoRectItem()->setZValue(9);
+  this->m_chartView->infoRectItem()->setPos(90, 70);
+  this->m_chartView->infoRectItem()->setRect(
+      this->m_chartView->infoItem()->boundingRect());
+  this->m_chartView->infoRectItem()->setBrush(Qt::white);
 
   return 0;
 }

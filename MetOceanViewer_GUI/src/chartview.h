@@ -20,11 +20,13 @@
 
 #ifndef CHARTVIEW_H
 #define CHARTVIEW_H
-#include "qkdtree2.h"
 #include <QChartView>
+#include <QDateTimeAxis>
 #include <QLineSeries>
+#include <QValueAxis>
 #include <QtCharts/QChartGlobal>
 #include <QtWidgets>
+#include "qkdtree2.h"
 
 QT_BEGIN_NAMESPACE
 class QGraphicsScene;
@@ -41,7 +43,7 @@ QT_CHARTS_USE_NAMESPACE
 class ChartView : public QChartView {
   Q_OBJECT
 
-public:
+ public:
   ChartView(QWidget *parent = nullptr);
 
   ~ChartView();
@@ -54,11 +56,33 @@ public:
   void rebuild();
   void clear();
 
-  QGraphicsSimpleTextItem *m_coord;
-  QGraphicsTextItem *m_info;
-  int m_style;
-  QString m_infoString;
-  QChart *m_chart;
+  QGraphicsSimpleTextItem *coord() const;
+
+  int style() const;
+  void setStyle(int style);
+
+  QString infoString() const;
+  void setInfoString(QString infoString);
+  void setInfoString(QString regressionString, QString correlationString,
+                     QString standardDeviationString);
+
+  QDateTimeAxis *dateAxis() const;
+  QValueAxis *xAxis() const;
+  QValueAxis *yAxis() const;
+
+  void setDateFormat(QDateTime start, QDateTime end);
+
+  void initializeLegendMarkers();
+  void initializeAxis(int style = 1);
+  void setAxisLimits(QDateTime startDate, QDateTime endDate, double ymin,
+                     double ymax);
+  void setAxisLimits(double xmin, double xmax, double ymin, double ymax);
+
+  QGraphicsRectItem *infoRectItem() const;
+  void setInfoRectItem(QGraphicsRectItem *infoRectItem);
+
+  QGraphicsTextItem *infoItem() const;
+  void setInfoItem(QGraphicsTextItem *infoItem);
 
 protected:
   void resizeEvent(QResizeEvent *event);
@@ -67,8 +91,9 @@ protected:
   void mouseReleaseEvent(QMouseEvent *event);
   void wheelEvent(QWheelEvent *event);
 
-private:
+ private:
   void resetAxisLimits();
+
   qreal x_axis_min, x_axis_max;
   qreal y_axis_min, y_axis_max;
   qreal current_x_axis_min, current_x_axis_max;
@@ -79,8 +104,19 @@ private:
   QVector<qKdtree2 *> m_kdtree;
   bool m_displayValues;
 
-public slots:
+  QDateTimeAxis *m_dateAxis;
+  QValueAxis *m_xAxis, *m_yAxis;
+  QGraphicsSimpleTextItem *m_coord;
+  int m_style;
+  QString m_infoString;
+
+  QGraphicsRectItem *m_infoRectItem;
+  QGraphicsTextItem *m_infoItem;
+
+
+
+ public slots:
   void handleLegendMarkerClicked();
 };
 
-#endif // CHARTVIEW_H
+#endif  // CHARTVIEW_H

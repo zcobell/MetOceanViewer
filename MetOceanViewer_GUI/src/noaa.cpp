@@ -48,7 +48,6 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
   this->m_stationModel = inStationModel;
   this->m_productIndex = 0;
   this->m_selectedStation = inSelectedStation;
-  this->m_chartView->m_chart = nullptr;
 
   //...Initialize the station object
   this->m_currentStationData.resize(2);
@@ -197,7 +196,11 @@ int Noaa::getClickedNOAAStation() { return this->m_station.id().toInt(); }
 
 int Noaa::plotChart() {
   double ymin, ymax;
-  QString S1, S2, format;
+  QString S1, S2;
+
+  this->m_chartView->clear();
+
+  this->m_chartView->initializeAxis(1);
 
   //...Create the line series
   this->generateLabels();
@@ -209,11 +212,8 @@ int Noaa::plotChart() {
   this->m_currentStationData[1]->setUnits(this->m_units);
   this->m_currentStationData[1]->setDatum(this->m_datum);
 
-  //...Create the chart
-  this->m_chartView->m_chart = new QChart();
-
-  QLineSeries *series1 = new QLineSeries(this);
-  QLineSeries *series2 = new QLineSeries(this);
+  QLineSeries *series1 = new QLineSeries(this->m_chartView->chart());
+  QLineSeries *series2 = new QLineSeries(this->m_chartView->chart());
   series1->setName(S1);
   series2->setName(S2);
   series1->setPen(
@@ -224,27 +224,12 @@ int Noaa::plotChart() {
   QDateTime minDateTime = this->m_startDateEdit->dateTime();
   QDateTime maxDateTime = this->m_endDateEdit->dateTime();
 
-  QDateTimeAxis *axisX = new QDateTimeAxis(this);
-  axisX->setTickCount(5);
-  if (this->m_startDate.daysTo(this->m_endDate) > 90)
-    axisX->setFormat("MM/yyyy");
-  else if (this->m_startDate.daysTo(this->m_endDate) > 4)
-    axisX->setFormat("MM/dd/yyyy");
-  else
-    axisX->setFormat("MM/dd/yyyy hh:mm");
-  axisX->setTitleText("Date (" + this->tz->abbreviation() + ")");
-  axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  axisX->setMin(minDateTime);
-  axisX->setMax(maxDateTime);
-  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
+  this->m_chartView->dateAxis()->setTitleText("Date (" +
+                                              this->tz->abbreviation() + ")");
 
-  QValueAxis *axisY = new QValueAxis(this);
-  axisY->setLabelFormat(format);
-  axisY->setTitleText(this->m_ylabel);
-  axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  axisY->setMin(ymin);
-  axisY->setMax(ymax);
-  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
+  this->m_chartView->yAxis()->setTitleText(this->m_ylabel);
+  this->m_chartView->setDateFormat(minDateTime, maxDateTime);
+  this->m_chartView->setAxisLimits(minDateTime, maxDateTime, ymin, ymax);
 
   for (int j = 0; j < this->m_currentStationData[0]->station(0)->numSnaps();
        j++) {
@@ -258,10 +243,9 @@ int Noaa::plotChart() {
                         this->m_currentStationData[0]->station(0)->data(j));
     }
   }
-  this->m_chartView->m_chart->addSeries(series1);
-  series1->attachAxis(axisX);
-  series1->attachAxis(axisY);
-  this->m_chartView->clear();
+  this->m_chartView->chart()->addSeries(series1);
+  series1->attachAxis(this->m_chartView->dateAxis());
+  series1->attachAxis(this->m_chartView->yAxis());
   this->m_chartView->addSeries(series1, series1->name());
 
   if (this->m_productIndex == 0) {
@@ -276,50 +260,17 @@ int Noaa::plotChart() {
                               this->m_offsetSeconds,
                           this->m_currentStationData[1]->station(0)->data(j));
       }
-    this->m_chartView->m_chart->addSeries(series2);
+    this->m_chartView->chart()->addSeries(series2);
     this->m_chartView->addSeries(series2, series2->name());
-    series2->attachAxis(axisX);
-    series2->attachAxis(axisY);
+    series2->attachAxis(this->m_chartView->dateAxis());
+    series2->attachAxis(this->m_chartView->yAxis());
   }
 
-  for (int i = 0; i < this->m_chartView->m_chart->legend()->markers().length();
-       i++)
-    this->m_chartView->m_chart->legend()->markers().at(i)->setFont(
-        QFont("Helvetica", 10, QFont::Bold));
-
-  axisY->setTickCount(10);
-  axisY->applyNiceNumbers();
-  axisX->setGridLineColor(QColor(200, 200, 200));
-  axisY->setGridLineColor(QColor(200, 200, 200));
-  axisY->setShadesPen(Qt::NoPen);
-  axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
-  axisY->setShadesVisible(true);
-
-  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-  this->m_chartView->m_chart->setTitle(tr("NOAA Station ") +
+  this->m_chartView->chart()->setTitle(tr("NOAA Station ") +
                                        this->m_station.id() + ": " +
                                        this->m_station.name());
-  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->m_chartView->setRenderHint(QPainter::Antialiasing);
 
-  this->m_chartView->setChart(this->m_chartView->m_chart);
-
-  foreach (QLegendMarker *marker,
-           this->m_chartView->m_chart->legend()->markers()) {
-    // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
-                        SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
-                     SLOT(handleLegendMarkerClicked()));
-  }
-
-  this->m_chartView->m_style = 1;
-  this->m_chartView->m_coord =
-      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
-  this->m_chartView->m_coord->setPos(
-      this->m_chartView->size().width() / 2 - 100,
-      this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeLegendMarkers();
   this->m_chartView->initializeAxisLimits();
   this->m_chartView->setStatusBar(this->m_statusBar);
 
@@ -512,11 +463,11 @@ int Noaa::replotChart(Timezone *newTimezone) {
   int totalOffset = -this->m_priorOffsetSeconds + offset;
 
   QVector<QLineSeries *> series;
-  series.resize(this->m_chartView->m_chart->series().length());
+  series.resize(this->m_chartView->chart()->series().length());
 
-  for (int i = 0; i < this->m_chartView->m_chart->series().length(); i++) {
+  for (int i = 0; i < this->m_chartView->chart()->series().length(); i++) {
     series[i] =
-        static_cast<QLineSeries *>(this->m_chartView->m_chart->series().at(i));
+        static_cast<QLineSeries *>(this->m_chartView->chart()->series().at(i));
   }
 
   for (int i = 0; i < series.length(); i++) {
@@ -536,10 +487,10 @@ int Noaa::replotChart(Timezone *newTimezone) {
   minDateTime = minDateTime.addMSecs(totalOffset);
   maxDateTime = maxDateTime.addMSecs(totalOffset);
 
-  this->m_chartView->m_chart->axisX()->setTitleText(
+  this->m_chartView->dateAxis()->setTitleText(
       "Date (" + newTimezone->abbreviation() + ")");
-  this->m_chartView->m_chart->axisX()->setMin(minDateTime);
-  this->m_chartView->m_chart->axisX()->setMax(maxDateTime);
+  this->m_chartView->dateAxis()->setMin(minDateTime);
+  this->m_chartView->dateAxis()->setMax(maxDateTime);
 
   this->m_priorOffsetSeconds = offset;
 
@@ -547,7 +498,7 @@ int Noaa::replotChart(Timezone *newTimezone) {
 
   this->m_chartView->update();
 
-  this->m_chartView->m_chart->zoomReset();
+  this->m_chartView->chart()->zoomReset();
 
   return 0;
 }

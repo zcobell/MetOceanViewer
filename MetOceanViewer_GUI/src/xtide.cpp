@@ -99,6 +99,9 @@ int XTide::plotChart() {
   qint64 minDate, maxDate;
   QString format;
 
+  this->m_chartView->clear();
+  this->m_chartView->initializeAxis(1);
+
   double multiplier;
   if (this->m_comboUnits->currentIndex() == 0)
     multiplier = 1.0;
@@ -115,9 +118,6 @@ int XTide::plotChart() {
   else
     this->m_ylabel = tr("Water Surface Elevation (m, MLLW)");
 
-  //...Create the chart
-  this->m_chartView->m_chart = new QChart();
-
   QLineSeries *series1 = new QLineSeries(this);
   series1->setName(this->m_data->station(0)->name());
   series1->setPen(
@@ -128,73 +128,24 @@ int XTide::plotChart() {
   minDateTime.setTime(QTime(0, 0, 0));
   maxDateTime.setTime(QTime(0, 0, 0));
 
-  QDateTimeAxis *axisX = new QDateTimeAxis(this);
-  axisX->setTickCount(5);
-  if (minDateTime.daysTo(maxDateTime) > 90)
-    axisX->setFormat("MM/yyyy");
-  else if (minDateTime.daysTo(maxDateTime) > 4)
-    axisX->setFormat("MM/dd/yyyy");
-  else
-    axisX->setFormat("MM/dd/yyyy hh:mm");
-  axisX->setTitleText("Date (GMT)");
-  axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  axisX->setMin(minDateTime);
-  axisX->setMax(maxDateTime);
-  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
-
-  QValueAxis *axisY = new QValueAxis(this);
-  axisY->setLabelFormat(format);
-  axisY->setTitleText(this->m_ylabel);
-  axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  axisY->setMin(ymin);
-  axisY->setMax(ymax);
-  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
+  this->m_chartView->setDateFormat(minDateTime, maxDateTime);
+  this->m_chartView->setAxisLimits(minDateTime, maxDateTime, ymin, ymax);
+  this->m_chartView->dateAxis()->setTitleText("Date (GMT)");
+  this->m_chartView->yAxis()->setTitleText(this->m_ylabel);
 
   for (int i = 0; i < this->m_data->station(0)->numSnaps(); i++) {
     series1->append(this->m_data->station(0)->date(i),
                     this->m_data->station(0)->data(i) * multiplier);
   }
-  this->m_chartView->m_chart->addSeries(series1);
-  this->m_chartView->clear();
+
+  this->m_chartView->chart()->addSeries(series1);
   this->m_chartView->addSeries(series1, series1->name());
-  series1->attachAxis(axisX);
-  series1->attachAxis(axisY);
-  axisY->setTickCount(10);
-  axisY->applyNiceNumbers();
-  axisX->setGridLineColor(QColor(200, 200, 200));
-  axisY->setGridLineColor(QColor(200, 200, 200));
-  axisY->setShadesPen(Qt::NoPen);
-  axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
-  axisY->setShadesVisible(true);
-
-  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-  this->m_chartView->m_chart->setTitle("XTide Station: " +
+  this->m_chartView->chart()->setTitle("XTide Station: " +
                                        this->m_station.name());
-  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->m_chartView->setRenderHint(QPainter::Antialiasing);
-  this->m_chartView->setChart(this->m_chartView->m_chart);
 
-  this->m_chartView->m_style = 1;
-  this->m_chartView->m_coord =
-      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
-  this->m_chartView->m_coord->setPos(
-      this->m_chartView->size().width() / 2 - 100,
-      this->m_chartView->size().height() - 20);
   this->m_chartView->initializeAxisLimits();
+  this->m_chartView->initializeLegendMarkers();
   this->m_chartView->setStatusBar(this->m_statusBar);
-  this->m_chartView->m_chart->legend()->markers().at(0)->setFont(
-      QFont("Helvetica", 10, QFont::Bold));
-
-  foreach (QLegendMarker *marker,
-           this->m_chartView->m_chart->legend()->markers()) {
-    // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
-                        SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
-                     SLOT(handleLegendMarkerClicked()));
-  }
-
   return 0;
 }
 
