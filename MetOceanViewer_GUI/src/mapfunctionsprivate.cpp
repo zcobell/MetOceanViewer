@@ -110,3 +110,31 @@ QVector<Station> MapFunctionsPrivate::readXtideMarkers() {
 
   return output;
 }
+
+QVector<Station> MapFunctionsPrivate::readNdbcMarkers() {
+  QVector<Station> output;
+  QFile stationFile(":/stations/data/ndbc_stations.csv");
+
+  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+
+  int index = 0;
+
+  while (!stationFile.atEnd()) {
+    QString line = stationFile.readLine().simplified();
+    index++;
+    if (index > 1) {
+      QStringList list = line.split(",");
+      QString id = list.value(0).simplified();
+      QString name = "NDBC_"+id;
+      QString temp = list.value(1);
+      double lon = temp.toDouble();
+      temp = list.value(2);
+      double lat = temp.toDouble();
+      output.push_back(Station(QGeoCoordinate(lat, lon), id, name));
+    }
+  }
+
+  stationFile.close();
+
+  return output;
+}

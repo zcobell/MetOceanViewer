@@ -79,6 +79,8 @@ QVector<Station> MapFunctions::readMarkers(
     return MapFunctionsPrivate::readUsgsMarkers();
   } else if (markerType == XTIDE) {
     return MapFunctionsPrivate::readXtideMarkers();
+  } else if (markerType == NDBC) {
+    return MapFunctionsPrivate::readNdbcMarkers();
   } else {
     QVector<Station> output;
     return output;
@@ -86,48 +88,52 @@ QVector<Station> MapFunctions::readMarkers(
 }
 
 int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
-                                 QVector<Station> &locations) {
+                                 QVector<Station> &locations, bool filter) {
   //...Clear current markers
   model->clear();
 
-  //...Get the bounding area
-  QVariant var;
-  QMetaObject::invokeMethod(map->rootObject(), "getVisibleRegion",
-                            Q_RETURN_ARG(QVariant, var));
-  QGeoShape visibleRegion = qvariant_cast<QGeoShape>(var);
-  QGeoRectangle boundingBox = visibleRegion.boundingGeoRectangle();
+  if (filter) {
+    //...Get the bounding area
+    QVariant var;
+    QMetaObject::invokeMethod(map->rootObject(), "getVisibleRegion",
+                              Q_RETURN_ARG(QVariant, var));
+    QGeoShape visibleRegion = qvariant_cast<QGeoShape>(var);
+    QGeoRectangle boundingBox = visibleRegion.boundingGeoRectangle();
 
-  //...Get coordinates
-  double x1 = boundingBox.topLeft().longitude();
-  double y1 = boundingBox.topLeft().latitude();
-  double x2 = boundingBox.bottomRight().longitude();
-  double y2 = boundingBox.bottomRight().latitude();
+    //...Get coordinates
+    double x1 = boundingBox.topLeft().longitude();
+    double y1 = boundingBox.topLeft().latitude();
+    double x2 = boundingBox.bottomRight().longitude();
+    double y2 = boundingBox.bottomRight().latitude();
 
-  //...Orient box to 0->360
-  if (x1 < 0.0) x1 = x1 + 360.0;
-  if (x2 < 0.0) x2 = x2 + 360.0;
+    //...Orient box to 0->360
+    if (x1 < 0.0) x1 = x1 + 360.0;
+    if (x2 < 0.0) x2 = x2 + 360.0;
 
-  double xl = std::min(x1, x2);
-  double xr = std::max(x1, x2);
-  double yb = std::min(y1, y2);
-  double yt = std::max(y1, y2);
+    double xl = std::min(x1, x2);
+    double xr = std::max(x1, x2);
+    double yb = std::min(y1, y2);
+    double yt = std::max(y1, y2);
 
-  QVector<Station> visibleMarkers;
+    QVector<Station> visibleMarkers;
 
-  //...Get the objects inside the viewport
-  for (int i = 0; i < locations.size(); i++) {
-    double x = locations.at(i).coordinate().longitude();
-    double y = locations.at(i).coordinate().latitude();
-    if (x < 0.0) x = x + 360.0;
-    if (x <= xr && x >= xl && y <= yt && y >= yb)
-      visibleMarkers.push_back(locations.at(i));
+    //...Get the objects inside the viewport
+    for (int i = 0; i < locations.size(); i++) {
+      double x = locations.at(i).coordinate().longitude();
+      double y = locations.at(i).coordinate().latitude();
+      if (x < 0.0) x = x + 360.0;
+      if (x <= xr && x >= xl && y <= yt && y >= yb)
+        visibleMarkers.push_back(locations.at(i));
+    }
+
+    if (visibleMarkers.length() <= MAX_NUM_DISPLAYED_STATIONS) {
+      model->addMarkers(visibleMarkers);
+    }
+    return visibleMarkers.length();
+  } else {
+    model->addMarkers(locations);
+    return locations.length();
   }
-
-  if (visibleMarkers.length() <= MAX_NUM_DISPLAYED_STATIONS) {
-    model->addMarkers(visibleMarkers);
-  }
-
-  return visibleMarkers.length();
 }
 
 void MapFunctions::setMapTypes(QComboBox *comboBox) {

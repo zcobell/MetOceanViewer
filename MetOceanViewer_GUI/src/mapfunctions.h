@@ -28,7 +28,7 @@
 class MapFunctions : public QObject {
   Q_OBJECT
  public:
-  enum MarkerType { NOAA, USGS, XTIDE };
+  enum MarkerType { NOAA, USGS, XTIDE, NDBC };
 
   enum MapSource { ESRI, MapBox, OSM };
 
@@ -37,7 +37,7 @@ class MapFunctions : public QObject {
   QVector<Station> readMarkers(MapFunctions::MarkerType markerType);
 
   int refreshMarkers(StationModel *model, QQuickWidget *map,
-                     QVector<Station> &locations);
+                     QVector<Station> &locations, bool filter = true);
 
   void setMapTypes(QComboBox *comboBox);
 

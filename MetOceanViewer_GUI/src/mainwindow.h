@@ -40,6 +40,7 @@ class Noaa;
 class Usgs;
 class Hwm;
 class XTide;
+class Ndbc;
 class UserTimeseries;
 class WebEnginePage;
 class Session;
@@ -185,6 +186,8 @@ class MainWindow : public QMainWindow {
 
   void changeUserMarker(QString markerId);
 
+  void changeNdbcMarker(QString markerId);
+
   void changeNoaaMaptype();
 
   void changeUsgsMaptype();
@@ -194,6 +197,8 @@ class MainWindow : public QMainWindow {
   void changeUserMaptype();
 
   void changeHwmMaptype();
+
+  void changeNdbcMaptype();
 
   void on_combo_xtide_maptype_currentIndexChanged(int index);
 
@@ -229,6 +234,10 @@ class MainWindow : public QMainWindow {
 
   void on_actionOpenStreetMap_toggled(bool arg1);
 
+  void on_button_fetchndbc_clicked();
+
+  void on_combo_ndbcproduct_currentIndexChanged(int index);
+
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 
@@ -249,6 +258,8 @@ private:
   void setupMarkerClasses(QQuickWidget *widget);
 
   void setupUserTimeseriesMap();
+
+  void setupNdbcMap();
 
   void setupHighWaterMarkMap();
 
@@ -284,6 +295,8 @@ private:
 
   QPointer<XTide> m_xtide;
 
+  Ndbc *m_ndbc;
+
   QPointer<UserTimeseries> m_userTimeseries;
 
   Session *sessionState;
@@ -304,15 +317,19 @@ private:
 
   StationModel *hwmMarkerModel;
 
+  StationModel *ndbcStationModel;
+
   MapFunctions *mapFunctions;
 
   QActionGroup *mapActionGroup;
 
   QVector<Station> xtideMarkerLocations;
+  QVector<Station> ndbcMarkerLocations;
   QVector<Station> noaaMarkerLocations;
   QVector<Station> usgsMarkerLocations;
 
   QString noaaSelectedStation;
+  QString ndbcSelectedStation;
   QString usgsSelectedStation;
   QString xtideSelectedStation;
   QString userSelectedStations;
