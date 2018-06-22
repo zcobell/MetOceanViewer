@@ -238,6 +238,14 @@ class MainWindow : public QMainWindow {
 
   void on_combo_ndbcproduct_currentIndexChanged(int index);
 
+  void on_button_ndbc_resetzoom_clicked();
+
+  void on_button_ndbcDisplayValues_toggled(bool checked);
+
+  void on_button_ndbc_savechart_clicked();
+
+  void on_button_ndbc_savedata_clicked();
+
 private:
   enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
 

@@ -1,6 +1,8 @@
 #include "ndbc.h"
 #include <QDateTimeAxis>
 #include <QLegendMarker>
+#include <QPixmap>
+#include <QPrinter>
 #include <QValueAxis>
 #include "chartview.h"
 #include "ndbcdata.h"
@@ -18,12 +20,17 @@ Ndbc::Ndbc(QQuickWidget *inMap, ChartView *inChart, QComboBox *inProductBox,
   this->m_statusBar = instatusBar;
   this->m_stationModel = stationModel;
   this->m_selectedStation = inSelectedStation;
+  this->m_dataReady = false;
   this->m_data = nullptr;
 }
 
 int Ndbc::plotStation() {
   QDateTime startDate = this->m_startDateEdit->dateTime();
   QDateTime endDate = this->m_endDateEdit->dateTime();
+
+  startDate.setTime(QTime(0, 0, 0));
+  endDate.addDays(1);
+  endDate.setTime(QTime(0, 0, 0));
 
   this->m_station =
       this->m_stationModel->findStation(*(this->m_selectedStation));
@@ -33,9 +40,13 @@ int Ndbc::plotStation() {
   this->m_data = new Hmdf(this);
   int ierr = n->get(this->m_data);
 
-  delete n;
+  if (ierr != 0) {
+    emit ndbcError(n->errorString());
+    delete n;
+    return ierr;
+  }
 
-  if (ierr != 0) return ierr;
+  delete n;
 
   this->m_productBox->clear();
   for (int i = 0; i < this->m_data->nstations(); i++) {
@@ -44,8 +55,12 @@ int Ndbc::plotStation() {
 
   this->plot(0);
 
+  this->m_dataReady = true;
+
   return 0;
 }
+
+bool Ndbc::dataReady() const { return this->m_dataReady; }
 
 int Ndbc::replotStation(int index) { return this->plot(index); }
 
@@ -55,11 +70,17 @@ int Ndbc::plot(int index) {
   this->m_chartView->clear();
   this->m_chartView->initializeAxis(1);
 
+  int offset = Timezone::localMachineOffsetFromUtc() * 1000;
+
   qint64 minDate, maxDate;
   double ymin, ymax;
   s->dataBounds(minDate, maxDate, ymin, ymax);
-  QDateTime minDateTime = QDateTime::fromMSecsSinceEpoch(minDate);
-  QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(maxDate);
+
+  QDateTime startDate = this->m_startDateEdit->dateTime();
+  QDateTime endDate = this->m_endDateEdit->dateTime();
+  startDate.setTime(QTime(0, 0, 0));
+  endDate.addDays(1);
+  endDate.setTime(QTime(0, 0, 0));
 
   QLineSeries *series1 = new QLineSeries(this->m_chartView->chart());
   series1->setName(s->name());
@@ -67,16 +88,14 @@ int Ndbc::plot(int index) {
       QPen(QColor(0, 0, 255), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
   for (int j = 0; j < s->numSnaps(); j++) {
-    if (QDateTime::fromMSecsSinceEpoch(s->date(j)).isValid()) {
-      series1->append(s->date(j), s->data(j));
-    }
+    series1->append(s->date(j) - offset, s->data(j));
   }
 
   this->m_chartView->chart()->addSeries(series1);
   this->m_chartView->addSeries(series1, s->name());
 
-  this->m_chartView->setDateFormat(minDateTime, maxDateTime);
-  this->m_chartView->setAxisLimits(minDateTime, maxDateTime, ymin, ymax);
+  this->m_chartView->setDateFormat(startDate, endDate);
+  this->m_chartView->setAxisLimits(startDate, endDate, ymin, ymax);
 
   this->m_chartView->yAxis()->setTitleText("Observed");
   this->m_chartView->dateAxis()->setTitleText("Date (GMT)");
@@ -90,4 +109,75 @@ int Ndbc::plot(int index) {
   this->m_chartView->setStatusBar(this->m_statusBar);
 
   return 0;
+}
+
+int Ndbc::saveImage(QString filename, QString filter) {
+  if (filter == "PDF (*.pdf)") {
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPrinter::Letter);
+    printer.setResolution(400);
+    printer.setOrientation(QPrinter::Landscape);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(filename);
+
+    QPainter painter(&printer);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.begin(&printer);
+
+    //...Page 1 - Chart
+    this->m_chartView->render(&painter);
+
+    //...Page 2 - Map
+    printer.newPage();
+    QPixmap renderedMap = this->m_map->grab();
+    QPixmap mapScaled = renderedMap.scaledToWidth(printer.width());
+    if (mapScaled.height() > printer.height())
+      mapScaled = renderedMap.scaledToHeight(printer.height());
+    int cw = (printer.width() - mapScaled.width()) / 2;
+    int ch = (printer.height() - mapScaled.height()) / 2;
+    painter.drawPixmap(cw, ch, mapScaled.width(), mapScaled.height(),
+                       mapScaled);
+
+    painter.end();
+  } else if (filter == "JPG (*.jpg *.jpeg)") {
+    QFile outputFile(filename);
+    QSize imageSize(
+        this->m_map->size().width() + this->m_chartView->size().width(),
+        this->m_map->size().height());
+    QRect chartRect(this->m_map->size().width(), 0,
+                    this->m_chartView->size().width(),
+                    this->m_chartView->size().height());
+
+    QImage pixmap(imageSize, QImage::Format_ARGB32);
+    pixmap.fill(Qt::white);
+    QPainter imagePainter(&pixmap);
+    imagePainter.setRenderHints(QPainter::Antialiasing |
+                                QPainter::TextAntialiasing |
+                                QPainter::SmoothPixmapTransform);
+    // this->map->render(&imagePainter, QPoint(0, 0));
+    this->m_chartView->render(&imagePainter, chartRect);
+
+    outputFile.open(QIODevice::WriteOnly);
+    pixmap.save(&outputFile, "JPG", 100);
+  }
+
+  return 0;
+}
+
+int Ndbc::saveData(QString filename) {
+  Hmdf *out = new Hmdf(this);
+  out->addStation(this->m_data->station(this->m_productBox->currentIndex()));
+
+  int ierr = out->write(filename);
+  if (ierr != 0) {
+    emit ndbcError("Error writing NDBC data to file.");
+  }
+
+  delete out;
+
+  return ierr;
+}
+
+QString Ndbc::getSelectedMarker(){
+  return this->m_station.id();
 }

@@ -18,6 +18,11 @@ class Ndbc : public QObject {
 
   int plotStation();
   int replotStation(int index);
+  bool dataReady() const;
+  int saveData(QString filename);
+  int saveImage(QString filename, QString filter);
+
+  QString getSelectedMarker();
 
  signals:
   void ndbcError(QString);
@@ -33,6 +38,7 @@ class Ndbc : public QObject {
   QStatusBar *m_statusBar;
   QString *m_selectedStation;
   Hmdf *m_data;
+  bool m_dataReady;
 
   Station m_station;
 };

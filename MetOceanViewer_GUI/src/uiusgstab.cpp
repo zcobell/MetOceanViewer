@@ -201,7 +201,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
   QString DefaultFile = "/USGS_" + MarkerID + ".imeds";
 
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), previousDirectory + DefaultFile,
+      this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
 
   QStringList filter2 = filter.split(" ");
@@ -209,9 +209,9 @@ void MainWindow::on_button_usgssavedata_clicked() {
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, previousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  m_usgs->saveUSGSData(TempString, format);
+  this->m_usgs->saveUSGSData(TempString, format);
 
   return;
 }

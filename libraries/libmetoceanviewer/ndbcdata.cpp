@@ -14,6 +14,7 @@ NdbcData::NdbcData(Station &station, QDateTime startDate, QDateTime endDate,
 
 void NdbcData::buildDataNameMap() {
   this->m_dataNameMap["WD"] = "Wind Direction";
+  this->m_dataNameMap["WDIR"] = "Wind Direction";
   this->m_dataNameMap["WSPD"] = "Wind Speed";
   this->m_dataNameMap["GST"] = "Wind Gusts";
   this->m_dataNameMap["WVHT"] = "Wave Height";
@@ -21,6 +22,7 @@ void NdbcData::buildDataNameMap() {
   this->m_dataNameMap["APD"] = "Average Wave Period";
   this->m_dataNameMap["MWD"] = "Mean Wave Direction";
   this->m_dataNameMap["BAR"] = "Barometric Pressure";
+  this->m_dataNameMap["PRES"] = "Atmospheric Pressure";
   this->m_dataNameMap["ATMP"] = "Air Temperature";
   this->m_dataNameMap["WTMP"] = "Water Temperature";
   this->m_dataNameMap["DEWP"] = "Dewpoint";
@@ -97,15 +99,37 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
                                  Hmdf *data) {
   //...Create stations
   QStringList d = serverResponse[0].at(0).simplified().split(" ");
-  int n = d.length() - 5;
-
   QVector<HmdfStation *> st;
+
+  int n, p, q, r;
+
+  for (int i = 0; i < serverResponse[0].size(); i++) {
+    if (serverResponse[0][i].mid(0, 1) != "#") {
+      p = i;
+      break;
+    }
+  }
+
+  if (d[4] == "mm") {
+    q = 16;
+    r = 5;
+  } else {
+    q = 13;
+    r = 4;
+  }
+
+  n = d.length() - r;
 
   for (int i = 0; i < n; i++) {
     HmdfStation *s = new HmdfStation(data);
+
     s->setCoordinate(this->station().coordinate());
-    s->setName(d[i + 5]);
-    s->setId(d[i + 5]);
+    if (this->m_dataNameMap.contains(d[i + r])) {
+      s->setName(this->m_dataNameMap[d[i + r]]);
+    } else {
+      s->setName(d[i + r]);
+    }
+    s->setId(s->name());
     s->setStationIndex(i);
     st.push_back(s);
   }
@@ -114,22 +138,27 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
   qint64 end = this->endDate().toMSecsSinceEpoch();
 
   for (int i = 0; i < serverResponse.length(); i++) {
-    for (int j = 1; j < serverResponse[i].length(); j++) {
-      QString ds = serverResponse[i][j].mid(0, 16).simplified();
-      QDateTime d = QDateTime::fromString(ds, "yyyy MM dd hh m");
+    for (int j = p; j < serverResponse[i].length(); j++) {
+      QString ds = serverResponse[i][j].mid(0, q).simplified();
+
+      QDateTime d;
+      if (q == 13)
+        d = QDateTime::fromString(ds, "yyyy MM dd hh");
+      else if (q == 16)
+        d = QDateTime::fromString(ds, "yyyy MM dd hh mm");
+      d.setTimeSpec(Qt::UTC);
 
       if (d.isValid()) {
         QString vs =
-            serverResponse[i][j].mid(16, serverResponse[i][j].length() - 16);
+            serverResponse[i][j].mid(q, serverResponse[i][j].length() - q);
         QStringList v = vs.simplified().split(" ");
-        d.setTimeSpec(Qt::UTC);
         qint64 dm = d.toMSecsSinceEpoch();
-        qDebug() << dm << start << end << (dm >= start) << (dm <= end);
         if (dm >= start && dm <= end) {
           for (int k = 0; k < n; k++) {
-            double vl = v[k].toDouble();
-            if (vl != 999 && vl != 99.0) {
-              st[k]->setNext(d.toMSecsSinceEpoch(), vl);
+            if (v[k] != "999" && v[k] != "99.0" && v[k] != "99.00" &&
+                v[k] != "999.0") {
+              double vl = v[k].toDouble();
+              st[k]->setNext(dm, vl);
             }
           }
         }

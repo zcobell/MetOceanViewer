@@ -94,6 +94,7 @@ void MainWindow::setupMetOceanViewerUI() {
   this->xtideStationModel = nullptr;
   this->userDataStationModel = nullptr;
   this->hwmMarkerModel = nullptr;
+  this->ndbcStationModel = nullptr;
 
   this->setupNoaaMap();
   this->setupUsgsMap();

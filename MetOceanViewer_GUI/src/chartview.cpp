@@ -27,6 +27,7 @@
 #include <QtGui/QResizeEvent>
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QGraphicsTextItem>
+#include "timezone.h"
 
 ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
   this->m_coord = new QGraphicsSimpleTextItem(this->chart());
@@ -119,8 +120,17 @@ void ChartView::setAxisLimits(double xmin, double xmax, double ymin,
 
 void ChartView::setAxisLimits(QDateTime startDate, QDateTime endDate,
                               double ymin, double ymax) {
-  this->dateAxis()->setMin(startDate);
-  this->dateAxis()->setMax(endDate);
+  int offset = Timezone::localMachineOffsetFromUtc();
+  if (startDate.timeSpec() == Qt::LocalTime)
+    this->dateAxis()->setMin(startDate);
+  else
+    this->dateAxis()->setMin(startDate.addSecs(-offset));
+
+  if (endDate.timeSpec() == Qt::LocalTime)
+    this->dateAxis()->setMax(endDate);
+  else
+    this->dateAxis()->setMax(endDate.addSecs(-offset));
+
   this->yAxis()->setMin(ymin);
   this->yAxis()->setMax(ymax);
   return;

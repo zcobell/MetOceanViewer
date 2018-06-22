@@ -89,7 +89,7 @@
            </size>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_noaa">
            <attribute name="title">
@@ -1674,14 +1674,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>23</hour>
+                     <hour>6</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>0</hour>
+                     <hour>7</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>
