@@ -1,3 +1,22 @@
+/*-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2018  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//-----------------------------------------------------------------------*/
 #include "ndbc.h"
 #include <QDateTimeAxis>
 #include <QLegendMarker>
@@ -167,6 +186,7 @@ int Ndbc::saveImage(QString filename, QString filter) {
 int Ndbc::saveData(QString filename) {
   Hmdf *out = new Hmdf(this);
   out->addStation(this->m_data->station(this->m_productBox->currentIndex()));
+  out->station(0)->setName(this->m_station.name());
 
   int ierr = out->write(filename);
   if (ierr != 0) {
@@ -178,6 +198,4 @@ int Ndbc::saveData(QString filename) {
   return ierr;
 }
 
-QString Ndbc::getSelectedMarker(){
-  return this->m_station.id();
-}
+QString Ndbc::getSelectedMarker() { return this->m_station.id(); }

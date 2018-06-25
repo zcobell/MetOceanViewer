@@ -125,7 +125,7 @@ void MainWindow::on_Button_FetchData_clicked() {
 
 void MainWindow::plotNOAAStation() {
   //...Create a new NOAA object
-  if (!this->m_noaa.isNull()) delete this->m_noaa;
+  if (this->m_noaa != nullptr) delete this->m_noaa;
   this->m_noaa =
       new Noaa(ui->quick_noaaMap, ui->noaa_graphics, ui->Date_StartTime,
                ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
@@ -141,7 +141,7 @@ void MainWindow::plotNOAAStation() {
 }
 
 void MainWindow::on_button_noaaresetzoom_clicked() {
-  if (!this->m_noaa.isNull()) ui->noaa_graphics->resetZoom();
+  if (this->m_noaa != nullptr) ui->noaa_graphics->resetZoom();
   return;
 }
 

@@ -27,9 +27,8 @@ void MainWindow::on_button_xtide_compute_clicked() {
 }
 
 void MainWindow::plotXTideStation() {
-
   //...Create an xTide object
-  if (!this->m_xtide.isNull()) delete this->m_xtide;
+  if (this->m_xtide != nullptr) delete this->m_xtide;
   this->m_xtide =
       new XTide(ui->quick_xtideMap, ui->xtide_graphics, ui->date_xtide_start,
                 ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar,
@@ -44,15 +43,15 @@ void MainWindow::plotXTideStation() {
 }
 
 void MainWindow::on_button_xtide_resetzoom_clicked() {
-  if (!this->m_xtide.isNull()) ui->xtide_graphics->resetZoom();
+  if (this->m_xtide != nullptr) ui->xtide_graphics->resetZoom();
   return;
 }
 
 void MainWindow::on_button_xtide_savemap_clicked() {
   QString filename;
 
-  QString MarkerID = m_xtide->getLoadedXTideStation();
-  QString MarkerID2 = m_xtide->getCurrentXTideStation();
+  QString MarkerID = this->m_xtide->getLoadedXTideStation();
+  QString MarkerID2 = this->m_xtide->getCurrentXTideStation();
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
@@ -70,21 +69,20 @@ void MainWindow::on_button_xtide_savemap_clicked() {
   QString filter = "JPG (*.jpg *.jpeg)";
   QString DefaultFile = "/XTide_" + MarkerID.replace(" ", "_") + ".jpg";
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), previousDirectory + DefaultFile,
+      this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, previousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  m_xtide->saveXTidePlot(TempString, filter);
+  this->m_xtide->saveXTidePlot(TempString, filter);
 
   return;
 }
 
 void MainWindow::on_button_xtide_savedata_clicked() {
-
-  if(this->m_xtide==nullptr){
+  if (this->m_xtide == nullptr) {
     QMessageBox::critical(this, tr("ERROR"),
                           tr("No station has been calculated."));
     return;
@@ -92,8 +90,8 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 
   QString filename;
 
-  QString MarkerID = m_xtide->getLoadedXTideStation();
-  QString MarkerID2 = m_xtide->getCurrentXTideStation();
+  QString MarkerID = this->m_xtide->getLoadedXTideStation();
+  QString MarkerID2 = this->m_xtide->getCurrentXTideStation();
 
   if (MarkerID == "none") {
     QMessageBox::critical(this, tr("ERROR"),
@@ -112,7 +110,7 @@ void MainWindow::on_button_xtide_savedata_clicked() {
   QString DefaultFile = "/XTide_" + MarkerID.replace(" ", "_") + ".imeds";
 
   QString TempString = QFileDialog::getSaveFileName(
-      this, tr("Save as..."), previousDirectory + DefaultFile,
+      this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
 
   QStringList filter2 = filter.split(" ");
@@ -120,9 +118,9 @@ void MainWindow::on_button_xtide_savedata_clicked() {
 
   if (TempString == NULL) return;
 
-  Generic::splitPath(TempString, filename, previousDirectory);
+  Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  m_xtide->saveXTideData(TempString, format);
+  this->m_xtide->saveXTideData(TempString, format);
 
   return;
 }

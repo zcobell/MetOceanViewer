@@ -39,13 +39,13 @@ void MainWindow::on_combo_usgs_maptype_currentIndexChanged(int index) {
 //-------------------------------------------//
 void MainWindow::on_button_usgs_fetch_clicked() {
   //...Create a new USGS object
-  if (!m_usgs.isNull()) delete m_usgs;
-  this->m_usgs = new Usgs(ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
-                      ui->radio_usgshistoric, ui->radio_usgs_instant,
-                      ui->combo_USGSProduct, ui->Date_usgsStart,
-                      ui->Date_usgsEnd, ui->statusBar,
-                      ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone,
-                      this->usgsStationModel, &this->usgsSelectedStation, this);
+  if (m_usgs != nullptr) delete m_usgs;
+  this->m_usgs = new Usgs(
+      ui->quick_usgsMap, ui->usgs_graphics, ui->radio_usgsDaily,
+      ui->radio_usgshistoric, ui->radio_usgs_instant, ui->combo_USGSProduct,
+      ui->Date_usgsStart, ui->Date_usgsEnd, ui->statusBar,
+      ui->combo_usgsTimezoneLocation, ui->combo_usgsTimezone,
+      this->usgsStationModel, &this->usgsSelectedStation, this);
   connect(this->m_usgs, SIGNAL(usgsError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -61,7 +61,7 @@ void MainWindow::on_button_usgs_fetch_clicked() {
 // data is only available 120 days into the past
 //-------------------------------------------//
 void MainWindow::on_radio_usgs_instant_clicked() {
-  if (!m_usgs.isNull()) m_usgs->setUSGSBeenPlotted(false);
+  if (m_usgs != nullptr) m_usgs->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(
       QDateTime::currentDateTime().addDays(-120));
   ui->Date_usgsEnd->setMinimumDateTime(
@@ -83,7 +83,7 @@ void MainWindow::on_radio_usgs_instant_clicked() {
 // ago when using daily data from USGS
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked() {
-  if (!m_usgs.isNull()) m_usgs->setUSGSBeenPlotted(false);
+  if (this->m_usgs != nullptr) m_usgs->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   return;
@@ -95,7 +95,7 @@ void MainWindow::on_radio_usgsDaily_clicked() {
 // ago when using daily data from USGS
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked() {
-  if (!m_usgs.isNull()) m_usgs->setUSGSBeenPlotted(false);
+  if (this->m_usgs != nullptr) m_usgs->setUSGSBeenPlotted(false);
   ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
   return;
@@ -218,7 +218,7 @@ void MainWindow::on_button_usgssavedata_clicked() {
 //-------------------------------------------//
 
 void MainWindow::on_button_usgsresetzoom_clicked() {
-  if (!this->m_usgs.isNull()) ui->usgs_graphics->resetZoom();
+  if (this->m_usgs != nullptr) ui->usgs_graphics->resetZoom();
   return;
 }
 

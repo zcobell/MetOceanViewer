@@ -300,17 +300,17 @@ class MainWindow : public QMainWindow {
 
   void resetMapSource(MapFunctions::MapSource source);
 
-  QPointer<Noaa> m_noaa;
+  Noaa *m_noaa;
 
-  QPointer<Usgs> m_usgs;
+  Usgs *m_usgs;
 
-  QPointer<Hwm> m_hwm;
+  Hwm *m_hwm;
 
-  QPointer<XTide> m_xtide;
+  XTide *m_xtide;
 
   Ndbc *m_ndbc;
 
-  QPointer<UserTimeseries> m_userTimeseries;
+  UserTimeseries *m_userTimeseries;
 
   Session *sessionState;
 

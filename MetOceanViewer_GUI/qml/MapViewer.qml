@@ -210,8 +210,8 @@ Rectangle {
                             "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
                             "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
                             "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name+"<br>"+
-                            "<b>Available:</b> "+startDate+" - "+endDateString;
-                        infoWindow.shownHeight = 75;
+                            "<b>Available: </b> "+startDate+" - "+endDateString;
+                        infoWindow.shownHeight = 78;
                     }
 
                     return text;

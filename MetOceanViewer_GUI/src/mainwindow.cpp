@@ -45,14 +45,17 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
   this->commandLineFile = commandLineFile;
   this->initialized = false;
 
+  this->m_noaa = nullptr;
+  this->m_usgs = nullptr;
   this->m_ndbc = nullptr;
+  this->m_xtide = nullptr;
+  this->m_userTimeseries = nullptr;
+  this->m_hwm = nullptr;
 
   this->setupMetOceanViewerUI();
 }
 
-MainWindow::~MainWindow() {
-  delete ui;
-}
+MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::setupMetOceanViewerUI() {
   this->mapActionGroup = new QActionGroup(this);
@@ -213,7 +216,7 @@ void MainWindow::handleEnterKey() {
     } else if (ui->subtab_livedata->currentIndex() == 1) {
       on_button_usgs_fetch_clicked();
     } else if (ui->subtab_livedata->currentIndex() == 2) {
-      // on_button_ndbc_fetch_clicked();
+      on_button_fetchndbc_clicked();
     } else if (ui->subtab_livedata->currentIndex() == 3) {
       on_button_xtide_compute_clicked();
     }
@@ -363,7 +366,7 @@ void MainWindow::setupNdbcMap() {
                             Q_ARG(QVariant, 1.69));
 
   this->mapFunctions->refreshMarkers(this->ndbcStationModel, ui->quick_ndbcMap,
-                                     this->ndbcMarkerLocations, true, true);
+                                     this->ndbcMarkerLocations, false, true);
 
   return;
 }
