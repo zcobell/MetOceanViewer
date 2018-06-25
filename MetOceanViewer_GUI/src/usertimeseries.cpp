@@ -347,7 +347,8 @@ void UserTimeseries::plot() {
             colorCounter = 0;
 
           series.resize(seriesCounter);
-          series[seriesCounter - 1] = new QLineSeries(this->m_chartView->chart());
+          series[seriesCounter - 1] =
+              new QLineSeries(this->m_chartView->chart());
           series[seriesCounter - 1]->setName(
               this->m_fileDataUnique[i]
                   ->station(this->m_selectedStations[k])
@@ -607,8 +608,8 @@ int UserTimeseries::addMarkersToMap() {
       }
     }
 
-    this->m_stationmodel->addMarker(
-        Station(QGeoCoordinate(y, x), QString::number(i), StationName));
+    Station s = Station(QGeoCoordinate(y, x), QString::number(i), StationName);
+    this->m_stationmodel->addMarker(s);
   }
 
   return MetOceanViewer::Error::NOERR;

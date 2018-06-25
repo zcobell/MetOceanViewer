@@ -182,11 +182,12 @@ int Hwm::plotHWMMap() {
     else
       classification = this->classifyHWM(this->m_highWaterMarks[i].error);
 
-    this->m_stationModel->addMarker(
+    Station s =
         Station(QGeoCoordinate(this->m_highWaterMarks[i].lat,
                                this->m_highWaterMarks[i].lon),
                 QString::number(i), "hwm", this->m_highWaterMarks[i].measured,
-                this->m_highWaterMarks[i].modeled, classification));
+                this->m_highWaterMarks[i].modeled, classification);
+    this->m_stationModel->addMarker(s);
   }
 
   StationModel::fitMarkers(this->m_quickMap, this->m_stationModel);

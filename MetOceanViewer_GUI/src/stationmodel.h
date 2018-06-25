@@ -45,12 +45,15 @@ class StationModel : public QAbstractListModel {
     measuredRole,
     differenceRole,
     categoryRole,
-    selectedRole
+    selectedRole,
+    startDateRole,
+    endDateRole,
+    activeRole
   };
 
   StationModel(QObject *parent = Q_NULLPTR);
 
-  Q_INVOKABLE void addMarker(const Station &station);
+  Q_INVOKABLE void addMarker(Station &station);
 
   void addMarkers(QVector<Station> &stations);
 
@@ -61,13 +64,14 @@ class StationModel : public QAbstractListModel {
 
   QHash<int, QByteArray> roleNames() const;
 
-  Station findStation(QString stationName) const;
+  Station findStation(QString stationName);
 
-  void boundingBox(QRectF &box);
+  void boundingBox(QRectF &box, bool activeOnly = true);
 
   void clear();
 
-  static void fitMarkers(QQuickWidget *quickWidget, StationModel *model);
+  static void fitMarkers(QQuickWidget *quickWidget, StationModel *model,
+                         bool activeOnly = true);
 
  public slots:
 
@@ -78,11 +82,13 @@ class StationModel : public QAbstractListModel {
  private:
   void buildRoles();
 
+  bool removeRows(int row, int count,
+                  const QModelIndex &parent = QModelIndex());
+
   QList<Station> m_stations;
   QHash<QString, Station> m_stationMap;
   QHash<QString, int> m_stationLocationMap;
   QHash<int, QByteArray> m_roles;
-
 };
 
 #endif  // STATIONMODEL_H

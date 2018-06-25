@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "mapfunctionsprivate.h"
 #include <QFile>
+#include <memory>
 
 MapFunctionsPrivate::MapFunctionsPrivate(QObject *parent) : QObject(parent) {}
 
@@ -29,21 +30,39 @@ QVector<Station> MapFunctionsPrivate::readNoaaMarkers() {
 
   if (!stationFile.open(QIODevice::ReadOnly)) return output;
 
-  int index = 0;
-
   while (!stationFile.atEnd()) {
     QString line = stationFile.readLine().simplified();
-    index++;
-    if (index > 1) {
-      QStringList list = line.split(";");
-      QString id = list.value(0);
-      QString name = list.value(3);
-      name = name.simplified();
-      QString temp = list.value(1);
-      double lat = temp.toDouble();
-      temp = list.value(2);
-      double lon = temp.toDouble();
-      output.push_back(Station(QGeoCoordinate(lat, lon), id, name));
+    QStringList list = line.split(";");
+    QString id = list.value(0);
+    QString name = list.value(1);
+    name = name.simplified();
+    QString temp = list.value(3);
+    double lat = temp.toDouble();
+    temp = list.value(2);
+    double lon = temp.toDouble();
+
+    QString startDateString = list.value(4).simplified();
+    QString endDateString = list.value(5).simplified();
+    QDateTime startDate =
+        QDateTime::fromString(startDateString, "MMM dd, yyyy");
+    startDate.setTimeSpec(Qt::UTC);
+    QDateTime endDate;
+    if (endDateString == "present")
+      endDate = QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0));
+    else
+      endDate = QDateTime::fromString(endDateString, "MMM dd, yyyy");
+    endDate.setTimeSpec(Qt::UTC);
+
+    if (startDate.isValid() || endDate.isValid()) {
+      if (endDateString == "present") {
+        Station s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, true,
+                            startDate, endDate);
+        output.push_back(s);
+      } else {
+        Station s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, false,
+                            startDate, endDate);
+        output.push_back(s);
+      }
     }
   }
 
@@ -73,7 +92,8 @@ QVector<Station> MapFunctionsPrivate::readUsgsMarkers() {
       double lat = temp.toDouble();
       temp = list.value(3);
       double lon = temp.toDouble();
-      output.push_back(Station(QGeoCoordinate(lat, lon), id, name));
+      Station s = Station(QGeoCoordinate(lat, lon), id, name);
+      output.push_back(s);
     }
   }
 
@@ -102,7 +122,8 @@ QVector<Station> MapFunctionsPrivate::readXtideMarkers() {
       double lat = temp.toDouble();
       temp = list.value(1);
       double lon = temp.toDouble();
-      output.push_back(Station(QGeoCoordinate(lat, lon), id, name));
+      Station s = Station(QGeoCoordinate(lat, lon), id, name);
+      output.push_back(s);
     }
   }
 
@@ -125,12 +146,13 @@ QVector<Station> MapFunctionsPrivate::readNdbcMarkers() {
     if (index > 1) {
       QStringList list = line.split(",");
       QString id = list.value(0).simplified();
-      QString name = "NDBC_"+id;
+      QString name = "NDBC_" + id;
       QString temp = list.value(1);
       double lon = temp.toDouble();
       temp = list.value(2);
       double lat = temp.toDouble();
-      output.push_back(Station(QGeoCoordinate(lat, lon), id, name));
+      Station s = Station(QGeoCoordinate(lat, lon), id, name);
+      output.push_back(s);
     }
   }
 

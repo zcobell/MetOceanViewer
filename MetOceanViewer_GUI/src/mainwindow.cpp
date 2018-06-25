@@ -50,7 +50,9 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
   this->setupMetOceanViewerUI();
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() {
+  delete ui;
+}
 
 void MainWindow::setupMetOceanViewerUI() {
   this->mapActionGroup = new QActionGroup(this);
@@ -309,7 +311,7 @@ void MainWindow::setupNoaaMap() {
   ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
                                                        this->noaaStationModel);
   ui->quick_noaaMap->rootContext()->setContextProperty(
-      "markerMode", MapViewerMarkerModes::SingleSelect);
+      "markerMode", MapViewerMarkerModes::SingleSelectWithDates);
   this->setupMarkerClasses(ui->quick_noaaMap);
   this->mapFunctions->setMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(
@@ -361,7 +363,7 @@ void MainWindow::setupNdbcMap() {
                             Q_ARG(QVariant, 1.69));
 
   this->mapFunctions->refreshMarkers(this->ndbcStationModel, ui->quick_ndbcMap,
-                                     this->ndbcMarkerLocations, false);
+                                     this->ndbcMarkerLocations, true, true);
 
   return;
 }
@@ -623,21 +625,25 @@ void MainWindow::on_button_hwmDisplayValues_toggled(bool checked) {
 
 void MainWindow::on_button_refreshUsgsStations_clicked() {
   int n = this->mapFunctions->refreshMarkers(
-      this->usgsStationModel, ui->quick_usgsMap, this->usgsMarkerLocations);
+      this->usgsStationModel, ui->quick_usgsMap, this->usgsMarkerLocations,
+      true, true);
   this->stationDisplayWarning(n);
   return;
 }
 
 void MainWindow::on_button_refreshNoaaStations_clicked() {
+  bool active = ui->check_noaaActiveOnly->isChecked();
   int n = this->mapFunctions->refreshMarkers(
-      this->noaaStationModel, ui->quick_noaaMap, this->noaaMarkerLocations);
+      this->noaaStationModel, ui->quick_noaaMap, this->noaaMarkerLocations,
+      true, active);
   this->stationDisplayWarning(n);
   return;
 }
 
 void MainWindow::on_button_refreshXtideStations_clicked() {
   int n = this->mapFunctions->refreshMarkers(
-      this->xtideStationModel, ui->quick_xtideMap, this->xtideMarkerLocations);
+      this->xtideStationModel, ui->quick_xtideMap, this->xtideMarkerLocations,
+      true, true);
   this->stationDisplayWarning(n);
   return;
 }

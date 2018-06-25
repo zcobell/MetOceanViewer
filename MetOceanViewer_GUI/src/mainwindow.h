@@ -246,8 +246,13 @@ class MainWindow : public QMainWindow {
 
   void on_button_ndbc_savedata_clicked();
 
-private:
-  enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
+ private:
+  enum MapViewerMarkerModes {
+    SingleSelect,
+    MultipleSelect,
+    ColoredMarkers,
+    SingleSelectWithDates
+  };
 
   Ui::MainWindow *ui;
 

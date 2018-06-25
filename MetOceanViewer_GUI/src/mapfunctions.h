@@ -22,6 +22,7 @@
 
 #include <QComboBox>
 #include <QObject>
+#include <memory>
 #include "station.h"
 #include "stationmodel.h"
 
@@ -37,7 +38,8 @@ class MapFunctions : public QObject {
   QVector<Station> readMarkers(MapFunctions::MarkerType markerType);
 
   int refreshMarkers(StationModel *model, QQuickWidget *map,
-                     QVector<Station> &locations, bool filter = true);
+                     QVector<Station> &locations, bool filter = true,
+                     bool activeOnly = true);
 
   void setMapTypes(QComboBox *comboBox);
 

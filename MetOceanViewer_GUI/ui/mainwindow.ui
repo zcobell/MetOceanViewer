@@ -699,7 +699,7 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>110</width>
+                     <width>80</width>
                      <height>27</height>
                     </size>
                    </property>
@@ -727,6 +727,16 @@
                    </property>
                    <property name="text">
                     <string>Refresh Stations</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="check_noaaActiveOnly">
+                   <property name="text">
+                    <string>Active Stations Only</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -4563,7 +4573,7 @@
      <x>0</x>
      <y>0</y>
      <width>780</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

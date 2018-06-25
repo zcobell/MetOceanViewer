@@ -88,7 +88,8 @@ QVector<Station> MapFunctions::readMarkers(
 }
 
 int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
-                                 QVector<Station> &locations, bool filter) {
+                                 QVector<Station> &locations, bool filter,
+                                 bool activeOnly) {
   //...Clear current markers
   model->clear();
 
@@ -121,9 +122,17 @@ int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
     for (int i = 0; i < locations.size(); i++) {
       double x = locations.at(i).coordinate().longitude();
       double y = locations.at(i).coordinate().latitude();
+
       if (x < 0.0) x = x + 360.0;
-      if (x <= xr && x >= xl && y <= yt && y >= yb)
-        visibleMarkers.push_back(locations.at(i));
+
+      if (x <= xr && x >= xl && y <= yt && y >= yb) {
+        if (activeOnly) {
+          if (locations.at(i).active()) {
+            visibleMarkers.push_back(locations.at(i));
+          }
+        } else
+          visibleMarkers.push_back(locations.at(i));
+      }
     }
 
     if (visibleMarkers.length() <= MAX_NUM_DISPLAYED_STATIONS) {

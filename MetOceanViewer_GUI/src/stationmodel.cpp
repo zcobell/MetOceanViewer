@@ -34,10 +34,13 @@ void StationModel::buildRoles() {
   this->m_roles[selectedRole] = "selected";
   this->m_roles[differenceRole] = "difference";
   this->m_roles[categoryRole] = "category";
+  this->m_roles[startDateRole] = "startDate";
+  this->m_roles[endDateRole] = "endDate";
+  this->m_roles[activeRole] = "active";
   return;
 }
 
-void StationModel::addMarker(const Station &station) {
+void StationModel::addMarker(Station &station) {
   this->beginInsertRows(QModelIndex(), rowCount(), rowCount());
   this->m_stations.append(station);
   this->m_stationMap[station.id()] =
@@ -84,6 +87,14 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
     return QVariant::fromValue(this->m_stations[index.row()].category());
   } else if (role == StationModel::selectedRole) {
     return QVariant::fromValue(this->m_stations[index.row()].selected());
+  } else if (role == StationModel::startDateRole) {
+    return QVariant::fromValue(
+        this->m_stations[index.row()].startValidDate().toString("MM/dd/yyyy"));
+  } else if (role == StationModel::endDateRole) {
+    return QVariant::fromValue(
+        this->m_stations[index.row()].endValidDate().toString("MM/dd/yyyy"));
+  } else if (role == StationModel::activeRole) {
+    return QVariant::fromValue(this->m_stations[index.row()].active());
   } else {
     return QVariant();
   }
@@ -91,7 +102,7 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
 
 QHash<int, QByteArray> StationModel::roleNames() const { return this->m_roles; }
 
-Station StationModel::findStation(QString stationName) const {
+Station StationModel::findStation(QString stationName) {
   if (this->m_stationMap.contains(stationName)) {
     return this->m_stationMap[stationName];
   } else {
@@ -113,37 +124,61 @@ void StationModel::deselectStation(QString name) {
   return;
 }
 
-void StationModel::boundingBox(QRectF &box) {
+void StationModel::boundingBox(QRectF &box, bool activeOnly) {
   if (this->m_stations.length() == 0) {
     box = QRectF();
     return;
   }
 
+  int j = 0;
   for (int i = 0; i < this->m_stations.length(); i++) {
-    if (i == 0) {
-      box.setTopLeft(QPointF(this->m_stations[i].coordinate().longitude(),
-                             this->m_stations[i].coordinate().latitude()));
-      box.setBottomRight(box.topLeft());
+    if (activeOnly) {
+      if (this->m_stations[i].active()) {
+        if (j == 0) {
+          box.setTopLeft(QPointF(this->m_stations[i].coordinate().longitude(),
+                                 this->m_stations[i].coordinate().latitude()));
+          box.setBottomRight(box.topLeft());
+          j++;
+        } else {
+          box.setBottomLeft(
+              QPointF(std::min(this->m_stations[i].coordinate().longitude(),
+                               box.bottomLeft().x()),
+                      std::min(this->m_stations[i].coordinate().latitude(),
+                               box.bottomLeft().y())));
+          box.setTopRight(
+              QPointF(std::max(this->m_stations[i].coordinate().longitude(),
+                               box.topRight().x()),
+                      std::max(this->m_stations[i].coordinate().latitude(),
+                               box.topRight().y())));
+        }
+      }
     } else {
-      box.setBottomLeft(
-          QPointF(std::min(this->m_stations[i].coordinate().longitude(),
-                           box.bottomLeft().x()),
-                  std::min(this->m_stations[i].coordinate().latitude(),
-                           box.bottomLeft().y())));
-      box.setTopRight(
-          QPointF(std::max(this->m_stations[i].coordinate().longitude(),
-                           box.topRight().x()),
-                  std::max(this->m_stations[i].coordinate().latitude(),
-                           box.topRight().y())));
+      if (i == 0) {
+        box.setTopLeft(QPointF(this->m_stations[i].coordinate().longitude(),
+                               this->m_stations[i].coordinate().latitude()));
+        box.setBottomRight(box.topLeft());
+      } else {
+        box.setBottomLeft(
+            QPointF(std::min(this->m_stations[i].coordinate().longitude(),
+                             box.bottomLeft().x()),
+                    std::min(this->m_stations[i].coordinate().latitude(),
+                             box.bottomLeft().y())));
+        box.setTopRight(
+            QPointF(std::max(this->m_stations[i].coordinate().longitude(),
+                             box.topRight().x()),
+                    std::max(this->m_stations[i].coordinate().latitude(),
+                             box.topRight().y())));
+      }
     }
   }
   return;
 }
 
-void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
+void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model,
+                              bool activeOnly) {
   //...Generate the bounding box, expand by 10% to give some margin
   QRectF boundingBox;
-  model->boundingBox(boundingBox);
+  model->boundingBox(boundingBox, activeOnly);
 
   if (boundingBox == QRectF()) return;
 
@@ -166,5 +201,14 @@ void StationModel::fitMarkers(QQuickWidget *quickWidget, StationModel *model) {
 void StationModel::clear() {
   this->beginResetModel();
   this->m_stations.clear();
+  this->m_stationMap.clear();
   this->endResetModel();
+}
+
+bool StationModel::removeRows(int row, int count, const QModelIndex &parent) {
+  beginRemoveRows(parent, row, count - 1);
+  this->m_stations.clear();
+  this->m_stationMap.clear();
+  endRemoveRows();
+  return true;
 }

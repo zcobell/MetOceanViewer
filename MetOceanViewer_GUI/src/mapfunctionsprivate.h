@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QVector>
+#include <memory>
 #include "station.h"
 
 class MapFunctionsPrivate : public QObject {
