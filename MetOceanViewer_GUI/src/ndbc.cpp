@@ -48,8 +48,18 @@ int Ndbc::plotStation() {
   QDateTime endDate = this->m_endDateEdit->dateTime();
 
   startDate.setTime(QTime(0, 0, 0));
-  endDate.addDays(1);
   endDate.setTime(QTime(0, 0, 0));
+  endDate.addDays(1);
+
+  if (startDate >= endDate) {
+    emit ndbcError("Invalid date range selected");
+    return 1;
+  } else if (startDate.date().year() ==
+             QDateTime::currentDateTime().date().year()) {
+    emit ndbcError(
+        "NDBC data only available starting in the prior calendar year.");
+    return 1;
+  }
 
   this->m_station =
       this->m_stationModel->findStation(*(this->m_selectedStation));

@@ -27,16 +27,6 @@ void MainWindow::on_button_xtide_compute_clicked() {
 }
 
 void MainWindow::plotXTideStation() {
-  //...Check the provided dates
-  QDateTime d1 = ui->date_xtide_start->dateTime();
-  QDateTime d2 = ui->date_xtide_end->dateTime();
-  d1.setTime(QTime(0, 0, 0));
-  d2.setTime(QTime(0, 0, 0));
-  d2.addDays(1);
-  if (d1 <= d2) {
-    throwErrorMessageBox("XTide dates must be reasonable.");
-    return;
-  }
 
   //...Create an xTide object
   if (this->m_xtide != nullptr) delete this->m_xtide;

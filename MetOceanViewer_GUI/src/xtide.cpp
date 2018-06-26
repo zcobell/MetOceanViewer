@@ -58,6 +58,17 @@ int XTide::plotXTideStation() {
   this->m_station =
       this->m_stationModel->findStation(*(this->m_currentStation));
 
+  //...Check the provided dates
+  QDateTime d1 = this->m_startDateEdit->dateTime();
+  QDateTime d2 = this->m_endDateEdit->dateTime();
+  d1.setTime(QTime(0, 0, 0));
+  d2.setTime(QTime(0, 0, 0));
+  d2.addDays(1);
+  if (d1 >= d2) {
+    emit xTideError("Invalid date range selected.");
+    return 1;
+  }
+
   //...Calculate the tide signal
   int ierr = this->calculateXTides();
 
