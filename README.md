@@ -7,10 +7,12 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 # Feature List
 - [x] Access and view NOAA station data
 - [x] Access and view USGS station data
+- [x] Access and view NDBC archive station data
 - [x] Create tide predictions using XTide
 - [x] Read ADCIRC fort.61 files (when accompanied by station file)
 - [x] Read ADCIRC netCDF formatted files
 - [x] Read/write IMEDS formatted data
+- [x] Read/write generic netcdf formatted data
 - [x] Read HWM comparisons, plot to map, and calculate statistics
 
 # Screenshots
