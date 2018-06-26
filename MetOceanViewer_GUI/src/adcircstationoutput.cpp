@@ -337,10 +337,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
 }
 
 int AdcircStationOutput::toHmdf(Hmdf *outputHmdf) {
-  HmdfStation *tempStation;
-
   for (int i = 0; i < this->nStations; ++i) {
-    tempStation = new HmdfStation(outputHmdf);
+    HmdfStation *tempStation = new HmdfStation(outputHmdf);
     tempStation->setName(this->station_name[i]);
     tempStation->setId(this->station_name[i]);
     tempStation->setLongitude(this->longitude[i]);

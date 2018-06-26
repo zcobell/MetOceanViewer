@@ -336,7 +336,6 @@ int Session::save() {
         nc_put_var1_string(ncid, varid_names, start, mydatastring));
     if (ierr != NC_NOERR)
       return 1;
-    mydatastring[0] = NULL;
 
     tempByte = colors_ts[(int)iu].toUtf8();
     mydatastring[0] = tempByte.data();
