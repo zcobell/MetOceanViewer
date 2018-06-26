@@ -227,6 +227,7 @@ Rectangle {
                         } else {
                             if(map.previousMarker){
                                 map.previousMarker.deselect()
+                                infoWindow.state = "hidden"
                             }
 
                             markerid.select()
