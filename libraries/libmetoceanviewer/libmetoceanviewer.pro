@@ -8,7 +8,9 @@ QT       += network positioning
 
 TARGET = metoceanviewer
 TEMPLATE = lib
-CONFIG += staticlib
+CONFIG += c++11
+
+DEFINES += METOCEAN_LIBRARY
 
 
 # The following define makes your compiler emit warnings if you use
@@ -59,7 +61,8 @@ HEADERS += hmdfasciiparser.h  \
     xtidedata.h \
     tideprediction.h \
     ndbcdata.h \
-    stationlocations.h
+    stationlocations.h \
+    metoceanviewer_global.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

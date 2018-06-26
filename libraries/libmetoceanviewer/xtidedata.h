@@ -20,10 +20,11 @@
 #ifndef XTIDEDATA_H
 #define XTIDEDATA_H
 
-#include "waterdata.h"
+#include "metoceanviewer_global.h"
 #include "tideprediction.h"
+#include "waterdata.h"
 
-class XtideData : public WaterData {
+class METOCEANSHARED_EXPORT XtideData : public WaterData {
   Q_OBJECT
  public:
   XtideData(Station &station, QDateTime startDate, QDateTime endDate,
@@ -32,7 +33,7 @@ class XtideData : public WaterData {
   int interval() const;
   void setInterval(int interval);
 
-private:
+ private:
   int retrieveData(Hmdf *data);
 
   int m_interval;

@@ -22,10 +22,10 @@
 
 #include <QDateTime>
 #include <QGeoCoordinate>
+#include "metoceanviewer_global.h"
 
-class Station {
+class METOCEANSHARED_EXPORT Station {
  public:
-
   Station();
   Station(QGeoCoordinate coordinate, QString id, QString name,
           double measured = 0.0, double modeled = 0.0, int category = 0,
@@ -72,7 +72,6 @@ class Station {
   void setActive(bool active);
 
  private:
-
   QGeoCoordinate m_coordinate;
   QString m_name;
   QString m_id;

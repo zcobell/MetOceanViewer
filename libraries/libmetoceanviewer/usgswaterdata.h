@@ -20,10 +20,11 @@
 #ifndef USGSWATERDATA_H
 #define USGSWATERDATA_H
 
+#include "metoceanviewer_global.h"
 #include "waterdata.h"
 
-class UsgsWaterdata : public WaterData {
-    Q_OBJECT
+class METOCEANSHARED_EXPORT UsgsWaterdata : public WaterData {
+  Q_OBJECT
  public:
   UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
                 int databaseOption, QObject *parent = nullptr);

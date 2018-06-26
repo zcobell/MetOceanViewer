@@ -22,9 +22,10 @@
 
 #include <QNetworkReply>
 #include <QObject>
+#include "metoceanviewer_global.h"
 #include "waterdata.h"
 
-class NoaaCoOps : public WaterData {
+class METOCEANSHARED_EXPORT NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
   NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
@@ -47,7 +48,8 @@ class NoaaCoOps : public WaterData {
 
   int formatNoaaResponse(QVector<QString> &downloadedData, Hmdf *outputData);
   int formatNoaaResponseCsv(QVector<QString> &downloadedData, Hmdf *outputData);
-  int formatNoaaResponseJson(QVector<QString> &downloadedData, Hmdf *outputData);
+  int formatNoaaResponseJson(QVector<QString> &downloadedData,
+                             Hmdf *outputData);
 
   QString m_product;
   QStringList m_productParsed;

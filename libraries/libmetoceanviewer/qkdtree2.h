@@ -40,11 +40,12 @@
 #include <QPointF>
 #include <QVector3D>
 #include <QVector>
+#include "metoceanviewer_global.h"
 
 // Forward declaration of kdtree2 class included from kdtree2.hpp
 class kdtree2;
 
-class qKdtree2 : public QObject {
+class METOCEANSHARED_EXPORT qKdtree2 : public QObject {
   Q_OBJECT
  public:
   explicit qKdtree2(QObject *parent = nullptr);

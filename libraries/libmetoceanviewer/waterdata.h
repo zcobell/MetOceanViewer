@@ -23,10 +23,11 @@
 #include <QNetworkReply>
 #include <QObject>
 #include "hmdf.h"
+#include "metoceanviewer_global.h"
 #include "station.h"
 #include "timezone.h"
 
-class WaterData : public QObject {
+class METOCEANSHARED_EXPORT WaterData : public QObject {
   Q_OBJECT
  public:
   explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
@@ -39,7 +40,7 @@ class WaterData : public QObject {
   Timezone *getTimezone() const;
   void setTimezone(Timezone *timezone);
 
-protected:
+ protected:
   virtual int retrieveData(Hmdf *data);
 
   void setErrorString(const QString &errorString);

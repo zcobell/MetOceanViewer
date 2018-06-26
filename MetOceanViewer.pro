@@ -21,5 +21,6 @@
 TEMPLATE = subdirs
 
 SUBDIRS  = libraries \
-           MetOceanViewer_GUI
+           MetOceanViewer_GUI \
+    MetOceanViewer_CMD
 CONFIG += ordered           

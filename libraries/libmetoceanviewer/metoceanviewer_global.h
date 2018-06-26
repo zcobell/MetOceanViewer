@@ -17,46 +17,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef NETCDFTIMESERIES_H
-#define NETCDFTIMESERIES_H
+#ifndef METOCEANVIEWER_GLOBAL_H
+#define METOCEANVIEWER_GLOBAL_H
 
-#include <QDateTime>
-#include <QObject>
-#include <QVector>
-#include "hmdf.h"
-#include "metoceanviewer_global.h"
+#include <QtCore/qglobal.h>
 
-class METOCEANSHARED_EXPORT NetcdfTimeseries : public QObject {
-  Q_OBJECT
- public:
-  explicit NetcdfTimeseries(QObject *parent = nullptr);
+#if defined(METOCEAN_LIBRARY)
+#define METOCEANSHARED_EXPORT Q_DECL_EXPORT
+#else
+#define METOCEANSHARED_EXPORT Q_DECL_IMPORT
+#endif
 
-  int read();
-
-  int toHmdf(Hmdf *hmdf);
-
-  QString filename() const;
-  void setFilename(const QString &filename);
-
-  int epsg() const;
-  void setEpsg(int epsg);
-
-  static int getEpsg(QString file);
-
- private:
-  QString m_filename;
-  QString m_units;
-  QString m_verticalDatum;
-  QString m_horizontalProjection;
-  int m_epsg;
-  size_t m_numStations;
-
-  QVector<double> m_xcoor;
-  QVector<double> m_ycoor;
-  QVector<size_t> m_stationLength;
-  QVector<QString> m_stationName;
-  QVector<QVector<qint64> > m_time;
-  QVector<QVector<double> > m_data;
-};
-
-#endif  // NETCDFTIMESERIES_H
+#endif  // METOCEANVIEWER_GLOBAL_H

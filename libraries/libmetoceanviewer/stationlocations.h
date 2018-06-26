@@ -22,9 +22,10 @@
 
 #include <QObject>
 #include <QVector>
+#include "metoceanviewer_global.h"
 #include "station.h"
 
-class StationLocations : public QObject {
+class METOCEANSHARED_EXPORT StationLocations : public QObject {
   Q_OBJECT
  public:
   explicit StationLocations(QObject *parent = nullptr);

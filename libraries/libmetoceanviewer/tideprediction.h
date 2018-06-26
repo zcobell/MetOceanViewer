@@ -24,9 +24,10 @@
 #include <QObject>
 #include <QVector>
 #include "hmdf.h"
+#include "metoceanviewer_global.h"
 #include "station.h"
 
-class TidePrediction : public QObject {
+class METOCEANSHARED_EXPORT TidePrediction : public QObject {
   Q_OBJECT
  public:
   explicit TidePrediction(QString root, QObject *parent = nullptr);

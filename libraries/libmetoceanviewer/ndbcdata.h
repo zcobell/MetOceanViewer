@@ -22,8 +22,9 @@
 
 #include <QMap>
 #include "waterdata.h"
+#include "metoceanviewer_global.h"
 
-class NdbcData : public WaterData {
+class METOCEANSHARED_EXPORT NdbcData : public WaterData {
  public:
   NdbcData(Station &station, QDateTime startDate, QDateTime endDate,
            QObject *parent);

@@ -22,9 +22,10 @@
 
 #include <QMap>
 #include <QObject>
+#include "metoceanviewer_global.h"
 #include "timezonestruct.h"
 
-class Timezone : public QObject {
+class METOCEANSHARED_EXPORT Timezone : public QObject {
   Q_OBJECT
 
  public:
