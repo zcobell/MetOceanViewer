@@ -319,6 +319,8 @@ void MainWindow::setupNoaaMap() {
   this->mapFunctions->setMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_noaaMap);
   this->mapFunctions->setMapQmlFile(ui->quick_noaaMap);
   this->noaaMarkerLocations =
       this->mapFunctions->readMarkers(MapFunctions::NOAA);
@@ -351,6 +353,8 @@ void MainWindow::setupNdbcMap() {
   this->mapFunctions->setMapTypes(ui->combo_ndbc_maptype);
   ui->combo_ndbc_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_ndbcMap);
   this->mapFunctions->setMapQmlFile(ui->quick_ndbcMap);
   this->ndbcMarkerLocations =
       this->mapFunctions->readMarkers(MapFunctions::NDBC);
@@ -395,6 +399,8 @@ void MainWindow::setupUsgsMap() {
   this->mapFunctions->setMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_usgsMap);
   this->mapFunctions->setMapQmlFile(ui->quick_usgsMap);
   QObject *usgsItem = ui->quick_usgsMap->rootObject();
   QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
@@ -424,6 +430,8 @@ void MainWindow::setupXTideMap() {
   this->mapFunctions->setMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_xtideMap);
   this->mapFunctions->setMapQmlFile(ui->quick_xtideMap);
   QObject *xtideItem = ui->quick_xtideMap->rootObject();
   QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
@@ -465,6 +473,8 @@ void MainWindow::setupUserTimeseriesMap() {
   this->setupMarkerClasses(ui->quick_timeseriesMap);
   ui->combo_user_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_timeseriesMap);
   this->mapFunctions->setMapQmlFile(ui->quick_timeseriesMap);
   QObject *userTimeseriesItem = ui->quick_timeseriesMap->rootObject();
   QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
@@ -494,7 +504,8 @@ void MainWindow::setupHighWaterMarkMap() {
   this->setupMarkerClasses(ui->quick_hwmMap);
   ui->combo_hwmMaptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_hwmMap);
   this->mapFunctions->setMapQmlFile(ui->quick_hwmMap);
 
   QObject *hwmItem = ui->quick_hwmMap->rootObject();
