@@ -243,7 +243,6 @@ int Noaa::plotChart() {
                         this->m_currentStationData[0]->station(0)->data(j));
     }
   }
-  this->m_chartView->chart()->addSeries(series1);
   series1->attachAxis(this->m_chartView->dateAxis());
   series1->attachAxis(this->m_chartView->yAxis());
   this->m_chartView->addSeries(series1, series1->name());
@@ -260,7 +259,6 @@ int Noaa::plotChart() {
                               this->m_offsetSeconds,
                           this->m_currentStationData[1]->station(0)->data(j));
       }
-    this->m_chartView->chart()->addSeries(series2);
     this->m_chartView->addSeries(series2, series2->name());
     series2->attachAxis(this->m_chartView->dateAxis());
     series2->attachAxis(this->m_chartView->yAxis());

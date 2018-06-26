@@ -110,7 +110,6 @@ int Ndbc::plot(int index) {
     series1->append(s->date(j) - offset, s->data(j));
   }
 
-  this->m_chartView->chart()->addSeries(series1);
   this->m_chartView->addSeries(series1, s->name());
 
   this->m_chartView->setDateFormat(startDate, endDate);

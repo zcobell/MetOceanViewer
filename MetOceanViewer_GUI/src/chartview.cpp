@@ -171,6 +171,7 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
   this->m_kdtree.push_back(new qKdtree2(this->chart()));
   QList<QPointF> points = this->m_series.last()->points();
   this->m_kdtree.last()->build(points);
+  this->chart()->addSeries(series);
   return;
 }
 

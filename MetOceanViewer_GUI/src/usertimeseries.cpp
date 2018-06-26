@@ -321,12 +321,6 @@ void UserTimeseries::plot() {
 
       if (series[seriesCounter - 1]->points().size() > 0) {
         plottedSeriesCounter = plottedSeriesCounter + 1;
-        this->m_chartView->chart()->addSeries(series[seriesCounter - 1]);
-        this->m_chartView->chart()
-            ->legend()
-            ->markers()
-            .at(plottedSeriesCounter - 1)
-            ->setFont(QFont("Helvetica", 10, QFont::Bold));
         series[seriesCounter - 1]->attachAxis(this->m_chartView->dateAxis());
         series[seriesCounter - 1]->attachAxis(this->m_chartView->yAxis());
         this->m_chartView->addSeries(series[seriesCounter - 1],

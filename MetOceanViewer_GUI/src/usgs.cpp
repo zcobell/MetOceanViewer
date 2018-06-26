@@ -174,8 +174,6 @@ int Usgs::plotUSGS() {
       series1->append(station->date(j), station->data(j));
     }
   }
-
-  this->m_chartView->chart()->addSeries(series1);
   this->m_chartView->addSeries(series1, this->m_productName);
 
   this->m_chartView->dateAxis()->setTitleText("Date (" +

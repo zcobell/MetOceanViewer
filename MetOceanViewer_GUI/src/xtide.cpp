@@ -138,7 +138,6 @@ int XTide::plotChart() {
                     this->m_data->station(0)->data(i) * multiplier);
   }
 
-  this->m_chartView->chart()->addSeries(series1);
   this->m_chartView->addSeries(series1, series1->name());
   this->m_chartView->chart()->setTitle("XTide Station: " +
                                        this->m_station.name());
