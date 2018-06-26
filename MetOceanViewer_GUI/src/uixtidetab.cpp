@@ -27,13 +27,24 @@ void MainWindow::on_button_xtide_compute_clicked() {
 }
 
 void MainWindow::plotXTideStation() {
+  //...Check the provided dates
+  QDateTime d1 = ui->date_xtide_start->dateTime();
+  QDateTime d2 = ui->date_xtide_end->dateTime();
+  d1.setTime(QTime(0, 0, 0));
+  d2.setTime(QTime(0, 0, 0));
+  d2.addDays(1);
+  if (d1 <= d2) {
+    throwErrorMessageBox("XTide dates must be reasonable.");
+    return;
+  }
+
   //...Create an xTide object
   if (this->m_xtide != nullptr) delete this->m_xtide;
   this->m_xtide =
       new XTide(ui->quick_xtideMap, ui->xtide_graphics, ui->date_xtide_start,
                 ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar,
                 this->xtideStationModel, &this->xtideSelectedStation, this);
-  connect(m_xtide, SIGNAL(xTideError(QString)), this,
+  connect(this->m_xtide, SIGNAL(xTideError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
   //...Call the plotting routine
