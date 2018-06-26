@@ -196,10 +196,11 @@ Rectangle {
                             diff = (Math.round((-difference)*100)/100).toFixed(2);
                         }
 
-                        text = "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                        text = "<b>Location: &nbsp;&nbsp;</b>"+longitude+", "+latitude+"<br>"+
                                "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
-                               "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
-                               "<b>Difference:</b> "+diff
+                               "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
+                               "<b>Difference:</b> &nbsp;"+diff
+                        infoWindow.shownHeight = 78;
                     } else if(markerMode===3){
                         var endDateString;
                         if(endDate=="01/01/2050")
