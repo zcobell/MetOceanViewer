@@ -198,6 +198,8 @@ int Noaa::plotChart() {
   double ymin, ymax;
   QString S1, S2;
 
+  int offset = Timezone::localMachineOffsetFromUtc()*1000;
+
   this->m_chartView->clear();
 
   this->m_chartView->initializeAxis(1);
@@ -239,7 +241,7 @@ int Noaa::plotChart() {
             .isValid()) {
       if (this->m_currentStationData[0]->station(0)->data(j) != 0.0)
         series1->append(this->m_currentStationData[0]->station(0)->date(j) +
-                            this->m_offsetSeconds,
+                            this->m_offsetSeconds - offset,
                         this->m_currentStationData[0]->station(0)->data(j));
     }
   }
@@ -255,7 +257,7 @@ int Noaa::plotChart() {
               .isValid()) {
         if (this->m_currentStationData[1]->station(0)->data(j) != 0.0)
           series2->append(this->m_currentStationData[1]->station(0)->date(j) +
-                              this->m_offsetSeconds,
+                              this->m_offsetSeconds - offset,
                           this->m_currentStationData[1]->station(0)->data(j));
       }
     this->m_chartView->addSeries(series2, series2->name());

@@ -41,16 +41,19 @@ class NoaaCoOps : public WaterData {
 
   int downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
                                  QVector<QDateTime> endDateList,
-                                 QVector<QByteArray> &downloadedData);
+                                 QVector<QString> &downloadedData);
 
-  int readNoaaResponse(QNetworkReply *reply, QVector<QByteArray> &retrieveData);
+  int readNoaaResponse(QNetworkReply *reply, QVector<QString> &retrieveData);
 
-  int formatNoaaResponse(QVector<QByteArray> &downloadedData, Hmdf *outputData);
+  int formatNoaaResponse(QVector<QString> &downloadedData, Hmdf *outputData);
+  int formatNoaaResponseCsv(QVector<QString> &downloadedData, Hmdf *outputData);
+  int formatNoaaResponseJson(QVector<QString> &downloadedData, Hmdf *outputData);
 
   QString m_product;
   QStringList m_productParsed;
   QString m_datum;
   QString m_units;
+  bool m_useJson;
 };
 
 #endif  // NOAACOOPS_H

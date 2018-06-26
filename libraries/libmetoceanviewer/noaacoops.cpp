@@ -19,6 +19,10 @@
 //-----------------------------------------------------------------------*/
 #include "noaacoops.h"
 #include <QEventLoop>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -30,6 +34,7 @@ NoaaCoOps::NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
   this->m_product = product;
   this->m_units = units;
   this->m_datum = datum;
+  this->m_useJson = true;
   this->parseProduct();
 }
 
@@ -40,7 +45,7 @@ int NoaaCoOps::parseProduct() {
 
 int NoaaCoOps::retrieveData(Hmdf *data) {
   QVector<QDateTime> startDateList, endDateList;
-  QVector<QByteArray> rawNoaaData;
+  QVector<QString> rawNoaaData;
   int ierr = this->generateDateRanges(startDateList, endDateList);
   if (ierr != 0) return ierr;
   ierr =
@@ -78,7 +83,7 @@ int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
 
 int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
                                           QVector<QDateTime> endDateList,
-                                          QVector<QByteArray> &downloadedData) {
+                                          QVector<QString> &downloadedData) {
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
 
   for (int i = 0; i < startDateList.length(); i++) {
@@ -88,6 +93,14 @@ int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
     QString endString =
         endDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
 
+    //...Select parser type
+    QString format;
+    if (this->m_useJson) {
+      format = "json";
+    } else {
+      format = "csv";
+    }
+
     // Build the URL to request data from the NOAA CO-OPS API
     QString requestURL =
         QStringLiteral("http://tidesandcurrents.noaa.gov/api/datagetter?") +
@@ -96,7 +109,7 @@ int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
         QStringLiteral("&begin_date=") + startString +
         QStringLiteral("&end_date=") + endString + QStringLiteral("&station=") +
         this->station().id() + QStringLiteral("&time_zone=GMT&units=") +
-        this->m_units + QStringLiteral("&interval=&format=csv");
+        this->m_units + QStringLiteral("&interval=&format=") + format;
 
     // Allow a different datum where allowed
     if (this->m_datum != QStringLiteral("Stnd"))
@@ -130,7 +143,7 @@ int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
 }
 
 int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
-                                QVector<QByteArray> &downloadedData) {
+                                QVector<QString> &downloadedData) {
   // Catch some errors during the download
   if (reply->error() != 0) {
     this->setErrorString(QStringLiteral("ERROR: ") + reply->errorString());
@@ -139,7 +152,7 @@ int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
   }
 
   // Store the data at the back of the vector
-  downloadedData.push_back(reply->readAll());
+  downloadedData.push_back((QString)reply->readAll());
 
   // Delete this response
   reply->deleteLater();
@@ -147,8 +160,17 @@ int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
   return 0;
 }
 
-int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
+int NoaaCoOps::formatNoaaResponse(QVector<QString> &downloadedData,
                                   Hmdf *outputData) {
+  if (this->m_useJson) {
+    return this->formatNoaaResponseJson(downloadedData, outputData);
+  } else {
+    return this->formatNoaaResponseCsv(downloadedData, outputData);
+  }
+}
+
+int NoaaCoOps::formatNoaaResponseCsv(QVector<QString> &downloadedData,
+                                     Hmdf *outputData) {
   QVector<QStringList> data;
   QString error;
 
@@ -167,6 +189,7 @@ int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
   station->setStationIndex(0);
 
   QDateTime tempDate = QDateTime();
+  tempDate.setTimeSpec(Qt::UTC);
 
   for (int i = 0; i < data.size(); i++) {
     if (data[i].size() > 3) {
@@ -209,9 +232,62 @@ int NoaaCoOps::formatNoaaResponse(QVector<QByteArray> &downloadedData,
   outputData->addStation(station);
 
   if (outputData->station(0)->numSnaps() < 5) {
-    this->setErrorString(QStringLiteral("No valid data"));
+    this->setErrorString(QStringLiteral("No valid data was found."));
     return 1;
   }
 
   return 0;
+}
+
+int NoaaCoOps::formatNoaaResponseJson(QVector<QString> &downloadedData,
+                                      Hmdf *outputData) {
+  HmdfStation *station = new HmdfStation(outputData);
+  station->setCoordinate(this->station().coordinate());
+  station->setName(this->station().name());
+  station->setId(this->station().id());
+  station->setStationIndex(0);
+
+  for (int i = 0; i < downloadedData.length(); i++) {
+    QString data = downloadedData[i];
+    QJsonDocument jsonData = QJsonDocument::fromJson(data.toUtf8());
+    QJsonObject jsonObj = jsonData.object();
+
+    QJsonArray jsonArr;
+    if (jsonObj.contains("data"))
+      jsonArr = jsonObj["data"].toArray();
+    else if (jsonObj.contains("predictions"))
+      jsonArr = jsonObj["predictions"].toArray();
+    else {
+      QJsonValue val = jsonData["error"];
+      QJsonObject obj = val.toObject();
+      QJsonValue val2 = obj["message"];
+      this->setErrorString(val2.toString());
+    }
+
+    //...Ditch duplicate data
+    int start;
+    if (i == 0)
+      start = 0;
+    else
+      start = 1;
+
+    for (int j = start; j < jsonArr.size(); j++) {
+      QJsonObject obj = jsonArr[j].toObject();
+      QDateTime t =
+          QDateTime::fromString(obj["t"].toString(), "yyyy-MM-dd hh:mm");
+      t.setTimeSpec(Qt::UTC);
+      bool ok;
+      double v = obj["v"].toString().toDouble(&ok);
+      if (t.isValid() && ok) {
+        station->setNext(t.toMSecsSinceEpoch(), v);
+      }
+    }
+  }
+
+  if (station->numSnaps() > 3) {
+    outputData->addStation(station);
+    return 0;
+  } else {
+    return 1;
+  }
 }

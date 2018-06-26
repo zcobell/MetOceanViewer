@@ -7,18 +7,18 @@ language: cpp
 compiler: gcc
 
 before_install:
-- sudo add-apt-repository --yes ppa:beineri/opt-qt592-trusty
+- sudo add-apt-repository --yes ppa:beineri/opt-qt-5.10.1-trusty
 - sudo apt-get update  -qq
 - sudo apt-get install -qq libsqlite3-dev libnetcdf-dev
-- sudo apt-cache search qt59
-- sudo apt-get install -qq qt59base qt59charts-no-lgpl qt59webengine qt59imageformats qt59connectivity qt59graphicaleffects qt59script qt59sensors qt59webchannel qt59svg qt59xmlpatterns qt59location qt59quickcontrols2 qt59quickcontrols 
-- export PATH=/opt/qt59/bin:$PATH
+- sudo apt-cache search qt510
+- sudo apt-get install -qq qt510base qt510charts-no-lgpl qt510webengine qt510imageformats qt510connectivity qt510graphicaleffects qt510script qt510sensors qt510webchannel qt510svg qt510xmlpatterns qt510location qt510quickcontrols2 qt510quickcontrols 
+- export PATH=/opt/qt510/bin:$PATH
 
 script:
 - uname -a
 - which qmake
 - gcc --version
 - g++ --version
-- . /opt/qt59/bin/qt59-env.sh
-- /opt/qt59/bin/qmake MetOceanViewer.pro 
+- . /opt/qt510/bin/qt510-env.sh
+- /opt/qt510/bin/qmake MetOceanViewer.pro 
 - make -j4
