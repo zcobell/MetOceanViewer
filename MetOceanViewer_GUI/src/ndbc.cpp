@@ -128,9 +128,6 @@ int Ndbc::plot(int index) {
   this->m_chartView->yAxis()->setTitleText("Observed");
   this->m_chartView->dateAxis()->setTitleText("Date (GMT)");
 
-  series1->attachAxis(this->m_chartView->dateAxis());
-  series1->attachAxis(this->m_chartView->yAxis());
-
   this->m_chartView->chart()->setTitle("NDBC Station " + this->m_station.id());
   this->m_chartView->initializeLegendMarkers();
   this->m_chartView->initializeAxisLimits();

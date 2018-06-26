@@ -172,6 +172,13 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
   QList<QPointF> points = this->m_series.last()->points();
   this->m_kdtree.last()->build(points);
   this->chart()->addSeries(series);
+
+  if (this->xAxis() != nullptr)
+    series->attachAxis(this->xAxis());
+  else
+    series->attachAxis(this->dateAxis());
+
+  series->attachAxis(this->yAxis());
   return;
 }
 

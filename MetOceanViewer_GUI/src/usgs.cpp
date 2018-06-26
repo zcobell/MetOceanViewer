@@ -179,9 +179,6 @@ int Usgs::plotUSGS() {
   this->m_chartView->dateAxis()->setTitleText("Date (" +
                                               this->m_tz->abbreviation() + ")");
 
-  series1->attachAxis(this->m_chartView->dateAxis());
-  series1->attachAxis(this->m_chartView->yAxis());
-
   this->m_chartView->yAxis()->setTitleText(
       this->m_productName.split(",").value(0));
 
