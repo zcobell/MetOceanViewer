@@ -34,18 +34,18 @@
  */
 //-----------------------------------------------------------------------------------------//
 qKdtree2::qKdtree2(QObject *parent) : QObject(parent) {
-  this->initialized = false;
-  this->numDataPoints = 0;
-  this->tree = nullptr;
+  this->m_initialized = false;
+  this->m_numDataPoints = 0;
+  this->m_tree = nullptr;
 }
 //-----------------------------------------------------------------------------------------//
 
 qKdtree2::~qKdtree2() {
-  if (this->tree != nullptr) delete this->tree;
+  if (this->m_tree != nullptr) delete this->m_tree;
 }
 
 void qKdtree2::clear() {
-  if (!(this->tree == nullptr)) delete this->tree;
+  if (!(this->m_tree == nullptr)) delete this->m_tree;
 }
 
 //-----------------------------------------------------------------------------------------//
@@ -65,7 +65,7 @@ int qKdtree2::build(QVector<QPointF> &pointCloud) {
   int i;
   typedef boost::multi_array<float, 2> array2d;
 
-  this->numDataPoints = pointCloud.size();
+  this->m_numDataPoints = pointCloud.size();
 
   array2d data(boost::extents[pointCloud.size()][2]);
 
@@ -74,8 +74,8 @@ int qKdtree2::build(QVector<QPointF> &pointCloud) {
     data[i][1] = static_cast<float>(pointCloud[i].y());
   }
 
-  if (this->tree != nullptr) this->clear();
-  this->tree = new kdtree2(data, true);
+  if (this->m_tree != nullptr) this->clear();
+  this->m_tree = new kdtree2(data, true);
 
   return 0;
 }
@@ -98,7 +98,7 @@ int qKdtree2::build(QList<QPointF> &pointCloud) {
   int i;
   typedef boost::multi_array<float, 2> array2d;
 
-  this->numDataPoints = pointCloud.size();
+  this->m_numDataPoints = pointCloud.size();
 
   array2d data(boost::extents[pointCloud.size()][2]);
 
@@ -110,8 +110,8 @@ int qKdtree2::build(QList<QPointF> &pointCloud) {
     data[i][1] = 0.0;
   }
 
-  if (this->tree != nullptr) this->clear();
-  this->tree = new kdtree2(data, true);
+  if (this->m_tree != nullptr) this->clear();
+  this->m_tree = new kdtree2(data, true);
 
   return 0;
 }
@@ -137,7 +137,7 @@ int qKdtree2::build(QVector<qreal> &x, QVector<qreal> &y) {
 
   if (x.size() != y.size()) return -1;
 
-  this->numDataPoints = x.size();
+  this->m_numDataPoints = x.size();
 
   array2d data(boost::extents[x.size()][2]);
 
@@ -146,8 +146,8 @@ int qKdtree2::build(QVector<qreal> &x, QVector<qreal> &y) {
     data[i][1] = static_cast<float>(y[i]);
   }
 
-  if (this->tree != nullptr) this->clear();
-  this->tree = new kdtree2(data, true);
+  if (this->m_tree != nullptr) this->clear();
+  this->m_tree = new kdtree2(data, true);
 
   return 0;
 }
@@ -170,7 +170,7 @@ int qKdtree2::build(QVector<QVector3D> &pointCloud) {
   int i;
   typedef boost::multi_array<float, 2> array2d;
 
-  this->numDataPoints = pointCloud.size();
+  this->m_numDataPoints = pointCloud.size();
 
   array2d data(boost::extents[pointCloud.size()][2]);
 
@@ -179,8 +179,8 @@ int qKdtree2::build(QVector<QVector3D> &pointCloud) {
     data[i][1] = pointCloud[i].y();
   }
 
-  if (this->tree != nullptr) this->clear();
-  this->tree = new kdtree2(data, true);
+  if (this->m_tree != nullptr) this->clear();
+  this->m_tree = new kdtree2(data, true);
 
   return 0;
 }
@@ -212,7 +212,7 @@ int qKdtree2::findNearest(QPointF pointLocation, int &index) {
   query[0] = static_cast<float>(pointLocation.x());
   query[1] = static_cast<float>(pointLocation.y());
 
-  this->tree->n_nearest(query, 1, result_vector);
+  this->m_tree->n_nearest(query, 1, result_vector);
 
   result = result_vector.at(0);
   index = result.idx;
@@ -293,12 +293,12 @@ int qKdtree2::findXNearest(QPointF pointLocation, int nn,
   kdtree2_result result;
   vector<float> query(2);
 
-  if (nn > this->numDataPoints) nn = this->numDataPoints;
+  if (nn > this->m_numDataPoints) nn = this->m_numDataPoints;
 
   query[0] = static_cast<float>(pointLocation.x());
   query[1] = static_cast<float>(pointLocation.y());
 
-  this->tree->n_nearest(query, nn, result_vector);
+  this->m_tree->n_nearest(query, nn, result_vector);
 
   indicies.resize(nn);
 
@@ -360,3 +360,16 @@ int qKdtree2::findXNearest(QVector3D pointLocation, int nn,
   return this->findXNearest(pointLocation.toPointF(), nn, indicies);
 }
 //-----------------------------------------------------------------------------------------//
+
+int qKdtree2::numDataPoints() const { return this->m_numDataPoints; }
+
+void qKdtree2::setNumDataPoints(int numDataPoints) {
+  this->m_numDataPoints = numDataPoints;
+}
+
+bool qKdtree2::initialized() const { return this->m_initialized; }
+
+void qKdtree2::setInitialized(bool initialized) {
+  this->m_initialized = initialized;
+}
+

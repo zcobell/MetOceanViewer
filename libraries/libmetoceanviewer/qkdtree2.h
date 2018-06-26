@@ -46,16 +46,10 @@ class kdtree2;
 
 class qKdtree2 : public QObject {
   Q_OBJECT
-public:
-  explicit qKdtree2(QObject *parent = 0);
+ public:
+  explicit qKdtree2(QObject *parent = nullptr);
 
   ~qKdtree2();
-
-  /// Variable holding the total number of points in the search tree
-  int numDataPoints;
-
-  /// Variable that ensures the search tree is initialized
-  bool initialized;
 
   void clear();
 
@@ -72,9 +66,21 @@ public:
   int findXNearest(qreal x, qreal y, int nn, QVector<int> &indicies);
   int findXNearest(QVector3D pointLocation, int nn, QVector<int> &indicies);
 
-private:
+  int numDataPoints() const;
+  void setNumDataPoints(int numDataPoints);
+
+  bool initialized() const;
+  void setInitialized(bool initialized);
+
+ private:
+  /// Variable holding the total number of points in the search tree
+  int m_numDataPoints;
+
+  /// Variable that ensures the search tree is initialized
+  bool m_initialized;
+
   /// Pointer to variable holding the kdtree search tree
-  kdtree2 *tree;
+  kdtree2 *m_tree;
 };
 
-#endif // QKDTREE2_H
+#endif  // QKDTREE2_H
