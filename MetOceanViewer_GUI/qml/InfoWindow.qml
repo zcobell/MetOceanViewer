@@ -21,6 +21,7 @@ import QtQuick 2.0
 
 Rectangle {
     property int mode: 0
+    property int shownHeight: 65
     id: infoWindow
     color: "#ffffff"
     border.color: "#000000"
@@ -33,7 +34,7 @@ Rectangle {
     states: [
         State {
             name: "shown"
-            PropertyChanges { target: infoWindow; height:65 }
+            PropertyChanges { target: infoWindow; height: shownHeight }
         }, State {
             name: "hidden"
             PropertyChanges { target: infoWindow; height:0 }

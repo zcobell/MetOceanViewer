@@ -20,13 +20,19 @@
 #ifndef STATION_H
 #define STATION_H
 
+#include <QDateTime>
 #include <QGeoCoordinate>
 
 class Station {
  public:
   Station();
   Station(QGeoCoordinate coordinate, QString id, QString name,
-          double measured = 0.0, double modeled = 0.0, int category = 0);
+          double measured = 0.0, double modeled = 0.0, int category = 0,
+          bool active = true,
+          QDateTime startValidDate = QDateTime(QDate(1900, 1, 1),
+                                               QTime(0, 0, 0)),
+          QDateTime endValidDate = QDateTime(QDate(2050, 1, 1),
+                                             QTime(0, 0, 0)));
 
   ~Station();
 
@@ -55,7 +61,16 @@ class Station {
 
   double difference() const;
 
-private:
+  QDateTime startValidDate() const;
+  void setStartValidDate(const QDateTime &startValidDate);
+
+  QDateTime endValidDate() const;
+  void setEndValidDate(const QDateTime &endValidDate);
+
+  bool active() const;
+  void setActive(bool active);
+
+ private:
   QGeoCoordinate m_coordinate;
   QString m_name;
   QString m_id;
@@ -63,6 +78,9 @@ private:
   double m_measured;
   int m_category;
   bool m_selected;
+  bool m_active;
+  QDateTime m_startValidDate;
+  QDateTime m_endValidDate;
 };
 Q_DECLARE_METATYPE(Station)
 

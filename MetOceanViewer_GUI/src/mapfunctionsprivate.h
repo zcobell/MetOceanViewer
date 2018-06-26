@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QVector>
+#include <memory>
 #include "station.h"
 
 class MapFunctionsPrivate : public QObject {
@@ -31,6 +32,7 @@ class MapFunctionsPrivate : public QObject {
   static QVector<Station> readNoaaMarkers();
   static QVector<Station> readUsgsMarkers();
   static QVector<Station> readXtideMarkers();
+  static QVector<Station> readNdbcMarkers();
 };
 
 #endif  // MAPFUNCTIONSPRIVATE_H

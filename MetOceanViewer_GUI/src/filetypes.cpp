@@ -74,7 +74,7 @@ bool Filetypes::_checkNetcdfAdcirc(QString filename) {
   if (ierr != 0) {
     free(attname);
     free(model);
-    ierr = nc_close(ncid);
+    nc_close(ncid);
     return false;
   }
   nc_close(ncid);

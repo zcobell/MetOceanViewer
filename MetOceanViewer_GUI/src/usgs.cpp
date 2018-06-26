@@ -137,7 +137,9 @@ int Usgs::replotCurrentUSGSStation(int index) {
 }
 
 int Usgs::plotUSGS() {
-  QString format;
+
+  this->m_chartView->clear();
+  this->m_chartView->initializeAxis(1);
 
   this->m_productIndex = this->m_comboProduct->currentIndex();
   this->m_productName = this->m_comboProduct->currentText();
@@ -167,79 +169,28 @@ int Usgs::plotUSGS() {
   series1->setPen(
       QPen(QColor(0, 0, 255), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
-  //...Create the chart
-  this->m_chartView->m_chart = new QChart();
-  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-
   for (int j = 0; j < station->numSnaps(); j++) {
     if (QDateTime::fromMSecsSinceEpoch(station->date(j)).isValid()) {
       series1->append(station->date(j), station->data(j));
     }
   }
-
-  this->m_chartView->m_chart->addSeries(series1);
-
-  this->m_chartView->clear();
   this->m_chartView->addSeries(series1, this->m_productName);
 
-  QDateTimeAxis *axisX = new QDateTimeAxis(this);
-  axisX->setTickCount(5);
-  if (this->m_requestStartDate.daysTo(this->m_requestEndDate) > 90)
-    axisX->setFormat("MM/yyyy");
-  else if (this->m_requestStartDate.daysTo(this->m_requestEndDate) > 4)
-    axisX->setFormat("MM/dd/yyyy");
-  else
-    axisX->setFormat("MM/dd/yyyy hh:mm");
-  axisX->setTitleText("Date (" + this->m_tz->abbreviation() + ")");
-  axisX->setMin(minDateTime);
-  axisX->setMax(maxDateTime);
-  this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
-  series1->attachAxis(axisX);
+  this->m_chartView->dateAxis()->setTitleText("Date (" +
+                                              this->m_tz->abbreviation() + ")");
 
-  QValueAxis *axisY = new QValueAxis(this);
-  axisY->setLabelFormat(format);
-  axisY->setTitleText(this->m_productName.split(",").value(0));
-  axisY->setMin(ymin);
-  axisY->setMax(ymax);
-  this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
-  series1->attachAxis(axisY);
+  this->m_chartView->yAxis()->setTitleText(
+      this->m_productName.split(",").value(0));
 
-  axisY->setTickCount(10);
-  axisY->applyNiceNumbers();
-  axisX->setGridLineColor(QColor(200, 200, 200));
-  axisY->setGridLineColor(QColor(200, 200, 200));
-  axisY->setShadesPen(Qt::NoPen);
-  axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
-  axisY->setShadesVisible(true);
-  axisY->applyNiceNumbers();
-  axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-  this->m_chartView->m_chart->legend()->markers().at(0)->setFont(
-      QFont("Helvetica", 10, QFont::Bold));
+  this->m_chartView->setDateFormat(this->m_requestStartDate,
+                                   this->m_requestEndDate);
+  this->m_chartView->setAxisLimits(minDateTime, maxDateTime, ymin, ymax);
 
-  this->m_chartView->m_chart->setTitle(tr("USGS Station ") +
+  this->m_chartView->chart()->setTitle(tr("USGS Station ") +
                                        this->m_currentStation.id() + ": " +
                                        this->m_currentStation.name());
-  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  m_chartView->setRenderHint(QPainter::Antialiasing);
-  m_chartView->setChart(this->m_chartView->m_chart);
 
-  foreach (QLegendMarker *marker,
-           this->m_chartView->m_chart->legend()->markers()) {
-    // Disconnect possible existing connection to avoid multiple connections
-    QObject::disconnect(marker, SIGNAL(clicked()), this->m_chartView,
-                        SLOT(handleLegendMarkerClicked()));
-    QObject::connect(marker, SIGNAL(clicked()), this->m_chartView,
-                     SLOT(handleLegendMarkerClicked()));
-  }
-
-  this->m_chartView->m_style = 1;
-  this->m_chartView->m_coord =
-      new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
-  this->m_chartView->m_coord->setPos(
-      this->m_chartView->size().width() / 2 - 100,
-      this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeLegendMarkers();
   this->m_chartView->initializeAxisLimits();
   this->m_chartView->setStatusBar(this->m_statusBar);
 
@@ -333,11 +284,11 @@ int Usgs::replotChart(Timezone *newTimezone) {
   int totalOffset = -this->m_priorOffsetSeconds + offset;
 
   QVector<QLineSeries *> series;
-  series.resize(this->m_chartView->m_chart->series().length());
+  series.resize(this->m_chartView->chart()->series().length());
 
-  for (int i = 0; i < this->m_chartView->m_chart->series().length(); i++) {
+  for (int i = 0; i < this->m_chartView->chart()->series().length(); i++) {
     series[i] =
-        static_cast<QLineSeries *>(this->m_chartView->m_chart->series().at(i));
+        static_cast<QLineSeries *>(this->m_chartView->chart()->series().at(i));
   }
   for (int i = 0; i < series.length(); i++) {
     QList<QPointF> data = series[i]->points();
@@ -364,10 +315,10 @@ int Usgs::replotChart(Timezone *newTimezone) {
   minDateTime = minDateTime.addMSecs(totalOffset);
   maxDateTime = maxDateTime.addMSecs(totalOffset);
 
-  this->m_chartView->m_chart->axisX()->setTitleText(
+  this->m_chartView->dateAxis()->setTitleText(
       "Date (" + newTimezone->abbreviation() + ")");
-  this->m_chartView->m_chart->axisX()->setMin(minDateTime);
-  this->m_chartView->m_chart->axisX()->setMax(maxDateTime);
+  this->m_chartView->dateAxis()->setMin(minDateTime);
+  this->m_chartView->dateAxis()->setMax(maxDateTime);
 
   this->m_priorOffsetSeconds = offset;
 
@@ -375,7 +326,7 @@ int Usgs::replotChart(Timezone *newTimezone) {
 
   this->m_chartView->update();
 
-  this->m_chartView->m_chart->zoomReset();
+  this->m_chartView->chart()->zoomReset();
 
   return 0;
 }

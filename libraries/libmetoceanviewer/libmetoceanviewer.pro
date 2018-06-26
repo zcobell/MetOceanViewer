@@ -10,6 +10,7 @@ TARGET = metoceanviewer
 TEMPLATE = lib
 CONFIG += staticlib
 
+
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -38,7 +39,8 @@ SOURCES += ../../thirdparty/kdtree/kdtree2.cpp \
            station.cpp \ 
     usgswaterdata.cpp \
     xtidedata.cpp \
-    tideprediction.cpp
+    tideprediction.cpp \
+    ndbcdata.cpp
 
 HEADERS += hmdfasciiparser.h  \
            hmdf.h  \
@@ -54,7 +56,8 @@ HEADERS += hmdfasciiparser.h  \
            station.h \ 
     usgswaterdata.h \
     xtidedata.h \
-    tideprediction.h
+    tideprediction.h \
+    ndbcdata.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

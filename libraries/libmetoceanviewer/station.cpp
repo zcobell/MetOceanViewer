@@ -27,10 +27,14 @@ Station::Station() {
   this->m_modeled = 0.0;
   this->m_selected = false;
   this->m_category = 0;
+  this->m_startValidDate = QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0));
+  this->m_endValidDate = QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0));
+  this->m_active = true;
 }
 
 Station::Station(QGeoCoordinate coordinate, QString id, QString name,
-                 double measured, double modeled, int category) {
+                 double measured, double modeled, int category, bool active,
+                 QDateTime startValidDate, QDateTime endValidDate) {
   this->m_coordinate = coordinate;
   this->m_id = id;
   this->m_name = name;
@@ -38,6 +42,9 @@ Station::Station(QGeoCoordinate coordinate, QString id, QString name,
   this->m_modeled = modeled;
   this->m_category = category;
   this->m_selected = false;
+  this->m_startValidDate = startValidDate;
+  this->m_endValidDate = endValidDate;
+  this->m_active = active;
 }
 
 Station::~Station() {}
@@ -83,3 +90,19 @@ void Station::setCategory(int category) { this->m_category = category; }
 double Station::difference() const {
   return this->m_measured - this->m_modeled;
 }
+
+QDateTime Station::startValidDate() const { return this->m_startValidDate; }
+
+void Station::setStartValidDate(const QDateTime &startValidDate) {
+  this->m_startValidDate = startValidDate;
+}
+
+QDateTime Station::endValidDate() const { return this->m_endValidDate; }
+
+void Station::setEndValidDate(const QDateTime &endValidDate) {
+  this->m_endValidDate = endValidDate;
+}
+
+bool Station::active() const { return this->m_active; }
+
+void Station::setActive(bool active) { this->m_active = active; }

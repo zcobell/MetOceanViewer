@@ -115,8 +115,10 @@ void MainWindow::setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog) {
   ui->table_TimeseriesData->setItem(
       row, 13, new QTableWidgetItem(QString::number(dialog->layer())));
 
-  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(dialog->randomButtonColor());
-  ui->table_TimeseriesData->item(row, 2)->setTextColor(dialog->randomButtonColor());
+  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(
+      dialog->randomButtonColor());
+  ui->table_TimeseriesData->item(row, 2)->setTextColor(
+      dialog->randomButtonColor());
   ui->table_TimeseriesData->item(row, 0)->setCheckState(Qt::Checked);
 
   // Tooltips in table cells
@@ -247,7 +249,7 @@ void MainWindow::on_button_processTimeseriesData_clicked() {
   // Change the mouse pointer
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  if (!this->m_userTimeseries.isNull()) delete this->m_userTimeseries;
+  if (this->m_userTimeseries != nullptr) delete this->m_userTimeseries;
 
   this->m_userTimeseries = new UserTimeseries(
       ui->table_TimeseriesData, ui->check_TimeseriesAllData,
@@ -400,6 +402,6 @@ void MainWindow::setTableRow(int row,
 //-------------------------------------------//
 
 void MainWindow::on_button_usertimeseriesResetZoom_clicked() {
-  if (!this->m_userTimeseries.isNull()) ui->timeseries_graphics->resetZoom();
+  if (this->m_userTimeseries != nullptr) ui->timeseries_graphics->resetZoom();
   return;
 }

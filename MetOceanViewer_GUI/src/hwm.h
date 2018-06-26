@@ -89,6 +89,7 @@ class Hwm : public QObject {
   QQuickWidget *m_quickMap;
   QStatusBar *m_statusBar;
   StationModel *m_stationModel;
+
 };
 
 #endif  // HWM_H

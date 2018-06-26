@@ -84,16 +84,17 @@ void MainWindow::on_button_processHWM_clicked() {
     }
   }
 
-  if (!m_hwm.isNull()) delete m_hwm;
+  if (this->m_hwm != nullptr) delete m_hwm;
 
-  m_hwm = new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
-                  ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
-                  ui->check_regressionColorMatch, ui->button_hwmcolor,
-                  ui->button_121linecolor, ui->button_boundlinecolor,
-                  ui->button_reglinecolor, ui->text_adchwmaxislabel,
-                  ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
-                  ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
-                  ui->statusBar, classes, this->hwmMarkerModel, this);
+  this->m_hwm =
+      new Hwm(ui->Text_HWMFile, ui->check_manualHWM, ui->combo_hwmunits,
+              ui->check_forceregthroughzero, ui->check_dispupperlowerlines,
+              ui->check_regressionColorMatch, ui->button_hwmcolor,
+              ui->button_121linecolor, ui->button_boundlinecolor,
+              ui->button_reglinecolor, ui->text_adchwmaxislabel,
+              ui->text_measuredhwmaxislabel, ui->text_hwmplottitle,
+              ui->spin_upperlowervalue, ui->quick_hwmMap, ui->graphics_hwm,
+              ui->statusBar, classes, this->hwmMarkerModel, this);
 
   ierr = m_hwm->processHWMData();
 
@@ -232,6 +233,6 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
 }
 
 void MainWindow::on_button_hwmResetZoom_clicked() {
-  if (!this->m_hwm.isNull()) ui->graphics_hwm->resetZoom();
+  if (this->m_hwm != nullptr) ui->graphics_hwm->resetZoom();
   return;
 }

@@ -40,6 +40,7 @@ class Noaa;
 class Usgs;
 class Hwm;
 class XTide;
+class Ndbc;
 class UserTimeseries;
 class WebEnginePage;
 class Session;
@@ -185,6 +186,8 @@ class MainWindow : public QMainWindow {
 
   void changeUserMarker(QString markerId);
 
+  void changeNdbcMarker(QString markerId);
+
   void changeNoaaMaptype();
 
   void changeUsgsMaptype();
@@ -194,6 +197,8 @@ class MainWindow : public QMainWindow {
   void changeUserMaptype();
 
   void changeHwmMaptype();
+
+  void changeNdbcMaptype();
 
   void on_combo_xtide_maptype_currentIndexChanged(int index);
 
@@ -229,8 +234,25 @@ class MainWindow : public QMainWindow {
 
   void on_actionOpenStreetMap_toggled(bool arg1);
 
-private:
-  enum MapViewerMarkerModes { SingleSelect, MultipleSelect, ColoredMarkers };
+  void on_button_fetchndbc_clicked();
+
+  void on_combo_ndbcproduct_currentIndexChanged(int index);
+
+  void on_button_ndbc_resetzoom_clicked();
+
+  void on_button_ndbcDisplayValues_toggled(bool checked);
+
+  void on_button_ndbc_savechart_clicked();
+
+  void on_button_ndbc_savedata_clicked();
+
+ private:
+  enum MapViewerMarkerModes {
+    SingleSelect,
+    MultipleSelect,
+    ColoredMarkers,
+    SingleSelectWithDates
+  };
 
   Ui::MainWindow *ui;
 
@@ -249,6 +271,8 @@ private:
   void setupMarkerClasses(QQuickWidget *widget);
 
   void setupUserTimeseriesMap();
+
+  void setupNdbcMap();
 
   void setupHighWaterMarkMap();
 
@@ -276,15 +300,17 @@ private:
 
   void resetMapSource(MapFunctions::MapSource source);
 
-  QPointer<Noaa> m_noaa;
+  Noaa *m_noaa;
 
-  QPointer<Usgs> m_usgs;
+  Usgs *m_usgs;
 
-  QPointer<Hwm> m_hwm;
+  Hwm *m_hwm;
 
-  QPointer<XTide> m_xtide;
+  XTide *m_xtide;
 
-  QPointer<UserTimeseries> m_userTimeseries;
+  Ndbc *m_ndbc;
+
+  UserTimeseries *m_userTimeseries;
 
   Session *sessionState;
 
@@ -304,15 +330,19 @@ private:
 
   StationModel *hwmMarkerModel;
 
+  StationModel *ndbcStationModel;
+
   MapFunctions *mapFunctions;
 
   QActionGroup *mapActionGroup;
 
   QVector<Station> xtideMarkerLocations;
+  QVector<Station> ndbcMarkerLocations;
   QVector<Station> noaaMarkerLocations;
   QVector<Station> usgsMarkerLocations;
 
   QString noaaSelectedStation;
+  QString ndbcSelectedStation;
   QString usgsSelectedStation;
   QString xtideSelectedStation;
   QString userSelectedStations;

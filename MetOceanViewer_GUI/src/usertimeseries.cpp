@@ -50,7 +50,6 @@ UserTimeseries::UserTimeseries(
   this->m_statusBar = inStatusBar;
   this->m_randomColorList = inRandomColorList;
   this->m_markerId = 0;
-  this->m_chartView->m_chart = nullptr;
   this->m_stationmodel = inStationModel;
   this->m_currentStation = inSelectedStation;
 }
@@ -239,6 +238,9 @@ void UserTimeseries::plot() {
 
   colorCounter = -1;
 
+  this->m_chartView->clear();
+  this->m_chartView->initializeAxis(1);
+
   //...At some point this may no longer be
   //   needed, but this defines an offset from UTC
   //   For some reason, the qDatTime axis operate in local
@@ -258,68 +260,34 @@ void UserTimeseries::plot() {
   this->m_markerId = this->m_selectedStations[0];
   ierr = this->getDataBounds(ymin, ymax, minDate, maxDate, addXList);
 
-  QDateTimeAxis *axisX;
-  QValueAxis *axisY;
-
-  if (this->m_chartView->m_chart == nullptr) {
-    this->m_chartView->m_chart = new QChart();
-    axisX = new QDateTimeAxis(this->m_chartView->m_chart);
-    axisY = new QValueAxis(this->m_chartView->m_chart);
-    this->m_chartView->m_coord =
-        new QGraphicsSimpleTextItem(this->m_chartView->m_chart);
-    this->m_chartView->m_chart->addAxis(axisX, Qt::AlignBottom);
-    this->m_chartView->m_chart->addAxis(axisY, Qt::AlignLeft);
-  } else {
-    this->m_chartView->m_chart->removeAllSeries();
-    axisX = static_cast<QDateTimeAxis *>(this->m_chartView->m_chart->axisX());
-    axisY = static_cast<QValueAxis *>(this->m_chartView->m_chart->axisY());
-  }
-
-  this->m_chartView->m_chart->setAnimationOptions(QChart::SeriesAnimations);
-  this->m_chartView->m_chart->legend()->setAlignment(Qt::AlignBottom);
-
-  axisX->setTickCount(5);
-  axisX->setTitleText("Date");
+  this->m_chartView->dateAxis()->setTitleText("Date");
   if (!this->m_checkXaxis->isChecked()) {
-    axisX->setMin(this->m_startDateEdit->dateTime());
-    axisX->setMax(this->m_endDateEdit->dateTime());
+    minDate = this->m_startDateEdit->dateTime();
+    maxDate = this->m_endDateEdit->dateTime();
   } else {
     minDate = minDate.addMSecs(-offset);
     maxDate = maxDate.addMSecs(-offset);
-    axisX->setMin(minDate);
-    axisX->setMax(maxDate);
+    this->m_chartView->dateAxis()->setMin(minDate);
+    this->m_chartView->dateAxis()->setMax(maxDate);
   }
 
-  axisX->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
-
-  axisY->setTickCount(5);
-  axisY->setTitleText(this->m_yLabelEdit->text());
+  this->m_chartView->yAxis()->setTitleText(this->m_yLabelEdit->text());
   if (!this->m_checkYaxis->isChecked()) {
-    axisY->setMin(this->m_yMinEdit->value());
-    axisY->setMax(this->m_yMaxEdit->value());
-  } else {
-    axisY->setMin(ymin);
-    axisY->setMax(ymax);
+    ymin = this->m_yMinEdit->value();
+    ymax = this->m_yMaxEdit->value();
   }
-  axisY->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
 
-  if (axisX->min().daysTo(axisX->max()) > 90)
-    axisX->setFormat("MM/yyyy");
-  else if (axisX->min().daysTo(axisX->max()) > 4)
-    axisX->setFormat("MM/dd/yyyy");
-  else
-    axisX->setFormat("MM/dd/yyyy hh:mm");
+  this->m_chartView->setDateFormat(minDate, maxDate);
+  this->m_chartView->setAxisLimits(minDate, maxDate, ymin, ymax);
 
   int seriesCounter = 0;
   int plottedSeriesCounter = 0;
-
-  this->m_chartView->clear();
 
   for (i = 0; i < this->m_fileDataUnique.length(); i++) {
     if (this->m_selectedStations.length() == 1) {
       seriesCounter = seriesCounter + 1;
       series.resize(seriesCounter);
-      series[seriesCounter - 1] = new QLineSeries(this->m_chartView->m_chart);
+      series[seriesCounter - 1] = new QLineSeries(this->m_chartView->chart());
       series[seriesCounter - 1]->setName(
           this->m_table->item(seriesCounter - 1, 1)->text());
       seriesColor.setNamedColor(
@@ -353,13 +321,6 @@ void UserTimeseries::plot() {
 
       if (series[seriesCounter - 1]->points().size() > 0) {
         plottedSeriesCounter = plottedSeriesCounter + 1;
-        this->m_chartView->m_chart->addSeries(series[seriesCounter - 1]);
-        this->m_chartView->m_chart->legend()
-            ->markers()
-            .at(plottedSeriesCounter - 1)
-            ->setFont(QFont("Helvetica", 10, QFont::Bold));
-        series[seriesCounter - 1]->attachAxis(axisX);
-        series[seriesCounter - 1]->attachAxis(axisY);
         this->m_chartView->addSeries(series[seriesCounter - 1],
                                      series[seriesCounter - 1]->name());
       }
@@ -378,7 +339,8 @@ void UserTimeseries::plot() {
             colorCounter = 0;
 
           series.resize(seriesCounter);
-          series[seriesCounter - 1] = new QLineSeries(this->m_chartView);
+          series[seriesCounter - 1] =
+              new QLineSeries(this->m_chartView->chart());
           series[seriesCounter - 1]->setName(
               this->m_fileDataUnique[i]
                   ->station(this->m_selectedStations[k])
@@ -417,13 +379,12 @@ void UserTimeseries::plot() {
           }
 
           if (series[seriesCounter - 1]->points().size() > 0) {
-            this->m_chartView->m_chart->addSeries(series[seriesCounter - 1]);
-            this->m_chartView->m_chart->legend()
+            this->m_chartView->chart()->addSeries(series[seriesCounter - 1]);
+            this->m_chartView->chart()
+                ->legend()
                 ->markers()
                 .at(seriesCounter - 1)
                 ->setFont(QFont("Helvetica", 10, QFont::Bold));
-            series[seriesCounter - 1]->attachAxis(axisX);
-            series[seriesCounter - 1]->attachAxis(axisY);
             this->m_chartView->addSeries(series[seriesCounter - 1],
                                          series[seriesCounter - 1]->name());
           }
@@ -432,39 +393,14 @@ void UserTimeseries::plot() {
     }
   }
 
-  axisY->setTickCount(10);
-  axisY->applyNiceNumbers();
-  axisX->setGridLineColor(QColor(200, 200, 200));
-  axisY->setGridLineColor(QColor(200, 200, 200));
-  axisY->setShadesPen(Qt::NoPen);
-  axisY->setShadesBrush(QBrush(QColor(240, 240, 240)));
-  axisY->setShadesVisible(true);
-  axisY->applyNiceNumbers();
-
   if (this->m_selectedStations.length() == 1)
-    this->m_chartView->m_chart->setTitle(
+    this->m_chartView->chart()->setTitle(
         this->m_plotTitle->text() + ": " +
         this->m_fileDataUnique[0]->station(this->m_markerId)->name());
   else
-    this->m_chartView->m_chart->setTitle(this->m_plotTitle->text());
+    this->m_chartView->chart()->setTitle(this->m_plotTitle->text());
 
-  this->m_chartView->m_chart->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
-  this->m_chartView->setRenderHint(QPainter::Antialiasing);
-  this->m_chartView->setChart(this->m_chartView->m_chart);
-
-  foreach (QLegendMarker *marker,
-           this->m_chartView->m_chart->legend()->markers()) {
-    // Disconnect possible existing connection to avoid multiple connections
-    disconnect(marker, SIGNAL(clicked()), this->m_chartView,
-               SLOT(handleLegendMarkerClicked()));
-    connect(marker, SIGNAL(clicked()), this->m_chartView,
-            SLOT(handleLegendMarkerClicked()));
-  }
-
-  this->m_chartView->m_style = 1;
-  this->m_chartView->m_coord->setPos(
-      this->m_chartView->size().width() / 2 - 100,
-      this->m_chartView->size().height() - 20);
+  this->m_chartView->initializeLegendMarkers();
   this->m_chartView->initializeAxisLimits();
   this->m_chartView->setStatusBar(this->m_statusBar);
 
@@ -661,8 +597,8 @@ int UserTimeseries::addMarkersToMap() {
       }
     }
 
-    this->m_stationmodel->addMarker(
-        Station(QGeoCoordinate(y, x), QString::number(i), StationName));
+    Station s = Station(QGeoCoordinate(y, x), QString::number(i), StationName);
+    this->m_stationmodel->addMarker(s);
   }
 
   return MetOceanViewer::Error::NOERR;

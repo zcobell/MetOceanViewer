@@ -128,7 +128,7 @@ Rectangle {
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: {
 
-                if(markerMode===0){
+                if(markerMode===0 || markerMode===3){
                     if(map.previousMarker){
                         map.previousMarker.deselect()
                         map.previousMarker = null
@@ -167,6 +167,7 @@ Rectangle {
             id: mapcomponent
             MovMapItem {
                 mode: markerMode
+                stationActive: active
                 id: markerid
                 stationId: id
                 coordinate: position
@@ -199,7 +200,20 @@ Rectangle {
                                "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
                                "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
                                "<b>Difference:</b> "+diff
+                    } else if(markerMode===3){
+                        var endDateString;
+                        if(endDate=="01/01/2050")
+                            endDateString = "present";
+                        else
+                            endDateString = endDate;
+                        text =
+                            "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                            "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
+                            "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name+"<br>"+
+                            "<b>Available: </b> "+startDate+" - "+endDateString;
+                        infoWindow.shownHeight = 78;
                     }
+
                     return text;
                 }
 
@@ -238,7 +252,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        if(markerMode===0 || markerMode===2) {
+                        if(markerMode===0 || markerMode===2 || markerMode===3) {
                             singleMarkerSelection();
                         } else if(markerMode===1) {
                             if(markerid.selected){

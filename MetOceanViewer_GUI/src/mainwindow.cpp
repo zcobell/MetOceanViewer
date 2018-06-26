@@ -44,6 +44,14 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
   this->processCommandLine = processCommandLine;
   this->commandLineFile = commandLineFile;
   this->initialized = false;
+
+  this->m_noaa = nullptr;
+  this->m_usgs = nullptr;
+  this->m_ndbc = nullptr;
+  this->m_xtide = nullptr;
+  this->m_userTimeseries = nullptr;
+  this->m_hwm = nullptr;
+
   this->setupMetOceanViewerUI();
 }
 
@@ -91,10 +99,12 @@ void MainWindow::setupMetOceanViewerUI() {
   this->xtideStationModel = nullptr;
   this->userDataStationModel = nullptr;
   this->hwmMarkerModel = nullptr;
+  this->ndbcStationModel = nullptr;
 
   this->setupNoaaMap();
   this->setupUsgsMap();
   this->setupXTideMap();
+  this->setupNdbcMap();
   this->setupUserTimeseriesMap();
   this->setupHighWaterMarkMap();
   this->setupTimeseriesTable();
@@ -121,6 +131,7 @@ void MainWindow::resetMapSource(MapFunctions::MapSource source) {
   this->setupNoaaMap();
   this->setupUsgsMap();
   this->setupXTideMap();
+  this->setupNdbcMap();
   this->setupUserTimeseriesMap();
   this->setupHighWaterMarkMap();
 
@@ -205,6 +216,8 @@ void MainWindow::handleEnterKey() {
     } else if (ui->subtab_livedata->currentIndex() == 1) {
       on_button_usgs_fetch_clicked();
     } else if (ui->subtab_livedata->currentIndex() == 2) {
+      on_button_fetchndbc_clicked();
+    } else if (ui->subtab_livedata->currentIndex() == 3) {
       on_button_xtide_compute_clicked();
     }
   }
@@ -237,6 +250,10 @@ void MainWindow::changeNoaaMarker(QString markerId) {
   return;
 }
 
+void MainWindow::changeNdbcMarker(QString markerId) {
+  this->ndbcSelectedStation = markerId;
+}
+
 void MainWindow::changeUsgsMarker(QString markerId) {
   this->usgsSelectedStation = markerId;
   return;
@@ -255,6 +272,12 @@ void MainWindow::changeUserMarker(QString markerId) {
 void MainWindow::changeNoaaMaptype() {
   this->mapFunctions->setMapType(ui->combo_noaa_maptype->currentIndex(),
                                  ui->quick_noaaMap);
+  return;
+}
+
+void MainWindow::changeNdbcMaptype() {
+  this->mapFunctions->setMapType(ui->combo_ndbc_maptype->currentIndex(),
+                                 ui->quick_ndbcMap);
   return;
 }
 
@@ -291,11 +314,13 @@ void MainWindow::setupNoaaMap() {
   ui->quick_noaaMap->rootContext()->setContextProperty("stationModel",
                                                        this->noaaStationModel);
   ui->quick_noaaMap->rootContext()->setContextProperty(
-      "markerMode", MapViewerMarkerModes::SingleSelect);
+      "markerMode", MapViewerMarkerModes::SingleSelectWithDates);
   this->setupMarkerClasses(ui->quick_noaaMap);
   this->mapFunctions->setMapTypes(ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_noaaMap);
   this->mapFunctions->setMapQmlFile(ui->quick_noaaMap);
   this->noaaMarkerLocations =
       this->mapFunctions->readMarkers(MapFunctions::NOAA);
@@ -312,6 +337,40 @@ void MainWindow::setupNoaaMap() {
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
   this->on_button_refreshNoaaStations_clicked();
+
+  return;
+}
+
+void MainWindow::setupNdbcMap() {
+  if (this->ndbcStationModel == nullptr) {
+    this->ndbcStationModel = new StationModel(this);
+  }
+  ui->quick_ndbcMap->rootContext()->setContextProperty("stationModel",
+                                                       this->ndbcStationModel);
+  ui->quick_ndbcMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::SingleSelect);
+  this->setupMarkerClasses(ui->quick_ndbcMap);
+  this->mapFunctions->setMapTypes(ui->combo_ndbc_maptype);
+  ui->combo_ndbc_maptype->setCurrentIndex(
+      this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_ndbcMap);
+  this->mapFunctions->setMapQmlFile(ui->quick_ndbcMap);
+  this->ndbcMarkerLocations =
+      this->mapFunctions->readMarkers(MapFunctions::NDBC);
+  QObject *ndbcItem = ui->quick_ndbcMap->rootObject();
+  QObject::connect(ndbcItem, SIGNAL(markerChanged(QString)), this,
+                   SLOT(changeNdbcMarker(QString)));
+  ui->date_ndbcStarttime->setDateTime(
+      QDateTime::currentDateTimeUtc().addDays(-1));
+  ui->date_ndbcEndtime->setDateTime(QDateTime::currentDateTimeUtc());
+
+  QMetaObject::invokeMethod(ndbcItem, "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
+
+  this->mapFunctions->refreshMarkers(this->ndbcStationModel, ui->quick_ndbcMap,
+                                     this->ndbcMarkerLocations, false, true);
 
   return;
 }
@@ -340,6 +399,8 @@ void MainWindow::setupUsgsMap() {
   this->mapFunctions->setMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_usgsMap);
   this->mapFunctions->setMapQmlFile(ui->quick_usgsMap);
   QObject *usgsItem = ui->quick_usgsMap->rootObject();
   QObject::connect(usgsItem, SIGNAL(markerChanged(QString)), this,
@@ -369,6 +430,8 @@ void MainWindow::setupXTideMap() {
   this->mapFunctions->setMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_xtideMap);
   this->mapFunctions->setMapQmlFile(ui->quick_xtideMap);
   QObject *xtideItem = ui->quick_xtideMap->rootObject();
   QObject::connect(xtideItem, SIGNAL(markerChanged(QString)), this,
@@ -410,6 +473,8 @@ void MainWindow::setupUserTimeseriesMap() {
   this->setupMarkerClasses(ui->quick_timeseriesMap);
   ui->combo_user_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_timeseriesMap);
   this->mapFunctions->setMapQmlFile(ui->quick_timeseriesMap);
   QObject *userTimeseriesItem = ui->quick_timeseriesMap->rootObject();
   QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
@@ -439,7 +504,8 @@ void MainWindow::setupHighWaterMarkMap() {
   this->setupMarkerClasses(ui->quick_hwmMap);
   ui->combo_hwmMaptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
-
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_hwmMap);
   this->mapFunctions->setMapQmlFile(ui->quick_hwmMap);
 
   QObject *hwmItem = ui->quick_hwmMap->rootObject();
@@ -573,21 +639,25 @@ void MainWindow::on_button_hwmDisplayValues_toggled(bool checked) {
 
 void MainWindow::on_button_refreshUsgsStations_clicked() {
   int n = this->mapFunctions->refreshMarkers(
-      this->usgsStationModel, ui->quick_usgsMap, this->usgsMarkerLocations);
+      this->usgsStationModel, ui->quick_usgsMap, this->usgsMarkerLocations,
+      true, true);
   this->stationDisplayWarning(n);
   return;
 }
 
 void MainWindow::on_button_refreshNoaaStations_clicked() {
+  bool active = ui->check_noaaActiveOnly->isChecked();
   int n = this->mapFunctions->refreshMarkers(
-      this->noaaStationModel, ui->quick_noaaMap, this->noaaMarkerLocations);
+      this->noaaStationModel, ui->quick_noaaMap, this->noaaMarkerLocations,
+      true, active);
   this->stationDisplayWarning(n);
   return;
 }
 
 void MainWindow::on_button_refreshXtideStations_clicked() {
   int n = this->mapFunctions->refreshMarkers(
-      this->xtideStationModel, ui->quick_xtideMap, this->xtideMarkerLocations);
+      this->xtideStationModel, ui->quick_xtideMap, this->xtideMarkerLocations,
+      true, true);
   this->stationDisplayWarning(n);
   return;
 }

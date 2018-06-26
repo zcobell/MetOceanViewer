@@ -25,8 +25,10 @@ MapQuickItem {
 
     property bool selected: false
     property int mode: 0
+    property bool stationActive: true
     property string stationId;
     property string defaultImage: "qrc:/rsc/img/mm_20_darkgreen.png"
+    property string defaultInavtiveImage: "qrc:/rsc/img/mm_20_red.png"
     property string selectedImage: "qrc:/rsc/img/mm_20_red.png"
     property string markerWhite: "qrc:/rsc/img/mm_20_white.png"
     property var markerColors: [ "qrc:/rsc/img/mm_20_purple.png",
@@ -91,6 +93,11 @@ MapQuickItem {
     Component.onCompleted: {
         if(mode===2) {
             selectMarkerImage();
+        } else if(mode===3){
+            if(stationActive)
+                image.source = defaultImage
+            else
+                image.source = defaultInavtiveImage
         }
     }
 

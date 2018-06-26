@@ -365,10 +365,25 @@ int Hmdf::writeNetcdf(QString filename) {
       data[j] = this->station(i)->data(j);
     }
 
-    NCCHECK(nc_put_var1_double(ncid, varid_stationx, stindex, lon));
-    NCCHECK(nc_put_var1_double(ncid, varid_stationy, stindex, lat));
+    int status = nc_put_var1_double(ncid, varid_stationx, stindex, lon);
+    if (status != NC_NOERR) {
+      free(time);
+      free(data);
+      free(name);
+      nc_close(ncid);
+      return status;
+    }
 
-    int status = nc_put_var_longlong(ncid, varid_stationDate[i], time);
+    status = nc_put_var1_double(ncid, varid_stationy, stindex, lat);
+    if (status != NC_NOERR) {
+      free(time);
+      free(data);
+      free(name);
+      nc_close(ncid);
+      return status;
+    }
+
+    status = nc_put_var_longlong(ncid, varid_stationDate[i], time);
     if (status != NC_NOERR) {
       free(time);
       free(data);
