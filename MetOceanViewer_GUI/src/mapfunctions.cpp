@@ -27,7 +27,6 @@
 #include <QXmlStreamWriter>
 #include "errors.h"
 #include "generic.h"
-#include "mapfunctionsprivate.h"
 
 static QStringList esriList = QStringList() << "World Street Map"
                                             << "World Imagery"
@@ -69,22 +68,6 @@ MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
   this->m_configDirectory = Generic::configDirectory();
-}
-
-QVector<Station> MapFunctions::readMarkers(
-    MapFunctions::MarkerType markerType) {
-  if (markerType == NOAA) {
-    return MapFunctionsPrivate::readNoaaMarkers();
-  } else if (markerType == USGS) {
-    return MapFunctionsPrivate::readUsgsMarkers();
-  } else if (markerType == XTIDE) {
-    return MapFunctionsPrivate::readXtideMarkers();
-  } else if (markerType == NDBC) {
-    return MapFunctionsPrivate::readNdbcMarkers();
-  } else {
-    QVector<Station> output;
-    return output;
-  }
 }
 
 int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,

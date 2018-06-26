@@ -53,7 +53,6 @@ SOURCES +=\
     src/addtimeseriesdialog.cpp \
     src/uixtidetab.cpp \
     src/mapfunctions.cpp \
-    src/mapfunctionsprivate.cpp \
     src/uindbctab.cpp \
     src/ndbc.cpp
 
@@ -80,7 +79,6 @@ HEADERS  += \
     src/usertimeseries.h \
     version.h \
     src/mapfunctions.h \
-    src/mapfunctionsprivate.h \
     src/ndbc.h
 
 FORMS    += \

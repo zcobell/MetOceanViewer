@@ -32,6 +32,7 @@
 #include "mapfunctions.h"
 #include "noaa.h"
 #include "session.h"
+#include "stationlocations.h"
 #include "ui_mainwindow.h"
 #include "updatedialog.h"
 #include "usgs.h"
@@ -323,7 +324,7 @@ void MainWindow::setupNoaaMap() {
                                  ui->quick_noaaMap);
   this->mapFunctions->setMapQmlFile(ui->quick_noaaMap);
   this->noaaMarkerLocations =
-      this->mapFunctions->readMarkers(MapFunctions::NOAA);
+      StationLocations::readMarkers(StationLocations::NOAA);
   QObject *noaaItem = ui->quick_noaaMap->rootObject();
   QObject::connect(noaaItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeNoaaMarker(QString)));
@@ -357,7 +358,7 @@ void MainWindow::setupNdbcMap() {
                                  ui->quick_ndbcMap);
   this->mapFunctions->setMapQmlFile(ui->quick_ndbcMap);
   this->ndbcMarkerLocations =
-      this->mapFunctions->readMarkers(MapFunctions::NDBC);
+      StationLocations::readMarkers(StationLocations::NDBC);
   QObject *ndbcItem = ui->quick_ndbcMap->rootObject();
   QObject::connect(ndbcItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeNdbcMarker(QString)));
@@ -395,7 +396,7 @@ void MainWindow::setupUsgsMap() {
       "markerMode", MapViewerMarkerModes::SingleSelect);
   this->setupMarkerClasses(ui->quick_usgsMap);
   this->usgsMarkerLocations =
-      this->mapFunctions->readMarkers(MapFunctions::USGS);
+      StationLocations::readMarkers(StationLocations::USGS);
   this->mapFunctions->setMapTypes(ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
@@ -426,7 +427,7 @@ void MainWindow::setupXTideMap() {
       "markerMode", MapViewerMarkerModes::SingleSelect);
   this->setupMarkerClasses(ui->quick_xtideMap);
   this->xtideMarkerLocations =
-      this->mapFunctions->readMarkers(MapFunctions::XTIDE);
+      StationLocations::readMarkers(StationLocations::XTIDE);
   this->mapFunctions->setMapTypes(ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());

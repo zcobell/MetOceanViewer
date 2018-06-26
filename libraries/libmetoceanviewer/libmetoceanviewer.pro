@@ -40,7 +40,8 @@ SOURCES += ../../thirdparty/kdtree/kdtree2.cpp \
     usgswaterdata.cpp \
     xtidedata.cpp \
     tideprediction.cpp \
-    ndbcdata.cpp
+    ndbcdata.cpp \
+    stationlocations.cpp
 
 HEADERS += hmdfasciiparser.h  \
            hmdf.h  \
@@ -57,7 +58,8 @@ HEADERS += hmdfasciiparser.h  \
     usgswaterdata.h \
     xtidedata.h \
     tideprediction.h \
-    ndbcdata.h
+    ndbcdata.h \
+    stationlocations.h
 unix {
     target.path = /usr/lib
     INSTALLS += target
