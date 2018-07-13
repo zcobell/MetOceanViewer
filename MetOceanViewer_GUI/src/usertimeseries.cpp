@@ -245,8 +245,7 @@ void UserTimeseries::plot() {
   //   needed, but this defines an offset from UTC
   //   For some reason, the qDatTime axis operate in local
   //   time, which can show an offset when converting to mSecSinceEpoch
-  QDateTime now = QDateTime::currentDateTime();
-  qint64 offset = now.offsetFromUtc() * qint64(1000);
+  qint64 offset = Timezone::localMachineOffsetFromUtc() * 1000;
   qint64 endDate = this->m_endDateEdit->dateTime().toMSecsSinceEpoch();
   qint64 startDate = this->m_startDateEdit->dateTime().toMSecsSinceEpoch();
 

@@ -26,7 +26,6 @@
 #include <QValueAxis>
 #include <QtCharts/QChartGlobal>
 #include <QtWidgets>
-#include "qkdtree2.h"
 
 QT_BEGIN_NAMESPACE
 class QGraphicsScene;
@@ -84,7 +83,7 @@ class ChartView : public QChartView {
   QGraphicsTextItem *infoItem() const;
   void setInfoItem(QGraphicsTextItem *infoItem);
 
-protected:
+ protected:
   void resizeEvent(QResizeEvent *event);
   void mouseMoveEvent(QMouseEvent *event);
   void mouseDoubleClickEvent(QMouseEvent *event);
@@ -101,7 +100,8 @@ protected:
   QStatusBar *m_statusBar;
   QVector<QString> m_legendNames;
   QVector<QLineSeries *> m_series;
-  QVector<qKdtree2 *> m_kdtree;
+  QVector<QVector<double>> m_date;
+  QVector<QVector<double>> m_data;
   bool m_displayValues;
 
   QDateTimeAxis *m_dateAxis;
@@ -112,8 +112,6 @@ protected:
 
   QGraphicsRectItem *m_infoRectItem;
   QGraphicsTextItem *m_infoItem;
-
-
 
  public slots:
   void handleLegendMarkerClicked();

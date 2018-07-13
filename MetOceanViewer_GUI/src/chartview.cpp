@@ -140,7 +140,6 @@ void ChartView::clear() {
   if (this->chart()->series().length() > 0) this->chart()->removeAllSeries();
   this->m_legendNames.clear();
   this->m_series.clear();
-  this->m_kdtree.clear();
   return;
 }
 
@@ -168,10 +167,16 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
   this->m_series.push_back(series);
   this->m_legendNames.push_back(name);
 
-  this->m_kdtree.push_back(new qKdtree2(this->chart()));
-  QList<QPointF> points = this->m_series.last()->points();
-  this->m_kdtree.last()->build(points);
   this->chart()->addSeries(series);
+
+  this->m_date.resize(this->m_date.size() + 1);
+  this->m_data.resize(this->m_data.size() + 1);
+  this->m_date.last().resize(series->points().size());
+  this->m_data.last().resize(series->points().size());
+  for (size_t i = 0; i < series->points().size(); i++) {
+    this->m_date.last()[i] = series->points().at(i).x();
+    this->m_data.last()[i] = series->points().at(i).y();
+  }
 
   if (this->xAxis() != nullptr)
     series->attachAxis(this->xAxis());
@@ -183,9 +188,13 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
 }
 
 void ChartView::rebuild() {
-  for (int i = 0; i < this->m_kdtree.length(); i++) {
-    QList<QPointF> points = this->m_series[i]->points();
-    this->m_kdtree[i]->build(points);
+  for (size_t j = 0; j < this->chart()->series().length(); j++) {
+    QLineSeries *series =
+        static_cast<QLineSeries *>(this->chart()->series().at(j));
+    for (size_t i = 0; i < series->points().length(); i++) {
+      this->m_date[j][i] = series->points().at(i).x();
+      this->m_data[j][i] = series->points().at(i).y();
+    }
   }
   this->initializeAxisLimits();
   return;
@@ -209,7 +218,6 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
   QString dateString;
   QDateTime date;
   qreal x, y;
-  qreal y_dum = 0.0;
 
   if (this->m_coord) {
     if (this->m_displayValues) {
@@ -221,7 +229,9 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
         if (this->m_style == 1) {
           int i_min = 0;
           for (int i = 0; i < this->m_series.length(); i++) {
-            this->m_kdtree.at(i)->findNearest(x, y_dum, i_min);
+            i_min = std::lower_bound(this->m_date[i].begin(),
+                                     this->m_date[i].end(), x) -
+                    this->m_date[i].begin();
             this->chart()->series().at(i)->setName(
                 this->m_legendNames.at(i) + ": " +
                 QString::number(this->m_series[i]->points().at(i_min).y()));

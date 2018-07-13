@@ -20,20 +20,17 @@ DEFINES += METOCEAN_LIBRARY
 DEFINES += QT_DEPRECATED_WARNINGS USE_PRAGMA_MESSAGE
 
 INCLUDEPATH += $$PWD/../../thirdparty/boost_1_67_0
-INCLUDEPATH += $$PWD/../../thirdparty/kdtree
 
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-SOURCES += ../../thirdparty/kdtree/kdtree2.cpp \
-           hmdfasciiparser.cpp  \
+SOURCES += hmdfasciiparser.cpp  \
            hmdf.cpp  \
            hmdfstation.cpp  \
            netcdftimeseries.cpp  \
            noaacoops.cpp  \
-           qkdtree2.cpp  \
            stringutil.cpp  \
            timezone.cpp  \
            timezonestruct.cpp  \
@@ -50,7 +47,6 @@ HEADERS += hmdfasciiparser.h  \
            hmdfstation.h  \
            netcdftimeseries.h  \
            noaacoops.h  \
-           qkdtree2.h  \
            stringutil.h  \
            timezone.h  \
            timezonestruct.h  \
