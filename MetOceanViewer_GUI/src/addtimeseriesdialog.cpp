@@ -114,6 +114,7 @@ void AddTimeseriesDialog::set_dialog_box_elements(
   ui->text_filetype->setText(Filetypes::integerFiletypeToString(FileType));
   ui->date_coldstart->setDateTime(ColdStart);
   ui->text_stationfile->setText(StationFile);
+  ui->spin_epsg->setValue(epsg);
   this->m_inputFilePath = Filepath;
   this->m_currentFileName = Filepath;
   this->m_stationFilePath = StationPath;
