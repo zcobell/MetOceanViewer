@@ -242,7 +242,7 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
     imagePainter.setRenderHints(QPainter::Antialiasing |
                                 QPainter::TextAntialiasing |
                                 QPainter::SmoothPixmapTransform);
-    // this->map->render(&imagePainter, QPoint(0, 0));
+    this->m_quickMap->render(&imagePainter, QPoint(0, 0));
     this->m_chartView->render(&imagePainter, chartRect);
 
     outputFile.open(QIODevice::WriteOnly);
@@ -252,7 +252,7 @@ int Usgs::saveUSGSImage(QString filename, QString filter) {
   return 0;
 }
 
-int Usgs::saveUSGSData(QString filename, QString format) {
+int Usgs::saveUSGSData(QString filename) {
   Hmdf *usgsOut = new Hmdf(this);
   usgsOut->addStation(this->m_allStationData->station(this->m_productIndex));
 

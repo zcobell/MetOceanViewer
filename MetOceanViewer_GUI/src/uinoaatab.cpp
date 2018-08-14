@@ -62,7 +62,7 @@ void MainWindow::on_button_noaasavechart_clicked() {
       this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL) return;
+  if (TempString == nullptr) return;
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 

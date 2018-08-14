@@ -56,7 +56,7 @@ class Usgs : public QObject {
   int replotCurrentUSGSStation(int index);
   int setUSGSBeenPlotted(bool input);
   int saveUSGSImage(QString filename, QString filter);
-  int saveUSGSData(QString filename, QString format);
+  int saveUSGSData(QString filename);
   QString getUSGSErrorString();
   QString getLoadedUSGSStation();
   QString getClickedUSGSStation();

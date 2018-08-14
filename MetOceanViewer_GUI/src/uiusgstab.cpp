@@ -154,11 +154,11 @@ void MainWindow::on_button_usgssavemap_clicked() {
       this, tr("Save as..."), previousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL) return;
+  if (TempString == nullptr) return;
 
   Generic::splitPath(TempString, filename, previousDirectory);
 
-  m_usgs->saveUSGSImage(TempString, filter);
+  this->m_usgs->saveUSGSImage(TempString, filter);
 
   return;
 }
@@ -205,13 +205,12 @@ void MainWindow::on_button_usgssavedata_clicked() {
       "IMEDS (*.imeds);;CSV (*.csv);;netCDF (*.nc)", &filter);
 
   QStringList filter2 = filter.split(" ");
-  QString format = filter2.value(0);
 
-  if (TempString == NULL) return;
+  if (TempString == nullptr) return;
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
-  this->m_usgs->saveUSGSData(TempString, format);
+  this->m_usgs->saveUSGSData(TempString);
 
   return;
 }
