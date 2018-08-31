@@ -23,6 +23,6 @@ TEMPLATE = subdirs
 SUBDIRS  = libproj4 \
            libnetcdfcxx \
            libtide \
-           libmetoceanviewer
+           libmetocean
 
 CONFIG += ordered

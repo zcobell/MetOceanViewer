@@ -17,32 +17,49 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef USGSWATERDATA_H
-#define USGSWATERDATA_H
+#ifndef WATERDATA_H
+#define WATERDATA_H
 
-#include "metoceanviewer_global.h"
-#include "waterdata.h"
+#include <QNetworkReply>
+#include <QObject>
+#include "hmdf.h"
+#include "metocean_global.h"
+#include "station.h"
+#include "timezone.h"
 
-class UsgsWaterdata : public WaterData {
+class WaterData : public QObject {
   Q_OBJECT
  public:
-  UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
-                int databaseOption, QObject *parent = nullptr);
+  explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
+                     QObject *parent = nullptr);
 
   int get(Hmdf *data);
 
+  QString errorString() const;
+
+  Timezone *getTimezone() const;
+  void setTimezone(Timezone *timezone);
+
+ protected:
+  virtual int retrieveData(Hmdf *data);
+
+  void setErrorString(const QString &errorString);
+
+  Station station() const;
+  void setStation(const Station &station);
+
+  QDateTime startDate() const;
+  void setStartDate(const QDateTime &startDate);
+
+  QDateTime endDate() const;
+  void setEndDate(const QDateTime &endDate);
+
  private:
-  int fetch(Hmdf *data);
-
-  QUrl buildUrl();
-
-  int download(QUrl url, Hmdf *data);
-
-  int readDownloadedData(QNetworkReply *reply, Hmdf *output);
-
-  int readUsgsData(QByteArray &data, Hmdf *output);
-
-  int m_databaseOption;
+  QString m_errorString;
+  Station m_station;
+  QDateTime m_startDate;
+  QDateTime m_endDate;
+  Timezone *m_timezone;
 };
 
-#endif  // USGSWATERDATA_H
+#endif  // WATERDATA_H

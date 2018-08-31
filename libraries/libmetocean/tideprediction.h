@@ -17,50 +17,34 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef TIMEZONE_H
-#define TIMEZONE_H
+#ifndef TIDEPREDICTION_H
+#define TIDEPREDICTION_H
 
-#include <QMap>
+#include <QDateTime>
 #include <QObject>
-#include "metoceanviewer_global.h"
-#include "timezonestruct.h"
+#include <QVector>
+#include "hmdf.h"
+#include "metocean_global.h"
+#include "station.h"
 
-class Timezone : public QObject {
+class TidePrediction : public QObject {
   Q_OBJECT
-
  public:
-  explicit Timezone(QObject *parent = nullptr);
+  explicit TidePrediction(QString root, QObject *parent = nullptr);
 
-  static int localMachineOffsetFromUtc();
+  ~TidePrediction();
 
-  static int offsetFromUtc(QString value,
-                           TZData::Location location = TZData::NorthAmerica);
+  void deleteHarmonicsOnExit(bool b);
 
-  bool fromAbbreviation(QString value,
-                        TZData::Location location = TZData::NorthAmerica);
-
-  bool initialized();
-
-  int utcOffset();
-
-  int offsetTo(Timezone &zone);
-
-  QString abbreviation();
-
-  QStringList getAllTimezoneAbbreviations();
-  QStringList getAllTimezoneNames();
-  QStringList getTimezoneAbbreviations(TZData::Location location);
-  QStringList getTimezoneNames(TZData::Location location);
+  int get(Station &s, QDateTime startDate, QDateTime endDate, int interval,
+          Hmdf *data);
 
  private:
-  void build();
+  void initHarmonicsDatabase();
 
-  bool m_initialized;
+  bool m_deleteHarmonicsOnExit = true;
 
-  TimezoneStruct m_zone;
-
-  QMap<std::pair<TZData::Location, TZData::Abbreviation>, TimezoneStruct>
-      m_timezones;
+  QString m_harmonicsDatabase;
 };
 
-#endif  // TIMEZONE_H
+#endif  // TIDEPREDICTION_H

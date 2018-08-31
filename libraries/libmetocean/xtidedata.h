@@ -17,46 +17,28 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef NETCDFTIMESERIES_H
-#define NETCDFTIMESERIES_H
+#ifndef XTIDEDATA_H
+#define XTIDEDATA_H
 
-#include <QDateTime>
-#include <QObject>
-#include <QVector>
-#include "hmdf.h"
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
+#include "tideprediction.h"
+#include "waterdata.h"
 
-class NetcdfTimeseries : public QObject {
+class XtideData : public WaterData {
   Q_OBJECT
  public:
-  explicit NetcdfTimeseries(QObject *parent = nullptr);
+  XtideData(Station &station, QDateTime startDate, QDateTime endDate,
+            QString rootDriectory, QObject *parent);
 
-  int read();
-
-  int toHmdf(Hmdf *hmdf);
-
-  QString filename() const;
-  void setFilename(const QString &filename);
-
-  int epsg() const;
-  void setEpsg(int epsg);
-
-  static int getEpsg(QString file);
+  int interval() const;
+  void setInterval(int interval);
 
  private:
-  QString m_filename;
-  QString m_units;
-  QString m_verticalDatum;
-  QString m_horizontalProjection;
-  int m_epsg;
-  size_t m_numStations;
+  int retrieveData(Hmdf *data);
 
-  QVector<double> m_xcoor;
-  QVector<double> m_ycoor;
-  QVector<size_t> m_stationLength;
-  QVector<QString> m_stationName;
-  QVector<QVector<qint64> > m_time;
-  QVector<QVector<double> > m_data;
+  int m_interval;
+  QString m_rootDirectory;
+  TidePrediction *m_tidePrediction;
 };
 
-#endif  // NETCDFTIMESERIES_H
+#endif  // XTIDEDATA_H

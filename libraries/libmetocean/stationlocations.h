@@ -22,7 +22,7 @@
 
 #include <QObject>
 #include <QVector>
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
 #include "station.h"
 
 class StationLocations : public QObject {

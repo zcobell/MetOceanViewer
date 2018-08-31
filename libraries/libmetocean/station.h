@@ -22,7 +22,7 @@
 
 #include <QDateTime>
 #include <QGeoCoordinate>
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
 
 class Station {
  public:

@@ -3,8 +3,8 @@
 static=1
 QtHome=/opt/Qt
 QtLibDir=/opt/Qt/5.11.0/gcc_64/lib
-gui=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_GUI/MetOceanViewer
-cmd=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_CMD/MetOceanData
+gui=../../build-MetOcean-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer/MetOceanViewer
+cmd=../../build-MetOcean-Desktop_Qt_5_11_0_Static-Release/MetOceanData/MetOceanData
 version=$(git describe --always --tags)
 
 if [ $static == 1 ] ; then
@@ -40,7 +40,7 @@ fi
 
 cp $gui ./$bindir/com.zachcobell.metoceanviewer/data/.
 cp $cmd ./$bindir/com.zachcobell.metoceanviewer/data/.
-cp ../MetOceanViewer_GUI/img/logo_small.png ./$bindir/com.zachcobell.metoceanviewer/data/MetOceanViewer.png
+cp ../MetOceanViewer/img/logo_small.png ./$bindir/com.zachcobell.metoceanviewer/data/MetOceanViewer.png
 
 while read LIB
 do

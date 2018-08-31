@@ -22,7 +22,7 @@
 
 #include <QNetworkReply>
 #include <QObject>
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
 #include "waterdata.h"
 
 class NoaaCoOps : public WaterData {

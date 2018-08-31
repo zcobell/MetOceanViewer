@@ -17,34 +17,32 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef TIDEPREDICTION_H
-#define TIDEPREDICTION_H
+#ifndef USGSWATERDATA_H
+#define USGSWATERDATA_H
 
-#include <QDateTime>
-#include <QObject>
-#include <QVector>
-#include "hmdf.h"
-#include "metoceanviewer_global.h"
-#include "station.h"
+#include "metocean_global.h"
+#include "waterdata.h"
 
-class TidePrediction : public QObject {
+class UsgsWaterdata : public WaterData {
   Q_OBJECT
  public:
-  explicit TidePrediction(QString root, QObject *parent = nullptr);
+  UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
+                int databaseOption, QObject *parent = nullptr);
 
-  ~TidePrediction();
-
-  void deleteHarmonicsOnExit(bool b);
-
-  int get(Station &s, QDateTime startDate, QDateTime endDate, int interval,
-          Hmdf *data);
+  int get(Hmdf *data);
 
  private:
-  void initHarmonicsDatabase();
+  int fetch(Hmdf *data);
 
-  bool m_deleteHarmonicsOnExit = true;
+  QUrl buildUrl();
 
-  QString m_harmonicsDatabase;
+  int download(QUrl url, Hmdf *data);
+
+  int readDownloadedData(QNetworkReply *reply, Hmdf *output);
+
+  int readUsgsData(QByteArray &data, Hmdf *output);
+
+  int m_databaseOption;
 };
 
-#endif  // TIDEPREDICTION_H
+#endif  // USGSWATERDATA_H

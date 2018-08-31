@@ -24,7 +24,7 @@
 #include <QObject>
 #include <QString>
 #include <QVector>
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
 
 class HmdfStation : public QObject {
   Q_OBJECT

@@ -22,7 +22,7 @@
 
 #include <QMap>
 #include "waterdata.h"
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
 
 class NdbcData : public WaterData {
  public:

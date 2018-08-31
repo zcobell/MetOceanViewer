@@ -17,49 +17,50 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef WATERDATA_H
-#define WATERDATA_H
+#ifndef TIMEZONE_H
+#define TIMEZONE_H
 
-#include <QNetworkReply>
+#include <QMap>
 #include <QObject>
-#include "hmdf.h"
-#include "metoceanviewer_global.h"
-#include "station.h"
-#include "timezone.h"
+#include "metocean_global.h"
+#include "timezonestruct.h"
 
-class WaterData : public QObject {
+class Timezone : public QObject {
   Q_OBJECT
+
  public:
-  explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
-                     QObject *parent = nullptr);
+  explicit Timezone(QObject *parent = nullptr);
 
-  int get(Hmdf *data);
+  static int localMachineOffsetFromUtc();
 
-  QString errorString() const;
+  static int offsetFromUtc(QString value,
+                           TZData::Location location = TZData::NorthAmerica);
 
-  Timezone *getTimezone() const;
-  void setTimezone(Timezone *timezone);
+  bool fromAbbreviation(QString value,
+                        TZData::Location location = TZData::NorthAmerica);
 
- protected:
-  virtual int retrieveData(Hmdf *data);
+  bool initialized();
 
-  void setErrorString(const QString &errorString);
+  int utcOffset();
 
-  Station station() const;
-  void setStation(const Station &station);
+  int offsetTo(Timezone &zone);
 
-  QDateTime startDate() const;
-  void setStartDate(const QDateTime &startDate);
+  QString abbreviation();
 
-  QDateTime endDate() const;
-  void setEndDate(const QDateTime &endDate);
+  QStringList getAllTimezoneAbbreviations();
+  QStringList getAllTimezoneNames();
+  QStringList getTimezoneAbbreviations(TZData::Location location);
+  QStringList getTimezoneNames(TZData::Location location);
 
  private:
-  QString m_errorString;
-  Station m_station;
-  QDateTime m_startDate;
-  QDateTime m_endDate;
-  Timezone *m_timezone;
+  void build();
+
+  bool m_initialized;
+
+  TimezoneStruct m_zone;
+
+  QMap<std::pair<TZData::Location, TZData::Abbreviation>, TimezoneStruct>
+      m_timezones;
 };
 
-#endif  // WATERDATA_H
+#endif  // TIMEZONE_H

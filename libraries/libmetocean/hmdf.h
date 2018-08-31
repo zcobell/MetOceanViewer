@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 #include "hmdfstation.h"
-#include "metoceanviewer_global.h"
+#include "metocean_global.h"
 #include "timezone.h"
 
 class Hmdf : public QObject {

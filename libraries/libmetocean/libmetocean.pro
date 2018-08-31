@@ -6,7 +6,7 @@
 
 QT       += network positioning
 
-TARGET = metoceanviewer
+TARGET = metocean
 TEMPLATE = lib
 CONFIG += c++11
 CONFIG += staticlib
@@ -61,40 +61,11 @@ HEADERS += hmdfasciiparser.h  \
            tideprediction.h \
            ndbcdata.h \
            stationlocations.h \
-           metoceanviewer_global.h \
+           metocean_global.h \
            generic.h
 unix {
     target.path = /usr/lib
     INSTALLS += target
-}
-
-#...Microsoft Visual C++ compilers
-*msvc* {
-
-    #...Location of the netCDF srcs
-    INCLUDEPATH += $$PWD/../../thirdparty/netcdf/include
-
-    contains(QT_ARCH, i386){
-        #...Microsoft Visual C++ 32-bit compiler
-        LIBS += -L$$PWD/../../thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
-    }else{
-
-        #...Microsoft Visual C++ 64-bit compiler
-        LIBS += -L$$PWD/../../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
-    }
-}
-#...Unix - We assume static library for NetCDF installed
-#          in the system path already
-unix:!macx{
-    LIBS += -lnetcdf
-
-}
-#...Mac - Assume static libs for netCDF in this path
-#         This, obviously, will vary by the machine
-#         the code is built on
-macx{
-    LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
-    INCLUDEPATH += /Users/zcobell/Software/netCDF/src
 }
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libtide/release/ -ltide

@@ -22,9 +22,12 @@ include($$PWD/global.pri)
 
 TEMPLATE = subdirs
 
-SUBDIRS  = libraries \
-           MetOceanViewer_GUI \
-           MetOceanViewer_CMD
+equals(GUI_DISABLE,1) {
+  SUBDIRS = libraries MetOceanData
+} else {
+  SUBDIRS  = libraries MetOceanViewer MetOceanData
+}
+
 CONFIG += ordered           
 
 HEADERS += version.h
