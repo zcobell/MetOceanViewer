@@ -36,7 +36,7 @@ void processCommandLineOptions(QCoreApplication &a,
 
 int main(int argc, char *argv[]) {
   QCoreApplication a(argc, argv);
-  QCoreApplication::setApplicationName("MetOceanViewer");
+  QCoreApplication::setApplicationName("MetOceanData");
   QCoreApplication::setApplicationVersion(
       QString::fromStdString(metoceanVersion()));
 
