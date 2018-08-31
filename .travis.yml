@@ -20,5 +20,5 @@ script:
 - gcc --version
 - g++ --version
 - . /opt/qt510/bin/qt510-env.sh
-- /opt/qt510/bin/qmake MetOceanViewer.pro 
+- /opt/qt510/bin/qmake MetOcean.pro 
 - make -j4
