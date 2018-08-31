@@ -16,9 +16,9 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 - [x] Read HWM comparisons, plot to map, and calculate statistics
 
 # Screenshots
-![Screenshot 1](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer_GUI/screenshots/mov_ss1.JPG)
-![Screenshot 2](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer_GUI/screenshots/mov_ss2.JPG)
-![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer_GUI/screenshots/mov_ss3.JPG)
+![Screenshot 1](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer/screenshots/mov_ss1.JPG)
+![Screenshot 2](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer/screenshots/mov_ss2.JPG)
+![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer/screenshots/mov_ss3.JPG)
 
 # Compiling
 To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.11.1 on Windows and Ubuntu Linux 18.04. It is expected that other versions and flavors of Linux should not pose an issue. Mac OSX is expected to work, however, some tweaks may be required. I don't currently have a development environment for Mac, so assistance with this would be appreciated. 
