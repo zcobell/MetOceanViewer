@@ -7,21 +7,26 @@
 #include "station.h"
 #include "stationlocations.h"
 
-class Driver : public QObject {
+class MetOceanData : public QObject {
   Q_OBJECT
  public:
   enum serviceTypes { NOAA, USGS, NDBC, XTIDE, UNKNOWNSERVICE };
 
-  explicit Driver(QObject *parent = nullptr);
-  explicit Driver(serviceTypes service, QString station, int product, int datum,
-                  QDateTime startDate, QDateTime endDate, QString outputFile,
-                  QObject *parent = nullptr);
+  explicit MetOceanData(QObject *parent = nullptr);
+  explicit MetOceanData(serviceTypes service, QStringList station, int product,
+                        int datum, QDateTime startDate, QDateTime endDate,
+                        QString outputFile, QObject *parent = nullptr);
+
+  static QStringList selectStations(serviceTypes service, double x1, double y1,
+                                    double x2, double y2);
+
+  static QString selectNearestStation(serviceTypes service, double x, double y);
 
   int service() const;
   void setService(int service);
 
-  QString station() const;
-  void setStation(QString station);
+  QStringList station() const;
+  void setStation(QStringList station);
 
   QDateTime startDate() const;
   void setStartDate(const QDateTime &startDate);
@@ -42,11 +47,13 @@ class Driver : public QObject {
   void finished();
   void status(QString, int);
   void error(QString);
+  void warning(QString);
 
  public slots:
   virtual void run();
   void showError(QString);
   void showStatus(QString, int);
+  void showWarning(QString);
 
  private:
   void getNoaaData();
@@ -54,7 +61,9 @@ class Driver : public QObject {
   void getNdbcData();
   void getXtideData();
 
-  bool findStation(QString name, StationLocations::MarkerType type, Station &s);
+  bool findStation(QStringList name, StationLocations::MarkerType type,
+                   QVector<Station> &s);
+  static StationLocations::MarkerType serviceToMarkerType(serviceTypes type);
 
   QString noaaIndexToProduct();
   QString noaaIndexToDatum();
@@ -63,7 +72,7 @@ class Driver : public QObject {
   int printAvailableProducts(Hmdf *data);
 
   int m_service;
-  QString m_station;
+  QStringList m_station;
   int m_product;
   int m_datum;
   QDateTime m_startDate;

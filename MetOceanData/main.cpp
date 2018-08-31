@@ -23,16 +23,17 @@
 #include <QDateTime>
 #include <QTimer>
 #include <iostream>
-#include "driver.h"
+#include "metoceandata.h"
 #include "version.h"
 
 QDateTime checkDateString(QString str);
 int checkServiceString(QString str);
 int checkIntegerString(QString str);
 void processCommandLineOptions(QCoreApplication &a,
-                               Driver::serviceTypes &service, QString &station,
-                               int &product, int &datum, QDateTime &startDate,
-                               QDateTime &endDate, QString &outputFile);
+                               MetOceanData::serviceTypes &service,
+                               QStringList &station, int &product, int &datum,
+                               QDateTime &startDate, QDateTime &endDate,
+                               QString &outputFile);
 
 int main(int argc, char *argv[]) {
   QCoreApplication a(argc, argv);
@@ -43,14 +44,15 @@ int main(int argc, char *argv[]) {
   Q_INIT_RESOURCE(resource_files);
 
   int product, datum;
-  Driver::serviceTypes service;
+  MetOceanData::serviceTypes service;
   QDateTime startDate, endDate;
-  QString outputFile, station;
+  QString outputFile;
+  QStringList station;
 
   processCommandLineOptions(a, service, station, product, datum, startDate,
                             endDate, outputFile);
 
-  Driver *d = new Driver(service, station, product, datum, startDate, endDate,
+  MetOceanData *d = new MetOceanData(service, station, product, datum, startDate, endDate,
                          outputFile, &a);
   d->setLoggingActive();
   QObject::connect(d, SIGNAL(finished()), &a, SLOT(quit()));
@@ -59,9 +61,10 @@ int main(int argc, char *argv[]) {
 }
 
 void processCommandLineOptions(QCoreApplication &app,
-                               Driver::serviceTypes &service, QString &station,
-                               int &product, int &datum, QDateTime &startDate,
-                               QDateTime &endDate, QString &outputFile) {
+                               MetOceanData::serviceTypes &service,
+                               QStringList &station, int &product, int &datum,
+                               QDateTime &startDate, QDateTime &endDate,
+                               QString &outputFile) {
   QCommandLineParser parser;
   parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
   parser.setApplicationDescription(
@@ -107,10 +110,11 @@ void processCommandLineOptions(QCoreApplication &app,
       QStringList() << "d"
                     << "datum",
       "Specified datum to use. Only available for NOAA "
-      "products. Options "
-      "are: \n    (1)  MHHW\n    (2)  MHW\n    (3)  MTL\n    (4)  MSL\n    (5) "
-      " MLW\n    (6)  MLLW\n    (7)  NAVD\n    (8)  LWI\n    (9)  HWI\n    "
-      "(10) IGLD\n    (11) Station Datum",
+      "products.",
+//      "Options "
+//      "are: \n    (1)  MHHW\n    (2)  MHW\n    (3)  MTL\n    (4)  MSL\n    (5) "
+//      " MLW\n    (6)  MLLW\n    (7)  NAVD\n    (8)  LWI\n    (9)  HWI\n    "
+//      "(10) IGLD\n    (11) Station Datum",
       "option");
 
   QCommandLineOption cmd_outputFile =
@@ -163,7 +167,7 @@ void processCommandLineOptions(QCoreApplication &app,
   QString serviceString = parser.value(cmd_serviceType);
   QString startDateString = parser.value(cmd_startDate);
   QString endDateString = parser.value(cmd_endDate);
-  station = parser.value(cmd_stationId);
+  station = parser.values(cmd_stationId);
   outputFile = parser.value(cmd_outputFile);
 
   if (parser.isSet(cmd_product)) {
@@ -189,8 +193,8 @@ void processCommandLineOptions(QCoreApplication &app,
   }
 
   service =
-      static_cast<Driver::serviceTypes>(checkServiceString(serviceString));
-  if (service == Driver::UNKNOWNSERVICE) {
+      static_cast<MetOceanData::serviceTypes>(checkServiceString(serviceString));
+  if (service == MetOceanData::UNKNOWNSERVICE) {
     std::cerr << "Error: Unknown service specified." << std::endl;
     parser.showHelp(1);
   }
@@ -219,11 +223,11 @@ void processCommandLineOptions(QCoreApplication &app,
 
 int checkServiceString(QString str) {
   str = str.toUpper();
-  if (str == "NOAA") return Driver::NOAA;
-  if (str == "USGS") return Driver::USGS;
-  if (str == "XTIDE") return Driver::XTIDE;
-  if (str == "NDBC") return Driver::NDBC;
-  return Driver::UNKNOWNSERVICE;
+  if (str == "NOAA") return MetOceanData::NOAA;
+  if (str == "USGS") return MetOceanData::USGS;
+  if (str == "XTIDE") return MetOceanData::XTIDE;
+  if (str == "NDBC") return MetOceanData::NDBC;
+  return MetOceanData::UNKNOWNSERVICE;
 }
 
 QDateTime checkDateString(QString str) {
