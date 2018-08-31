@@ -43,7 +43,8 @@ SOURCES += hmdfasciiparser.cpp  \
            tideprediction.cpp \
            ndbcdata.cpp \
            stationlocations.cpp \
-           generic.cpp
+           generic.cpp \
+    constants.cpp
 
 HEADERS += hmdfasciiparser.h  \
            hmdf.h  \
@@ -62,7 +63,8 @@ HEADERS += hmdfasciiparser.h  \
            ndbcdata.h \
            stationlocations.h \
            metocean_global.h \
-           generic.h
+           generic.h \
+    constants.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

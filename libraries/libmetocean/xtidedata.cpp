@@ -30,7 +30,7 @@ XtideData::XtideData(Station &station, QDateTime startDate, QDateTime endDate,
   this->m_tidePrediction->deleteHarmonicsOnExit(false);
 
   //...Default tide prediction interval in seconds, 5 minutes
-  this->m_interval = 600;
+  this->m_interval = 300;
 }
 
 int XtideData::retrieveData(Hmdf *data) {

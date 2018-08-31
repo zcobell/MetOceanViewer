@@ -20,12 +20,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-    driver.cpp
+    metoceandata.cpp
 
 INCLUDEPATH += ../
 
 HEADERS += \
-    driver.h
+    metoceandata.h
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libmetocean/release/ -lmetocean
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libmetocean/debug/ -lmetocean
