@@ -34,6 +34,11 @@ macx {
 }
 
 message("Current version: $$MOV_VERSION")
+    
+!isEmpty(NETCDFHOME){
+    INCLUDEPATH += $$NETCDFHOME/include
+    LIBS += -L$$NETCDFHOME/lib
+}
 
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
