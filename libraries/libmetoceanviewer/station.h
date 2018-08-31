@@ -24,7 +24,7 @@
 #include <QGeoCoordinate>
 #include "metoceanviewer_global.h"
 
-class METOCEANSHARED_EXPORT Station {
+class Station {
  public:
   Station();
   Station(QGeoCoordinate coordinate, QString id, QString name,

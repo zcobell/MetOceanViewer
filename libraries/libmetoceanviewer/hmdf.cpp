@@ -219,8 +219,9 @@ int Hmdf::writeImeds(QString filename) {
 
   outputFile.write(QString("% IMEDS generic format\n").toUtf8());
   outputFile.write(QString("% year month day hour min sec value\n").toUtf8());
-  outputFile.write(
-      QString("MetOceanViewer    UTC    " + this->datum() + "\n").toUtf8());
+  outputFile.write(QString("MetOceanViewer    UTC    " + this->datum() + "   " +
+                           this->units() + "\n")
+                       .toUtf8());
 
   for (int s = 0; s < this->nstations(); s++) {
     outputFile.write(
@@ -312,11 +313,19 @@ int Hmdf::writeNetcdf(QString filename) {
     NCCHECK(nc_put_att_text(ncid, v, "StationName",
                             this->station(i)->name().length(),
                             this->station(i)->name().toStdString().c_str()));
+    NCCHECK(nc_put_att_text(ncid, v, "StationID",
+                            this->station(i)->id().length(),
+                            this->station(i)->id().toStdString().c_str()));
     NCCHECK(nc_def_var_deflate(ncid, v, 1, 1, 2));
     varid_stationDate.push_back(v);
 
     NCCHECK(nc_def_var(ncid, dataVarName.toStdString().c_str(), NC_DOUBLE, 1, d,
                        &v));
+    NCCHECK(nc_def_var_deflate(ncid, v, 1, 1, 2));
+    NCCHECK(nc_put_att_text(ncid, v, "units", this->units().length(),
+                            this->units().toStdString().c_str()));
+    NCCHECK(nc_put_att_text(ncid, v, "datum", this->datum().length(),
+                            this->datum().toStdString().c_str()));
     varid_stationData.push_back(v);
   }
 

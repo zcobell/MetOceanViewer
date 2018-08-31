@@ -122,7 +122,9 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   }
 
   //...Save the potential error string
-  this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
+  // this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
+  QString e = InputData.split("\n").value(0).split("#").value(0).simplified();
+  this->setErrorString(e);
 
   //...Start by finding the header and reading the parameters from it
   for (int i = 0; i < SplitByLine.length(); i++) {

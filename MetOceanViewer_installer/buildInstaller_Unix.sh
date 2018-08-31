@@ -3,7 +3,8 @@
 static=1
 QtHome=/opt/Qt
 QtLibDir=/opt/Qt/5.11.0/gcc_64/lib
-executable=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_GUI/MetOceanViewer
+gui=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_GUI/MetOceanViewer
+cmd=../../build-MetOceanViewer-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer_CMD/MetOceanData
 version=$(git describe --always --tags)
 
 if [ $static == 1 ] ; then
@@ -12,8 +13,13 @@ else
     bindir=packages_unix
 fi
 
-if [ ! -s $executable ] ; then
-    echo "ERROR: executable not found."
+if [ ! -s $gui ] ; then
+    echo "ERROR: gui executable not found."
+    exit 1
+fi
+
+if [ ! -s $cmd ] ; then
+    echo "ERROR: command line executable not found."
     exit 1
 fi
 
@@ -23,7 +29,8 @@ if [ ! -s $QtHome/Tools/QtInstallerFramework/3.0/bin/binarycreator ] ; then
 fi
 
 echo "Gathering libraries..."
-ldd $executable > liblist.txt
+ldd $gui >  liblist.txt
+ldd $cmd >> liblist.txt
 
 mkdir -p ./$bindir/com.zachcobell.metoceanviewer/data
 mkdir -p ./$bindir/com.unidata.netcdf/data 
@@ -31,7 +38,8 @@ if [ $static == 0 ] ; then
     mkdir -p ./$bindir/com.qt.qtsharedlibraries/data
 fi
 
-cp $executable ./$bindir/com.zachcobell.metoceanviewer/data/.
+cp $gui ./$bindir/com.zachcobell.metoceanviewer/data/.
+cp $cmd ./$bindir/com.zachcobell.metoceanviewer/data/.
 cp ../MetOceanViewer_GUI/img/logo_small.png ./$bindir/com.zachcobell.metoceanviewer/data/MetOceanViewer.png
 
 while read LIB

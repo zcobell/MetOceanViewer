@@ -27,7 +27,7 @@
 #include "station.h"
 #include "timezone.h"
 
-class METOCEANSHARED_EXPORT WaterData : public QObject {
+class WaterData : public QObject {
   Q_OBJECT
  public:
   explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,

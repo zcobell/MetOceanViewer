@@ -56,16 +56,6 @@ void Generic::splitPath(QString input, QString &filename, QString &directory) {
 }
 
 //-------------------------------------------//
-// NetCDF Error function
-//-------------------------------------------//
-int Generic::NETCDF_ERR(int status) {
-  if (status != NC_NOERR)
-    QMessageBox::critical(nullptr, tr("Error Saving File"),
-                          tr(nc_strerror(status)));
-
-  return status;
-}
-//-------------------------------------------//
 
 //-------------------------------------------//
 // Function that checks if the computer is
@@ -97,7 +87,7 @@ bool Generic::createConfigDirectory(QString &configDirectory) {
       QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
           .at(0);
   if (!QDir(configDirectory).exists()) {
-    return QDir().mkdir(configDirectory);
+    return QDir().mkpath(configDirectory);
   } else {
     return true;
   }

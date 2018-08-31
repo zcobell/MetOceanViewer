@@ -23,7 +23,7 @@
 #include "metoceanviewer_global.h"
 #include "waterdata.h"
 
-class METOCEANSHARED_EXPORT UsgsWaterdata : public WaterData {
+class UsgsWaterdata : public WaterData {
   Q_OBJECT
  public:
   UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,

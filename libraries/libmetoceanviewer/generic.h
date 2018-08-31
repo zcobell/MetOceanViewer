@@ -17,13 +17,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef GENERIC_H
+#define GENERIC_H
 
-#define VER_FILEVERSION 3.1.0
-#define VER_FILEVERSION_STR "v3.1.0"
+#include <QDateTime>
+#include <QNetworkInterface>
+#include <QString>
+#include <QtCore>
 
-#define VER_PRODUCTVERSION 3.1.0
-#define VER_PRODUCTVERSION_STR "v3.1.0"
+class Generic : public QObject {
+  Q_OBJECT
+ public:
+  static void splitPath(QString input, QString &filename, QString &directory);
+  static void delay(int delayTime);
+  static void delayM(int delayTime);
+  static bool isConnectedToNetwork();
+  static bool createConfigDirectory();
+  static bool createConfigDirectory(QString &configDirectory);
+  static QString configDirectory();
 
-#endif // VERSION_H
+ private:
+  static QString dummyConfigDir;
+};
+
+#endif  // GENERIC_H

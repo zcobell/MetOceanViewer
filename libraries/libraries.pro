@@ -25,4 +25,4 @@ SUBDIRS  = libproj4 \
            libtide \
            libmetoceanviewer
 
-CONFIG += ordered           
+CONFIG += ordered

@@ -24,7 +24,7 @@
 #include "tideprediction.h"
 #include "waterdata.h"
 
-class METOCEANSHARED_EXPORT XtideData : public WaterData {
+class XtideData : public WaterData {
   Q_OBJECT
  public:
   XtideData(Station &station, QDateTime startDate, QDateTime endDate,

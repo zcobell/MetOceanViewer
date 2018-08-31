@@ -25,7 +25,7 @@
 #include "metoceanviewer_global.h"
 #include "station.h"
 
-class METOCEANSHARED_EXPORT StationLocations : public QObject {
+class StationLocations : public QObject {
   Q_OBJECT
  public:
   explicit StationLocations(QObject *parent = nullptr);

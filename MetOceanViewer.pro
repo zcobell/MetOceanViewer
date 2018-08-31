@@ -18,9 +18,13 @@
 #
 #-----------------------------------------------------------------------#
 
+include($$PWD/global.pri)
+
 TEMPLATE = subdirs
 
 SUBDIRS  = libraries \
            MetOceanViewer_GUI \
-    MetOceanViewer_CMD
+           MetOceanViewer_CMD
 CONFIG += ordered           
+
+HEADERS += version.h

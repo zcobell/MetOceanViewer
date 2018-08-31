@@ -9,9 +9,11 @@ QT       += network positioning
 TARGET = metoceanviewer
 TEMPLATE = lib
 CONFIG += c++11
+CONFIG += staticlib
 
 DEFINES += METOCEAN_LIBRARY
 
+include($$PWD/../../global.pri)
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -36,11 +38,12 @@ SOURCES += hmdfasciiparser.cpp  \
            timezonestruct.cpp  \
            waterdata.cpp \
            station.cpp \ 
-    usgswaterdata.cpp \
-    xtidedata.cpp \
-    tideprediction.cpp \
-    ndbcdata.cpp \
-    stationlocations.cpp
+           usgswaterdata.cpp \
+           xtidedata.cpp \
+           tideprediction.cpp \
+           ndbcdata.cpp \
+           stationlocations.cpp \
+           generic.cpp
 
 HEADERS += hmdfasciiparser.h  \
            hmdf.h  \
@@ -53,12 +56,13 @@ HEADERS += hmdfasciiparser.h  \
            tzdata.h  \
            waterdata.h \
            station.h \ 
-    usgswaterdata.h \
-    xtidedata.h \
-    tideprediction.h \
-    ndbcdata.h \
-    stationlocations.h \
-    metoceanviewer_global.h
+           usgswaterdata.h \
+           xtidedata.h \
+           tideprediction.h \
+           ndbcdata.h \
+           stationlocations.h \
+           metoceanviewer_global.h \
+           generic.h
 unix {
     target.path = /usr/lib
     INSTALLS += target
@@ -72,12 +76,10 @@ unix {
 
     contains(QT_ARCH, i386){
         #...Microsoft Visual C++ 32-bit compiler
-        message("Using MSVC-32 bit compiler...")
         LIBS += -L$$PWD/../../thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
     }else{
 
         #...Microsoft Visual C++ 64-bit compiler
-        message("Using MSVC-64 bit compiler...")
         LIBS += -L$$PWD/../../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
     }
 }

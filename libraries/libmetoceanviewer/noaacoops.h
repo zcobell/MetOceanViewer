@@ -25,7 +25,7 @@
 #include "metoceanviewer_global.h"
 #include "waterdata.h"
 
-class METOCEANSHARED_EXPORT NoaaCoOps : public WaterData {
+class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
   NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,

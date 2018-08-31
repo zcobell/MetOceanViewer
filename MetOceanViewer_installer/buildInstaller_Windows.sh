@@ -32,6 +32,7 @@ mkdir -p $winPackDir/com.zachcobell.metoceanviewer/data
 
 #...Grab the MetOceanViewer executable
 cp $compileDirectory/MetOceanViewer_GUI/release/MetOceanViewer.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
+cp $compileDirectory/MetOceanViewer_CMD/release/MetOceanData.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the icon
 cp ../MetOceanViewer_GUI/img/mov.ico $winPackDir/com.zachcobell.metoceanviewer/data/.
@@ -44,8 +45,10 @@ cp ../thirdparty/openssl/bin_64/*.dll $winPackDir/com.zachcobell.metoceanviewer/
 cd $winPackDir/com.zachcobell.metoceanviewer/data
 if [ $autoredist == 1 ] ; then
     $winDeployQtBinary --compiler-runtime --qmldir=../../../../MetOceanViewer_GUI/qml -release MetOceanViewer.exe
+    $winDeployQtBinary --compiler-runtime -release MetOceanData.exe
 else
     $winDeployQtBinary -release --qmldir=../../../../MetOceanViewer_GUI/qml MetOceanViewer.exe
+    $winDeployQtBinary -release MetOceanData.exe
 fi
 cd ../../..
 

@@ -26,7 +26,7 @@
 #include "hmdf.h"
 #include "metoceanviewer_global.h"
 
-class METOCEANSHARED_EXPORT NetcdfTimeseries : public QObject {
+class NetcdfTimeseries : public QObject {
   Q_OBJECT
  public:
   explicit NetcdfTimeseries(QObject *parent = nullptr);

@@ -25,7 +25,7 @@ XtideData::XtideData(Station &station, QDateTime startDate, QDateTime endDate,
   //...Root application directory. We'll store the harmonics file here
   this->m_rootDirectory = rootDriectory;
 
-  //...Creates the tide prediction object, tells it
+  //...Creates the tide prediction object
   this->m_tidePrediction = new TidePrediction(this->m_rootDirectory, this);
   this->m_tidePrediction->deleteHarmonicsOnExit(false);
 

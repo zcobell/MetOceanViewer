@@ -27,7 +27,7 @@
 #include "metoceanviewer_global.h"
 #include "station.h"
 
-class METOCEANSHARED_EXPORT TidePrediction : public QObject {
+class TidePrediction : public QObject {
   Q_OBJECT
  public:
   explicit TidePrediction(QString root, QObject *parent = nullptr);

@@ -26,7 +26,7 @@
 #include <QVector>
 #include "metoceanviewer_global.h"
 
-class METOCEANSHARED_EXPORT HmdfStation : public QObject {
+class HmdfStation : public QObject {
   Q_OBJECT
 
  public:

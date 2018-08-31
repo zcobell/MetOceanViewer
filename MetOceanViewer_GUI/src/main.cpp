@@ -33,6 +33,8 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 
+  Q_INIT_RESOURCE(resource_files);
+
   //...Display the splash screen
   QPixmap pixmap(":/rsc/img/logo_full.png");
   QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);

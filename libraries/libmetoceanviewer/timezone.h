@@ -25,7 +25,7 @@
 #include "metoceanviewer_global.h"
 #include "timezonestruct.h"
 
-class METOCEANSHARED_EXPORT Timezone : public QObject {
+class Timezone : public QObject {
   Q_OBJECT
 
  public:

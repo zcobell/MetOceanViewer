@@ -17,31 +17,22 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef GENERIC_H
-#define GENERIC_H
+#ifndef VERSION_H
+#define VERSION_H
+#include <string>
 
-#include <QColor>
-#include <QDateTime>
-#include <QMessageBox>
-#include <QNetworkInterface>
-#include <QString>
-#include <QtCore>
-#include <QtWidgets>
+#define VER_FILEVERSION 4.0.0
+#define VER_FILEVERSION_STR "v4.0.0"
 
-class Generic : public QObject {
-  Q_OBJECT
- public:
-  static void splitPath(QString input, QString &filename, QString &directory);
-  static void delay(int delayTime);
-  static void delayM(int delayTime);
-  static int NETCDF_ERR(int status);
-  static bool isConnectedToNetwork();
-  static bool createConfigDirectory();
-  static bool createConfigDirectory(QString &configDirectory);
-  static QString configDirectory();
+#define VER_PRODUCTVERSION 4.0.0
+#define VER_PRODUCTVERSION_STR "v4.0.0"
 
- private:
-  static QString dummyConfigDir;
-};
+static std::string metoceanVersion() {
+  if (std::string(GIT_VERSION) == std::string("unversioned")) {
+    return VER_FILEVERSION_STR;
+  } else {
+    return GIT_VERSION;
+  }
+}
 
-#endif  // GENERIC_H
+#endif  // VERSION_H

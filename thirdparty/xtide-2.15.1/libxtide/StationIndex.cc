@@ -96,7 +96,7 @@ void StationIndex::addHarmonicsFile (const Dstr &harmonicsFileName) {
   Dstr msg ("Indexing ");
   msg += harmonicsFileName;
   msg += "...";
-  Global::log (msg, LOG_NOTICE);
+  //Global::log (msg, LOG_NOTICE);
 
   // Every StationRef from this HarmonicsFile gets a reference to this
   // string, so it has to be persistent.

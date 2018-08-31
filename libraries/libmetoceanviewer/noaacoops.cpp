@@ -258,7 +258,7 @@ int NoaaCoOps::formatNoaaResponseJson(QVector<QString> &downloadedData,
     else if (jsonObj.contains("predictions"))
       jsonArr = jsonObj["predictions"].toArray();
     else {
-      QJsonValue val = jsonData["error"];
+      QJsonValue val = jsonData.object()["error"];
       QJsonObject obj = val.toObject();
       QJsonValue val2 = obj["message"];
       this->setErrorString(val2.toString());

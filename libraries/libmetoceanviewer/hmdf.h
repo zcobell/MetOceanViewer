@@ -32,7 +32,7 @@
 #include "metoceanviewer_global.h"
 #include "timezone.h"
 
-class METOCEANSHARED_EXPORT Hmdf : public QObject {
+class Hmdf : public QObject {
   Q_OBJECT
 
  public:

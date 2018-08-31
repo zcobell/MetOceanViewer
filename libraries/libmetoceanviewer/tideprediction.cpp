@@ -73,12 +73,12 @@ int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
     startDate.setTime(QTime(0, 0, 0));
     endDate.setTime(QTime(0, 0, 0));
 
-    libxtide::Timestamp startTime =
-        libxtide::Timestamp(startDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
-                  sr->timezone);
-    libxtide::Timestamp endTime =
-        libxtide::Timestamp(endDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
-                  sr->timezone);
+    libxtide::Timestamp startTime = libxtide::Timestamp(
+        startDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
+        sr->timezone);
+    libxtide::Timestamp endTime = libxtide::Timestamp(
+        endDate.toString("yyyy-MM-dd hh:mm").toStdString().c_str(),
+        sr->timezone);
 
     station->setUnits(libxtide::Units::meters);
 
@@ -97,10 +97,9 @@ int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
       if (d.isValid()) {
         st->setNext(d.toMSecsSinceEpoch(), val.toDouble());
       }
-
-      st->setIsNull(false);
-      data->addStation(st);
     }
+    st->setIsNull(false);
+    data->addStation(st);
 
     return 0;
   } else {

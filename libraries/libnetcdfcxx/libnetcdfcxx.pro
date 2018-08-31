@@ -35,6 +35,10 @@ INCLUDEPATH += $$PWD/../../thirdparty/netcdf/include
 LIBS += -L$$PWD/../../thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 }
 
+unix:!macx{
+    LIBS += -lnetcdf
+}
+
 DEFINES      = NETCDFCXX_LIBRARY
 
 #...NETCDFCXX Sources

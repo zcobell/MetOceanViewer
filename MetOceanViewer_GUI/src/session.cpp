@@ -18,18 +18,28 @@
 //
 //-----------------------------------------------------------------------*/
 #include "session.h"
+#include <QMessageBox>
 #include "filetypes.h"
 #include "generic.h"
 
-Session::Session(QTableWidget *inTableWidget,
-                       QLineEdit *inPlotTitleWidget, QLineEdit *inXLabelWidget,
-                       QLineEdit *inYLabelWidget, QDateEdit *inStartDateEdit,
-                       QDateEdit *inEndDateEdit, QDoubleSpinBox *inYMinSpinBox,
-                       QDoubleSpinBox *inYMaxSpinBox, QCheckBox *incheckAllData,
-                       QCheckBox *inCheckYAuto, QString &inPreviousDirectory,
-                       QObject *parent)
-    : QObject(parent) {
+//-------------------------------------------//
+// NetCDF Error function
+//-------------------------------------------//
+int NETCDF_ERR(int status) {
+  if (status != NC_NOERR)
+    QMessageBox::critical(nullptr, "Error Saving File",
+                          nc_strerror(status));
 
+  return status;
+}
+
+Session::Session(QTableWidget *inTableWidget, QLineEdit *inPlotTitleWidget,
+                 QLineEdit *inXLabelWidget, QLineEdit *inYLabelWidget,
+                 QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
+                 QDoubleSpinBox *inYMinSpinBox, QDoubleSpinBox *inYMaxSpinBox,
+                 QCheckBox *incheckAllData, QCheckBox *inCheckYAuto,
+                 QString &inPreviousDirectory, QObject *parent)
+    : QObject(parent) {
   this->tableWidget = inTableWidget;
   this->plotTitleWidget = inPlotTitleWidget;
   this->xLabelWidget = inXLabelWidget;
@@ -88,17 +98,15 @@ int Session::save() {
   QVector<int> dflowlayer_ts;
 
   // Remove the old file
-  if (Session.exists())
-    Session.remove();
+  if (Session.exists()) Session.remove();
 
   // Get the path of the session file so we can save a relative path later
   Generic::splitPath(this->sessionFileName, TempFile, Directory);
   QDir CurrentDir(Directory);
 
-  ierr = Generic::NETCDF_ERR(
-      nc_create(this->sessionFileName.toUtf8(), NC_NETCDF4, &ncid));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr =
+      NETCDF_ERR(nc_create(this->sessionFileName.toUtf8(), NC_NETCDF4, &ncid));
+  if (ierr != NC_NOERR) return 1;
 
   // Start setting up the definitions
   nTimeseries = this->tableWidget->rowCount();
@@ -136,187 +144,140 @@ int Session::save() {
     dflowlayer_ts[i] = this->tableWidget->item(i, 13)->text().toInt();
   }
 
-  ierr = Generic::NETCDF_ERR(nc_def_dim(ncid, "ntimeseries",
-                                           static_cast<size_t>(nTimeseries),
-                                           &dimid_ntimeseries));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_dim(ncid, "one", 1, &dimid_one));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_def_dim(ncid, "ntimeseries",
+                               static_cast<size_t>(nTimeseries),
+                               &dimid_ntimeseries));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_dim(ncid, "one", 1, &dimid_one));
+  if (ierr != NC_NOERR) return 1;
 
   // Arrays
   dims_1d[0] = dimid_ntimeseries;
-  ierr = Generic::NETCDF_ERR(nc_def_var(
-      ncid, "timeseries_filename", NC_STRING, 1, dims_1d, &varid_filename));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_colors", NC_STRING,
-                                           1, dims_1d, &varid_colors));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_names", NC_STRING,
-                                           1, dims_1d, &varid_names));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_filename", NC_STRING, 1,
+                               dims_1d, &varid_filename));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_colors", NC_STRING, 1, dims_1d,
+                               &varid_colors));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_names", NC_STRING, 1, dims_1d,
+                               &varid_names));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(
       nc_def_var(ncid, "timeseries_filetype", NC_INT, 1, dims_1d, &varid_type));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_coldstartdate",
-                                           NC_STRING, 1, dims_1d,
-                                           &varid_coldstart));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_stationfile",
-                                           NC_STRING, 1, dims_1d,
-                                           &varid_stationfile));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_xshift", NC_DOUBLE,
-                                           1, dims_1d, &varid_xshift));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_yshift", NC_DOUBLE,
-                                           1, dims_1d, &varid_yshift));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_units", NC_DOUBLE,
-                                           1, dims_1d, &varid_units));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(
-      ncid, "timeseries_checkState", NC_INT, 1, dims_1d, &varid_checkState));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_coldstartdate", NC_STRING, 1,
+                               dims_1d, &varid_coldstart));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_stationfile", NC_STRING, 1,
+                               dims_1d, &varid_stationfile));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_xshift", NC_DOUBLE, 1, dims_1d,
+                               &varid_xshift));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_yshift", NC_DOUBLE, 1, dims_1d,
+                               &varid_yshift));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_units", NC_DOUBLE, 1, dims_1d,
+                               &varid_units));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_checkState", NC_INT, 1,
+                               dims_1d, &varid_checkState));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(
       nc_def_var(ncid, "timeseries_epsg", NC_INT, 1, dims_1d, &varid_epsg));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(
-      ncid, "timeseries_dflowvar", NC_STRING, 1, dims_1d, &varid_dflowvar));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_layer", NC_INT, 1,
-                                           dims_1d, &varid_dflowlayer));
-  if (ierr != NC_NOERR)
-    return 1;
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_dflowvar", NC_STRING, 1,
+                               dims_1d, &varid_dflowvar));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_layer", NC_INT, 1, dims_1d,
+                               &varid_dflowlayer));
+  if (ierr != NC_NOERR) return 1;
 
   // Scalars
   dims_1d[0] = dimid_one;
-  ierr = Generic::NETCDF_ERR(nc_def_var(
-      ncid, "timeseries_plottitle", NC_STRING, 1, dims_1d, &varid_plottitle));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_xlabel", NC_STRING,
-                                           1, dims_1d, &varid_xlabel));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_ylabel", NC_STRING,
-                                           1, dims_1d, &varid_ylabel));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_precision", NC_INT,
-                                           1, dims_1d, &varid_precision));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(
-      ncid, "timeseries_startdate", NC_STRING, 1, dims_1d, &varid_startdate));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(
-      ncid, "timeseries_enddate", NC_STRING, 1, dims_1d, &varid_enddate));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_plottitle", NC_STRING, 1,
+                               dims_1d, &varid_plottitle));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_xlabel", NC_STRING, 1, dims_1d,
+                               &varid_xlabel));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_ylabel", NC_STRING, 1, dims_1d,
+                               &varid_ylabel));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_precision", NC_INT, 1, dims_1d,
+                               &varid_precision));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_startdate", NC_STRING, 1,
+                               dims_1d, &varid_startdate));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_enddate", NC_STRING, 1,
+                               dims_1d, &varid_enddate));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(
       nc_def_var(ncid, "timeseries_ymin", NC_DOUBLE, 1, dims_1d, &varid_ymin));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(
       nc_def_var(ncid, "timeseries_ymax", NC_DOUBLE, 1, dims_1d, &varid_ymax));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_def_var(ncid, "timeseries_autodate", NC_INT,
-                                           1, dims_1d, &varid_autodate));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_autodate", NC_INT, 1, dims_1d,
+                               &varid_autodate));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(
       nc_def_var(ncid, "timeseries_autoy", NC_INT, 1, dims_1d, &varid_autoy));
-  if (ierr != NC_NOERR)
-    return 1;
-  ierr = Generic::NETCDF_ERR(nc_enddef(ncid));
-  if (ierr != NC_NOERR)
-    return 1;
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_enddef(ncid));
+  if (ierr != NC_NOERR) return 1;
 
   tempByte = this->plotTitleWidget->text().toUtf8();
   mydatastring[0] = tempByte.data();
-  ierr = Generic::NETCDF_ERR(
-      nc_put_var_string(ncid, varid_plottitle, mydatastring));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_string(ncid, varid_plottitle, mydatastring));
+  if (ierr != NC_NOERR) return 1;
 
   tempByte = this->xLabelWidget->text().toUtf8();
   mydatastring[0] = tempByte.data();
-  ierr = Generic::NETCDF_ERR(
-      nc_put_var_string(ncid, varid_xlabel, mydatastring));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_string(ncid, varid_xlabel, mydatastring));
+  if (ierr != NC_NOERR) return 1;
 
   tempByte = this->yLabelWidget->text().toUtf8();
   mydatastring[0] = tempByte.data();
-  ierr = Generic::NETCDF_ERR(
-      nc_put_var_string(ncid, varid_ylabel, mydatastring));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_string(ncid, varid_ylabel, mydatastring));
+  if (ierr != NC_NOERR) return 1;
 
   tempByte =
       this->startDateEdit->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
   mydatastring[0] = tempByte.data();
-  ierr = Generic::NETCDF_ERR(
-      nc_put_var_string(ncid, varid_startdate, mydatastring));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_string(ncid, varid_startdate, mydatastring));
+  if (ierr != NC_NOERR) return 1;
 
   tempByte =
       this->endDateEdit->dateTime().toString("yyyy-MM-dd hh:mm:ss").toUtf8();
   mydatastring[0] = tempByte.data();
-  ierr = Generic::NETCDF_ERR(
-      nc_put_var_string(ncid, varid_enddate, mydatastring));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_string(ncid, varid_enddate, mydatastring));
+  if (ierr != NC_NOERR) return 1;
 
   mydataint[0] = 3;
-  ierr =
-      Generic::NETCDF_ERR(nc_put_var_int(ncid, varid_precision, mydataint));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_int(ncid, varid_precision, mydataint));
+  if (ierr != NC_NOERR) return 1;
   mydatadouble[0] = this->yMinSpinBox->value();
-  ierr =
-      Generic::NETCDF_ERR(nc_put_var_double(ncid, varid_ymin, mydatadouble));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_double(ncid, varid_ymin, mydatadouble));
+  if (ierr != NC_NOERR) return 1;
   mydatadouble[0] = this->yMaxSpinBox->value();
-  ierr =
-      Generic::NETCDF_ERR(nc_put_var_double(ncid, varid_ymax, mydatadouble));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_double(ncid, varid_ymax, mydatadouble));
+  if (ierr != NC_NOERR) return 1;
 
   if (this->checkAllData->isChecked())
     mydataint[0] = 1;
   else
     mydataint[0] = 0;
-  ierr =
-      Generic::NETCDF_ERR(nc_put_var_int(ncid, varid_autodate, mydataint));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_int(ncid, varid_autodate, mydataint));
+  if (ierr != NC_NOERR) return 1;
 
   if (this->checkYAuto->isChecked())
     mydataint[0] = 1;
   else
     mydataint[0] = 0;
-  ierr = Generic::NETCDF_ERR(nc_put_var_int(ncid, varid_autoy, mydataint));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_put_var_int(ncid, varid_autoy, mydataint));
+  if (ierr != NC_NOERR) return 1;
 
   for (iu = 0; iu < static_cast<unsigned int>(nTimeseries); iu++) {
     start[0] = iu;
@@ -324,99 +285,83 @@ int Session::save() {
     relPath = CurrentDir.relativeFilePath(filenames_ts[(int)iu]);
     tempByte = relPath.toUtf8();
     mydatastring[0] = tempByte.data();
-    ierr = Generic::NETCDF_ERR(
+    ierr = NETCDF_ERR(
         nc_put_var1_string(ncid, varid_filename, start, mydatastring));
-    if (ierr != NC_NOERR)
-      return 1;
+    if (ierr != NC_NOERR) return 1;
 
     tempString = seriesname_ts[(int)iu];
     tempByte = tempString.toUtf8();
     mydatastring[0] = tempByte.data();
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_string(ncid, varid_names, start, mydatastring));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_string(ncid, varid_names, start, mydatastring));
+    if (ierr != NC_NOERR) return 1;
 
     tempByte = colors_ts[(int)iu].toUtf8();
     mydatastring[0] = tempByte.data();
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_string(ncid, varid_colors, start, mydatastring));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_string(ncid, varid_colors, start, mydatastring));
+    if (ierr != NC_NOERR) return 1;
     mydatastring[0] = NULL;
 
     tempByte = date_ts[(int)iu].toUtf8();
     mydatastring[0] = tempByte.data();
-    ierr = Generic::NETCDF_ERR(
+    ierr = NETCDF_ERR(
         nc_put_var1_string(ncid, varid_coldstart, start, mydatastring));
-    if (ierr != NC_NOERR)
-      return 1;
+    if (ierr != NC_NOERR) return 1;
     mydatastring[0] = NULL;
 
     relPath = CurrentDir.relativeFilePath(stationfile_ts[(int)iu]);
     tempByte = relPath.toUtf8();
     mydatastring[0] = tempByte.data();
-    ierr = Generic::NETCDF_ERR(
+    ierr = NETCDF_ERR(
         nc_put_var1_string(ncid, varid_stationfile, start, mydatastring));
-    if (ierr != NC_NOERR)
-      return 1;
+    if (ierr != NC_NOERR) return 1;
     mydatastring[0] = NULL;
 
     mydataint[0] = filetype_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_int(ncid, varid_type, start, mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_put_var1_int(ncid, varid_type, start, mydataint));
+    if (ierr != NC_NOERR) return 1;
     mydatastring[0] = NULL;
 
     mydatadouble[0] = xshift_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_double(ncid, varid_xshift, start, mydatadouble));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_double(ncid, varid_xshift, start, mydatadouble));
+    if (ierr != NC_NOERR) return 1;
 
     mydatadouble[0] = yshift_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_double(ncid, varid_yshift, start, mydatadouble));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_double(ncid, varid_yshift, start, mydatadouble));
+    if (ierr != NC_NOERR) return 1;
 
     mydatadouble[0] = units_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_double(ncid, varid_units, start, mydatadouble));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_double(ncid, varid_units, start, mydatadouble));
+    if (ierr != NC_NOERR) return 1;
 
     mydataint[0] = checkStates_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_int(ncid, varid_checkState, start, mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_int(ncid, varid_checkState, start, mydataint));
+    if (ierr != NC_NOERR) return 1;
 
     mydataint[0] = epsg_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_int(ncid, varid_epsg, start, mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_put_var1_int(ncid, varid_epsg, start, mydataint));
+    if (ierr != NC_NOERR) return 1;
 
     tempByte = dflowvar_ts[(int)iu].toUtf8();
     mydatastring[0] = tempByte.data();
-    ierr = Generic::NETCDF_ERR(
+    ierr = NETCDF_ERR(
         nc_put_var1_string(ncid, varid_dflowvar, start, mydatastring));
-    if (ierr != NC_NOERR)
-      return 1;
+    if (ierr != NC_NOERR) return 1;
     mydatastring[0] = NULL;
 
     mydataint[0] = dflowlayer_ts[(int)iu];
-    ierr = Generic::NETCDF_ERR(
-        nc_put_var1_int(ncid, varid_dflowlayer, start, mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr =
+        NETCDF_ERR(nc_put_var1_int(ncid, varid_dflowlayer, start, mydataint));
+    if (ierr != NC_NOERR) return 1;
   }
 
-  ierr = Generic::NETCDF_ERR(nc_close(ncid));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_close(ncid));
+  if (ierr != NC_NOERR) return 1;
   return 0;
 }
 
@@ -452,126 +397,83 @@ int Session::open(QString openFilename) {
   }
 
   // Open the netCDF file
-  ierr =
-      Generic::NETCDF_ERR(nc_open(openFilename.toUtf8(), NC_NOWRITE, &ncid));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_open(openFilename.toUtf8(), NC_NOWRITE, &ncid));
+  if (ierr != NC_NOERR) return 1;
 
   // Read some of the basics from the file (dimensions, variable IDs)
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_dimid(ncid, "ntimeseries", &dimid_ntimeseries));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_dimid(ncid, "ntimeseries", &dimid_ntimeseries));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_filename", &varid_filename));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_filename", &varid_filename));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_colors", &varid_colors));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_colors", &varid_colors));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_names", &varid_names));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_names", &varid_names));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_filetype", &varid_type));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_filetype", &varid_type));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_units", &varid_units));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_units", &varid_units));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_xshift", &varid_xshift));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_xshift", &varid_xshift));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_yshift", &varid_yshift));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_yshift", &varid_yshift));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
+  ierr = NETCDF_ERR(
       nc_inq_varid(ncid, "timeseries_coldstartdate", &varid_coldstart));
-  if (ierr != NC_NOERR)
-    return 1;
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
+  ierr = NETCDF_ERR(
       nc_inq_varid(ncid, "timeseries_stationfile", &varid_stationfile));
-  if (ierr != NC_NOERR)
-    return 1;
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_plottitle", &varid_plottitle));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr =
+      NETCDF_ERR(nc_inq_varid(ncid, "timeseries_plottitle", &varid_plottitle));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_xlabel", &varid_xlabel));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_xlabel", &varid_xlabel));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_ylabel", &varid_ylabel));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_ylabel", &varid_ylabel));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_precision", &varid_precision));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr =
+      NETCDF_ERR(nc_inq_varid(ncid, "timeseries_precision", &varid_precision));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_startdate", &varid_startdate));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr =
+      NETCDF_ERR(nc_inq_varid(ncid, "timeseries_startdate", &varid_startdate));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_enddate", &varid_enddate));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_enddate", &varid_enddate));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_ymin", &varid_ymin));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_ymin", &varid_ymin));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_ymax", &varid_ymax));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_ymax", &varid_ymax));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_autodate", &varid_autodate));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_autodate", &varid_autodate));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_autoy", &varid_autoy));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_autoy", &varid_autoy));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_epsg", &varid_epsg));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_epsg", &varid_epsg));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_dflowvar", &varid_dflowvar));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_dflowvar", &varid_dflowvar));
+  if (ierr != NC_NOERR) return 1;
 
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_varid(ncid, "timeseries_layer", &varid_dflowlayer));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_layer", &varid_dflowlayer));
+  if (ierr != NC_NOERR) return 1;
 
   ierr = nc_inq_varid(ncid, "timeseries_checkState", &varid_checkState);
   if (ierr != NC_NOERR)
@@ -580,67 +482,56 @@ int Session::open(QString openFilename) {
     hasCheckInfo = true;
 
   // Read the scalar variables
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_plottitle, &mydatachar));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_plottitle, &mydatachar));
+  if (ierr != NC_NOERR) return 1;
   this->plotTitleWidget->setText(QString(mydatachar[0]));
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_xlabel, &mydatachar));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_xlabel, &mydatachar));
+  if (ierr != NC_NOERR) return 1;
   this->xLabelWidget->setText(QString(mydatachar[0]));
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_ylabel, &mydatachar));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_ylabel, &mydatachar));
+  if (ierr != NC_NOERR) return 1;
   this->yLabelWidget->setText(QString(mydatachar[0]));
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_startdate, &mydatachar));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_startdate, &mydatachar));
+  if (ierr != NC_NOERR) return 1;
   tempstring = QString(mydatachar[0]);
   tempstartdate =
       QDateTime::fromString(tempstring, "yyyy-MM-dd hh:mm:ss").date();
   this->startDateEdit->setDate(tempstartdate);
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_enddate, &mydatachar));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_enddate, &mydatachar));
+  if (ierr != NC_NOERR) return 1;
   tempstring = QString(mydatachar[0]);
   tempenddate = QDateTime::fromString(tempstring, "yyyy-MM-dd hh:mm:ss").date();
   this->endDateEdit->setDate(tempenddate);
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_ymin, &mydatadouble));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_ymin, &mydatadouble));
+  if (ierr != NC_NOERR) return 1;
   this->yMinSpinBox->setValue(mydatadouble[0]);
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_ymax, &mydatadouble));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_ymax, &mydatadouble));
+  if (ierr != NC_NOERR) return 1;
   this->yMaxSpinBox->setValue(mydatadouble[0]);
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_autodate, &mydataint));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_autodate, &mydataint));
+  if (ierr != NC_NOERR) return 1;
   if (mydataint[0] == 0)
     this->checkAllData->setChecked(false);
   else
     this->checkAllData->setChecked(true);
 
-  ierr = Generic::NETCDF_ERR(nc_get_var(ncid, varid_autoy, &mydataint));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_get_var(ncid, varid_autoy, &mydataint));
+  if (ierr != NC_NOERR) return 1;
   if (mydataint[0] == 0)
     this->checkYAuto->setChecked(false);
   else
     this->checkYAuto->setChecked(true);
 
   // Next, read in the data and add rows to the table
-  ierr = Generic::NETCDF_ERR(
-      nc_inq_dimlen(ncid, dimid_ntimeseries, &temp_size_t));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_inq_dimlen(ncid, dimid_ntimeseries, &temp_size_t));
+  if (ierr != NC_NOERR) return 1;
   nTimeseries = static_cast<int>(temp_size_t);
   nrow = 0;
 
@@ -650,85 +541,59 @@ int Session::open(QString openFilename) {
   for (i = 0; i < nTimeseries; i++) {
     start[0] = static_cast<size_t>(i);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_filename, start, &mydatachar));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_filename, start, &mydatachar));
+    if (ierr != NC_NOERR) return 1;
     QString filelocation = QString(mydatachar[0]);
     Generic::splitPath(filelocation, filename, TempFile);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_names, start, &mydatachar));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_names, start, &mydatachar));
+    if (ierr != NC_NOERR) return 1;
     QString series_name = QString(mydatachar[0]);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_type, start, &mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_type, start, &mydataint));
+    if (ierr != NC_NOERR) return 1;
     int type = mydataint[0];
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_colors, start, &mydatachar));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_colors, start, &mydatachar));
+    if (ierr != NC_NOERR) return 1;
     QString color = QString(mydatachar[0]);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_units, start, &mydatadouble));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_units, start, &mydatadouble));
+    if (ierr != NC_NOERR) return 1;
     double unitconvert = mydatadouble[0];
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_coldstart, start, &mydatachar));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_coldstart, start, &mydatachar));
+    if (ierr != NC_NOERR) return 1;
     QString coldstartstring = QString(mydatachar[0]);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_xshift, start, &mydatadouble));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_xshift, start, &mydatadouble));
+    if (ierr != NC_NOERR) return 1;
     double xshift = mydatadouble[0];
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_yshift, start, &mydatadouble));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_yshift, start, &mydatadouble));
+    if (ierr != NC_NOERR) return 1;
     double yshift = mydatadouble[0];
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_stationfile, start, &mydatachar));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_stationfile, start, &mydatachar));
+    if (ierr != NC_NOERR) return 1;
     QString stationfilepath = QString(mydatachar[0]);
     Generic::splitPath(stationfilepath, stationfile, TempFile);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_dflowvar, start, &mydatachar));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_dflowvar, start, &mydatachar));
+    if (ierr != NC_NOERR) return 1;
     QString dflowvar = QString(mydatachar[0]);
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_epsg, start, &mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_epsg, start, &mydataint));
+    if (ierr != NC_NOERR) return 1;
     int epsg = mydataint[0];
 
-    ierr = Generic::NETCDF_ERR(
-        nc_get_var1(ncid, varid_dflowlayer, start, &mydataint));
-    if (ierr != NC_NOERR)
-      return 1;
+    ierr = NETCDF_ERR(nc_get_var1(ncid, varid_dflowlayer, start, &mydataint));
+    if (ierr != NC_NOERR) return 1;
     int layer = mydataint[0];
 
     if (hasCheckInfo) {
-      ierr = Generic::NETCDF_ERR(
-          nc_get_var1(ncid, varid_checkState, start, &mydataint));
-      if (ierr != NC_NOERR)
-        return 1;
+      ierr = NETCDF_ERR(nc_get_var1(ncid, varid_checkState, start, &mydataint));
+      if (ierr != NC_NOERR) return 1;
       if (mydataint[0] == 1)
         checkState = Qt::Checked;
       else
@@ -753,7 +618,6 @@ int Session::open(QString openFilename) {
                                   tr("Data file not found in default location. "
                                      "Would you like to specify another?"));
         if (reply == QMessageBox::Yes) {
-
           // Get an alternate location
           // this->alternateFolder = QFileDialog::getExistingDirectory(0,"Select
           // Folder",this->previousDirectory);
@@ -911,9 +775,8 @@ int Session::open(QString openFilename) {
       ColdStart = QDateTime::fromString(coldstartstring, "yyyy-MM-dd hh:mm:ss");
     }
   }
-  ierr = Generic::NETCDF_ERR(nc_close(ncid));
-  if (ierr != NC_NOERR)
-    return 1;
+  ierr = NETCDF_ERR(nc_close(ncid));
+  if (ierr != NC_NOERR) return 1;
 
   return 0;
 }
