@@ -32,7 +32,15 @@ static QHash<int, QString> noaaDatum = {
     {1, "MHHW"}, {2, "MHW"}, {3, "MTL"}, {4, "MSL"},   {5, "MLW"},  {6, "MLLW"},
     {7, "NAVD"}, {8, "LWI"}, {9, "HWI"}, {10, "IGLD"}, {11, "Stnd"}};
 
-Driver::Driver(QObject *parent) : QObject(parent) {}
+Driver::Driver(QObject *parent) : QObject(parent) {
+  this->m_service = 0;
+  this->m_product = 0;
+  this->m_datum = 0;
+  this->m_station = QString();
+  this->m_startDate = QDateTime();
+  this->m_endDate = QDateTime();
+  this->m_outputFile = QString();
+}
 
 Driver::Driver(serviceTypes service, QString station, int product, int datum,
                QDateTime startDate, QDateTime endDate, QString outputFile,
@@ -159,7 +167,7 @@ void Driver::getNdbcData() {
   data2->station(0)->setId(s.id());
 
   ierr = data2->write(this->m_outputFile);
-  if(ierr!=0){
+  if (ierr != 0) {
     emit error("Error writing to file.");
     return;
   }
@@ -229,7 +237,7 @@ void Driver::getUsgsData() {
   data2->station(0)->setId(s.id());
 
   ierr = data2->write(this->m_outputFile);
-  if(ierr!=0){
+  if (ierr != 0) {
     emit error("Error writing to file.");
     return;
   }

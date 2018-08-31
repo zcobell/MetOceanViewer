@@ -58,7 +58,7 @@ SOURCES +=\
     src/ndbc.cpp
 
 HEADERS  += \
-    src/metocean.h \
+    src/metoceanviewer.h \
     src/stationmodel.h \
     src/colors.h \
     src/dflow.h \
