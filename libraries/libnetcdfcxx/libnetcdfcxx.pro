@@ -26,13 +26,11 @@ TEMPLATE     = lib
 
 CONFIG      += staticlib
 
-include($$PWD/../global.pri)
+include($$PWD/../../global.pri)
 
 NETCDFCXXPATH    = $$PWD/../../thirdparty/netcdf-cxx/cxx4
 
 INCLUDEPATH += $$NETCDFCXXPATH 
-INCLUDEPATH += $$NETCDFHOME/include
-
 DEFINES      = NETCDFCXX_LIBRARY
 
 #...NETCDFCXX Sources
