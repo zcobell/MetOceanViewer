@@ -1,3 +1,22 @@
+/*-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2018  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//-----------------------------------------------------------------------*/
 #include "metoceandata.h"
 #include <QHash>
 #include <algorithm>
@@ -10,12 +29,12 @@
 #include "usgswaterdata.h"
 #include "xtidedata.h"
 
-static QHash<int, QString> noaaProducts = {
+static const QHash<int, QString> noaaProducts = {
     {1, "water_level"},     {2, "hourly_height"},     {3, "predictions"},
     {4, "air_temperature"}, {5, "water_temperature"}, {6, "wind:speed"},
     {7, "humidity"},        {8, "air_pressure"},      {9, "wind:direction"},
     {10, "wind:gusts"}};
-static QHash<int, QString> noaaProductLongName = {{1, "6 minute water level"},
+static const QHash<int, QString> noaaProductLongName = {{1, "6 minute water level"},
                                                   {2, "Hourly water level"},
                                                   {3, "Tide predictoins"},
                                                   {4, "Air temperature"},
@@ -25,10 +44,10 @@ static QHash<int, QString> noaaProductLongName = {{1, "6 minute water level"},
                                                   {8, "Air pressure"},
                                                   {9, "Wind direction"},
                                                   {10, "Wind gusts"}};
-static QHash<int, QString> noaaUnits = {
+static const QHash<int, QString> noaaUnits = {
     {1, "m"},   {2, "m"}, {3, "m"},  {4, "C"},   {5, "C"},
     {6, "m/s"}, {7, "%"}, {8, "mb"}, {9, "deg"}, {10, "m/s"}};
-static QHash<int, QString> noaaDatum = {
+static const QHash<int, QString> noaaDatum = {
     {1, "MHHW"}, {2, "MHW"}, {3, "MTL"}, {4, "MSL"},   {5, "MLW"},  {6, "MLLW"},
     {7, "NAVD"}, {8, "LWI"}, {9, "HWI"}, {10, "IGLD"}, {11, "Stnd"}};
 
