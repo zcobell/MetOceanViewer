@@ -84,6 +84,7 @@ void MetOceanData::setLoggingActive() {
   connect(this, SIGNAL(error(QString)), this, SLOT(showError(QString)));
   connect(this, SIGNAL(status(QString, int)), this,
           SLOT(showStatus(QString, int)));
+  connect(this, SIGNAL(warning(QString)), this, SLOT(showWarning(QString)));
   return;
 }
 
@@ -91,6 +92,7 @@ void MetOceanData::setLoggingInactive() {
   disconnect(this, SIGNAL(error(QString)), this, SLOT(showError(QString)));
   disconnect(this, SIGNAL(status(QString, int)), this,
              SLOT(showStatus(QString, int)));
+  disconnect(this, SIGNAL(warning(QString)), this, SLOT(showWarning(QString)));
   return;
 }
 
@@ -118,7 +120,7 @@ void MetOceanData::showStatus(QString message, int pct) {
 void MetOceanData::run() {
   if (this->service() == USGS && this->m_station.length() > 1) {
     emit error(
-        "Error: Beacuase each station has different characteristics, only one "
+        "Beacuase each station has different characteristics, only one "
         "USGS station may be selected at a time.");
     emit finished();
     return;
@@ -162,8 +164,9 @@ QString MetOceanData::selectNearestStation(serviceTypes service, double x,
   QVector<Station> markerLocations = StationLocations::readMarkers(m);
 
   double d = std::numeric_limits<double>::max();
-  size_t j = -1;
-  for (size_t i = 0; i < markerLocations.size(); ++i) {
+  size_t j = std::numeric_limits<size_t>::max();
+
+  for (size_t i = 0; i < markerLocations.size(); i++) {
     double xs = markerLocations[i].coordinate().longitude();
     double ys = markerLocations[i].coordinate().latitude();
     double d1 = Constants::distance(x, y, xs, ys, true);
@@ -172,7 +175,8 @@ QString MetOceanData::selectNearestStation(serviceTypes service, double x,
       j = i;
     }
   }
-  if (j > -1) {
+
+  if (j != std::numeric_limits<size_t>::max()) {
     return markerLocations[j].id();
   } else {
     return QString();
@@ -248,9 +252,8 @@ void MetOceanData::getNdbcData() {
     ierr = this->printAvailableProducts(data);
     if (ierr != 0) return;
 
-    dataOut->station(0)->setName(s[i].name());
-    dataOut->station(0)->setId(s[i].id());
-
+    data->station(this->m_product - 1)->setName(s[i].name());
+    data->station(this->m_product - 1)->setId(s[i].id());
     dataOut->addStation(data->station(this->m_product - 1));
     data->station(this->m_product - 1)->setParent(dataOut);
 

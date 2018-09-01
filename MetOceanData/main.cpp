@@ -27,7 +27,7 @@
 #include "version.h"
 
 QDateTime checkDateString(QString str);
-int checkServiceString(QString str);
+MetOceanData::serviceTypes checkServiceString(QString str);
 int checkIntegerString(QString str);
 void processCommandLineOptions(QCoreApplication &a,
                                MetOceanData::serviceTypes &service,
@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
   processCommandLineOptions(a, service, station, product, datum, startDate,
                             endDate, outputFile);
 
-  MetOceanData *d = new MetOceanData(service, station, product, datum, startDate, endDate,
-                         outputFile, &a);
+  MetOceanData *d = new MetOceanData(service, station, product, datum,
+                                     startDate, endDate, outputFile, &a);
   d->setLoggingActive();
   QObject::connect(d, SIGNAL(finished()), &a, SLOT(quit()));
   QTimer::singleShot(0, d, SLOT(run()));
@@ -78,8 +78,7 @@ void processCommandLineOptions(QCoreApplication &app,
                          "USGS, NDBC, or XTIDE",
                          "source");
   QCommandLineOption cmd_stationId = QCommandLineOption(
-      QStringList() << "n"
-                    << "station",
+      QStringList() << "station",
       "Station ID to use to generate data. Ex. NOAA Station 2695540 would "
       "be be specified with '2695540'. XTide stations should be specified "
       "using their ID from MetOceanViewer",
@@ -106,16 +105,17 @@ void processCommandLineOptions(QCoreApplication &app,
                          "you will be presented with a list of options",
                          "index");
 
-  QCommandLineOption cmd_datum = QCommandLineOption(
-      QStringList() << "d"
-                    << "datum",
-      "Specified datum to use. Only available for NOAA "
-      "products.",
-//      "Options "
-//      "are: \n    (1)  MHHW\n    (2)  MHW\n    (3)  MTL\n    (4)  MSL\n    (5) "
-//      " MLW\n    (6)  MLLW\n    (7)  NAVD\n    (8)  LWI\n    (9)  HWI\n    "
-//      "(10) IGLD\n    (11) Station Datum",
-      "option");
+  QCommandLineOption cmd_datum =
+      QCommandLineOption(QStringList() << "d"
+                                       << "datum",
+                         "Specified datum to use. Only available for NOAA "
+                         "products.",
+                         //      "Options "
+                         //      "are: \n    (1)  MHHW\n    (2)  MHW\n    (3)
+                         //      MTL\n    (4)  MSL\n (5) " " MLW\n    (6) MLLW\n
+                         //      (7)  NAVD\n    (8)  LWI\n    (9) HWI\n    "
+                         //      "(10) IGLD\n    (11) Station Datum",
+                         "option");
 
   QCommandLineOption cmd_outputFile =
       QCommandLineOption(QStringList() << "o"
@@ -124,14 +124,45 @@ void processCommandLineOptions(QCoreApplication &app,
                          "extension (.imeds or .nc)",
                          "filename");
 
+  QCommandLineOption cmd_boundingBox =
+      QCommandLineOption(QStringList() << "boundingbox",
+                         "Bounding box coordinates. Selects all stations that "
+                         "fall within the bounding box.",
+                         "x1,y1,x2,y2");
+
+  QCommandLineOption cmd_nearest = QCommandLineOption(
+      QStringList() << "nearest",
+      "Selects the station that falls closest to the specfied location", "x,y");
+
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addOptions(QList<QCommandLineOption>()
-                    << cmd_serviceType << cmd_stationId << cmd_startDate
-                    << cmd_endDate << cmd_product << cmd_outputFile
-                    << cmd_datum);
+                    << cmd_serviceType << cmd_stationId << cmd_boundingBox
+                    << cmd_nearest << cmd_startDate << cmd_endDate
+                    << cmd_product << cmd_outputFile << cmd_datum);
 
   parser.process(app);
+
+  if (parser.isSet(cmd_stationId) && parser.isSet(cmd_nearest)) {
+    std::cerr << "Error: Cannot select station id and nearest station options."
+              << std::endl;
+    parser.showHelp(1);
+  }
+
+  if (parser.isSet(cmd_stationId) && parser.isSet(cmd_boundingBox)) {
+    std::cerr
+        << "Error: Cannot select station id and bound box station options."
+        << std::endl;
+    ;
+    parser.showHelp(1);
+  }
+
+  if (parser.isSet(cmd_boundingBox) && parser.isSet(cmd_nearest)) {
+    std::cerr
+        << "Error: Cannot select nearest station and bounding box options."
+        << std::endl;
+    parser.showHelp(1);
+  }
 
   if (app.arguments().length() == 1) {
     std::cerr << "Error: No command line arguments detected." << std::endl;
@@ -144,8 +175,9 @@ void processCommandLineOptions(QCoreApplication &app,
     parser.showHelp(1);
   }
 
-  if (!parser.isSet(cmd_stationId)) {
-    std::cerr << "Error: No station selected." << std::endl;
+  if (!parser.isSet(cmd_stationId) && !parser.isSet(cmd_boundingBox) &&
+      !parser.isSet(cmd_nearest)) {
+    std::cerr << "Error: No stations selected." << std::endl;
     parser.showHelp(1);
   }
 
@@ -167,8 +199,56 @@ void processCommandLineOptions(QCoreApplication &app,
   QString serviceString = parser.value(cmd_serviceType);
   QString startDateString = parser.value(cmd_startDate);
   QString endDateString = parser.value(cmd_endDate);
-  station = parser.values(cmd_stationId);
   outputFile = parser.value(cmd_outputFile);
+
+  service = checkServiceString(serviceString);
+  if (service == MetOceanData::UNKNOWNSERVICE) {
+    std::cerr << "Error: Unknown service specified." << std::endl;
+    parser.showHelp(1);
+  }
+
+  if (parser.isSet(cmd_stationId)) {
+    station = parser.values(cmd_stationId);
+  } else if (parser.isSet(cmd_nearest)) {
+    QStringList v = parser.value(cmd_nearest).split(",");
+    if (v.length() != 2) {
+      std::cerr << "Error: Poorly formed coordinate input." << std::endl;
+      exit(1);
+    }
+    double x = parser.value(cmd_nearest).split(",").at(0).toDouble();
+    double y = parser.value(cmd_nearest).split(",").at(1).toDouble();
+    station.push_back(MetOceanData::selectNearestStation(service, x, y));
+    if (!station.at(0).isNull()) {
+      std::cout << "Selected " << station.at(0).toStdString()
+                << " using nearest location." << std::endl;
+    } else {
+      std::cerr << "No station could be selected." << std::endl;
+      exit(1);
+    }
+  } else if (parser.isSet(cmd_boundingBox)) {
+    QStringList v = parser.value(cmd_boundingBox).split(",");
+    if (v.length() != 4) {
+      std::cerr << "Error: Poorly formed bounding box input." << std::endl;
+      exit(1);
+    }
+    double x1 = v.at(0).toDouble();
+    double y1 = v.at(1).toDouble();
+    double x2 = v.at(2).toDouble();
+    double y2 = v.at(3).toDouble();
+    station = MetOceanData::selectStations(service, x1, y1, x2, y2);
+    if (station.length() == 0) {
+      std::cerr << "No station could be selected." << std::endl;
+      exit(1);
+    } else {
+      std::cout << "Selected " << station.length()
+                << " stations using bounding box." << std::endl;
+    }
+  }
+
+  if (station.length() == 0) {
+    std::cerr << "Error: No stations selected." << std::endl;
+    parser.showHelp(1);
+  }
 
   if (parser.isSet(cmd_product)) {
     QString productString = parser.value(cmd_product);
@@ -190,13 +270,6 @@ void processCommandLineOptions(QCoreApplication &app,
     }
   } else {
     datum = -1;
-  }
-
-  service =
-      static_cast<MetOceanData::serviceTypes>(checkServiceString(serviceString));
-  if (service == MetOceanData::UNKNOWNSERVICE) {
-    std::cerr << "Error: Unknown service specified." << std::endl;
-    parser.showHelp(1);
   }
 
   startDate = checkDateString(startDateString);
@@ -221,7 +294,7 @@ void processCommandLineOptions(QCoreApplication &app,
   return;
 }
 
-int checkServiceString(QString str) {
+MetOceanData::serviceTypes checkServiceString(QString str) {
   str = str.toUpper();
   if (str == "NOAA") return MetOceanData::NOAA;
   if (str == "USGS") return MetOceanData::USGS;

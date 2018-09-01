@@ -249,6 +249,7 @@ int Hmdf::writeNetcdf(QString filename) {
   int ncid;
   int dimid_nstations, dimid_stationNameLength;
   int varid_stationName, varid_stationx, varid_stationy;
+  int varid_stationId;
 
   QVector<int> dimid_stationLength;
   QVector<int> varid_stationDate, varid_stationData;
@@ -275,6 +276,8 @@ int Hmdf::writeNetcdf(QString filename) {
 
   NCCHECK(nc_def_var(ncid, "stationName", NC_CHAR, 2, stationNameDims,
                      &varid_stationName));
+  NCCHECK(nc_def_var(ncid, "stationId", NC_CHAR, 2, stationNameDims,
+                     &varid_stationId));
   NCCHECK(nc_def_var(ncid, "stationXCoordinate", NC_DOUBLE, 1, nstationDims,
                      &varid_stationx));
   NCCHECK(nc_def_var(ncid, "stationYCoordinate", NC_DOUBLE, 1, nstationDims,
@@ -366,8 +369,11 @@ int Hmdf::writeNetcdf(QString filename) {
     double *data =
         (double *)malloc(this->station(i)->numSnaps() * sizeof(double));
     char *name = (char *)malloc(200 * sizeof(char));
+    char *id = (char *)malloc(200 * sizeof(char));
     memset(name, ' ', 200);
+    memset(id, ' ', 200);
     this->station(i)->name().toStdString().copy(name, 200, 0);
+    this->station(i)->id().toStdString().copy(id, 200, 0);
 
     for (int j = 0; j < this->station(i)->numSnaps(); j++) {
       time[j] = this->station(i)->date(j) / 1000;
@@ -379,6 +385,7 @@ int Hmdf::writeNetcdf(QString filename) {
       free(time);
       free(data);
       free(name);
+      free(id);
       nc_close(ncid);
       return status;
     }
@@ -388,6 +395,7 @@ int Hmdf::writeNetcdf(QString filename) {
       free(time);
       free(data);
       free(name);
+      free(id);
       nc_close(ncid);
       return status;
     }
@@ -397,6 +405,7 @@ int Hmdf::writeNetcdf(QString filename) {
       free(time);
       free(data);
       free(name);
+      free(id);
       nc_close(ncid);
       return status;
     }
@@ -406,6 +415,7 @@ int Hmdf::writeNetcdf(QString filename) {
       free(time);
       free(data);
       free(name);
+      free(id);
       nc_close(ncid);
       return status;
     }
@@ -415,6 +425,17 @@ int Hmdf::writeNetcdf(QString filename) {
       free(time);
       free(data);
       free(name);
+      free(id);
+      nc_close(ncid);
+      return status;
+    }
+
+    status = nc_put_vara_text(ncid, varid_stationId, index, count, id);
+    if (status != NC_NOERR) {
+      free(time);
+      free(data);
+      free(name);
+      free(id);
       nc_close(ncid);
       return status;
     }
@@ -422,6 +443,7 @@ int Hmdf::writeNetcdf(QString filename) {
     free(time);
     free(data);
     free(name);
+    free(id);
   }
 
   nc_close(ncid);
