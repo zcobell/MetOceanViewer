@@ -61,12 +61,14 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
 
   if (!this->parser()->isSet(m_serviceType)) {
     std::cerr << "Error: No service selected." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
   QString serviceString = this->parser()->value(m_serviceType);
   opt.service = checkServiceString(serviceString);
   if (opt.service == MetOceanData::UNKNOWNSERVICE) {
     std::cerr << "Error: Unknown service specified." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
@@ -76,6 +78,7 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
     QStringList v = this->parser()->value(m_nearest).split(",");
     if (v.length() != 2) {
       std::cerr << "Error: Poorly formed coordinate input." << std::endl;
+      std::cerr.flush();
       exit(1);
     }
     double x = this->parser()->value(m_nearest).split(",").at(0).toDouble();
@@ -86,9 +89,11 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
       if (!this->parser()->isSet(m_show)) {
         std::cout << "Selected " << opt.station.at(0).toStdString()
                   << " using nearest location." << std::endl;
+        std::cout.flush();
       }
     } else {
       std::cerr << "No station could be selected." << std::endl;
+      std::cerr.flush();
       exit(1);
     }
   } else if (this->parser()->isSet(m_boundingBox)) {
@@ -104,11 +109,13 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
     opt.station = MetOceanData::selectStations(opt.service, x1, y1, x2, y2);
     if (opt.station.length() == 0) {
       std::cerr << "No station could be selected." << std::endl;
+      std::cerr.flush();
       exit(1);
     } else {
       if (!this->parser()->isSet(m_show)) {
         std::cout << "Selected " << opt.station.length()
                   << " stations using bounding box." << std::endl;
+        std::cout.flush();
       }
     }
   } else if (this->parser()->isSet(m_list)) {
@@ -121,6 +128,7 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
 
   if (opt.station.length() == 0) {
     std::cerr << "Error: No stations selected." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
@@ -130,16 +138,19 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
 
   if (!this->parser()->isSet(m_startDate)) {
     std::cerr << "Error: No start date selected." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
   if (!this->parser()->isSet(m_endDate)) {
     std::cerr << "Error: No end date selected." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
   if (!this->parser()->isSet(m_outputFile)) {
     std::cerr << "Error: No output file specified." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
@@ -152,6 +163,7 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
     opt.product = checkIntegerString(productString);
     if (opt.product == -1) {
       std::cout << "Error: Invalid product selection." << std::endl;
+      std::cout.flush();
       this->parser()->showHelp(1);
     }
   } else {
@@ -162,7 +174,8 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
     QString datumString = this->parser()->value(m_datum);
     opt.datum = checkIntegerString(datumString);
     if (opt.datum == -1) {
-      std::cout << "Error: Invalid datum selection." << std::endl;
+      std::cerr << "Error: Invalid datum selection." << std::endl;
+      std::cerr.flush();
       this->parser()->showHelp(1);
     }
   } else {
@@ -172,17 +185,20 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
   opt.startDate = checkDateString(startDateString);
   if (opt.startDate.isNull()) {
     std::cerr << "Error: Invalid start date." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
   opt.endDate = checkDateString(endDateString);
   if (opt.endDate.isNull()) {
     std::cerr << "Error: Invalid end date." << std::endl;
+    std::cerr.flush();
     this->parser()->showHelp(1);
   }
 
   if (opt.startDate >= opt.endDate) {
     std::cerr << "Error: Date range is not logical." << std::endl;
+    std::cerr.flush();
     exit(1);
   }
 
@@ -225,9 +241,9 @@ void Options::printStationList(QStringList station,
               << s[i].name().replace(" ", "_").toStdString() << "',"
               << s[i].coordinate().longitude() << ","
               << s[i].coordinate().latitude() << std::endl;
+    std::cout.flush();
   }
   exit(0);
-  return;
 }
 
 void Options::readStationList(QStringList &station,
@@ -236,11 +252,13 @@ void Options::readStationList(QStringList &station,
   QFile f(filename);
   if (!f.exists()) {
     std::cout << "Error: Input file does not exist." << std::endl;
+    std::cout.flush();
     exit(1);
   }
 
   if (!f.open(QIODevice::ReadOnly)) {
     std::cout << "Error: Could not open input file." << std::endl;
+    std::cout.flush();
     exit(1);
   }
 
@@ -255,6 +273,7 @@ void Options::readStationList(QStringList &station,
     if (!found) {
       std::cerr << "Error: Station " << s.toStdString() << " not found."
                 << std::endl;
+      std::cerr.flush();
     } else {
       station.push_back(s);
     }
@@ -262,6 +281,7 @@ void Options::readStationList(QStringList &station,
 
   if (station.length() == 0) {
     std::cerr << "Error: No valid stations found in file." << std::endl;
+    std::cerr.flush();
     exit(1);
   }
 
