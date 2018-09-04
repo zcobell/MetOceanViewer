@@ -238,9 +238,8 @@ int Dflow::getVariable(QString variable, int layer, Hmdf *hmdf) {
   hmdf->setHeader2("DFlowFM");
   hmdf->setHeader3("DFlowFM");
 
-  HmdfStation *station = new HmdfStation(hmdf);
-
   for (i = 0; i < this->_nStations; i++) {
+    HmdfStation *station = new HmdfStation(hmdf);
     station->setDate(time);
     station->setData(data[i]);
     station->setLatitude(this->_yCoordinates[i]);
@@ -248,6 +247,7 @@ int Dflow::getVariable(QString variable, int layer, Hmdf *hmdf) {
     station->setStationIndex(i);
     station->setId(QString::number(i));
     station->setName(this->_stationNames[i]);
+    hmdf->addStation(station);
   }
   hmdf->setSuccess(true);
 

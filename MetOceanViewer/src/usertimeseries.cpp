@@ -723,9 +723,9 @@ int UserTimeseries::projectStations(QVector<int> epsg,
   bool isLatLon;
   proj4 *projection = new proj4(this);
 
-  for (i = 0; i < projectedStations.length(); i++) {
+  for (i = 0; i < projectedStations.length(); ++i) {
     if (epsg[i] != 4326) {
-      for (j = 0; j < projectedStations[i]->nstations(); j++) {
+      for (j = 0; j < projectedStations[i]->nstations(); ++j) {
         x = projectedStations[i]->station(j)->longitude();
         y = projectedStations[i]->station(j)->latitude();
         ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
