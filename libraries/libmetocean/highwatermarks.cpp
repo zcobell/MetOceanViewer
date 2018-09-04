@@ -26,6 +26,7 @@
 HighWaterMarks::HighWaterMarks(QObject *parent) : QObject(parent) {
   this->m_filename = QString();
   this->m_regressionThroughZero = true;
+  this->m_n2 = 0;
   this->m_r2 = -1;
   this->m_slope = 0.0;
   this->m_intercept = 0.0;
@@ -37,6 +38,7 @@ HighWaterMarks::HighWaterMarks(QString filename, bool regressionThroughZero,
     : QObject(parent) {
   this->m_filename = filename;
   this->m_regressionThroughZero = regressionThroughZero;
+  this->m_n2 = 0;
   this->m_r2 = -1;
   this->m_slope = 0.0;
   this->m_intercept = 0.0;
@@ -58,7 +60,7 @@ void HighWaterMarks::setFilename(const QString &filename) {
 }
 
 HwmData *HighWaterMarks::hwm(size_t index) {
-  if (index >= 0 && index < this->m_hwms.size())
+  if (index < this->m_hwms.size())
     return this->m_hwms[index];
   else
     return nullptr;
