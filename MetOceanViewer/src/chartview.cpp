@@ -144,6 +144,7 @@ void ChartView::clear() {
   if (this->chart()->series().length() > 0) this->chart()->removeAllSeries();
   this->m_legendNames.clear();
   this->m_series.clear();
+  this->removeTraceLines();
   return;
 }
 
