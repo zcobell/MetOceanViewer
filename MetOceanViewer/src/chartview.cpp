@@ -37,6 +37,10 @@ ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
   this->m_statusBar = nullptr;
   this->m_infoItem = nullptr;
   this->m_infoRectItem = nullptr;
+  this->m_xTraceLinePtr = nullptr;
+  this->m_yTraceLinePtr = nullptr;
+  this->m_yTraceLine = QLineF();
+  this->m_xTraceLine = QLineF();
 
   this->setDragMode(QChartView::NoDrag);
   this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -171,11 +175,11 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
 
   this->m_date.resize(this->m_date.size() + 1);
   this->m_data.resize(this->m_data.size() + 1);
-  this->m_date.last().resize(series->points().size());
-  this->m_data.last().resize(series->points().size());
-  for (size_t i = 0; i < series->points().size(); i++) {
-    this->m_date.last()[i] = series->points().at(i).x();
-    this->m_data.last()[i] = series->points().at(i).y();
+  this->m_date.last().resize(series->pointsVector().size());
+  this->m_data.last().resize(series->pointsVector().size());
+  for (size_t i = 0; i < series->pointsVector().size(); i++) {
+    this->m_date.last()[i] = series->pointsVector().at(i).x();
+    this->m_data.last()[i] = series->pointsVector().at(i).y();
   }
 
   if (this->xAxis() != nullptr)
@@ -191,9 +195,9 @@ void ChartView::rebuild() {
   for (size_t j = 0; j < this->chart()->series().length(); j++) {
     QLineSeries *series =
         static_cast<QLineSeries *>(this->chart()->series().at(j));
-    for (size_t i = 0; i < series->points().length(); i++) {
-      this->m_date[j][i] = series->points().at(i).x();
-      this->m_data[j][i] = series->points().at(i).y();
+    for (size_t i = 0; i < series->pointsVector().length(); i++) {
+      this->m_date[j][i] = series->pointsVector().at(i).x();
+      this->m_data[j][i] = series->pointsVector().at(i).y();
     }
   }
   this->initializeAxisLimits();
@@ -208,59 +212,155 @@ void ChartView::resizeEvent(QResizeEvent *event) {
       this->chart()->resize(event->size());
       this->m_coord->setPos(this->chart()->size().width() / 2 - 100,
                             this->chart()->size().height() - 20);
+      if (this->m_displayValues) {
+        this->removeTraceLines();
+      }
     }
   }
   QChartView::resizeEvent(event);
   return;
 }
 
-void ChartView::mouseMoveEvent(QMouseEvent *event) {
-  QString dateString;
-  QDateTime date;
-  qreal x, y;
+void ChartView::removeTraceLines() {
+  if (this->m_xTraceLinePtr != nullptr) {
+    this->scene()->removeItem(this->m_xTraceLinePtr);
+    this->m_xTraceLinePtr = nullptr;
+  }
+  if (this->m_yTraceLinePtr != nullptr) {
+    this->scene()->removeItem(this->m_yTraceLinePtr);
+    this->m_yTraceLinePtr = nullptr;
+  }
+  return;
+}
 
+void ChartView::addXTraceLine(QMouseEvent *event) {
+  qreal ymin = this->chart()
+                   ->mapToPosition(QPointF(this->current_x_axis_min,
+                                           this->current_y_axis_min))
+                   .y();
+  qreal ymax = this->chart()
+                   ->mapToPosition(QPointF(this->current_x_axis_max,
+                                           this->current_y_axis_max))
+                   .y();
+  this->removeTraceLines();
+  this->m_xTraceLine.setLine(event->pos().x(), ymin, event->pos().x(), ymax);
+  this->m_xTraceLinePtr = this->scene()->addLine(this->m_xTraceLine);
+  return;
+}
+
+void ChartView::addXYTraceLine(QMouseEvent *event) {
+  QPointF min = this->chart()->mapToPosition(
+      QPointF(this->current_x_axis_min, this->current_y_axis_min));
+  QPointF max = this->chart()->mapToPosition(
+      QPointF(this->current_x_axis_max, this->current_y_axis_max));
+  this->removeTraceLines();
+  this->m_xTraceLine.setLine(event->pos().x(), min.y(), event->pos().x(),
+                             max.y());
+  this->m_yTraceLine.setLine(min.x(), event->pos().y(), max.x(),
+                             event->pos().y());
+  this->m_xTraceLinePtr = this->scene()->addLine(this->m_xTraceLine);
+  this->m_yTraceLinePtr = this->scene()->addLine(this->m_yTraceLine);
+  return;
+}
+
+void ChartView::addTraceLines(QMouseEvent *event) {
+  if (this->m_style == 1) {
+    this->addXTraceLine(event);
+  } else if (this->m_style == 2) {
+    this->addXYTraceLine(event);
+  }
+  return;
+}
+
+bool ChartView::getNearestPointToCursor(qreal cursorXPosition, int seriesIndex,
+                                        qreal &x, qreal &y) {
+  qreal x_ll = this->m_series[seriesIndex]->at(0).x();
+  qreal x_ul = this->m_series[seriesIndex]
+                   ->at(this->m_series[seriesIndex]->pointsVector().size() - 1)
+                   .x();
+
+  if (cursorXPosition >= x_ll && cursorXPosition <= x_ul) {
+    size_t i_min =
+        std::lower_bound(this->m_date[seriesIndex].begin(),
+                         this->m_date[seriesIndex].end(), cursorXPosition) -
+        this->m_date[seriesIndex].begin();
+    x = this->m_series[seriesIndex]->at(i_min).x();
+    y = this->m_series[seriesIndex]->at(i_min).y();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void ChartView::addLineValuesToLegend(qreal x) {
+  for (int i = 0; i < this->m_series.length(); i++) {
+    qreal xv, yv;
+    bool found = getNearestPointToCursor(x, i, xv, yv);
+    if (found)
+      this->chart()->series().at(i)->setName(this->m_legendNames.at(i) + ": " +
+                                             QString::number(yv));
+    else
+      this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
+  }
+  QDateTime date = QDateTime::fromMSecsSinceEpoch(x);
+  date.setTimeSpec(Qt::UTC);
+  QString dateString = QString("Date: ") + date.toString("MM/dd/yyyy hh:mm AP");
+  this->m_coord->setText(dateString);
+  return;
+}
+
+void ChartView::addChartPositionToLegend(qreal x, qreal y) {
+  this->m_coord->setText(
+      tr("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y - x));
+}
+
+bool ChartView::isOnPlot(qreal x, qreal y) {
+  if (x < this->current_x_axis_max && x > this->current_x_axis_min &&
+      y < this->current_y_axis_max && y > this->current_y_axis_min)
+    return true;
+  else
+    return false;
+}
+
+void ChartView::makeDynamicLegendLabels(qreal x, qreal y) {
+  if (this->m_style == 1) {
+    this->addLineValuesToLegend(x);
+  } else if (this->m_style == 2) {
+    this->addChartPositionToLegend(x, y);
+  }
+  return;
+}
+
+void ChartView::displayInstructionsOnStatusBar() {
+  if (this->m_statusBar)
+    this->m_statusBar->showMessage(
+        tr("Left click and drag to zoom in, Right click to zoom out, "
+           "Double click to reset zoom"));
+}
+
+void ChartView::resetPlotLegend() {
+  this->m_coord->setText("");
+  if (this->m_statusBar) this->m_statusBar->clearMessage();
+  for (int i = 0; i < this->m_series.length(); i++)
+    this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
+  this->removeTraceLines();
+}
+
+void ChartView::mouseMoveEvent(QMouseEvent *event) {
   if (this->m_coord) {
     if (this->m_displayValues) {
-      x = this->chart()->mapToValue(event->pos()).x();
-      y = this->chart()->mapToValue(event->pos()).y();
+      qreal x = this->chart()->mapToValue(event->pos()).x();
+      qreal y = this->chart()->mapToValue(event->pos()).y();
 
-      if (x < this->current_x_axis_max && x > this->current_x_axis_min &&
-          y < this->current_y_axis_max && y > this->current_y_axis_min) {
-        if (this->m_style == 1) {
-          int i_min = 0;
-          for (int i = 0; i < this->m_series.length(); i++) {
-            i_min = std::lower_bound(this->m_date[i].begin(),
-                                     this->m_date[i].end(), x) -
-                    this->m_date[i].begin();
-            this->chart()->series().at(i)->setName(
-                this->m_legendNames.at(i) + ": " +
-                QString::number(this->m_series[i]->points().at(i_min).y()));
-          }
-          date = QDateTime::fromMSecsSinceEpoch(x);
-          date.setTimeSpec(Qt::UTC);
-          dateString = QString("Date: ") + date.toString("MM/dd/yyyy hh:mm AP");
-          this->m_coord->setText(dateString);
-        } else if (this->m_style == 2)
-          this->m_coord->setText(tr("Measured: %1     Modeled: %2     Diff: %3")
-                                     .arg(x)
-                                     .arg(y)
-                                     .arg(y - x));
-
-        if (this->m_statusBar)
-          this->m_statusBar->showMessage(
-              tr("Left click and drag to zoom in, Right click to zoom out, "
-                 "Double click to reset zoom"));
+      if (this->isOnPlot(x, y)) {
+        this->makeDynamicLegendLabels(x, y);
+        this->addTraceLines(event);
+        this->displayInstructionsOnStatusBar();
       } else {
-        this->m_coord->setText("");
-        if (this->m_statusBar) this->m_statusBar->clearMessage();
-        for (int i = 0; i < this->m_series.length(); i++)
-          this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
+        this->resetPlotLegend();
       }
     } else {
-      this->m_coord->setText("");
-      if (this->m_statusBar) this->m_statusBar->clearMessage();
-      for (int i = 0; i < this->m_series.length(); i++)
-        this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
+      this->resetPlotLegend();
     }
   }
 

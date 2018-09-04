@@ -22,6 +22,7 @@
 #define CHARTVIEW_H
 #include <QChartView>
 #include <QDateTimeAxis>
+#include <QLineF>
 #include <QLineSeries>
 #include <QValueAxis>
 #include <QtCharts/QChartGlobal>
@@ -102,6 +103,10 @@ class ChartView : public QChartView {
   QVector<QLineSeries *> m_series;
   QVector<QVector<double>> m_date;
   QVector<QVector<double>> m_data;
+  QLineF m_yTraceLine;
+  QLineF m_xTraceLine;
+  QGraphicsItem *m_yTraceLinePtr;
+  QGraphicsItem *m_xTraceLinePtr;
   bool m_displayValues;
 
   QDateTimeAxis *m_dateAxis;
@@ -112,6 +117,24 @@ class ChartView : public QChartView {
 
   QGraphicsRectItem *m_infoRectItem;
   QGraphicsTextItem *m_infoItem;
+
+  bool getNearestPointToCursor(qreal cursorXPosition, int seriesIndex, qreal &x,
+                               qreal &y);
+  bool isOnPlot(qreal x, qreal y);
+  void addTraceLines(QMouseEvent *event);
+  void addXTraceLine(QMouseEvent *event);
+  void addXYTraceLine(QMouseEvent *event);
+  void removeTraceLines();
+
+  void addLineValuesToLegend(qreal x);
+
+  void addChartPositionToLegend(qreal x, qreal y);
+
+  void makeDynamicLegendLabels(qreal x, qreal y);
+
+  void displayInstructionsOnStatusBar();
+
+  void resetPlotLegend();
 
  public slots:
   void handleLegendMarkerClicked();
