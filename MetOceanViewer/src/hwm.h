@@ -28,6 +28,7 @@
 #include <QtMath>
 #include <QtWidgets>
 #include "chartview.h"
+#include "highwatermarks.h"
 #include "stationmodel.h"
 
 class Hwm : public QObject {
@@ -52,26 +53,13 @@ class Hwm : public QObject {
   QString getErrorString();
 
  private:
-  //...High water mark structure
-  struct hwm_data {
-    double lat;
-    double lon;
-    double bathy;
-    double measured;
-    double modeled;
-    double error;
-  };
-
   //...Private Variables
-  double m_regLineSlope, m_regLineIntercept;
-  double m_regCorrelation, m_regStdDev;
   QString m_errorString;
   QVector<double> m_classes;
-  QVector<hwm_data> m_highWaterMarks;
+  HighWaterMarks *m_hwm;
 
   //...Private Functions
   int readHWMData();
-  int computeLinearRegression();
   int classifyHWM(double diff);
   int plotHWMMap();
   int plotRegression();
@@ -89,7 +77,6 @@ class Hwm : public QObject {
   QQuickWidget *m_quickMap;
   QStatusBar *m_statusBar;
   StationModel *m_stationModel;
-
 };
 
 #endif  // HWM_H

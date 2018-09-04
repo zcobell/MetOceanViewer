@@ -52,12 +52,9 @@ Hwm::Hwm(QLineEdit *inFilebox, QCheckBox *inManualCheck,
   this->m_chartView = inChartView;
   this->m_quickMap = inMap;
   this->m_statusBar = inStatusBar;
-  this->m_regCorrelation = 0.0;
-  this->m_regLineIntercept = 0.0;
-  this->m_regLineSlope = 0.0;
-  this->m_regStdDev = 0.0;
   this->m_stationModel = stationModel;
   this->m_classes = inClassValues;
+  this->m_hwm = new HighWaterMarks(this);
 }
 
 QString Hwm::getErrorString() { return this->m_errorString; }
@@ -67,102 +64,6 @@ int Hwm::classifyHWM(double diff) {
     if (diff < this->m_classes[i]) return i;
   }
   return 7;
-}
-
-int Hwm::computeLinearRegression() {
-  try {
-    double SumXY = 0;
-    double SumX2 = 0;
-    double SumY2 = 0;
-    double SumY = 0;
-    double SumX = 0;
-    double M = 0;
-    double B = 0;
-    double N = static_cast<double>(this->m_highWaterMarks.size());
-    double NDry = 0;
-    double SumErr = 0;
-    for (int i = 0; i < N; i++) {
-      // We ditch points that didn't wet since they
-      // skew calculation
-      if (this->m_highWaterMarks[i].modeled > -9999) {
-        SumX = SumX + (this->m_highWaterMarks[i].measured);
-        SumY = SumY + (this->m_highWaterMarks[i].modeled);
-        SumXY = SumXY + (this->m_highWaterMarks[i].measured *
-                         this->m_highWaterMarks[i].modeled);
-        SumX2 = SumX2 + (this->m_highWaterMarks[i].measured *
-                         this->m_highWaterMarks[i].measured);
-        SumY2 = SumY2 + (this->m_highWaterMarks[i].modeled *
-                         this->m_highWaterMarks[i].modeled);
-        SumErr = SumErr + this->m_highWaterMarks[i].error;
-      } else {
-        NDry = NDry + 1;
-      }
-    }
-
-    // Number of points that we'll end up using
-    double N2 = N - NDry;
-
-    double R2, MeanErr, StdDev;
-
-    // Calculate the slope (M) and Correllation (R2)
-    if (this->m_checkForceZero->isChecked()) {
-      // Slope
-      M = SumXY / SumX2;
-
-      // Forced through zero
-      B = 0;
-
-      // Average Y
-      double YBar = SumY / N2;
-
-      // Calculate Total Sum of Squares
-      double SSTOT = 0.0;
-      for (int i = 0; i < N; i++) {
-        // We ditch points that didn't wet since they
-        // skew calculation
-        if (this->m_highWaterMarks[i].modeled > -9999) {
-          SSTOT = SSTOT + qPow((this->m_highWaterMarks[i].modeled - YBar), 2.0);
-        }
-      }
-
-      // Sum of square errors
-      double SSE = SumY2 - M * M * SumX2;
-
-      // R2
-      R2 = 1 - (SSE / SSTOT);
-    } else {
-      // Slope
-      M = (N2 * SumXY - SumX * SumY) / (N2 * SumX2 - (SumX * SumX));
-
-      // Intercept
-      B = ((SumY * SumX2) - (SumX * SumXY)) / (N2 * SumX2 - (SumX * SumX));
-
-      // R2 calculation
-      R2 = qPow(
-          ((N2 * SumXY - (SumX * SumY)) /
-           sqrt((N2 * SumX2 - (SumX * SumX)) * (N2 * SumY2 - (SumY * SumY)))),
-          2.0);
-    }
-
-    // Calculate Standard Deviation
-    MeanErr = SumErr / N2;
-    SumErr = 0;
-    for (int i = 0; i < N; i++)
-      if (this->m_highWaterMarks[i].modeled > -9999)
-        SumErr = SumErr + qPow(this->m_highWaterMarks[i].error - MeanErr, 2.0);
-
-    StdDev = qSqrt(SumErr / N2);
-
-    this->m_regLineSlope = M;
-    this->m_regLineIntercept = B;
-    this->m_regCorrelation = R2;
-    this->m_regStdDev = StdDev;
-
-  } catch (...) {
-    return 1;
-  }
-
-  return 0;
 }
 
 int Hwm::plotHWMMap() {
@@ -175,18 +76,18 @@ int Hwm::plotHWMMap() {
   else
     unitString = "ft";
 
-  for (int i = 0; i < this->m_highWaterMarks.length(); i++) {
+  for (int i = 0; i < this->m_hwm->n(); ++i) {
     int classification;
-    if (this->m_highWaterMarks[i].modeled < -9999)
+    if (this->m_hwm->hwm(i)->modeledElevation() < -999)
       classification = -1;
     else
-      classification = this->classifyHWM(this->m_highWaterMarks[i].error);
+      classification = this->classifyHWM(this->m_hwm->hwm(i)->modeledError());
 
-    Station s =
-        Station(QGeoCoordinate(this->m_highWaterMarks[i].lat,
-                               this->m_highWaterMarks[i].lon),
-                QString::number(i), "hwm", this->m_highWaterMarks[i].measured,
-                this->m_highWaterMarks[i].modeled, classification);
+    Station s = Station(
+        QGeoCoordinate(this->m_hwm->hwm(i)->coordinate()->latitude(),
+                       this->m_hwm->hwm(i)->coordinate()->longitude()),
+        QString::number(i), "hwm", this->m_hwm->hwm(i)->observedElevation(),
+        this->m_hwm->hwm(i)->modeledElevation(), classification);
     this->m_stationModel->addMarker(s);
   }
 
@@ -215,13 +116,13 @@ int Hwm::plotRegression() {
   this->m_chartView->initializeAxis(2);
 
   if (this->m_checkForceZero->isChecked())
-    RegressionString.sprintf("y = %0.2fx", this->m_regLineSlope);
+    RegressionString.sprintf("y = %0.2fx", this->m_hwm->slope());
   else
-    RegressionString.sprintf("y = %0.2fx + %0.2f", this->m_regLineSlope,
-                             this->m_regLineIntercept);
+    RegressionString.sprintf("y = %0.2fx + %0.2f", this->m_hwm->slope(),
+                             this->m_hwm->intercept());
 
-  CorrelationString.sprintf("%0.2f", this->m_regCorrelation);
-  StandardDeviationString.sprintf("%0.2f", this->m_regStdDev);
+  CorrelationString.sprintf("%0.2f", this->m_hwm->r2());
+  StandardDeviationString.sprintf("%0.2f", this->m_hwm->standardDeviation());
 
   RegressionTitle = this->m_plotTitleBox->text();
   YLabel = this->m_modeledAxisLabelBox->text();
@@ -236,7 +137,8 @@ int Hwm::plotRegression() {
   RegColor =
       Colors::styleSheetToColor(this->m_buttonColorRegLine->styleSheet());
 
-  boundValue = this->m_boundingLineValue->value() * this->m_regStdDev;
+  boundValue =
+      this->m_boundingLineValue->value() * this->m_hwm->standardDeviation();
 
   doColorDots = this->m_checkColorDots->isChecked();
 
@@ -272,33 +174,33 @@ int Hwm::plotRegression() {
   this->m_chartView->xAxis()->setTitleText(XLabel);
   this->m_chartView->yAxis()->setTitleText(YLabel);
 
-  min = DBL_MAX;
-  max = DBL_MIN;
+  min = std::numeric_limits<double>::max();
+  max = std::numeric_limits<double>::min();
 
-  for (int i = 0; i < this->m_highWaterMarks.length(); i++) {
-    int classification = this->classifyHWM(this->m_highWaterMarks[i].error);
+  for (int i = 0; i < this->m_hwm->n(); ++i) {
+    int classification = this->classifyHWM(this->m_hwm->hwm(i)->modeledError());
 
-    if (this->m_highWaterMarks[i].modeled > -900)
+    if (this->m_hwm->hwm(i)->modeledElevation() > -900)
       scatterSeries[classification]->append(
-          QPointF(this->m_highWaterMarks[i].measured,
-                  this->m_highWaterMarks[i].modeled));
+          QPointF(this->m_hwm->hwm(i)->observedElevation(),
+                  this->m_hwm->hwm(i)->modeledElevation()));
     else
       scatterSeries[classification]->append(
-          QPointF(this->m_highWaterMarks[i].measured,
-                  this->m_highWaterMarks[i].measured));
+          QPointF(this->m_hwm->hwm(i)->observedElevation(),
+                  this->m_hwm->hwm(i)->observedElevation()));
 
-    if (this->m_highWaterMarks[i].modeled > max &&
-        this->m_highWaterMarks[i].modeled > -900)
-      max = this->m_highWaterMarks[i].modeled;
-    if (this->m_highWaterMarks[i].modeled < min &&
-        this->m_highWaterMarks[i].modeled > -900)
-      min = this->m_highWaterMarks[i].modeled;
-    if (this->m_highWaterMarks[i].measured > max &&
-        this->m_highWaterMarks[i].measured > -900)
-      max = this->m_highWaterMarks[i].measured;
-    if (this->m_highWaterMarks[i].measured < min &&
-        this->m_highWaterMarks[i].measured > -900)
-      min = this->m_highWaterMarks[i].measured;
+    if (this->m_hwm->hwm(i)->modeledElevation() > max &&
+        this->m_hwm->hwm(i)->modeledElevation() > -900)
+      max = this->m_hwm->hwm(i)->modeledElevation();
+    if (this->m_hwm->hwm(i)->modeledElevation() < min &&
+        this->m_hwm->hwm(i)->modeledElevation() > -900)
+      min = this->m_hwm->hwm(i)->modeledElevation();
+    if (this->m_hwm->hwm(i)->observedElevation() > max &&
+        this->m_hwm->hwm(i)->observedElevation() > -900)
+      max = this->m_hwm->hwm(i)->observedElevation();
+    if (this->m_hwm->hwm(i)->observedElevation() < min &&
+        this->m_hwm->hwm(i)->observedElevation() > -900)
+      min = this->m_hwm->hwm(i)->observedElevation();
   }
 
   this->m_chartView->setAxisLimits(min, max, min, max);
@@ -327,9 +229,9 @@ int Hwm::plotRegression() {
   //...Regression Line
   QLineSeries *RegressionLine = new QLineSeries(this->m_chartView->chart());
   RegressionLine->append(
-      -1000, this->m_regLineSlope * -1000 + this->m_regLineIntercept);
+      -1000, this->m_hwm->slope() * -1000 + this->m_hwm->intercept());
   RegressionLine->append(
-      1000, this->m_regLineSlope * 1000 + this->m_regLineIntercept);
+      1000, this->m_hwm->slope() * 1000 + this->m_hwm->intercept());
   RegressionLine->setPen(QPen(QBrush(RegColor), 3));
   this->m_chartView->chart()->addSeries(RegressionLine);
   RegressionLine->attachAxis(this->m_chartView->xAxis());
@@ -388,13 +290,7 @@ int Hwm::plotRegression() {
 int Hwm::processHWMData() {
   int ierr = this->readHWMData();
   if (ierr != 0) {
-    this->m_errorString = tr("Could not read the high water mark file.");
-    return -1;
-  }
-
-  ierr = this->computeLinearRegression();
-  if (ierr != 0) {
-    this->m_errorString = tr("Could not calculate the regression function.");
+    this->m_errorString = tr("Could not process the high water mark file.");
     return -1;
   }
 
@@ -439,43 +335,9 @@ int Hwm::processHWMData() {
 }
 
 int Hwm::readHWMData() {
-  QString Line;
-  QStringList List;
-
-  QFile MyFile(this->m_fileBox->text());
-
-  // Check if we can open the file
-  if (!MyFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    this->m_errorString = MyFile.errorString();
-    return -1;
-  }
-
-  try {
-    int nLines = 0;
-    while (!MyFile.atEnd()) {
-      Line = MyFile.readLine();
-      nLines = nLines + 1;
-    }
-    MyFile.close();
-    MyFile.open(QIODevice::ReadOnly | QIODevice::Text);
-    this->m_highWaterMarks.resize(nLines);
-    int i = 0;
-    while (!MyFile.atEnd()) {
-      Line = MyFile.readLine().simplified();
-      List = Line.split(",");
-      this->m_highWaterMarks[i].lon = List.value(0).toDouble();
-      this->m_highWaterMarks[i].lat = List.value(1).toDouble();
-      this->m_highWaterMarks[i].bathy = List.value(2).toDouble();
-      this->m_highWaterMarks[i].measured = List.value(3).toDouble();
-      this->m_highWaterMarks[i].modeled = List.value(4).toDouble();
-      this->m_highWaterMarks[i].error = List.value(5).toDouble();
-      i = i + 1;
-    }
-    return 0;
-  } catch (...) {
-    this->m_errorString = tr("Unexpected error reading file.");
-    return 1;
-  }
+  this->m_hwm->setFilename(this->m_fileBox->text());
+  this->m_hwm->setRegressionThroughZero(this->m_checkForceZero);
+  return this->m_hwm->read();
 }
 
 int Hwm::saveHWMMap(QString outputFile, QString filter) {

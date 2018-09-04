@@ -31,3 +31,6 @@ equals(GUI_DISABLE,1) {
 CONFIG += ordered           
 
 HEADERS += version.h
+
+SUBDIRS += \
+    MetOceanHWMStats
