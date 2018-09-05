@@ -556,14 +556,29 @@ void AddTimeseriesDialog::on_button_presetColor4_clicked() {
 }
 
 void AddTimeseriesDialog::on_button_describeepsg_clicked() {
+  QMessageBox msgBox(this);
+  msgBox.setWindowTitle("Coordinate System Description");
+  msgBox.setTextFormat(Qt::RichText);
+  QString description;
+
   if (this->proj->containsEPSG(ui->spin_epsg->value())) {
-    QString description =
-        this->proj->coordinateSystemString(ui->spin_epsg->value());
-    QMessageBox::information(this, tr("Coordinate System Description"),
-                             description);
-  } else
-    QMessageBox::information(this, tr("Coordinate System Description"),
-                             tr("ERROR: Invalid EPSG"));
+    int proj4code = ui->spin_epsg->value();
+    QString projInitString = this->proj->coordinateSystemString(proj4code);
+    description = QStringLiteral(
+                      "<b>Coordinate System Reference:</b> <a "
+                      "href=\"http://spatialreference.org/ref/epsg/") +
+                  QString::number(proj4code) +
+                  QStringLiteral("/\">SpatialReference.org</a>") +
+                  QStringLiteral("<br><b>Proj4 Initialization String:</b> ") +
+                  projInitString;
+  } else {
+    description = "<b>Error:</b> Invalid EPSG";
+  }
+  msgBox.setText(description);
+  msgBox.setModal(true);
+  msgBox.exec();
+  msgBox.deleteLater();
+  return;
 }
 
 void AddTimeseriesDialog::on_spin_epsg_valueChanged(int arg1) {
