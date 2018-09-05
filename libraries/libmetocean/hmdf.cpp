@@ -196,13 +196,12 @@ int Hmdf::writeCsv(QString filename) {
     output.write(QString("Units: " + this->units() + "\n").toUtf8());
     output.write(QString("\n").toUtf8());
     for (i = 0; i < this->station(s)->numSnaps(); i++) {
-      if (QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i)).isValid()) {
+      QDateTime d = QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i));
+      d.setTimeSpec(Qt::UTC);
+      if (d.isValid()) {
         value.sprintf("%10.4e", this->station(s)->data(i));
         output.write(
-            QString(QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i))
-                        .toString("MM/dd/yyyy,hh:mm,") +
-                    value + "\n")
-                .toUtf8());
+            QString(d.toString("MM/dd/yyyy,hh:mm,") + value + "\n").toUtf8());
       }
     }
     output.write(QString("\n\n\n").toUtf8());
@@ -231,12 +230,14 @@ int Hmdf::writeImeds(QString filename) {
             .toUtf8());
 
     for (int i = 0; i < this->station(s)->numSnaps(); i++) {
-      if (QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i)).isValid()) {
+      QDateTime d = QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i));
+      d.setTimeSpec(Qt::UTC);
+
+      if (d.isValid()) {
         value.sprintf("%10.4e", this->station(s)->data(i));
         outputFile.write(
-            QString(QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i))
-                        .toString("yyyy    MM    dd    hh    mm    ss") +
-                    "    " + value + "\n")
+            QString(d.toString("yyyy    MM    dd    hh    mm    ss") + "    " +
+                    value + "\n")
                 .toUtf8());
       }
     }
