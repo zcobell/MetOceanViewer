@@ -142,7 +142,7 @@ void AddTimeseriesDialog::setItemsByFiletype() {
     ui->text_filetype->setText(QStringLiteral("ADCIRC netCDF"));
     ui->date_coldstart->setEnabled(true);
     this->setColdstartSelectElements(true);
-    this->setStationSelectElements(true);
+    this->setStationSelectElements(false);
     this->setVariableSelectElements(false);
     this->setVerticalLayerElements(false);
     this->m_fileReadError = false;
