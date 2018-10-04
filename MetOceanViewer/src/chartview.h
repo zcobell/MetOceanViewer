@@ -94,6 +94,8 @@ class ChartView : public QChartView {
  private:
   void resetAxisLimits();
 
+  static bool pointXLessThan(const QPointF &p1, const QPointF &p2);
+
   qreal x_axis_min, x_axis_max;
   qreal y_axis_min, y_axis_max;
   qreal current_x_axis_min, current_x_axis_max;
@@ -101,8 +103,6 @@ class ChartView : public QChartView {
   QStatusBar *m_statusBar;
   QVector<QString> m_legendNames;
   QVector<QLineSeries *> m_series;
-  QVector<QVector<double>> m_date;
-  QVector<QVector<double>> m_data;
   QLineF m_yTraceLine;
   QLineF m_xTraceLine;
   QGraphicsItem *m_yTraceLinePtr;

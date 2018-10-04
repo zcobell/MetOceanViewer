@@ -29,6 +29,10 @@
 #include <QtWidgets/QGraphicsTextItem>
 #include "timezone.h"
 
+bool ChartView::pointXLessThan(const QPointF &p1, const QPointF &p2) {
+  return p1.x() < p2.x();
+}
+
 ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
   this->m_coord = new QGraphicsSimpleTextItem(this->chart());
   this->m_yAxis = nullptr;
@@ -173,16 +177,6 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
   this->m_legendNames.push_back(name);
 
   this->chart()->addSeries(series);
-
-  this->m_date.resize(this->m_date.size() + 1);
-  this->m_data.resize(this->m_data.size() + 1);
-  this->m_date.last().resize(series->pointsVector().size());
-  this->m_data.last().resize(series->pointsVector().size());
-  for (size_t i = 0; i < series->pointsVector().size(); i++) {
-    this->m_date.last()[i] = series->pointsVector().at(i).x();
-    this->m_data.last()[i] = series->pointsVector().at(i).y();
-  }
-
   if (this->xAxis() != nullptr)
     series->attachAxis(this->xAxis());
   else
@@ -193,14 +187,6 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
 }
 
 void ChartView::rebuild() {
-  for (size_t j = 0; j < this->chart()->series().length(); j++) {
-    QLineSeries *series =
-        static_cast<QLineSeries *>(this->chart()->series().at(j));
-    for (size_t i = 0; i < series->pointsVector().length(); i++) {
-      this->m_date[j][i] = series->pointsVector().at(i).x();
-      this->m_data[j][i] = series->pointsVector().at(i).y();
-    }
-  }
   this->initializeAxisLimits();
   return;
 }
@@ -275,18 +261,17 @@ void ChartView::addTraceLines(QMouseEvent *event) {
 
 bool ChartView::getNearestPointToCursor(qreal cursorXPosition, int seriesIndex,
                                         qreal &x, qreal &y) {
-  qreal x_ll = this->m_series[seriesIndex]->at(0).x();
-  qreal x_ul = this->m_series[seriesIndex]
-                   ->at(this->m_series[seriesIndex]->pointsVector().size() - 1)
-                   .x();
+  QVector<QPointF> pv = this->m_series[seriesIndex]->pointsVector();
+  qreal x_ll = pv.at(0).x();
+  qreal x_ul = pv.last().x();
 
   if (cursorXPosition >= x_ll && cursorXPosition <= x_ul) {
+    QPointF c = QPointF(cursorXPosition, 0);
     size_t i_min =
-        std::lower_bound(this->m_date[seriesIndex].begin(),
-                         this->m_date[seriesIndex].end(), cursorXPosition) -
-        this->m_date[seriesIndex].begin();
-    x = this->m_series[seriesIndex]->at(i_min).x();
-    y = this->m_series[seriesIndex]->at(i_min).y();
+        std::lower_bound(pv.begin(), pv.end(), c, ChartView::pointXLessThan) -
+        pv.begin();
+    x = pv.at(i_min).x();
+    y = pv.at(i_min).y();
     return true;
   } else {
     return false;
@@ -296,7 +281,7 @@ bool ChartView::getNearestPointToCursor(qreal cursorXPosition, int seriesIndex,
 void ChartView::addLineValuesToLegend(qreal x) {
   for (int i = 0; i < this->m_series.length(); i++) {
     qreal xv, yv;
-    bool found = getNearestPointToCursor(x, i, xv, yv);
+    bool found = this->getNearestPointToCursor(x, i, xv, yv);
     if (found)
       this->chart()->series().at(i)->setName(this->m_legendNames.at(i) + ": " +
                                              QString::number(yv));
