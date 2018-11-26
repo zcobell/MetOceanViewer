@@ -20,5 +20,6 @@ script:
 - gcc --version
 - g++ --version
 - . /opt/qt510/bin/qt510-env.sh
+- git submodule update --init --recursive
 - /opt/qt510/bin/qmake MetOcean.pro 
 - make -j4
