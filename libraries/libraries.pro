@@ -20,7 +20,7 @@
 
 TEMPLATE = subdirs
 
-SUBDIRS  = libproj4 \
+SUBDIRS  = ../thirdparty/ezproj \
            libnetcdfcxx \
            libtide \
            libmetocean

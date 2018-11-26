@@ -25,7 +25,7 @@
 #include <QDialog>
 #include <QVector>
 #include "dflow.h"
-#include "proj4.h"
+#include "ezproj.h"
 
 namespace Ui {
 class AddTimeseriesDialog;
@@ -158,7 +158,7 @@ private slots:
   int m_epsg, m_layer;
 
   Dflow *dflow;
-  proj4 *proj;
+  std::unique_ptr<Ezproj> proj;
 
 };
 

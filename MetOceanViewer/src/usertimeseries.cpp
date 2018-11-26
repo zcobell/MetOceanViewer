@@ -21,11 +21,11 @@
 #include "adcircstationoutput.h"
 #include "dflow.h"
 #include "errors.h"
+#include "ezproj.h"
 #include "filetypes.h"
 #include "generic.h"
 #include "metoceanviewer.h"
 #include "netcdf.h"
-#include "proj4.h"
 
 UserTimeseries::UserTimeseries(
     QTableWidget *inTable, QCheckBox *inXAxisCheck, QCheckBox *inYAxisCheck,
@@ -721,7 +721,7 @@ int UserTimeseries::projectStations(QVector<int> epsg,
   int i, j, ierr;
   double x, y, x2, y2;
   bool isLatLon;
-  proj4 *projection = new proj4(this);
+  std::unique_ptr<Ezproj> projection(new Ezproj());
 
   for (i = 0; i < projectedStations.length(); ++i) {
     if (epsg[i] != 4326) {
@@ -735,6 +735,6 @@ int UserTimeseries::projectStations(QVector<int> epsg,
       }
     }
   }
-  delete projection;
+  projection.reset(nullptr);
   return MetOceanViewer::Error::NOERR;
 }

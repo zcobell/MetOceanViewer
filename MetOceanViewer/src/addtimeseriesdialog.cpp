@@ -20,6 +20,7 @@
 
 #include "addtimeseriesdialog.h"
 #include <QMessageBox>
+#include <memory>
 #include "colors.h"
 #include "filetypes.h"
 #include "generic.h"
@@ -50,7 +51,7 @@ AddTimeseriesDialog::AddTimeseriesDialog(QWidget *parent)
   this->m_epsg = 4326;
   this->m_layer = 0;
   this->dflow = nullptr;
-  this->proj = new proj4(this);
+  this->proj.reset(new Ezproj());
 }
 //-------------------------------------------//
 
@@ -515,7 +516,7 @@ void AddTimeseriesDialog::accept() {
              this->m_inputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
     emit addTimeseriesError(tr("You did not select a station file."));
     return;
-  } else if (!this->proj->containsEPSG(this->m_epsg)) {
+  } else if (!this->proj->containsEpsg(this->m_epsg)) {
     emit addTimeseriesError(
         tr("You did not enter a valid EPSG coordinate system."));
   } else
@@ -561,14 +562,19 @@ void AddTimeseriesDialog::on_button_describeepsg_clicked() {
   msgBox.setTextFormat(Qt::RichText);
   QString description;
 
-  if (this->proj->containsEPSG(ui->spin_epsg->value())) {
+  if (this->proj->containsEpsg(ui->spin_epsg->value())) {
     int proj4code = ui->spin_epsg->value();
-    QString projInitString = this->proj->coordinateSystemString(proj4code);
+    QString projInitString =
+        QString::fromStdString(this->proj->projInitializationString(proj4code));
+    QString csDescription =
+        QString::fromStdString(this->proj->description(proj4code));
     description = QStringLiteral(
                       "<b>Coordinate System Reference:</b> <a "
                       "href=\"http://spatialreference.org/ref/epsg/") +
                   QString::number(proj4code) +
                   QStringLiteral("/\">SpatialReference.org</a>") +
+                  QStringLiteral("<br><b>Coordinate System Description:</b> ") +
+                  csDescription +
                   QStringLiteral("<br><b>Proj4 Initialization String:</b> ") +
                   projInitString;
   } else {
@@ -582,7 +588,7 @@ void AddTimeseriesDialog::on_button_describeepsg_clicked() {
 }
 
 void AddTimeseriesDialog::on_spin_epsg_valueChanged(int arg1) {
-  if (this->proj->containsEPSG(arg1))
+  if (this->proj->containsEpsg(arg1))
     ui->spin_epsg->setStyleSheet("background-color: rgb(255, 255, 255);");
   else
     ui->spin_epsg->setStyleSheet("background-color: rgb(255, 0, 0);");
