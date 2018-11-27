@@ -24,6 +24,7 @@
 #include <QDateTime>
 #include <QDialog>
 #include <QVector>
+#include <memory>
 #include "dflow.h"
 #include "ezproj.h"
 

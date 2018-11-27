@@ -51,7 +51,7 @@ AddTimeseriesDialog::AddTimeseriesDialog(QWidget *parent)
   this->m_epsg = 4326;
   this->m_layer = 0;
   this->dflow = nullptr;
-  this->proj.reset(new Ezproj());
+  this->proj = std::unique_ptr<Ezproj>(new Ezproj());
 }
 //-------------------------------------------//
 

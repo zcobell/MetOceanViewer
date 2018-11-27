@@ -30,6 +30,7 @@
 #include <QTableWidget>
 #include <QVector>
 #include <QtCharts>
+#include <memory>
 #include "chartview.h"
 #include "generic.h"
 #include "hmdf.h"
