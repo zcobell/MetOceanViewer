@@ -58,11 +58,9 @@ UserTimeseries::~UserTimeseries() {}
 
 int UserTimeseries::getDataBounds(double &ymin, double &ymax,
                                   QDateTime &minDateOut, QDateTime &maxDateOut,
-                                  QVector<double> timeAddList) {
-  qint64 nullDate = 0;
-
-  ymin = DBL_MAX;
-  ymax = DBL_MIN;
+                                  QVector<double> &timeAddList) {
+  ymin = std::numeric_limits<double>::max();
+  ymax = std::numeric_limits<double>::min();
   qint64 minDate =
       QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0)).toMSecsSinceEpoch();
   qint64 maxDate =
@@ -71,69 +69,17 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
   for (int i = 0; i < this->m_fileDataUnique.length(); i++) {
     double unitConversion = this->m_table->item(i, 3)->text().toDouble();
     double addY = this->m_table->item(i, 5)->text().toDouble();
-    for (int k = 0; k < this->m_selectedStations.length(); k++) {
-      if (!this->m_fileDataUnique[i]
-               ->station(this->m_selectedStations[k])
-               ->isNull()) {
-        for (int j = 0; j < this->m_fileDataUnique[i]
-                                ->station(this->m_selectedStations[k])
-                                ->numSnaps();
-             j++) {
-          if (this->m_fileDataUnique[i]
-                              ->station(this->m_selectedStations[k])
-                              ->data(j) *
-                          unitConversion +
-                      addY <
-                  ymin &&
-              this->m_fileDataUnique[i]
-                      ->station(this->m_selectedStations[k])
-                      ->data(j) != HmdfStation::nullDataValue())
-            ymin = this->m_fileDataUnique[i]
-                           ->station(this->m_selectedStations[k])
-                           ->data(j) *
-                       unitConversion +
-                   addY;
-          if (this->m_fileDataUnique[i]
-                              ->station(this->m_selectedStations[k])
-                              ->data(j) *
-                          unitConversion +
-                      addY >
-                  ymax &&
-              this->m_fileDataUnique[i]
-                      ->station(this->m_selectedStations[k])
-                      ->data(j) != HmdfStation::nullDataValue())
-            ymax = this->m_fileDataUnique[i]
-                           ->station(this->m_selectedStations[k])
-                           ->data(j) *
-                       unitConversion +
-                   addY;
-          if (this->m_fileDataUnique[i]
-                          ->station(this->m_selectedStations[k])
-                          ->date(j) +
-                      (timeAddList[i] * 3600.0) <
-                  minDate &&
-              this->m_fileDataUnique[i]
-                      ->station(this->m_selectedStations[k])
-                      ->date(j) != nullDate)
-            minDate = this->m_fileDataUnique[i]
-                          ->station(this->m_selectedStations[k])
-                          ->date(j) +
-                      (timeAddList[i] * 3600.0);
-          if (this->m_fileDataUnique[i]
-                          ->station(this->m_selectedStations[k])
-                          ->date(j) +
-                      (timeAddList[i] * 3600.0) >
-                  maxDate &&
-              this->m_fileDataUnique[i]
-                      ->station(this->m_selectedStations[k])
-                      ->date(j) != nullDate)
-            maxDate = this->m_fileDataUnique[i]
-                          ->station(this->m_selectedStations[k])
-                          ->date(j) +
-                      (timeAddList[i] * 3600.0);
-        }
-      }
-    }
+    double minY, maxY;
+    qint64 minX, maxX;
+    this->m_fileDataUnique[i]->dataBounds(minX, maxX, minY, maxY);
+    minX = minX + timeAddList[i];
+    maxX = maxX + timeAddList[i];
+    minY = minY * unitConversion + addY;
+    maxY = maxY * unitConversion + addY;
+    ymin = std::min(minY, ymin);
+    ymax = std::max(maxY, ymax);
+    minDate = std::min(minDate, minX);
+    maxDate = std::max(maxDate, maxX);
   }
 
   minDateOut = QDateTime::fromMSecsSinceEpoch(minDate);
@@ -225,15 +171,92 @@ int UserTimeseries::getStationSelections() {
   return MetOceanViewer::Error::NOERR;
 }
 
+void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
+                                            int &seriesCounter,
+                                            QVector<QLineSeries *> &series,
+                                            qint64 startDate, qint64 endDate,
+                                            qint64 offset) {
+  seriesCounter = seriesCounter + 1;
+  series.resize(seriesCounter);
+
+  series.push_back(new QLineSeries(this->m_chartView->chart()));
+  QLineSeries *s = series.last();
+  QColor seriesColor;
+
+  s->setName(this->m_table->item(seriesCounter - 1, 1)->text());
+  seriesColor.setNamedColor(this->m_table->item(seriesCounter - 1, 2)->text());
+  s->setPen(QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+
+  double unitConversion =
+      this->m_table->item(seriesCounter - 1, 3)->text().toDouble();
+  double addX =
+      this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6;
+  double addY = this->m_table->item(seriesCounter - 1, 5)->text().toDouble();
+
+  for (int j = 0; j < h->station(this->m_markerId)->numSnaps(); j++) {
+    HmdfStation *st = h->station(this->m_markerId);
+    if (st->data(j) != HmdfStation::nullDataValue() &&
+        st->date(j) >= startDate && st->date(j) <= endDate) {
+      s->append(st->date(j) + addX - offset,
+                st->data(j) * unitConversion + addY);
+    }
+  }
+
+  if (s->points().size() > 0) {
+    plottedSeriesCounter++;
+    this->m_chartView->addSeries(s, s->name());
+  }
+  return;
+}
+
+void UserTimeseries::addMultipleStationsToPlot(
+    Hmdf *h, int index, QVector<QLineSeries *> &series, int &seriesCounter,
+    int &colorCounter, qint64 offset, qint64 startDate, qint64 endDate) {
+  for (int k = 0; k < this->m_selectedStations.length(); k++) {
+    HmdfStation *st = h->station(this->m_selectedStations[k]);
+
+    if (!st->isNull()) {
+      seriesCounter++;
+      colorCounter++;
+
+      //...Loop the colors
+      if (colorCounter >= this->m_randomColorList.length()) colorCounter = 0;
+
+      series.push_back(new QLineSeries(this->m_chartView->chart()));
+      QLineSeries *s = series.last();
+
+      s->setName(st->name() + QStringLiteral(": ") +
+                 this->m_table->item(index, 1)->text());
+      QColor seriesColor = this->m_randomColorList[colorCounter];
+
+      s->setPen(
+          QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+
+      double unitConversion = this->m_table->item(index, 3)->text().toDouble();
+      double addX = this->m_table->item(index, 4)->text().toDouble() * 3.6e+6;
+      double addY = this->m_table->item(index, 5)->text().toDouble();
+
+      for (int j = 0; j < st->numSnaps(); j++) {
+        if (st->data(j) != HmdfStation::nullDataValue() &&
+            st->date(j) >= startDate && st->date(j) <= endDate) {
+          s->append(st->date(j) + addX - offset,
+                    st->data(j) * unitConversion + addY);
+        }
+      }
+
+      if (s->points().size() > 0) {
+        this->m_chartView->addSeries(s, s->name());
+      }
+    }
+  }
+  return;
+}
+
 void UserTimeseries::plot() {
-  int i, j, k, ierr, colorCounter;
-  qint64 TempDate;
-  qreal TempValue;
-  double unitConversion, addX, addY;
+  int ierr, colorCounter;
   QVector<double> addXList;
   double ymin, ymax;
   QVector<QLineSeries *> series;
-  QColor seriesColor;
   QDateTime minDate, maxDate;
 
   colorCounter = -1;
@@ -253,7 +276,7 @@ void UserTimeseries::plot() {
   if (ierr != MetOceanViewer::Error::NOERR) return;
 
   addXList.resize(this->m_fileDataUnique.length());
-  for (i = 0; i < this->m_fileDataUnique.length(); i++)
+  for (int i = 0; i < this->m_fileDataUnique.length(); i++)
     addXList[i] = this->m_table->item(i, 4)->text().toDouble();
 
   this->m_markerId = this->m_selectedStations[0];
@@ -282,113 +305,17 @@ void UserTimeseries::plot() {
   int seriesCounter = 0;
   int plottedSeriesCounter = 0;
 
-  for (i = 0; i < this->m_fileDataUnique.length(); i++) {
+  for (int i = 0; i < this->m_fileDataUnique.length(); i++) {
     if (this->m_selectedStations.length() == 1) {
-      seriesCounter = seriesCounter + 1;
-      series.resize(seriesCounter);
-      series[seriesCounter - 1] = new QLineSeries(this->m_chartView->chart());
-      series[seriesCounter - 1]->setName(
-          this->m_table->item(seriesCounter - 1, 1)->text());
-      seriesColor.setNamedColor(
-          this->m_table->item(seriesCounter - 1, 2)->text());
-      series[seriesCounter - 1]->setPen(
-          QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-      unitConversion =
-          this->m_table->item(seriesCounter - 1, 3)->text().toDouble();
-      addX =
-          this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6;
-      addY = this->m_table->item(seriesCounter - 1, 5)->text().toDouble();
-      for (j = 0;
-           j < this->m_fileDataUnique[i]->station(this->m_markerId)->numSnaps();
-           j++) {
-        if (this->m_fileDataUnique[i]->station(this->m_markerId)->data(j) !=
-                HmdfStation::nullDataValue() &&
-            this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) >=
-                startDate &&
-            this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) <=
-                endDate) {
-          TempDate =
-              this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) +
-              addX - offset;
-          TempValue =
-              this->m_fileDataUnique[i]->station(this->m_markerId)->data(j) *
-                  unitConversion +
-              addY;
-          series[seriesCounter - 1]->append(TempDate, TempValue);
-        }
-      }
-
-      if (series[seriesCounter - 1]->points().size() > 0) {
-        plottedSeriesCounter = plottedSeriesCounter + 1;
-        this->m_chartView->addSeries(series[seriesCounter - 1],
-                                     series[seriesCounter - 1]->name());
-      }
+      this->addSingleStationToPlot(this->m_fileDataUnique[i],
+                                   plottedSeriesCounter, seriesCounter, series,
+                                   startDate, endDate, offset);
     } else {
       //...Plot multiple stations. We use random colors and append the station
       // number
-      for (k = 0; k < this->m_selectedStations.length(); k++) {
-        if (!this->m_fileDataUnique[i]
-                 ->station(this->m_selectedStations[k])
-                 ->isNull()) {
-          seriesCounter = seriesCounter + 1;
-          colorCounter = colorCounter + 1;
-
-          //...Loop the colors
-          if (colorCounter >= this->m_randomColorList.length())
-            colorCounter = 0;
-
-          series.resize(seriesCounter);
-          series[seriesCounter - 1] =
-              new QLineSeries(this->m_chartView->chart());
-          series[seriesCounter - 1]->setName(
-              this->m_fileDataUnique[i]
-                  ->station(this->m_selectedStations[k])
-                  ->name() +
-              QStringLiteral(": ") + this->m_table->item(i, 1)->text());
-          seriesColor = this->m_randomColorList[colorCounter];
-          series[seriesCounter - 1]->setPen(
-              QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-          unitConversion = this->m_table->item(i, 3)->text().toDouble();
-          addX = this->m_table->item(i, 4)->text().toDouble() * 3.6e+6;
-          addY = this->m_table->item(i, 5)->text().toDouble();
-          for (j = 0; j < this->m_fileDataUnique[i]
-                              ->station(this->m_selectedStations[k])
-                              ->numSnaps();
-               j++) {
-            if (this->m_fileDataUnique[i]
-                        ->station(this->m_selectedStations[k])
-                        ->data(j) != HmdfStation::nullDataValue() &&
-                this->m_fileDataUnique[i]
-                        ->station(this->m_selectedStations[k])
-                        ->date(j) >= startDate &&
-                this->m_fileDataUnique[i]
-                        ->station(this->m_selectedStations[k])
-                        ->date(j) <= endDate) {
-              TempDate = this->m_fileDataUnique[i]
-                             ->station(this->m_selectedStations[k])
-                             ->date(j) +
-                         addX - offset;
-              TempValue = this->m_fileDataUnique[i]
-                                  ->station(this->m_selectedStations[k])
-                                  ->data(j) *
-                              unitConversion +
-                          addY;
-              series[seriesCounter - 1]->append(TempDate, TempValue);
-            }
-          }
-
-          if (series[seriesCounter - 1]->points().size() > 0) {
-            this->m_chartView->chart()->addSeries(series[seriesCounter - 1]);
-            this->m_chartView->chart()
-                ->legend()
-                ->markers()
-                .at(seriesCounter - 1)
-                ->setFont(QFont("Helvetica", 10, QFont::Bold));
-            this->m_chartView->addSeries(series[seriesCounter - 1],
-                                         series[seriesCounter - 1]->name());
-          }
-        }
-      }
+      this->addMultipleStationsToPlot(this->m_fileDataUnique[i], i, series,
+                                      seriesCounter, colorCounter, offset,
+                                      startDate, endDate);
     }
   }
 
@@ -708,7 +635,8 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
       if (!found) {
         // Build a station with a null dataset we can find later
         DataOut[i]->station(j)->setName("NONAME");
-        DataOut[i]->station(j)->setNext(HmdfStation::nullDataValue(), 0.0);
+        DataOut[i]->station(j)->setNext(HmdfStation::nullDateValue(),
+                                        HmdfStation::nullDataValue());
         DataOut[i]->station(j)->setIsNull(true);
       }
     }

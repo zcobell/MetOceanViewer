@@ -480,10 +480,11 @@ void MainWindow::setupUserTimeseriesMap() {
   QObject *userTimeseriesItem = ui->quick_timeseriesMap->rootObject();
   QObject::connect(userTimeseriesItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeUserMarker(QString)));
+
   ui->date_TimeseriesStartDate->setDateTime(
-      ui->date_TimeseriesStartDate->minimumDateTime());
+      QDateTime(QDate(1980, 1, 1), QTime(0, 0, 0)));
   ui->date_TimeseriesEndDate->setDateTime(
-      ui->date_TimeseriesEndDate->maximumDateTime());
+      QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0)));
 
   QMetaObject::invokeMethod(userTimeseriesItem, "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),

@@ -382,8 +382,13 @@ int Hmdf::writeNetcdf(QString filename) {
     char *name = new char[200];
     char *id = new char[200];
 
-    this->station(i)->name().toStdString().copy(name, 200, 0);
-    this->station(i)->id().toStdString().copy(id, 200, 0);
+    memset(name, ' ', 200);
+    memset(id, ' ', 200);
+
+    this->station(i)->name().toStdString().copy(
+        name, this->station(i)->name().length(), 0);
+    this->station(i)->id().toStdString().copy(
+        id, this->station(i)->id().length(), 0);
 
     for (int j = 0; j < this->station(i)->numSnaps(); j++) {
       time[j] = this->station(i)->date(j) / 1000;
@@ -474,12 +479,14 @@ void Hmdf::dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
   for (int i = 0; i < this->nstations(); i++) {
     qint64 tempDateMin, tempDateMax;
     double tempMinValue, tempMaxValue;
-    this->station(i)->dataBounds(tempDateMin, tempDateMax, tempMinValue,
-                                 tempMaxValue);
-    dateMin = std::min(tempDateMin, dateMin);
-    dateMax = std::max(tempDateMax, dateMax);
-    minValue = std::min(tempMinValue, minValue);
-    maxValue = std::max(tempMaxValue, maxValue);
+    if (!this->station(i)->isNull()) {
+      this->station(i)->dataBounds(tempDateMin, tempDateMax, tempMinValue,
+                                   tempMaxValue);
+      dateMin = std::min(tempDateMin, dateMin);
+      dateMax = std::max(tempDateMax, dateMax);
+      minValue = std::min(tempMinValue, minValue);
+      maxValue = std::max(tempMaxValue, maxValue);
+    }
   }
   return;
 }

@@ -72,7 +72,7 @@ class UserTimeseries : public QObject {
   int buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
                         QVector<double> Y, QVector<Hmdf *> &DataOut);
   int getDataBounds(double &ymin, double &ymax, QDateTime &minDateOut,
-                    QDateTime &maxDateOut, QVector<double> timeAddList);
+                    QDateTime &maxDateOut, QVector<double> &timeAddList);
   int getMultipleMarkersFromMap();
   int getAsyncMultipleMarkersFromMap();
   int projectStations(QVector<int> epsg, QVector<Hmdf *> &projectedStations);
@@ -85,6 +85,15 @@ class UserTimeseries : public QObject {
   int processGenericNetcdfData(int tableIndex, Hmdf *data);
   int processStationLocations();
   int addMarkersToMap();
+  void addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
+                              int &seriesCounter,
+                              QVector<QLineSeries *> &series, qint64 startDate,
+                              qint64 endDate, qint64 offset);
+  void addMultipleStationsToPlot(Hmdf *h, int index,
+                                 QVector<QLineSeries *> &series,
+                                 int &seriesCounter, int &colorCounter,
+                                 qint64 offset, qint64 startDate,
+                                 qint64 endDate);
 
   //...Private Variables
   int m_markerId;
