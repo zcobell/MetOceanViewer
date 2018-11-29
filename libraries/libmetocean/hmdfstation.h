@@ -34,6 +34,14 @@ class HmdfStation : public QObject {
 
   void clear();
 
+  static constexpr double nullDataValue() {
+    return std::numeric_limits<double>::min();
+  }
+
+  static constexpr qint64 nullDateValue() {
+    return std::numeric_limits<qint64>::min();
+  }
+
   QGeoCoordinate *coordinate();
   void setCoordinate(const QGeoCoordinate coordinate);
 

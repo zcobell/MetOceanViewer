@@ -87,7 +87,7 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
                   ymin &&
               this->m_fileDataUnique[i]
                       ->station(this->m_selectedStations[k])
-                      ->data(j) != MetOceanViewer::NULL_TS)
+                      ->data(j) != HmdfStation::nullDataValue())
             ymin = this->m_fileDataUnique[i]
                            ->station(this->m_selectedStations[k])
                            ->data(j) *
@@ -101,7 +101,7 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
                   ymax &&
               this->m_fileDataUnique[i]
                       ->station(this->m_selectedStations[k])
-                      ->data(j) != MetOceanViewer::NULL_TS)
+                      ->data(j) != HmdfStation::nullDataValue())
             ymax = this->m_fileDataUnique[i]
                            ->station(this->m_selectedStations[k])
                            ->data(j) *
@@ -302,7 +302,7 @@ void UserTimeseries::plot() {
            j < this->m_fileDataUnique[i]->station(this->m_markerId)->numSnaps();
            j++) {
         if (this->m_fileDataUnique[i]->station(this->m_markerId)->data(j) !=
-                MetOceanViewer::NULL_TS &&
+                HmdfStation::nullDataValue() &&
             this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) >=
                 startDate &&
             this->m_fileDataUnique[i]->station(this->m_markerId)->date(j) <=
@@ -357,7 +357,7 @@ void UserTimeseries::plot() {
                j++) {
             if (this->m_fileDataUnique[i]
                         ->station(this->m_selectedStations[k])
-                        ->data(j) != MetOceanViewer::NULL_TS &&
+                        ->data(j) != HmdfStation::nullDataValue() &&
                 this->m_fileDataUnique[i]
                         ->station(this->m_selectedStations[k])
                         ->date(j) >= startDate &&
@@ -708,7 +708,7 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
       if (!found) {
         // Build a station with a null dataset we can find later
         DataOut[i]->station(j)->setName("NONAME");
-        DataOut[i]->station(j)->setNext(MetOceanViewer::NULL_TS, 0.0);
+        DataOut[i]->station(j)->setNext(HmdfStation::nullDataValue(), 0.0);
         DataOut[i]->station(j)->setIsNull(true);
       }
     }

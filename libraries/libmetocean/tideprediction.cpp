@@ -100,6 +100,8 @@ int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
     }
     st->setIsNull(false);
     data->addStation(st);
+    data->setUnits("m");
+    data->setDatum("mllw");
 
     return 0;
   } else {

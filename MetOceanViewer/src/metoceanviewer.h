@@ -3,14 +3,6 @@
 
 namespace MetOceanViewer {
 
-const int NULL_TS = -99999;
-const int NULL_DAY = 1;
-const int NULL_MONTH = 1;
-const int NULL_YEAR = 1200;
-const int NULL_HOUR = 0;
-const int NULL_MINUTE = 0;
-const int NULL_SECOND = 0;
-
 namespace FileType {
 enum _filetype {
   NETCDF_ADCIRC,

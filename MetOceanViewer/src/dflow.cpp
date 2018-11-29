@@ -71,9 +71,9 @@ int Dflow::_get2DVelocityMagnitude(int layer, QVector<QVector<double>> &data) {
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++) {
-      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
-          y_data[i][j] == MetOceanViewer::NULL_TS)
-        data[i][j] = MetOceanViewer::NULL_TS;
+      if (x_data[i][j] == HmdfStation::nullDataValue() ||
+          y_data[i][j] == HmdfStation::nullDataValue())
+        data[i][j] = HmdfStation::nullDataValue();
       else
         data[i][j] = qSqrt(qPow(x_data[i][j], 2.0) + qPow(y_data[i][j], 2.0));
     }
@@ -101,9 +101,9 @@ int Dflow::_get2DVelocityDirection(int layer, QVector<QVector<double>> &data) {
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++)
-      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
-          y_data[i][j] == MetOceanViewer::NULL_TS)
-        data[i][j] = MetOceanViewer::NULL_TS;
+      if (x_data[i][j] == HmdfStation::nullDataValue() ||
+          y_data[i][j] == HmdfStation::nullDataValue())
+        data[i][j] = HmdfStation::nullDataValue();
       else
         data[i][j] = qAtan2(y_data[i][j], x_data[i][j]) * 180.0 / M_PI;
   }
@@ -136,10 +136,10 @@ int Dflow::_get3DVeloctiyMagnitude(int layer, QVector<QVector<double>> &data) {
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++) {
-      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
-          y_data[i][j] == MetOceanViewer::NULL_TS ||
-          z_data[i][j] == MetOceanViewer::NULL_TS)
-        data[i][j] = MetOceanViewer::NULL_TS;
+      if (x_data[i][j] == HmdfStation::nullDataValue() ||
+          y_data[i][j] == HmdfStation::nullDataValue() ||
+          z_data[i][j] == HmdfStation::nullDataValue())
+        data[i][j] = HmdfStation::nullDataValue();
       else
         data[i][j] = qSqrt(qPow(x_data[i][j], 2.0) + qPow(y_data[i][j], 2.0) +
                            qPow(z_data[i][j], 2.0));
@@ -166,9 +166,9 @@ int Dflow::_getWindVelocityMagnitude(QVector<QVector<double>> &data) {
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++) {
-      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
-          y_data[i][j] == MetOceanViewer::NULL_TS)
-        data[i][j] = MetOceanViewer::NULL_TS;
+      if (x_data[i][j] == HmdfStation::nullDataValue() ||
+          y_data[i][j] == HmdfStation::nullDataValue())
+        data[i][j] = HmdfStation::nullDataValue();
       else
         data[i][j] = qSqrt(qPow(x_data[i][j], 2.0) + qPow(y_data[i][j], 2.0));
     }
@@ -194,9 +194,9 @@ int Dflow::_getWindDirection(QVector<QVector<double>> &data) {
   for (i = 0; i < this->_nStations; i++) {
     data[i].resize(this->_nSteps);
     for (j = 0; j < this->_nSteps; j++)
-      if (x_data[i][j] == MetOceanViewer::NULL_TS ||
-          y_data[i][j] == MetOceanViewer::NULL_TS)
-        data[i][j] = MetOceanViewer::NULL_TS;
+      if (x_data[i][j] == HmdfStation::nullDataValue() ||
+          y_data[i][j] == HmdfStation::nullDataValue())
+        data[i][j] = HmdfStation::nullDataValue();
       else
         data[i][j] = qAtan2(y_data[i][j], x_data[i][j]) * 180.0 / M_PI;
   }
@@ -622,7 +622,7 @@ int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
   for (i = 0; i < this->_nSteps; i++)
     for (j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
-        data[j][i] = MetOceanViewer::NULL_TS;
+        data[j][i] = HmdfStation::nullDataValue();
       else
         data[j][i] = d[i * this->_nStations + j];
     }
@@ -679,7 +679,7 @@ int Dflow::_getVar3D(QString variable, int layer,
   for (i = 0; i < this->_nSteps; i++)
     for (j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
-        data[j][i] = MetOceanViewer::NULL_TS;
+        data[j][i] = HmdfStation::nullDataValue();
       else
         data[j][i] = d[i * this->_nStations + j];
     }

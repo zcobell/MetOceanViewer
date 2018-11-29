@@ -83,6 +83,9 @@ class Hmdf : public QObject {
                   double &maxValue);
 
  private:
+  void init();
+  void deallocNcArrays(long long *time, double *data, char *name, char *id);
+
   //...Variables
   bool m_success, m_null;
 
