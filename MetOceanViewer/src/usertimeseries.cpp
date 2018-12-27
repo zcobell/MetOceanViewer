@@ -175,10 +175,10 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
                                             int &seriesCounter,
                                             QVector<QLineSeries *> &series,
                                             qint64 startDate, qint64 endDate,
-                                            qint64 offset) {
-  seriesCounter = seriesCounter + 1;
-  series.resize(seriesCounter);
-
+                                            qint64 offset, qint64 &minDate,
+                                            qint64 &maxDate, double &minVal,
+                                            double &maxVal) {
+  seriesCounter++;
   series.push_back(new QLineSeries(this->m_chartView->chart()));
   QLineSeries *s = series.last();
   QColor seriesColor;
@@ -189,14 +189,18 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
 
   double unitConversion =
       this->m_table->item(seriesCounter - 1, 3)->text().toDouble();
-  double addX =
-      this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6;
+  qint64 addX = static_cast<qint64>(
+      this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6);
   double addY = this->m_table->item(seriesCounter - 1, 5)->text().toDouble();
 
+  HmdfStation *st = h->station(this->m_markerId);
   for (int j = 0; j < h->station(this->m_markerId)->numSnaps(); j++) {
-    HmdfStation *st = h->station(this->m_markerId);
     if (st->data(j) != HmdfStation::nullDataValue() &&
         st->date(j) >= startDate && st->date(j) <= endDate) {
+      maxDate = std::max(st->date(j) + addX - offset, maxDate);
+      minDate = std::min(st->date(j) + addX - offset, minDate);
+      maxVal = std::max(st->data(j) * unitConversion + addY, maxVal);
+      minVal = std::min(st->data(j) * unitConversion + addY, minVal);
       s->append(st->date(j) + addX - offset,
                 st->data(j) * unitConversion + addY);
     }
@@ -211,7 +215,8 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
 
 void UserTimeseries::addMultipleStationsToPlot(
     Hmdf *h, int index, QVector<QLineSeries *> &series, int &seriesCounter,
-    int &colorCounter, qint64 offset, qint64 startDate, qint64 endDate) {
+    int &colorCounter, qint64 offset, qint64 startDate, qint64 endDate,
+    qint64 &minDate, qint64 &maxDate, double &minVal, double &maxVal) {
   for (int k = 0; k < this->m_selectedStations.length(); k++) {
     HmdfStation *st = h->station(this->m_selectedStations[k]);
 
@@ -233,12 +238,17 @@ void UserTimeseries::addMultipleStationsToPlot(
           QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
 
       double unitConversion = this->m_table->item(index, 3)->text().toDouble();
-      double addX = this->m_table->item(index, 4)->text().toDouble() * 3.6e+6;
+      qint64 addX = static_cast<qint64>(
+          this->m_table->item(index, 4)->text().toDouble() * 3.6e+6);
       double addY = this->m_table->item(index, 5)->text().toDouble();
 
       for (int j = 0; j < st->numSnaps(); j++) {
         if (st->data(j) != HmdfStation::nullDataValue() &&
             st->date(j) >= startDate && st->date(j) <= endDate) {
+          maxDate = std::max(st->date(j) + addX - offset, maxDate);
+          minDate = std::min(st->date(j) + addX - offset, minDate);
+          maxVal = std::max(st->data(j) * unitConversion + addY, maxVal);
+          minVal = std::min(st->data(j) * unitConversion + addY, minVal);
           s->append(st->date(j) + addX - offset,
                     st->data(j) * unitConversion + addY);
         }
@@ -254,10 +264,7 @@ void UserTimeseries::addMultipleStationsToPlot(
 
 void UserTimeseries::plot() {
   int ierr, colorCounter;
-  QVector<double> addXList;
-  double ymin, ymax;
   QVector<QLineSeries *> series;
-  QDateTime minDate, maxDate;
 
   colorCounter = -1;
 
@@ -275,12 +282,30 @@ void UserTimeseries::plot() {
   ierr = this->getStationSelections();
   if (ierr != MetOceanViewer::Error::NOERR) return;
 
-  addXList.resize(this->m_fileDataUnique.length());
-  for (int i = 0; i < this->m_fileDataUnique.length(); i++)
-    addXList[i] = this->m_table->item(i, 4)->text().toDouble();
-
   this->m_markerId = this->m_selectedStations[0];
-  ierr = this->getDataBounds(ymin, ymax, minDate, maxDate, addXList);
+
+  double ymin = std::numeric_limits<double>::max();
+  double ymax = std::numeric_limits<double>::min();
+  qint64 xmin = std::numeric_limits<qint64>::max();
+  qint64 xmax = std::numeric_limits<qint64>::min();
+
+  int seriesCounter = 0;
+  int plottedSeriesCounter = 0;
+
+  for (int i = 0; i < this->m_fileDataUnique.length(); i++) {
+    if (this->m_selectedStations.length() == 1) {
+      this->addSingleStationToPlot(
+          this->m_fileDataUnique[i], plottedSeriesCounter, seriesCounter,
+          series, startDate, endDate, offset, xmin, xmax, ymin, ymax);
+    } else {
+      this->addMultipleStationsToPlot(
+          this->m_fileDataUnique[i], i, series, seriesCounter, colorCounter,
+          offset, startDate, endDate, xmin, xmax, ymin, ymax);
+    }
+  }
+
+  QDateTime minDate = QDateTime::fromMSecsSinceEpoch(xmin);
+  QDateTime maxDate = QDateTime::fromMSecsSinceEpoch(xmax);
 
   this->m_chartView->dateAxis()->setTitleText("Date");
   if (!this->m_checkXaxis->isChecked()) {
@@ -292,32 +317,13 @@ void UserTimeseries::plot() {
     this->m_chartView->dateAxis()->setMin(minDate);
     this->m_chartView->dateAxis()->setMax(maxDate);
   }
-
   this->m_chartView->yAxis()->setTitleText(this->m_yLabelEdit->text());
   if (!this->m_checkYaxis->isChecked()) {
     ymin = this->m_yMinEdit->value();
     ymax = this->m_yMaxEdit->value();
   }
-
   this->m_chartView->setDateFormat(minDate, maxDate);
   this->m_chartView->setAxisLimits(minDate, maxDate, ymin, ymax);
-
-  int seriesCounter = 0;
-  int plottedSeriesCounter = 0;
-
-  for (int i = 0; i < this->m_fileDataUnique.length(); i++) {
-    if (this->m_selectedStations.length() == 1) {
-      this->addSingleStationToPlot(this->m_fileDataUnique[i],
-                                   plottedSeriesCounter, seriesCounter, series,
-                                   startDate, endDate, offset);
-    } else {
-      //...Plot multiple stations. We use random colors and append the station
-      // number
-      this->addMultipleStationsToPlot(this->m_fileDataUnique[i], i, series,
-                                      seriesCounter, colorCounter, offset,
-                                      startDate, endDate);
-    }
-  }
 
   if (this->m_selectedStations.length() == 1)
     this->m_chartView->chart()->setTitle(
@@ -649,20 +655,19 @@ int UserTimeseries::projectStations(QVector<int> epsg,
   int i, j, ierr;
   double x, y, x2, y2;
   bool isLatLon;
-  std::unique_ptr<Ezproj> projection(new Ezproj());
+  Ezproj projection;
 
   for (i = 0; i < projectedStations.length(); ++i) {
     if (epsg[i] != 4326) {
       for (j = 0; j < projectedStations[i]->nstations(); ++j) {
         x = projectedStations[i]->station(j)->longitude();
         y = projectedStations[i]->station(j)->latitude();
-        ierr = projection->transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
+        ierr = projection.transform(epsg[i], 4326, x, y, x2, y2, isLatLon);
         if (ierr != 0) return MetOceanViewer::Error::PROJECTSTATIONS;
         projectedStations[i]->station(j)->setLongitude(x2);
         projectedStations[i]->station(j)->setLatitude(y2);
       }
     }
   }
-  projection.reset(nullptr);
   return MetOceanViewer::Error::NOERR;
 }

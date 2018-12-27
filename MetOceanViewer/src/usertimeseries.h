@@ -88,12 +88,12 @@ class UserTimeseries : public QObject {
   void addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
                               int &seriesCounter,
                               QVector<QLineSeries *> &series, qint64 startDate,
-                              qint64 endDate, qint64 offset);
-  void addMultipleStationsToPlot(Hmdf *h, int index,
-                                 QVector<QLineSeries *> &series,
-                                 int &seriesCounter, int &colorCounter,
-                                 qint64 offset, qint64 startDate,
-                                 qint64 endDate);
+                              qint64 endDate, qint64 offset, qint64 &minDate,
+                              qint64 &maxDate, double &minVal, double &maxVal);
+  void addMultipleStationsToPlot(
+      Hmdf *h, int index, QVector<QLineSeries *> &series, int &seriesCounter,
+      int &colorCounter, qint64 offset, qint64 startDate, qint64 endDate,
+      qint64 &minDate, qint64 &maxDate, double &minVal, double &maxVal);
 
   //...Private Variables
   int m_markerId;
