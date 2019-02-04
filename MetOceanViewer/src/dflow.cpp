@@ -1,12 +1,9 @@
 #include "dflow.h"
 #include <QtMath>
+#include "/usr/include/netcdf.h"
 #include "errors.h"
 #include "hmdf.h"
 #include "metoceanviewer.h"
-#include "netcdf"
-
-using namespace netCDF;
-using namespace netCDF::exceptions;
 
 Dflow::Dflow(QString filename, QObject *parent) : QObject(parent) {
   this->_isInitialized = false;
@@ -338,14 +335,14 @@ int Dflow::_getPlottingVariables() {
     return this->error->errorCode();
   }
 
-  char *varname = (char *)malloc(sizeof(char) * (NC_MAX_NAME + 1));
-  int *dims = (int *)malloc(sizeof(int) * NC_MAX_DIMS);
+  char *varname = new char[NC_MAX_NAME + 1];
+  int *dims = new int[NC_MAX_DIMS];
 
   for (i = 0; i < ndim; i++) {
     ierr = nc_inq_dimname(ncid, i, varname);
     if (ierr != NC_NOERR) {
-      free(varname);
-      free(dims);
+      delete[] varname;
+      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
@@ -358,8 +355,8 @@ int Dflow::_getPlottingVariables() {
   for (i = 0; i < nvar; i++) {
     ierr = nc_inq_varname(ncid, i, varname);
     if (ierr != NC_NOERR) {
-      free(varname);
-      free(dims);
+      delete[] varname;
+      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
@@ -369,8 +366,8 @@ int Dflow::_getPlottingVariables() {
 
     ierr = nc_inq_varndims(ncid, i, &nd);
     if (ierr != NC_NOERR) {
-      free(varname);
-      free(dims);
+      delete[] varname;
+      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
@@ -381,8 +378,8 @@ int Dflow::_getPlottingVariables() {
 
     ierr = nc_inq_vardimid(ncid, i, dims);
     if (ierr != NC_NOERR) {
-      free(varname);
-      free(dims);
+      delete[] varname;
+      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
@@ -406,8 +403,8 @@ int Dflow::_getPlottingVariables() {
     this->_varnames[sname] = i;
   }
 
-  free(varname);
-  free(dims);
+  delete[] varname;
+  delete[] dims;
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
@@ -443,58 +440,73 @@ int Dflow::_getPlottingVariables() {
 }
 
 int Dflow::_getStations() {
-  int i;
   size_t nstation, name_len;
-  std::vector<size_t> start, count;
 
-  NcFile file;
-  file.open(this->_filename.toStdString(), NcFile::read);
-  NcDim stationDimension = file.getDim("stations");
-  NcDim stationNameLength = file.getDim("name_len");
-  NcVar xvar = file.getVar("station_x_coordinate");
-  NcVar yvar = file.getVar("station_y_coordinate");
-  NcVar nameVar = file.getVar("station_name");
+  int ncid, varid_xcoor, varid_ycoor, varid_namevar;
+  int dimid_nsta, dimid_namelen;
+  int ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  if (ierr != 0) {
+    return MetOceanViewer::Error::CANNOT_OPEN_FILE;
+  }
 
-  nstation = stationDimension.getSize();
-  this->_nStations = (int)nstation;
-  name_len = stationNameLength.getSize();
-  char *stationName = (char *)malloc(sizeof(char) * name_len);
-  double *xcoor = (double *)malloc(sizeof(double) * nstation);
-  double *ycoor = (double *)malloc(sizeof(double) * nstation);
+  ierr += nc_inq_dimid(ncid, "stations", &dimid_nsta);
+  ierr += nc_inq_dimid(ncid, "name_len", &dimid_namelen);
+  ierr += nc_inq_varid(ncid, "station_x_coordinate", &varid_xcoor);
+  ierr += nc_inq_varid(ncid, "station_y_coordinate", &varid_ycoor);
+  ierr += nc_inq_varid(ncid, "station_name", &varid_namevar);
+  if (ierr != 0) {
+    return MetOceanViewer::Error::DFLOW_FILEREADERROR;
+  }
+
+  ierr += nc_inq_dimlen(ncid, dimid_nsta, &nstation);
+  ierr += nc_inq_dimlen(ncid, dimid_namelen, &name_len);
+  if (ierr != 0) {
+    return MetOceanViewer::Error::DFLOW_FILEREADERROR;
+  }
+
+  this->_nStations = nstation;
+
+  char *stationName = new char[name_len * nstation];
+  double *xcoor = new double[nstation];
+  double *ycoor = new double[nstation];
   this->_xCoordinates.resize(this->_nStations);
   this->_yCoordinates.resize(this->_nStations);
   this->_stationNames.resize(this->_nStations);
 
-  start.resize(2);
-  count.resize(2);
-  count[0] = 1;
-  count[1] = name_len;
-
-  for (i = 0; i < nstation; i++) {
-    start[0] = i;
-    start[1] = 0;
-    nameVar.getVar(start, count, stationName);
-    this->_stationNames[i] = QString(stationName);
+  ierr += nc_get_var_text(ncid, varid_namevar, stationName);
+  if (ierr != 0) {
+    delete[] xcoor;
+    delete[] ycoor;
+    delete[] stationName;
+    return MetOceanViewer::Error::DFLOW_FILEREADERROR;
   }
 
-  start.resize(1);
-  count.resize(1);
-  start[0] = 0;
-  count[0] = nstation;
+  for (size_t i = 0; i < nstation; i++) {
+    char *n = new char[name_len + 1];
+    memcpy(n, &stationName[i * name_len], name_len);
+    this->_stationNames[i] = n;
+    delete[] n;
+  }
 
-  xvar.getVar(start, count, xcoor);
-  yvar.getVar(start, count, ycoor);
+  ierr += nc_get_var(ncid, varid_xcoor, xcoor);
+  ierr += nc_get_var(ncid, varid_ycoor, ycoor);
+  if (ierr != 0) {
+    delete[] xcoor;
+    delete[] ycoor;
+    delete[] stationName;
+    return MetOceanViewer::Error::DFLOW_FILEREADERROR;
+  }
 
-  for (i = 0; i < this->_nStations; i++) {
+  for (size_t i = 0; i < this->_nStations; i++) {
     this->_xCoordinates[i] = xcoor[i];
     this->_yCoordinates[i] = ycoor[i];
   }
 
-  file.close();
+  nc_close(ncid);
 
-  free(xcoor);
-  free(ycoor);
-  free(stationName);
+  delete[] xcoor;
+  delete[] ycoor;
+  delete[] stationName;
 
   return 0;
 }
@@ -503,7 +515,6 @@ int Dflow::_getTime(QVector<qint64> &timeList) {
   int i, ierr, ncid;
   size_t nsteps, unitsLen;
   double *time;
-  char *refstring;
   int varid_time = this->_varnames["time"];
   int dimid_time = this->_dimnames["time"];
   char *units = strdup("units");
@@ -511,7 +522,7 @@ int Dflow::_getTime(QVector<qint64> &timeList) {
 
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    free(units);
+    delete[] units;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -519,7 +530,7 @@ int Dflow::_getTime(QVector<qint64> &timeList) {
 
   ierr = nc_inq_dimlen(ncid, dimid_time, &nsteps);
   if (ierr != NC_NOERR) {
-    free(units);
+    delete[] units;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -527,18 +538,18 @@ int Dflow::_getTime(QVector<qint64> &timeList) {
 
   ierr = nc_inq_attlen(ncid, varid_time, units, &unitsLen);
   if (ierr != NC_NOERR) {
-    free(units);
+    delete[] units;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  refstring = (char *)malloc(sizeof(char) * unitsLen);
+  char *refstring = new char[unitsLen];
 
   ierr = nc_get_att(ncid, varid_time, units, refstring);
   if (ierr != NC_NOERR) {
-    free(units);
-    free(refstring);
+    delete[] units;
+    delete[] refstring;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -546,20 +557,20 @@ int Dflow::_getTime(QVector<qint64> &timeList) {
 
   refString = QString(refstring);
   refString = refString.mid(0, (int)unitsLen).right(19);
-  free(units);
-  free(refstring);
+  delete[] units;
+  delete[] refstring;
 
   this->_refTime =
       QDateTime::fromString(refString, QStringLiteral("yyyy-MM-dd hh:mm:ss"));
   this->_refTime.setTimeSpec(Qt::UTC);
 
-  timeList.resize((int)nsteps);
-  time = (double *)malloc(sizeof(double) * nsteps);
-  this->_nSteps = (int)nsteps;
+  timeList.resize(nsteps);
+  time = new double[nsteps];
+  this->_nSteps = nsteps;
 
   ierr = nc_get_var_double(ncid, varid_time, time);
   if (ierr != NC_NOERR) {
-    free(time);
+    delete[] time;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -569,7 +580,7 @@ int Dflow::_getTime(QVector<qint64> &timeList) {
     timeList[i] =
         this->_refTime.addMSecs(qRound64(time[i] * 1000.0)).toMSecsSinceEpoch();
 
-  free(time);
+  delete[] time;
 
   return MetOceanViewer::Error::NOERR;
 }
@@ -585,21 +596,20 @@ int Dflow::_getVar(QString variable, int layer,
 }
 
 int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
-  int i, j, ierr, ncid, varid;
-  double *d =
-      (double *)malloc(sizeof(double) * this->_nSteps * this->_nStations);
-  size_t *start = (size_t *)malloc(sizeof(size_t) * 2);
-  size_t *count = (size_t *)malloc(sizeof(size_t) * 2);
+  int ierr, ncid, varid;
+  double *d = new double[this->_nSteps * this->_nStations];
+  size_t *start = new size_t[2];
+  size_t *count = new size_t[2];
 
   data.resize(this->_nStations);
-  for (i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
+  for (size_t i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
 
   varid = this->_varnames[variable];
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    free(start);
-    free(count);
-    free(d);
+    delete[] start;
+    delete[] count;
+    delete[] d;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -611,25 +621,25 @@ int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
   count[1] = this->_nStations;
   ierr = nc_get_vara_double(ncid, varid, start, count, d);
   if (ierr != NC_NOERR) {
-    free(d);
-    free(start);
-    free(count);
+    delete[] start;
+    delete[] count;
+    delete[] d;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  for (i = 0; i < this->_nSteps; i++)
-    for (j = 0; j < this->_nStations; j++) {
+  for (size_t i = 0; i < this->_nSteps; i++)
+    for (size_t j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
         data[j][i] = HmdfStation::nullDataValue();
       else
         data[j][i] = d[i * this->_nStations + j];
     }
 
-  free(d);
-  free(start);
-  free(count);
+  delete[] start;
+  delete[] count;
+  delete[] d;
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
@@ -643,21 +653,20 @@ int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
 
 int Dflow::_getVar3D(QString variable, int layer,
                      QVector<QVector<double>> &data) {
-  int i, j, ierr, ncid, varid;
-  double *d =
-      (double *)malloc(sizeof(double) * this->_nSteps * this->_nStations);
-  size_t *start = (size_t *)malloc(sizeof(size_t) * 3);
-  size_t *count = (size_t *)malloc(sizeof(size_t) * 3);
+  int ierr, ncid, varid;
+  double *d = new double[this->_nSteps * this->_nStations];
+  size_t *start = new size_t[3];
+  size_t *count = new size_t[3];
 
   data.resize(this->_nStations);
-  for (i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
+  for (size_t i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
 
   varid = this->_varnames[variable];
   ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    free(d);
-    free(start);
-    free(count);
+    delete[] start;
+    delete[] count;
+    delete[] d;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -676,17 +685,17 @@ int Dflow::_getVar3D(QString variable, int layer,
     return MetOceanViewer::Error::NETCDF;
   }
 
-  for (i = 0; i < this->_nSteps; i++)
-    for (j = 0; j < this->_nStations; j++) {
+  for (size_t i = 0; i < this->_nSteps; i++)
+    for (size_t j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
         data[j][i] = HmdfStation::nullDataValue();
       else
         data[j][i] = d[i * this->_nStations + j];
     }
 
-  free(d);
-  free(start);
-  free(count);
+  delete[] start;
+  delete[] count;
+  delete[] d;
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
