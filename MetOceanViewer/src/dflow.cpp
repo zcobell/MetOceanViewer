@@ -1,6 +1,6 @@
 #include "dflow.h"
 #include <QtMath>
-#include "/usr/include/netcdf.h"
+#include "netcdf.h"
 #include "errors.h"
 #include "hmdf.h"
 #include "metoceanviewer.h"

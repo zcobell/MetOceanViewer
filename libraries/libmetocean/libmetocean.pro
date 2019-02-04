@@ -104,3 +104,5 @@ else:unix: PRE_TARGETDEPS += $$OUT_PWD/../libtide/libtide.a
 
 RESOURCES += \
     resource_files.qrc
+
+unix|win32: LIBS += -lnetcdf
