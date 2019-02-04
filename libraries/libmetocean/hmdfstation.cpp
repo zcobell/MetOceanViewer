@@ -128,13 +128,15 @@ void HmdfStation::dataBounds(qint64 &minDate, qint64 &maxDate, double &minValue,
 
   std::vector<double> sortedData = this->m_data.toStdVector();
   std::sort(sortedData.begin(), sortedData.end());
-  auto minValueIt = std::upper_bound(sortedData.begin(), sortedData.end(),
-                                     this->nullDataValue());
-  if (minValueIt == sortedData.end()) {
-    minValue = sortedData.front();
+
+  if (std::find(sortedData.begin(), sortedData.end(), this->nullDataValue()) !=
+      sortedData.end()) {
+    minValue = *std::upper_bound(sortedData.begin(), sortedData.end(),
+                                 this->nullDataValue());
   } else {
-    minValue = *minValueIt;
+    minValue = sortedData.front();
   }
   maxValue = sortedData.back();
+
   return;
 }

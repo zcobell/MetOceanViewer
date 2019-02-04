@@ -308,20 +308,21 @@ void UserTimeseries::plot() {
   QDateTime maxDate = QDateTime::fromMSecsSinceEpoch(xmax);
 
   this->m_chartView->dateAxis()->setTitleText("Date");
+
   if (!this->m_checkXaxis->isChecked()) {
     minDate = this->m_startDateEdit->dateTime();
     maxDate = this->m_endDateEdit->dateTime();
-  } else {
-    minDate = minDate.addMSecs(-offset);
-    maxDate = maxDate.addMSecs(-offset);
-    this->m_chartView->dateAxis()->setMin(minDate);
-    this->m_chartView->dateAxis()->setMax(maxDate);
   }
+
+  this->m_chartView->dateAxis()->setMin(minDate);
+  this->m_chartView->dateAxis()->setMax(maxDate);
+
   this->m_chartView->yAxis()->setTitleText(this->m_yLabelEdit->text());
   if (!this->m_checkYaxis->isChecked()) {
     ymin = this->m_yMinEdit->value();
     ymax = this->m_yMaxEdit->value();
   }
+
   this->m_chartView->setDateFormat(minDate, maxDate);
   this->m_chartView->setAxisLimits(minDate, maxDate, ymin, ymax);
 

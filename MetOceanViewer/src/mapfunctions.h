@@ -29,7 +29,6 @@
 class MapFunctions : public QObject {
   Q_OBJECT
  public:
-
   enum MapSource { ESRI, MapBox, OSM };
 
   explicit MapFunctions(QObject *parent = nullptr);
@@ -38,7 +37,7 @@ class MapFunctions : public QObject {
                      QVector<Station> &locations, bool filter = true,
                      bool activeOnly = true);
 
-  void setMapTypes(QComboBox *comboBox);
+  void setMapTypes(QQuickWidget *map, QComboBox *comboBox);
 
   int mapSource() const;
   void setMapSource(int mapSource);

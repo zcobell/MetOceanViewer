@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
   //...Display the splash screen
   QPixmap pixmap(":/rsc/img/logo_full.png");
-  QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
+  QSplashScreen splash(pixmap);
   splash.setEnabled(false);
   splash.show();
 

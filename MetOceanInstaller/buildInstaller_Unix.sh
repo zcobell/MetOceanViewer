@@ -1,10 +1,10 @@
 #!/bin/bash
 
 static=1
-QtHome=/opt/Qt
-QtLibDir=/opt/Qt/5.11.0/gcc_64/lib
-gui=../../build-MetOcean-Desktop_Qt_5_11_0_Static-Release/MetOceanViewer/MetOceanViewer
-cmd=../../build-MetOcean-Desktop_Qt_5_11_0_Static-Release/MetOceanData/MetOceanData
+QtHome=/home/zcobell/Qt/
+QtLibDir=/home/zcobell/Qt/qt-5.12.1-static/lib
+gui=../../build-MetOcean-Desktop_Qt_5_12_1_Static_GCC_64bit-Release/MetOceanViewer/MetOceanViewer
+cmd=../../build-MetOcean-Desktop_Qt_5_12_1_Static_GCC_64bit-Release/MetOceanData/MetOceanData
 version=$(git describe --always --tags)
 
 if [ $static == 1 ] ; then

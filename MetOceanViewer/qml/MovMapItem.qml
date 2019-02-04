@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-import QtQuick 2.5
+import QtQuick 2.11
 import QtLocation 5.9
 import QtGraphicalEffects 1.0
 

@@ -21,7 +21,6 @@
 TEMPLATE = subdirs
 
 SUBDIRS  = ../thirdparty/ezproj \
-           libnetcdfcxx \
            libtide \
            libmetocean
 

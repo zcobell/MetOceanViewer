@@ -246,6 +246,42 @@ class MainWindow : public QMainWindow {
 
   void on_button_ndbc_savedata_clicked();
 
+  void on_button_noaaMapZoomIn_clicked();
+
+  void on_button_noaaMapZoomOut_clicked();
+
+  void on_button_noaaMapClearMarkers_clicked();
+
+  void on_button_usgsMapZoomIn_clicked();
+
+  void on_button_usgsMapZoomOut_clicked();
+
+  void on_button_usgsMapClearMarkers_clicked();
+
+  void on_button_ndbcMapZoomIn_clicked();
+
+  void on_button_ndbcMapZoomOut_clicked();
+
+  void on_button_ndbcMapClearMarkers_clicked();
+
+  void on_button_xtideMapZoomIn_clicked();
+
+  void on_button_xtideMapZoomOut_clicked();
+
+  void on_button_xtideMapClearMarkers_clicked();
+
+  void on_button_userTimeseriesMapZoomIn_clicked();
+
+  void on_button_userTimeseriesMapZoomOut_clicked();
+
+  void on_button_userTimeseriesMapClearMarkers_clicked();
+
+  void on_button_hwmMapZoomIn_clicked();
+
+  void on_button_hwmMapZoomOut_clicked();
+
+  void on_button_hwmMapClearMarkers_clicked();
+
  private:
   enum MapViewerMarkerModes {
     SingleSelect,
