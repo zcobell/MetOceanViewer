@@ -17,17 +17,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-import QtQuick.Window 2.2
-import QtQuick 2.7
+import QtQuick.Window 2.11
+import QtQuick 2.11
 import QtQuick.Controls 1.4
 import QtLocation 5.9
-import QtPositioning 5.5
+import QtPositioning 5.8
 
 MapViewer {
     id: mapView
     Plugin {
         id: mapPlugin
-        name: "mapbox"
+        name: "mapboxgl"
         PluginParameter { name: "mapbox.access_token"; value: mapboxKey }
     }
 }

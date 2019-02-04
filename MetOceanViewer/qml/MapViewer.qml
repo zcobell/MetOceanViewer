@@ -17,17 +17,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-import QtQuick.Window 2.2
-import QtQuick 2.7
+import QtQuick.Window 2.11
+import QtQuick 2.11
 import QtQuick.Controls 1.4
 import QtLocation 5.9
-import QtPositioning 5.5
-
+import QtPositioning 5.8
+import QtQuick.Layouts 1.3
 
 Rectangle {
 
     id: window
     objectName: "mapWindow"
+    width: 800
+    height: 600
 
     signal markerChanged(string msg)
 
@@ -40,6 +42,17 @@ Rectangle {
 
     function getVisibleRegion() {
         return map.visibleRegion;
+    }
+
+    function getMapTypes() {
+        var list;
+        for(var i=0;i<map.supportedMapTypes.length;i++){
+            if(i==0)
+                list = "\""+map.supportedMapTypes[i].name+"\""
+            else
+                list=list+" << \""+map.supportedMapTypes[i].name+"\"";
+        }
+        return list;
     }
 
     function setVisibleRegion(x1,y1,x2,y2) {
@@ -73,6 +86,16 @@ Rectangle {
         return nSelected;
     }
 
+    function deselectMarkers() {
+        for(var i=0;i<map.children.length;i++){
+            if(map.children[i].selected===true){
+                map.children[i].deselect();
+            }
+        }
+        infoWindow.state = "hidden"
+        selectedMarkers()
+    }
+
     function numSelectedMarkers() {
         var nSelected = 0;
         for(var i=0;i<map.children.length;i++){
@@ -101,11 +124,12 @@ Rectangle {
         return;
     }
 
-    function listMapTypes() {
-        for(var i=0;i<map.supportedMapTypes.length;i++){
-            console.log(map.supportedMapTypes[i].name);
-        }
-        return;
+    function zoomIn() {
+        map.zoomLevel = map.zoomLevel + 1;
+    }
+
+    function zoomOut() {
+        map.zoomLevel = map.zoomLevel - 1;
     }
 
     Map {
@@ -113,54 +137,13 @@ Rectangle {
         anchors.fill: parent
         activeMapType: supportedMapTypes[mapType]
         plugin: mapPlugin;
-        //copyrightsVisible: false
+        copyrightsVisible: false
 
         property MovMapItem previousMarker
 
         MapItemView{
             model: stationModel
             delegate: mapcomponent
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            propagateComposedEvents: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: {
-
-                if(markerMode===0 || markerMode===3){
-                    if(map.previousMarker){
-                        map.previousMarker.deselect()
-                        map.previousMarker = null
-                        window.markerChanged(-1)
-                        infoWindow.state = "hidden"
-                    }
-                } else if (markerMode===1) {
-                    for(var i=0;i<map.children.length;i++){
-                        if(map.children[i].selected===true){
-                            map.children[i].deselect();
-                        }
-                    }
-                    selectedMarkers();
-                    infoWindow.state = "hidden"
-                } else if (markerMode===2) {
-                    if(map.previousMarker){
-                        map.previousMarker.deselect()
-                        map.previousMarker = null
-                    }
-                    infoWindow.state = "hidden"
-                }
-            }
-            onDoubleClicked: {
-                if (mouse.button === Qt.RightButton) {
-                    map.zoomLevel = map.zoomLevel-1;
-                    setMapPlugin(1);
-                } else if(mouse.button === Qt.LeftButton) {
-                    map.zoomLevel = map.zoomLevel+1;
-                }
-            }
-
-
         }
 
         Component {
@@ -177,14 +160,14 @@ Rectangle {
                     var text;
                     if(markerMode===0){
                         text =
-                            "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
-                            "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
-                            "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
+                                "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                                "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
+                                "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
                     }else if (markerMode===1){
                         text =
-                            "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
-                            "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
-                            "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
+                                "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                                "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
+                                "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name
                     }else if(markerMode===2){
                         var diff;
                         var modeledText;
@@ -197,9 +180,9 @@ Rectangle {
                         }
 
                         text = "<b>Location: &nbsp;&nbsp;</b>"+longitude+", "+latitude+"<br>"+
-                               "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
-                               "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
-                               "<b>Difference:</b> &nbsp;"+diff
+                                "<b>Observed:</b>&nbsp;&nbsp; "+measured.toFixed(2)+"<br>"+
+                                "<b>Modeled:</b> &nbsp;&nbsp;&nbsp;"+modeledText+"<br>"+
+                                "<b>Difference:</b> &nbsp;"+diff
                         infoWindow.shownHeight = 78;
                     } else if(markerMode===3){
                         var endDateString;
@@ -208,10 +191,10 @@ Rectangle {
                         else
                             endDateString = endDate;
                         text =
-                            "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
-                            "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
-                            "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name+"<br>"+
-                            "<b>Available: </b> "+startDate+" - "+endDateString;
+                                "<b>Location: &nbsp;</b>"+longitude+", "+latitude+"<br>"+
+                                "<b>Station: &nbsp;&nbsp;&nbsp; </b>"+id+"<br>"+
+                                "<b>Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>"+name+"<br>"+
+                                "<b>Available: </b> "+startDate+" - "+endDateString;
                         infoWindow.shownHeight = 78;
                     }
 
@@ -271,7 +254,6 @@ Rectangle {
                 }
             }
         }
-
     }
 
     InfoWindow {

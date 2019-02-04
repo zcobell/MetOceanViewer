@@ -32,7 +32,7 @@ static QStringList esriList = QStringList() << "World Street Map"
                                             << "World Imagery"
                                             << "World Terrain Base"
                                             << "World Topography"
-                                            << "USA Topo Map"
+                                            << "USA Topo Maps"
                                             << "National Geographic World Map"
                                             << "Light Gray Canvas"
                                             << "World Physical Map"
@@ -40,28 +40,27 @@ static QStringList esriList = QStringList() << "World Street Map"
                                             << "World Ocean Base"
                                             << "Dark Gray Canvas"
                                             << "DeLorme World Basemap";
+
 static QStringList mapboxList = QStringList() << "Streets"
+                                              << "Basic"
+                                              << "Bright"
+                                              << "Outdoors"
+                                              << "Satellite"
+                                              << "Satellite-Streets"
                                               << "Light"
                                               << "Dark"
-                                              << "Satellite"
-                                              << "Streets-Satellite"
-                                              << "Wheatpaste"
-                                              << "Streets-Basic"
-                                              << "Comic"
-                                              << "Outdoors"
-                                              << "Run-Bike-Hike"
-                                              << "Pencil"
-                                              << "Pirates"
-                                              << "Emerald"
-                                              << "High-Contrast";
+                                              << "Navigation Preview Day"
+                                              << "Navigation preview Night"
+                                              << "Navigation Day"
+                                              << "Navigation Night";
 
-static QStringList osmList = QStringList() << "Street Map";
-//                                           << "Satellite Map"
-//                                           << "Cycle Map"
-//                                           << "Transit Map"
-//                                           << "Night Transit Map"
-//                                           << "Terrain Map"
-//                                           << "Hiking Map";
+static QStringList osmList = QStringList() << "Street Map"
+                                           << "Satellite Map"
+                                           << "Cycle Map"
+                                           << "Transit Map"
+                                           << "Night Transit Map"
+                                           << "Terrain Map"
+                                           << "Hiking Map";
 
 MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_mapSource = 0;
@@ -128,7 +127,7 @@ int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
   }
 }
 
-void MapFunctions::setMapTypes(QComboBox *comboBox) {
+void MapFunctions::setMapTypes(QQuickWidget *map, QComboBox *comboBox) {
   comboBox->clear();
   if (this->m_mapSource == ESRI) {
     comboBox->addItems(esriList);

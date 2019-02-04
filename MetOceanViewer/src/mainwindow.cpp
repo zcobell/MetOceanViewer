@@ -317,7 +317,7 @@ void MainWindow::setupNoaaMap() {
   ui->quick_noaaMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::SingleSelectWithDates);
   this->setupMarkerClasses(ui->quick_noaaMap);
-  this->mapFunctions->setMapTypes(ui->combo_noaa_maptype);
+  this->mapFunctions->setMapTypes(ui->quick_noaaMap, ui->combo_noaa_maptype);
   ui->combo_noaa_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
   this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
@@ -351,7 +351,7 @@ void MainWindow::setupNdbcMap() {
   ui->quick_ndbcMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::SingleSelect);
   this->setupMarkerClasses(ui->quick_ndbcMap);
-  this->mapFunctions->setMapTypes(ui->combo_ndbc_maptype);
+  this->mapFunctions->setMapTypes(ui->quick_ndbcMap, ui->combo_ndbc_maptype);
   ui->combo_ndbc_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
   this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
@@ -397,7 +397,7 @@ void MainWindow::setupUsgsMap() {
   this->setupMarkerClasses(ui->quick_usgsMap);
   this->usgsMarkerLocations =
       StationLocations::readMarkers(StationLocations::USGS);
-  this->mapFunctions->setMapTypes(ui->combo_usgs_maptype);
+  this->mapFunctions->setMapTypes(ui->quick_usgsMap, ui->combo_usgs_maptype);
   ui->combo_usgs_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
   this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
@@ -428,7 +428,7 @@ void MainWindow::setupXTideMap() {
   this->setupMarkerClasses(ui->quick_xtideMap);
   this->xtideMarkerLocations =
       StationLocations::readMarkers(StationLocations::XTIDE);
-  this->mapFunctions->setMapTypes(ui->combo_xtide_maptype);
+  this->mapFunctions->setMapTypes(ui->quick_xtideMap, ui->combo_xtide_maptype);
   ui->combo_xtide_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
   this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
@@ -470,7 +470,8 @@ void MainWindow::setupUserTimeseriesMap() {
       "stationModel", this->userDataStationModel);
   ui->quick_timeseriesMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::MultipleSelect);
-  this->mapFunctions->setMapTypes(ui->combo_user_maptype);
+  this->mapFunctions->setMapTypes(ui->quick_timeseriesMap,
+                                  ui->combo_user_maptype);
   this->setupMarkerClasses(ui->quick_timeseriesMap);
   ui->combo_user_maptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
@@ -502,7 +503,7 @@ void MainWindow::setupHighWaterMarkMap() {
 
   ui->quick_hwmMap->rootContext()->setContextProperty(
       "markerMode", MapViewerMarkerModes::ColoredMarkers);
-  this->mapFunctions->setMapTypes(ui->combo_hwmMaptype);
+  this->mapFunctions->setMapTypes(ui->quick_hwmMap, ui->combo_hwmMaptype);
   this->setupMarkerClasses(ui->quick_hwmMap);
   ui->combo_hwmMaptype->setCurrentIndex(
       this->mapFunctions->getDefaultMapIndex());
@@ -729,4 +730,78 @@ void MainWindow::on_actionSave_Default_Map_Settings_triggered() {
   this->mapFunctions->setDefaultMapIndex(mapIndex);
   this->mapFunctions->saveConfigurationToDisk();
   return;
+}
+
+void MainWindow::on_button_noaaMapZoomIn_clicked() {
+  QMetaObject::invokeMethod(ui->quick_noaaMap->rootObject(), "zoomIn");
+}
+
+void MainWindow::on_button_noaaMapZoomOut_clicked() {
+  QMetaObject::invokeMethod(ui->quick_noaaMap->rootObject(), "zoomOut");
+}
+
+void MainWindow::on_button_noaaMapClearMarkers_clicked() {
+  QMetaObject::invokeMethod(ui->quick_noaaMap->rootObject(), "deselectMarkers");
+}
+
+void MainWindow::on_button_usgsMapZoomIn_clicked() {
+  QMetaObject::invokeMethod(ui->quick_usgsMap->rootObject(), "zoomIn");
+}
+
+void MainWindow::on_button_usgsMapZoomOut_clicked() {
+  QMetaObject::invokeMethod(ui->quick_usgsMap->rootObject(), "zoomOut");
+}
+
+void MainWindow::on_button_usgsMapClearMarkers_clicked() {
+  QMetaObject::invokeMethod(ui->quick_usgsMap->rootObject(), "deselectMarkers");
+}
+
+void MainWindow::on_button_ndbcMapZoomIn_clicked() {
+  QMetaObject::invokeMethod(ui->quick_ndbcMap->rootObject(), "zoomIn");
+}
+
+void MainWindow::on_button_ndbcMapZoomOut_clicked() {
+  QMetaObject::invokeMethod(ui->quick_ndbcMap->rootObject(), "zoomOut");
+}
+
+void MainWindow::on_button_ndbcMapClearMarkers_clicked() {
+  QMetaObject::invokeMethod(ui->quick_ndbcMap->rootObject(), "deselectMarkers");
+}
+
+void MainWindow::on_button_xtideMapZoomIn_clicked() {
+  QMetaObject::invokeMethod(ui->quick_xtideMap->rootObject(), "zoomIn");
+}
+
+void MainWindow::on_button_xtideMapZoomOut_clicked() {
+  QMetaObject::invokeMethod(ui->quick_xtideMap->rootObject(), "zoomOut");
+}
+
+void MainWindow::on_button_xtideMapClearMarkers_clicked() {
+  QMetaObject::invokeMethod(ui->quick_xtideMap->rootObject(),
+                            "deselectMarkers");
+}
+
+void MainWindow::on_button_userTimeseriesMapZoomIn_clicked() {
+  QMetaObject::invokeMethod(ui->quick_timeseriesMap->rootObject(), "zoomIn");
+}
+
+void MainWindow::on_button_userTimeseriesMapZoomOut_clicked() {
+  QMetaObject::invokeMethod(ui->quick_timeseriesMap->rootObject(), "zoomOut");
+}
+
+void MainWindow::on_button_userTimeseriesMapClearMarkers_clicked() {
+  QMetaObject::invokeMethod(ui->quick_timeseriesMap->rootObject(),
+                            "deselectMarkers");
+}
+
+void MainWindow::on_button_hwmMapZoomIn_clicked() {
+  QMetaObject::invokeMethod(ui->quick_hwmMap->rootObject(), "zoomIn");
+}
+
+void MainWindow::on_button_hwmMapZoomOut_clicked() {
+  QMetaObject::invokeMethod(ui->quick_hwmMap->rootObject(), "zoomOut");
+}
+
+void MainWindow::on_button_hwmMapClearMarkers_clicked() {
+  QMetaObject::invokeMethod(ui->quick_hwmMap->rootObject(), "deselectMarkers");
 }

@@ -198,7 +198,7 @@ int Noaa::plotChart() {
   double ymin, ymax;
   QString S1, S2;
 
-  int offset = Timezone::localMachineOffsetFromUtc()*1000;
+  int offset = Timezone::localMachineOffsetFromUtc() * 1000;
 
   this->m_chartView->clear();
 
@@ -428,7 +428,6 @@ int Noaa::saveNOAAImage(QString filename, QString filter) {
     outputFile.open(QIODevice::WriteOnly);
     pixmap.save(&outputFile, "JPG", 100);
   }
-
   return 0;
 }
 
