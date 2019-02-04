@@ -108,7 +108,6 @@ int XTide::calculateXTides() {
 int XTide::plotChart() {
   double ymin, ymax;
   qint64 minDate, maxDate;
-  QString format;
 
   this->m_chartView->clear();
   this->m_chartView->initializeAxis(1);
