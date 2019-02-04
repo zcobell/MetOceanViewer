@@ -50,7 +50,7 @@ static QStringList mapboxList = QStringList() << "Streets"
                                               << "Light"
                                               << "Dark"
                                               << "Navigation Preview Day"
-                                              << "Navigation preview Night"
+                                              << "Navigation Preview Night"
                                               << "Navigation Day"
                                               << "Navigation Night";
 
