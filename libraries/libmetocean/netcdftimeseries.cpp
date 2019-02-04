@@ -58,8 +58,6 @@ int NetcdfTimeseries::read() {
   int varid_time, varid_data, varid_xcoor, varid_ycoor, varid_stationName;
   int epsg;
   char timeChar[80];
-  char *stationName;
-  double *varData, *xcoor, *ycoor;
 
   NCCHECK(nc_open(this->m_filename.toStdString().c_str(), NC_NOWRITE, &ncid));
   NCCHECK(nc_inq_dimid(ncid, "numStations", &dimid_nstations));
@@ -73,21 +71,21 @@ int NetcdfTimeseries::read() {
 
   this->setEpsg(epsg);
 
-  xcoor = (double *)malloc(sizeof(double) * this->m_numStations);
-  ycoor = (double *)malloc(sizeof(double) * this->m_numStations);
+  double *xcoor = new double[this->m_numStations];
+  double *ycoor = new double[this->m_numStations];
 
   ierr = nc_get_var_double(ncid, varid_xcoor, xcoor);
   if (ierr != NC_NOERR) {
-    free(xcoor);
-    free(ycoor);
+    delete[] xcoor;
+    delete[] ycoor;
     nc_close(ncid);
     return ierr;
   }
 
   ierr = nc_get_var_double(ncid, varid_ycoor, ycoor);
   if (ierr != NC_NOERR) {
-    free(xcoor);
-    free(ycoor);
+    delete[] xcoor;
+    delete[] ycoor;
     nc_close(ncid);
     return ierr;
   }
@@ -97,16 +95,15 @@ int NetcdfTimeseries::read() {
     this->m_ycoor.push_back(ycoor[i]);
   }
 
-  free(xcoor);
-  free(ycoor);
+  delete[] xcoor;
+  delete[] ycoor;
 
-  stationName =
-      (char *)malloc(sizeof(char) * stationNameLength * this->m_numStations);
+  char *stationName = new char[stationNameLength * this->m_numStations];
 
   NCCHECK(nc_get_var_text(ncid, varid_stationName, stationName));
   stationNameString = QString(stationName);
 
-  free(stationName);
+  delete[] stationName;
 
   for (size_t i = 0; i < this->m_numStations; i++) {
     this->m_stationName.push_back(
@@ -138,21 +135,21 @@ int NetcdfTimeseries::read() {
     refTime = QDateTime::fromString(timeString, "yyyy-MM-dd hh:mm:ss");
     refTime.setTimeSpec(Qt::UTC);
 
-    qint64 *timeData = (qint64 *)malloc(sizeof(qint64) * length);
-    varData = (double *)malloc(sizeof(double) * length);
+    qint64 *timeData = new qint64[length];
+    double *varData = new double[length];
 
     ierr = nc_get_var_double(ncid, varid_data, varData);
     if (ierr != NC_NOERR) {
-      free(timeData);
-      free(varData);
+      delete[] timeData;
+      delete[] varData;
       nc_close(ncid);
       return ierr;
     }
 
     ierr = nc_get_var_longlong(ncid, varid_time, timeData);
     if (ierr != NC_NOERR) {
-      free(timeData);
-      free(varData);
+      delete[] timeData;
+      delete[] varData;
       nc_close(ncid);
       return ierr;
     }
@@ -165,8 +162,8 @@ int NetcdfTimeseries::read() {
       this->m_time[i][j] = refTime.addSecs(timeData[j]).toMSecsSinceEpoch();
     }
 
-    free(timeData);
-    free(varData);
+    delete[] timeData;
+    delete[] varData;
   }
 
   NCCHECK(nc_close(ncid));

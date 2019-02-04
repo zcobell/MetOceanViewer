@@ -278,8 +278,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     this->latitude[j] = Temp;
   }
 
-  double *tempVar1 = (double *)malloc(sizeof(double) * time_size_int);
-  double *tempVar2 = (double *)malloc(sizeof(double) * time_size_int);
+  double *tempVar1 = new double[time_size_int];
+  double *tempVar2 = new double[time_size_int];
 
   // Loop over the stations, reading the data into memory
   for (int i = 0; i < station_size_int; ++i) {
@@ -290,8 +290,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     count[1] = static_cast<size_t>(1);
     this->_error = nc_get_vara(ncid, varid_zeta, start, count, tempVar1);
     if (this->_error != NC_NOERR) {
-      free(tempVar1);
-      free(tempVar2);
+      delete[] tempVar1;
+      delete[] tempVar2;
       this->_ncerr = this->_error;
       this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
@@ -300,8 +300,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     if (isVector) {
       this->_error = nc_get_vara(ncid, varid_zeta2, start, count, tempVar2);
       if (this->_error != NC_NOERR) {
-        free(tempVar1);
-        free(tempVar2);
+        delete[] tempVar1;
+        delete[] tempVar2;
         this->_ncerr = this->_error;
         this->_error = MetOceanViewer::Error::NETCDF;
         return this->_error;
@@ -316,8 +316,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   }
   this->_error = nc_close(ncid);
   if (this->_error != NC_NOERR) {
-    free(tempVar1);
-    free(tempVar2);
+    delete[] tempVar1;
+    delete[] tempVar2;
     this->_ncerr = this->_error;
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
@@ -330,8 +330,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   for (int i = 0; i < station_size_int; ++i)
     this->station_name[i] = tr("Station ") + QString::number(i);
 
-  free(tempVar1);
-  free(tempVar2);
+  delete[] tempVar1;
+  delete[] tempVar2;
 
   return 0;
 }
