@@ -27,41 +27,55 @@ MapQuickItem {
     property int mode: 0
     property bool stationActive: true
     property string stationId;
+    property string sourceImage;
+    property string selectedSourceImage;
     property string defaultImage: "qrc:/rsc/img/mm_20_darkgreen.png"
-    property string defaultInavtiveImage: "qrc:/rsc/img/mm_20_red.png"
+    property string defaultInactiveImage: "qrc:/rsc/img/mm_20_darkorange.png"
     property string selectedImage: "qrc:/rsc/img/mm_20_red.png"
     property string markerWhite: "qrc:/rsc/img/mm_20_white.png"
     property var markerColors: [ "qrc:/rsc/img/mm_20_purple.png",
-                                 "qrc:/rsc/img/mm_20_darkblue.png",
-                                 "qrc:/rsc/img/mm_20_lightblue.png",
-                                 "qrc:/rsc/img/mm_20_darkgreen.png",
-                                 "qrc:/rsc/img/mm_20_lightgreen.png",
-                                 "qrc:/rsc/img/mm_20_yellow.png",
-                                 "qrc:/rsc/img/mm_20_darkorange.png",
-                                 "qrc:/rsc/img/mm_20_red.png" ]
+        "qrc:/rsc/img/mm_20_darkblue.png",
+        "qrc:/rsc/img/mm_20_lightblue.png",
+        "qrc:/rsc/img/mm_20_darkgreen.png",
+        "qrc:/rsc/img/mm_20_lightgreen.png",
+        "qrc:/rsc/img/mm_20_yellow.png",
+        "qrc:/rsc/img/mm_20_darkorange.png",
+        "qrc:/rsc/img/mm_20_red.png" ]
     property int markerCategory: 0;
 
     function selectMarkerImage(){
-        if(modeled<-900){
-            image.source = markerWhite
+        if(mode===2) {
+            if(modeled<-900){
+                sourceImage = markerWhite
+            } else {
+                sourceImage = markerColors[markerCategory];
+            }
+            selectedSourceImage = sourceImage
+        } else if(mode===3){
+            if(stationActive){
+                sourceImage = defaultImage
+            } else {
+                sourceImage = defaultInactiveImage
+            }
+            selectedSourceImage = selectedImage
         } else {
-            image.source = markerColors[markerCategory];
+            sourceImage = defaultImage
+            selectedSourceImage = selectedImage
         }
+        image.source = sourceImage;
     }
 
     function deselect(){
         selected = false
         glowing.visible = false
-        if(mode!=2) image.source = defaultImage
+        image.source = sourceImage
     }
 
     function select(){
         selected = true
         glowing.visible = true
-        if(mode!=2) image.source = selectedImage
+        image.source = selectedSourceImage
     }
-
-    parent: map
 
     sourceItem: Rectangle{
         id: imageRectangle
@@ -90,15 +104,6 @@ MapQuickItem {
     anchorPoint.x: imageRectangle.width/4
     anchorPoint.y: imageRectangle.height
 
-    Component.onCompleted: {
-        if(mode===2) {
-            selectMarkerImage();
-        } else if(mode===3){
-            if(stationActive)
-                image.source = defaultImage
-            else
-                image.source = defaultInavtiveImage
-        }
-    }
+    Component.onCompleted: selectMarkerImage()
 
 }

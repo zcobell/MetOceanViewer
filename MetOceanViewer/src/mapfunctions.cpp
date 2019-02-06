@@ -54,13 +54,13 @@ static QStringList mapboxList = QStringList() << "Streets"
                                               << "Navigation Day"
                                               << "Navigation Night";
 
-static QStringList osmList = QStringList() << "Street Map"
-                                           << "Satellite Map"
-                                           << "Cycle Map"
-                                           << "Transit Map"
-                                           << "Night Transit Map"
-                                           << "Terrain Map"
-                                           << "Hiking Map";
+static QStringList osmList = QStringList() << "Street Map";
+//                                           << "Satellite Map"
+//                                           << "Cycle Map"
+//                                           << "Transit Map"
+//                                           << "Night Transit Map"
+//                                           << "Terrain Map"
+//                                           << "Hiking Map";
 
 MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_mapSource = 0;

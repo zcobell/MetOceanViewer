@@ -1,11 +1,11 @@
 #!/bin/bash
 redist=1
-autoredist=1
-redistexe='/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/VC/redist/vcredist.x64.exe'
+autoredist=0
+redistexe="/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Redist/MSVC/14.16.27012/vc_redist.x64.exe"
 msvcVersion=2017
-QtVersion=5_11_1
+QtVersion=5_12_1
 compileDirectory="../../build-MetOcean-Desktop_Qt_"$QtVersion"_MSVC"$msvcVersion"_64bit-Release"
-winDeployQtBinary=/cygdrive/c/Qt/5.11.1/msvc2017_64/bin/windeployqt.exe
+winDeployQtBinary=/cygdrive/c/Qt/5.12.1/msvc2017_64/bin/windeployqt.exe
 binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator.exe
 version=$(git describe --always --tags)
 
@@ -44,11 +44,11 @@ cp ../thirdparty/openssl/bin_64/*.dll $winPackDir/com.zachcobell.metoceanviewer/
 #...Run the deployment script
 cd $winPackDir/com.zachcobell.metoceanviewer/data
 if [ $autoredist == 1 ] ; then
-    $winDeployQtBinary --compiler-runtime --qmldir=../../../../MetOceanViewer/qml -release MetOceanViewer.exe
     $winDeployQtBinary --compiler-runtime -release MetOceanData.exe
+    $winDeployQtBinary --compiler-runtime --qmldir=../../../../MetOceanViewer/qml -release MetOceanViewer.exe
 else
-    $winDeployQtBinary -release --qmldir=../../../../MetOceanViewer/qml MetOceanViewer.exe
     $winDeployQtBinary -release MetOceanData.exe
+    $winDeployQtBinary -release --qmldir=../../../../MetOceanViewer/qml MetOceanViewer.exe
 fi
 cd ../../..
 

@@ -35,11 +35,6 @@ Rectangle {
 
     property string stationText;
 
-    function clearMarkers() {
-        map.clearMapItems();
-        return;
-    }
-
     function getVisibleRegion() {
         return map.visibleRegion;
     }
@@ -52,6 +47,7 @@ Rectangle {
             else
                 list=list+" << \""+map.supportedMapTypes[i].name+"\"";
         }
+        console.log(list)
         return list;
     }
 
@@ -73,13 +69,15 @@ Rectangle {
     function selectedMarkers() {
         var selectedList = "";
         var nSelected = 0;
-        for(var i=0;i<map.children.length;i++){
-            if(map.children[i].selected===true){
-                nSelected = nSelected + 1;
-                if(nSelected==1)
-                    selectedList = map.children[i].stationId;
-                else
-                    selectedList = selectedList + "," + map.children[i].stationId;
+        for(var child in mapItemView.children){
+            if(mapItemView.children[child].objectName==="marker"){
+                if(mapItemView.children[child].selected===true){
+                    nSelected = nSelected + 1;
+                    if(nSelected==1)
+                        selectedList = mapItemView.children[child].stationId;
+                    else
+                        selectedList = selectedList + "," + mapItemView.children[child].stationId;
+                }
             }
         }
         markerChanged(selectedList);
@@ -87,20 +85,23 @@ Rectangle {
     }
 
     function deselectMarkers() {
-        for(var i=0;i<map.children.length;i++){
-            if(map.children[i].selected===true){
-                map.children[i].deselect();
+        for(var child in mapItemView.children){
+            if(mapItemView.children[child].objectName==="marker"){
+                if(mapItemView.children[child].selected===true){
+                    mapItemView.children[child].deselect();
+                }
             }
         }
         infoWindow.state = "hidden"
-        selectedMarkers()
     }
 
     function numSelectedMarkers() {
         var nSelected = 0;
-        for(var i=0;i<map.children.length;i++){
-            if(map.children[i].selected===true){
-                nSelected = nSelected + 1;
+        for(var child in mapItemView.children){
+            if(mapItemView.children[child].objectName==="marker"){
+                if(mapItemView.children[child].selected===true){
+                    nSelected = nSelected + 1;
+                }
             }
         }
         return nSelected;
@@ -132,6 +133,14 @@ Rectangle {
         map.zoomLevel = map.zoomLevel - 1;
     }
 
+    function zoomClick(button) {
+        if(button === Qt.LeftButton) {
+            zoomIn();
+        } else if(button === Qt.RightButton) {
+            zoomOut();
+        }
+    }
+
     Map {
         id: map
         anchors.fill: parent
@@ -141,20 +150,30 @@ Rectangle {
 
         property MovMapItem previousMarker
 
+        MouseArea{
+            anchors.fill: parent
+            onClicked: deselectMarkers()
+            onDoubleClicked: zoomClick(mouse.button)
+        }
+
         MapItemView{
+            id: mapItemView
             model: stationModel
+            objectName: "mapItemView"
             delegate: mapcomponent
         }
 
         Component {
             id: mapcomponent
             MovMapItem {
+                objectName: "marker"
                 mode: markerMode
                 stationActive: active
                 id: markerid
                 stationId: id
                 coordinate: position
                 markerCategory: category
+                parent: mapItemView
 
                 function generateInfoWindowText(){
                     var text;
