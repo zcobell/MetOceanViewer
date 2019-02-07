@@ -62,9 +62,9 @@ message("Current version: $$MOV_VERSION")
 #...Compiler dependent options
 DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
 
-win32{
-    DEFINES += USE_ANGLE
-}
+#win32{
+#    DEFINES += USE_ANGLE
+#}
 
 #...Microsoft Visual C++ compilers
 *msvc* {
