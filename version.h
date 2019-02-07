@@ -21,11 +21,11 @@
 #define VERSION_H
 #include <string>
 
-#define VER_FILEVERSION 4.0.0
-#define VER_FILEVERSION_STR "v4.0.0"
+#define VER_FILEVERSION 4.2.0
+#define VER_FILEVERSION_STR "v4.2.0"
 
-#define VER_PRODUCTVERSION 4.0.0
-#define VER_PRODUCTVERSION_STR "v4.0.0"
+#define VER_PRODUCTVERSION 4.2.0
+#define VER_PRODUCTVERSION_STR "v4.2.0"
 
 static std::string metoceanVersion() {
   if (std::string(GIT_VERSION) == std::string("unversioned")) {
