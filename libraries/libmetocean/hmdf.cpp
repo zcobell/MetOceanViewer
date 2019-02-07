@@ -129,7 +129,7 @@ int Hmdf::readImeds(QString filename) {
     station->setLongitude(templist.at(2).toDouble());
     station->setLatitude(templist.at(1).toDouble());
 
-    while (true) {
+    while (!fid.eof()) {
       std::getline(fid, templine);
 
       int year, month, day, hour, minute, second;
