@@ -41,8 +41,8 @@ private:
 
   int readNetCDF(QString AdicrcOutputFile);
 
-  int nStations;
-  int nSnaps;
+  size_t nStations;
+  size_t nSnaps;
   int _error;
   int _ncerr;
 

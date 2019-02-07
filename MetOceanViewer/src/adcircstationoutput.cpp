@@ -18,11 +18,13 @@
 //
 //-----------------------------------------------------------------------*/
 #include "adcircstationoutput.h"
-#include <netcdf.h>
 #include <QFile>
-#include <QtMath>
+#include <algorithm>
+#include <cmath>
+#include <iterator>
 #include "errors.h"
 #include "hmdf.h"
+#include "netcdf.h"
 
 AdcircStationOutput::AdcircStationOutput(QObject *parent) : QObject(parent) {
   this->_error = MetOceanViewer::Error::NOERR;
@@ -78,20 +80,25 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
   this->time.resize(this->nSnaps);
   this->data.resize(this->nStations);
 
-  for (int i = 0; i < this->nStations; ++i) this->data[i].resize(this->nSnaps);
+  for (size_t i = 0; i < this->nStations; ++i)
+    this->data[i].resize(this->nSnaps);
 
-  for (int i = 0; i < this->nSnaps; ++i) {
+  for (size_t i = 0; i < this->nSnaps; ++i) {
     TempLine = MyFile.readLine().simplified();
     TempList = TempLine.split(" ");
     this->time[i] = TempList.value(1).toDouble();
-    for (int j = 0; j < this->nStations; ++j) {
+    for (size_t j = 0; j < this->nStations; ++j) {
       TempLine = MyFile.readLine().simplified();
       TempList = TempLine.split(" ");
-      this->data[j][i] = TempList.value(1).toDouble();
-      if (nColumns == 2)
-        this->data[j][i] = qPow(
-            qPow(this->data[j][i], 2) + qPow(TempList.value(2).toDouble(), 2),
-            2);
+      if (TempList.value(1).toDouble() < -900) {
+        this->data[j][i] = HmdfStation::nullDataValue();
+      } else {
+        this->data[j][i] = TempList.value(1).toDouble();
+        if (nColumns == 2)
+          this->data[j][i] = pow(
+              pow(this->data[j][i], 2) + pow(TempList.value(2).toDouble(), 2),
+              2);
+      }
     }
   }
   MyFile.close();
@@ -107,7 +114,7 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
   this->latitude.resize(this->nStations);
   this->station_name.resize(this->nStations);
 
-  for (int i = 0; i < TempStations; ++i) {
+  for (size_t i = 0; i < TempStations; ++i) {
     TempLine = StationFile.readLine().simplified();
     TempList = TempLine.split(QRegExp(",| "));
     this->longitude[i] = TempList.value(0).toDouble();
@@ -126,12 +133,10 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
 }
 
 int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
-  size_t station_size, time_size, startIndex;
-  int time_size_int, station_size_int;
+  size_t station_size, time_size;
   int ncid, varid_zeta, varid_zeta2, varid_lat, varid_lon, varid_time;
   int dimid_time, dimid_station;
   bool isVector;
-  double Temp;
 
   // Size the location array
   size_t start[2];
@@ -147,58 +152,49 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   netcdf_types[5] = "windy";
 
   // Open the file
-  this->_error = nc_open(AdcircOutputFile.toUtf8(), NC_NOWRITE, &ncid);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_open(AdcircOutputFile.toUtf8(), NC_NOWRITE, &ncid);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
   // Get the dimension ids
-  this->_error = nc_inq_dimid(ncid, "time", &dimid_time);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_dimid(ncid, "time", &dimid_time);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
-  this->_error = nc_inq_dimid(ncid, "station", &dimid_station);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_dimid(ncid, "station", &dimid_station);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
   // Find out the dimension size
-  this->_error = nc_inq_dimlen(ncid, dimid_time, &time_size);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_dimlen(ncid, dimid_time, &time_size);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
-  this->_error = nc_inq_dimlen(ncid, dimid_station, &station_size);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_dimlen(ncid, dimid_station, &station_size);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
-
-  station_size_int = static_cast<unsigned int>(station_size);
-  time_size_int = static_cast<unsigned int>(time_size);
 
   // Find the variable in the NetCDF file
-  for (int i = 0; i < 6; i++) {
+  for (size_t i = 0; i < 6; i++) {
     int ierr = nc_inq_varid(ncid, netcdf_types[i].toUtf8(), &varid_zeta);
 
     // If we found the variable, we're done
     if (ierr == NC_NOERR) {
       if (i == 1 || i == 4) {
         isVector = true;
-        this->_error =
+        this->_ncerr =
             nc_inq_varid(ncid, netcdf_types[i + 1].toUtf8(), &varid_zeta2);
-        if (this->_error != NC_NOERR) {
-          this->_ncerr = this->_error;
+        if (this->_ncerr != NC_NOERR) {
           this->_error = MetOceanViewer::Error::NETCDF;
           return this->_error;
         }
@@ -214,110 +210,120 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   }
 
   // Size the output variables
-  this->latitude.resize(station_size_int);
-  this->longitude.resize(station_size_int);
-  this->nStations = station_size_int;
-  this->nSnaps = time_size_int;
-  this->time.resize(time_size_int);
-  this->data.resize(station_size_int);
-  for (int i = 0; i < station_size_int; ++i)
-    this->data[i].resize(time_size_int);
+  this->latitude.reserve(station_size);
+  this->longitude.reserve(station_size);
+  this->nStations = station_size;
+  this->nSnaps = time_size;
+  this->time.reserve(time_size);
+  this->data.resize(station_size);
+  for (size_t i = 0; i < station_size; ++i) this->data[i].resize(time_size);
 
   // Read the station locations and times
-  this->_error = nc_inq_varid(ncid, "time", &varid_time);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_varid(ncid, "time", &varid_time);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
-  this->_error = nc_inq_varid(ncid, "x", &varid_lon);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_varid(ncid, "x", &varid_lon);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
-  this->_error = nc_inq_varid(ncid, "y", &varid_lat);
-  if (this->_error != NC_NOERR) {
-    this->_ncerr = this->_error;
+  this->_ncerr = nc_inq_varid(ncid, "y", &varid_lat);
+  if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
   }
 
-  for (int j = 0; j < time_size_int; j++) {
-    startIndex = static_cast<size_t>(j);
-    this->_error = nc_get_var1(ncid, varid_time, &startIndex, &Temp);
-    if (this->_error != NC_NOERR) {
-      this->_ncerr = this->_error;
-      this->_error = MetOceanViewer::Error::NETCDF;
-      return this->_error;
-    }
-
-    this->time[j] = Temp;
+  double fillVal;
+  this->_ncerr = nc_inq_var_fill(ncid, varid_zeta, NULL, &fillVal);
+  if (this->_ncerr != NC_NOERR) {
+    this->_error = MetOceanViewer::Error::NETCDF;
+    return this->_error;
   }
 
-  for (int j = 0; j < station_size_int; j++) {
-    startIndex = static_cast<size_t>(j);
-    this->_error = nc_get_var1(ncid, varid_lon, &startIndex, &Temp);
-    if (this->_error != NC_NOERR) {
-      this->_ncerr = this->_error;
-      this->_error = MetOceanViewer::Error::NETCDF;
-      return this->_error;
-    }
-
-    this->longitude[j] = Temp;
-
-    this->_error = nc_get_var1(ncid, varid_lat, &startIndex, &Temp);
-    if (this->_error != NC_NOERR) {
-      this->_ncerr = this->_error;
-      this->_error = MetOceanViewer::Error::NETCDF;
-      return this->_error;
-    }
-
-    this->latitude[j] = Temp;
+  double *timeData = new double[time_size];
+  this->_ncerr = nc_get_var_double(ncid, varid_time, timeData);
+  if (this->_ncerr != NC_NOERR) {
+    this->_error = MetOceanViewer::Error::NETCDF;
+    delete[] timeData;
+    return this->_error;
   }
+  this->time.reserve(time_size);
+  std::copy(timeData, timeData + time_size, std::back_inserter(this->time));
+  delete[] timeData;
 
-  double *tempVar1 = new double[time_size_int];
-  double *tempVar2 = new double[time_size_int];
+  double *coor = new double[station_size];
+  this->_ncerr = nc_get_var_double(ncid, varid_lon, coor);
+  if (this->_ncerr != NC_NOERR) {
+    this->_error = MetOceanViewer::Error::NETCDF;
+    delete[] coor;
+    return this->_error;
+  }
+  std::copy(coor, coor + station_size, std::back_inserter(this->longitude));
+  delete[] coor;
+
+  coor = new double[station_size];
+  this->_ncerr = nc_get_var_double(ncid, varid_lat, coor);
+  if (this->_ncerr != NC_NOERR) {
+    this->_error = MetOceanViewer::Error::NETCDF;
+    delete[] coor;
+    return this->_error;
+  }
+  std::copy(coor, coor + station_size, std::back_inserter(this->latitude));
+  delete[] coor;
 
   // Loop over the stations, reading the data into memory
-  for (int i = 0; i < station_size_int; ++i) {
+  for (size_t i = 0; i < station_size; ++i) {
+    double *tempVar1 = new double[time_size];
+    double *tempVar2 = new double[time_size];
+
     // Read from netCDF
-    start[0] = static_cast<size_t>(0);
-    start[1] = static_cast<size_t>(i);
-    count[0] = static_cast<size_t>(time_size_int);
-    count[1] = static_cast<size_t>(1);
-    this->_error = nc_get_vara(ncid, varid_zeta, start, count, tempVar1);
-    if (this->_error != NC_NOERR) {
+    start[0] = 0;
+    start[1] = i;
+    count[0] = time_size;
+    count[1] = 1;
+    this->_ncerr = nc_get_vara(ncid, varid_zeta, start, count, tempVar1);
+    if (this->_ncerr != NC_NOERR) {
       delete[] tempVar1;
       delete[] tempVar2;
-      this->_ncerr = this->_error;
       this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
     }
 
     if (isVector) {
-      this->_error = nc_get_vara(ncid, varid_zeta2, start, count, tempVar2);
-      if (this->_error != NC_NOERR) {
+      this->_ncerr = nc_get_vara(ncid, varid_zeta2, start, count, tempVar2);
+      if (this->_ncerr != NC_NOERR) {
         delete[] tempVar1;
         delete[] tempVar2;
-        this->_ncerr = this->_error;
         this->_error = MetOceanViewer::Error::NETCDF;
         return this->_error;
       }
-      for (int j = 0; j < time_size_int; j++)
-        this->data[i][j] =
-            qSqrt(qPow(tempVar1[j], 2.0) + qPow(tempVar2[j], 2.0));
+      for (size_t j = 0; j < time_size; j++) {
+        if (tempVar1[j] != fillVal) {
+          this->data[i][j] =
+              sqrt(pow(tempVar1[j], 2.0) + pow(tempVar2[j], 2.0));
+        } else {
+          this->data[i][j] = HmdfStation::nullDataValue();
+        }
+      }
     } else {
-      // Place in the output variable
-      for (int j = 0; j < time_size_int; ++j) this->data[i][j] = tempVar1[j];
+      for (size_t j = 0; j < time_size; ++j) {
+        if (tempVar1[j] != fillVal) {
+          this->data[i][j] = tempVar1[j];
+        } else {
+          this->data[i][j] = HmdfStation::nullDataValue();
+        }
+      }
     }
+
+    delete[] tempVar1;
+    delete[] tempVar2;
   }
   this->_error = nc_close(ncid);
   if (this->_error != NC_NOERR) {
-    delete[] tempVar1;
-    delete[] tempVar2;
     this->_ncerr = this->_error;
     this->_error = MetOceanViewer::Error::NETCDF;
     return this->_error;
@@ -326,12 +332,9 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   // Finally, name the stations the default names for now. Later
   // we can get fancy and try to get the ADCIRC written names in
   // the NetCDF file
-  this->station_name.resize(station_size_int);
-  for (int i = 0; i < station_size_int; ++i)
+  this->station_name.resize(station_size);
+  for (int i = 0; i < station_size; ++i)
     this->station_name[i] = tr("Station ") + QString::number(i);
-
-  delete[] tempVar1;
-  delete[] tempVar2;
 
   return 0;
 }
