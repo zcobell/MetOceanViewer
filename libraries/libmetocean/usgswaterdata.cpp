@@ -224,10 +224,13 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
     int offset = Timezone::offsetFromUtc(TempTimeZoneString);
     currentDate = currentDate.addSecs(-offset);
 
-    for (int j = 0; j < params.length(); j++) {
-      double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
-      if (doubleok) {
-        stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
+    if (currentDate.toMSecsSinceEpoch() !=
+        stations[0]->date(stations[0]->numSnaps() - 1)) {
+      for (int j = 0; j < params.length(); j++) {
+        double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
+        if (doubleok) {
+          stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
+        }
       }
     }
   }
