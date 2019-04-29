@@ -27,7 +27,7 @@ MapViewer {
     id: mapView
     Plugin {
         id: mapPlugin
-        name: "mapboxgl"
+        name: "mapbox"
         PluginParameter { name: "mapbox.access_token"; value: mapboxKey }
     }
 }
