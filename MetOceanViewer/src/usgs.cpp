@@ -101,6 +101,14 @@ int Usgs::plotNewUSGSStation() {
                           this->m_requestEndDate, this->m_usgsDataMethod, this);
     this->m_allStationData = new Hmdf(this);
     ierr = waterData->get(this->m_allStationData);
+
+    for (size_t i = 0; i < this->m_allStationData->nstations(); ++i) {
+      this->m_allStationData->station(i)->setLatitude(
+          this->m_currentStation.coordinate().latitude());
+      this->m_allStationData->station(i)->setLongitude(
+          this->m_currentStation.coordinate().longitude());
+    }
+
     this->m_statusBar->clearMessage();
     if (ierr != 0) {
       emit usgsError(waterData->errorString());
@@ -137,7 +145,6 @@ int Usgs::replotCurrentUSGSStation(int index) {
 }
 
 int Usgs::plotUSGS() {
-
   this->m_chartView->clear();
   this->m_chartView->initializeAxis(1);
 
