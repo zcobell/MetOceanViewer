@@ -161,10 +161,8 @@ int Usgs::plotUSGS() {
   station->dataBounds(dateMin, dateMax, ymin, ymax);
 
   QDateTime minDateTime, maxDateTime;
-  minDateTime = QDateTime::fromMSecsSinceEpoch(dateMin);
-  maxDateTime = QDateTime::fromMSecsSinceEpoch(dateMax);
-  minDateTime.setTimeSpec(Qt::UTC);
-  maxDateTime.setTimeSpec(Qt::UTC);
+  minDateTime = QDateTime::fromMSecsSinceEpoch(dateMin, Qt::UTC);
+  maxDateTime = QDateTime::fromMSecsSinceEpoch(dateMax, Qt::UTC);
 
   minDateTime =
       QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));
@@ -307,12 +305,11 @@ int Usgs::replotChart(Timezone *newTimezone) {
   }
 
   QDateTime minDateTime = QDateTime::fromMSecsSinceEpoch(
-      this->m_allStationData->station(0)->date(0));
-  QDateTime maxDateTime =
-      QDateTime::fromMSecsSinceEpoch(this->m_allStationData->station(0)->date(
-          this->m_allStationData->station(0)->numSnaps()));
-  minDateTime.setTimeSpec(Qt::UTC);
-  maxDateTime.setTimeSpec(Qt::UTC);
+      this->m_allStationData->station(0)->date(0), Qt::UTC);
+  QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(
+      this->m_allStationData->station(0)->date(
+          this->m_allStationData->station(0)->numSnaps()),
+      Qt::UTC);
 
   minDateTime =
       QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));

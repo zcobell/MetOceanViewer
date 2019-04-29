@@ -237,7 +237,7 @@ int Noaa::plotChart() {
        j++) {
     if (QDateTime::fromMSecsSinceEpoch(
             this->m_currentStationData[0]->station(0)->date(j) +
-            this->m_offsetSeconds)
+            this->m_offsetSeconds,Qt::UTC)
             .isValid()) {
       if (this->m_currentStationData[0]->station(0)->data(j) != 0.0)
         series1->append(this->m_currentStationData[0]->station(0)->date(j) +
@@ -253,7 +253,7 @@ int Noaa::plotChart() {
          j++)
       if (QDateTime::fromMSecsSinceEpoch(
               this->m_currentStationData[1]->station(0)->date(j) +
-              this->m_offsetSeconds)
+              this->m_offsetSeconds,Qt::UTC)
               .isValid()) {
         if (this->m_currentStationData[1]->station(0)->data(j) != 0.0)
           series2->append(this->m_currentStationData[1]->station(0)->date(j) +

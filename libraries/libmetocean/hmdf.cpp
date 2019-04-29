@@ -193,8 +193,7 @@ int Hmdf::writeCsv(QString filename) {
     output.write(QString("Units: " + this->units() + "\n").toUtf8());
     output.write(QString("\n").toUtf8());
     for (i = 0; i < this->station(s)->numSnaps(); i++) {
-      QDateTime d = QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i));
-      d.setTimeSpec(Qt::UTC);
+      QDateTime d = QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i),Qt::UTC);
       if (d.isValid()) {
         value.sprintf("%10.4e", this->station(s)->data(i));
         output.write(
@@ -230,8 +229,8 @@ int Hmdf::writeImeds(QString filename) {
             .toUtf8());
 
     for (int i = 0; i < this->station(s)->numSnaps(); i++) {
-      QDateTime d = QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i));
-      d.setTimeSpec(Qt::UTC);
+      QDateTime d =
+          QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i), Qt::UTC);
 
       if (d.isValid()) {
         value.sprintf("%10.4e", this->station(s)->data(i));
@@ -370,7 +369,7 @@ int Hmdf::writeNetcdf(QString filename) {
 
   NCCHECK(nc_enddef(ncid));
 
-  for (int i = 0; i < this->nstations(); i++) {
+  for (size_t i = 0; i < this->nstations(); i++) {
     size_t index[2] = {i, 0};
     size_t stindex[1] = {i};
     size_t count[2] = {1, 200};

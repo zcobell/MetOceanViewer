@@ -288,8 +288,7 @@ void ChartView::addLineValuesToLegend(qreal x) {
     else
       this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
   }
-  QDateTime date = QDateTime::fromMSecsSinceEpoch(x);
-  date.setTimeSpec(Qt::UTC);
+  QDateTime date = QDateTime::fromMSecsSinceEpoch(x,Qt::UTC);
   QString dateString = QString("Date: ") + date.toString("MM/dd/yyyy hh:mm AP");
   this->m_coord->setText(dateString);
   return;
