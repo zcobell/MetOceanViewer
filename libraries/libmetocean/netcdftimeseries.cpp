@@ -135,6 +135,11 @@ int NetcdfTimeseries::read() {
     refTime = QDateTime::fromString(timeString, "yyyy-MM-dd hh:mm:ss");
     refTime.setTimeSpec(Qt::UTC);
 
+    double fillValue;
+    NCCHECK(nc_inq_var_fill(ncid, varid_data, NULL, &fillValue));
+    if (fillValue == NC_FILL_DOUBLE) fillValue = -99999.0;
+    this->m_fillValue.push_back(fillValue);
+
     qint64 *timeData = new qint64[length];
     double *varData = new double[length];
 
@@ -187,6 +192,7 @@ int NetcdfTimeseries::toHmdf(Hmdf *hmdf) {
     station->setName(this->m_stationName[i]);
     station->setId(this->m_stationName[i]);
     station->setStationIndex(i);
+    station->setNullValue(this->m_fillValue[i]);
     hmdf->addStation(station);
   }
 

@@ -34,7 +34,7 @@ NoaaCoOps::NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
   this->m_product = product;
   this->m_units = units;
   this->m_datum = datum;
-  this->m_useJson = true;
+  this->m_useJson = false;
   this->parseProduct();
 }
 
@@ -204,7 +204,7 @@ int NoaaCoOps::formatNoaaResponseCsv(QVector<QString> &downloadedData,
         int hour = d[3].toInt();
         int minute = d[4].toInt();
 
-        double value;
+        double value = 0.0;
         if (this->m_productParsed.size() > 1) {
           if (this->m_productParsed[1] == "speed") {
             value = t[1].toDouble();
@@ -218,11 +218,12 @@ int NoaaCoOps::formatNoaaResponseCsv(QVector<QString> &downloadedData,
         }
 
         //...Remove duplicates when sets are downloaded back to back
-        if (QDateTime(QDate(year, month, day), QTime(hour, minute, 0)) ==
-            tempDate)
+        if (QDateTime(QDate(year, month, day), QTime(hour, minute, 0),
+                      Qt::UTC) == tempDate)
           continue;
 
-        tempDate = QDateTime(QDate(year, month, day), QTime(hour, minute, 0));
+        tempDate =
+            QDateTime(QDate(year, month, day), QTime(hour, minute, 0), Qt::UTC);
         if (value != 0.0 && tempDate.isValid()) {
           station->setNext(tempDate.toMSecsSinceEpoch(), value);
         }

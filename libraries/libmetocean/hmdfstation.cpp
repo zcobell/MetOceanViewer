@@ -25,6 +25,7 @@ HmdfStation::HmdfStation(QObject *parent) : QObject(parent) {
   this->m_id = "noid";
   this->m_isNull = true;
   this->m_stationIndex = 0;
+  this->m_nullValue = HmdfStation::nullDataValue();
 }
 
 void HmdfStation::clear() {
@@ -139,4 +140,10 @@ void HmdfStation::dataBounds(qint64 &minDate, qint64 &maxDate, double &minValue,
   maxValue = sortedData.back();
 
   return;
+}
+
+double HmdfStation::nullValue() const { return this->m_nullValue; }
+
+void HmdfStation::setNullValue(double nullValue) {
+  this->m_nullValue = nullValue;
 }

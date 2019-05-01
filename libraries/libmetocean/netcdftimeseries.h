@@ -43,7 +43,7 @@ class NetcdfTimeseries : public QObject {
 
   static int getEpsg(QString file);
 
- private:
+private:
   QString m_filename;
   QString m_units;
   QString m_verticalDatum;
@@ -51,6 +51,7 @@ class NetcdfTimeseries : public QObject {
   int m_epsg;
   size_t m_numStations;
 
+  QVector<double> m_fillValue;
   QVector<double> m_xcoor;
   QVector<double> m_ycoor;
   QVector<size_t> m_stationLength;

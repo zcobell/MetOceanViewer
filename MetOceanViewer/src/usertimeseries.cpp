@@ -195,7 +195,8 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
 
   HmdfStation *st = h->station(this->m_markerId);
   for (int j = 0; j < h->station(this->m_markerId)->numSnaps(); j++) {
-    if (st->data(j) != HmdfStation::nullDataValue() &&
+    // qDebug() << st->nullValue();
+    if (std::abs(st->data(j) - st->nullValue()) > 0.0001 &&
         st->date(j) >= startDate && st->date(j) <= endDate) {
       maxDate = std::max(st->date(j) + addX - offset, maxDate);
       minDate = std::min(st->date(j) + addX - offset, minDate);
@@ -634,6 +635,8 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
           DataOut[i]->station(j)->setName(Data[i]->station(k)->name());
           DataOut[i]->station(j)->setData(Data[i]->station(k)->allData());
           DataOut[i]->station(j)->setDate(Data[i]->station(k)->allDate());
+          DataOut[i]->station(j)->setNullValue(
+              Data[i]->station(k)->nullValue());
           DataOut[i]->station(j)->setIsNull(false);
           found = true;
           break;
