@@ -49,7 +49,7 @@ int Ndbc::plotStation() {
 
   startDate.setTime(QTime(0, 0, 0));
   endDate.setTime(QTime(0, 0, 0));
-  endDate.addDays(1);
+  endDate = endDate.addDays(1);
 
   if (startDate >= endDate) {
     emit ndbcError("Invalid date range selected");

@@ -75,10 +75,6 @@ win32{
 
 *msvc*{
   INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/VS
-} else {
-  INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/DOS
-}
-
   DEFINES += HAVE_INTTYPES_H HAVE_IO_H HAVE_LIBTCD HAVE_LLROUND HAVE_MEMORY_H HAVE_PROCESS_H \
              HAVE_LIBTCD HAVE_LLROUND HAVE_MEMORY_H HAVE_PROCESS_H USE_PRAGMA_MESSAGE \
              HAVE_STDINT_H HAVE_STDLIB_H HAVE_STRING_H HAVE_SYS_STAT_H HAVE_SYS_TYPES_H \
@@ -86,6 +82,17 @@ win32{
              acceptarg3_t=size_t xttpd_group=\"nobody\" xttpd_user=\"nobody\" VERSION=\"2.15.1\" \
              PACKAGE_VERSION=\"2.15.1\" PACKAGE_NAME=\"XTide\" PACKAGE_BUGREPORT=\"dave@flaterco.com\" \
              PACKAGE=\"xtide\"
+} else {
+  INCLUDEPATH += $$PWD/../../thirdparty/libtcd-2.2.7/DOS
+  DEFINES += HAVE_INTTYPES_H HAVE_IO_H HAVE_LIBTCD HAVE_LLROUND HAVE_MEMORY_H HAVE_PROCESS_H \
+             HAVE_LIBTCD HAVE_LLROUND HAVE_MEMORY_H HAVE_PROCESS_H USE_PRAGMA_MESSAGE \
+             HAVE_STDINT_H HAVE_STDLIB_H HAVE_STRING_H HAVE_SYS_STAT_H HAVE_SYS_TYPES_H \
+             STDC_HEADERS USE_PRAGMA_MESSAGE UseLocalFiles UseSemicolonPathsep X_DISPLAY_MISSING \
+             acceptarg3_t=size_t xttpd_group=\"nobody\" xttpd_user=\"nobody\" VERSION=\"2.15.1\" \
+             PACKAGE_VERSION=\"2.15.1\" PACKAGE_NAME=\"XTide\" PACKAGE_BUGREPORT=\"dave@flaterco.com\" \
+             PACKAGE=\"xtide\" ALLOW_BROKEN_ZONEINFO
+}
+
 }
 
 unix{
