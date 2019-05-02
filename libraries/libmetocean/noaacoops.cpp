@@ -39,7 +39,7 @@ NoaaCoOps::NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
   this->m_product = product;
   this->m_units = units;
   this->m_datum = datum;
-  this->m_useJson = false;
+  this->m_useJson = true;
   this->parseProduct();
 }
 
@@ -278,32 +278,45 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
       QJsonObject obj = val.toObject();
       QJsonValue val2 = obj["message"];
       this->setErrorString(val2.toString());
+      return 1;
     }
 
     //...Ditch duplicate data
-    int start;
+    size_t start;
     if (i == 0)
       start = 0;
     else
       start = 1;
 
-    for (int j = start; j < jsonArr.size(); j++) {
+    for (size_t j = start; j < jsonArr.size(); j++) {
       QJsonObject obj = jsonArr[j].toObject();
       QDateTime t =
           QDateTime::fromString(obj["t"].toString(), "yyyy-MM-dd hh:mm");
       t.setTimeSpec(Qt::UTC);
-      bool ok;
-      double v = obj["v"].toString().toDouble(&ok);
+      bool ok = false;
+      double v = station->nullValue();
+      if (this->m_productParsed.size() == 1) {
+        v = obj["v"].toString().toDouble(&ok);
+      } else {
+        if (this->m_productParsed[1] == "speed") {
+          v = obj["s"].toString().toDouble(&ok);
+        } else if (this->m_productParsed[1] == "direction") {
+          v = obj["d"].toString().toDouble(&ok);
+        } else if (this->m_productParsed[1] == "gusts") {
+          v = obj["g"].toString().toDouble(&ok);
+        }
+      }
       if (t.isValid() && ok) {
         station->setNext(t.toMSecsSinceEpoch(), v);
       }
     }
-  }
 
-  if (station->numSnaps() > 3) {
-    outputData->addStation(station);
-    return 0;
-  } else {
-    return 1;
+    if (station->numSnaps() > 3) {
+      outputData->addStation(station);
+      return 0;
+    } else {
+      return 1;
+    }
   }
+  return 1;
 }

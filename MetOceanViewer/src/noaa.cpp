@@ -122,7 +122,7 @@ int Noaa::getDataBounds(double &ymin, double &ymax) {
   ymax = std::numeric_limits<double>::min();
   ymin = std::numeric_limits<double>::max();
 
-  for (int i = 0; i < this->m_currentStationData.length(); i++) {
+  for (size_t i = 0; i < this->m_currentStationData.length(); i++) {
     if (!this->m_currentStationData[i]->null()) {
       QVector<double> data =
           this->m_currentStationData[i]->station(0)->allData();
@@ -168,7 +168,7 @@ QString Noaa::getUnitsLabel() {
 
 QString Noaa::getDatumLabel() {
   if (this->m_productIndex > 3)
-    return "Stnd";
+    return QString();
   else
     return this->m_comboDatum->currentText();
 }
@@ -180,8 +180,12 @@ int Noaa::generateLabels() {
   } else {
     QString product;
     this->getNoaaProductLabel(product);
-    this->m_ylabel = product + " (" + this->getUnitsLabel() + ", " +
-                     this->getDatumLabel() + ")";
+    if (this->getDatumLabel() == QString()) {
+      this->m_ylabel = product + " (" + this->getUnitsLabel() + ")";
+    } else {
+      this->m_ylabel = product + " (" + this->getUnitsLabel() + ", " +
+                       this->getDatumLabel() + ")";
+    }
   }
   this->m_plotTitle = tr("Station ") + this->m_station.id() + ": " +
                       this->m_currentStationData[0]->station(0)->name();
@@ -233,11 +237,12 @@ int Noaa::plotChart() {
   this->m_chartView->setDateFormat(minDateTime, maxDateTime);
   this->m_chartView->setAxisLimits(minDateTime, maxDateTime, ymin, ymax);
 
-  for (int j = 0; j < this->m_currentStationData[0]->station(0)->numSnaps();
+  for (size_t j = 0; j < this->m_currentStationData[0]->station(0)->numSnaps();
        j++) {
     if (QDateTime::fromMSecsSinceEpoch(
             this->m_currentStationData[0]->station(0)->date(j) +
-            this->m_offsetSeconds,Qt::UTC)
+                this->m_offsetSeconds,
+            Qt::UTC)
             .isValid()) {
       if (this->m_currentStationData[0]->station(0)->data(j) != 0.0)
         series1->append(this->m_currentStationData[0]->station(0)->date(j) +
@@ -249,11 +254,12 @@ int Noaa::plotChart() {
   this->m_chartView->addSeries(series1, series1->name());
 
   if (this->m_productIndex == 0) {
-    for (int j = 0; j < this->m_currentStationData[1]->station(0)->numSnaps();
+    for (size_t j = 0; j < this->m_currentStationData[1]->station(0)->numSnaps();
          j++)
       if (QDateTime::fromMSecsSinceEpoch(
               this->m_currentStationData[1]->station(0)->date(j) +
-              this->m_offsetSeconds,Qt::UTC)
+                  this->m_offsetSeconds,
+              Qt::UTC)
               .isValid()) {
         if (this->m_currentStationData[1]->station(0)->data(j) != 0.0)
           series2->append(this->m_currentStationData[1]->station(0)->date(j) +
@@ -461,15 +467,15 @@ int Noaa::replotChart(Timezone *newTimezone) {
   QVector<QLineSeries *> series;
   series.resize(this->m_chartView->chart()->series().length());
 
-  for (int i = 0; i < this->m_chartView->chart()->series().length(); i++) {
+  for (size_t i = 0; i < this->m_chartView->chart()->series().length(); i++) {
     series[i] =
         static_cast<QLineSeries *>(this->m_chartView->chart()->series().at(i));
   }
 
-  for (int i = 0; i < series.length(); i++) {
+  for (size_t i = 0; i < series.length(); i++) {
     QList<QPointF> data = series[i]->points();
     series[i]->clear();
-    for (int j = 0; j < data.length(); j++) {
+    for (size_t j = 0; j < data.length(); j++) {
       data[j].setX(data[j].x() + totalOffset);
     }
     series[i]->append(data);
