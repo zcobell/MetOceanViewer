@@ -98,6 +98,7 @@ RESOURCES += \
 RC_FILE = resources.rc
 
 DISTFILES += \
+    qml/MapboxGLMapViewer.qml \
     qml/MovMapItem.qml \
     qml/MapViewer.qml \
     qml/InfoWindow.qml \

@@ -150,7 +150,15 @@ void MapFunctions::setMapQmlFile(QQuickWidget *map) {
     map->setSource(QUrl("qrc:/qml/qml/EsriMapViewer.qml"));
   else if (this->m_mapSource == MapSource::MapBox) {
     map->rootContext()->setContextProperty("mapboxKey", this->m_mapboxApiKey);
+
+//...Only g++ can use MapboxGL (as of this writing). This is toggled
+//   automatically here
+#ifdef _MSC_VER
     map->setSource(QUrl("qrc:/qml/qml/MapboxMapViewer.qml"));
+#else
+    map->setSource(QUrl("qrc:/qml/qml/MapboxGLMapViewer.qml"));
+#endif
+
   } else if (this->m_mapSource == MapSource::OSM) {
     map->setSource(QUrl("qrc:/qml/qml/OsmMapViewer.qml"));
   }
