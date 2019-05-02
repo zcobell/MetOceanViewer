@@ -67,35 +67,20 @@ DEFINES += MOV_ARCH=\\\"$$QT_ARCH\\\"
 #}
 
 #...Microsoft Visual C++ compilers
-*msvc* {
+win32 {
 
     #...Location of the netCDF srcs
     INCLUDEPATH += $$PWD/thirdparty/netcdf/include
 
-    contains(QT_ARCH, i386){
+    #...Microsoft Visual C++ 64-bit compiler
+    LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
 
-        #...Microsoft Visual C++ 32-bit compiler
-        LIBS += -L$$PWD/thirdparty/netcdf/libs_vc32 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
+    #...Optimization flags
+    QMAKE_CXXFLAGS_RELEASE +=
+    QMAKE_CXXFLAGS_DEBUG += -DEBUG
 
-        #...Optimization flags
-        QMAKE_CXXFLAGS_RELEASE +=
-        QMAKE_CXXFLAGS_DEBUG += -DEBUG
-
-        #...Define a variable for the about dialog
-        DEFINES += MOV_COMPILER=\\\"msvc\\\"
-    }else{
-
-        #...Microsoft Visual C++ 64-bit compiler
-        LIBS += -L$$PWD/thirdparty/netcdf/libs_vc64 -lnetcdf -lhdf5 -lzlib -llibcurl_imp
-
-        #...Optimization flags
-        QMAKE_CXXFLAGS_RELEASE +=
-        QMAKE_CXXFLAGS_DEBUG += -DEBUG
-
-        #...Define a variable for the about dialog
-        DEFINES += MOV_COMPILER=\\\"msvc\\\"
-    }
-
+    #...Define a variable for the about dialog
+    DEFINES += MOV_COMPILER=\\\"msvc\\\"
 }
 
 

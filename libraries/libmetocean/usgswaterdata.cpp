@@ -127,14 +127,14 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   this->setErrorString(e);
 
   //...Start by finding the header and reading the parameters from it
-  for (int i = 0; i < SplitByLine.length(); i++) {
+  for (size_t i = 0; i < SplitByLine.length(); i++) {
     if (SplitByLine.value(i).left(15) == "# Data provided") {
       ParamStart = i + 2;
       break;
     }
   }
 
-  for (int i = ParamStart; i < SplitByLine.length(); i++) {
+  for (size_t i = ParamStart; i < SplitByLine.length(); i++) {
     tempLine = SplitByLine.value(i);
     if (tempLine == "#") {
       ParamStop = i - 1;
@@ -151,7 +151,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   };
   QVector<UsgsParameter> params;
 
-  for (int i = ParamStart; i <= ParamStop; i++) {
+  for (size_t i = ParamStart; i <= ParamStop; i++) {
     tempLine = SplitByLine.value(i);
     tempList = tempLine.split("  ", QString::SkipEmptyParts);
 
@@ -174,7 +174,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   }
 
   //...Find out where the header ends
-  for (int i = 0; i < SplitByLine.length(); i++) {
+  for (size_t i = 0; i < SplitByLine.length(); i++) {
     if (SplitByLine.value(i).left(1) != "#") {
       HeaderEnd = i + 2;
       break;
@@ -185,8 +185,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   QMap<int, int> parameterMapping, revParmeterMapping;
   QString mapString = SplitByLine[HeaderEnd - 2];
   QStringList mapList = mapString.split("\t");
-  for (int i = 4; i < mapList.length(); i++) {
-    for (int j = 0; j < params.length(); j++) {
+  for (size_t i = 4; i < mapList.length(); i++) {
+    for (size_t j = 0; j < params.length(); j++) {
       if (mapList[i] == params[j].code) {
         parameterMapping[i] = j;
         revParmeterMapping[j] = i;
@@ -197,7 +197,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   //...Initialize the array
   QVector<HmdfStation *> stations;
   stations.resize(params.length());
-  for (int i = 0; i < stations.length(); i++) {
+  for (size_t i = 0; i < stations.length(); i++) {
     stations[i] = new HmdfStation(output);
     stations[i]->setName(params[i].description);
   }
@@ -206,7 +206,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   if (stations.length() == 0) return 1;
 
   //...Read the data into the array
-  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
+  for (size_t i = HeaderEnd; i < SplitByLine.length(); i++) {
     tempLine = SplitByLine.value(i);
     tempList = tempLine.split(QRegExp("[\t]"));
     TempDateString = tempList.value(2);
@@ -224,9 +224,19 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
     int offset = Timezone::offsetFromUtc(TempTimeZoneString);
     currentDate = currentDate.addSecs(-offset);
 
-    if (currentDate.toMSecsSinceEpoch() >
-        stations[0]->date(stations[0]->numSnaps() - 1)) {
-      for (int j = 0; j < params.length(); j++) {
+    if (stations[0]->numSnaps() > 0) {
+      if (currentDate.toMSecsSinceEpoch() >
+          stations[0]->date(stations[0]->numSnaps() - 1)) {
+        for (size_t j = 0; j < params.length(); j++) {
+          double data =
+              tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
+          if (doubleok) {
+            stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
+          }
+        }
+      }
+    } else {
+      for (size_t j = 0; j < params.length(); j++) {
         double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
         if (doubleok) {
           stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
@@ -251,7 +261,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   }
 
   //...Add stations to object
-  for (int i = 0; i < stations.length(); i++) output->addStation(stations[i]);
+  for (int i = 0; i < stations.length(); i++)
+    output->addStation(stations[i]);
 
   return 0;
 }

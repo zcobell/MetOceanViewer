@@ -161,8 +161,8 @@ int Usgs::plotUSGS() {
   station->dataBounds(dateMin, dateMax, ymin, ymax);
 
   QDateTime minDateTime, maxDateTime;
-  minDateTime = QDateTime::fromMSecsSinceEpoch(dateMin, Qt::UTC);
-  maxDateTime = QDateTime::fromMSecsSinceEpoch(dateMax, Qt::UTC);
+  minDateTime = QDateTime::fromMSecsSinceEpoch(dateMin);
+  maxDateTime = QDateTime::fromMSecsSinceEpoch(dateMax);
 
   minDateTime =
       QDateTime(minDateTime.date(), QTime(minDateTime.time().hour(), 0, 0));

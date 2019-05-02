@@ -25,5 +25,6 @@
         <file>qml/EsriMapViewer.qml</file>
         <file>qml/MapboxMapViewer.qml</file>
         <file>qml/OsmMapViewer.qml</file>
+        <file>qml/MapboxGLMapViewer.qml</file>
     </qresource>
 </RCC>
