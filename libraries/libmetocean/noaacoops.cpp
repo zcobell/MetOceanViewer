@@ -310,13 +310,12 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
         station->setNext(t.toMSecsSinceEpoch(), v);
       }
     }
-
-    if (station->numSnaps() > 3) {
-      outputData->addStation(station);
-      return 0;
-    } else {
-      return 1;
-    }
   }
-  return 1;
+
+  if (station->numSnaps() > 3) {
+    outputData->addStation(station);
+    return 0;
+  } else {
+    return 1;
+  }
 }
