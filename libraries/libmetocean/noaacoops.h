@@ -42,14 +42,18 @@ class NoaaCoOps : public WaterData {
 
   int downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
                                  QVector<QDateTime> endDateList,
-                                 QVector<QString> &downloadedData);
+                                 std::vector<std::string> &downloadedData);
 
-  int readNoaaResponse(QNetworkReply *reply, QVector<QString> &retrieveData);
+  int readNoaaResponse(QNetworkReply *reply,
+                       std::vector<std::string> &retrieveData);
 
-  int formatNoaaResponse(QVector<QString> &downloadedData, Hmdf *outputData);
-  int formatNoaaResponseCsv(QVector<QString> &downloadedData, Hmdf *outputData);
-  int formatNoaaResponseJson(QVector<QString> &downloadedData,
+  int formatNoaaResponse(std::vector<std::string> &downloadedData,
+                         Hmdf *outputData);
+  int formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
+                            Hmdf *outputData);
+  int formatNoaaResponseJson(std::vector<std::string> &downloadedData,
                              Hmdf *outputData);
+  void parseCsvToValuePair(std::string &data, QDateTime &date, double &value);
 
   QString m_product;
   QStringList m_productParsed;

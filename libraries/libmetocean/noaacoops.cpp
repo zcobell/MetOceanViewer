@@ -26,6 +26,11 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include "boost/algorithm/string/split.hpp"
+#include "boost/algorithm/string/trim.hpp"
+#include "boost/config/warning_disable.hpp"
+#include "boost/spirit/include/phoenix.hpp"
+#include "boost/spirit/include/qi.hpp"
 
 NoaaCoOps::NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
                      QString product, QString datum, QString units,
@@ -45,7 +50,7 @@ int NoaaCoOps::parseProduct() {
 
 int NoaaCoOps::retrieveData(Hmdf *data) {
   QVector<QDateTime> startDateList, endDateList;
-  QVector<QString> rawNoaaData;
+  std::vector<std::string> rawNoaaData;
   int ierr = this->generateDateRanges(startDateList, endDateList);
   if (ierr != 0) return ierr;
   ierr =
@@ -58,7 +63,7 @@ int NoaaCoOps::retrieveData(Hmdf *data) {
 
 int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
                                   QVector<QDateTime> &endDateList) {
-  int numDownloads = (this->startDate().daysTo(this->endDate()) / 30) + 1;
+  long long numDownloads = (this->startDate().daysTo(this->endDate()) / 30) + 1;
 
   this->startDate().setTime(QTime(this->startDate().time().hour(),
                                   this->startDate().time().minute(), 0));
@@ -81,9 +86,9 @@ int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
   return 0;
 }
 
-int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
-                                          QVector<QDateTime> endDateList,
-                                          QVector<QString> &downloadedData) {
+int NoaaCoOps::downloadDataFromNoaaServer(
+    QVector<QDateTime> startDateList, QVector<QDateTime> endDateList,
+    std::vector<std::string> &downloadedData) {
   QNetworkAccessManager *manager = new QNetworkAccessManager(this);
 
   for (int i = 0; i < startDateList.length(); i++) {
@@ -143,7 +148,7 @@ int NoaaCoOps::downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
 }
 
 int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
-                                QVector<QString> &downloadedData) {
+                                std::vector<std::string> &downloadedData) {
   // Catch some errors during the download
   if (reply->error() != 0) {
     this->setErrorString(QStringLiteral("ERROR: ") + reply->errorString());
@@ -152,7 +157,7 @@ int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
   }
 
   // Store the data at the back of the vector
-  downloadedData.push_back((QString)reply->readAll());
+  downloadedData.push_back(static_cast<std::string>(reply->readAll()));
 
   // Delete this response
   reply->deleteLater();
@@ -160,7 +165,7 @@ int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
   return 0;
 }
 
-int NoaaCoOps::formatNoaaResponse(QVector<QString> &downloadedData,
+int NoaaCoOps::formatNoaaResponse(std::vector<std::string> &downloadedData,
                                   Hmdf *outputData) {
   if (this->m_useJson) {
     return this->formatNoaaResponseJson(downloadedData, outputData);
@@ -169,17 +174,46 @@ int NoaaCoOps::formatNoaaResponse(QVector<QString> &downloadedData,
   }
 }
 
-int NoaaCoOps::formatNoaaResponseCsv(QVector<QString> &downloadedData,
+void NoaaCoOps::parseCsvToValuePair(std::string &data, QDateTime &date,
+                                    double &value) {
+  namespace qi = boost::spirit::qi;
+  namespace ascii = boost::spirit::ascii;
+  namespace phoenix = boost::phoenix;
+  std::string dir;
+  std::vector<double> v2(3);
+  int year, month, day, hour, minute;
+  qi::phrase_parse(data.begin(), data.begin() + 10,
+                   (qi::int_ >> qi::int_ >> qi::int_), qi::skip['-'], year,
+                   month, day);
+  qi::phrase_parse(data.begin() + 11, data.begin() + 16, (qi::int_ >> qi::int_),
+                   qi::skip[':'], hour, minute);
+  qi::phrase_parse(data.begin() + 17, data.end(),
+                   (qi::double_ >> qi::double_ >>
+                    qi::lexeme[+(qi::char_ - ',')] >> qi::double_),
+                   qi::skip[','], v2[0], v2[1], dir, v2[2]);
+  date = QDateTime(QDate(year, month, day), QTime(hour, minute, 0), Qt::UTC);
+
+  if (this->m_productParsed.size() > 1) {
+    if (this->m_productParsed[1] == "speed") {
+      value = v2[0];
+    } else if (this->m_productParsed[1] == "direction") {
+      value = v2[1];
+    } else if (this->m_productParsed[1] == "gusts") {
+      value = v2[2];
+    }
+  } else {
+    value = v2[0];
+  }
+  return;
+}
+
+int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
                                      Hmdf *outputData) {
-  QVector<QStringList> data;
-  QString error;
+  std::vector<std::vector<std::string>> data(downloadedData.size());
 
-  data.resize(downloadedData.size());
-
-  for (int i = 0; i < downloadedData.size(); i++) {
-    data[i] = QString(downloadedData[i])
-                  .split(QRegExp("[\r\n]"), QString::SkipEmptyParts);
-    error = QString(downloadedData[i]) + QStringLiteral("\n");
+  for (size_t i = 0; i < downloadedData.size(); ++i) {
+    boost::algorithm::split(data[i], downloadedData[i], boost::is_any_of("\n"),
+                            boost::token_compress_on);
   }
 
   HmdfStation *station = new HmdfStation(outputData);
@@ -188,44 +222,24 @@ int NoaaCoOps::formatNoaaResponseCsv(QVector<QString> &downloadedData,
   station->setId(this->station().id());
   station->setStationIndex(0);
 
-  QDateTime tempDate = QDateTime();
-  tempDate.setTimeSpec(Qt::UTC);
+  for (auto &d : data) {
+    if (d.size() > 3) {
+      for (auto &d2 : d) {
+        if (d2.size() == 0) continue;
 
-  for (int i = 0; i < data.size(); i++) {
-    if (data[i].size() > 3) {
-      for (int j = 1; j < data[i].size(); j++) {
-        const QRegExp rx("-|:");
-        QStringList t = data[i][j].split(",");
-        QStringList d = t[0].replace(rx, " ").split(" ");
+        QDateTime date = QDateTime();
+        double value = HmdfStation::nullDataValue();
+        this->parseCsvToValuePair(d2, date, value);
 
-        int year = d[0].toInt();
-        int month = d[1].toInt();
-        int day = d[2].toInt();
-        int hour = d[3].toInt();
-        int minute = d[4].toInt();
-
-        double value = 0.0;
-        if (this->m_productParsed.size() > 1) {
-          if (this->m_productParsed[1] == "speed") {
-            value = t[1].toDouble();
-          } else if (this->m_productParsed[1] == "direction") {
-            value = t[2].toDouble();
-          } else if (this->m_productParsed[1] == "gusts") {
-            value = t[4].toDouble();
+        if (std::abs(value - HmdfStation::nullDataValue()) > 0.001 &&
+            date.isValid()) {
+          qint64 t = date.toMSecsSinceEpoch();
+          if (station->numSnaps() > 0) {
+            if (station->date(station->numSnaps() - 1) != t)
+              station->setNext(t, value);
+          } else {
+            station->setNext(t, value);
           }
-        } else {
-          value = t[1].toDouble();
-        }
-
-        //...Remove duplicates when sets are downloaded back to back
-        if (QDateTime(QDate(year, month, day), QTime(hour, minute, 0),
-                      Qt::UTC) == tempDate)
-          continue;
-
-        tempDate =
-            QDateTime(QDate(year, month, day), QTime(hour, minute, 0), Qt::UTC);
-        if (value != 0.0 && tempDate.isValid()) {
-          station->setNext(tempDate.toMSecsSinceEpoch(), value);
         }
       }
     }
@@ -240,7 +254,7 @@ int NoaaCoOps::formatNoaaResponseCsv(QVector<QString> &downloadedData,
   return 0;
 }
 
-int NoaaCoOps::formatNoaaResponseJson(QVector<QString> &downloadedData,
+int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
                                       Hmdf *outputData) {
   HmdfStation *station = new HmdfStation(outputData);
   station->setCoordinate(this->station().coordinate());
@@ -248,9 +262,10 @@ int NoaaCoOps::formatNoaaResponseJson(QVector<QString> &downloadedData,
   station->setId(this->station().id());
   station->setStationIndex(0);
 
-  for (int i = 0; i < downloadedData.length(); i++) {
-    QString data = downloadedData[i];
-    QJsonDocument jsonData = QJsonDocument::fromJson(data.toUtf8());
+  for (size_t i = 0; i < downloadedData.size(); i++) {
+    std::string data = downloadedData[i];
+    QJsonDocument jsonData =
+        QJsonDocument::fromJson(QString::fromStdString(data).toUtf8());
     QJsonObject jsonObj = jsonData.object();
 
     QJsonArray jsonArr;
