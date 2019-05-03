@@ -278,7 +278,6 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
       QJsonObject obj = val.toObject();
       QJsonValue val2 = obj["message"];
       this->setErrorString(val2.toString());
-      return 1;
     }
 
     //...Ditch duplicate data

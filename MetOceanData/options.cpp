@@ -238,7 +238,7 @@ void Options::printStationList(QStringList station,
                             MetOceanData::serviceToMarkerType(markerType), s);
   for (size_t i = 0; i < station.size(); ++i) {
     std::cout << s[i].id().toStdString() << ",'"
-              << s[i].name().replace(" ", "_").toStdString() << "',"
+              << s[i].name().replace(" ", "_").replace(",","_").replace("__","_").toStdString() << "',"
               << s[i].coordinate().longitude() << ","
               << s[i].coordinate().latitude() << std::endl;
     std::cout.flush();
