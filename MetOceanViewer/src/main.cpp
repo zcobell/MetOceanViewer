@@ -33,6 +33,8 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 
+  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
   Q_INIT_RESOURCE(resource_files);
 
   //...Display the splash screen
