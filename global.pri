@@ -45,18 +45,11 @@ GIT_VERSION = $$system($$BASE_GIT_COMMAND describe --always --tags 2> $$NULL_DEV
 # also here we want full version on every system so using GIT_VERSION
 DEFINES += GIT_VERSION=\\\"$$MOV_VERSION\\\"
 
-# By default Qt only uses major and minor version for Info.plist on Mac.
-# This will rewrite Info.plist with full version
-macx {
-    INFO_PLIST_PATH = $$shell_quote($${OUT_PWD}/$${TARGET}.app/Contents/Info.plist)
-    QMAKE_POST_LINK += /usr/libexec/PlistBuddy -c \"Set :CFBundleShortVersionString $${MOV_VERSION}\" $${INFO_PLIST_PATH}
-}
-
 message("Current version: $$MOV_VERSION")
-    
+
 !isEmpty(NETCDFHOME){
     INCLUDEPATH += $$NETCDFHOME/include
-    LIBS += -L$$NETCDFHOME/lib
+    LIBS += -L$$NETCDFHOME/lib -lnetcdf
 }
 
 #...Compiler dependent options
@@ -108,8 +101,6 @@ unix:!macx{
 #         This, obviously, will vary by the machine
 #         the code is built on
 macx{
-    LIBS += -L/Users/zcobell/Software/netCDF/lib -lnetcdf
-    INCLUDEPATH += /Users/zcobell/Software/netCDF/src
     ICON = img/mov.icns
 
     #...Optimization flags
