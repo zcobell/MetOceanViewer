@@ -9,5 +9,4 @@
         <License name="GNU Generic Public License, Version 3" file="LICENSE" />
     </Licenses>
     <Script>installScript.qs</Script>
-    <RequiresAdminRights>true</RequiresAdminRights>
 </Package>
