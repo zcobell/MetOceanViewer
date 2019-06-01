@@ -41,6 +41,22 @@ static QStringList esriList = QStringList() << "World Street Map"
                                             << "Dark Gray Canvas"
                                             << "DeLorme World Basemap";
 
+#if defined(_MSC_VER) || defined(__APPLE__)
+static QStringList mapboxList = QStringList() << "Streets"
+                                              << "Light"
+                                              << "Dark"
+                                              << "Satellite"
+                                              << "Streets-Satellite"
+                                              << "Wheatpaste"
+                                              << "Streets-Basic"
+                                              << "Comic"
+                                              << "Outdoors"
+                                              << "Run-Bike-Hike"
+                                              << "Pencil"
+                                              << "Pirates"
+                                              << "Emerald"
+                                              << "High-Contrast";
+#else
 static QStringList mapboxList = QStringList() << "Streets"
                                               << "Basic"
                                               << "Bright"
@@ -53,6 +69,7 @@ static QStringList mapboxList = QStringList() << "Streets"
                                               << "Navigation Preview Night"
                                               << "Navigation Day"
                                               << "Navigation Night";
+#endif
 
 static QStringList osmList = QStringList() << "Street Map";
 //                                           << "Satellite Map"
