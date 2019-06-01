@@ -4,6 +4,8 @@
 
 Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gui interface. The code is written in Qt C++ and is designed to run on Windows and Linux systems.
 
+<img src="https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer/img/workswith.png" alt="Works with Windows, Mac, and Linux" width="200">
+
 # Feature List
 - [x] Access and view NOAA station data
 - [x] Access and view USGS station data
