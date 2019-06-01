@@ -153,7 +153,7 @@ void MapFunctions::setMapQmlFile(QQuickWidget *map) {
 
 //...Only g++ can use MapboxGL (as of this writing). This is toggled
 //   automatically here
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__APPLE__)
     map->setSource(QUrl("qrc:/qml/qml/MapboxMapViewer.qml"));
 #else
     map->setSource(QUrl("qrc:/qml/qml/MapboxGLMapViewer.qml"));
