@@ -200,6 +200,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   for (size_t i = 0; i < stations.length(); i++) {
     stations[i] = new HmdfStation(output);
     stations[i]->setName(params[i].description);
+    stations[i]->setLatitude(station().coordinate().latitude());
+    stations[i]->setLongitude(station().coordinate().longitude());
   }
 
   //...Sanity check
