@@ -1,5 +1,5 @@
 # MetOceanViewer
-[![Build Status](https://travis-ci.org/zcobell/MetOceanViewer.svg?branch=master)](https://travis-ci.org/zcobell/MetOceanViewer)
+[![Build Status](https://travis-ci.com/zcobell/MetOceanViewer.svg?branch=master)](https://travis-ci.com/zcobell/MetOceanViewer)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2d817318594440a0834476c9b06de219)](https://www.codacy.com/app/zachary.cobell/MetOceanViewer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=zcobell/MetOceanViewer&amp;utm_campaign=Badge_Grade)
 
 Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gui interface. The code is written in Qt C++ and is designed to run on Windows, Mac, and Linux systems.
