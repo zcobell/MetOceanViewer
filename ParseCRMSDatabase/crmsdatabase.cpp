@@ -38,9 +38,11 @@ int CrmsDatabase::parse() {
 
   size_t nStation = 0;
   while (!this->m_file.eof()) {
-    this->getNextStation(data);
-    this->putNextStation(ncid, nStation, data);
-    qDebug() << QString::fromStdString(data.at(0).id);
+    bool valid = this->getNextStation(data);
+    if (valid) {
+      this->putNextStation(ncid, nStation, data);
+      qDebug() << QString::fromStdString(data.at(0).id);
+    }
     nStation++;
     data.clear();
   }
@@ -140,6 +142,11 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
   std::vector<std::string> split = splitString(line);
   d.id = split[0];
 
+  if (d.id.substr(0, 4) != "CRMS") {
+    d.valid = false;
+    return d;
+  }
+
   QString dateString = QString::fromStdString(split[1]);
   QString timeString = QString::fromStdString(split[2]);
 
@@ -147,6 +154,11 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
                          QTime::fromString(timeString, "hh:mm:ss"), Qt::UTC);
   int offset = Timezone::offsetFromUtc(QString::fromStdString(split[3]));
   d.datetime = d.datetime.addSecs(-offset);
+
+  if (!d.datetime.isValid()) {
+    d.valid = false;
+    return d;
+  }
 
   d.values.reserve(this->m_dataCategories.size());
 
@@ -159,12 +171,14 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
       d.values.push_back(this->fillValue());
     }
   }
+  d.valid = true;
   return d;
 }
 
-void CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data) {
+bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data) {
   std::string prevname;
   size_t n = 0;
+  bool valid = true;
 
   data.reserve(300000);
 
@@ -173,6 +187,7 @@ void CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data) {
     std::getline(this->m_file, line);
     streampos p = this->m_file.tellg();
     CrmsDataContainer d = this->splitToCrmsDataContainer(line);
+    if (!d.valid) valid = false;
     if (n == 0) {
       prevname = d.id;
     } else if (prevname != d.id) {
@@ -180,9 +195,9 @@ void CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data) {
       break;
     }
     n++;
-    data.push_back(d);
+    if (valid) data.push_back(d);
   }
-  return;
+  return valid;
 }
 
 bool CrmsDatabase::fileExists(const std::string &filename) {

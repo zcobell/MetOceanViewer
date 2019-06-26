@@ -19,6 +19,7 @@ class CrmsDatabase : public QObject {
  private:
   struct CrmsDataContainer {
     std::string id;
+    bool valid;
     QDateTime datetime;
     std::vector<double> values;
   };
@@ -27,7 +28,7 @@ class CrmsDatabase : public QObject {
   void openCrmsFile();
   void closeCrmsFile();
   CrmsDataContainer splitToCrmsDataContainer(const std::string &line);
-  void getNextStation(std::vector<CrmsDataContainer> &data);
+  bool getNextStation(std::vector<CrmsDataContainer> &data);
   void putNextStation(int ncid, size_t stationNumber,
                       std::vector<CrmsDataContainer> &data);
   void initializeOutputFile(int &ncid);
