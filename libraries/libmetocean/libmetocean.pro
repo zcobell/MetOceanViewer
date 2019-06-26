@@ -43,6 +43,7 @@ INCLUDEPATH += $$PWD/../../thirdparty/boost_1_67_0
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += hmdfasciiparser.cpp  \
+           crmsdata.cpp \
            hmdf.cpp  \
            hmdfstation.cpp  \
            netcdftimeseries.cpp  \
@@ -63,6 +64,7 @@ SOURCES += hmdfasciiparser.cpp  \
     hwmdata.cpp
 
 HEADERS += hmdfasciiparser.h  \
+           crmsdata.h \
            hmdf.h  \
            hmdfstation.h  \
            netcdftimeseries.h  \

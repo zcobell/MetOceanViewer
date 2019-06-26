@@ -175,3 +175,14 @@ QVector<Station> StationLocations::readNdbcMarkers() {
 
   return output;
 }
+
+QVector<Station> StationLocations::readCrmsMarkers() {
+  QVector<Station> output;
+  QFile stationFile(":/stations/data/crms_stations.csv");
+  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+
+
+
+  return output;
+
+}

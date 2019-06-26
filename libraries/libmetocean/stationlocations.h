@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QVector>
+#include "crmsdata.h"
 #include "metocean_global.h"
 #include "station.h"
 
@@ -30,7 +31,7 @@ class StationLocations : public QObject {
  public:
   explicit StationLocations(QObject *parent = nullptr);
 
-  enum MarkerType { NOAA, USGS, XTIDE, NDBC };
+  enum MarkerType { NOAA, USGS, XTIDE, NDBC, CRMS };
 
   static QVector<Station> readMarkers(MarkerType markerType);
 
@@ -39,6 +40,7 @@ class StationLocations : public QObject {
   static QVector<Station> readUsgsMarkers();
   static QVector<Station> readXtideMarkers();
   static QVector<Station> readNdbcMarkers();
+  static QVector<Station> readCrmsMarkers();
 };
 
 #endif  // STATIONLOCATIONS_H

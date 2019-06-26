@@ -33,4 +33,5 @@ CONFIG += ordered
 HEADERS += version.h
 
 SUBDIRS += \
-    MetOceanHWMStats
+    MetOceanHWMStats \
+    ParseCRMSDatabase
