@@ -35,6 +35,7 @@ class Generic : public QObject {
   static bool createConfigDirectory();
   static bool createConfigDirectory(QString &configDirectory);
   static QString configDirectory();
+  static QString crmsDataFile();
 
  private:
   static QString dummyConfigDir;

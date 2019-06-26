@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "stationlocations.h"
 #include <QFile>
+#include "generic.h"
 
 StationLocations::StationLocations(QObject *parent) : QObject(parent) {}
 
@@ -32,6 +33,8 @@ QVector<Station> StationLocations::readMarkers(
     return StationLocations::readXtideMarkers();
   } else if (markerType == NDBC) {
     return StationLocations::readNdbcMarkers();
+  } else if (markerType == CRMS) {
+    return StationLocations::readCrmsMarkers();
   } else {
     QVector<Station> output;
     return output;
@@ -178,11 +181,18 @@ QVector<Station> StationLocations::readNdbcMarkers() {
 
 QVector<Station> StationLocations::readCrmsMarkers() {
   QVector<Station> output;
-  QFile stationFile(":/stations/data/crms_stations.csv");
-  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+  QVector<double> latitude, longitude;
+  QVector<QString> name;
+  QString filename = Generic::crmsDataFile();
+  CrmsData::readStationList(filename, latitude, longitude, name);
 
-
+  for (size_t i = 0; i < latitude.size(); ++i) {
+    QGeoCoordinate c(latitude[i], longitude[i]);
+    QString id;
+    id.sprintf("%zu", i);
+    Station s(c, id, name[i]);
+    output.push_back(s);
+  }
 
   return output;
-
 }

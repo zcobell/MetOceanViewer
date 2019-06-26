@@ -246,6 +246,8 @@ class MainWindow : public QMainWindow {
 
   void on_button_ndbc_savedata_clicked();
 
+  void on_actionGenerate_CRMS_Database_triggered();
+
  private:
   enum MapViewerMarkerModes {
     SingleSelect,
@@ -275,6 +277,8 @@ class MainWindow : public QMainWindow {
   void setupNdbcMap();
 
   void setupHighWaterMarkMap();
+
+  void setupCrmsMap();
 
   void setupRandomColors();
 
@@ -332,6 +336,8 @@ class MainWindow : public QMainWindow {
 
   StationModel *ndbcStationModel;
 
+  StationModel *crmsStationModel;
+
   MapFunctions *mapFunctions;
 
   QActionGroup *mapActionGroup;
@@ -340,6 +346,7 @@ class MainWindow : public QMainWindow {
   QVector<Station> ndbcMarkerLocations;
   QVector<Station> noaaMarkerLocations;
   QVector<Station> usgsMarkerLocations;
+  QVector<Station> crmsMarkerLocations;
 
   QString noaaSelectedStation;
   QString ndbcSelectedStation;

@@ -6,6 +6,7 @@
 #include <QVector>
 #include <fstream>
 #include <string>
+#include <unordered_map>
 
 class CrmsDatabase : public QObject {
   Q_OBJECT
@@ -14,33 +15,55 @@ class CrmsDatabase : public QObject {
                         const std::string &outputFile,
                         QObject *parent = nullptr);
 
-  int parse();
+ public slots:
+  void parse();
+
+ signals:
+  void percentComplete(int);
+  void complete();
+  void success();
+  void error();
 
  private:
-  struct CrmsDataContainer {
-    std::string id;
-    bool valid;
-    QDateTime datetime;
-    std::vector<double> values;
+  struct Position {
+    double latitude;
+    double longitude;
   };
 
+  struct CrmsDataContainer {
+    std::string id;
+    std::string geoid;
+    Position location;
+    bool valid;
+    QDateTime datetime;
+    std::vector<float> values;
+  };
+
+  double getPercentComplete();
   void readHeader();
   void openCrmsFile();
   void closeCrmsFile();
   CrmsDataContainer splitToCrmsDataContainer(const std::string &line);
-  bool getNextStation(std::vector<CrmsDataContainer> &data);
-  void putNextStation(int ncid, size_t stationNumber,
+  bool getNextStation(std::vector<CrmsDataContainer> &data, bool &finished);
+  void putNextStation(size_t stationNumber,
                       std::vector<CrmsDataContainer> &data);
-  void initializeOutputFile(int &ncid);
-  void closeOutputFile(int ncid, size_t numStations);
+  void initializeOutputFile();
+  void closeOutputFile(size_t numStations);
   bool fileExists(const std::string &filename);
-  double fillValue() const;
+  float fillValue() const;
+  void exitCleanly();
 
   std::string m_databaseFile;
   std::string m_outputFile;
   std::ifstream m_file;
+  size_t m_geoidIndex;
+  int m_ncid;
+  bool m_hasError;
   std::vector<std::string> m_dataCategories;
   std::vector<std::string> m_stationNames;
+  std::vector<Position> m_stationLocations;
+  std::unordered_map<size_t, size_t> m_categoryMap;
+  size_t m_fileLength;
 };
 
 #endif  // READCRMSDATABASE_H

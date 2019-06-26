@@ -97,3 +97,7 @@ QString Generic::configDirectory() {
   return QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
       .at(0);
 }
+
+QString Generic::crmsDataFile() {
+  return Generic::configDirectory() + "/crms.nc";
+}

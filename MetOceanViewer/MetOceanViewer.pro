@@ -23,12 +23,15 @@ QT  += qml quick positioning location quickwidgets
 
 include($$PWD/../global.pri)
 
+INCLUDEPATH += $$PWD/../thirdparty/boost_1_67_0
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = MetOceanViewer
 TEMPLATE = app
 
 SOURCES +=\
+    src/crmsdialog.cpp \
     src/stationmodel.cpp \
     src/colors.cpp \
     src/dflow.cpp \
@@ -55,9 +58,11 @@ SOURCES +=\
     src/uixtidetab.cpp \
     src/mapfunctions.cpp \
     src/uindbctab.cpp \
-    src/ndbc.cpp
+    src/ndbc.cpp \
+    src/crmsdatabase.cpp 
 
 HEADERS  += \
+    src/crmsdialog.h \
     src/metoceanviewer.h \
     src/stationmodel.h \
     src/colors.h \
@@ -78,9 +83,11 @@ HEADERS  += \
     src/updatedialog.h \
     src/usertimeseries.h \
     src/mapfunctions.h \
-    src/ndbc.h
+    src/ndbc.h \
+    src/crmsdatabase.h 
 
 FORMS    += \
+    ui/crmsdialog.ui \
     ui/aboutdialog.ui \
     ui/addtimeseriesdialog.ui \
     ui/updatedialog.ui \

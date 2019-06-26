@@ -25,6 +25,7 @@
 #include <algorithm>
 #include "aboutdialog.h"
 #include "colors.h"
+#include "crmsdialog.h"
 #include "dflow.h"
 #include "generic.h"
 #include "keyhandler.h"
@@ -101,6 +102,7 @@ void MainWindow::setupMetOceanViewerUI() {
   this->userDataStationModel = nullptr;
   this->hwmMarkerModel = nullptr;
   this->ndbcStationModel = nullptr;
+  this->crmsStationModel = nullptr;
 
   this->setupNoaaMap();
   this->setupUsgsMap();
@@ -109,6 +111,7 @@ void MainWindow::setupMetOceanViewerUI() {
   this->setupUserTimeseriesMap();
   this->setupHighWaterMarkMap();
   this->setupTimeseriesTable();
+  this->setupCrmsMap();
 
   this->setupRandomColors();
   this->installKeyhandlers();
@@ -133,6 +136,7 @@ void MainWindow::resetMapSource(MapFunctions::MapSource source) {
   this->setupUsgsMap();
   this->setupXTideMap();
   this->setupNdbcMap();
+  this->setupCrmsMap();
   this->setupUserTimeseriesMap();
   this->setupHighWaterMarkMap();
 
@@ -409,6 +413,46 @@ void MainWindow::setupUsgsMap() {
   QMetaObject::invokeMethod(usgsItem, "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
+
+  return;
+}
+
+void MainWindow::setupCrmsMap() {
+  bool hasCrms = CrmsData::inquireCrmsStatus(Generic::crmsDataFile());
+  if (!hasCrms) {
+    ui->subtab_livedata->setTabEnabled(4, false);
+    return;
+  }
+
+  if (this->crmsStationModel == nullptr) {
+    this->crmsStationModel = new StationModel(this);
+  }
+  ui->quick_crmsMap->rootContext()->setContextProperty("stationModel",
+                                                       this->crmsStationModel);
+  ui->quick_crmsMap->rootContext()->setContextProperty(
+      "markerMode", MapViewerMarkerModes::SingleSelect);
+  this->setupMarkerClasses(ui->quick_crmsMap);
+  this->mapFunctions->setMapTypes(ui->quick_crmsMap, ui->combo_crms_maptype);
+  ui->combo_crms_maptype->setCurrentIndex(
+      this->mapFunctions->getDefaultMapIndex());
+  this->mapFunctions->setMapType(this->mapFunctions->getDefaultMapIndex(),
+                                 ui->quick_crmsMap);
+  this->mapFunctions->setMapQmlFile(ui->quick_crmsMap);
+  this->crmsMarkerLocations =
+      StationLocations::readMarkers(StationLocations::CRMS);
+  QObject *crmsItem = ui->quick_crmsMap->rootObject();
+  QObject::connect(crmsItem, SIGNAL(markerChanged(QString)), this,
+                   SLOT(changecrmsMarker(QString)));
+  ui->date_crmsStarttime->setDateTime(
+      QDateTime::currentDateTimeUtc().addDays(-1));
+  ui->date_crmsEndtime->setDateTime(QDateTime::currentDateTimeUtc());
+
+  QMetaObject::invokeMethod(crmsItem, "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
+
+  this->mapFunctions->refreshMarkers(this->crmsStationModel, ui->quick_crmsMap,
+                                     this->crmsMarkerLocations, false, true);
 
   return;
 }
@@ -729,5 +773,11 @@ void MainWindow::on_actionSave_Default_Map_Settings_triggered() {
   }
   this->mapFunctions->setDefaultMapIndex(mapIndex);
   this->mapFunctions->saveConfigurationToDisk();
+  return;
+}
+
+void MainWindow::on_actionGenerate_CRMS_Database_triggered() {
+  QPointer<CrmsDialog> dialog = new CrmsDialog(this);
+  dialog->exec();
   return;
 }
