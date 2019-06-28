@@ -110,24 +110,36 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
 
   ierr = nc_put_att_text(this->m_ncid, varid_data, "station_name",
                          data[0].id.length(), data[0].id.c_str());
-  ierr = nc_put_att_double(this->m_ncid, varid_data, "longitude", NC_DOUBLE, 1,
-                           &data[0].location.longitude);
-  ierr = nc_put_att_double(this->m_ncid, varid_data, "latitude", NC_DOUBLE, 1,
-                           &data[0].location.latitude);
-  ierr = nc_put_att_text(this->m_ncid, varid_data, "geoid",
-                         data[0].geoid.length(), data[0].geoid.c_str());
+  //  ierr = nc_put_att_double(this->m_ncid, varid_data, "longitude", NC_DOUBLE,
+  //  1,
+  //                           &data[0].location.longitude);
+  //  ierr = nc_put_att_double(this->m_ncid, varid_data, "latitude", NC_DOUBLE,
+  //  1,
+  //                           &data[0].location.latitude);
+  //  ierr = nc_put_att_text(this->m_ncid, varid_data, "geoid",
+  //                         data[0].geoid.length(), data[0].geoid.c_str());
 
   QDateTime refDate = QDateTime::fromSecsSinceEpoch(0, Qt::UTC);
   QString refstring =
       "seconds since " + refDate.toString("yyyy/MM/dd hh:mm:ss UTC");
+  QString minString = data[0].datetime.toString("yyyy/MM/dd hh:mm:ss");
+  QString maxString =
+      data[data.size() - 1].datetime.toString("yyyy/MM/dd hh:mm:ss");
+
   ierr = nc_put_att_text(this->m_ncid, varid_time, "station_name",
                          data[0].id.length(), data[0].id.c_str());
-  ierr = nc_put_att_double(this->m_ncid, varid_time, "longitude", NC_DOUBLE, 1,
-                           &data[0].location.longitude);
-  ierr = nc_put_att_double(this->m_ncid, varid_time, "latitude", NC_DOUBLE, 1,
-                           &data[0].location.latitude);
+  //  ierr = nc_put_att_double(this->m_ncid, varid_time, "longitude", NC_DOUBLE,
+  //  1,
+  //                           &data[0].location.longitude);
+  //  ierr = nc_put_att_double(this->m_ncid, varid_time, "latitude", NC_DOUBLE,
+  //  1,
+  //                           &data[0].location.latitude);
   ierr = nc_put_att_text(this->m_ncid, varid_time, "reference",
                          refstring.length(), refstring.toStdString().c_str());
+  ierr = nc_put_att_text(this->m_ncid, varid_time, "minimum",
+                         minString.length(), minString.toStdString().c_str());
+  ierr = nc_put_att_text(this->m_ncid, varid_time, "maximum",
+                         maxString.length(), maxString.toStdString().c_str());
 
   this->m_stationLocations.push_back(data[0].location);
   float fill = this->fillValue();
@@ -205,11 +217,6 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
     const std::string &line) {
   CrmsDataContainer d;
 
-  if (line.substr(0, 4) != "CRMS") {
-    d.valid = false;
-    return d;
-  }
-
   std::vector<std::string> split = splitString(line);
   d.id = split[0];
 
@@ -227,9 +234,6 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
   }
 
   d.geoid = split[this->m_geoidIndex];
-  d.location.latitude = std::stod(split[split.size() - 2]);
-  d.location.longitude = std::stod(split[split.size() - 1]);
-
   d.values.reserve(this->m_categoryMap.size());
 
   for (size_t i = 0; i < this->m_categoryMap.size(); ++i) {
