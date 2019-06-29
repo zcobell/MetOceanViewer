@@ -733,7 +733,7 @@
                   <widget class="QPushButton" name="button_refreshNoaaStations">
                    <property name="minimumSize">
                     <size>
-                     <width>120</width>
+                     <width>130</width>
                      <height>25</height>
                     </size>
                    </property>
@@ -1732,14 +1732,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>5</hour>
+                     <hour>4</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>6</hour>
+                     <hour>5</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>
@@ -2594,14 +2594,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>5</hour>
+                     <hour>4</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>6</hour>
+                     <hour>5</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>

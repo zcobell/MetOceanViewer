@@ -1,3 +1,22 @@
+/*-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2018  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//-----------------------------------------------------------------------*/
 #include "crmsdatabase.h"
 #include <QDateTime>
 #include <QThread>
@@ -22,6 +41,8 @@ CrmsDatabase::CrmsDatabase(const std::string &datafile,
     : m_databaseFile(datafile),
       m_outputFile(outputFile),
       m_hasError(false),
+      m_showProgressBar(false),
+      m_progressbar(nullptr),
       QObject(parent) {}
 
 float CrmsDatabase::fillValue() const { return -9999.0f; }
@@ -33,6 +54,13 @@ double CrmsDatabase::getPercentComplete() {
                           static_cast<long double>(this->m_fileLength)) *
       100.0;
   emit this->percentComplete(static_cast<int>(std::floor(percent)));
+  if (this->m_showProgressBar) {
+    unsigned long dt =
+        static_cast<unsigned long>(std::floor(std::round(percent))) -
+        this->m_previousPercentComplete;
+    *(this->m_progressbar) += dt;
+    this->m_previousPercentComplete += dt;
+  }
   return percent;
 }
 
@@ -49,6 +77,10 @@ void CrmsDatabase::parse() {
   this->openCrmsFile();
   this->readHeader();
   this->initializeOutputFile();
+
+  if (this->m_showProgressBar) {
+    this->m_progressbar.reset(new boost::progress_display(100));
+  }
 
   size_t nStation = 0;
   bool finished = false;
@@ -110,14 +142,6 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
 
   ierr = nc_put_att_text(this->m_ncid, varid_data, "station_name",
                          data[0].id.length(), data[0].id.c_str());
-  //  ierr = nc_put_att_double(this->m_ncid, varid_data, "longitude", NC_DOUBLE,
-  //  1,
-  //                           &data[0].location.longitude);
-  //  ierr = nc_put_att_double(this->m_ncid, varid_data, "latitude", NC_DOUBLE,
-  //  1,
-  //                           &data[0].location.latitude);
-  //  ierr = nc_put_att_text(this->m_ncid, varid_data, "geoid",
-  //                         data[0].geoid.length(), data[0].geoid.c_str());
 
   QDateTime refDate = QDateTime::fromSecsSinceEpoch(0, Qt::UTC);
   QString refstring =
@@ -128,12 +152,6 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
 
   ierr = nc_put_att_text(this->m_ncid, varid_time, "station_name",
                          data[0].id.length(), data[0].id.c_str());
-  //  ierr = nc_put_att_double(this->m_ncid, varid_time, "longitude", NC_DOUBLE,
-  //  1,
-  //                           &data[0].location.longitude);
-  //  ierr = nc_put_att_double(this->m_ncid, varid_time, "latitude", NC_DOUBLE,
-  //  1,
-  //                           &data[0].location.latitude);
   ierr = nc_put_att_text(this->m_ncid, varid_time, "reference",
                          refstring.length(), refstring.toStdString().c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "minimum",
@@ -322,4 +340,10 @@ void CrmsDatabase::exitCleanly() {
   nc_close(this->m_ncid);
   this->m_hasError = true;
   return;
+}
+
+bool CrmsDatabase::showProgressBar() const { return this->m_showProgressBar; }
+
+void CrmsDatabase::setShowProgressBar(bool showProgressBar) {
+  this->m_showProgressBar = showProgressBar;
 }

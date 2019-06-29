@@ -1,3 +1,22 @@
+/*-------------------------------GPL-------------------------------------//
+//
+// MetOcean Viewer - A simple interface for viewing hydrodynamic model data
+// Copyright (C) 2018  Zach Cobell
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+//-----------------------------------------------------------------------*/
 #ifndef READCRMSDATABASE_H
 #define READCRMSDATABASE_H
 
@@ -7,6 +26,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
+#include "boost/progress.hpp"
 
 class CrmsDatabase : public QObject {
   Q_OBJECT
@@ -15,12 +35,15 @@ class CrmsDatabase : public QObject {
                         const std::string &outputFile,
                         QObject *parent = nullptr);
 
- public slots:
-  void parse();
+    bool showProgressBar() const;
+    void setShowProgressBar(bool showProgressBar);
 
- signals:
-  void percentComplete(int);
-  void complete();
+public slots:
+    void parse();
+
+signals:
+    void percentComplete(int);
+    void complete();
   void success();
   void error();
 
@@ -59,6 +82,9 @@ class CrmsDatabase : public QObject {
   size_t m_geoidIndex;
   int m_ncid;
   bool m_hasError;
+  bool m_showProgressBar;
+  unsigned long m_previousPercentComplete;
+  std::unique_ptr<boost::progress_display> m_progressbar;
   std::vector<std::string> m_dataCategories;
   std::vector<std::string> m_stationNames;
   std::vector<Position> m_stationLocations;
