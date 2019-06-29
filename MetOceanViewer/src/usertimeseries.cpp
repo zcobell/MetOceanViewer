@@ -60,7 +60,7 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
                                   QDateTime &minDateOut, QDateTime &maxDateOut,
                                   QVector<double> &timeAddList) {
   ymin = std::numeric_limits<double>::max();
-  ymax = std::numeric_limits<double>::min();
+  ymax = -std::numeric_limits<double>::max();
   qint64 minDate =
       QDateTime(QDate(3000, 1, 1), QTime(0, 0, 0)).toMSecsSinceEpoch();
   qint64 maxDate =
@@ -286,9 +286,9 @@ void UserTimeseries::plot() {
   this->m_markerId = this->m_selectedStations[0];
 
   double ymin = std::numeric_limits<double>::max();
-  double ymax = std::numeric_limits<double>::min();
+  double ymax = -std::numeric_limits<double>::max();
   qint64 xmin = std::numeric_limits<qint64>::max();
-  qint64 xmax = std::numeric_limits<qint64>::min();
+  qint64 xmax = -std::numeric_limits<qint64>::max();
 
   int seriesCounter = 0;
   int plottedSeriesCounter = 0;

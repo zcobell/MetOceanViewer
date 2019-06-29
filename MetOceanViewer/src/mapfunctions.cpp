@@ -86,16 +86,19 @@ MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_configDirectory = Generic::configDirectory();
 }
 
+template <typename T>
+bool isBetween(T start, T end, T rangeStart, T rangeEnd) {
+  return (start <= rangeEnd && end >= rangeStart);
+}
+
 int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
                                  QVector<Station> &locations, QDateTime &start,
                                  QDateTime &end) {
   model->clear();
   QVector<Station> visibleMarkers;
   for (size_t i = 0; i < locations.size(); ++i) {
-    if ((locations[i].startValidDate().date() >= start.date() &&
-         locations[i].startValidDate().date() < end.date()) ||
-        (locations[i].endValidDate().date() <= end.date() &&
-         locations[i].endValidDate().date() > start.date())) {
+    if (isBetween<QDateTime>(locations[i].startValidDate(),
+                             locations[i].endValidDate(), start, end)) {
       visibleMarkers.push_back(locations[i]);
     }
   }

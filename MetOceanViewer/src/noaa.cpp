@@ -119,7 +119,7 @@ int Noaa::fetchNOAAData() {
 }
 
 int Noaa::getDataBounds(double &ymin, double &ymax) {
-  ymax = std::numeric_limits<double>::min();
+  ymax = -std::numeric_limits<double>::max();
   ymin = std::numeric_limits<double>::max();
 
   for (size_t i = 0; i < this->m_currentStationData.length(); i++) {

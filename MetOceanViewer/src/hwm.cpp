@@ -175,7 +175,7 @@ int Hwm::plotRegression() {
   this->m_chartView->yAxis()->setTitleText(YLabel);
 
   min = std::numeric_limits<double>::max();
-  max = std::numeric_limits<double>::min();
+  max = -std::numeric_limits<double>::max();
 
   for (int i = 0; i < this->m_hwm->n(); ++i) {
     int classification = this->classifyHWM(this->m_hwm->hwm(i)->modeledError());

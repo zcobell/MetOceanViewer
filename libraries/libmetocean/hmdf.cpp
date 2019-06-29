@@ -470,9 +470,9 @@ int Hmdf::write(QString filename) {
 
 void Hmdf::dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
                       double &maxValue) {
-  dateMax = std::numeric_limits<qint64>::min();
-  dateMin = std::numeric_limits<qint64>::max();
-  maxValue = std::numeric_limits<double>::min();
+  dateMax = std::numeric_limits<qint64>::max();
+  dateMin = -std::numeric_limits<qint64>::max();
+  maxValue = -std::numeric_limits<double>::max();
   minValue = std::numeric_limits<double>::max();
 
   for (int i = 0; i < this->nstations(); i++) {

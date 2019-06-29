@@ -35,11 +35,11 @@ class HmdfStation : public QObject {
   void clear();
 
   static constexpr double nullDataValue() {
-    return std::numeric_limits<double>::min();
+    return -std::numeric_limits<double>::max();
   }
 
   static constexpr qint64 nullDateValue() {
-    return std::numeric_limits<qint64>::min();
+    return -std::numeric_limits<qint64>::max();
   }
 
   QGeoCoordinate *coordinate();
