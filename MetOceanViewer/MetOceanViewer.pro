@@ -60,8 +60,7 @@ SOURCES +=\
     src/uixtidetab.cpp \
     src/mapfunctions.cpp \
     src/uindbctab.cpp \
-    src/ndbc.cpp \
-    src/crmsdatabase.cpp 
+    src/ndbc.cpp
 
 HEADERS  += \
     src/crms.h \
@@ -86,8 +85,7 @@ HEADERS  += \
     src/updatedialog.h \
     src/usertimeseries.h \
     src/mapfunctions.h \
-    src/ndbc.h \
-    src/crmsdatabase.h 
+    src/ndbc.h
 
 FORMS    += \
     ui/crmsdialog.ui \
