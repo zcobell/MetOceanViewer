@@ -99,7 +99,6 @@ int Crms::plot(size_t index) {
   ymax = -std::numeric_limits<double>::max();
   ymin = std::numeric_limits<double>::max();
   this->m_data->station(index)->dataBounds(minDate, maxDate, ymin, ymax);
-  qDebug() << ymin << ymax;
 
   QLineSeries *series = new QLineSeries(this);
   series->setName(this->m_station.name());
