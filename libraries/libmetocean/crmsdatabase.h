@@ -17,8 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef READCRMSDATABASE_H
-#define READCRMSDATABASE_H
+#ifndef CRMSDATABASE_H
+#define CRMSDATABASE_H
 
 #include <QDateTime>
 #include <QObject>
@@ -39,6 +39,8 @@ class CrmsDatabase : public QObject {
   bool showProgressBar() const;
   void setShowProgressBar(bool showProgressBar);
 
+  static constexpr float fillValue() { return -9999.0f; }
+
  public slots:
   void parse();
 
@@ -46,7 +48,7 @@ class CrmsDatabase : public QObject {
   void percentComplete(int);
   void complete();
   void success();
-  void error();
+  void error(QString);
 
  private:
   struct Position {
@@ -74,7 +76,6 @@ class CrmsDatabase : public QObject {
   void initializeOutputFile();
   void closeOutputFile(size_t numStations);
   bool fileExists(const std::string &filename);
-  float fillValue() const;
   void exitCleanly();
 
   std::string m_databaseFile;
@@ -93,4 +94,4 @@ class CrmsDatabase : public QObject {
   size_t m_fileLength;
 };
 
-#endif  // READCRMSDATABASE_H
+#endif  // CRMSDATABASE_H

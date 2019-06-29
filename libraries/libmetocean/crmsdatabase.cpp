@@ -43,9 +43,8 @@ CrmsDatabase::CrmsDatabase(const std::string &datafile,
       m_hasError(false),
       m_showProgressBar(false),
       m_progressbar(nullptr),
+      m_previousPercentComplete(0),
       QObject(parent) {}
-
-float CrmsDatabase::fillValue() const { return -9999.0f; }
 
 double CrmsDatabase::getPercentComplete() {
   size_t fileposition = static_cast<size_t>(this->m_file.tellg());
@@ -55,18 +54,19 @@ double CrmsDatabase::getPercentComplete() {
       100.0;
   emit this->percentComplete(static_cast<int>(std::floor(percent)));
   if (this->m_showProgressBar) {
-    unsigned long dt =
-        static_cast<unsigned long>(std::floor(std::round(percent))) -
-        this->m_previousPercentComplete;
-    *(this->m_progressbar) += dt;
-    this->m_previousPercentComplete += dt;
+    unsigned long dt = static_cast<unsigned long>(std::floor(percent)) -
+                       this->m_previousPercentComplete;
+    if (dt > 0) {
+      *(this->m_progressbar) += dt;
+      this->m_previousPercentComplete += dt;
+    }
   }
   return percent;
 }
 
 void CrmsDatabase::parse() {
   if (!this->fileExists(this->m_databaseFile)) {
-    emit error();
+    emit error("File does not exist");
     emit complete();
     return;
   }
@@ -103,7 +103,7 @@ void CrmsDatabase::parse() {
   this->closeCrmsFile();
 
   if (this->m_hasError) {
-    emit error();
+    emit error("Error during CRMS processing");
     emit this->percentComplete(0);
   } else {
     emit success();

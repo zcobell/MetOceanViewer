@@ -72,7 +72,8 @@ static const QCommandLineOption m_outputFile =
     QCommandLineOption(QStringList() << "o"
                                      << "output",
                        "Name of the output file. Format will be guessed from "
-                       "extension (.imeds or .nc)",
+                       "extension (.imeds or .nc). Note if performing crms "
+                       "processing, the output extension will always be *.nc",
                        "filename");
 
 static const QCommandLineOption m_boundingBox =
@@ -95,5 +96,9 @@ static const QCommandLineOption m_show =
     QCommandLineOption(QStringList() << "show",
                        "Show the stations that would be selected given the "
                        "provided criteria and exit.");
+
+static const QCommandLineOption m_crmsSourceFile = QCommandLineOption(
+    QStringList() << "crms", "Converts a CRMS database into netCDF format",
+    "filename");
 
 #endif  // OPTIONSLIST_H

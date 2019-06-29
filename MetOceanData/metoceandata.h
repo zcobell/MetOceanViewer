@@ -35,6 +35,8 @@ class MetOceanData : public QObject {
   explicit MetOceanData(serviceTypes service, QStringList station, int product,
                         int datum, QDateTime startDate, QDateTime endDate,
                         QString outputFile, QObject *parent = nullptr);
+  explicit MetOceanData(QString crmsFile, QString outputFile,
+                        QObject *parent = nullptr);
 
   static QStringList selectStations(serviceTypes service, double x1, double y1,
                                     double x2, double y2);
@@ -62,9 +64,10 @@ class MetOceanData : public QObject {
   int getDatum() const;
   void setDatum(int datum);
 
-  static StationLocations::MarkerType serviceToMarkerType(MetOceanData::serviceTypes type);
+  static StationLocations::MarkerType serviceToMarkerType(
+      MetOceanData::serviceTypes type);
   static bool findStation(QStringList name, StationLocations::MarkerType type,
-                   QVector<Station> &s);
+                          QVector<Station> &s);
 
  signals:
   void finished();
@@ -83,6 +86,7 @@ class MetOceanData : public QObject {
   void getUsgsData();
   void getNdbcData();
   void getXtideData();
+  void processCrmsData();
 
   QString noaaIndexToProduct();
   QString noaaIndexToDatum();
@@ -90,6 +94,7 @@ class MetOceanData : public QObject {
 
   int printAvailableProducts(Hmdf *data);
 
+  bool m_doCrms;
   int m_service;
   QStringList m_station;
   int m_product;
@@ -97,6 +102,7 @@ class MetOceanData : public QObject {
   QDateTime m_startDate;
   QDateTime m_endDate;
   QString m_outputFile;
+  QString m_crmsFile;
 };
 
 #endif  // DRIVER_H

@@ -37,11 +37,24 @@ void Options::addOptions() {
                              << m_serviceType << m_stationId << m_boundingBox
                              << m_nearest << m_startDate << m_endDate
                              << m_product << m_outputFile << m_datum << m_list
-                             << m_show);
+                             << m_show << m_crmsSourceFile);
 }
 
 Options::CommandLineOptions Options::getCommandLineOptions() {
   Options::CommandLineOptions opt;
+
+  opt.doCrms = false;
+
+  if (this->parser()->isSet(m_crmsSourceFile)) {
+    if (!this->parser()->isSet(m_outputFile)) {
+      std::cerr << "No output file set." << std::endl;
+      this->parser()->showHelp(1);
+    }
+    opt.crms = this->parser()->value(m_crmsSourceFile);
+    opt.outputFile = this->parser()->value(m_outputFile);
+    opt.doCrms = true;
+    return opt;
+  }
 
   std::vector<bool> inputOptions;
   inputOptions.push_back(this->parser()->isSet(m_stationId));
@@ -238,8 +251,12 @@ void Options::printStationList(QStringList station,
                             MetOceanData::serviceToMarkerType(markerType), s);
   for (size_t i = 0; i < station.size(); ++i) {
     std::cout << s[i].id().toStdString() << ",'"
-              << s[i].name().replace(" ", "_").replace(",","_").replace("__","_").toStdString() << "',"
-              << s[i].coordinate().longitude() << ","
+              << s[i].name()
+                     .replace(" ", "_")
+                     .replace(",", "_")
+                     .replace("__", "_")
+                     .toStdString()
+              << "'," << s[i].coordinate().longitude() << ","
               << s[i].coordinate().latitude() << std::endl;
     std::cout.flush();
   }
