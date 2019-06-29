@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QVector>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include "boost/progress.hpp"
@@ -35,15 +36,15 @@ class CrmsDatabase : public QObject {
                         const std::string &outputFile,
                         QObject *parent = nullptr);
 
-    bool showProgressBar() const;
-    void setShowProgressBar(bool showProgressBar);
+  bool showProgressBar() const;
+  void setShowProgressBar(bool showProgressBar);
 
-public slots:
-    void parse();
+ public slots:
+  void parse();
 
-signals:
-    void percentComplete(int);
-    void complete();
+ signals:
+  void percentComplete(int);
+  void complete();
   void success();
   void error();
 
