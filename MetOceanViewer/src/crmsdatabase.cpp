@@ -172,7 +172,7 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
 }
 
 void CrmsDatabase::openCrmsFile() {
-  this->m_file = std::ifstream(this->m_databaseFile, std::ios::binary);
+  this->m_file.open(this->m_databaseFile, std::ios::binary);
   this->m_file.seekg(0, std::ios::end);
   this->m_fileLength = static_cast<size_t>(this->m_file.tellg());
   this->m_file.seekg(0, std::ios::beg);
