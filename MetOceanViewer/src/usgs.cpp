@@ -308,7 +308,7 @@ int Usgs::replotChart(Timezone *newTimezone) {
       this->m_allStationData->station(0)->date(0), Qt::UTC);
   QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(
       this->m_allStationData->station(0)->date(
-          this->m_allStationData->station(0)->numSnaps()),
+          this->m_allStationData->station(0)->numSnaps() - 1),
       Qt::UTC);
 
   minDateTime =
