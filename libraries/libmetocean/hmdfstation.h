@@ -74,6 +74,7 @@ class HmdfStation : public QObject {
   double data(int index) const;
   void setData(const double &data, int index);
   void setData(const QVector<double> &data);
+  void setData(const QVector<float> &data);
 
   QVector<qint64> allDate() const;
   QVector<double> allData() const;

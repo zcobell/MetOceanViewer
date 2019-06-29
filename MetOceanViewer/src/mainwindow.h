@@ -44,6 +44,7 @@ class Ndbc;
 class UserTimeseries;
 class WebEnginePage;
 class Session;
+class Crms;
 
 //-------------------------------------------//
 // Main class used by the Qt program that holds
@@ -188,6 +189,8 @@ class MainWindow : public QMainWindow {
 
   void changeNdbcMarker(QString markerId);
 
+  void changeCrmsMarker(QString markerId);
+
   void changeNoaaMaptype();
 
   void changeUsgsMaptype();
@@ -199,6 +202,8 @@ class MainWindow : public QMainWindow {
   void changeHwmMaptype();
 
   void changeNdbcMaptype();
+
+  void changeCrmsMaptype();
 
   void on_combo_xtide_maptype_currentIndexChanged(int index);
 
@@ -248,7 +253,27 @@ class MainWindow : public QMainWindow {
 
   void on_actionGenerate_CRMS_Database_triggered();
 
- private:
+  void on_button_fetchcrms_clicked();
+
+  void on_combo_crmsproduct_currentIndexChanged(int index);
+
+  void on_combo_crms_maptype_currentIndexChanged(int index);
+
+  void on_button_crms_savechart_clicked();
+
+  void on_button_crms_savedata_clicked();
+
+  void on_button_crms_resetzoom_clicked();
+
+  void on_button_crmsDisplayValues_toggled(bool checked);
+
+  void on_button_crmsfilterStationAvailablity_toggled(bool checked);
+
+  void on_date_crmsStarttime_dateChanged(const QDate &date);
+
+  void on_date_crmsEndtime_dateChanged(const QDate &date);
+
+private:
   enum MapViewerMarkerModes {
     SingleSelect,
     MultipleSelect,
@@ -314,6 +339,8 @@ class MainWindow : public QMainWindow {
 
   Ndbc *m_ndbc;
 
+  Crms *m_crms;
+
   UserTimeseries *m_userTimeseries;
 
   Session *sessionState;
@@ -342,6 +369,9 @@ class MainWindow : public QMainWindow {
 
   QActionGroup *mapActionGroup;
 
+  QVector<QString> crmsHeader;
+  QMap<QString, size_t> crmsMapping;
+
   QVector<Station> xtideMarkerLocations;
   QVector<Station> ndbcMarkerLocations;
   QVector<Station> noaaMarkerLocations;
@@ -353,11 +383,14 @@ class MainWindow : public QMainWindow {
   QString usgsSelectedStation;
   QString xtideSelectedStation;
   QString userSelectedStations;
+  QString crmsSelectedStations;
 
   bool processCommandLine;
   bool initialized;
 
- protected:
+  void filterCrmsStationsByDate();
+
+protected:
   void closeEvent(QCloseEvent *);
 };
 

@@ -89,9 +89,9 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
 
   ierr = nc_redef(this->m_ncid);
   QString station_dim_string, station_time_var_string, station_data_var_string;
-  station_dim_string.sprintf("stationLength_%4.4llu", stationNumber + 1);
-  station_time_var_string.sprintf("time_station_%4.4llu", stationNumber + 1);
-  station_data_var_string.sprintf("data_station_%4.4llu", stationNumber + 1);
+  station_dim_string.sprintf("stationLength_%6.6llu", stationNumber + 1);
+  station_time_var_string.sprintf("time_station_%6.6llu", stationNumber + 1);
+  station_data_var_string.sprintf("data_station_%6.6llu", stationNumber + 1);
 
   int dimid_len, varid_time, varid_data;
   ierr = nc_def_dim(this->m_ncid, station_dim_string.toStdString().c_str(),

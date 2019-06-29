@@ -183,14 +183,18 @@ QVector<Station> StationLocations::readCrmsMarkers() {
   QVector<Station> output;
   QVector<double> latitude, longitude;
   QVector<QString> name;
+  QVector<QDateTime> startDate, endDate;
   QString filename = Generic::crmsDataFile();
-  CrmsData::readStationList(filename, latitude, longitude, name);
+  bool success = CrmsData::readStationList(filename, latitude, longitude, name,
+                                           startDate, endDate);
+
+  if (!success) return output;
 
   for (size_t i = 0; i < latitude.size(); ++i) {
     QGeoCoordinate c(latitude[i], longitude[i]);
     QString id;
     id.sprintf("%zu", i);
-    Station s(c, id, name[i]);
+    Station s(c, id, name[i], 0, 0, 0, true, startDate[i], endDate[i]);
     output.push_back(s);
   }
 

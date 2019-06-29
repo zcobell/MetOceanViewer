@@ -53,6 +53,7 @@ MainWindow::MainWindow(bool processCommandLine, QString commandLineFile,
   this->m_xtide = nullptr;
   this->m_userTimeseries = nullptr;
   this->m_hwm = nullptr;
+  this->m_crms = nullptr;
 
   this->setupMetOceanViewerUI();
 }
@@ -224,6 +225,8 @@ void MainWindow::handleEnterKey() {
       on_button_fetchndbc_clicked();
     } else if (ui->subtab_livedata->currentIndex() == 3) {
       on_button_xtide_compute_clicked();
+    } else if (ui->subtab_livedata->currentIndex() == 4) {
+      on_button_fetchcrms_clicked();
     }
   }
   // Events for "ENTER" on the timeseries tabs
@@ -274,6 +277,37 @@ void MainWindow::changeUserMarker(QString markerId) {
   return;
 }
 
+void MainWindow::changeCrmsMarker(QString markerId) {
+  this->crmsSelectedStations = markerId;
+
+  if (ui->check_crmsLockDates->isChecked()) return;
+
+  Station s = this->crmsStationModel->findStation(markerId);
+  ui->date_crmsStarttime->setMinimumDateTime(s.startValidDate());
+  ui->date_crmsEndtime->setMaximumDateTime(s.endValidDate());
+
+  if (ui->date_crmsStarttime->dateTime() < s.startValidDate()) {
+    ui->date_crmsStarttime->setDateTime(s.startValidDate());
+  }
+  if (ui->date_crmsStarttime->dateTime() > s.endValidDate()) {
+    ui->date_crmsStarttime->setDateTime(s.startValidDate());
+  }
+
+  if (ui->date_crmsEndtime->dateTime() > s.endValidDate()) {
+    ui->date_crmsEndtime->setDateTime(s.endValidDate());
+  }
+  if (ui->date_crmsEndtime->dateTime() < s.startValidDate()) {
+    ui->date_crmsEndtime->setDateTime(s.endValidDate());
+  }
+
+  if (ui->date_crmsEndtime->dateTime() < ui->date_crmsStarttime->dateTime()) {
+    ui->date_crmsEndtime->setDateTime(
+        ui->date_crmsEndtime->dateTime().addDays(7));
+  }
+
+  return;
+}
+
 void MainWindow::changeNoaaMaptype() {
   this->mapFunctions->setMapType(ui->combo_noaa_maptype->currentIndex(),
                                  ui->quick_noaaMap);
@@ -307,6 +341,12 @@ void MainWindow::changeUserMaptype() {
 void MainWindow::changeHwmMaptype() {
   this->mapFunctions->setMapType(ui->combo_hwmMaptype->currentIndex(),
                                  ui->quick_hwmMap);
+  return;
+}
+
+void MainWindow::changeCrmsMaptype() {
+  this->mapFunctions->setMapType(ui->combo_crms_maptype->currentIndex(),
+                                 ui->quick_crmsMap);
   return;
 }
 
@@ -430,7 +470,7 @@ void MainWindow::setupCrmsMap() {
   ui->quick_crmsMap->rootContext()->setContextProperty("stationModel",
                                                        this->crmsStationModel);
   ui->quick_crmsMap->rootContext()->setContextProperty(
-      "markerMode", MapViewerMarkerModes::SingleSelect);
+      "markerMode", MapViewerMarkerModes::SingleSelectWithDates);
   this->setupMarkerClasses(ui->quick_crmsMap);
   this->mapFunctions->setMapTypes(ui->quick_crmsMap, ui->combo_crms_maptype);
   ui->combo_crms_maptype->setCurrentIndex(
@@ -440,16 +480,23 @@ void MainWindow::setupCrmsMap() {
   this->mapFunctions->setMapQmlFile(ui->quick_crmsMap);
   this->crmsMarkerLocations =
       StationLocations::readMarkers(StationLocations::CRMS);
+
+  if (this->crmsMarkerLocations.size() == 0) {
+    ui->subtab_livedata->setTabEnabled(4, false);
+  }
+
+  CrmsData::readHeader(Generic::crmsDataFile(), this->crmsHeader);
+  CrmsData::generateStationMapping(Generic::crmsDataFile(), this->crmsMapping);
+
   QObject *crmsItem = ui->quick_crmsMap->rootObject();
   QObject::connect(crmsItem, SIGNAL(markerChanged(QString)), this,
-                   SLOT(changecrmsMarker(QString)));
+                   SLOT(changeCrmsMarker(QString)));
   ui->date_crmsStarttime->setDateTime(
-      QDateTime::currentDateTimeUtc().addDays(-1));
+      QDateTime::currentDateTimeUtc().addDays(-7));
   ui->date_crmsEndtime->setDateTime(QDateTime::currentDateTimeUtc());
 
-  QMetaObject::invokeMethod(crmsItem, "setMapLocation",
-                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
-                            Q_ARG(QVariant, 1.69));
+  QMetaObject::invokeMethod(crmsItem, "setMapLocation", Q_ARG(QVariant, -91.5),
+                            Q_ARG(QVariant, 30.0), Q_ARG(QVariant, 6.25));
 
   this->mapFunctions->refreshMarkers(this->crmsStationModel, ui->quick_crmsMap,
                                      this->crmsMarkerLocations, false, true);
@@ -779,5 +826,48 @@ void MainWindow::on_actionSave_Default_Map_Settings_triggered() {
 void MainWindow::on_actionGenerate_CRMS_Database_triggered() {
   QPointer<CrmsDialog> dialog = new CrmsDialog(this);
   dialog->exec();
+  return;
+}
+
+void MainWindow::on_combo_crms_maptype_currentIndexChanged(int index) {
+  Q_UNUSED(index);
+  this->changeCrmsMaptype();
+}
+
+void MainWindow::on_button_crmsfilterStationAvailablity_toggled(bool checked) {
+  if (!checked) {
+    int n = this->mapFunctions->refreshMarkers(
+        this->crmsStationModel, ui->quick_crmsMap, this->crmsMarkerLocations,
+        false, false);
+  } else {
+    this->filterCrmsStationsByDate();
+  }
+  return;
+}
+
+void MainWindow::filterCrmsStationsByDate() {
+  QDateTime start = ui->date_crmsStarttime->dateTime();
+  QDateTime end = ui->date_crmsEndtime->dateTime();
+  start.setTime(QTime(0, 0, 0));
+  end.setTime(QTime(0, 0, 0));
+  end = end.addDays(1);
+  int n = this->mapFunctions->refreshMarkers(
+      this->crmsStationModel, ui->quick_crmsMap, this->crmsMarkerLocations,
+      start, end);
+  return;
+}
+
+void MainWindow::on_date_crmsStarttime_dateChanged(const QDate &date) {
+  Q_UNUSED(date);
+  if (ui->button_crmsfilterStationAvailablity->isChecked()) {
+    this->filterCrmsStationsByDate();
+  }
+  return;
+}
+void MainWindow::on_date_crmsEndtime_dateChanged(const QDate &date) {
+  Q_UNUSED(date);
+  if (ui->button_crmsfilterStationAvailablity->isChecked()) {
+    this->filterCrmsStationsByDate();
+  }
   return;
 }

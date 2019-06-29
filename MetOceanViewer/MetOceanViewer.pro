@@ -31,6 +31,7 @@ TARGET = MetOceanViewer
 TEMPLATE = app
 
 SOURCES +=\
+    src/crms.cpp \
     src/crmsdialog.cpp \
     src/stationmodel.cpp \
     src/colors.cpp \
@@ -41,6 +42,7 @@ SOURCES +=\
     src/keyhandler.cpp \
     src/noaa.cpp \
     src/session.cpp \
+    src/uicrmstab.cpp \
     src/usgs.cpp \
     src/xtide.cpp \
     src/chartview.cpp \
@@ -62,6 +64,7 @@ SOURCES +=\
     src/crmsdatabase.cpp 
 
 HEADERS  += \
+    src/crms.h \
     src/crmsdialog.h \
     src/metoceanviewer.h \
     src/stationmodel.h \

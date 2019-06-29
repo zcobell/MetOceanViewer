@@ -7,5 +7,6 @@
         <file>data/noaa_stations.csv</file>
         <file>data/usgs_stations.csv</file>
         <file>data/xtide_stations.csv</file>
+        <file>data/crms_stations.csv</file>
     </qresource>
 </RCC>

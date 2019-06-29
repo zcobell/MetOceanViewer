@@ -95,6 +95,14 @@ void HmdfStation::setData(const QVector<double> &data) {
   return;
 }
 
+void HmdfStation::setData(const QVector<float> &data) {
+  this->m_data.resize(data.size());
+  for (size_t i = 0; i < data.size(); ++i) {
+    this->m_data[i] = static_cast<double>(data[i]);
+  }
+  return;
+}
+
 void HmdfStation::setNext(const qint64 &date, const double &data) {
   this->m_date.push_back(date);
   this->m_data.push_back(data);
@@ -130,8 +138,7 @@ void HmdfStation::dataBounds(qint64 &minDate, qint64 &maxDate, double &minValue,
   std::vector<double> sortedData = this->m_data.toStdVector();
   std::sort(sortedData.begin(), sortedData.end());
 
-  if (std::find(sortedData.begin(), sortedData.end(), this->nullDataValue()) !=
-      sortedData.end()) {
+  if (sortedData.front() != sortedData.back()) {
     minValue = *std::upper_bound(sortedData.begin(), sortedData.end(),
                                  this->nullDataValue());
   } else {

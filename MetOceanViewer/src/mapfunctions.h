@@ -37,6 +37,10 @@ class MapFunctions : public QObject {
                      QVector<Station> &locations, bool filter = true,
                      bool activeOnly = true);
 
+  int refreshMarkers(StationModel *model, QQuickWidget *map,
+                     QVector<Station> &locations, QDateTime &start,
+                     QDateTime &end);
+
   void setMapTypes(QQuickWidget *map, QComboBox *comboBox);
 
   int mapSource() const;

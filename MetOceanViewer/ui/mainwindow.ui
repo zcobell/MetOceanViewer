@@ -27,7 +27,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>780</width>
+    <width>850</width>
     <height>650</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>780</width>
+    <width>850</width>
     <height>650</height>
    </size>
   </property>
@@ -2621,6 +2621,26 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QCheckBox" name="check_crmsLockDates">
+                   <property name="text">
+                    <string>Lock Dates</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_crmsfilterStationAvailablity">
+                   <property name="text">
+                    <string>Filter Available Stations</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="horizontalSpacer_35">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
@@ -2705,7 +2725,7 @@
                     <bool>false</bool>
                    </property>
                    <property name="text">
-                    <string>Fetch</string>
+                    <string>Query Database</string>
                    </property>
                   </widget>
                  </item>
@@ -5126,7 +5146,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>780</width>
+     <width>850</width>
      <height>21</height>
     </rect>
    </property>
