@@ -24,6 +24,17 @@
 #include "generic.h"
 #include "ui_crmsdialog.h"
 
+static QString s_crmsInstructions =
+    "<html><head/><body><p>You can manually convert the CIMS database to "
+    "netCDF format for MetOceanViewer using the following built-in processing. "
+    "However, the process is completed automatically and a publicly accessable "
+    "database is updated weekly <a href=\" "
+    "https://metoceanviewer.s3.amazonaws.com/crms.nc\"><span style=\""
+    "text-decoration : underline;color : "
+    "#0000ff;\">here.</span></a></p><p>Place the downloaded file "
+    "here: " +
+    Generic::crmsDataFile() + "</p></body></html>";
+
 CrmsDialog::CrmsDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::CrmsDialog) {
   ui->setupUi(this);
@@ -31,6 +42,7 @@ CrmsDialog::CrmsDialog(QWidget *parent)
   ui->progressbar->setValue(0);
   ui->progressbar->hide();
   this->m_thread = new QThread(this);
+  ui->label_crmsInstructions->setText(s_crmsInstructions);
 }
 
 CrmsDialog::~CrmsDialog() { delete ui; }

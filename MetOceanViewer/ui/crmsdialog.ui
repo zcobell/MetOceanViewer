@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>652</width>
-    <height>257</height>
+    <width>697</width>
+    <height>365</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -68,6 +68,16 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_crmsInstructions">
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can manually convert the CIMS database to netCDF format for MetOceanViewer using the following built-in processing. However, the process is completed automatically and a publicly accessable database is updated weekly &lt;a href=&quot;https://metoceanviewer.s3.amazonaws.com/crms.nc&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;here.&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Place the downloaded file here: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">

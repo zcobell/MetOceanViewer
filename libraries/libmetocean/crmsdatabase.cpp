@@ -71,9 +71,6 @@ void CrmsDatabase::parse() {
     return;
   }
 
-  std::string name;
-  std::vector<CrmsDataContainer> data;
-
   this->openCrmsFile();
   this->readHeader();
   this->initializeOutputFile();
@@ -91,12 +88,12 @@ void CrmsDatabase::parse() {
       break;
     }
     this->getPercentComplete();
+    std::vector<CrmsDataContainer> data;
     bool valid = this->getNextStation(data, finished);
     if (valid) {
       this->putNextStation(nStation, data);
     }
     nStation++;
-    data.clear();
   }
 
   this->closeOutputFile(nStation);
