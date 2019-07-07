@@ -59,9 +59,10 @@ SOURCES += hmdfasciiparser.cpp  \
            ndbcdata.cpp \
            stationlocations.cpp \
            generic.cpp \
-    constants.cpp \
-    highwatermarks.cpp \
-    hwmdata.cpp
+           constants.cpp \
+           highwatermarks.cpp \
+           hwmdata.cpp \
+           crmsdatabase.cpp
 
 HEADERS += hmdfasciiparser.h  \
            crmsdata.h \
@@ -82,9 +83,10 @@ HEADERS += hmdfasciiparser.h  \
            stationlocations.h \
            metocean_global.h \
            generic.h \
-    constants.h \
-    highwatermarks.h \
-    hwmdata.h
+           constants.h \
+           highwatermarks.h \
+           hwmdata.h \
+           crmsdatabase.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

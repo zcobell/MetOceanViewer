@@ -28,6 +28,14 @@
 #include "errors.h"
 #include "generic.h"
 
+#if defined(_MSC_VER)
+#define USE_MAPBOXGL 0
+#elif defined(__APPLE__)
+#define USE_MAPBOXGL 1
+#else
+#define USE_MAPBOXGL 1
+#endif
+
 static QStringList esriList = QStringList() << "World Street Map"
                                             << "World Imagery"
                                             << "World Terrain Base"
@@ -41,7 +49,7 @@ static QStringList esriList = QStringList() << "World Street Map"
                                             << "Dark Gray Canvas"
                                             << "DeLorme World Basemap";
 
-#if defined(_MSC_VER) || defined(__APPLE__)
+#if USE_MAPBOXGL == 0
 static QStringList mapboxList = QStringList() << "Streets"
                                               << "Light"
                                               << "Dark"
@@ -190,7 +198,7 @@ void MapFunctions::setMapQmlFile(QQuickWidget *map) {
 
 //...Only g++ can use MapboxGL (as of this writing). This is toggled
 //   automatically here
-#if defined(_MSC_VER) || defined(__APPLE__)
+#if USE_MAPBOXGL == 0
     map->setSource(QUrl("qrc:/qml/qml/MapboxMapViewer.qml"));
 #else
     map->setSource(QUrl("qrc:/qml/qml/MapboxGLMapViewer.qml"));
