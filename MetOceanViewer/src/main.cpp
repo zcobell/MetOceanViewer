@@ -35,6 +35,15 @@ int main(int argc, char *argv[]) {
 
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
+  //...Check for the internet connection
+  if (!Generic::isConnectedToNetwork()) {
+    QMessageBox::critical(nullptr,
+                          QObject::tr("Internet Connection Not Detected"),
+                          QObject::tr("No internet connection was detected.\n"
+                                      "The program will now be terminated."));
+    return 1;
+  }
+
   Q_INIT_RESOURCE(resource_files);
 
   //...Display the splash screen
@@ -45,15 +54,6 @@ int main(int argc, char *argv[]) {
 
   //...Generate the config directory if required
   Generic::createConfigDirectory();
-
-  //...Check for the internet connection
-  if (!Generic::isConnectedToNetwork()) {
-    QMessageBox::critical(nullptr,
-                          QObject::tr("Internet Connection Not Detected"),
-                          QObject::tr("No internet connection was detected.\n"
-                                      "The program will now be terminated."));
-    return 1;
-  }
 
   // Check for drag/drop operations
   if (argc == 2) {
