@@ -28,11 +28,10 @@ static QString s_crmsInstructions =
     "<html><head/><body><p>You can manually convert the CIMS database to "
     "netCDF format for MetOceanViewer using the following built-in processing. "
     "However, the process is completed automatically and a publicly accessable "
-    "database is updated weekly <a href=\" "
-    "https://metoceanviewer.s3.amazonaws.com/crms.nc\"><span style=\""
-    "text-decoration : underline;color : "
-    "#0000ff;\">here.</span></a></p><p>Place the downloaded file "
-    "here: " +
+    "database is updated every Monday morning"
+    " <a href=\"https://metoceanviewer.s3.amazonaws.com/crms.nc\">"
+    "here</a>.</p>"
+    "<p>Place the downloaded file here: " +
     Generic::crmsDataFile() + "</p></body></html>";
 
 CrmsDialog::CrmsDialog(QWidget *parent)
@@ -42,7 +41,10 @@ CrmsDialog::CrmsDialog(QWidget *parent)
   ui->progressbar->setValue(0);
   ui->progressbar->hide();
   this->m_thread = new QThread(this);
+  ui->label_crmsInstructions->setTextFormat(Qt::RichText);
   ui->label_crmsInstructions->setText(s_crmsInstructions);
+  ui->label_crmsInstructions->setTextInteractionFlags(Qt::TextBrowserInteraction);
+  ui->label_crmsInstructions->setOpenExternalLinks(true);
 }
 
 CrmsDialog::~CrmsDialog() { delete ui; }
