@@ -56,6 +56,9 @@ double CrmsDatabase::getPercentComplete() {
   if (this->m_showProgressBar) {
     unsigned long dt = static_cast<unsigned long>(std::floor(percent)) -
                        this->m_previousPercentComplete;
+    if(dt > 100 - this->m_previousPercentComplete){
+        dt = 100 - this->m_previousPercentComplete;
+    }
     if (dt > 0) {
       *(this->m_progressbar) += dt;
       this->m_previousPercentComplete += dt;
@@ -93,7 +96,12 @@ void CrmsDatabase::parse() {
     if (valid) {
       this->putNextStation(nStation, data);
     }
+    data.erase(data.begin(), data.end());
     nStation++;
+  }
+
+  if(this->m_showProgressBar){
+      this->getPercentComplete();
   }
 
   this->closeOutputFile(nStation);
@@ -156,7 +164,6 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
   ierr = nc_put_att_text(this->m_ncid, varid_time, "maximum",
                          maxString.length(), maxString.toStdString().c_str());
 
-  this->m_stationLocations.push_back(data[0].location);
   float fill = this->fillValue();
   ierr = nc_def_var_fill(this->m_ncid, varid_data, 0, &fill);
   ierr = nc_enddef(this->m_ncid);
@@ -249,19 +256,19 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
   }
 
   d.geoid = split[this->m_geoidIndex];
-  d.values.reserve(this->m_categoryMap.size());
+  d.values.resize(this->m_categoryMap.size());
 
   for (size_t i = 0; i < this->m_categoryMap.size(); ++i) {
     size_t idx = this->m_categoryMap[i];
     if (split[idx] == "") {
-      d.values.push_back(this->fillValue());
+      d.values[i] = this->fillValue();
     } else {
       try {
         // float v = boost::lexical_cast<float>(split[idx]);
         float v = std::stof(split[idx]);
-        d.values.push_back(v);
+        d.values[i] = v;
       } catch (...) {
-        d.values.push_back(this->fillValue());
+        d.values[i] = this->fillValue();
       }
     }
   }
@@ -288,6 +295,8 @@ bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data,
     std::getline(this->m_file, line);
     finished = this->m_file.eof();
     streampos p = this->m_file.tellg();
+
+    if (line.size() < 10) break;
 
     CrmsDataContainer d = this->splitToCrmsDataContainer(line);
 

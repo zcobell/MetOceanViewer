@@ -51,15 +51,10 @@ class CrmsDatabase : public QObject {
   void error(QString);
 
  private:
-  struct Position {
-    double latitude;
-    double longitude;
-  };
 
   struct CrmsDataContainer {
     std::string id;
     std::string geoid;
-    Position location;
     bool valid;
     QDateTime datetime;
     std::vector<float> values;
@@ -89,7 +84,6 @@ class CrmsDatabase : public QObject {
   std::unique_ptr<boost::progress_display> m_progressbar;
   std::vector<std::string> m_dataCategories;
   std::vector<std::string> m_stationNames;
-  std::vector<Position> m_stationLocations;
   std::unordered_map<size_t, size_t> m_categoryMap;
   size_t m_fileLength;
 };
