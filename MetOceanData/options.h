@@ -38,8 +38,6 @@ class Options : public QObject {
     QDateTime endDate;
     QString outputFile;
     QStringList station;
-    bool doCrms;
-    QString crms;
   };
 
   void processOptions();

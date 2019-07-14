@@ -97,8 +97,4 @@ static const QCommandLineOption m_show =
                        "Show the stations that would be selected given the "
                        "provided criteria and exit.");
 
-static const QCommandLineOption m_crmsSourceFile = QCommandLineOption(
-    QStringList() << "crms", "Converts a CRMS database into netCDF format",
-    "filename");
-
 #endif  // OPTIONSLIST_H

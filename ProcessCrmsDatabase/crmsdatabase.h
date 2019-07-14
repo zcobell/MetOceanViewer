@@ -20,43 +20,31 @@
 #ifndef CRMSDATABASE_H
 #define CRMSDATABASE_H
 
-#include <QDateTime>
-#include <QObject>
-#include <QVector>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "boost/progress.hpp"
 
-class CrmsDatabase : public QObject {
-  Q_OBJECT
+class CrmsDatabase {
  public:
   explicit CrmsDatabase(const std::string &datafile,
-                        const std::string &outputFile,
-                        QObject *parent = nullptr);
+                        const std::string &outputFile);
 
   bool showProgressBar() const;
   void setShowProgressBar(bool showProgressBar);
 
   static constexpr float fillValue() { return -9999.0f; }
 
- public slots:
   void parse();
 
- signals:
-  void percentComplete(int);
-  void complete();
-  void success();
-  void error(QString);
-
  private:
-
   struct CrmsDataContainer {
     std::string id;
     std::string geoid;
     bool valid;
-    QDateTime datetime;
+    long long datetime;
     std::vector<float> values;
   };
 
@@ -71,14 +59,12 @@ class CrmsDatabase : public QObject {
   void initializeOutputFile();
   void closeOutputFile(size_t numStations);
   bool fileExists(const std::string &filename);
-  void exitCleanly();
 
   std::string m_databaseFile;
   std::string m_outputFile;
   std::ifstream m_file;
   size_t m_geoidIndex;
   int m_ncid;
-  bool m_hasError;
   bool m_showProgressBar;
   unsigned long m_previousPercentComplete;
   std::unique_ptr<boost::progress_display> m_progressbar;

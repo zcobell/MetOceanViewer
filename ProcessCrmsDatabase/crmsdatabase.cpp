@@ -18,16 +18,13 @@
 //
 //-----------------------------------------------------------------------*/
 #include "crmsdatabase.h"
-#include <QDateTime>
-#include <QThread>
 #include <iostream>
 #include "boost/algorithm/string/split.hpp"
 #include "boost/algorithm/string/trim.hpp"
+#include "boost/format.hpp"
 #include "boost/lexical_cast.hpp"
-#include "hmdfasciiparser.h"
+#include "cdate.h"
 #include "netcdf.h"
-#include "stringutil.h"
-#include "timezone.h"
 
 std::vector<std::string> splitString(const std::string &s) {
   std::vector<std::string> elems;
@@ -37,14 +34,12 @@ std::vector<std::string> splitString(const std::string &s) {
 }
 
 CrmsDatabase::CrmsDatabase(const std::string &datafile,
-                           const std::string &outputFile, QObject *parent)
+                           const std::string &outputFile)
     : m_databaseFile(datafile),
       m_outputFile(outputFile),
-      m_hasError(false),
-      m_showProgressBar(false),
-      m_progressbar(nullptr),
+      m_showProgressBar(true),
       m_previousPercentComplete(0),
-      QObject(parent) {}
+      m_progressbar(nullptr) {}
 
 double CrmsDatabase::getPercentComplete() {
   size_t fileposition = static_cast<size_t>(this->m_file.tellg());
@@ -52,12 +47,11 @@ double CrmsDatabase::getPercentComplete() {
       static_cast<double>(static_cast<long double>(fileposition) /
                           static_cast<long double>(this->m_fileLength)) *
       100.0;
-  emit this->percentComplete(static_cast<int>(std::floor(percent)));
   if (this->m_showProgressBar) {
     unsigned long dt = static_cast<unsigned long>(std::floor(percent)) -
                        this->m_previousPercentComplete;
-    if(dt > 100 - this->m_previousPercentComplete){
-        dt = 100 - this->m_previousPercentComplete;
+    if (dt > 100 - this->m_previousPercentComplete) {
+      dt = 100 - this->m_previousPercentComplete;
     }
     if (dt > 0) {
       *(this->m_progressbar) += dt;
@@ -69,8 +63,7 @@ double CrmsDatabase::getPercentComplete() {
 
 void CrmsDatabase::parse() {
   if (!this->fileExists(this->m_databaseFile)) {
-    emit error("File does not exist");
-    emit complete();
+    std::cerr << "File does not exist." << std::endl;
     return;
   }
 
@@ -86,10 +79,6 @@ void CrmsDatabase::parse() {
   bool finished = false;
 
   while (!finished) {
-    if (QThread::currentThread()->isInterruptionRequested()) {
-      this->exitCleanly();
-      break;
-    }
     this->getPercentComplete();
     std::vector<CrmsDataContainer> data;
     bool valid = this->getNextStation(data, finished);
@@ -100,22 +89,13 @@ void CrmsDatabase::parse() {
     nStation++;
   }
 
-  if(this->m_showProgressBar){
-      this->getPercentComplete();
+  if (this->m_showProgressBar) {
+    this->getPercentComplete();
   }
 
   this->closeOutputFile(nStation);
   this->closeCrmsFile();
 
-  if (this->m_hasError) {
-    emit error("Error during CRMS processing");
-    emit this->percentComplete(0);
-  } else {
-    emit success();
-    emit this->percentComplete(100);
-  }
-
-  emit complete();
   return;
 }
 
@@ -125,22 +105,25 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
   int ierr = nc_inq_dimid(this->m_ncid, "numParam", &dimid_param);
 
   ierr = nc_redef(this->m_ncid);
-  QString station_dim_string, station_time_var_string, station_data_var_string;
-  station_dim_string.sprintf("stationLength_%6.6llu", stationNumber + 1);
-  station_time_var_string.sprintf("time_station_%6.6llu", stationNumber + 1);
-  station_data_var_string.sprintf("data_station_%6.6llu", stationNumber + 1);
+
+  std::string station_dim_string =
+      boost::str(boost::format("stationLength_%6.6llu") % (stationNumber + 1));
+  std::string station_time_var_string =
+      boost::str(boost::format("time_station_%6.6llu") % (stationNumber + 1));
+  std::string station_data_var_string =
+      boost::str(boost::format("data_station_%6.6llu") % (stationNumber + 1));
 
   int dimid_len, varid_time, varid_data;
-  ierr = nc_def_dim(this->m_ncid, station_dim_string.toStdString().c_str(),
-                    data.size(), &dimid_len);
+  ierr = nc_def_dim(this->m_ncid, station_dim_string.c_str(), data.size(),
+                    &dimid_len);
   int dims[2];
   dims[0] = dimid_param;
   dims[1] = dimid_len;
 
-  ierr = nc_def_var(this->m_ncid, station_time_var_string.toStdString().c_str(),
-                    NC_INT64, 1, &dimid_len, &varid_time);
-  ierr = nc_def_var(this->m_ncid, station_data_var_string.toStdString().c_str(),
-                    NC_FLOAT, 2, dims, &varid_data);
+  ierr = nc_def_var(this->m_ncid, station_time_var_string.c_str(), NC_INT64, 1,
+                    &dimid_len, &varid_time);
+  ierr = nc_def_var(this->m_ncid, station_data_var_string.c_str(), NC_FLOAT, 2,
+                    dims, &varid_data);
 
   ierr = nc_def_var_deflate(this->m_ncid, varid_time, 1, 1, 2);
   ierr = nc_def_var_deflate(this->m_ncid, varid_data, 1, 1, 2);
@@ -148,21 +131,23 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
   ierr = nc_put_att_text(this->m_ncid, varid_data, "station_name",
                          data[0].id.length(), data[0].id.c_str());
 
-  QDateTime refDate = QDateTime::fromSecsSinceEpoch(0, Qt::UTC);
-  QString refstring =
-      "seconds since " + refDate.toString("yyyy/MM/dd hh:mm:ss UTC");
-  QString minString = data[0].datetime.toString("yyyy/MM/dd hh:mm:ss");
-  QString maxString =
-      data[data.size() - 1].datetime.toString("yyyy/MM/dd hh:mm:ss");
+  CDate refDate;
+  refDate.fromSeconds(0);
+  CDate dateMin(data[0].datetime);
+  CDate dateMax(data.back().datetime);
+
+  std::string refstring = "seconds since " + refDate.toString() + " UTC";
+  std::string minString = dateMin.toString();
+  std::string maxString = dateMax.toString();
 
   ierr = nc_put_att_text(this->m_ncid, varid_time, "station_name",
                          data[0].id.length(), data[0].id.c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "reference",
-                         refstring.length(), refstring.toStdString().c_str());
+                         refstring.length(), refstring.c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "minimum",
-                         minString.length(), minString.toStdString().c_str());
+                         minString.length(), minString.c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "maximum",
-                         maxString.length(), maxString.toStdString().c_str());
+                         maxString.length(), maxString.c_str());
 
   float fill = this->fillValue();
   ierr = nc_def_var_fill(this->m_ncid, varid_data, 0, &fill);
@@ -175,7 +160,7 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
   size_t idx = 0;
 
   for (size_t i = 0; i < data.size(); ++i) {
-    t[i] = static_cast<long long>(data[i].datetime.toSecsSinceEpoch());
+    t[i] = data[i].datetime;
   }
 
   for (size_t i = 0; i < this->m_categoryMap.size(); ++i) {
@@ -217,8 +202,7 @@ void CrmsDatabase::readHeader() {
   std::string line;
   size_t idx = 0;
   std::getline(this->m_file, line);
-  line = StringUtil::sanitizeString(line);
-  std::vector<std::string> list = StringUtil::stringSplitToVector(line, ",");
+  std::vector<std::string> list = splitString(line);
   for (size_t i = 0; i < list.size(); ++i) {
     std::string s = list[i];
     if (s != "Station ID" && s != "Date (mm/dd/yyyy)" &&
@@ -242,18 +226,15 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
   std::vector<std::string> split = splitString(line);
   d.id = split[0];
 
-  QString dateString = QString::fromStdString(split[1]);
-  QString timeString = QString::fromStdString(split[2]);
+  CDate date = CDate(split[1], split[2]);
 
-  d.datetime = QDateTime(QDate::fromString(dateString, "M/d/yyyy"),
-                         QTime::fromString(timeString, "hh:mm:ss"), Qt::UTC);
-  int offset = Timezone::offsetFromUtc(QString::fromStdString(split[3]));
-  d.datetime = d.datetime.addSecs(-offset);
-
-  if (!d.datetime.isValid()) {
-    d.valid = false;
-    return d;
+  int offset = 0;
+  if (split[3] == "CST") {
+    offset = 21600;
+  } else if (split[4] == "CDT") {
+    offset = 18000;
   }
+  date.add(offset);
 
   d.geoid = split[this->m_geoidIndex];
   d.values.resize(this->m_categoryMap.size());
@@ -284,17 +265,10 @@ bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data,
   data.reserve(300000);
 
   for (;;) {
-    if (QThread::currentThread()->isInterruptionRequested()) {
-      this->exitCleanly();
-      finished = true;
-      return false;
-    }
-
     std::string line;
-
     std::getline(this->m_file, line);
     finished = this->m_file.eof();
-    streampos p = this->m_file.tellg();
+    std::streampos p = this->m_file.tellg();
 
     if (line.size() < 10) break;
 
@@ -338,13 +312,6 @@ void CrmsDatabase::initializeOutputFile() {
     const size_t count[2] = {1, s.length()};
     ierr = nc_put_vara_text(this->m_ncid, varid_cat, start, count, name);
   }
-  return;
-}
-
-void CrmsDatabase::exitCleanly() {
-  this->m_file.close();
-  nc_close(this->m_ncid);
-  this->m_hasError = true;
   return;
 }
 

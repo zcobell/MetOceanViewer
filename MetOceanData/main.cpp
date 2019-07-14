@@ -43,12 +43,8 @@ int main(int argc, char *argv[]) {
   option->processOptions();
   Options::CommandLineOptions opt = option->getCommandLineOptions();
   MetOceanData *d;
-  if (opt.doCrms) {
-    d = new MetOceanData(opt.crms, opt.outputFile, &a);
-  } else {
-    d = new MetOceanData(opt.service, opt.station, opt.product, opt.datum,
-                         opt.startDate, opt.endDate, opt.outputFile, &a);
-  }
+  d = new MetOceanData(opt.service, opt.station, opt.product, opt.datum,
+                       opt.startDate, opt.endDate, opt.outputFile, &a);
   d->setLoggingActive();
   QObject::connect(d, SIGNAL(finished()), &a, SLOT(quit()));
   QTimer::singleShot(0, d, SLOT(run()));

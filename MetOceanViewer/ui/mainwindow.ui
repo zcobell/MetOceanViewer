@@ -1732,14 +1732,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>4</hour>
+                     <hour>5</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>5</hour>
+                     <hour>6</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>
@@ -2594,14 +2594,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>4</hour>
+                     <hour>5</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>5</hour>
+                     <hour>6</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>
@@ -5296,7 +5296,7 @@
   </action>
   <action name="actionGenerate_CRMS_Database">
    <property name="text">
-    <string>Generate CRMS Database</string>
+    <string>CRMS Database Help</string>
    </property>
   </action>
  </widget>

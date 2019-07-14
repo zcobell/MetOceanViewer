@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <iostream>
 #include "constants.h"
-#include "crmsdatabase.h"
 #include "generic.h"
 #include "hmdf.h"
 #include "ndbcdata.h"
@@ -61,8 +60,6 @@ MetOceanData::MetOceanData(QObject *parent) : QObject(parent) {
   this->m_startDate = QDateTime();
   this->m_endDate = QDateTime();
   this->m_outputFile = QString();
-  this->m_doCrms = false;
-  this->m_crmsFile = QString();
 }
 
 MetOceanData::MetOceanData(serviceTypes service, QStringList station,
@@ -77,22 +74,6 @@ MetOceanData::MetOceanData(serviceTypes service, QStringList station,
   this->m_startDate = startDate;
   this->m_endDate = endDate;
   this->m_outputFile = outputFile;
-  this->m_doCrms = false;
-  this->m_crmsFile = QString();
-}
-
-MetOceanData::MetOceanData(QString crmsFile, QString outputFile,
-                           QObject *parent)
-    : QObject(parent) {
-  this->m_service = 0;
-  this->m_product = 0;
-  this->m_datum = 0;
-  this->m_station = QStringList();
-  this->m_startDate = QDateTime();
-  this->m_endDate = QDateTime();
-  this->m_outputFile = outputFile;
-  this->m_doCrms = true;
-  this->m_crmsFile = crmsFile;
 }
 
 int MetOceanData::service() const { return m_service; }
@@ -157,27 +138,23 @@ void MetOceanData::showStatus(QString message, int pct) {
 }
 
 void MetOceanData::run() {
-  if (this->m_doCrms) {
-    this->processCrmsData();
+  if (this->service() == USGS && this->m_station.length() > 1) {
+    emit error(
+        "Beacuase each station has different characteristics, only one "
+        "USGS station may be selected at a time.");
+    emit finished();
     return;
-  } else {
-    if (this->service() == USGS && this->m_station.length() > 1) {
-      emit error(
-          "Beacuase each station has different characteristics, only one "
-          "USGS station may be selected at a time.");
-      emit finished();
-      return;
-    }
-
-    if (this->service() == NOAA)
-      this->getNoaaData();
-    else if (this->service() == USGS)
-      this->getUsgsData();
-    else if (this->service() == NDBC)
-      this->getNdbcData();
-    else if (this->service() == XTIDE)
-      this->getXtideData();
   }
+
+  if (this->service() == NOAA)
+    this->getNoaaData();
+  else if (this->service() == USGS)
+    this->getUsgsData();
+  else if (this->service() == NDBC)
+    this->getNdbcData();
+  else if (this->service() == XTIDE)
+    this->getXtideData();
+
   emit finished();
   return;
 }
@@ -526,14 +503,3 @@ QString MetOceanData::noaaIndexToUnits() { return noaaUnits[this->m_product]; }
 int MetOceanData::getDatum() const { return m_datum; }
 
 void MetOceanData::setDatum(int datum) { m_datum = datum; }
-
-void MetOceanData::processCrmsData() {
-  CrmsDatabase *d = new CrmsDatabase(this->m_crmsFile.toStdString(),
-                                     this->m_outputFile.toStdString(), this);
-  connect(d, SIGNAL(error(QString)), this, SLOT(showError(QString)));
-  d->setShowProgressBar(true);
-  d->parse();
-  emit finished();
-  delete d;
-  return;
-}

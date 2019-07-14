@@ -37,24 +37,11 @@ void Options::addOptions() {
                              << m_serviceType << m_stationId << m_boundingBox
                              << m_nearest << m_startDate << m_endDate
                              << m_product << m_outputFile << m_datum << m_list
-                             << m_show << m_crmsSourceFile);
+                             << m_show );
 }
 
 Options::CommandLineOptions Options::getCommandLineOptions() {
   Options::CommandLineOptions opt;
-
-  opt.doCrms = false;
-
-  if (this->parser()->isSet(m_crmsSourceFile)) {
-    if (!this->parser()->isSet(m_outputFile)) {
-      std::cerr << "No output file set." << std::endl;
-      this->parser()->showHelp(1);
-    }
-    opt.crms = this->parser()->value(m_crmsSourceFile);
-    opt.outputFile = this->parser()->value(m_outputFile);
-    opt.doCrms = true;
-    return opt;
-  }
 
   std::vector<bool> inputOptions;
   inputOptions.push_back(this->parser()->isSet(m_stationId));

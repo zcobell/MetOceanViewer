@@ -61,8 +61,7 @@ SOURCES += hmdfasciiparser.cpp  \
            generic.cpp \
            constants.cpp \
            highwatermarks.cpp \
-           hwmdata.cpp \
-           crmsdatabase.cpp
+           hwmdata.cpp
 
 HEADERS += hmdfasciiparser.h  \
            crmsdata.h \
@@ -85,8 +84,7 @@ HEADERS += hmdfasciiparser.h  \
            generic.h \
            constants.h \
            highwatermarks.h \
-           hwmdata.h \
-           crmsdatabase.h
+           hwmdata.h
 unix {
     target.path = /usr/lib
     INSTALLS += target
