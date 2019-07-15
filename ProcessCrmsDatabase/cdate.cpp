@@ -1,28 +1,31 @@
 #include "cdate.h"
-#include <iostream>
 #include "boost/format.hpp"
 #include "boost/spirit/include/phoenix.hpp"
 #include "boost/spirit/include/qi.hpp"
 
 CDate::CDate() {
-  struct tm defaultTime = {0};
-  this->m_date = timegm(&defaultTime);
-  this->m_epoch_tm = defaultTime;
-  this->m_epoch = this->m_date;
+  this->init();
 }
 
-CDate::CDate(long long &seconds) { this->fromSeconds(seconds); }
+CDate::CDate(long long &seconds) { 
+  this->init();
+  this->fromSeconds(seconds); 
+}
 
-CDate::CDate(long &seconds) { this->fromSeconds(seconds); }
+CDate::CDate(long &seconds) { 
+   this->init();
+   this->fromSeconds(seconds); 
+}
 
 CDate::CDate(const std::string &dateString) {
   using namespace boost::phoenix;
   using namespace boost::spirit::qi;
   int year, month, day, hour, minute, second;
+  this->init();
   bool r = parse(dateString.begin(), dateString.end(),
                  (int_ >> "/" >> int_ >> "/" >> int_ >> " " >> int_ >> ":" >>
                   int_ >> ":" >> int_ >> ":"),
-                 year, month, day, hour, minute, second);
+                 month, day, year, hour, minute, second);
   if (!r) {
     std::cerr << "Error reading date string!" << std::endl;
   } else {
@@ -34,8 +37,9 @@ CDate::CDate(const std::string &dateString, const std::string &timeString) {
   using namespace boost::phoenix;
   using namespace boost::spirit::qi;
   int year, month, day, hour, minute, second;
+  this->init();
   bool r1 = parse(dateString.begin(), dateString.end(),
-                  (int_ >> "/" >> int_ >> "/" >> int_), year, month, day);
+                  (int_ >> "/" >> int_ >> "/" >> int_), month, day, year);
   bool r2 = parse(timeString.begin(), timeString.end(),
                   (int_ >> ":" >> int_ >> ":" >> int_), hour, minute, second);
   if (!r1 || !r2) {
@@ -43,6 +47,13 @@ CDate::CDate(const std::string &dateString, const std::string &timeString) {
   } else {
     this->set(year, month, day, hour, minute, second);
   }
+}
+
+void CDate::init(){
+  struct tm defaultTime = {70,0,1,0,0,0};
+  this->m_date = timegm(&defaultTime);
+  this->m_epoch_tm = defaultTime;
+  this->m_epoch = this->m_date;
 }
 
 void CDate::add(long seconds) {
@@ -156,13 +167,13 @@ void CDate::setSecond(int second) {
 }
 
 std::string CDate::toString() {
-  return boost::str(boost::format("%4.4i/%2.2i/%2.2i %2.2i/%2.2i/%2.2i") %
+  return boost::str(boost::format("%04i/%02i/%02i %02i:%02i:%02i") %
                     this->year() % this->month() % this->day() % this->hour() %
                     this->minute() % this->second());
 }
 
 std::string CDate::dateString(CDate &d) {
-  return boost::str(boost::format("%4.4i/%2.2i/%2.2i %2.2i/%2.2i/%2.2i") %
+  return boost::str(boost::format("%04i/%02i/%02i %02i:%02i:%02i") %
                     d.year() % d.month() % d.day() % d.hour() % d.minute() %
                     d.second());
 }

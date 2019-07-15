@@ -23,6 +23,7 @@ INCLUDEPATH += $$PWD/../thirdparty/boost_1_67_0
 SOURCES += \
         cdate.cpp \
         crmsdatabase.cpp \
+        crmsdatacontainer.cpp \
         main.cpp
 
 # Default rules for deployment.
@@ -32,4 +33,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     cdate.h \
-    crmsdatabase.h
+    crmsdatabase.h \
+    crmsdatacontainer.h

@@ -80,12 +80,12 @@ void CrmsDatabase::parse() {
 
   while (!finished) {
     this->getPercentComplete();
-    std::vector<CrmsDataContainer> data;
+    std::vector<CrmsDataContainer *> data;
     bool valid = this->getNextStation(data, finished);
     if (valid) {
       this->putNextStation(nStation, data);
     }
-    data.erase(data.begin(), data.end());
+    this->deleteCrmsObjects(data);
     nStation++;
   }
 
@@ -99,19 +99,27 @@ void CrmsDatabase::parse() {
   return;
 }
 
+void CrmsDatabase::deleteCrmsObjects(
+    const std::vector<CrmsDataContainer *> &data) {
+  for (auto &d : data) {
+    delete d;
+  }
+  return;
+}
+
 void CrmsDatabase::putNextStation(size_t stationNumber,
-                                  std::vector<CrmsDataContainer> &data) {
+                                  std::vector<CrmsDataContainer *> &data) {
   int dimid_param;
   int ierr = nc_inq_dimid(this->m_ncid, "numParam", &dimid_param);
 
   ierr = nc_redef(this->m_ncid);
 
   std::string station_dim_string =
-      boost::str(boost::format("stationLength_%6.6llu") % (stationNumber + 1));
+      boost::str(boost::format("stationLength_%06i") % (stationNumber + 1));
   std::string station_time_var_string =
-      boost::str(boost::format("time_station_%6.6llu") % (stationNumber + 1));
+      boost::str(boost::format("time_station_%06i") % (stationNumber + 1));
   std::string station_data_var_string =
-      boost::str(boost::format("data_station_%6.6llu") % (stationNumber + 1));
+      boost::str(boost::format("data_station_%06i") % (stationNumber + 1));
 
   int dimid_len, varid_time, varid_data;
   ierr = nc_def_dim(this->m_ncid, station_dim_string.c_str(), data.size(),
@@ -129,19 +137,19 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
   ierr = nc_def_var_deflate(this->m_ncid, varid_data, 1, 1, 2);
 
   ierr = nc_put_att_text(this->m_ncid, varid_data, "station_name",
-                         data[0].id.length(), data[0].id.c_str());
+                         data[0]->id().length(), data[0]->id().c_str());
 
-  CDate refDate;
+  CDate refDate, dateMin, dateMax;
   refDate.fromSeconds(0);
-  CDate dateMin(data[0].datetime);
-  CDate dateMax(data.back().datetime);
+  dateMin.fromSeconds(data.front()->datetime());
+  dateMax.fromSeconds(data.back()->datetime());
 
   std::string refstring = "seconds since " + refDate.toString() + " UTC";
   std::string minString = dateMin.toString();
   std::string maxString = dateMax.toString();
 
   ierr = nc_put_att_text(this->m_ncid, varid_time, "station_name",
-                         data[0].id.length(), data[0].id.c_str());
+                         data[0]->id().length(), data[0]->id().c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "reference",
                          refstring.length(), refstring.c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "minimum",
@@ -160,12 +168,12 @@ void CrmsDatabase::putNextStation(size_t stationNumber,
   size_t idx = 0;
 
   for (size_t i = 0; i < data.size(); ++i) {
-    t[i] = data[i].datetime;
+    t[i] = data[i]->datetime();
   }
 
   for (size_t i = 0; i < this->m_categoryMap.size(); ++i) {
     for (size_t j = 0; j < data.size(); ++j) {
-      v[idx] = data[j].values[i];
+      v[idx] = data[j]->value(i);
       idx++;
     }
   }
@@ -219,12 +227,12 @@ void CrmsDatabase::readHeader() {
   return;
 }
 
-CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
+CrmsDataContainer *CrmsDatabase::splitToCrmsDataContainer(
     const std::string &line) {
-  CrmsDataContainer d;
+  CrmsDataContainer *d = new CrmsDataContainer(this->m_categoryMap.size());
 
   std::vector<std::string> split = splitString(line);
-  d.id = split[0];
+  d->setId(split[0]);
 
   CDate date = CDate(split[1], split[2]);
 
@@ -236,33 +244,28 @@ CrmsDatabase::CrmsDataContainer CrmsDatabase::splitToCrmsDataContainer(
   }
   date.add(offset);
 
-  d.geoid = split[this->m_geoidIndex];
-  d.values.resize(this->m_categoryMap.size());
-
   for (size_t i = 0; i < this->m_categoryMap.size(); ++i) {
     size_t idx = this->m_categoryMap[i];
     if (split[idx] == "") {
-      d.values[i] = this->fillValue();
+      d->setValue(i, this->fillValue());
     } else {
       try {
         // float v = boost::lexical_cast<float>(split[idx]);
         float v = std::stof(split[idx]);
-        d.values[i] = v;
+        d->setValue(i, v);
       } catch (...) {
-        d.values[i] = this->fillValue();
+        d->setValue(i, this->fillValue());
       }
     }
   }
-  d.valid = true;
+  d->setValid(true);
   return d;
 }
 
-bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data,
+bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer *> &data,
                                   bool &finished) {
   std::string prevname;
   size_t n = 0;
-
-  data.reserve(300000);
 
   for (;;) {
     std::string line;
@@ -272,17 +275,18 @@ bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer> &data,
 
     if (line.size() < 10) break;
 
-    CrmsDataContainer d = this->splitToCrmsDataContainer(line);
+    CrmsDataContainer *d = this->splitToCrmsDataContainer(line);
 
     if (n == 0) {
-      prevname = d.id;
-    } else if (prevname != d.id) {
+      prevname = d->id();
+    } else if (prevname != d->id()) {
       this->m_file.seekg(p);
+      delete d;
       break;
     }
 
     n++;
-    if (d.valid) data.push_back(d);
+    if (d->valid()) data.push_back(d);
     if (finished) break;
   }
   return data.size() > 0;

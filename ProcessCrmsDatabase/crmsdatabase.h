@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <vector>
 #include "boost/progress.hpp"
+#include "crmsdatacontainer.h"
 
 class CrmsDatabase {
  public:
@@ -40,25 +41,18 @@ class CrmsDatabase {
   void parse();
 
  private:
-  struct CrmsDataContainer {
-    std::string id;
-    std::string geoid;
-    bool valid;
-    long long datetime;
-    std::vector<float> values;
-  };
-
   double getPercentComplete();
   void readHeader();
   void openCrmsFile();
   void closeCrmsFile();
-  CrmsDataContainer splitToCrmsDataContainer(const std::string &line);
-  bool getNextStation(std::vector<CrmsDataContainer> &data, bool &finished);
+  CrmsDataContainer *splitToCrmsDataContainer(const std::string &line);
+  bool getNextStation(std::vector<CrmsDataContainer *> &data, bool &finished);
   void putNextStation(size_t stationNumber,
-                      std::vector<CrmsDataContainer> &data);
+                      std::vector<CrmsDataContainer *> &data);
   void initializeOutputFile();
   void closeOutputFile(size_t numStations);
   bool fileExists(const std::string &filename);
+  void deleteCrmsObjects(const std::vector<CrmsDataContainer*> &data);
 
   std::string m_databaseFile;
   std::string m_outputFile;

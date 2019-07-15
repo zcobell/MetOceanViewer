@@ -46,6 +46,7 @@ class CDate {
   static std::string dateString(CDate &d);
 
  private:
+  void init();
   void buildTm();
   void buildDate(int year, int month, int day, int hour, int minute,
                  int second);
