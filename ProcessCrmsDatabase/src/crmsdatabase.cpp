@@ -243,6 +243,7 @@ CrmsDataContainer *CrmsDatabase::splitToCrmsDataContainer(
     offset = 18000;
   }
   date.add(offset);
+  d->setDatetime(date.toSeconds());
 
   for (size_t i = 0; i < this->m_categoryMap.size(); ++i) {
     size_t idx = this->m_categoryMap[i];

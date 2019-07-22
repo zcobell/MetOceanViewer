@@ -50,7 +50,7 @@ CDate::CDate(const std::string &dateString, const std::string &timeString) {
 }
 
 void CDate::init(){
-  struct tm defaultTime = {70,0,1,0,0,0};
+  struct tm defaultTime = {0};
   this->m_date = timegm(&defaultTime);
   this->m_epoch_tm = defaultTime;
   this->m_epoch = this->m_date;

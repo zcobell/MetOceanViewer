@@ -21,10 +21,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 INCLUDEPATH += $$PWD/../thirdparty/boost_1_67_0
 
 SOURCES += \
-        cdate.cpp \
-        crmsdatabase.cpp \
-        crmsdatacontainer.cpp \
-        main.cpp
+        src/cdate.cpp \
+        src/crmsdatabase.cpp \
+        src/crmsdatacontainer.cpp \
+        src/main.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -32,6 +32,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    cdate.h \
-    crmsdatabase.h \
-    crmsdatacontainer.h
+    src/cdate.h \
+    src/crmsdatabase.h \
+    src/crmsdatacontainer.h
