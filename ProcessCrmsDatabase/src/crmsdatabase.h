@@ -44,21 +44,27 @@ class CrmsDatabase {
   double getPercentComplete();
   void readHeader();
   void openCrmsFile();
+  void prereadCrmsFile(std::vector<std::string> &stationNames,
+                       std::vector<size_t> &stationLengths);
   void closeCrmsFile();
   CrmsDataContainer *splitToCrmsDataContainer(const std::string &line);
   bool getNextStation(std::vector<CrmsDataContainer *> &data, bool &finished);
-  void putNextStation(size_t stationNumber,
-                      std::vector<CrmsDataContainer *> &data);
-  void initializeOutputFile();
+  void putNextStation(std::vector<CrmsDataContainer *> &data, int varid_data,
+                      int varid_time);
+  void initializeOutputFile(std::vector<std::string> &stationNames,
+                            std::vector<size_t> &length,
+                            std::vector<int> &varid_data,
+                            std::vector<int> &varid_time);
   void closeOutputFile(size_t numStations);
   bool fileExists(const std::string &filename);
-  void deleteCrmsObjects(const std::vector<CrmsDataContainer*> &data);
+  void deleteCrmsObjects(const std::vector<CrmsDataContainer *> &data);
 
   std::string m_databaseFile;
   std::string m_outputFile;
   std::ifstream m_file;
   size_t m_geoidIndex;
   int m_ncid;
+  size_t m_maxLength;
   bool m_showProgressBar;
   unsigned long m_previousPercentComplete;
   std::unique_ptr<boost::progress_display> m_progressbar;

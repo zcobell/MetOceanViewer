@@ -67,10 +67,25 @@ void CrmsDatabase::parse() {
     return;
   }
 
+  std::vector<std::string> names;
+  std::vector<size_t> length;
+  std::vector<int> varids_data, varids_time;
+
   this->openCrmsFile();
   this->readHeader();
-  this->initializeOutputFile();
 
+  std::cout << "Preprocessing CRMS file..." << std::endl;
+
+  this->m_previousPercentComplete = 0;
+  if (this->m_showProgressBar) {
+    this->m_progressbar.reset(new boost::progress_display(100));
+  }
+
+  this->prereadCrmsFile(names, length);
+
+  this->initializeOutputFile(names, length, varids_data, varids_time);
+
+  this->m_previousPercentComplete = 0;
   if (this->m_showProgressBar) {
     this->m_progressbar.reset(new boost::progress_display(100));
   }
@@ -83,7 +98,7 @@ void CrmsDatabase::parse() {
     std::vector<CrmsDataContainer *> data;
     bool valid = this->getNextStation(data, finished);
     if (valid) {
-      this->putNextStation(nStation, data);
+      this->putNextStation(data, varids_data[nStation], varids_time[nStation]);
     }
     this->deleteCrmsObjects(data);
     nStation++;
@@ -107,58 +122,63 @@ void CrmsDatabase::deleteCrmsObjects(
   return;
 }
 
-void CrmsDatabase::putNextStation(size_t stationNumber,
-                                  std::vector<CrmsDataContainer *> &data) {
+void CrmsDatabase::prereadCrmsFile(std::vector<std::string> &stationNames,
+                                   std::vector<size_t> &stationLengths) {
+  size_t nRecord = 1;
+  std::string stationPrev;
+  std::string line;
+  std::getline(this->m_file, line);
+
+  std::string stn1;
+  std::stringstream ss1(line);
+  std::getline(ss1, stationPrev, ',');
+
+  for (;;) {
+    if (this->m_file.eof()) break;
+    std::getline(this->m_file, line);
+    std::stringstream ss(line);
+    std::string stn;
+    std::getline(ss, stn, ',');
+    if (stn != stationPrev) {
+      stationNames.push_back(stationPrev);
+      stationLengths.push_back(nRecord);
+      nRecord = 1;
+      stationPrev = stn;
+      this->getPercentComplete();
+    } else {
+      nRecord++;
+    }
+  }
+  this->m_file.close();
+  this->m_file.open(this->m_databaseFile, std::ios::binary);
+  std::getline(this->m_file, line);
+
+  this->m_maxLength =
+      *std::max_element(stationLengths.begin(), stationLengths.end());
+
+  return;
+}
+
+void CrmsDatabase::putNextStation(std::vector<CrmsDataContainer *> &data,
+                                  int varid_data, int varid_time) {
   int dimid_param;
   int ierr = nc_inq_dimid(this->m_ncid, "numParam", &dimid_param);
 
   ierr = nc_redef(this->m_ncid);
 
-  std::string station_dim_string =
-      boost::str(boost::format("stationLength_%06i") % (stationNumber + 1));
-  std::string station_time_var_string =
-      boost::str(boost::format("time_station_%06i") % (stationNumber + 1));
-  std::string station_data_var_string =
-      boost::str(boost::format("data_station_%06i") % (stationNumber + 1));
+  CDate dateMin, dateMax;
 
-  int dimid_len, varid_time, varid_data;
-  ierr = nc_def_dim(this->m_ncid, station_dim_string.c_str(), data.size(),
-                    &dimid_len);
-  int dims[2];
-  dims[0] = dimid_param;
-  dims[1] = dimid_len;
-
-  ierr = nc_def_var(this->m_ncid, station_time_var_string.c_str(), NC_INT64, 1,
-                    &dimid_len, &varid_time);
-  ierr = nc_def_var(this->m_ncid, station_data_var_string.c_str(), NC_FLOAT, 2,
-                    dims, &varid_data);
-
-  ierr = nc_def_var_deflate(this->m_ncid, varid_time, 1, 1, 2);
-  ierr = nc_def_var_deflate(this->m_ncid, varid_data, 1, 1, 2);
-
-  ierr = nc_put_att_text(this->m_ncid, varid_data, "station_name",
-                         data[0]->id().length(), data[0]->id().c_str());
-
-  CDate refDate, dateMin, dateMax;
-  refDate.fromSeconds(0);
   dateMin.fromSeconds(data.front()->datetime());
   dateMax.fromSeconds(data.back()->datetime());
 
-  std::string refstring = "seconds since " + refDate.toString() + " UTC";
   std::string minString = dateMin.toString();
   std::string maxString = dateMax.toString();
 
-  ierr = nc_put_att_text(this->m_ncid, varid_time, "station_name",
-                         data[0]->id().length(), data[0]->id().c_str());
-  ierr = nc_put_att_text(this->m_ncid, varid_time, "reference",
-                         refstring.length(), refstring.c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "minimum",
                          minString.length(), minString.c_str());
   ierr = nc_put_att_text(this->m_ncid, varid_time, "maximum",
                          maxString.length(), maxString.c_str());
 
-  float fill = this->fillValue();
-  ierr = nc_def_var_fill(this->m_ncid, varid_data, 0, &fill);
   ierr = nc_enddef(this->m_ncid);
 
   size_t nData = data.size() * this->m_categoryMap.size();
@@ -239,7 +259,7 @@ CrmsDataContainer *CrmsDatabase::splitToCrmsDataContainer(
   int offset = 0;
   if (split[3] == "CST") {
     offset = 21600;
-  } else if (split[4] == "CDT") {
+  } else if (split[3] == "CDT") {
     offset = 18000;
   }
   date.add(offset);
@@ -251,8 +271,8 @@ CrmsDataContainer *CrmsDatabase::splitToCrmsDataContainer(
       d->setValue(i, this->fillValue());
     } else {
       try {
-        // float v = boost::lexical_cast<float>(split[idx]);
-        float v = std::stof(split[idx]);
+        float v = boost::lexical_cast<float>(split[idx]);
+        // float v = std::stof(split[idx]);
         d->setValue(i, v);
       } catch (...) {
         d->setValue(i, this->fillValue());
@@ -267,6 +287,8 @@ bool CrmsDatabase::getNextStation(std::vector<CrmsDataContainer *> &data,
                                   bool &finished) {
   std::string prevname;
   size_t n = 0;
+
+  data.reserve(this->m_maxLength);
 
   for (;;) {
     std::string line;
@@ -298,7 +320,10 @@ bool CrmsDatabase::fileExists(const std::string &filename) {
   return static_cast<bool>(ifile);
 }
 
-void CrmsDatabase::initializeOutputFile() {
+void CrmsDatabase::initializeOutputFile(std::vector<std::string> &stationNames,
+                                        std::vector<size_t> &length,
+                                        std::vector<int> &varid_data,
+                                        std::vector<int> &varid_time) {
   int ierr = nc_create(this->m_outputFile.c_str(), NC_NETCDF4, &this->m_ncid);
   int dimid_categories, dimid_stringsize, varid_cat;
   ierr = nc_def_dim(this->m_ncid, "numParam", this->m_categoryMap.size(),
@@ -308,6 +333,50 @@ void CrmsDatabase::initializeOutputFile() {
   dims[0] = dimid_categories;
   dims[1] = dimid_stringsize;
   ierr = nc_def_var(this->m_ncid, "sensors", NC_CHAR, 2, dims, &varid_cat);
+
+  CDate refDate;
+  refDate.fromSeconds(0);
+  std::string refstring = "seconds since " + refDate.toString() + " UTC";
+
+  for (size_t i = 0; i < stationNames.size(); ++i) {
+    std::string station_dim_string =
+        boost::str(boost::format("stationLength_%06i") % (i + 1));
+    std::string station_time_var_string =
+        boost::str(boost::format("time_station_%06i") % (i + 1));
+    std::string station_data_var_string =
+        boost::str(boost::format("data_station_%06i") % (i + 1));
+
+    int dimid_len, varid_t, varid_d;
+    ierr = nc_def_dim(this->m_ncid, station_dim_string.c_str(), length[i],
+                      &dimid_len);
+    int dims[2];
+    dims[0] = dimid_categories;
+    dims[1] = dimid_len;
+
+    ierr = nc_def_var(this->m_ncid, station_time_var_string.c_str(), NC_INT64,
+                      1, &dimid_len, &varid_t);
+    ierr = nc_def_var(this->m_ncid, station_data_var_string.c_str(), NC_FLOAT,
+                      2, dims, &varid_d);
+
+    ierr = nc_def_var_deflate(this->m_ncid, varid_t, 1, 1, 2);
+    ierr = nc_def_var_deflate(this->m_ncid, varid_d, 1, 1, 2);
+
+    ierr = nc_def_var_chunking(this->m_ncid, varid_t, NC_CONTIGUOUS, nullptr);
+    ierr = nc_def_var_chunking(this->m_ncid, varid_d, NC_CONTIGUOUS, nullptr);
+
+    ierr = nc_put_att_text(this->m_ncid, varid_d, "station_name",
+                           stationNames[i].length(), stationNames[i].c_str());
+    ierr = nc_put_att_text(this->m_ncid, varid_t, "station_name",
+                           stationNames[i].length(), stationNames[i].c_str());
+    ierr = nc_put_att_text(this->m_ncid, varid_t, "reference",
+                           refstring.length(), refstring.c_str());
+
+    float fill = this->fillValue();
+    ierr = nc_def_var_fill(this->m_ncid, varid_d, 0, &fill);
+    varid_data.push_back(varid_d);
+    varid_time.push_back(varid_t);
+  }
+
   ierr = nc_enddef(this->m_ncid);
 
   for (size_t i = 0; i < this->m_dataCategories.size(); ++i) {
@@ -317,6 +386,7 @@ void CrmsDatabase::initializeOutputFile() {
     const size_t count[2] = {1, s.length()};
     ierr = nc_put_vara_text(this->m_ncid, varid_cat, start, count, name);
   }
+
   return;
 }
 
