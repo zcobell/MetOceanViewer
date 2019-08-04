@@ -230,6 +230,7 @@ void CrmsDatabase::readHeader() {
   std::string line;
   size_t idx = 0;
   std::getline(this->m_file, line);
+  line.erase(std::remove(line.begin(), line.end(),'\r'), line.end());
   std::vector<std::string> list = splitString(line);
   for (size_t i = 0; i < list.size(); ++i) {
     std::string s = list[i];
