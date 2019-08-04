@@ -23,22 +23,23 @@
 #include "generic.h"
 #include "ui_crmsdialog.h"
 
-static QString s_crmsInstructions =
-    "<html><head/><body><p>You can manually convert the CIMS database to "
-    "netCDF format for MetOceanViewer using the executable distributed with "
-    "this code called BuildCrmsDatabase. "
-    "However, the process is completed automatically and a publicly accessable "
-    "database is updated every Monday morning"
-    " <a href=\"https://metoceanviewer.s3.amazonaws.com/crms.nc\">"
-    "here</a>.</p>"
-    "<p>Place the downloaded file here: " +
-    Generic::crmsDataFile() + "</p></body></html>";
-
 CrmsDialog::CrmsDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::CrmsDialog) {
   ui->setupUi(this);
+
+  QString crmsInstructions =
+      "<html><head/><body><p>You can manually convert the CIMS database to "
+      "netCDF format for MetOceanViewer using the executable distributed with "
+      "this code called BuildCrmsDatabase. "
+      "However, the process is completed automatically and a publicly accessable "
+      "database is updated every Monday morning"
+      " <a href=\"https://metoceanviewer.s3.amazonaws.com/crms.nc\">"
+      "here</a>.</p>"
+      "<p>Place the downloaded file here: " +
+      Generic::crmsDataFile() + "</p></body></html>";
+
   ui->label_crmsInstructions->setTextFormat(Qt::RichText);
-  ui->label_crmsInstructions->setText(s_crmsInstructions);
+  ui->label_crmsInstructions->setText(crmsInstructions);
   ui->label_crmsInstructions->setTextInteractionFlags(
       Qt::TextBrowserInteraction);
   ui->label_crmsInstructions->setOpenExternalLinks(true);
