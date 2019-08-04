@@ -1,8 +1,8 @@
 #!/bin/bash
 redist=1
-QtVersion=5_12_3
+QtVersion=5_13_0
 compileDirectory="../../build-MetOcean-Desktop_Qt_"$QtVersion"_MinGW_64_bit-Release"
-mingwPath=/cygdrive/c/Qt/5.12.3/mingw73_64/bin
+mingwPath=/cygdrive/c/Qt/5.13.0/mingw73_64/bin
 winDeployQtBinary=$mingwPath/windeployqt.exe
 binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator.exe
 version=$(git describe --always --tags)

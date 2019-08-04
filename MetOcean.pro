@@ -33,5 +33,8 @@ CONFIG += ordered
 HEADERS += version.h
 
 SUBDIRS += \
-    MetOceanHWMStats  \
-    ProcessCrmsDatabase
+    MetOceanHWMStats
+
+unix {
+SUBDIRS+=ProcessCrmsDatabase
+}
