@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "stationlocations.h"
 #include <QFile>
+#include "generic.h"
 
 StationLocations::StationLocations(QObject *parent) : QObject(parent) {}
 
@@ -32,6 +33,8 @@ QVector<Station> StationLocations::readMarkers(
     return StationLocations::readXtideMarkers();
   } else if (markerType == NDBC) {
     return StationLocations::readNdbcMarkers();
+  } else if (markerType == CRMS) {
+    return StationLocations::readCrmsMarkers();
   } else {
     QVector<Station> output;
     return output;
@@ -172,6 +175,28 @@ QVector<Station> StationLocations::readNdbcMarkers() {
   }
 
   stationFile.close();
+
+  return output;
+}
+
+QVector<Station> StationLocations::readCrmsMarkers() {
+  QVector<Station> output;
+  QVector<double> latitude, longitude;
+  QVector<QString> name;
+  QVector<QDateTime> startDate, endDate;
+  QString filename = Generic::crmsDataFile();
+  bool success = CrmsData::readStationList(filename, latitude, longitude, name,
+                                           startDate, endDate);
+
+  if (!success) return output;
+
+  for (size_t i = 0; i < latitude.size(); ++i) {
+    QGeoCoordinate c(latitude[i], longitude[i]);
+    QString id;
+    id.sprintf("%zu", i);
+    Station s(c, id, name[i], 0, 0, 0, true, startDate[i], endDate[i]);
+    output.push_back(s);
+  }
 
   return output;
 }

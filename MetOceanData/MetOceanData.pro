@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
 # MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-# Copyright (C) 2015-2017  Zach Cobell
+# Copyright (C) 2019  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@ include($$PWD/../global.pri)
 CONFIG += c++11 console
 CONFIG -= app_bundle
 TARGET = MetOceanData
+
+INCLUDEPATH += $$PWD/../thirdparty/boost_1_67_0
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings

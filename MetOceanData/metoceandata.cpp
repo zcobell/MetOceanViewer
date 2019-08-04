@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -34,16 +34,17 @@ static const QHash<int, QString> noaaProducts = {
     {4, "air_temperature"}, {5, "water_temperature"}, {6, "wind:speed"},
     {7, "humidity"},        {8, "air_pressure"},      {9, "wind:direction"},
     {10, "wind:gusts"}};
-static const QHash<int, QString> noaaProductLongName = {{1, "6 minute water level"},
-                                                  {2, "Hourly water level"},
-                                                  {3, "Tide predictoins"},
-                                                  {4, "Air temperature"},
-                                                  {5, "Water temperature"},
-                                                  {6, "Wind speed"},
-                                                  {7, "Humidity"},
-                                                  {8, "Air pressure"},
-                                                  {9, "Wind direction"},
-                                                  {10, "Wind gusts"}};
+static const QHash<int, QString> noaaProductLongName = {
+    {1, "6 minute water level"},
+    {2, "Hourly water level"},
+    {3, "Tide predictoins"},
+    {4, "Air temperature"},
+    {5, "Water temperature"},
+    {6, "Wind speed"},
+    {7, "Humidity"},
+    {8, "Air pressure"},
+    {9, "Wind direction"},
+    {10, "Wind gusts"}};
 static const QHash<int, QString> noaaUnits = {
     {1, "m"},   {2, "m"}, {3, "m"},  {4, "C"},   {5, "C"},
     {6, "m/s"}, {7, "%"}, {8, "mb"}, {9, "deg"}, {10, "m/s"}};

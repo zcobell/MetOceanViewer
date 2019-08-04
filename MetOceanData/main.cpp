@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -42,11 +42,12 @@ int main(int argc, char *argv[]) {
 
   option->processOptions();
   Options::CommandLineOptions opt = option->getCommandLineOptions();
-  MetOceanData *d =
-      new MetOceanData(opt.service, opt.station, opt.product, opt.datum,
+  MetOceanData *d;
+  d = new MetOceanData(opt.service, opt.station, opt.product, opt.datum,
                        opt.startDate, opt.endDate, opt.outputFile, &a);
   d->setLoggingActive();
   QObject::connect(d, SIGNAL(finished()), &a, SLOT(quit()));
   QTimer::singleShot(0, d, SLOT(run()));
+
   return a.exec();
 }

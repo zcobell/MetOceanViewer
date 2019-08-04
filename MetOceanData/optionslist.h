@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -72,7 +72,8 @@ static const QCommandLineOption m_outputFile =
     QCommandLineOption(QStringList() << "o"
                                      << "output",
                        "Name of the output file. Format will be guessed from "
-                       "extension (.imeds or .nc)",
+                       "extension (.imeds or .nc). Note if performing crms "
+                       "processing, the output extension will always be *.nc",
                        "filename");
 
 static const QCommandLineOption m_boundingBox =

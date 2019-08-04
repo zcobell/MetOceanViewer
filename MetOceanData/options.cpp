@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ void Options::addOptions() {
                              << m_serviceType << m_stationId << m_boundingBox
                              << m_nearest << m_startDate << m_endDate
                              << m_product << m_outputFile << m_datum << m_list
-                             << m_show);
+                             << m_show );
 }
 
 Options::CommandLineOptions Options::getCommandLineOptions() {
@@ -238,8 +238,12 @@ void Options::printStationList(QStringList station,
                             MetOceanData::serviceToMarkerType(markerType), s);
   for (size_t i = 0; i < station.size(); ++i) {
     std::cout << s[i].id().toStdString() << ",'"
-              << s[i].name().replace(" ", "_").replace(",","_").replace("__","_").toStdString() << "',"
-              << s[i].coordinate().longitude() << ","
+              << s[i].name()
+                     .replace(" ", "_")
+                     .replace(",", "_")
+                     .replace("__", "_")
+                     .toStdString()
+              << "'," << s[i].coordinate().longitude() << ","
               << s[i].coordinate().latitude() << std::endl;
     std::cout.flush();
   }

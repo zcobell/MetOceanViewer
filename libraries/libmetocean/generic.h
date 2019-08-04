@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ class Generic : public QObject {
   static bool createConfigDirectory();
   static bool createConfigDirectory(QString &configDirectory);
   static QString configDirectory();
+  static QString crmsDataFile();
 
  private:
   static QString dummyConfigDir;

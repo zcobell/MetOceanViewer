@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
 # MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-# Copyright (C) 2018  Zach Cobell
+# Copyright (C) 2019  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,12 +23,16 @@ QT  += qml quick positioning location quickwidgets
 
 include($$PWD/../global.pri)
 
+INCLUDEPATH += $$PWD/../thirdparty/boost_1_67_0
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = MetOceanViewer
 TEMPLATE = app
 
 SOURCES +=\
+    src/crms.cpp \
+    src/crmsdialog.cpp \
     src/stationmodel.cpp \
     src/colors.cpp \
     src/dflow.cpp \
@@ -38,6 +42,7 @@ SOURCES +=\
     src/keyhandler.cpp \
     src/noaa.cpp \
     src/session.cpp \
+    src/uicrmstab.cpp \
     src/usgs.cpp \
     src/xtide.cpp \
     src/chartview.cpp \
@@ -58,6 +63,8 @@ SOURCES +=\
     src/ndbc.cpp
 
 HEADERS  += \
+    src/crms.h \
+    src/crmsdialog.h \
     src/metoceanviewer.h \
     src/stationmodel.h \
     src/colors.h \
@@ -81,6 +88,7 @@ HEADERS  += \
     src/ndbc.h
 
 FORMS    += \
+    ui/crmsdialog.ui \
     ui/aboutdialog.ui \
     ui/addtimeseriesdialog.ui \
     ui/updatedialog.ui \

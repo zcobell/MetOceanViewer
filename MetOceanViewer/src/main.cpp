@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,6 +35,15 @@ int main(int argc, char *argv[]) {
 
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
+  //...Check for the internet connection
+  if (!Generic::isConnectedToNetwork()) {
+    QMessageBox::critical(nullptr,
+                          QObject::tr("Internet Connection Not Detected"),
+                          QObject::tr("No internet connection was detected.\n"
+                                      "The program will now be terminated."));
+    return 1;
+  }
+
   Q_INIT_RESOURCE(resource_files);
 
   //...Display the splash screen
@@ -45,15 +54,6 @@ int main(int argc, char *argv[]) {
 
   //...Generate the config directory if required
   Generic::createConfigDirectory();
-
-  //...Check for the internet connection
-  if (!Generic::isConnectedToNetwork()) {
-    QMessageBox::critical(nullptr,
-                          QObject::tr("Internet Connection Not Detected"),
-                          QObject::tr("No internet connection was detected.\n"
-                                      "The program will now be terminated."));
-    return 1;
-  }
 
   // Check for drag/drop operations
   if (argc == 2) {

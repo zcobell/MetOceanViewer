@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -308,7 +308,7 @@ int Usgs::replotChart(Timezone *newTimezone) {
       this->m_allStationData->station(0)->date(0), Qt::UTC);
   QDateTime maxDateTime = QDateTime::fromMSecsSinceEpoch(
       this->m_allStationData->station(0)->date(
-          this->m_allStationData->station(0)->numSnaps()),
+          this->m_allStationData->station(0)->numSnaps() - 1),
       Qt::UTC);
 
   minDateTime =

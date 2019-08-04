@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -62,9 +62,10 @@ class MetOceanData : public QObject {
   int getDatum() const;
   void setDatum(int datum);
 
-  static StationLocations::MarkerType serviceToMarkerType(MetOceanData::serviceTypes type);
+  static StationLocations::MarkerType serviceToMarkerType(
+      MetOceanData::serviceTypes type);
   static bool findStation(QStringList name, StationLocations::MarkerType type,
-                   QVector<Station> &s);
+                          QVector<Station> &s);
 
  signals:
   void finished();
@@ -83,6 +84,7 @@ class MetOceanData : public QObject {
   void getUsgsData();
   void getNdbcData();
   void getXtideData();
+  void processCrmsData();
 
   QString noaaIndexToProduct();
   QString noaaIndexToDatum();
@@ -97,6 +99,7 @@ class MetOceanData : public QObject {
   QDateTime m_startDate;
   QDateTime m_endDate;
   QString m_outputFile;
+
 };
 
 #endif  // DRIVER_H

@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -119,7 +119,7 @@ int Noaa::fetchNOAAData() {
 }
 
 int Noaa::getDataBounds(double &ymin, double &ymax) {
-  ymax = std::numeric_limits<double>::min();
+  ymax = -std::numeric_limits<double>::max();
   ymin = std::numeric_limits<double>::max();
 
   for (size_t i = 0; i < this->m_currentStationData.length(); i++) {

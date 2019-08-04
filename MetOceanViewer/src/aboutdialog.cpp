@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -75,9 +75,10 @@ QString AboutDialog::generateAboutText() {
       "repository</a><br>" +
       "<a href=\"https://github.com/zcobell/MetOceanViewer/wiki\">Visit "
       "Documentation Page</a><br><br>" +
-      "<b>Git Revision: </b>" + QString::fromStdString(metoceanVersion()) + "<br><br>" +
-      "<b>Compiler: </b>" + compiler + "<br>" + "<b>Architecture: </b>" +
-      architecture + "<br>" + "<b>Qt Version:  </b>" + QString(QT_VERSION_STR) +
+      "<b>Git Revision: </b>" + QString::fromStdString(metoceanVersion()) +
+      "<br><br>" + "<b>Compiler: </b>" + compiler + "<br>" +
+      "<b>Architecture: </b>" + architecture + "<br>" + "<b>Qt Version:  </b>" +
+      QString(QT_VERSION_STR) +
       "<br><br>"
 
       "<b>External Libraries</b> <br><br>" +
@@ -111,7 +112,9 @@ QString AboutDialog::generateAboutText() {
       "a><br>" +
       "MapBox - <a "
       "href=\"http://www.mapbox.com\">http://www.mapbox.com</a><br>" +
-      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a>" +
+      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a><br>" +
+      "Coastwide Reference Monitoring System (CRMS) - <a "
+      "href=\"https://cims.coastal.louisiana.gov/Default.aspx\">CIMS</a>" +
       "</p></body></html>";
 
   return text;
@@ -133,7 +136,7 @@ QString AboutDialog::generateLicenseText() {
       "margin-right:0px; -qt-block-indent:0; text-indent:0px;\">" +
       "<b>MetOcean Viewer</b> <br>" +
       "<i>A simple interface for viewing hydrodynamic model data</i> <br><br>" +
-      "Copyright (C) 2018  Zach Cobell <br><br>" +
+// Copyright (C) 2019  Zach Cobell
       "This program is free software: you can redistribute it and/or modify it "
       "under the terms of the GNU General Public License" +
       " as published by the Free Software Foundation, either version 3 of the "

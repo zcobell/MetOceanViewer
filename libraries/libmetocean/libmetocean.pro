@@ -1,7 +1,7 @@
 #-------------------------------GPL-------------------------------------#
 #
 # MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-# Copyright (C) 2015-2017  Zach Cobell
+# Copyright (C) 2019  Zach Cobell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ INCLUDEPATH += $$PWD/../../thirdparty/boost_1_67_0
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += hmdfasciiparser.cpp  \
+           crmsdata.cpp \
            hmdf.cpp  \
            hmdfstation.cpp  \
            netcdftimeseries.cpp  \
@@ -58,11 +59,12 @@ SOURCES += hmdfasciiparser.cpp  \
            ndbcdata.cpp \
            stationlocations.cpp \
            generic.cpp \
-    constants.cpp \
-    highwatermarks.cpp \
-    hwmdata.cpp
+           constants.cpp \
+           highwatermarks.cpp \
+           hwmdata.cpp
 
 HEADERS += hmdfasciiparser.h  \
+           crmsdata.h \
            hmdf.h  \
            hmdfstation.h  \
            netcdftimeseries.h  \
@@ -80,9 +82,9 @@ HEADERS += hmdfasciiparser.h  \
            stationlocations.h \
            metocean_global.h \
            generic.h \
-    constants.h \
-    highwatermarks.h \
-    hwmdata.h
+           constants.h \
+           highwatermarks.h \
+           hwmdata.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,11 +35,11 @@ class HmdfStation : public QObject {
   void clear();
 
   static constexpr double nullDataValue() {
-    return std::numeric_limits<double>::min();
+    return -std::numeric_limits<double>::max();
   }
 
   static constexpr qint64 nullDateValue() {
-    return std::numeric_limits<qint64>::min();
+    return -std::numeric_limits<qint64>::max();
   }
 
   QGeoCoordinate *coordinate();
@@ -74,6 +74,7 @@ class HmdfStation : public QObject {
   double data(int index) const;
   void setData(const double &data, int index);
   void setData(const QVector<double> &data);
+  void setData(const QVector<float> &data);
 
   QVector<qint64> allDate() const;
   QVector<double> allData() const;

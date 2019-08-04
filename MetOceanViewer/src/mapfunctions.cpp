@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,6 +28,14 @@
 #include "errors.h"
 #include "generic.h"
 
+#if defined(_MSC_VER)
+#define USE_MAPBOXGL 0
+#elif defined(__APPLE__)
+#define USE_MAPBOXGL 1
+#else
+#define USE_MAPBOXGL 1
+#endif
+
 static QStringList esriList = QStringList() << "World Street Map"
                                             << "World Imagery"
                                             << "World Terrain Base"
@@ -41,7 +49,7 @@ static QStringList esriList = QStringList() << "World Street Map"
                                             << "Dark Gray Canvas"
                                             << "DeLorme World Basemap";
 
-#if defined(_MSC_VER) || defined(__APPLE__)
+#if USE_MAPBOXGL == 0
 static QStringList mapboxList = QStringList() << "Streets"
                                               << "Light"
                                               << "Dark"
@@ -84,6 +92,26 @@ MapFunctions::MapFunctions(QObject *parent) : QObject(parent) {
   this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
   this->m_configDirectory = Generic::configDirectory();
+}
+
+template <typename T>
+bool isBetween(T start, T end, T rangeStart, T rangeEnd) {
+  return (start <= rangeEnd && end >= rangeStart);
+}
+
+int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
+                                 QVector<Station> &locations, QDateTime &start,
+                                 QDateTime &end) {
+  model->clear();
+  QVector<Station> visibleMarkers;
+  for (size_t i = 0; i < locations.size(); ++i) {
+    if (isBetween<QDateTime>(locations[i].startValidDate(),
+                             locations[i].endValidDate(), start, end)) {
+      visibleMarkers.push_back(locations[i]);
+    }
+  }
+  model->addMarkers(visibleMarkers);
+  return visibleMarkers.length();
 }
 
 int MapFunctions::refreshMarkers(StationModel *model, QQuickWidget *map,
@@ -170,7 +198,7 @@ void MapFunctions::setMapQmlFile(QQuickWidget *map) {
 
 //...Only g++ can use MapboxGL (as of this writing). This is toggled
 //   automatically here
-#if defined(_MSC_VER) || defined(__APPLE__)
+#if USE_MAPBOXGL == 0
     map->setSource(QUrl("qrc:/qml/qml/MapboxMapViewer.qml"));
 #else
     map->setSource(QUrl("qrc:/qml/qml/MapboxGLMapViewer.qml"));
