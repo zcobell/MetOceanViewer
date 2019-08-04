@@ -1,7 +1,7 @@
 /*-------------------------------GPL-------------------------------------//
 //
 // MetOcean Viewer - A simple interface for viewing hydrodynamic model data
-// Copyright (C) 2018  Zach Cobell
+// Copyright (C) 2019  Zach Cobell
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,8 +19,22 @@
 //-----------------------------------------------------------------------*/
 #include "crmsdatacontainer.h"
 
-CrmsDataContainer::CrmsDataContainer(size_t size) {
-  this->m_values = new float[size];
+CrmsDataContainer::CrmsDataContainer(size_t size)
+    : m_id(std::string()),
+      m_valid(false),
+      m_size(size),
+      m_datetime(0),
+      m_values(new float[size]) {}
+
+CrmsDataContainer::CrmsDataContainer(const CrmsDataContainer &c) {
+  this->m_size = c.size();
+  this->m_values = new float[this->m_size];
+  this->m_id = c.id();
+  this->m_valid = c.valid();
+  this->m_datetime = c.datetime();
+  for (size_t i = 0; i < this->size(); ++i) {
+    this->m_values[i] = c.value(i);
+  }
 }
 
 CrmsDataContainer::~CrmsDataContainer() { delete[] this->m_values; }
@@ -46,3 +60,5 @@ float CrmsDataContainer::value(size_t index) const {
 void CrmsDataContainer::setValue(size_t index, float value) {
   this->m_values[index] = value;
 }
+
+size_t CrmsDataContainer::size() const { return this->m_size; }

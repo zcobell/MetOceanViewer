@@ -22,18 +22,16 @@
 #include "boost/spirit/include/phoenix.hpp"
 #include "boost/spirit/include/qi.hpp"
 
-CDate::CDate() {
+CDate::CDate() { this->init(); }
+
+CDate::CDate(long long &seconds) {
   this->init();
+  this->fromSeconds(seconds);
 }
 
-CDate::CDate(long long &seconds) { 
+CDate::CDate(long &seconds) {
   this->init();
-  this->fromSeconds(seconds); 
-}
-
-CDate::CDate(long &seconds) { 
-   this->init();
-   this->fromSeconds(seconds); 
+  this->fromSeconds(seconds);
 }
 
 CDate::CDate(const std::string &dateString) {
@@ -68,8 +66,9 @@ CDate::CDate(const std::string &dateString, const std::string &timeString) {
   }
 }
 
-void CDate::init(){
-  struct tm defaultTime = {0};
+void CDate::init() {
+  struct tm defaultTime = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr};
+  this->m_tm = defaultTime;
   this->m_date = timegm(&defaultTime);
   this->m_epoch_tm = defaultTime;
   this->m_epoch = this->m_date;
@@ -192,7 +191,6 @@ std::string CDate::toString() {
 }
 
 std::string CDate::dateString(CDate &d) {
-  return boost::str(boost::format("%04i/%02i/%02i %02i:%02i:%02i") %
-                    d.year() % d.month() % d.day() % d.hour() % d.minute() %
-                    d.second());
+  return boost::str(boost::format("%04i/%02i/%02i %02i:%02i:%02i") % d.year() %
+                    d.month() % d.day() % d.hour() % d.minute() % d.second());
 }

@@ -183,10 +183,10 @@ bool CrmsData::readStationList(const QString &filename,
   int ncid, dimid_nstation, dimid_stringsize;
   size_t nstations, stringsize;
   int ierr = nc_open(filename.toStdString().c_str(), NC_NOWRITE, &ncid);
-  ierr = nc_inq_dimid(ncid, "nstation", &dimid_nstation);
-  ierr = nc_inq_dimlen(ncid, dimid_nstation, &nstations);
-  ierr = nc_inq_dimid(ncid, "stringsize", &dimid_stringsize);
-  ierr = nc_inq_dimlen(ncid, dimid_stringsize, &stringsize);
+  ierr += nc_inq_dimid(ncid, "nstation", &dimid_nstation);
+  ierr += nc_inq_dimlen(ncid, dimid_nstation, &nstations);
+  ierr += nc_inq_dimid(ncid, "stringsize", &dimid_stringsize);
+  ierr += nc_inq_dimlen(ncid, dimid_stringsize, &stringsize);
 
   longitude.reserve(nstations);
   latitude.reserve(nstations);

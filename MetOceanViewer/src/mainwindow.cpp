@@ -836,7 +836,7 @@ void MainWindow::on_combo_crms_maptype_currentIndexChanged(int index) {
 
 void MainWindow::on_button_crmsfilterStationAvailablity_toggled(bool checked) {
   if (!checked) {
-    int n = this->mapFunctions->refreshMarkers(
+    this->mapFunctions->refreshMarkers(
         this->crmsStationModel, ui->quick_crmsMap, this->crmsMarkerLocations,
         false, false);
   } else {
@@ -851,9 +851,8 @@ void MainWindow::filterCrmsStationsByDate() {
   start.setTime(QTime(0, 0, 0));
   end.setTime(QTime(0, 0, 0));
   end = end.addDays(1);
-  int n = this->mapFunctions->refreshMarkers(
-      this->crmsStationModel, ui->quick_crmsMap, this->crmsMarkerLocations,
-      start, end);
+  this->mapFunctions->refreshMarkers(this->crmsStationModel, ui->quick_crmsMap,
+                                     this->crmsMarkerLocations, start, end);
   return;
 }
 

@@ -26,6 +26,7 @@ class CrmsDataContainer {
  public:
   CrmsDataContainer(size_t size);
   ~CrmsDataContainer();
+  CrmsDataContainer(const CrmsDataContainer &c);
 
   std::string id() const;
   void setId(const std::string &id);
@@ -39,9 +40,12 @@ class CrmsDataContainer {
   float value(size_t index) const;
   void setValue(size_t index, float value);
 
+  size_t size() const;
+
 private:
   std::string m_id;
   bool m_valid;
+  size_t m_size;
   long long m_datetime;
   float *m_values;
 };

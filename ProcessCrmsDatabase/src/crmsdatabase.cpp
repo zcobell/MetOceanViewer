@@ -39,7 +39,8 @@ CrmsDatabase::CrmsDatabase(const std::string &datafile,
       m_outputFile(outputFile),
       m_showProgressBar(true),
       m_previousPercentComplete(0),
-      m_progressbar(nullptr) {}
+      m_progressbar(nullptr),
+      m_fileLength(0) {}
 
 double CrmsDatabase::getPercentComplete() {
   size_t fileposition = static_cast<size_t>(this->m_file.tellg());
@@ -163,8 +164,7 @@ void CrmsDatabase::putNextStation(std::vector<CrmsDataContainer *> &data,
                                   int varid_data, int varid_time) {
   int dimid_param;
   int ierr = nc_inq_dimid(this->m_ncid, "numParam", &dimid_param);
-
-  ierr = nc_redef(this->m_ncid);
+  ierr += nc_redef(this->m_ncid);
 
   CDate dateMin, dateMax;
 
@@ -174,12 +174,12 @@ void CrmsDatabase::putNextStation(std::vector<CrmsDataContainer *> &data,
   std::string minString = dateMin.toString();
   std::string maxString = dateMax.toString();
 
-  ierr = nc_put_att_text(this->m_ncid, varid_time, "minimum",
-                         minString.length(), minString.c_str());
-  ierr = nc_put_att_text(this->m_ncid, varid_time, "maximum",
-                         maxString.length(), maxString.c_str());
+  ierr += nc_put_att_text(this->m_ncid, varid_time, "minimum",
+                          minString.length(), minString.c_str());
+  ierr += nc_put_att_text(this->m_ncid, varid_time, "maximum",
+                          maxString.length(), maxString.c_str());
 
-  ierr = nc_enddef(this->m_ncid);
+  ierr += nc_enddef(this->m_ncid);
 
   size_t nData = data.size() * this->m_categoryMap.size();
 
@@ -198,8 +198,12 @@ void CrmsDatabase::putNextStation(std::vector<CrmsDataContainer *> &data,
     }
   }
 
-  ierr = nc_put_var_longlong(this->m_ncid, varid_time, t);
-  ierr = nc_put_var_float(this->m_ncid, varid_data, v);
+  ierr += nc_put_var_longlong(this->m_ncid, varid_time, t);
+  ierr += nc_put_var_float(this->m_ncid, varid_data, v);
+
+  if (ierr != NC_NOERR) {
+    std::cout << "Error placing variable into netCDF file." << std::endl;
+  }
 
   delete[] t;
   delete[] v;
@@ -216,8 +220,11 @@ void CrmsDatabase::openCrmsFile() {
 void CrmsDatabase::closeOutputFile(size_t numStations) {
   int ierr = nc_redef(this->m_ncid);
   int dimid_nstation;
-  ierr = nc_def_dim(this->m_ncid, "nstation", numStations, &dimid_nstation);
-  ierr = nc_close(this->m_ncid);
+  ierr += nc_def_dim(this->m_ncid, "nstation", numStations, &dimid_nstation);
+  ierr += nc_close(this->m_ncid);
+  if (ierr != NC_NOERR) {
+    std::cout << "Error: Error closing netCDF file." << std::endl;
+  }
   return;
 }
 
@@ -230,7 +237,7 @@ void CrmsDatabase::readHeader() {
   std::string line;
   size_t idx = 0;
   std::getline(this->m_file, line);
-  line.erase(std::remove(line.begin(), line.end(),'\r'), line.end());
+  line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
   std::vector<std::string> list = splitString(line);
   for (size_t i = 0; i < list.size(); ++i) {
     std::string s = list[i];
@@ -327,13 +334,13 @@ void CrmsDatabase::initializeOutputFile(std::vector<std::string> &stationNames,
                                         std::vector<int> &varid_time) {
   int ierr = nc_create(this->m_outputFile.c_str(), NC_NETCDF4, &this->m_ncid);
   int dimid_categories, dimid_stringsize, varid_cat;
-  ierr = nc_def_dim(this->m_ncid, "numParam", this->m_categoryMap.size(),
-                    &dimid_categories);
-  ierr = nc_def_dim(this->m_ncid, "stringsize", 200, &dimid_stringsize);
+  ierr += nc_def_dim(this->m_ncid, "numParam", this->m_categoryMap.size(),
+                     &dimid_categories);
+  ierr += nc_def_dim(this->m_ncid, "stringsize", 200, &dimid_stringsize);
   int dims[2];
   dims[0] = dimid_categories;
   dims[1] = dimid_stringsize;
-  ierr = nc_def_var(this->m_ncid, "sensors", NC_CHAR, 2, dims, &varid_cat);
+  ierr += nc_def_var(this->m_ncid, "sensors", NC_CHAR, 2, dims, &varid_cat);
 
   CDate refDate;
   refDate.fromSeconds(0);
@@ -348,44 +355,48 @@ void CrmsDatabase::initializeOutputFile(std::vector<std::string> &stationNames,
         boost::str(boost::format("data_station_%06i") % (i + 1));
 
     int dimid_len, varid_t, varid_d;
-    ierr = nc_def_dim(this->m_ncid, station_dim_string.c_str(), length[i],
-                      &dimid_len);
+    ierr += nc_def_dim(this->m_ncid, station_dim_string.c_str(), length[i],
+                       &dimid_len);
     int dims[2];
     dims[0] = dimid_categories;
     dims[1] = dimid_len;
 
-    ierr = nc_def_var(this->m_ncid, station_time_var_string.c_str(), NC_INT64,
-                      1, &dimid_len, &varid_t);
-    ierr = nc_def_var(this->m_ncid, station_data_var_string.c_str(), NC_FLOAT,
-                      2, dims, &varid_d);
+    ierr += nc_def_var(this->m_ncid, station_time_var_string.c_str(), NC_INT64,
+                       1, &dimid_len, &varid_t);
+    ierr += nc_def_var(this->m_ncid, station_data_var_string.c_str(), NC_FLOAT,
+                       2, dims, &varid_d);
 
-    ierr = nc_def_var_deflate(this->m_ncid, varid_t, 1, 1, 2);
-    ierr = nc_def_var_deflate(this->m_ncid, varid_d, 1, 1, 2);
+    ierr += nc_def_var_deflate(this->m_ncid, varid_t, 1, 1, 2);
+    ierr += nc_def_var_deflate(this->m_ncid, varid_d, 1, 1, 2);
 
-    ierr = nc_def_var_chunking(this->m_ncid, varid_t, NC_CONTIGUOUS, nullptr);
-    ierr = nc_def_var_chunking(this->m_ncid, varid_d, NC_CONTIGUOUS, nullptr);
+    ierr += nc_def_var_chunking(this->m_ncid, varid_t, NC_CONTIGUOUS, nullptr);
+    ierr += nc_def_var_chunking(this->m_ncid, varid_d, NC_CONTIGUOUS, nullptr);
 
-    ierr = nc_put_att_text(this->m_ncid, varid_d, "station_name",
-                           stationNames[i].length(), stationNames[i].c_str());
-    ierr = nc_put_att_text(this->m_ncid, varid_t, "station_name",
-                           stationNames[i].length(), stationNames[i].c_str());
-    ierr = nc_put_att_text(this->m_ncid, varid_t, "reference",
-                           refstring.length(), refstring.c_str());
+    ierr += nc_put_att_text(this->m_ncid, varid_d, "station_name",
+                            stationNames[i].length(), stationNames[i].c_str());
+    ierr += nc_put_att_text(this->m_ncid, varid_t, "station_name",
+                            stationNames[i].length(), stationNames[i].c_str());
+    ierr += nc_put_att_text(this->m_ncid, varid_t, "reference",
+                            refstring.length(), refstring.c_str());
 
     float fill = this->fillValue();
-    ierr = nc_def_var_fill(this->m_ncid, varid_d, 0, &fill);
+    ierr += nc_def_var_fill(this->m_ncid, varid_d, 0, &fill);
     varid_data.push_back(varid_d);
     varid_time.push_back(varid_t);
   }
 
-  ierr = nc_enddef(this->m_ncid);
+  ierr += nc_enddef(this->m_ncid);
 
   for (size_t i = 0; i < this->m_dataCategories.size(); ++i) {
     std::string s = this->m_dataCategories[i];
     const char *name = s.c_str();
     const size_t start[2] = {i, 0};
     const size_t count[2] = {1, s.length()};
-    ierr = nc_put_vara_text(this->m_ncid, varid_cat, start, count, name);
+    ierr += nc_put_vara_text(this->m_ncid, varid_cat, start, count, name);
+  }
+
+  if (ierr != NC_NOERR) {
+    std::cout << "Error initializing netCDF output file." << std::endl;
   }
 
   return;
