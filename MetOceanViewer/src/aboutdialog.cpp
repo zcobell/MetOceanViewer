@@ -75,9 +75,10 @@ QString AboutDialog::generateAboutText() {
       "repository</a><br>" +
       "<a href=\"https://github.com/zcobell/MetOceanViewer/wiki\">Visit "
       "Documentation Page</a><br><br>" +
-      "<b>Git Revision: </b>" + QString::fromStdString(metoceanVersion()) + "<br><br>" +
-      "<b>Compiler: </b>" + compiler + "<br>" + "<b>Architecture: </b>" +
-      architecture + "<br>" + "<b>Qt Version:  </b>" + QString(QT_VERSION_STR) +
+      "<b>Git Revision: </b>" + QString::fromStdString(metoceanVersion()) +
+      "<br><br>" + "<b>Compiler: </b>" + compiler + "<br>" +
+      "<b>Architecture: </b>" + architecture + "<br>" + "<b>Qt Version:  </b>" +
+      QString(QT_VERSION_STR) +
       "<br><br>"
 
       "<b>External Libraries</b> <br><br>" +
@@ -111,7 +112,9 @@ QString AboutDialog::generateAboutText() {
       "a><br>" +
       "MapBox - <a "
       "href=\"http://www.mapbox.com\">http://www.mapbox.com</a><br>" +
-      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a>" +
+      "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a><br>" +
+      "Coastwide Reference Monitoring System (CRMS) - <a "
+      "href=\"https://cims.coastal.louisiana.gov/Default.aspx\">CIMS</a>" +
       "</p></body></html>";
 
   return text;
