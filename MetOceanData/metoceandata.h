@@ -33,7 +33,7 @@ class MetOceanData : public QObject {
 
   explicit MetOceanData(QObject *parent = nullptr);
   explicit MetOceanData(serviceTypes service, QStringList station, int product,
-                        int datum, QDateTime startDate, QDateTime endDate,
+                        bool useVdatum, int datum, QDateTime startDate, QDateTime endDate,
                         QString outputFile, QObject *parent = nullptr);
 
   static QStringList selectStations(serviceTypes service, double x1, double y1,
@@ -87,11 +87,12 @@ class MetOceanData : public QObject {
   void processCrmsData();
 
   QString noaaIndexToProduct();
-  QString noaaIndexToDatum();
+  QString indexToDatum();
   QString noaaIndexToUnits();
 
   int printAvailableProducts(Hmdf *data);
 
+  bool m_usevdatum;
   int m_service;
   QStringList m_station;
   int m_product;

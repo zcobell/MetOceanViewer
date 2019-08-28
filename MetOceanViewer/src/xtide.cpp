@@ -24,7 +24,7 @@
 //...Constructor
 XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
              QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-             QComboBox *inUnits, QStatusBar *inStatusBar,
+             QComboBox *inUnits, QComboBox *inDatum, QStatusBar *inStatusBar,
              StationModel *inStationModel, QString *inCurrentStation,
              QObject *parent)
     : QObject(parent) {
@@ -33,6 +33,7 @@ XTide::XTide(QQuickWidget *inMap, ChartView *inChart,
   this->m_startDateEdit = inStartDateEdit;
   this->m_endDateEdit = inEndDateEdit;
   this->m_comboUnits = inUnits;
+  this->m_comboDatum = inDatum;
   this->m_statusBar = inStatusBar;
   this->m_station.setLatitude(0.0);
   this->m_station.setLongitude(0.0);
@@ -63,7 +64,7 @@ int XTide::plotXTideStation() {
   QDateTime d2 = this->m_endDateEdit->dateTime();
   d1.setTime(QTime(0, 0, 0));
   d2.setTime(QTime(0, 0, 0));
-  d2.addDays(1);
+  d2 = d2.addDays(1);
   if (d1 >= d2) {
     emit xTideError("Invalid date range selected.");
     return 1;
@@ -72,7 +73,14 @@ int XTide::plotXTideStation() {
   //...Calculate the tide signal
   int ierr = this->calculateXTides();
 
-  if (ierr == 0) this->plotChart();
+  if (ierr == 0) {
+    this->plotChart();
+  } else {
+    emit xTideError("Error computing tide data at station " +
+                    this->m_station.name() +
+                    ". Check station validity and datum "
+                    "availability.");
+  }
 
   return 0;
 }
@@ -94,11 +102,13 @@ int XTide::calculateXTides() {
 
   if (this->m_data != nullptr) delete this->m_data;
 
+  Datum::VDatum datumID = Datum::datumID(this->m_comboDatum->currentText());
+
   this->m_data = new Hmdf(this);
   XtideData *xtideData = new XtideData(this->m_station, startDate, endDate,
                                        Generic::configDirectory(), this);
 
-  ierr = xtideData->get(this->m_data);
+  ierr = xtideData->get(this->m_data, datumID);
 
   delete xtideData;
 
@@ -123,10 +133,12 @@ int XTide::plotChart() {
   ymin = ymin * multiplier;
   ymax = ymax * multiplier;
 
+  QString datum = this->m_data->datum();
+
   if (this->m_comboUnits->currentIndex() == 1)
-    this->m_ylabel = tr("Water Surface Elevation (ft, MLLW)");
+    this->m_ylabel = "Water Surface Elevation (ft, " + datum + ")";
   else
-    this->m_ylabel = tr("Water Surface Elevation (m, MLLW)");
+    this->m_ylabel = "Water Surface Elevation (m, " + datum + ")";
 
   QLineSeries *series1 = new QLineSeries(this);
   series1->setName(this->m_data->station(0)->name());

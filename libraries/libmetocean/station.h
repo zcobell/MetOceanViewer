@@ -71,12 +71,43 @@ class Station {
   bool active() const;
   void setActive(bool active);
 
+  double navd88Offset() const;
+  void setNavd88Offset(double navd88Offset);
+
+  double mslOffset() const;
+  void setMslOffset(double mslOffset);
+
+  double ngvd29Offset() const;
+  void setNgvd29Offset(double ngvd29Offset);
+
+  double mlwOffset() const;
+  void setMlwOffset(double mlwOffset);
+
+  double mllwOffset() const;
+  void setMllwOffset(double mllwOffset);
+
+  double mhwOffset() const;
+  void setMhwOffset(double mhwOffset);
+
+  double mhhwOffset() const;
+  void setMhhwOffset(double mhhwOffset);
+
+  static constexpr double nullOffset() { return -9999.0; }
+  bool isNullOffset(double offset);
+
  private:
   QGeoCoordinate m_coordinate;
   QString m_name;
   QString m_id;
   double m_modeled;
   double m_measured;
+  double m_navd88Offset;
+  double m_ngvd29Offset;
+  double m_mslOffset;
+  double m_mlwOffset;
+  double m_mllwOffset;
+  double m_mhwOffset;
+  double m_mhhwOffset;
   int m_category;
   bool m_selected;
   bool m_active;

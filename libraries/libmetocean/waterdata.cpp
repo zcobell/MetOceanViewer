@@ -29,11 +29,13 @@ WaterData::WaterData(Station &station, QDateTime startDate, QDateTime endDate,
   this->m_timezone = new Timezone(this);
 }
 
-int WaterData::get(Hmdf *data) { return this->retrieveData(data); }
+int WaterData::get(Hmdf *data, Datum::VDatum datum) {
+  return this->retrieveData(data, datum);
+}
 
 QString WaterData::errorString() const { return this->m_errorString; }
 
-int WaterData::retrieveData(Hmdf *data) {
+int WaterData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   Q_UNUSED(data);
   return 0;
 }

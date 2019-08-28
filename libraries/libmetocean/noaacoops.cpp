@@ -33,13 +33,14 @@
 #include "boost/spirit/include/qi.hpp"
 
 NoaaCoOps::NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
-                     QString product, QString datum, QString units,
-                     QObject *parent)
-    : WaterData(station, startDate, endDate, parent) {
-  this->m_product = product;
-  this->m_units = units;
-  this->m_datum = datum;
-  this->m_useJson = true;
+                     QString product, QString datum, bool useVdatum,
+                     QString units, QObject *parent)
+    : WaterData(station, startDate, endDate, parent),
+      m_product(product),
+      m_units(units),
+      m_datum(datum),
+      m_useVdatum(useVdatum),
+      m_useJson(true) {
   this->parseProduct();
 }
 
@@ -48,7 +49,7 @@ int NoaaCoOps::parseProduct() {
   return 0;
 }
 
-int NoaaCoOps::retrieveData(Hmdf *data) {
+int NoaaCoOps::retrieveData(Hmdf *data, Datum::VDatum datum) {
   QVector<QDateTime> startDateList, endDateList;
   std::vector<std::string> rawNoaaData;
   int ierr = this->generateDateRanges(startDateList, endDateList);
@@ -58,6 +59,11 @@ int NoaaCoOps::retrieveData(Hmdf *data) {
   if (ierr != 0) return ierr;
   ierr = this->formatNoaaResponse(rawNoaaData, data);
   if (ierr != 0) return ierr;
+  if (this->m_useVdatum) {
+    Datum::VDatum d = Datum::datumID(this->m_datum);
+    Station s = this->station();
+    data->applyDatumCorrection(s, d);
+  }
   return 0;
 }
 
@@ -116,9 +122,15 @@ int NoaaCoOps::downloadDataFromNoaaServer(
         this->station().id() + QStringLiteral("&time_zone=GMT&units=") +
         this->m_units + QStringLiteral("&interval=&format=") + format;
 
-    // Allow a different datum where allowed
-    if (this->m_datum != QStringLiteral("Stnd"))
-      requestURL = requestURL + QStringLiteral("&datum=") + this->m_datum;
+    // Allow a different datum where allowed. Use VDatum if the user wants near
+    // the coast
+    if (this->m_datum != QStringLiteral("Stnd")) {
+      if (this->m_useVdatum) {
+        requestURL = requestURL + QStringLiteral("&datum=MSL");
+      } else {
+        requestURL = requestURL + QStringLiteral("&datum=") + this->m_datum;
+      }
+    }
 
     // Send the request
     QEventLoop loop;

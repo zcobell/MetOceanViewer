@@ -568,7 +568,7 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>0</width>
+                     <width>65</width>
                      <height>25</height>
                     </size>
                    </property>
@@ -642,6 +642,16 @@
                      <string>STND</string>
                     </property>
                    </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="check_noaa_usevdatum">
+                   <property name="toolTip">
+                    <string>This option uses offline computed values for datums using the NOAA VDatum tool. MetOceanViewer will download data in MSL and then convert to the selected datum.</string>
+                   </property>
+                   <property name="text">
+                    <string>Use NOAA VDatum</string>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -1732,14 +1742,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>5</hour>
+                     <hour>6</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>6</hour>
+                     <hour>7</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>
@@ -2072,7 +2082,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_22">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_22">
+             <layout class="QHBoxLayout" name="horizontalLayout_53">
               <item>
                <widget class="QLabel" name="label_xtide_startdate">
                 <property name="minimumSize">
@@ -2162,42 +2172,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="label_xtide_units">
-                <property name="text">
-                 <string>Units:</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="combo_xtide_units">
-                <property name="minimumSize">
-                 <size>
-                  <width>75</width>
-                  <height>25</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>75</width>
-                  <height>25</height>
-                 </size>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>meters</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>feet</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item>
                <widget class="QPushButton" name="button_xtide_compute">
                 <property name="minimumSize">
                  <size>
@@ -2237,6 +2211,133 @@
               </item>
               <item>
                <spacer name="horizontalSpacer_10">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>38</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_22">
+              <item>
+               <widget class="QLabel" name="label_xtide_units">
+                <property name="text">
+                 <string>Units:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="combo_xtide_units">
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>meters</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>feet</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_xtide_datum">
+                <property name="text">
+                 <string>Datum:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="combo_xtide_datum">
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>75</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>This option uses offline computed values for datums using the NOAA VDatum tool. XTide computes values in MLLW by default</string>
+                </property>
+                <property name="currentIndex">
+                 <number>2</number>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>MLLW</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>MLW</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>MSL</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>MHW</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>MHHW</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>NGVD29</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>NAVD88</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_xtide_vdatum_warning">
+                <property name="text">
+                 <string>*All except MLLW use NOAA vDatum conversions</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_39">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -2594,14 +2695,14 @@
                    </property>
                    <property name="maximumTime">
                     <time>
-                     <hour>5</hour>
+                     <hour>6</hour>
                      <minute>59</minute>
                      <second>59</second>
                     </time>
                    </property>
                    <property name="minimumTime">
                     <time>
-                     <hour>6</hour>
+                     <hour>7</hour>
                      <minute>0</minute>
                      <second>0</second>
                     </time>
@@ -3656,7 +3757,7 @@
             <item>
              <widget class="QGroupBox" name="groupBox_5">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -5168,7 +5269,7 @@
      <x>0</x>
      <y>0</y>
      <width>850</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

@@ -154,3 +154,33 @@ double HmdfStation::nullValue() const { return this->m_nullValue; }
 void HmdfStation::setNullValue(double nullValue) {
   this->m_nullValue = nullValue;
 }
+
+#include <QDebug>
+int HmdfStation::applyDatumCorrection(Station s, Datum::VDatum datum) {
+  qDebug() << "here" << datum;
+  if (datum == Datum::VDatum::NullDatum) return 0;
+
+  double shift = 0.0;
+  if (datum == Datum::VDatum::MLLW)
+    shift = s.mllwOffset();
+  else if (datum == Datum::VDatum::MLW)
+    shift = s.mlwOffset();
+  else if (datum == Datum::VDatum::MSL)
+    shift = s.mslOffset();
+  else if (datum == Datum::VDatum::MHW)
+    shift = s.mhwOffset();
+  else if (datum == Datum::VDatum::MHHW)
+    shift = s.mhhwOffset();
+  else if (datum == Datum::VDatum::NGVD29)
+    shift = s.ngvd29Offset();
+  else if (datum == Datum::VDatum::NAVD88)
+    shift = s.navd88Offset();
+
+  if (s.isNullOffset(shift)) return 1;
+
+  for (auto &d : this->m_data) {
+    d += shift;
+  }
+
+  return 0;
+}

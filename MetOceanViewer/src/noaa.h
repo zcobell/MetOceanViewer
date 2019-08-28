@@ -30,9 +30,9 @@
 #include <QtCharts>
 #include <QtNetwork>
 #include "errors.h"
+#include "hmdf.h"
 #include "stationmodel.h"
 #include "timezone.h"
-#include "hmdf.h"
 
 //...Forward declare classes
 class ChartView;
@@ -45,12 +45,12 @@ class Noaa : public QObject {
  public:
   //...Constructor
   explicit Noaa(QQuickWidget *inMap, ChartView *inChart,
-                   QDateTimeEdit *inStartDateEdit, QDateTimeEdit *inEndDateEdit,
-                   QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-                   QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
-                   QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
-                   StationModel *inStationModel, QString *inSelectedStation,
-                   QObject *parent = nullptr);
+                QDateTimeEdit *inStartDateEdit, QDateTimeEdit *inEndDateEdit,
+                QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
+                QComboBox *inNoaaDatum, QCheckBox *inNoaaVDatum,
+                QStatusBar *inStatusBar, QComboBox *inNoaaTimezoneLocation,
+                QComboBox *inNoaaTimezone, StationModel *inStationModel,
+                QString *inSelectedStation, QObject *parent = nullptr);
 
   //...Destructor
   ~Noaa();
@@ -94,7 +94,7 @@ class Noaa : public QObject {
   QDateTime m_startDate;
   QDateTime m_endDate;
 
-  QVector<Hmdf*> m_currentStationData;
+  QVector<Hmdf *> m_currentStationData;
 
   Timezone *tz;
   int m_offsetSeconds;
@@ -107,6 +107,7 @@ class Noaa : public QObject {
   QDateTimeEdit *m_startDateEdit, *m_endDateEdit;
   QComboBox *m_comboProduct, *m_comboUnits, *m_comboDatum,
       *m_comboTimezoneLocation, *m_comboTimezone;
+  QCheckBox *m_checkNoaaVdatum;
   QStatusBar *m_statusBar;
   StationModel *m_stationModel;
   Station m_station;

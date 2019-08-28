@@ -33,10 +33,12 @@ XtideData::XtideData(Station &station, QDateTime startDate, QDateTime endDate,
   this->m_interval = 300;
 }
 
-int XtideData::retrieveData(Hmdf *data) {
+int XtideData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   Station s = this->station();
-  return this->m_tidePrediction->get(s, this->startDate(), this->endDate(),
-                                     this->interval(), data);
+  int ierr = this->m_tidePrediction->get(s, this->startDate(), this->endDate(),
+                                         this->interval(), data);
+  ierr += data->applyDatumCorrection(s, datum);
+  return ierr;
 }
 
 int XtideData::interval() const { return this->m_interval; }

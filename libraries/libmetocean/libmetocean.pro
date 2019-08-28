@@ -65,6 +65,7 @@ SOURCES += hmdfasciiparser.cpp  \
 
 HEADERS += hmdfasciiparser.h  \
            crmsdata.h \
+           datum.h \
            hmdf.h  \
            hmdfstation.h  \
            netcdftimeseries.h  \

@@ -34,7 +34,7 @@ class XtideData : public WaterData {
   void setInterval(int interval);
 
  private:
-  int retrieveData(Hmdf *data);
+  int retrieveData(Hmdf *data, Datum::VDatum datum);
 
   int m_interval;
   QString m_rootDirectory;

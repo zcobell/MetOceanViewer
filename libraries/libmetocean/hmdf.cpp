@@ -193,7 +193,8 @@ int Hmdf::writeCsv(QString filename) {
     output.write(QString("Units: " + this->units() + "\n").toUtf8());
     output.write(QString("\n").toUtf8());
     for (i = 0; i < this->station(s)->numSnaps(); i++) {
-      QDateTime d = QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i),Qt::UTC);
+      QDateTime d =
+          QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i), Qt::UTC);
       if (d.isValid()) {
         value.sprintf("%10.4e", this->station(s)->data(i));
         output.write(
@@ -488,4 +489,24 @@ void Hmdf::dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
     }
   }
   return;
+}
+
+bool Hmdf::applyDatumCorrection(Station &s, Datum::VDatum datum) {
+  int ierr = 0;
+  for (auto &stn : this->m_station) {
+    ierr += stn->applyDatumCorrection(s, datum);
+  }
+  if (ierr != 0) return false;
+  this->setDatum(datumName(datum));
+  return true;
+}
+
+bool Hmdf::applyDatumCorrection(QVector<Station> &s, Datum::VDatum datum) {
+  int ierr = 0;
+  for (size_t i = 0; i < this->nstations(); ++i) {
+    ierr += this->m_station[i]->applyDatumCorrection(s[i], datum);
+  }
+  if (ierr != 0) return false;
+  this->setDatum(Datum::datumName(datum));
+  return true;
 }

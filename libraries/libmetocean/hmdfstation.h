@@ -24,7 +24,9 @@
 #include <QObject>
 #include <QString>
 #include <QVector>
+#include "datum.h"
 #include "metocean_global.h"
+#include "station.h"
 
 class HmdfStation : public QObject {
   Q_OBJECT
@@ -84,6 +86,8 @@ class HmdfStation : public QObject {
 
   double nullValue() const;
   void setNullValue(double nullValue);
+
+  int applyDatumCorrection(Station s, Datum::VDatum datum);
 
  private:
   QGeoCoordinate m_coordinate;

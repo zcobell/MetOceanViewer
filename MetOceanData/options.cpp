@@ -36,8 +36,8 @@ void Options::addOptions() {
   this->parser()->addOptions(QList<QCommandLineOption>()
                              << m_serviceType << m_stationId << m_boundingBox
                              << m_nearest << m_startDate << m_endDate
-                             << m_product << m_outputFile << m_datum << m_list
-                             << m_show );
+                             << m_product << m_outputFile << m_datum << m_vdatum
+                             << m_list << m_show);
 }
 
 Options::CommandLineOptions Options::getCommandLineOptions() {
@@ -170,6 +170,10 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
     opt.product = -1;
   }
 
+  opt.vdatum = false;
+  if (this->parser()->isSet(m_vdatum)) {
+    opt.vdatum = true;
+  }
   if (this->parser()->isSet(m_datum)) {
     QString datumString = this->parser()->value(m_datum);
     opt.datum = checkIntegerString(datumString);

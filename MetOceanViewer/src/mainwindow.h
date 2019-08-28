@@ -273,6 +273,8 @@ class MainWindow : public QMainWindow {
 
   void on_date_crmsEndtime_dateChanged(const QDate &date);
 
+  void on_check_noaa_usevdatum_clicked(bool checked);
+
 private:
   enum MapViewerMarkerModes {
     SingleSelect,

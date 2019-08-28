@@ -29,11 +29,11 @@ class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
   NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
-            QString product, QString datum, QString units,
+            QString product, QString datum, bool useVdatum, QString units,
             QObject *parent = nullptr);
 
  private:
-  int retrieveData(Hmdf *data);
+  int retrieveData(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 
   int parseProduct();
 
@@ -59,7 +59,7 @@ class NoaaCoOps : public WaterData {
   QStringList m_productParsed;
   QString m_datum;
   QString m_units;
-  bool m_useJson;
+  bool m_useJson, m_useVdatum;
 };
 
 #endif  // NOAACOOPS_H

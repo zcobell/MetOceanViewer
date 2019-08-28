@@ -26,6 +26,7 @@
 #include "metocean_global.h"
 #include "station.h"
 #include "timezone.h"
+#include "datum.h"
 
 class WaterData : public QObject {
   Q_OBJECT
@@ -33,7 +34,7 @@ class WaterData : public QObject {
   explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
                      QObject *parent = nullptr);
 
-  int get(Hmdf *data);
+  int get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 
   QString errorString() const;
 
@@ -41,7 +42,7 @@ class WaterData : public QObject {
   void setTimezone(Timezone *timezone);
 
  protected:
-  virtual int retrieveData(Hmdf *data);
+  virtual int retrieveData(Hmdf *data, Datum::VDatum datum);
 
   void setErrorString(const QString &errorString);
 
