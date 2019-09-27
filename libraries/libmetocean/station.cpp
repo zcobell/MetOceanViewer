@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "station.h"
+#include <cmath>
 
 Station::Station()
     : m_coordinate(QGeoCoordinate()),

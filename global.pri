@@ -18,7 +18,7 @@
 #
 #-----------------------------------------------------------------------#
 # Library version
-VERSION=4.3.0
+VERSION=4.4.0
 
 # If there is no version tag in git this one will be used
 MOV_VERSION = \"unversioned\"
