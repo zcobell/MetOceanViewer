@@ -23,6 +23,7 @@
 #include "mainwindow.h"
 
 int main(int argc, char *argv[]) {
+  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
   QApplication a(argc, argv);
   QString sessionFile;
   bool doSession;
@@ -32,8 +33,6 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
 #endif
 #endif
-
-  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
   //...Check for the internet connection
   if (!Generic::isConnectedToNetwork()) {
