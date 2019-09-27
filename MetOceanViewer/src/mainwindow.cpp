@@ -836,9 +836,9 @@ void MainWindow::on_combo_crms_maptype_currentIndexChanged(int index) {
 
 void MainWindow::on_button_crmsfilterStationAvailablity_toggled(bool checked) {
   if (!checked) {
-    this->mapFunctions->refreshMarkers(
-        this->crmsStationModel, ui->quick_crmsMap, this->crmsMarkerLocations,
-        false, false);
+    this->mapFunctions->refreshMarkers(this->crmsStationModel,
+                                       ui->quick_crmsMap,
+                                       this->crmsMarkerLocations, false, false);
   } else {
     this->filterCrmsStationsByDate();
   }

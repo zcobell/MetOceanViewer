@@ -56,17 +56,11 @@ static const QCommandLineOption m_product =
                        "you will be presented with a list of options",
                        "index");
 
-static const QCommandLineOption m_datum =
-    QCommandLineOption(QStringList() << "d"
-                                     << "datum",
-                       "Specified datum to use. Only available for NOAA "
-                       "products.",
-                       //      "Options "
-                       //      "are: \n    (1)  MHHW\n    (2)  MHW\n    (3)
-                       //      MTL\n    (4)  MSL\n (5) " " MLW\n    (6) MLLW\n
-                       //      (7)  NAVD\n    (8)  LWI\n    (9) HWI\n    "
-                       //      "(10) IGLD\n    (11) Station Datum",
-                       "option");
+static const QCommandLineOption m_datum = QCommandLineOption(
+    QStringList() << "d"
+                  << "datum",
+    "Specified datum to use. Only available for NOAA and XTide products",
+    "option");
 
 static const QCommandLineOption m_outputFile =
     QCommandLineOption(QStringList() << "o"
@@ -79,7 +73,7 @@ static const QCommandLineOption m_outputFile =
 static const QCommandLineOption m_boundingBox =
     QCommandLineOption(QStringList() << "boundingbox",
                        "Bounding box coordinates. Selects all stations that "
-                       "fall within the bounding box.",
+                       "fall within the bounding box",
                        "x1,y1,x2,y2");
 
 static const QCommandLineOption m_nearest = QCommandLineOption(
@@ -89,12 +83,16 @@ static const QCommandLineOption m_nearest = QCommandLineOption(
 static const QCommandLineOption m_list =
     QCommandLineOption(QStringList() << "list",
                        "Provide a list of stations via input file formatted "
-                       "using a list of station id numbers.",
+                       "using a list of station id numbers",
                        "file");
 
 static const QCommandLineOption m_show =
     QCommandLineOption(QStringList() << "show",
                        "Show the stations that would be selected given the "
-                       "provided criteria and exit.");
+                       "provided criteria and exit");
+
+static const QCommandLineOption m_vdatum =
+    QCommandLineOption(QStringList() << "vdatum",
+                       "Use NOAA VDatum transformations where available");
 
 #endif  // OPTIONSLIST_H

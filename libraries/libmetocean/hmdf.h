@@ -82,6 +82,9 @@ class Hmdf : public QObject {
   void dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
                   double &maxValue);
 
+  bool applyDatumCorrection(Station &s, Datum::VDatum datum);
+  bool applyDatumCorrection(QVector<Station> &s, Datum::VDatum datum);
+
  private:
   void init();
   void deallocNcArrays(long long *time, double *data, char *name, char *id);

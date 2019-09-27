@@ -41,9 +41,9 @@ class XTide : public QObject {
   //...Constructor
   explicit XTide(QQuickWidget *inMap, ChartView *inChart,
                  QDateEdit *inStartDateEdit, QDateEdit *inEndDateEdit,
-                 QComboBox *inUnits, QStatusBar *inStatusBar,
-                 StationModel *inStationModel, QString *currentStation,
-                 QObject *parent = nullptr);
+                 QComboBox *inUnits, QComboBox *inDatum,
+                 QStatusBar *inStatusBar, StationModel *inStationModel,
+                 QString *currentStation, QObject *parent = nullptr);
 
   //...Destructor
   ~XTide();
@@ -75,6 +75,7 @@ class XTide : public QObject {
   ChartView *m_chartView;
   QDateEdit *m_startDateEdit, *m_endDateEdit;
   QComboBox *m_comboUnits;
+  QComboBox *m_comboDatum;
   QStatusBar *m_statusBar;
   StationModel *m_stationModel;
   Station m_station;

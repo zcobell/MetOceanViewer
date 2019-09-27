@@ -23,7 +23,7 @@ Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gu
 ![Screenshot 3](https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer/screenshots/mov_ss3.JPG)
 
 # Compiling
-To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.11.1 on Windows and Ubuntu Linux 18.04. It is expected that other versions and flavors of Linux should not pose an issue. Mac OSX is expected to work, however, some tweaks may be required. I don't currently have a development environment for Mac, so assistance with this would be appreciated. 
+To compile this program, please use the Qt suite of tools. The MetOceanViewer.pro file has been tested using QtCreator and Qt version 5.13.1 on Windows and Ubuntu Linux 18.04. It is expected that other versions and flavors of Linux should not pose an issue. Mac OSX is expected to work, however, some tweaks may be required. I don't currently have a development environment for Mac, so assistance with this would be appreciated. 
 
 Other versions of Qt that include the QtCharts library should work, but have not been tested.
 
@@ -41,10 +41,10 @@ The following external libraries/APIs are used in this software
 | netCDF v4.3.3 | http://www.unidata.ucar.edu/software/netcdf)
 | HDF5 v1.8.14 | http://www.hdfgroup.org/HDF5 |
 | Curl v7.35.0 |http://curl.haxx.se |
-| Proj.4 v4.9.2 | http://proj4.org |
 | zlib v1.2.8 |http://www.zlib.net|
-| OpenSSL v1.0.2d |https://www.openssl.org/|
+| OpenSSL v1.1.1d |https://www.openssl.org/|
 | XTide |http://www.flaterco.com/xtide/|
+| EzProj | http://github.com/zcobell/EzProj| 
 
 # License
 This program conforms to the GNU GPL, Version 3.

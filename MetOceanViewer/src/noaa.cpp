@@ -30,10 +30,10 @@
 Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
            QDateTimeEdit *inStartDateEdit, QDateTimeEdit *inEndDateEdit,
            QComboBox *inNoaaProduct, QComboBox *inNoaaUnits,
-           QComboBox *inNoaaDatum, QStatusBar *inStatusBar,
-           QComboBox *inNoaaTimezoneLocation, QComboBox *inNoaaTimezone,
-           StationModel *inStationModel, QString *inSelectedStation,
-           QObject *parent)
+           QComboBox *inNoaaDatum, QCheckBox *inNoaaVDatum,
+           QStatusBar *inStatusBar, QComboBox *inNoaaTimezoneLocation,
+           QComboBox *inNoaaTimezone, StationModel *inStationModel,
+           QString *inSelectedStation, QObject *parent)
     : QObject(parent) {
   this->m_quickMap = inMap;
   this->m_chartView = inChart;
@@ -47,6 +47,7 @@ Noaa::Noaa(QQuickWidget *inMap, ChartView *inChart,
   this->m_comboTimezone = inNoaaTimezone;
   this->m_stationModel = inStationModel;
   this->m_productIndex = 0;
+  this->m_checkNoaaVdatum = inNoaaVDatum;
   this->m_selectedStation = inSelectedStation;
 
   //...Initialize the station object
@@ -83,9 +84,9 @@ int Noaa::fetchNOAAData() {
 
   this->m_datum = this->getDatumLabel();
 
-  NoaaCoOps *coops =
-      new NoaaCoOps(this->m_station, localStartDate, localEndDate, product1,
-                    this->m_datum, this->m_units, this);
+  NoaaCoOps *coops = new NoaaCoOps(
+      this->m_station, localStartDate, localEndDate, product1, this->m_datum,
+      this->m_checkNoaaVdatum->isChecked(), this->m_units, this);
   ierr = coops->get(this->m_currentStationData[0]);
   if (ierr != 0) {
     this->m_errorString = coops->errorString();
@@ -98,9 +99,9 @@ int Noaa::fetchNOAAData() {
   this->m_currentStationData[0]->setNull(false);
 
   if (this->m_productIndex == 0) {
-    NoaaCoOps *coops =
-        new NoaaCoOps(this->m_station, localStartDate, localEndDate, product2,
-                      this->m_datum, this->m_units, this);
+    NoaaCoOps *coops = new NoaaCoOps(
+        this->m_station, localStartDate, localEndDate, product2, this->m_datum,
+        this->m_checkNoaaVdatum->isChecked(), this->m_units, this);
     ierr = coops->get(this->m_currentStationData[1]);
     if (ierr != 0) {
       this->m_errorString = coops->errorString();
@@ -168,7 +169,7 @@ QString Noaa::getUnitsLabel() {
 
 QString Noaa::getDatumLabel() {
   if (this->m_productIndex > 3)
-    return QString();
+    return "Stnd";
   else
     return this->m_comboDatum->currentText();
 }
@@ -254,8 +255,8 @@ int Noaa::plotChart() {
   this->m_chartView->addSeries(series1, series1->name());
 
   if (this->m_productIndex == 0) {
-    for (size_t j = 0; j < this->m_currentStationData[1]->station(0)->numSnaps();
-         j++)
+    for (size_t j = 0;
+         j < this->m_currentStationData[1]->station(0)->numSnaps(); j++)
       if (QDateTime::fromMSecsSinceEpoch(
               this->m_currentStationData[1]->station(0)->date(j) +
                   this->m_offsetSeconds,

@@ -19,33 +19,45 @@
 //-----------------------------------------------------------------------*/
 #include "station.h"
 
-Station::Station() {
-  this->m_coordinate = QGeoCoordinate();
-  this->m_id = QString();
-  this->m_name = QString();
-  this->m_measured = 0.0;
-  this->m_modeled = 0.0;
-  this->m_selected = false;
-  this->m_category = 0;
-  this->m_startValidDate = QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0));
-  this->m_endValidDate = QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0));
-  this->m_active = true;
-}
+Station::Station()
+    : m_coordinate(QGeoCoordinate()),
+      m_id(QString()),
+      m_name(QString()),
+      m_measured(0.0),
+      m_modeled(0.0),
+      m_selected(false),
+      m_category(0),
+      m_startValidDate(QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0))),
+      m_endValidDate(QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0))),
+      m_active(true),
+      m_mslOffset(0.0),
+      m_navd88Offset(0.0),
+      m_mllwOffset(0.0),
+      m_mlwOffset(0.0),
+      m_mhwOffset(0.0),
+      m_mhhwOffset(0.0),
+      m_ngvd29Offset(0.0) {}
 
 Station::Station(QGeoCoordinate coordinate, QString id, QString name,
                  double measured, double modeled, int category, bool active,
-                 QDateTime startValidDate, QDateTime endValidDate) {
-  this->m_coordinate = coordinate;
-  this->m_id = id;
-  this->m_name = name;
-  this->m_measured = measured;
-  this->m_modeled = modeled;
-  this->m_category = category;
-  this->m_selected = false;
-  this->m_startValidDate = startValidDate;
-  this->m_endValidDate = endValidDate;
-  this->m_active = active;
-}
+                 QDateTime startValidDate, QDateTime endValidDate)
+    : m_coordinate(coordinate),
+      m_id(id),
+      m_name(name),
+      m_measured(measured),
+      m_modeled(modeled),
+      m_selected(false),
+      m_category(category),
+      m_startValidDate(startValidDate),
+      m_endValidDate(endValidDate),
+      m_active(active),
+      m_mslOffset(0.0),
+      m_navd88Offset(0.0),
+      m_mllwOffset(0.0),
+      m_mlwOffset(0.0),
+      m_mhwOffset(0.0),
+      m_mhhwOffset(0.0),
+      m_ngvd29Offset(0.0) {}
 
 Station::~Station() {}
 
@@ -106,3 +118,43 @@ void Station::setEndValidDate(const QDateTime &endValidDate) {
 bool Station::active() const { return this->m_active; }
 
 void Station::setActive(bool active) { this->m_active = active; }
+
+double Station::navd88Offset() const { return this->m_navd88Offset; }
+
+void Station::setNavd88Offset(double navd88Offset) {
+  this->m_navd88Offset = navd88Offset;
+}
+
+double Station::mslOffset() const { return this->m_mslOffset; }
+
+void Station::setMslOffset(double mslOffset) { this->m_mslOffset = mslOffset; }
+
+double Station::ngvd29Offset() const { return m_ngvd29Offset; }
+
+void Station::setNgvd29Offset(double ngvd29Offset) {
+  m_ngvd29Offset = ngvd29Offset;
+}
+
+double Station::mlwOffset() const { return this->m_mlwOffset; }
+
+void Station::setMlwOffset(double mlwOffset) { this->m_mlwOffset = mlwOffset; }
+
+double Station::mllwOffset() const { return this->m_mllwOffset; }
+
+void Station::setMllwOffset(double mllwOffset) {
+  this->m_mllwOffset = mllwOffset;
+}
+
+double Station::mhwOffset() const { return this->m_mhwOffset; }
+
+void Station::setMhwOffset(double mhwOffset) { this->m_mhwOffset = mhwOffset; }
+
+double Station::mhhwOffset() const { return this->m_mhhwOffset; }
+
+void Station::setMhhwOffset(double mhhwOffset) {
+  this->m_mhhwOffset = mhhwOffset;
+}
+
+bool Station::isNullOffset(double offset) {
+  return std::abs(offset - this->nullOffset()) < 0.0001;
+}

@@ -51,53 +51,61 @@ static const QHash<int, QString> noaaUnits = {
 static const QHash<int, QString> noaaDatum = {
     {1, "MHHW"}, {2, "MHW"}, {3, "MTL"}, {4, "MSL"},   {5, "MLW"},  {6, "MLLW"},
     {7, "NAVD"}, {8, "LWI"}, {9, "HWI"}, {10, "IGLD"}, {11, "Stnd"}};
+static const QHash<int, QString> vDatum = {
+    {1, "MLLW"}, {2, "MLW"},    {3, "MSL"},   {4, "MHW"},
+    {5, "MHHW"}, {6, "NGVD29"}, {7, "NAVD88"}};
 
-MetOceanData::MetOceanData(QObject *parent) : QObject(parent) {
-  this->m_service = 0;
-  this->m_product = 0;
-  this->m_datum = 0;
-  this->m_station = QStringList();
-  this->m_startDate = QDateTime();
-  this->m_endDate = QDateTime();
-  this->m_outputFile = QString();
-}
+MetOceanData::MetOceanData(QObject *parent)
+    : m_service(0),
+      m_product(0),
+      m_station(nullptr),
+      m_datum(0),
+      m_startDate(QDateTime()),
+      m_endDate(QDateTime()),
+      m_outputFile(QString()),
+      m_usevdatum(false),
+      QObject(parent) {}
 
 MetOceanData::MetOceanData(serviceTypes service, QStringList station,
-                           int product, int datum, QDateTime startDate,
-                           QDateTime endDate, QString outputFile,
-                           QObject *parent)
-    : QObject(parent) {
-  this->m_service = service;
-  this->m_product = product;
+                           int product, bool useVdatum, int datum,
+                           QDateTime startDate, QDateTime endDate,
+                           QString outputFile, QObject *parent)
+    : m_service(service),
+      m_product(product),
+      m_station(station),
+      m_datum(datum),
+      m_startDate(startDate),
+      m_endDate(endDate),
+      m_outputFile(outputFile),
+      m_usevdatum(useVdatum),
+      QObject(parent) {}
+
+int MetOceanData::service() const { return this->m_service; }
+
+void MetOceanData::setService(int service) { this->m_service = service; }
+
+QStringList MetOceanData::station() const { return this->m_station; }
+
+void MetOceanData::setStation(QStringList station) {
   this->m_station = station;
-  this->m_datum = datum;
-  this->m_startDate = startDate;
-  this->m_endDate = endDate;
-  this->m_outputFile = outputFile;
 }
 
-int MetOceanData::service() const { return m_service; }
-
-void MetOceanData::setService(int service) { m_service = service; }
-
-QStringList MetOceanData::station() const { return m_station; }
-
-void MetOceanData::setStation(QStringList station) { m_station = station; }
-
-QDateTime MetOceanData::startDate() const { return m_startDate; }
+QDateTime MetOceanData::startDate() const { return this->m_startDate; }
 
 void MetOceanData::setStartDate(const QDateTime &startDate) {
-  m_startDate = startDate;
+  this->m_startDate = startDate;
 }
 
-QDateTime MetOceanData::endDate() const { return m_endDate; }
+QDateTime MetOceanData::endDate() const { return this->m_endDate; }
 
-void MetOceanData::setEndDate(const QDateTime &endDate) { m_endDate = endDate; }
+void MetOceanData::setEndDate(const QDateTime &endDate) {
+  this->m_endDate = endDate;
+}
 
-QString MetOceanData::outputFile() const { return m_outputFile; }
+QString MetOceanData::outputFile() const { return this->m_outputFile; }
 
 void MetOceanData::setOutputFile(const QString &outputFile) {
-  m_outputFile = outputFile;
+  this->m_outputFile = outputFile;
 }
 
 void MetOceanData::setLoggingActive() {
@@ -208,19 +216,14 @@ StationLocations::MarkerType MetOceanData::serviceToMarkerType(
   switch (type) {
     case NOAA:
       return StationLocations::NOAA;
-      break;
     case USGS:
       return StationLocations::USGS;
-      break;
     case XTIDE:
       return StationLocations::XTIDE;
-      break;
     case NDBC:
       return StationLocations::NDBC;
-      break;
     default:
       return StationLocations::NOAA;
-      break;
   }
 }
 
@@ -316,7 +319,17 @@ void MetOceanData::getXtideData() {
       return;
     }
 
-    data->setDatum("MLLW");
+    QString datum = "MLLW";
+    if (this->m_usevdatum) {
+      QString d = this->indexToDatum();
+      Datum::VDatum datumid = Datum::datumID(d);
+      if (!data->applyDatumCorrection(s[i], datumid)) {
+        std::cout << "Warning: Could not apply datum transformation for "
+                  << s[i].name().toStdString() << "Using MLLW." << std::endl;
+      }
+    }
+
+    data->setDatum(datum);
     data->setUnits("m");
 
     dataOut->addStation(data->station(0));
@@ -411,10 +424,15 @@ void MetOceanData::getNoaaData() {
     return;
   }
 
-  QString d = this->noaaIndexToDatum();
+  QString d = this->indexToDatum();
   if (d == QString()) {
     emit finished();
     return;
+  }
+
+  Datum::VDatum datumid = Datum::VDatum::NullDatum;
+  if (this->m_usevdatum) {
+    datumid = Datum::datumID(d);
   }
 
   QString u = this->noaaIndexToUnits();
@@ -422,8 +440,11 @@ void MetOceanData::getNoaaData() {
   Hmdf *dataOut = new Hmdf(this);
 
   for (size_t i = 0; i < s.size(); ++i) {
+    QString d2 = "MSL";
+    if (!this->m_usevdatum) d2 = d;
+
     NoaaCoOps *coops = new NoaaCoOps(s[i], this->startDate(), this->endDate(),
-                                     p, d, "metric", this);
+                                     p, d2, this->m_usevdatum, "metric", this);
     Hmdf *data = new Hmdf(this);
     int ierr = coops->get(data);
     if (ierr != 0) {
@@ -433,8 +454,19 @@ void MetOceanData::getNoaaData() {
       continue;
     }
 
+    if (this->m_usevdatum) {
+      if (!data->applyDatumCorrection(s[i], datumid)) {
+        std::cout << "Warning: Could not convert datum for "
+                  << s[i].name().toStdString() << ". Using MSL." << std::endl;
+        data->setDatum("MSL");
+      } else {
+        data->setDatum(d);
+      }
+    } else {
+      data->setDatum(d);
+    }
+
     data->setUnits(u);
-    data->setDatum(d);
 
     dataOut->addStation(data->station(0));
     data->station(0)->setParent(dataOut);
@@ -472,29 +504,51 @@ QString MetOceanData::noaaIndexToProduct() {
   return noaaProducts[this->m_product];
 }
 
-QString MetOceanData::noaaIndexToDatum() {
-  if (this->m_product > 3) {
+QString MetOceanData::indexToDatum() {
+  if (this->m_service == NOAA && this->m_product > 3) {
     return QStringLiteral("Stnd");
   }
 
-  if (this->m_datum < 1 || this->m_datum > noaaDatum.size() + 1) {
-    int selection;
-    std::cout << "Select NOAA datum" << std::endl;
-    for (int i = 0; i < noaaDatum.size(); i++) {
-      std::cout << "(" << i + 1 << ") " << noaaDatum[i + 1].toStdString()
-                << std::endl;
-    }
-    std::cout << "==> ";
-    std::cin >> selection;
-    if (selection > 0 && selection < noaaDatum.size()) {
-      this->m_datum = selection;
-      return noaaDatum[this->m_datum];
+  if (this->m_usevdatum) {
+    if (this->m_datum < 1 || this->m_datum > vDatum.size() + 1) {
+      int selection;
+      std::cout << "Select Datum" << std::endl;
+      for (int i = 0; i < vDatum.size(); i++) {
+        std::cout << "(" << i + 1 << ") " << vDatum[i + 1].toStdString()
+                  << std::endl;
+      }
+      std::cout << "==> ";
+      std::cin >> selection;
+      if (selection > 0 && selection < vDatum.size()) {
+        this->m_datum = selection;
+        return vDatum[this->m_datum];
+      } else {
+        emit error("Invliad datum selection.");
+        return QString();
+      }
     } else {
-      emit error("Invliad datum selection.");
-      return QString();
+      return vDatum[this->m_datum];
     }
   } else {
-    return noaaDatum[this->m_datum];
+    if (this->m_datum < 1 || this->m_datum > noaaDatum.size() + 1) {
+      int selection;
+      std::cout << "Select Datum" << std::endl;
+      for (int i = 0; i < noaaDatum.size(); i++) {
+        std::cout << "(" << i + 1 << ") " << noaaDatum[i + 1].toStdString()
+                  << std::endl;
+      }
+      std::cout << "==> ";
+      std::cin >> selection;
+      if (selection > 0 && selection < noaaDatum.size()) {
+        this->m_datum = selection;
+        return noaaDatum[this->m_datum];
+      } else {
+        emit error("Invliad datum selection.");
+        return QString();
+      }
+    } else {
+      return noaaDatum[this->m_datum];
+    }
   }
 }
 

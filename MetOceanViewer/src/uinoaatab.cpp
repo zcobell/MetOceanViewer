@@ -129,7 +129,7 @@ void MainWindow::plotNOAAStation() {
   this->m_noaa =
       new Noaa(ui->quick_noaaMap, ui->noaa_graphics, ui->Date_StartTime,
                ui->Date_EndTime, ui->combo_NOAAProduct, ui->combo_noaaunits,
-               ui->combo_noaadatum, ui->statusBar,
+               ui->combo_noaadatum, ui->check_noaa_usevdatum, ui->statusBar,
                ui->combo_noaaTimezoneLocation, ui->combo_noaaTimezone,
                this->noaaStationModel, &this->noaaSelectedStation, this);
 
@@ -166,5 +166,34 @@ void MainWindow::on_combo_noaaTimezone_currentIndexChanged(
     return;
   this->m_noaa->replotChart(t);
   delete t;
+  return;
+}
+
+void MainWindow::on_check_noaa_usevdatum_clicked(bool checked) {
+  if (checked) {
+    ui->combo_noaadatum->clear();
+    ui->combo_noaadatum->addItems(QStringList() << "MLLW"
+                                                << "MLW"
+                                                << "MSL"
+                                                << "MHW"
+                                                << "MHHW"
+                                                << "NGVD29"
+                                                << "NAVD88");
+    ui->combo_noaadatum->setCurrentIndex(2);
+  } else {
+    ui->combo_noaadatum->clear();
+    ui->combo_noaadatum->addItems(QStringList() << "MHHW"
+                                                << "MHW"
+                                                << "MTL"
+                                                << "MSL"
+                                                << "MLW"
+                                                << "MLLW"
+                                                << "NAVD"
+                                                << "LWI"
+                                                << "HWI"
+                                                << "IGLD"
+                                                << "STND");
+    ui->combo_noaadatum->setCurrentIndex(3);
+  }
   return;
 }

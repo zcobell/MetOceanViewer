@@ -72,15 +72,37 @@ QVector<Station> StationLocations::readNoaaMarkers() {
     endDate.setTimeSpec(Qt::UTC);
 
     if (startDate.isValid() || endDate.isValid()) {
+      Station s = Station();
       if (endDateString == "present") {
-        Station s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, true,
-                            startDate, endDate);
-        output.push_back(s);
+        s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, true,
+                    startDate, endDate);
       } else {
-        Station s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, false,
-                            startDate, endDate);
-        output.push_back(s);
+        s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, false,
+                    startDate, endDate);
       }
+      double mllw = list.value(6).toDouble();
+      double mlw = list.value(7).toDouble();
+      double mhw = list.value(9).toDouble();
+      double mhhw = list.value(10).toDouble();
+      double ngvd = list.value(11).toDouble();
+      double navd = list.value(12).toDouble();
+
+      if (mlw < -900.0) mlw = s.nullOffset();
+      if (mllw < -900.0) mllw = s.nullOffset();
+      if (mhw < -900.0) mhw = s.nullOffset();
+      if (mhhw < -900.0) mhhw = s.nullOffset();
+      if (ngvd < -900.0) ngvd = s.nullOffset();
+      if (navd < -900.0) navd = s.nullOffset();
+
+      s.setMllwOffset(mllw);
+      s.setMlwOffset(mlw);
+      s.setMslOffset(0.0);
+      s.setMhwOffset(mhw);
+      s.setMhhwOffset(mhhw);
+      s.setNgvd29Offset(ngvd);
+      s.setNavd88Offset(navd);
+
+      output.push_back(s);
     }
   }
 
@@ -141,6 +163,29 @@ QVector<Station> StationLocations::readXtideMarkers() {
       temp = list.value(1);
       double lon = temp.toDouble();
       Station s = Station(QGeoCoordinate(lat, lon), id, name);
+
+      double mlw = list.value(6).toDouble();
+      double msl = list.value(7).toDouble();
+      double mhw = list.value(8).toDouble();
+      double mhhw = list.value(9).toDouble();
+      double ngvd = list.value(10).toDouble();
+      double navd = list.value(11).toDouble();
+
+      if (mlw < -900.0) mlw = s.nullOffset();
+      if (msl < -900.0) msl = s.nullOffset();
+      if (mhw < -900.0) mhw = s.nullOffset();
+      if (mhhw < -900.0) mhhw = s.nullOffset();
+      if (ngvd < -900.0) ngvd = s.nullOffset();
+      if (navd < -900.0) navd = s.nullOffset();
+
+      s.setMllwOffset(0.0);
+      s.setMlwOffset(mlw);
+      s.setMslOffset(msl);
+      s.setMhwOffset(mhw);
+      s.setMhhwOffset(mhhw);
+      s.setNgvd29Offset(ngvd);
+      s.setNavd88Offset(navd);
+
       output.push_back(s);
     }
   }

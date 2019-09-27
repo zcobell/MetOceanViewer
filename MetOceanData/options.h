@@ -33,6 +33,7 @@ class Options : public QObject {
   struct CommandLineOptions {
     int product;
     int datum;
+    bool vdatum;
     MetOceanData::serviceTypes service;
     QDateTime startDate;
     QDateTime endDate;
@@ -49,8 +50,10 @@ class Options : public QObject {
  private:
   void addOptions();
 
-  void printStationList(QStringList station, MetOceanData::serviceTypes markerType);
-  void readStationList(QStringList &station, MetOceanData::serviceTypes markerType);
+  void printStationList(QStringList station,
+                        MetOceanData::serviceTypes markerType);
+  void readStationList(QStringList &station,
+                       MetOceanData::serviceTypes markerType);
 
   QDateTime checkDateString(QString str);
   MetOceanData::serviceTypes checkServiceString(QString str);

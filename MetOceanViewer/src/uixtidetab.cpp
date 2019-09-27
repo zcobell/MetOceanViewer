@@ -27,13 +27,13 @@ void MainWindow::on_button_xtide_compute_clicked() {
 }
 
 void MainWindow::plotXTideStation() {
-
   //...Create an xTide object
   if (this->m_xtide != nullptr) delete this->m_xtide;
   this->m_xtide =
       new XTide(ui->quick_xtideMap, ui->xtide_graphics, ui->date_xtide_start,
-                ui->date_xtide_end, ui->combo_xtide_units, ui->statusBar,
-                this->xtideStationModel, &this->xtideSelectedStation, this);
+                ui->date_xtide_end, ui->combo_xtide_units,
+                ui->combo_xtide_datum, ui->statusBar, this->xtideStationModel,
+                &this->xtideSelectedStation, this);
   connect(this->m_xtide, SIGNAL(xTideError(QString)), this,
           SLOT(throwErrorMessageBox(QString)));
 
@@ -73,7 +73,7 @@ void MainWindow::on_button_xtide_savemap_clicked() {
       this, tr("Save as..."), this->previousDirectory + DefaultFile,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL) return;
+  if (TempString == QString()) return;
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
