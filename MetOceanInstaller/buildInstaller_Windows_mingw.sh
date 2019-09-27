@@ -1,10 +1,10 @@
 #!/bin/bash
 redist=1
-QtVersion=5_13_0
+QtVersion=5_13_1
 compileDirectory="../../build-MetOcean-Desktop_Qt_"$QtVersion"_MinGW_64_bit-Release"
-mingwPath=/cygdrive/c/Qt/5.13.0/mingw73_64/bin
+mingwPath=/cygdrive/c/Qt/5.13.1/mingw73_64/bin
 winDeployQtBinary=$mingwPath/windeployqt.exe
-binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator.exe
+binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.1/bin/binarycreator.exe
 version=$(git describe --always --tags)
 winPackDir=packages_windows
 
@@ -54,4 +54,4 @@ cd ../../..
 #fi
 
 #...Run the installer generator
-$binaryCreator -c config/config.xml -p $winPackDir MetOceanViewer_Windows64bitiMinGW_Installer_$version.exe
+$binaryCreator -c config/config.xml -p $winPackDir MetOceanViewer_Windows64bit_MinGW_Installer_$version.exe
