@@ -29,7 +29,10 @@ UsgsWaterdata::UsgsWaterdata(Station &station, QDateTime startDate,
   this->m_databaseOption = databaseOption;
 }
 
-int UsgsWaterdata::get(Hmdf *data) { return this->fetch(data); }
+int UsgsWaterdata::get(Hmdf *data, Datum::VDatum datum) {
+  Q_UNUSED(datum)
+  return this->fetch(data);
+}
 
 int UsgsWaterdata::fetch(Hmdf *data) {
   if (this->station().id() == QString()) {
@@ -263,8 +266,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   }
 
   //...Add stations to object
-  for (int i = 0; i < stations.length(); i++)
-    output->addStation(stations[i]);
+  for (int i = 0; i < stations.length(); i++) output->addStation(stations[i]);
 
   return 0;
 }

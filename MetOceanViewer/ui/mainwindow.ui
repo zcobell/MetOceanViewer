@@ -28,7 +28,7 @@
     <x>0</x>
     <y>0</y>
     <width>850</width>
-    <height>650</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -40,7 +40,7 @@
   <property name="minimumSize">
    <size>
     <width>850</width>
-    <height>650</height>
+    <height>700</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -105,7 +105,7 @@
                </size>
               </property>
               <property name="title">
-               <string>Select a station, the NOAA CO-OPS Product, date range, datum and units, then click plot or press enter</string>
+               <string>Select a station, the NOAA CO-OPS Product, date range, datum, and units. Then, click plot or press enter</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_2">
                <item>
@@ -152,13 +152,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>160</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>160</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="autoFillBackground">
@@ -214,13 +214,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>160</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>160</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="autoFillBackground">
@@ -265,7 +265,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>75</width>
-                     <height>27</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -293,13 +293,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>120</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="currentText">
@@ -383,14 +383,153 @@
                    <property name="minimumSize">
                     <size>
                      <width>100</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>100</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_noaadatum">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="text">
+                    <string>Datum:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_noaadatum">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>75</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="autoFillBackground">
+                    <bool>false</bool>
+                   </property>
+                   <property name="currentText">
+                    <string>MSL</string>
+                   </property>
+                   <property name="currentIndex">
+                    <number>3</number>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>MHHW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MHW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MTL</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MSL</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MLW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>MLLW</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>NAVD</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>LWI</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>HWI</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>IGLD</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>STND</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="check_noaa_usevdatum">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>This option uses offline computed values for datums using the NOAA VDatum tool. MetOceanViewer will download data in MSL and then convert to the selected datum.</string>
+                   </property>
+                   <property name="text">
+                    <string>Use NOAA VDatum</string>
                    </property>
                   </widget>
                  </item>
@@ -416,13 +555,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>75</width>
-                     <height>0</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>75</width>
-                     <height>16777215</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -444,13 +583,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>350</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>350</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <item>
@@ -528,133 +667,6 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_10">
                  <item>
-                  <widget class="QLabel" name="label_noaadatum">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>75</width>
-                     <height>27</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>75</width>
-                     <height>27</height>
-                    </size>
-                   </property>
-                   <property name="autoFillBackground">
-                    <bool>false</bool>
-                   </property>
-                   <property name="text">
-                    <string>Datum:</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QComboBox" name="combo_noaadatum">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>65</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="autoFillBackground">
-                    <bool>false</bool>
-                   </property>
-                   <property name="currentText">
-                    <string>MSL</string>
-                   </property>
-                   <property name="currentIndex">
-                    <number>3</number>
-                   </property>
-                   <item>
-                    <property name="text">
-                     <string>MHHW</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>MHW</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>MTL</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>MSL</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>MLW</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>MLLW</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>NAVD</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>LWI</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>HWI</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>IGLD</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>STND</string>
-                    </property>
-                   </item>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QCheckBox" name="check_noaa_usevdatum">
-                   <property name="toolTip">
-                    <string>This option uses offline computed values for datums using the NOAA VDatum tool. MetOceanViewer will download data in MSL and then convert to the selected datum.</string>
-                   </property>
-                   <property name="text">
-                    <string>Use NOAA VDatum</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
                   <widget class="QLabel" name="label_noaaunits">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -664,18 +676,21 @@
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>0</width>
+                     <width>75</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>16777215</width>
+                     <width>75</width>
                      <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Units</string>
+                    <string>Units:</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                    </property>
                   </widget>
                  </item>
@@ -690,13 +705,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <item>
@@ -722,13 +737,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>80</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>110</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="autoFillBackground">
@@ -744,13 +759,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>130</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -760,6 +775,18 @@
                  </item>
                  <item>
                   <widget class="QCheckBox" name="check_noaaActiveOnly">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
                    <property name="text">
                     <string>Active Stations Only</string>
                    </property>
@@ -821,13 +848,13 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -847,13 +874,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>200</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="toolTip">
@@ -881,17 +908,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Save Map and Chart</string>
+                    <string>Save Graphic</string>
                    </property>
                   </widget>
                  </item>
@@ -900,13 +927,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -919,11 +946,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Reset Plot Zoom</string>
+                    <string>Reset Zoom</string>
                    </property>
                   </widget>
                  </item>
@@ -938,13 +971,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>16777215</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -1433,13 +1466,13 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -1465,7 +1498,7 @@
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>22</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="toolTip">
@@ -1499,17 +1532,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Save Map and Data</string>
+                    <string>Save Graphic</string>
                    </property>
                   </widget>
                  </item>
@@ -1524,13 +1557,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -1549,11 +1582,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Reset Plot Zoom</string>
+                    <string>Reset Zoom</string>
                    </property>
                   </widget>
                  </item>
@@ -1568,7 +1607,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -1910,13 +1955,13 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -1942,7 +1987,7 @@
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>22</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="toolTip">
@@ -1970,17 +2015,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Save Map and Chart</string>
+                    <string>Save Graphic</string>
                    </property>
                   </widget>
                  </item>
@@ -1989,13 +2034,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -2014,17 +2059,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Reset Plot Zoom</string>
+                    <string>Reset Zoom</string>
                    </property>
                   </widget>
                  </item>
@@ -2039,13 +2084,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -2240,7 +2285,7 @@
                <widget class="QComboBox" name="combo_xtide_units">
                 <property name="minimumSize">
                  <size>
-                  <width>75</width>
+                  <width>87</width>
                   <height>25</height>
                  </size>
                 </property>
@@ -2386,13 +2431,13 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -2412,7 +2457,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>200</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -2446,7 +2491,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -2456,7 +2501,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Save Map and Data</string>
+                    <string>Save Graphic</string>
                    </property>
                   </widget>
                  </item>
@@ -2465,7 +2510,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -2490,7 +2535,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -2500,7 +2545,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Reset Plot Zoom</string>
+                    <string>Reset Zoom</string>
                    </property>
                   </widget>
                  </item>
@@ -2515,7 +2560,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -2883,13 +2928,13 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>65</height>
+                <height>75</height>
                </size>
               </property>
               <property name="title">
@@ -2915,7 +2960,7 @@
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>22</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="toolTip">
@@ -2943,17 +2988,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Save Map and Chart</string>
+                    <string>Save Graphic</string>
                    </property>
                   </widget>
                  </item>
@@ -2962,13 +3007,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -2987,17 +3032,17 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Reset Plot Zoom</string>
+                    <string>Reset Zoom</string>
                    </property>
                   </widget>
                  </item>
@@ -3012,13 +3057,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3273,258 +3318,249 @@
              </layout>
             </item>
             <item>
-             <widget class="QGroupBox" name="group_TimeseriesRange">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>75</height>
-               </size>
-              </property>
-              <property name="title">
-               <string>Select Date Axis Range</string>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_39">
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_36">
+             <layout class="QHBoxLayout" name="horizontalLayout_54">
+              <item>
+               <widget class="QGroupBox" name="group_TimeseriesRange">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>75</height>
+                 </size>
+                </property>
+                <property name="title">
+                 <string>Set Date Axis Range</string>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_39">
                  <item>
-                  <widget class="QCheckBox" name="check_TimeseriesAllData">
-                   <property name="minimumSize">
-                    <size>
-                     <width>55</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>55</width>
-                     <height>16777215</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Auto</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QDateEdit" name="date_TimeseriesStartDate">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="displayFormat">
-                    <string>MM/dd/yyyy</string>
-                   </property>
-                   <property name="calendarPopup">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_27">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeType">
-                    <enum>QSizePolicy::Fixed</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>5</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <widget class="QDateEdit" name="date_TimeseriesEndDate">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="accelerated">
-                    <bool>false</bool>
-                   </property>
-                   <property name="displayFormat">
-                    <string>MM/dd/yyyy</string>
-                   </property>
-                   <property name="calendarPopup">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_28">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>259</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
+                  <layout class="QHBoxLayout" name="horizontalLayout_36">
+                   <item>
+                    <widget class="QCheckBox" name="check_TimeseriesAllData">
+                     <property name="minimumSize">
+                      <size>
+                       <width>55</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>55</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Auto</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QDateEdit" name="date_TimeseriesStartDate">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="displayFormat">
+                      <string>MM/dd/yyyy</string>
+                     </property>
+                     <property name="calendarPopup">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer_27">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>5</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QDateEdit" name="date_TimeseriesEndDate">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="accelerated">
+                      <bool>false</bool>
+                     </property>
+                     <property name="displayFormat">
+                      <string>MM/dd/yyyy</string>
+                     </property>
+                     <property name="calendarPopup">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="group_TimeseriesYaxis">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>75</height>
-               </size>
-              </property>
-              <property name="title">
-               <string>Select y-axis Range</string>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_37">
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_38">
+               </widget>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="group_TimeseriesYaxis">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>75</height>
+                 </size>
+                </property>
+                <property name="title">
+                 <string>Set y-axis Range</string>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_37">
                  <item>
-                  <widget class="QCheckBox" name="check_TimeseriesYauto">
-                   <property name="minimumSize">
-                    <size>
-                     <width>55</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>55</width>
-                     <height>16777215</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Auto</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QDoubleSpinBox" name="spin_TimeseriesYmin">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="minimum">
-                    <double>-9999999.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>9999999.990000000223517</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_29">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeType">
-                    <enum>QSizePolicy::Fixed</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>5</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <widget class="QDoubleSpinBox" name="spin_TimeseriesYmax">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>137</width>
-                     <height>23</height>
-                    </size>
-                   </property>
-                   <property name="minimum">
-                    <double>-9999999.990000000223517</double>
-                   </property>
-                   <property name="maximum">
-                    <double>9999999.990000000223517</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_30">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
+                  <layout class="QHBoxLayout" name="horizontalLayout_38">
+                   <item>
+                    <widget class="QCheckBox" name="check_TimeseriesYauto">
+                     <property name="minimumSize">
+                      <size>
+                       <width>55</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>55</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Auto</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QDoubleSpinBox" name="spin_TimeseriesYmin">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="minimum">
+                      <double>-9999999.000000000000000</double>
+                     </property>
+                     <property name="maximum">
+                      <double>9999999.990000000223517</double>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer_29">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>5</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QDoubleSpinBox" name="spin_TimeseriesYmax">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>137</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="minimum">
+                      <double>-9999999.990000000223517</double>
+                     </property>
+                     <property name="maximum">
+                      <double>9999999.990000000223517</double>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </widget>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_28">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
             </item>
             <item>
              <widget class="QGroupBox" name="group_TimeseriesGeneral">
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>125</height>
+                <height>150</height>
                </size>
               </property>
               <property name="title">
-               <string>General Options</string>
+               <string>Plot Labels</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_9">
                <item>
@@ -3534,13 +3570,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>110</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3556,13 +3592,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>250</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>250</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3592,7 +3628,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
@@ -3614,13 +3650,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>250</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>250</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3650,13 +3686,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>110</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3672,13 +3708,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>250</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>250</width>
-                     <height>21</height>
+                     <height>25</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3791,7 +3827,7 @@
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>22</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="toolTip">
@@ -3829,26 +3865,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Plot Station</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="button_usertimeseriesResetZoom">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Reset Plot Zoom</string>
+                    <string>Plot</string>
                    </property>
                   </widget>
                  </item>
@@ -3857,37 +3874,39 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Fit Markers</string>
+                    <string>Fit</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <spacer name="horizontalSpacer_34">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
+                  <widget class="QPushButton" name="button_usertimeseriesResetZoom">
+                   <property name="minimumSize">
                     <size>
-                     <width>40</width>
-                     <height>20</height>
+                     <width>0</width>
+                     <height>27</height>
                     </size>
                    </property>
-                  </spacer>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>27</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Reset Zoom</string>
+                   </property>
+                  </widget>
                  </item>
-                </layout>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_52">
                  <item>
                   <widget class="QPushButton" name="button_saveTimeseriesImage">
                    <property name="minimumSize">
@@ -3903,7 +3922,7 @@
                     </size>
                    </property>
                    <property name="text">
-                    <string>Save Map and Chart</string>
+                    <string>Save Graphic</string>
                    </property>
                   </widget>
                  </item>
@@ -3912,13 +3931,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>25</height>
+                     <height>27</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3933,7 +3952,7 @@
                   </widget>
                  </item>
                  <item>
-                  <spacer name="horizontalSpacer_38">
+                  <spacer name="horizontalSpacer_34">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
                    </property>
@@ -4520,7 +4539,7 @@
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
-                   <height>200</height>
+                   <height>225</height>
                   </size>
                  </property>
                  <property name="maximumSize">
@@ -4542,13 +4561,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>225</width>
-                          <height>0</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>225</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4587,13 +4606,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>225</width>
-                          <height>0</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>225</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4632,13 +4651,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>225</width>
-                          <height>0</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>225</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4677,13 +4696,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>225</width>
-                          <height>0</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>225</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4733,13 +4752,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>180</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4755,13 +4774,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>21</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>140</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4791,13 +4810,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>180</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4813,13 +4832,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>21</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>140</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4849,13 +4868,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>180</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4871,13 +4890,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>21</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>140</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4907,13 +4926,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>180</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>130</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -4929,13 +4948,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>140</width>
-                          <height>21</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>140</width>
-                          <height>16777215</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="alignment">
@@ -4974,13 +4993,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>130</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>16777215</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -5013,13 +5032,13 @@
                         <property name="minimumSize">
                          <size>
                           <width>130</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>16777215</width>
-                          <height>30</height>
+                          <height>25</height>
                          </size>
                         </property>
                         <property name="text">
@@ -5081,6 +5100,19 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
+             <widget class="QQuickWidget" name="quick_hwmMap">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>2</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="resizeMode">
+               <enum>QQuickWidget::SizeRootObjectToView</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_6">
               <item>
                <widget class="QComboBox" name="combo_hwmMaptype">
@@ -5093,13 +5125,13 @@
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>25</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>200</width>
-                  <height>25</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="toolTip">
@@ -5127,17 +5159,17 @@
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>25</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>25</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="text">
-                 <string>Save Map</string>
+                 <string>Save Graphic</string>
                 </property>
                </widget>
               </item>
@@ -5146,13 +5178,13 @@
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>25</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>25</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="text">
@@ -5160,20 +5192,20 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <spacer name="horizontalSpacer_30">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
              </layout>
-            </item>
-            <item>
-             <widget class="QQuickWidget" name="quick_hwmMap">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="resizeMode">
-               <enum>QQuickWidget::SizeRootObjectToView</enum>
-              </property>
-             </widget>
             </item>
            </layout>
           </widget>
@@ -5208,17 +5240,17 @@
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>23</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>23</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="text">
-                 <string>Save Scatter Plot</string>
+                 <string>Save Graphic</string>
                 </property>
                </widget>
               </item>
@@ -5227,22 +5259,34 @@
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>23</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>23</height>
+                  <height>27</height>
                  </size>
                 </property>
                 <property name="text">
-                 <string>Reset Plot Zoom</string>
+                 <string>Reset Zoom</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="button_hwmDisplayValues">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>27</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>27</height>
+                 </size>
+                </property>
                 <property name="text">
                  <string>Display Values</string>
                 </property>
@@ -5250,6 +5294,19 @@
                  <bool>true</bool>
                 </property>
                </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_38">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
              </layout>
             </item>
@@ -5269,7 +5326,7 @@
      <x>0</x>
      <y>0</y>
      <width>850</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

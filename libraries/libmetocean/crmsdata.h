@@ -45,7 +45,7 @@ class CrmsData : public WaterData {
   static bool inquireCrmsStatus(QString filename);
 
  private:
-  int retrieveData(Hmdf *data);
+  int retrieveData(Hmdf *data, Datum::VDatum datum);
 
   QDateTime m_startTime;
   QDateTime m_endTime;

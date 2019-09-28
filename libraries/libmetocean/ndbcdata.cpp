@@ -50,7 +50,8 @@ void NdbcData::buildDataNameMap() {
   return;
 }
 
-int NdbcData::retrieveData(Hmdf *data) {
+int NdbcData::retrieveData(Hmdf *data, Datum::VDatum datum) {
+  Q_UNUSED(datum)
   int yearStart = startDate().date().year();
   int yearEnd = endDate().date().year();
 

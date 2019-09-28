@@ -195,7 +195,6 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
 
   HmdfStation *st = h->station(this->m_markerId);
   for (int j = 0; j < h->station(this->m_markerId)->numSnaps(); j++) {
-    // qDebug() << st->nullValue();
     if (std::abs(st->data(j) - st->nullValue()) > 0.0001 &&
         st->date(j) >= startDate && st->date(j) <= endDate) {
       maxDate = std::max(st->date(j) + addX - offset, maxDate);

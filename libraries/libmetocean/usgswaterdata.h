@@ -29,7 +29,7 @@ class UsgsWaterdata : public WaterData {
   UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
                 int databaseOption, QObject *parent = nullptr);
 
-  int get(Hmdf *data);
+  int get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 
  private:
   int fetch(Hmdf *data);

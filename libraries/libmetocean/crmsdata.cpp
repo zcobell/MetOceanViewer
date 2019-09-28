@@ -34,7 +34,8 @@ CrmsData::CrmsData(Station &station, QDateTime startDate, QDateTime endDate,
       m_filename(filename),
       WaterData(station, startDate, endDate, parent) {}
 
-int CrmsData::retrieveData(Hmdf *data) {
+int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
+  Q_UNUSED(datum)
   int ncid;
   int ierr = nc_open(this->m_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
 

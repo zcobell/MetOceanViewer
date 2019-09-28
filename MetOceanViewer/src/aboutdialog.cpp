@@ -114,7 +114,9 @@ QString AboutDialog::generateAboutText() {
       "href=\"http://www.mapbox.com\">http://www.mapbox.com</a><br>" +
       "ESRI - <a href=\"http://www.esri.com\">http://www.esri.com</a><br>" +
       "Coastwide Reference Monitoring System (CRMS) - <a "
-      "href=\"https://cims.coastal.louisiana.gov/Default.aspx\">CIMS</a>" +
+      "href=\"https://cims.coastal.louisiana.gov/Default.aspx\">CIMS</a><br>" +
+      "NOAA Vertical Datum Transformation (VDatum) - <a "
+      "href=\"https://vdatum.noaa.gov/\">VDatum</a>" +
       "</p></body></html>";
 
   return text;
@@ -136,7 +138,7 @@ QString AboutDialog::generateLicenseText() {
       "margin-right:0px; -qt-block-indent:0; text-indent:0px;\">" +
       "<b>MetOcean Viewer</b> <br>" +
       "<i>A simple interface for viewing hydrodynamic model data</i> <br><br>" +
-// Copyright (C) 2019  Zach Cobell
+      // Copyright (C) 2019  Zach Cobell
       "This program is free software: you can redistribute it and/or modify it "
       "under the terms of the GNU General Public License" +
       " as published by the Free Software Foundation, either version 3 of the "

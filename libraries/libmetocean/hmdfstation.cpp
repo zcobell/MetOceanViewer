@@ -155,9 +155,7 @@ void HmdfStation::setNullValue(double nullValue) {
   this->m_nullValue = nullValue;
 }
 
-#include <QDebug>
 int HmdfStation::applyDatumCorrection(Station s, Datum::VDatum datum) {
-  qDebug() << "here" << datum;
   if (datum == Datum::VDatum::NullDatum) return 0;
 
   double shift = 0.0;

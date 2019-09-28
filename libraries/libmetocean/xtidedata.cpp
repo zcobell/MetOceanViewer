@@ -37,7 +37,7 @@ int XtideData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   Station s = this->station();
   int ierr = this->m_tidePrediction->get(s, this->startDate(), this->endDate(),
                                          this->interval(), data);
-  ierr += data->applyDatumCorrection(s, datum);
+  ierr += data->applyDatumCorrection(s, datum) ? 0 : 1;
   return ierr;
 }
 
