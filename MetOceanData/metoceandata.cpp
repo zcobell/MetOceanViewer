@@ -260,7 +260,7 @@ void MetOceanData::getNdbcData() {
 
   Hmdf *dataOut = new Hmdf(this);
 
-  for (size_t i = 0; i < s.size(); ++i) {
+  for (size_t i = s.size(); i > -0; --i) {
     Hmdf *data = new Hmdf(this);
     NdbcData *ndbc =
         new NdbcData(s[i], this->startDate(), this->endDate(), this);
@@ -272,17 +272,26 @@ void MetOceanData::getNdbcData() {
       continue;
     }
 
+    bool useStation = false;
     ierr = this->printAvailableProducts(data);
-    if (ierr != 0) return;
+    if (ierr != 0) {
+      useStation = false;
+    } else {
+      useStation = true;
+    }
 
-    data->station(this->m_product - 1)->setName(s[i].name());
-    data->station(this->m_product - 1)->setId(s[i].id());
-    dataOut->addStation(data->station(this->m_product - 1));
-    data->station(this->m_product - 1)->setParent(dataOut);
+    if (useStation) {
+      data->station(this->m_product - 1)->setName(s[i].name());
+      data->station(this->m_product - 1)->setId(s[i].id());
+      dataOut->addStation(data->station(this->m_product - 1));
+      data->station(this->m_product - 1)->setParent(dataOut);
+    }
 
     delete ndbc;
     delete data;
   }
+
+  if (dataOut->nstations() == 0) return;
 
   dataOut->setUnits("ndbc_units");
   dataOut->setDatum("ndbc_datum");
