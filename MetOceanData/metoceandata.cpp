@@ -64,6 +64,7 @@ MetOceanData::MetOceanData(QObject *parent)
       m_endDate(QDateTime()),
       m_outputFile(QString()),
       m_usevdatum(false),
+      m_previousProduct(QString()),
       QObject(parent) {}
 
 MetOceanData::MetOceanData(serviceTypes service, QStringList station,
@@ -78,6 +79,7 @@ MetOceanData::MetOceanData(serviceTypes service, QStringList station,
       m_endDate(endDate),
       m_outputFile(outputFile),
       m_usevdatum(useVdatum),
+      m_previousProduct((QString())),
       QObject(parent) {}
 
 int MetOceanData::service() const { return this->m_service; }
@@ -260,7 +262,7 @@ void MetOceanData::getNdbcData() {
 
   Hmdf *dataOut = new Hmdf(this);
 
-  for (size_t i = s.size(); i > -0; --i) {
+  for (size_t i = 0;i<s.size();++i) {
     Hmdf *data = new Hmdf(this);
     NdbcData *ndbc =
         new NdbcData(s[i], this->startDate(), this->endDate(), this);
@@ -397,7 +399,10 @@ void MetOceanData::getUsgsData() {
 
 int MetOceanData::printAvailableProducts(Hmdf *data) {
   if (this->m_product > 0 && this->m_product <= data->nstations()) {
-    return 0;
+    if (this->m_previousProduct != QString() &&
+        this->m_previousProduct == data->station(this->m_product)->name()) {
+      return 0;
+    }
   }
 
   int selection;
@@ -411,6 +416,7 @@ int MetOceanData::printAvailableProducts(Hmdf *data) {
 
   if (selection > 0 && selection <= data->nstations()) {
     this->m_product = selection;
+    this->m_previousProduct = data->station(selection)->name();
     return 0;
   } else {
     emit error("Invalid selection");

@@ -100,6 +100,7 @@ class MetOceanData : public QObject {
   QDateTime m_startDate;
   QDateTime m_endDate;
   QString m_outputFile;
+  QString m_previousProduct;
 
 };
 

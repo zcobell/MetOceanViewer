@@ -25,29 +25,50 @@
 #include <QString>
 #include <QStringList>
 
+const QStringList c_dataTypes = QStringList() << "WD"
+                                              << "WDIR"
+                                              << "WSPD"
+                                              << "GST"
+                                              << "WVHT"
+                                              << "DPD"
+                                              << "APD"
+                                              << "MWD"
+                                              << "BAR"
+                                              << "PRES"
+                                              << "ATMP"
+                                              << "WTMP"
+                                              << "DEWP"
+                                              << "VIS"
+                                              << "TIDE";
+
+const QStringList c_dataNames = QStringList() << "Wind Direction"
+                                              << "Wind Direction"
+                                              << "Wind Speed"
+                                              << "Wind Gusts"
+                                              << "Wave Height"
+                                              << "Dominant Wave Period"
+                                              << "Average Wave Period"
+                                              << "Mean Wave Direction"
+                                              << "Barometric Pressure"
+                                              << "Atmospheric Pressure"
+                                              << "Air Temperature"
+                                              << "Water Temperature"
+                                              << "Dewpoint"
+                                              << "Visibility"
+                                              << "Water Level";
+
 NdbcData::NdbcData(Station &station, QDateTime startDate, QDateTime endDate,
                    QObject *parent)
     : WaterData(station, startDate, endDate, parent) {
-  this->buildDataNameMap();
+  this->m_dataNameMap = this->buildDataNameMap();
 }
 
-void NdbcData::buildDataNameMap() {
-  this->m_dataNameMap["WD"] = "Wind Direction";
-  this->m_dataNameMap["WDIR"] = "Wind Direction";
-  this->m_dataNameMap["WSPD"] = "Wind Speed";
-  this->m_dataNameMap["GST"] = "Wind Gusts";
-  this->m_dataNameMap["WVHT"] = "Wave Height";
-  this->m_dataNameMap["DPD"] = "Dominant Wave Period";
-  this->m_dataNameMap["APD"] = "Average Wave Period";
-  this->m_dataNameMap["MWD"] = "Mean Wave Direction";
-  this->m_dataNameMap["BAR"] = "Barometric Pressure";
-  this->m_dataNameMap["PRES"] = "Atmospheric Pressure";
-  this->m_dataNameMap["ATMP"] = "Air Temperature";
-  this->m_dataNameMap["WTMP"] = "Water Temperature";
-  this->m_dataNameMap["DEWP"] = "Dewpoint";
-  this->m_dataNameMap["VIS"] = "Visibility";
-  this->m_dataNameMap["TIDE"] = "Water Level";
-  return;
+QMap<QString, QString> NdbcData::buildDataNameMap() {
+  QMap<QString, QString> map;
+  for (size_t i = 0; i < c_dataTypes.size(); ++i) {
+    map[c_dataTypes[i]] = c_dataNames[i];
+  }
+  return map;
 }
 
 int NdbcData::retrieveData(Hmdf *data, Datum::VDatum datum) {
@@ -121,7 +142,7 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
   QStringList d = serverResponse[0].at(0).simplified().split(" ");
   QVector<HmdfStation *> st;
 
-  int n, p, q, r;
+  int n, p = 0, q, r;
 
   for (int i = 0; i < serverResponse[0].size(); i++) {
     if (serverResponse[0][i].mid(0, 1) != "#") {
@@ -149,7 +170,7 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
     } else {
       s->setName(d[i + r]);
     }
-    s->setId(s->name());
+    s->setId(d[i + r]);
     s->setStationIndex(i);
     st.push_back(s);
   }
@@ -204,4 +225,12 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
   }
 
   return 0;
+}
+
+QStringList NdbcData::dataNames() { return c_dataNames; }
+
+QStringList NdbcData::dataTypes() { return c_dataTypes; }
+
+QMap<QString, QString> NdbcData::dataMap() {
+  return NdbcData::buildDataNameMap();
 }
