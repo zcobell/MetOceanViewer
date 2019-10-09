@@ -148,13 +148,13 @@ void MetOceanData::showStatus(QString message, int pct) {
 }
 
 void MetOceanData::run() {
-  if (this->service() == USGS && this->m_station.length() > 1) {
-    emit error(
-        "Beacuase each station has different characteristics, only one "
-        "USGS station may be selected at a time.");
-    emit finished();
-    return;
-  }
+  //  if (this->service() == USGS && this->m_station.length() > 1) {
+  //    emit error(
+  //        "Beacuase each station has different characteristics, only one "
+  //        "USGS station may be selected at a time.");
+  //    emit finished();
+  //    return;
+  //  }
 
   if (this->service() == NOAA)
     this->getNoaaData();
@@ -262,7 +262,7 @@ void MetOceanData::getNdbcData() {
 
   Hmdf *dataOut = new Hmdf(this);
 
-  for (size_t i = 0;i<s.size();++i) {
+  for (size_t i = 0; i < s.size(); ++i) {
     Hmdf *data = new Hmdf(this);
     NdbcData *ndbc =
         new NdbcData(s[i], this->startDate(), this->endDate(), this);
@@ -368,27 +368,39 @@ void MetOceanData::getUsgsData() {
     return;
   }
 
-  Hmdf *data = new Hmdf(this);
-  UsgsWaterdata *usgs =
-      new UsgsWaterdata(s[0], this->startDate(), this->endDate(), 0, this);
-  int ierr = usgs->get(data);
-  if (ierr != 0) {
-    emit error(usgs->errorString());
-    return;
+  Hmdf *data2 = new Hmdf(this);
+
+  for (size_t i = 0; i < s.size(); ++i) {
+    Hmdf *data = new Hmdf(this);
+    UsgsWaterdata *usgs =
+        new UsgsWaterdata(s[i], this->startDate(), this->endDate(), 0, this);
+    int ierr = usgs->get(data);
+    if (ierr != 0) {
+      emit error(usgs->errorString());
+      return;
+    }
+
+    if (this->printAvailableProducts(data, false) != 0) return;
+
+    int productIndex;
+    QString productId = QString();
+    if (this->m_product == -1) {
+      productIndex = this->getUSGSProductIndex(data, productId);
+    } else {
+      productId = data->station(0)->id();
+      productIndex = this->m_product - 1;
+    }
+
+    if (productIndex < 0) continue;
+
+    data2->addStation(data->station(productIndex));
+    data2->setUnits(data->station(productIndex)->name().split(",").value(0));
+    data2->setDatum("usgs_datum");
+    data2->station(i)->setName(s.at(i).name());
+    data2->station(i)->setId(s.at(i).id());
   }
 
-  ierr = this->printAvailableProducts(data);
-  if (ierr != 0) return;
-
-  Hmdf *data2 = new Hmdf(this);
-  data2->addStation(data->station(this->m_product - 1));
-  data2->setUnits(
-      data->station(this->m_product - 1)->name().split(",").value(0));
-  data2->setDatum("usgs_datum");
-  data2->station(0)->setName(s.at(0).name());
-  data2->station(0)->setId(s.at(0).id());
-
-  ierr = data2->write(this->m_outputFile);
+  int ierr = data2->write(this->m_outputFile);
   if (ierr != 0) {
     emit error("Error writing to file.");
     return;
@@ -397,12 +409,14 @@ void MetOceanData::getUsgsData() {
   return;
 }
 
-int MetOceanData::printAvailableProducts(Hmdf *data) {
-  if (this->m_product > 0 && this->m_product <= data->nstations()) {
+int MetOceanData::printAvailableProducts(Hmdf *data, bool reselect) {
+  if (reselect && this->m_product > 0 && this->m_product <= data->nstations()) {
     if (this->m_previousProduct != QString() &&
         this->m_previousProduct == data->station(this->m_product)->name()) {
       return 0;
     }
+  } else if (!reselect && this->m_product > 0) {
+    return 0;
   }
 
   int selection;
@@ -416,12 +430,19 @@ int MetOceanData::printAvailableProducts(Hmdf *data) {
 
   if (selection > 0 && selection <= data->nstations()) {
     this->m_product = selection;
-    this->m_previousProduct = data->station(selection)->name();
+    this->m_previousProduct = data->station(selection - 1)->name();
     return 0;
   } else {
     emit error("Invalid selection");
     return 1;
   }
+}
+
+int MetOceanData::getUSGSProductIndex(Hmdf *stationdata, QString product) {
+  for (size_t i = 0; i < stationdata->nstations(); ++i) {
+    if (stationdata->station(i)->id() == product) return i;
+  }
+  return -1;
 }
 
 void MetOceanData::getNoaaData() {

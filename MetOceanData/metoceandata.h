@@ -90,7 +90,8 @@ class MetOceanData : public QObject {
   QString indexToDatum();
   QString noaaIndexToUnits();
 
-  int printAvailableProducts(Hmdf *data);
+  int printAvailableProducts(Hmdf *data, bool reselect = true);
+  int getUSGSProductIndex(Hmdf *stationdata, QString product);
 
   bool m_usevdatum;
   int m_service;
