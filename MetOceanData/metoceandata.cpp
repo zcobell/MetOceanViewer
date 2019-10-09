@@ -383,8 +383,8 @@ void MetOceanData::getUsgsData() {
         new UsgsWaterdata(s[i], this->startDate(), this->endDate(), 0, this);
     int ierr = usgs->get(data);
     if (ierr != 0) {
-      emit error(usgs->errorString());
-      return;
+      emit error(s[i].name() + ": " + usgs->errorString());
+      continue;
     }
 
     if (productId == QString() && this->m_product == -1) {
@@ -399,6 +399,8 @@ void MetOceanData::getUsgsData() {
       productId = data->station(productIndex)->id();
     }
 
+    if (productIndex < 0) continue;
+
     data2->addStation(data->station(productIndex));
     data2->setUnits(data->station(productIndex)->name().split(",").value(0));
     data2->setDatum("usgs_datum");
@@ -406,9 +408,14 @@ void MetOceanData::getUsgsData() {
     data2->station(i)->setId(s.at(i).id());
   }
 
-  int ierr = data2->write(this->m_outputFile);
-  if (ierr != 0) {
-    emit error("Error writing to file.");
+  if (data2->nstations() > 0) {
+    int ierr = data2->write(this->m_outputFile);
+    if (ierr != 0) {
+      emit error("Error writing to file.");
+      return;
+    }
+  } else {
+    emit error("No station data found.");
     return;
   }
 
