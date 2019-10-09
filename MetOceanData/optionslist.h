@@ -95,4 +95,7 @@ static const QCommandLineOption m_vdatum =
     QCommandLineOption(QStringList() << "vdatum",
                        "Use NOAA VDatum transformations where available");
 
+static const QCommandLineOption m_parameterId = QCommandLineOption(
+    QStringList() << "parameter", "Parameter codes for USGS", "code");
+
 #endif  // OPTIONSLIST_H

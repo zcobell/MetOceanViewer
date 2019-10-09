@@ -65,11 +65,12 @@ MetOceanData::MetOceanData(QObject *parent)
       m_outputFile(QString()),
       m_usevdatum(false),
       m_previousProduct(QString()),
+      m_productId(QString()),
       QObject(parent) {}
 
 MetOceanData::MetOceanData(serviceTypes service, QStringList station,
-                           int product, bool useVdatum, int datum,
-                           QDateTime startDate, QDateTime endDate,
+                           int product, QString productId, bool useVdatum,
+                           int datum, QDateTime startDate, QDateTime endDate,
                            QString outputFile, QObject *parent)
     : m_service(service),
       m_product(product),
@@ -79,6 +80,7 @@ MetOceanData::MetOceanData(serviceTypes service, QStringList station,
       m_endDate(endDate),
       m_outputFile(outputFile),
       m_usevdatum(useVdatum),
+      m_productId(productId),
       m_previousProduct((QString())),
       QObject(parent) {}
 
@@ -368,6 +370,11 @@ void MetOceanData::getUsgsData() {
     return;
   }
 
+  QString productId = QString();
+  if (this->m_productId != QString()) {
+    productId = this->m_productId;
+  }
+
   Hmdf *data2 = new Hmdf(this);
 
   for (size_t i = 0; i < s.size(); ++i) {
@@ -380,18 +387,17 @@ void MetOceanData::getUsgsData() {
       return;
     }
 
-    if (this->printAvailableProducts(data, false) != 0) return;
-
-    int productIndex;
-    QString productId = QString();
-    if (this->m_product == -1) {
-      productIndex = this->getUSGSProductIndex(data, productId);
-    } else {
-      productId = data->station(0)->id();
-      productIndex = this->m_product - 1;
+    if (productId == QString() && this->m_product == -1) {
+      if (this->printAvailableProducts(data, false) != 0) return;
     }
 
-    if (productIndex < 0) continue;
+    int productIndex;
+    if (productId != QString()) {
+      productIndex = this->getUSGSProductIndex(data, productId);
+    } else {
+      productIndex = this->m_product - 1;
+      productId = data->station(productIndex)->id();
+    }
 
     data2->addStation(data->station(productIndex));
     data2->setUnits(data->station(productIndex)->name().split(",").value(0));
@@ -438,7 +444,8 @@ int MetOceanData::printAvailableProducts(Hmdf *data, bool reselect) {
   }
 }
 
-int MetOceanData::getUSGSProductIndex(Hmdf *stationdata, QString product) {
+int MetOceanData::getUSGSProductIndex(Hmdf *stationdata,
+                                      const QString &product) {
   for (size_t i = 0; i < stationdata->nstations(); ++i) {
     if (stationdata->station(i)->id() == product) return i;
   }
