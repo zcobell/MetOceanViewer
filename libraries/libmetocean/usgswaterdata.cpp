@@ -124,6 +124,11 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
     return 1;
   }
 
+  if (SplitByLine.size() < 3) {
+    this->setErrorString("Data is not available from this location.");
+    return 1;
+  }
+
   //...Save the potential error string
   // this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
   QString e = InputData.split("\n").value(0).split("#").value(0).simplified();
