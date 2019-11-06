@@ -47,7 +47,7 @@ class AddTimeseriesDialog : public QDialog {
                                double xmove, double ymove, QColor Color,
                                QDateTime ColdStart, int FileType,
                                QString StationPath, int epsg, QString varname,
-                               int layer);
+                               int layer, int lineStyle);
 
   QString previousDirectory() const;
   void setPreviousDirectory(const QString &previousDirectory);
@@ -106,6 +106,9 @@ class AddTimeseriesDialog : public QDialog {
   int layer() const;
   void setLayer(int layer);
 
+  int lineStyle() const;
+  void setLineStyle(int lineStyle);
+
 private slots:
 
   void on_browse_filebrowse_clicked();
@@ -157,10 +160,10 @@ private slots:
   QDateTime m_inputFileColdstart;
   int m_inputFileType;
   int m_epsg, m_layer;
+  int m_lineStyle;
 
   Dflow *dflow;
   std::unique_ptr<Ezproj> proj;
-
 };
 
-#endif // ADDTIMESERIESDIALOG_H
+#endif  // ADDTIMESERIESDIALOG_H

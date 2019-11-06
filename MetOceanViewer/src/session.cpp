@@ -27,8 +27,7 @@
 //-------------------------------------------//
 int NETCDF_ERR(int status) {
   if (status != NC_NOERR)
-    QMessageBox::critical(nullptr, "Error Saving File",
-                          nc_strerror(status));
+    QMessageBox::critical(nullptr, "Error Saving File", nc_strerror(status));
 
   return status;
 }
@@ -69,7 +68,7 @@ int Session::save() {
   int varid_stationfile, varid_plottitle, varid_xlabel, varid_ylabel;
   int varid_startdate, varid_enddate, varid_precision, varid_ymin, varid_ymax;
   int varid_autodate, varid_autoy, varid_checkState, varid_epsg,
-      varid_dflowlayer;
+      varid_dflowlayer, varid_linestyle;
   int varid_dflowvar;
   int dims_1d[1];
   int nTimeseries;
@@ -96,6 +95,7 @@ int Session::save() {
   QVector<int> epsg_ts;
   QVector<QString> dflowvar_ts;
   QVector<int> dflowlayer_ts;
+  QVector<int> linestyle_ts;
 
   // Remove the old file
   if (Session.exists()) Session.remove();
@@ -124,6 +124,7 @@ int Session::save() {
   epsg_ts.resize(nTimeseries);
   dflowvar_ts.resize(nTimeseries);
   dflowlayer_ts.resize(nTimeseries);
+  linestyle_ts.resize(nTimeseries);
 
   for (i = 0; i < nTimeseries; i++) {
     filenames_ts[i] = this->tableWidget->item(i, 6)->text();
@@ -142,6 +143,7 @@ int Session::save() {
     epsg_ts[i] = this->tableWidget->item(i, 11)->text().toInt();
     dflowvar_ts[i] = this->tableWidget->item(i, 12)->text();
     dflowlayer_ts[i] = this->tableWidget->item(i, 13)->text().toInt();
+    linestyle_ts[i] = this->tableWidget->item(i, 14)->text().toInt();
   }
 
   ierr = NETCDF_ERR(nc_def_dim(ncid, "ntimeseries",
@@ -191,6 +193,9 @@ int Session::save() {
   if (ierr != NC_NOERR) return 1;
   ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_layer", NC_INT, 1, dims_1d,
                                &varid_dflowlayer));
+  if (ierr != NC_NOERR) return 1;
+  ierr = NETCDF_ERR(nc_def_var(ncid, "timeseries_linestyle", NC_INT, 1, dims_1d,
+                               &varid_linestyle));
   if (ierr != NC_NOERR) return 1;
 
   // Scalars
@@ -352,11 +357,15 @@ int Session::save() {
     ierr = NETCDF_ERR(
         nc_put_var1_string(ncid, varid_dflowvar, start, mydatastring));
     if (ierr != NC_NOERR) return 1;
-    mydatastring[0] = NULL;
+    mydatastring[0] = nullptr;
 
     mydataint[0] = dflowlayer_ts[(int)iu];
     ierr =
         NETCDF_ERR(nc_put_var1_int(ncid, varid_dflowlayer, start, mydataint));
+    if (ierr != NC_NOERR) return 1;
+
+    mydataint[0] = linestyle_ts[(int)iu];
+    ierr = NETCDF_ERR(nc_put_var1_int(ncid, varid_linestyle, start, mydataint));
     if (ierr != NC_NOERR) return 1;
   }
 
@@ -373,7 +382,7 @@ int Session::open(QString openFilename) {
   int varid_stationfile, varid_plottitle, varid_xlabel, varid_ylabel;
   int varid_startdate, varid_enddate, varid_precision, varid_ymin, varid_ymax;
   int varid_autodate, varid_autoy, varid_checkState, varid_epsg, varid_dflowvar;
-  int varid_dflowlayer;
+  int varid_dflowlayer, varid_linestyle;
   const char *mydatachar[1];
   double mydatadouble[1];
   int mydataint[1];
@@ -387,7 +396,7 @@ int Session::open(QString openFilename) {
   QString tempstring;
   QColor CellColor;
   QDateTime ColdStart;
-  bool hasCheckInfo;
+  bool hasCheckInfo, hasLinestyleData;
   Qt::CheckState checkState;
 
   QFile Session(openFilename);
@@ -474,6 +483,14 @@ int Session::open(QString openFilename) {
 
   ierr = NETCDF_ERR(nc_inq_varid(ncid, "timeseries_layer", &varid_dflowlayer));
   if (ierr != NC_NOERR) return 1;
+
+  ierr =
+      NETCDF_ERR(nc_inq_varid(ncid, "timeseries_linestyle", &varid_linestyle));
+  if (ierr != NC_NOERR) {
+    hasLinestyleData = false;
+  } else {
+    hasLinestyleData = true;
+  }
 
   ierr = nc_inq_varid(ncid, "timeseries_checkState", &varid_checkState);
   if (ierr != NC_NOERR)
@@ -598,8 +615,15 @@ int Session::open(QString openFilename) {
         checkState = Qt::Checked;
       else
         checkState = Qt::Unchecked;
-    } else
+    } else {
       checkState = Qt::Checked;
+    }
+
+    int lineStyle = 1;
+    if (hasLinestyleData) {
+      ierr = NETCDF_ERR(nc_get_var1(ncid, varid_linestyle, start, &mydataint));
+      lineStyle = mydataint[0];
+    }
 
     bool continueToLoad = false;
 
@@ -610,7 +634,7 @@ int Session::open(QString openFilename) {
     if (!myfile.exists()) {
       // The file wasn't found where we think it should be. Give the
       // user a chance to specify an alternate data directory
-      if (this->alternateFolder == NULL) {
+      if (this->alternateFolder == QString()) {
         // If we haven't previously specified an alternate folder, inform the
         // user and  ask if they want to specify.
         reply =
@@ -678,7 +702,7 @@ int Session::open(QString openFilename) {
       if (!myfile.exists()) {
         // The file wasn't found where we think it should be. Give the
         // user a chance to specify an alternate data directory
-        if (this->alternateFolder == NULL) {
+        if (this->alternateFolder == QString()) {
           // If we haven't previously specified an alternate folder, inform the
           // user and  ask if they want to specify.
           reply = QMessageBox::question(
@@ -768,6 +792,8 @@ int Session::open(QString openFilename) {
       this->tableWidget->setItem(nrow - 1, 12, new QTableWidgetItem(dflowvar));
       this->tableWidget->setItem(nrow - 1, 13,
                                  new QTableWidgetItem(QString::number(layer)));
+      this->tableWidget->setItem(
+          nrow - 1, 14, new QTableWidgetItem(QString::number(lineStyle)));
       CellColor.setNamedColor(color);
       this->tableWidget->item(nrow - 1, 2)->setBackgroundColor(CellColor);
       this->tableWidget->item(nrow - 1, 2)->setTextColor(CellColor);

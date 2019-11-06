@@ -51,6 +51,7 @@ AddTimeseriesDialog::AddTimeseriesDialog(QWidget *parent)
   this->m_epsg = 4326;
   this->m_layer = 0;
   this->dflow = nullptr;
+  this->m_lineStyle = Qt::SolidLine;
   this->proj = std::unique_ptr<Ezproj>(new Ezproj());
 }
 //-------------------------------------------//
@@ -86,6 +87,7 @@ void AddTimeseriesDialog::set_default_dialog_box_elements(int NumRowsInTable) {
   this->m_epsg = 4326;
   this->m_dflowVariable = QString();
   this->m_layer = 1;
+  this->m_lineStyle = Qt::SolidLine;
 
   this->setColdstartSelectElements(false);
   this->setStationSelectElements(false);
@@ -103,7 +105,7 @@ void AddTimeseriesDialog::set_default_dialog_box_elements(int NumRowsInTable) {
 void AddTimeseriesDialog::set_dialog_box_elements(
     QString Filename, QString Filepath, QString SeriesName, double UnitConvert,
     double xmove, double ymove, QColor Color, QDateTime ColdStart, int FileType,
-    QString StationPath, int epsg, QString varname, int layer) {
+    QString StationPath, int epsg, QString varname, int layer, int lineStyle) {
   QString StationFile;
   this->m_inputFileColdstart.setTimeSpec(Qt::UTC);
   Generic::splitPath(StationPath, StationFile, this->m_previousDirectory);
@@ -116,6 +118,7 @@ void AddTimeseriesDialog::set_dialog_box_elements(
   ui->date_coldstart->setDateTime(ColdStart);
   ui->text_stationfile->setText(StationFile);
   ui->spin_epsg->setValue(epsg);
+  ui->combo_linestyle->setCurrentIndex(lineStyle - 1);
   this->m_inputFilePath = Filepath;
   this->m_currentFileName = Filepath;
   this->m_stationFilePath = StationPath;
@@ -124,6 +127,7 @@ void AddTimeseriesDialog::set_dialog_box_elements(
   this->m_epsg = epsg;
   this->m_layer = layer;
   this->m_randomButtonColor = Color;
+  this->m_lineStyle = lineStyle;
   Colors::changeButtonColor(ui->button_seriesColor, this->m_randomButtonColor);
   this->setItemsByFiletype();
 
@@ -213,6 +217,12 @@ void AddTimeseriesDialog::setItemsByFiletype() {
     emit addTimeseriesError(tr("No suitable filetype found."));
   }
   return;
+}
+
+int AddTimeseriesDialog::lineStyle() const { return this->m_lineStyle; }
+
+void AddTimeseriesDialog::setLineStyle(int lineStyle) {
+  this->m_lineStyle = lineStyle;
 }
 
 int AddTimeseriesDialog::layer() const { return m_layer; }
@@ -453,7 +463,7 @@ void AddTimeseriesDialog::on_browse_stationfile_clicked() {
       this, tr("Select ADCIRC Station File"), this->m_previousDirectory,
       tr("Station Format Files (*.txt *.csv) ;; Text File (*.txt) ;; )"
          "Comma Separated File (*.csv) ;; All Files (*.*)"));
-  if (TempPath != NULL) {
+  if (TempPath != QString()) {
     this->m_stationFilePath = TempPath;
     Generic::splitPath(TempPath, TempFile, this->m_previousDirectory);
     ui->text_stationfile->setText(TempFile);
@@ -476,15 +486,16 @@ void AddTimeseriesDialog::accept() {
   this->m_epsg = ui->spin_epsg->value();
   this->m_layer = ui->spin_layer->value();
   this->m_dflowVariable = ui->combo_variableSelect->currentText();
+  this->m_lineStyle = ui->combo_linestyle->currentIndex() + 1;
   TempString = ui->text_unitconvert->text();
   this->m_inputStationFile = ui->text_stationfile->text();
-  if (TempString == NULL)
+  if (TempString == QString())
     this->m_unitConversion = 1.0;
   else
     this->m_unitConversion = TempString.toDouble();
 
   TempString = ui->text_xadjust->text();
-  if (TempString == NULL)
+  if (TempString == QString())
     this->m_xadjust = 0.0;
   else
     this->m_xadjust = TempString.toDouble();
@@ -498,21 +509,21 @@ void AddTimeseriesDialog::accept() {
     this->m_xadjust = this->m_xadjust * 24.0;
 
   TempString = ui->text_yadjust->text();
-  if (TempString == NULL)
+  if (TempString == QString())
     this->m_yadjust = 0.0;
   else
     this->m_yadjust = TempString.toDouble();
 
-  if (this->m_inputFileName == NULL) {
+  if (this->m_inputFileName == QString()) {
     emit addTimeseriesError(tr("Please select an input file."));
     return;
-  } else if (this->m_inputSeriesName == NULL) {
+  } else if (this->m_inputSeriesName == QString()) {
     emit addTimeseriesError(tr("Please input a series name."));
     return;
-  } else if (this->m_inputColorString == NULL) {
+  } else if (this->m_inputColorString == QString()) {
     emit addTimeseriesError(tr("Please select a valid color for this series."));
     return;
-  } else if (this->m_inputStationFile == NULL &&
+  } else if (this->m_inputStationFile == QString() &&
              this->m_inputFileType == MetOceanViewer::FileType::ASCII_ADCIRC) {
     emit addTimeseriesError(tr("You did not select a station file."));
     return;

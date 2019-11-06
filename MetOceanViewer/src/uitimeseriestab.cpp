@@ -34,7 +34,7 @@ void MainWindow::on_button_saveTimeseriesImage_clicked() {
       this, tr("Save as..."), this->previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL) return;
+  if (TempString == QString()) return;
 
   Generic::splitPath(TempString, Filename, this->previousDirectory);
 
@@ -114,6 +114,8 @@ void MainWindow::setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog) {
       row, 12, new QTableWidgetItem(dialog->dflowVariable()));
   ui->table_TimeseriesData->setItem(
       row, 13, new QTableWidgetItem(QString::number(dialog->layer())));
+  ui->table_TimeseriesData->setItem(
+      row, 14, new QTableWidgetItem(QString::number(dialog->lineStyle())));
 
   ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(
       dialog->randomButtonColor());
@@ -157,11 +159,12 @@ void MainWindow::setupTimeseriesTable() {
   QString HeaderString =
       tr("Filename;Series Name;Color;Unit Conversion;"
          "x-shift;y-shift;FullPathToFile;Cold Start;"
-         "FileType;StationFile;StationFilePath;epsg;dflowvariable;layer");
+         "FileType;StationFile;StationFilePath;epsg;dflowvariable;layer;"
+         "linestyle");
   QStringList Header = HeaderString.split(";");
 
   ui->table_TimeseriesData->setRowCount(0);
-  ui->table_TimeseriesData->setColumnCount(14);
+  ui->table_TimeseriesData->setColumnCount(15);
   ui->table_TimeseriesData->setColumnHidden(6, true);
   ui->table_TimeseriesData->setColumnHidden(7, true);
   ui->table_TimeseriesData->setColumnHidden(8, true);
@@ -170,6 +173,7 @@ void MainWindow::setupTimeseriesTable() {
   ui->table_TimeseriesData->setColumnHidden(11, true);
   ui->table_TimeseriesData->setColumnHidden(12, true);
   ui->table_TimeseriesData->setColumnHidden(13, true);
+  ui->table_TimeseriesData->setColumnHidden(14, true);
   ui->table_TimeseriesData->setHorizontalHeaderLabels(Header);
   ui->table_TimeseriesData->horizontalHeader()->setSectionResizeMode(
       QHeaderView::Stretch);
@@ -184,12 +188,6 @@ void MainWindow::setupTimeseriesTable() {
 // Updates the timeseries data vector
 //-------------------------------------------//
 void MainWindow::on_button_TimeseriesEditRow_clicked() {
-  int CurrentRow, FileType, epsg, dflowLayer;
-  double xadjust, yadjust, UnitConversion;
-  QColor CellColor;
-  QString Filename, Filepath, SeriesName, StationFilePath, dflowVariable;
-  QDateTime ColdStart;
-  Qt::CheckState CheckState;
   QPointer<AddTimeseriesDialog> AddWindow = new AddTimeseriesDialog(this);
 
   if (ui->table_TimeseriesData->rowCount() == 0) {
@@ -204,30 +202,39 @@ void MainWindow::on_button_TimeseriesEditRow_clicked() {
 
   AddWindow->setModal(false);
   AddWindow->setEditBox(true);
-  CurrentRow = ui->table_TimeseriesData->currentRow();
-  Filename = ui->table_TimeseriesData->item(CurrentRow, 0)->text();
-  Filepath = ui->table_TimeseriesData->item(CurrentRow, 6)->text();
-  SeriesName = ui->table_TimeseriesData->item(CurrentRow, 1)->text();
-  UnitConversion =
+  int CurrentRow = ui->table_TimeseriesData->currentRow();
+  QString Filename = ui->table_TimeseriesData->item(CurrentRow, 0)->text();
+  QString Filepath = ui->table_TimeseriesData->item(CurrentRow, 6)->text();
+  QString SeriesName = ui->table_TimeseriesData->item(CurrentRow, 1)->text();
+  double UnitConversion =
       ui->table_TimeseriesData->item(CurrentRow, 3)->text().toDouble();
-  xadjust = ui->table_TimeseriesData->item(CurrentRow, 4)->text().toDouble();
-  yadjust = ui->table_TimeseriesData->item(CurrentRow, 5)->text().toDouble();
-  FileType = ui->table_TimeseriesData->item(CurrentRow, 8)->text().toInt();
-  epsg = ui->table_TimeseriesData->item(CurrentRow, 11)->text().toInt();
-  dflowVariable = ui->table_TimeseriesData->item(CurrentRow, 12)->text();
-  ColdStart = QDateTime::fromString(
+  double xadjust =
+      ui->table_TimeseriesData->item(CurrentRow, 4)->text().toDouble();
+  double yadjust =
+      ui->table_TimeseriesData->item(CurrentRow, 5)->text().toDouble();
+  int FileType = ui->table_TimeseriesData->item(CurrentRow, 8)->text().toInt();
+  int epsg = ui->table_TimeseriesData->item(CurrentRow, 11)->text().toInt();
+  QString dflowVariable =
+      ui->table_TimeseriesData->item(CurrentRow, 12)->text();
+  QDateTime ColdStart = QDateTime::fromString(
       ui->table_TimeseriesData->item(CurrentRow, 7)->text().simplified(),
       "yyyy-MM-dd hh:mm:ss");
+  QColor CellColor;
   CellColor.setNamedColor(
       ui->table_TimeseriesData->item(CurrentRow, 2)->text());
-  StationFilePath = ui->table_TimeseriesData->item(CurrentRow, 10)->text();
-  CheckState = ui->table_TimeseriesData->item(CurrentRow, 0)->checkState();
-  dflowLayer = ui->table_TimeseriesData->item(CurrentRow, 13)->text().toInt();
+  QString StationFilePath =
+      ui->table_TimeseriesData->item(CurrentRow, 10)->text();
+  Qt::CheckState CheckState =
+      ui->table_TimeseriesData->item(CurrentRow, 0)->checkState();
+  int dflowLayer =
+      ui->table_TimeseriesData->item(CurrentRow, 13)->text().toInt();
+  int lineStyle =
+      ui->table_TimeseriesData->item(CurrentRow, 14)->text().toInt();
 
   AddWindow->set_dialog_box_elements(
       Filename, Filepath, SeriesName, UnitConversion, xadjust, yadjust,
       CellColor, ColdStart, FileType, StationFilePath, epsg, dflowVariable,
-      dflowLayer);
+      dflowLayer, lineStyle);
 
   int WindowStatus = AddWindow->exec();
 

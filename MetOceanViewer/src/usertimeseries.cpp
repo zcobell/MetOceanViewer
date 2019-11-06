@@ -171,6 +171,23 @@ int UserTimeseries::getStationSelections() {
   return MetOceanViewer::Error::NOERR;
 }
 
+Qt::PenStyle UserTimeseries::setPenStyle(const int penIndex) {
+  switch (penIndex) {
+    case 0:
+      return Qt::NoPen;
+    case 1:
+      return Qt::SolidLine;
+    case 2:
+      return Qt::DashLine;
+    case 3:
+      return Qt::DashDotLine;
+    case 4:
+      return Qt::DashDotDotLine;
+    default:
+      return Qt::SolidLine;
+  }
+}
+
 void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
                                             int &seriesCounter,
                                             QVector<QLineSeries *> &series,
@@ -185,7 +202,9 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
 
   s->setName(this->m_table->item(seriesCounter - 1, 1)->text());
   seriesColor.setNamedColor(this->m_table->item(seriesCounter - 1, 2)->text());
-  s->setPen(QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+  Qt::PenStyle lineStyle =
+      setPenStyle(this->m_table->item(seriesCounter - 1, 14)->text().toInt());
+  s->setPen(QPen(seriesColor, 3, lineStyle, Qt::RoundCap, Qt::RoundJoin));
 
   double unitConversion =
       this->m_table->item(seriesCounter - 1, 3)->text().toDouble();
@@ -234,8 +253,9 @@ void UserTimeseries::addMultipleStationsToPlot(
                  this->m_table->item(index, 1)->text());
       QColor seriesColor = this->m_randomColorList[colorCounter];
 
-      s->setPen(
-          QPen(seriesColor, 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+      Qt::PenStyle lineStyle =
+          setPenStyle(this->m_table->item(index, 14)->text().toInt());
+      s->setPen(QPen(seriesColor, 3, lineStyle, Qt::RoundCap, Qt::RoundJoin));
 
       double unitConversion = this->m_table->item(index, 3)->text().toDouble();
       qint64 addX = static_cast<qint64>(

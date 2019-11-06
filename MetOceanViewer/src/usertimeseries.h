@@ -77,6 +77,7 @@ class UserTimeseries : public QObject {
   int getAsyncMultipleMarkersFromMap();
   int projectStations(QVector<int> epsg, QVector<Hmdf *> &projectedStations);
 
+  Qt::PenStyle setPenStyle(const int penIndex);
   int processDataFiles();
   int processImedsData(int tableIndex, Hmdf *data);
   int processAdcircAsciiData(int tableIndex, Hmdf *data);
