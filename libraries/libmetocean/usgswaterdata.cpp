@@ -124,6 +124,11 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
     return 1;
   }
 
+  if (SplitByLine.size() < 3) {
+    this->setErrorString("Data is not available from this location.");
+    return 1;
+  }
+
   //...Save the potential error string
   // this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
   QString e = InputData.split("\n").value(0).split("#").value(0).simplified();
@@ -203,6 +208,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   for (size_t i = 0; i < stations.length(); i++) {
     stations[i] = new HmdfStation(output);
     stations[i]->setName(params[i].description);
+    stations[i]->setId(params[i].parameter);
     stations[i]->setLatitude(station().coordinate().latitude());
     stations[i]->setLongitude(station().coordinate().longitude());
   }

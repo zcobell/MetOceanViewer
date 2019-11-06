@@ -39,6 +39,7 @@ class Options : public QObject {
     QDateTime endDate;
     QString outputFile;
     QStringList station;
+    QString parameterId;
   };
 
   void processOptions();

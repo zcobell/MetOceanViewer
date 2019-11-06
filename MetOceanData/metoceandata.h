@@ -33,7 +33,8 @@ class MetOceanData : public QObject {
 
   explicit MetOceanData(QObject *parent = nullptr);
   explicit MetOceanData(serviceTypes service, QStringList station, int product,
-                        bool useVdatum, int datum, QDateTime startDate, QDateTime endDate,
+                        QString productId, bool useVdatum, int datum,
+                        QDateTime startDate, QDateTime endDate,
                         QString outputFile, QObject *parent = nullptr);
 
   static QStringList selectStations(serviceTypes service, double x1, double y1,
@@ -90,7 +91,8 @@ class MetOceanData : public QObject {
   QString indexToDatum();
   QString noaaIndexToUnits();
 
-  int printAvailableProducts(Hmdf *data);
+  int printAvailableProducts(Hmdf *data, bool reselect = true);
+  int getUSGSProductIndex(Hmdf *stationdata, const QString &product);
 
   bool m_usevdatum;
   int m_service;
@@ -100,7 +102,8 @@ class MetOceanData : public QObject {
   QDateTime m_startDate;
   QDateTime m_endDate;
   QString m_outputFile;
-
+  QString m_previousProduct;
+  QString m_productId;
 };
 
 #endif  // DRIVER_H

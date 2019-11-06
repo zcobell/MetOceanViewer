@@ -43,9 +43,9 @@ int main(int argc, char *argv[]) {
   option->processOptions();
   Options::CommandLineOptions opt = option->getCommandLineOptions();
   MetOceanData *d;
-  d = new MetOceanData(opt.service, opt.station, opt.product, opt.vdatum,
-                       opt.datum, opt.startDate, opt.endDate, opt.outputFile,
-                       &a);
+  d = new MetOceanData(opt.service, opt.station, opt.product, opt.parameterId,
+                       opt.vdatum, opt.datum, opt.startDate, opt.endDate,
+                       opt.outputFile, &a);
   d->setLoggingActive();
   QObject::connect(d, SIGNAL(finished()), &a, SLOT(quit()));
   QTimer::singleShot(0, d, SLOT(run()));

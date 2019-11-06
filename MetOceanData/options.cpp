@@ -36,8 +36,8 @@ void Options::addOptions() {
   this->parser()->addOptions(QList<QCommandLineOption>()
                              << m_serviceType << m_stationId << m_boundingBox
                              << m_nearest << m_startDate << m_endDate
-                             << m_product << m_outputFile << m_datum << m_vdatum
-                             << m_list << m_show);
+                             << m_product << m_parameterId << m_outputFile
+                             << m_datum << m_vdatum << m_list << m_show);
 }
 
 Options::CommandLineOptions Options::getCommandLineOptions() {
@@ -168,6 +168,15 @@ Options::CommandLineOptions Options::getCommandLineOptions() {
     }
   } else {
     opt.product = -1;
+  }
+
+  opt.parameterId = QString();
+  if (this->parser()->isSet(m_parameterId)) {
+    opt.parameterId = this->parser()->value(m_parameterId);
+    if (opt.service != MetOceanData::USGS) {
+      std::cout << "Error: Must use --parameter with USGS service" << std::endl;
+      this->parser()->showHelp(1);
+    }
   }
 
   opt.vdatum = false;
