@@ -22,19 +22,20 @@ import QtQuick 2.11
 Rectangle {
     property int mode: 0
     property int shownHeight: 65
+    property int padding: 20
     id: infoWindow
     color: "#ffffff"
     border.color: "#000000"
     border.width: 3
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    width: infoWindowText.width+20
+    width: infoWindowText.width+padding
     state: "hidden"
 
     states: [
         State {
             name: "shown"
-            PropertyChanges { target: infoWindow; height: shownHeight }
+            PropertyChanges { target: infoWindow; height: infoWindowText.contentHeight+padding }
         }, State {
             name: "hidden"
             PropertyChanges { target: infoWindow; height:0 }

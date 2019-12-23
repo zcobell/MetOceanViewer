@@ -42,7 +42,7 @@ Rectangle {
     function getMapTypes() {
         var list;
         for(var i=0;i<map.supportedMapTypes.length;i++){
-            if(i==0)
+            if(i===0)
                 list = "\""+map.supportedMapTypes[i].name+"\""
             else
                 list=list+" << \""+map.supportedMapTypes[i].name+"\"";
@@ -73,7 +73,7 @@ Rectangle {
             if(mapItemView.children[child].objectName==="marker"){
                 if(mapItemView.children[child].selected===true){
                     nSelected = nSelected + 1;
-                    if(nSelected==1)
+                    if(nSelected===1)
                         selectedList = mapItemView.children[child].stationId;
                     else
                         selectedList = selectedList + "," + mapItemView.children[child].stationId;
@@ -146,7 +146,7 @@ Rectangle {
         anchors.fill: parent
         activeMapType: supportedMapTypes[mapType]
         plugin: mapPlugin;
-        copyrightsVisible: false
+        copyrightsVisible: true
 
         property MovMapItem previousMarker
 
