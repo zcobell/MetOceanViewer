@@ -1,0 +1,6 @@
+#ifndef TABTYPES_H
+#define TABTYPES_H
+
+enum TabType { UNKNOWN, NOAA, USGS, NDBC, CRMS, XTIDE, USERTS, USERHWM };
+
+#endif // TABTYPES_H

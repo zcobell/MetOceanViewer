@@ -33,7 +33,8 @@ CONFIG += ordered
 HEADERS += version.h
 
 SUBDIRS += \
-    MetOceanHWMStats
+    MetOceanHWMStats \
+    MetOceanViewer2
 
 unix {
 SUBDIRS+=ProcessCrmsDatabase

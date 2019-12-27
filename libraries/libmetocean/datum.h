@@ -13,7 +13,7 @@ static QStringList noaaDatumList() {
 }
 
 static QStringList vDatumList() {
-  return {"MHHW", "MHW", "MSL", "MLW", "MLLW", "NGVD29", "NAVD88"};
+  return {"none", "MLLW", "MLW", "MSL", "MHW", "MHHW", "NGVD29", "NAVD88"};
 }
 
 static QString datumName(VDatum datum) {

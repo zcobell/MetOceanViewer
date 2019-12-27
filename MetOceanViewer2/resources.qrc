@@ -1,0 +1,31 @@
+<RCC>
+    <qresource prefix="/rsc" lang="Generic Resources">
+        <file>img/mm_20_darkblue.png</file>
+        <file>img/mm_20_darkgreen.png</file>
+        <file>img/mm_20_darkorange.png</file>
+        <file>img/mm_20_lightblue.png</file>
+        <file>img/mm_20_lightgreen.png</file>
+        <file>img/mm_20_purple.png</file>
+        <file>img/mm_20_red.png</file>
+        <file>img/mm_20_yellow.png</file>
+        <file>img/mm_20_white.png</file>
+        <file>img/mov.png</file>
+        <file>img/logo_small.png</file>
+        <file>img/logo_full.png</file>
+        <file>resources.rc</file>
+        <file>img/mov.ico</file>
+        <file>img/arrow_down.png</file>
+        <file>img/arrow_up.png</file>
+        <file>img/crms.png</file>
+    </qresource>
+    <qresource prefix="/qml" lang="QML">
+        <file>qml/MovMapItem.qml</file>
+        <file>qml/MapViewer.qml</file>
+        <file>qml/InfoWindow.qml</file>
+        <file>qml/MapLegend.qml</file>
+        <file>qml/EsriMapViewer.qml</file>
+        <file>qml/MapboxMapViewer.qml</file>
+        <file>qml/OsmMapViewer.qml</file>
+        <file>qml/MapboxGLMapViewer.qml</file>
+    </qresource>
+</RCC>
