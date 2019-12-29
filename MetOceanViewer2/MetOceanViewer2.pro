@@ -24,12 +24,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    chartoptionsmenu.cpp \
+    combobox.cpp \
+    datebox.cpp \
     main.cpp \
     mainwindow.cpp \
     chartview.cpp \
     mapchartwidget.cpp \
     mapview.cpp \
+    metocean.cpp \
     newtabdialog.cpp \
+    noaaproductlist.cpp \
     noaatab.cpp \
     stationlist.cpp \
     stationmodel.cpp \
@@ -38,11 +43,16 @@ SOURCES += \
     tabwidget.cpp
 
 HEADERS += \
+    chartoptionsmenu.h \
+    combobox.h \
+    datebox.h \
     mainwindow.h \
     mapchartwidget.h \
     chartview.h \
     mapview.h \
+    metocean.h \
     newtabdialog.h \
+    noaaproductlist.h \
     noaatab.h \
     stationlist.h \
     tabbar.h \

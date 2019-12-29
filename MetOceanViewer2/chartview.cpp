@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "chartview.h"
+
 #include <QDateTime>
 #include <QLegendMarker>
 #include <QtCharts/QChart>
@@ -27,10 +28,15 @@
 #include <QtGui/QResizeEvent>
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QGraphicsTextItem>
+
 #include "timezone.h"
 
 bool ChartView::pointXLessThan(const QPointF &p1, const QPointF &p2) {
   return p1.x() < p2.x();
+}
+
+QPointF ChartView::dateDisplayPosition() {
+  return QPointF(this->size().width() / 2 - 100, this->size().height() - 30);
 }
 
 ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
@@ -58,8 +64,7 @@ ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
   this->chart()->legend()->setAlignment(Qt::AlignBottom);
   this->chart()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
 
-  this->m_coord->setPos(this->size().width() / 2 - 100,
-                        this->size().height() - 20);
+  this->m_coord->setPos(this->dateDisplayPosition());
 
   this->m_displayValues = false;
   this->m_style = 0;
@@ -83,7 +88,7 @@ void ChartView::initializeAxis(int style) {
       this->chart()->addAxis(this->m_dateAxis, Qt::AlignBottom);
       this->dateAxis()->setTickCount(5);
       this->dateAxis()->setGridLineColor(QColor(200, 200, 200));
-      this->dateAxis()->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
+      this->dateAxis()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
     }
   } else if (style == 2) {
     if (this->m_xAxis == nullptr) {
@@ -91,7 +96,7 @@ void ChartView::initializeAxis(int style) {
       this->chart()->addAxis(this->m_xAxis, Qt::AlignBottom);
       this->xAxis()->setTickCount(5);
       this->xAxis()->setGridLineColor(QColor(200, 200, 200));
-      this->xAxis()->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
+      this->xAxis()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
     }
   }
   if (this->m_yAxis == nullptr) {
@@ -102,7 +107,7 @@ void ChartView::initializeAxis(int style) {
     this->yAxis()->setShadesPen(Qt::NoPen);
     this->yAxis()->setShadesBrush(QBrush(QColor(240, 240, 240)));
     this->yAxis()->setShadesVisible(true);
-    this->yAxis()->setTitleFont(QFont("Helvetica", 10, QFont::Bold));
+    this->yAxis()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   }
   return;
 }
@@ -160,7 +165,7 @@ void ChartView::setDisplayValues(bool value) {
 void ChartView::initializeLegendMarkers() {
   for (int i = 0; i < this->chart()->legend()->markers().length(); i++)
     this->chart()->legend()->markers().at(i)->setFont(
-        QFont("Helvetica", 10, QFont::Bold));
+        QFont("Helvetica", 12, QFont::Bold));
 
   foreach (QLegendMarker *marker, this->chart()->legend()->markers()) {
     // Disconnect possible existing connection to avoid multiple connections
@@ -197,8 +202,7 @@ void ChartView::resizeEvent(QResizeEvent *event) {
     if (this->chart()) {
       this->resetAxisLimits();
       this->chart()->resize(event->size());
-      this->m_coord->setPos(this->chart()->size().width() / 2 - 100,
-                            this->chart()->size().height() - 20);
+      this->m_coord->setPos(this->dateDisplayPosition());
       if (this->m_displayValues) {
         this->removeTraceLines();
       }

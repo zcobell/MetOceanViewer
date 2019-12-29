@@ -14,8 +14,11 @@ class MapView : public QQuickWidget {
 
   Station currentStation();
 
+  MapFunctions *mapFunctions();
+
  public slots:
-  void refreshStations();
+  void refreshStations(bool filter = true, bool activeOnly = true);
+  void changeMap(int index);
 
  private slots:
   void changeMarker(QString);

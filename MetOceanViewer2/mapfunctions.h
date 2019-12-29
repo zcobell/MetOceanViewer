@@ -45,6 +45,7 @@ class MapFunctions {
                      QDateTime &start, QDateTime &end);
 
   void setMapTypes(QQuickWidget *map, QComboBox *comboBox);
+  void setMapTypes(QComboBox *comboBox);
 
   int mapSource() const;
   void setMapSource(int mapSource);

@@ -16,6 +16,7 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   this->m_addTabButton->setObjectName("addButton");
   this->m_addTabButton->setMinimumWidth(30);
   this->m_addTabButton->setMinimumHeight(30);
+  this->m_addTabButton->setAutoFillBackground(true);
   this->setCornerWidget(this->m_addTabButton, Qt::TopRightCorner);
   connect(this->m_addTabButton, SIGNAL(clicked()), this, SLOT(addNewTab()));
 
@@ -39,6 +40,7 @@ void TabWidget::addNewTab() {
     switch (d->type()) {
       case TabType::NOAA:
         this->addTab(new NoaaTab(stations, this), d->tabName());
+        this->setCurrentIndex(this->count() - 1);
         break;
       default:
         break;

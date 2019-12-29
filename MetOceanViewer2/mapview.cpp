@@ -4,8 +4,8 @@
 
 #include "stationlocations.h"
 
-MapView::MapView(QVector<Station> *s, QWidget *parent)
-    : QQuickWidget(parent) {
+MapView::MapView(QVector<Station> *s, QWidget *parent) : QQuickWidget(parent) {
+  this->m_currentMarker = QString();
   this->m_markerLocations = s;
   this->m_mapFunctions.getConfigurationFromDisk();
   this->rootContext()->setContextProperty(
@@ -15,6 +15,7 @@ MapView::MapView(QVector<Station> *s, QWidget *parent)
   this->m_mapFunctions.setMapType(this->m_mapFunctions.getDefaultMapIndex(),
                                   this);
   this->m_mapFunctions.setMapQmlFile(this);
+
   QObject *mapItem = this->rootObject();
   QObject::connect(mapItem, SIGNAL(markerChanged(QString)), this,
                    SLOT(changeMarker(QString)));
@@ -27,14 +28,18 @@ Station MapView::currentStation() {
       this->m_currentMarker);
 }
 
+MapFunctions *MapView::mapFunctions() { return &this->m_mapFunctions; }
+
 void MapView::changeMarker(QString markerString) {
   this->m_currentMarker = markerString;
 }
 
-void MapView::refreshStations() {
-  // bool active = ui->check_noaaActiveOnly->isChecked();
-  bool active = true;
+void MapView::refreshStations(bool filter, bool activeOnly) {
   int n = this->m_mapFunctions.refreshMarkers(this, this->m_markerLocations,
-                                              true, true);
+                                              filter, activeOnly);
   // this->stationDisplayWarning(n);
+}
+
+void MapView::changeMap(int index) {
+  this->mapFunctions()->setMapType(index, this);
 }

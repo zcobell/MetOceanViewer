@@ -184,6 +184,18 @@ void MapFunctions::setMapTypes(QQuickWidget *map, QComboBox *comboBox) {
   return;
 }
 
+void MapFunctions::setMapTypes(QComboBox *comboBox) {
+  comboBox->clear();
+  if (this->m_mapSource == ESRI) {
+    comboBox->addItems(esriList);
+  } else if (this->m_mapSource == MapBox) {
+    comboBox->addItems(mapboxList);
+  } else if (this->m_mapSource == OSM) {
+    comboBox->addItems(osmList);
+  }
+  return;
+}
+
 int MapFunctions::mapSource() const { return this->m_mapSource; }
 
 void MapFunctions::setMapSource(int mapSource) {

@@ -94,6 +94,8 @@ class ChartView : public QChartView {
  private:
   void resetAxisLimits();
 
+  QPointF dateDisplayPosition();
+
   static bool pointXLessThan(const QPointF &p1, const QPointF &p2);
 
   qreal x_axis_min, x_axis_max;
