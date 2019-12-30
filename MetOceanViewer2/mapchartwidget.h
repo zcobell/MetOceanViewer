@@ -24,13 +24,17 @@ class MapChartWidget : public QWidget {
 
   void initialize();
 
+  MapView *mapWidget() const;
+  ChartView *chartview() const;
+
  protected:
+  ChartOptionsMenu *chartOptions() const;
+  void setChartOptions(ChartOptionsMenu *chartOptions);
+
   QStringList timezoneList();
 
-  MapView *mapWidget() const;
   void setMapWidget(MapView *mapWidget);
 
-  ChartView *chartview() const;
   void setChartview(ChartView *chartview);
 
   QLineSeries *stationToSeries(HmdfStation *s, qint64 offset);
@@ -45,6 +49,9 @@ class MapChartWidget : public QWidget {
 
  protected:
   void writeData(Hmdf *data);
+
+ protected slots:
+  void chartOptionsChangeTriggered();
 
  private slots:
   virtual void plot();
@@ -67,6 +74,7 @@ class MapChartWidget : public QWidget {
   QHBoxLayout *m_mapLayout;
   QVBoxLayout *m_windowLayout;
   QGroupBox *m_inputBox;
+  ChartOptionsMenu *m_chartOptions;
   ChartView *m_chartview;
 };
 

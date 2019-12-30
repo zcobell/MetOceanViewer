@@ -2,12 +2,22 @@
 #define CHARTOPTIONSMENU_H
 
 #include <QMenu>
-#include <QToolButton>
+#include <QPushButton>
 
-class ChartOptionsMenu : public QToolButton {
+class ChartOptionsMenu : public QPushButton {
   Q_OBJECT
  public:
-  explicit ChartOptionsMenu(QWidget *parent = nullptr);
+  explicit ChartOptionsMenu(bool displayValues, bool saveData, bool saveGraphic,
+                            bool fitMarkers, bool resetChart, bool options,
+                            QWidget *parent = nullptr);
+
+  int titleFontsize() const;
+
+  int axisFontsize() const;
+
+  int legendFontsize() const;
+
+  QString dateFormat() const;
 
  signals:
   void displayValuesTriggered(bool);
@@ -15,6 +25,8 @@ class ChartOptionsMenu : public QToolButton {
   void fitMarkersTriggered();
   void resetChartTriggered();
   void saveGraphicTriggered();
+  void chartOptionsTriggered();
+  void chartOptionsChanged();
 
  private slots:
   void emitSaveDataSignal();
@@ -22,6 +34,8 @@ class ChartOptionsMenu : public QToolButton {
   void emitFitMarkersSignal();
   void emitResetChartSignal();
   void emitDisplayValuesSignal(bool);
+  void showChartOptions();
+  void emitChartOptionsChanged();
 
  private:
   QMenu *m_menu;
@@ -30,6 +44,12 @@ class ChartOptionsMenu : public QToolButton {
   QAction *m_saveGraphic;
   QAction *m_fitMarkers;
   QAction *m_resetChart;
+  QAction *m_options;
+
+  int m_titleFontsize;
+  int m_axisFontsize;
+  int m_legendFontsize;
+  QString m_dateFormat;
 };
 
 #endif  // CHARTOPTIONSMENU_H

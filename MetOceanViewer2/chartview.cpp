@@ -31,14 +31,6 @@
 
 #include "timezone.h"
 
-bool ChartView::pointXLessThan(const QPointF &p1, const QPointF &p2) {
-  return p1.x() < p2.x();
-}
-
-QPointF ChartView::dateDisplayPosition() {
-  return QPointF(this->size().width() / 2 - 100, this->size().height() - 30);
-}
-
 ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
   this->m_coord = new QGraphicsSimpleTextItem(this->chart());
   this->m_yAxis = nullptr;
@@ -80,6 +72,37 @@ ChartView::ChartView(QWidget *parent) : QChartView(new QChart(), parent) {
 
 ChartView::~ChartView() {}
 
+bool ChartView::pointXLessThan(const QPointF &p1, const QPointF &p2) {
+  return p1.x() < p2.x();
+}
+
+void ChartView::setAxisFontsize(int axisFontsize) {
+  if (this->m_xAxis) {
+    this->m_xAxis->setTitleFont(QFont("Helvetica", axisFontsize, QFont::Bold));
+  }
+  if (this->m_yAxis) {
+    this->m_yAxis->setTitleFont(QFont("Helvetica", axisFontsize, QFont::Bold));
+  }
+  if (this->m_dateAxis) {
+    this->m_dateAxis->setTitleFont(
+        QFont("Helvetica", axisFontsize, QFont::Bold));
+  }
+}
+
+void ChartView::setLegendFontsize(int legendFontsize) {
+  for (int i = 0; i < this->chart()->legend()->markers().length(); i++)
+    this->chart()->legend()->markers().at(i)->setFont(
+        QFont("Helvetica", legendFontsize, QFont::Bold));
+}
+
+void ChartView::setTitleFontsize(int titleFontsize) {
+  this->chart()->setTitleFont(QFont("Helvetica", titleFontsize, QFont::Bold));
+}
+
+QPointF ChartView::dateDisplayPosition() {
+  return QPointF(this->size().width() / 2 - 100, this->size().height() - 30);
+}
+
 void ChartView::initializeAxis(int style) {
   this->setStyle(style);
   if (style == 1) {
@@ -112,14 +135,26 @@ void ChartView::initializeAxis(int style) {
   return;
 }
 
-void ChartView::setDateFormat(QDateTime start, QDateTime end) {
+void ChartView::setDateFormat(const QString &format) {
+  if (this->m_dateAxis) {
+    if (format == "auto") {
+      this->setDateFormat(QDateTime::fromMSecsSinceEpoch(this->x_axis_min),
+                          QDateTime::fromMSecsSinceEpoch(this->x_axis_max));
+    } else {
+      this->dateAxis()->setFormat(format);
+    }
+  }
+}
+
+void ChartView::setDateFormat(const QDateTime &start, const QDateTime &end) {
+  QString format;
   if (start.daysTo(end) > 90)
-    this->dateAxis()->setFormat("MM/yyyy");
+    format = "MM/yyyy";
   else if (start.daysTo(end) > 4)
-    this->dateAxis()->setFormat("MM/dd/yyyy");
+    format = "MM/dd/yyyy";
   else
-    this->dateAxis()->setFormat("MM/dd/yyyy hh:mm");
-  return;
+    format = "MM/dd hh:mm";
+  this->dateAxis()->setFormat(format);
 }
 
 void ChartView::setAxisLimits(double xmin, double xmax, double ymin,

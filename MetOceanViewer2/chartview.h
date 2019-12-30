@@ -70,8 +70,6 @@ class ChartView : public QChartView {
   QValueAxis *xAxis() const;
   QValueAxis *yAxis() const;
 
-  void setDateFormat(QDateTime start, QDateTime end);
-
   void initializeLegendMarkers();
   void initializeAxis(int style = 1);
   void setAxisLimits(QDateTime startDate, QDateTime endDate, double ymin,
@@ -83,6 +81,15 @@ class ChartView : public QChartView {
 
   QGraphicsTextItem *infoItem() const;
   void setInfoItem(QGraphicsTextItem *infoItem);
+
+  void setTitleFontsize(int titleFontsize);
+
+  void setLegendFontsize(int legendFontsize);
+
+  void setAxisFontsize(int axisFontsize);
+
+  void setDateFormat(const QString &format);
+  void setDateFormat(const QDateTime &start, const QDateTime &end);
 
  protected:
   void resizeEvent(QResizeEvent *event);

@@ -24,6 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    chartoptions.cpp \
     chartoptionsmenu.cpp \
     combobox.cpp \
     datebox.cpp \
@@ -43,6 +44,7 @@ SOURCES += \
     tabwidget.cpp
 
 HEADERS += \
+    chartoptions.h \
     chartoptionsmenu.h \
     combobox.h \
     datebox.h \
@@ -62,6 +64,7 @@ HEADERS += \
     tabwidget.h
 
 FORMS += \
+    chartoptions.ui \
     mainwindow.ui \
     newtabdialog.ui
 

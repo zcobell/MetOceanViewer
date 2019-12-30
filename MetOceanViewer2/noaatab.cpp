@@ -12,26 +12,16 @@ std::array<QColor, 2> c_noaaColors = {QColor(Qt::blue), QColor(Qt::green)};
 NoaaTab::NoaaTab(QVector<Station> *stations, QWidget *parent)
     : MapChartWidget(TabType::NOAA, stations, parent) {
   this->initialize();
-  this->connectSignals();
 }
 
 void NoaaTab::connectSignals() {
-  connect(this->m_chartOptions, SIGNAL(displayValuesTriggered(bool)), this,
-          SLOT(toggleDisplayValues(bool)));
-  connect(this->m_chartOptions, SIGNAL(saveDataTriggered()), this,
-          SLOT(saveData()));
-  connect(this->m_chartOptions, SIGNAL(fitMarkersTriggered()), this,
-          SLOT(fitMarkers()));
-  connect(this->m_chartOptions, SIGNAL(resetChartTriggered()), this,
-          SLOT(resetChart()));
-  connect(this->m_chartOptions, SIGNAL(saveGraphicTriggered()), this,
-          SLOT(saveGraphic()));
   connect(this->m_chk_vdatum, SIGNAL(clicked(bool)), this,
           SLOT(updateDatumList(bool)));
   connect(this->m_chk_activeOnly, SIGNAL(clicked(bool)), this,
           SLOT(refreshStations(bool)));
   connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
           this->mapWidget(), SLOT(changeMap(int)));
+  MapChartWidget::connectSignals();
 }
 
 int NoaaTab::calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
@@ -150,6 +140,7 @@ void NoaaTab::setPlotAxis(Hmdf *data, const QDateTime &startDate,
   this->chartview()->dateAxis()->setTitleText("Date (" + tzAbbrev + ")");
   this->chartview()->yAxis()->setTitleText(productName + " (" + unitString +
                                            ", " + datumString + ")");
+  this->chartOptionsChangeTriggered();
   return;
 }
 
@@ -240,12 +231,9 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_chk_vdatum = new QCheckBox(this);
   this->m_chk_activeOnly = new QCheckBox(this);
   this->m_cbx_units = new ComboBox("Units: ", this);
-  this->m_chartOptions = new ChartOptionsMenu(this);
   this->m_cbx_mapType = new ComboBox("Map: ", this);
-
-  for (auto &w : this->findChildren<QWidget *>()) {
-    w->setMinimumHeight(25);
-  }
+  this->setChartOptions(
+      new ChartOptionsMenu(true, true, true, false, true, true, this));
 
   this->m_btn_refresh->setText("Show Stations");
   this->m_btn_plot->setText("Plot");
@@ -297,19 +285,20 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_rowLayouts[3]->addLayout(this->m_cbx_mapType->layout());
   this->m_rowLayouts[3]->addWidget(this->m_btn_plot);
   this->m_rowLayouts[3]->addWidget(this->m_btn_refresh);
-  this->m_rowLayouts[3]->addWidget(this->m_chartOptions);
+  this->m_rowLayouts[3]->addWidget(this->chartOptions());
 
-  for (auto &l : this->m_rowLayouts) {
+  for (auto l : this->m_rowLayouts) {
     l->addStretch();
-    l->addSpacing(1);
+    l->addSpacing(0);
     allLayout->addLayout(l);
   }
 
   allLayout->addStretch();
-  allLayout->setContentsMargins(5, 0, 5, 0);
+  allLayout->addSpacing(0);
+  allLayout->setContentsMargins(5, 0, 5, 5);
 
-  input->setMaximumHeight(150);
-  input->setMinimumHeight(150);
+  input->setMaximumHeight(175);
+  input->setMinimumHeight(175);
   input->setLayout(allLayout);
 
   return input;

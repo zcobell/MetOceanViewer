@@ -25,14 +25,35 @@ void MapChartWidget::initialize() {
   this->m_windowLayout->addLayout(this->m_mapLayout);
   this->setAutoFillBackground(true);
   this->setLayout(this->m_windowLayout);
+  this->connectSignals();
+}
+
+void MapChartWidget::connectSignals() {
   connect(this, SIGNAL(error(QString)), this, SLOT(showErrorDialog(QString)));
   connect(this, SIGNAL(warning(QString)), this,
           SLOT(showWarningDialog(QString)));
+  connect(this->chartOptions(), SIGNAL(displayValuesTriggered(bool)), this,
+          SLOT(toggleDisplayValues(bool)));
+  connect(this->chartOptions(), SIGNAL(saveDataTriggered()), this,
+          SLOT(saveData()));
+  connect(this->chartOptions(), SIGNAL(fitMarkersTriggered()), this,
+          SLOT(fitMarkers()));
+  connect(this->chartOptions(), SIGNAL(resetChartTriggered()), this,
+          SLOT(resetChart()));
+  connect(this->chartOptions(), SIGNAL(saveGraphicTriggered()), this,
+          SLOT(saveGraphic()));
+  connect(this->chartOptions(), SIGNAL(chartOptionsChanged()), this,
+          SLOT(chartOptionsChangeTriggered()));
 }
 
-void MapChartWidget::connectSignals() {}
-
 void MapChartWidget::plot() { return; }
+
+void MapChartWidget::chartOptionsChangeTriggered() {
+  this->chartview()->setTitleFontsize(this->m_chartOptions->titleFontsize());
+  this->chartview()->setAxisFontsize(this->m_chartOptions->axisFontsize());
+  this->chartview()->setLegendFontsize(this->m_chartOptions->legendFontsize());
+  this->chartview()->setDateFormat(this->m_chartOptions->dateFormat());
+}
 
 void MapChartWidget::saveGraphic() {
   QString filename = QFileDialog::getSaveFileName(
@@ -85,6 +106,14 @@ void MapChartWidget::keyPressEvent(QKeyEvent *event) {
   } else {
     QWidget::keyPressEvent(event);
   }
+}
+
+ChartOptionsMenu *MapChartWidget::chartOptions() const {
+  return m_chartOptions;
+}
+
+void MapChartWidget::setChartOptions(ChartOptionsMenu *chartOptions) {
+  m_chartOptions = chartOptions;
 }
 
 void MapChartWidget::writeData(Hmdf *data) {
