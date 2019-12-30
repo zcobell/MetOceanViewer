@@ -2,7 +2,6 @@
 #define NOAAPRODUCTLIST_H
 
 #include <QStringList>
-#include <array>
 #include <string>
 #include <vector>
 
@@ -54,11 +53,10 @@ class NoaaProductList {
 
   QStringList productList() const;
 
-  static constexpr size_t nProducts() { return c_nProducts; }
+  size_t nProducts() { return this->m_products.size(); }
 
  private:
-  static const size_t c_nProducts = 11;
-  const std::array<NoaaProduct, c_nProducts> m_products = {
+  const std::vector<NoaaProduct> m_products = {
       NoaaProduct("6 minute water level vs predicted water level",
                   {"water_level", "predictions"}, {"Observed", "Predicted"},
                   "meters", "feet", "Water Level", true, 2),
