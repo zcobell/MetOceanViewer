@@ -8,16 +8,27 @@
 
 TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   //...Override the tab bar so that a double click renames
-  TabBar* myTab = new TabBar(this);
-  this->setTabBar(myTab);
+  this->m_tabBar = new TabBar(this);
+  this->m_tabBar->setObjectName("TabBar");
+  this->setTabBar(this->m_tabBar);
+  this->setObjectName("TabWidget");
+  this->setStyleSheet(
+      "#qt_tabwidget_stackedwidget{"
+      "background-image: url(:/rsc/img/mov.png);"
+      "background-repeat: no-repeat; "
+      "background-attachment: fixed; "
+      "background-position: center; "
+      "}");
 
   //...Add a button to add new tabs
-  this->m_addTabButton = new QPushButton("+", this);
+  this->m_addTabButton = new QToolButton(this);
   this->m_addTabButton->setObjectName("addButton");
-  this->m_addTabButton->setMinimumWidth(30);
-  this->m_addTabButton->setMinimumHeight(30);
-  this->m_addTabButton->setAutoFillBackground(true);
+  this->m_addTabButton->setAutoFillBackground(false);
+  this->m_addTabButton->setText("+");
+  this->m_addTabButton->setToolButtonStyle(
+      Qt::ToolButtonStyle::ToolButtonTextOnly);
   this->setCornerWidget(this->m_addTabButton, Qt::TopRightCorner);
+  this->m_addTabButton->setMinimumSize(this->m_addTabButton->sizeHint());
   connect(this->m_addTabButton, SIGNAL(clicked()), this, SLOT(addNewTab()));
 
   //...Allow tabs to be closed and connect signals/slots

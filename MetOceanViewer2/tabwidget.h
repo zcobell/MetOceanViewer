@@ -1,9 +1,12 @@
 #ifndef TABWIDGET_H
 #define TABWIDGET_H
 
-#include <QPushButton>
 #include <QTabWidget>
+#include <QToolButton>
+#include <QLabel>
+
 #include "stationlist.h"
+#include "tabbar.h"
 
 class TabWidget : public QTabWidget {
   Q_OBJECT
@@ -15,7 +18,8 @@ class TabWidget : public QTabWidget {
   void closeTab(int);
 
  private:
-  QPushButton *m_addTabButton;
+  TabBar *m_tabBar;
+  QToolButton *m_addTabButton;
   StationList *m_stationList;
 };
 

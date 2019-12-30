@@ -2,8 +2,9 @@
 
 #include <QInputDialog>
 #include <QMouseEvent>
+#include <QDebug>
 
-TabBar::TabBar(QWidget *parent) : QTabBar(parent) {}
+TabBar::TabBar(QWidget *parent) : QTabBar(parent){}
 
 void TabBar::mouseDoubleClickEvent(QMouseEvent *e) {
   if (e->button() != Qt::LeftButton) {

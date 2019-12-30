@@ -2,9 +2,9 @@
 #define CHARTOPTIONSMENU_H
 
 #include <QMenu>
-#include <QPushButton>
+#include <QToolButton>
 
-class ChartOptionsMenu : public QPushButton {
+class ChartOptionsMenu : public QToolButton {
   Q_OBJECT
  public:
   explicit ChartOptionsMenu(QWidget *parent = nullptr);

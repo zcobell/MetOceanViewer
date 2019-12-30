@@ -2,6 +2,7 @@
 #define NEWTABDIALOG_H
 
 #include <QDialog>
+
 #include "tabtypes.h"
 
 namespace Ui {

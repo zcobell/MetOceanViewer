@@ -222,9 +222,12 @@ QGroupBox *NoaaTab::generateInputBox() {
   QGroupBox *input = new QGroupBox(this);
   input->setTitle("NOAA Station Download Options");
 
-  QHBoxLayout *r1Layout = new QHBoxLayout();
-  QHBoxLayout *r2Layout = new QHBoxLayout();
-  QHBoxLayout *r3Layout = new QHBoxLayout();
+  const size_t nLayoutRows = 4;
+  this->m_rowLayouts.resize(nLayoutRows);
+  for (auto &l : this->m_rowLayouts) {
+    l = new QHBoxLayout();
+  }
+
   QVBoxLayout *allLayout = new QVBoxLayout();
 
   this->m_dte_startDate = new DateBox("Start Time: ", this);
@@ -239,6 +242,10 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_cbx_units = new ComboBox("Units: ", this);
   this->m_chartOptions = new ChartOptionsMenu(this);
   this->m_cbx_mapType = new ComboBox("Map: ", this);
+
+  for (auto &w : this->findChildren<QWidget *>()) {
+    w->setMinimumHeight(25);
+  }
 
   this->m_btn_refresh->setText("Show Stations");
   this->m_btn_plot->setText("Plot");
@@ -279,33 +286,30 @@ QGroupBox *NoaaTab::generateInputBox() {
           SLOT(refreshStations()));
   connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
 
-  r1Layout->addLayout(this->m_dte_startDate->layout());
-  r1Layout->addLayout(this->m_dte_endDate->layout());
-  r1Layout->addWidget(this->m_chk_activeOnly);
-  r2Layout->addLayout(this->m_cbx_datatype->layout());
-  r2Layout->addLayout(this->m_cbx_datum->layout());
-  r2Layout->addWidget(this->m_chk_vdatum);
-  r3Layout->addLayout(this->m_cbx_timezones->layout());
-  r3Layout->addLayout(this->m_cbx_units->layout());
-  r3Layout->addLayout(this->m_cbx_mapType->layout());
-  r3Layout->addWidget(this->m_btn_plot);
-  r3Layout->addWidget(this->m_btn_refresh);
-  r3Layout->addWidget(this->m_chartOptions);
+  this->m_rowLayouts[0]->addLayout(this->m_dte_startDate->layout());
+  this->m_rowLayouts[0]->addLayout(this->m_dte_endDate->layout());
+  this->m_rowLayouts[0]->addWidget(this->m_chk_activeOnly);
+  this->m_rowLayouts[1]->addLayout(this->m_cbx_datatype->layout());
+  this->m_rowLayouts[1]->addLayout(this->m_cbx_datum->layout());
+  this->m_rowLayouts[2]->addLayout(this->m_cbx_timezones->layout());
+  this->m_rowLayouts[2]->addLayout(this->m_cbx_units->layout());
+  this->m_rowLayouts[2]->addWidget(this->m_chk_vdatum);
+  this->m_rowLayouts[3]->addLayout(this->m_cbx_mapType->layout());
+  this->m_rowLayouts[3]->addWidget(this->m_btn_plot);
+  this->m_rowLayouts[3]->addWidget(this->m_btn_refresh);
+  this->m_rowLayouts[3]->addWidget(this->m_chartOptions);
 
-  r1Layout->addStretch();
-  r2Layout->addStretch();
-  r3Layout->addStretch();
-
-  allLayout->addLayout(r1Layout);
-  allLayout->addLayout(r2Layout);
-  allLayout->addLayout(r3Layout);
+  for (auto &l : this->m_rowLayouts) {
+    l->addStretch();
+    l->addSpacing(1);
+    allLayout->addLayout(l);
+  }
 
   allLayout->addStretch();
-  allLayout->setSpacing(0);
   allLayout->setContentsMargins(5, 0, 5, 0);
 
-  input->setMaximumHeight(125);
-  input->setMinimumHeight(125);
+  input->setMaximumHeight(150);
+  input->setMinimumHeight(150);
   input->setLayout(allLayout);
 
   return input;

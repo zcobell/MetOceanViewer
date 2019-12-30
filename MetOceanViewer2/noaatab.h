@@ -58,6 +58,7 @@ class NoaaTab : public MapChartWidget {
   QCheckBox *m_chk_vdatum;
   ChartOptionsMenu *m_chartOptions;
   std::unique_ptr<Hmdf> m_noaaData;
+  std::vector<QHBoxLayout*> m_rowLayouts;
 };
 
 #endif  // NOAATAB_H

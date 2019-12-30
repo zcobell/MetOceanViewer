@@ -3,13 +3,14 @@
 
 #include <QTabBar>
 
-class TabBar : public QTabBar
-{
-    Q_OBJECT
-public:
-    TabBar(QWidget *parent = nullptr);
+class TabBar : public QTabBar {
+  Q_OBJECT
+ public:
+  TabBar(QWidget *parent = nullptr);
 
-    void mouseDoubleClickEvent(QMouseEvent *e);
+ public slots:
+  void mouseDoubleClickEvent(QMouseEvent *e) override;
+
 };
 
-#endif // TABBAR_H
+#endif  // TABBAR_H

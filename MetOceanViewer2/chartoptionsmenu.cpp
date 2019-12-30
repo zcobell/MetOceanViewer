@@ -2,17 +2,20 @@
 
 #ifdef __APPLE__
 const QString c_AltKey = QString::fromUtf8("\u2325");
-#else
-const QString c_AltKey = QString("ALT");
-#endif
-
 const QString c_saveDataLabelString = "Save Data (" + c_AltKey + "+S)";
 const QString c_saveGraphicLabelString = "Save Graphic (" + c_AltKey + "+G)";
 const QString c_fitMarkersLabelString = "Reset Map (" + c_AltKey + "+M)";
 const QString c_resetChartLabelString = "Reset Chart View (" + c_AltKey + "+R)";
 const QString c_showValuesLabelString = "Display Values (" + c_AltKey + "+D)";
+#else
+const QString c_saveDataLabelString = "Save Data";
+const QString c_saveGraphicLabelString = "Save Graphic";
+const QString c_fitMarkersLabelString = "Reset Map";
+const QString c_resetChartLabelString = "Reset Chart View";
+const QString c_showValuesLabelString = "Display Values";
+#endif
 
-ChartOptionsMenu::ChartOptionsMenu(QWidget *parent) : QPushButton(parent) {
+ChartOptionsMenu::ChartOptionsMenu(QWidget *parent) : QToolButton(parent) {
   this->m_menu = new QMenu(this);
   this->m_saveData = new QAction(c_saveDataLabelString, this);
   this->m_fitMarkers = new QAction(c_fitMarkersLabelString, this);
@@ -28,6 +31,10 @@ ChartOptionsMenu::ChartOptionsMenu(QWidget *parent) : QPushButton(parent) {
 
   this->m_displayValues->setCheckable(true);
 
+  this->setArrowType(Qt::ArrowType::DownArrow);
+  this->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonIconOnly);
+  this->setStyleSheet("::menu-indicator{ image: none; }");
+
   this->m_menu->addAction(this->m_saveData);
   this->m_menu->addAction(this->m_saveGraphic);
   this->m_menu->addSeparator();
@@ -36,7 +43,6 @@ ChartOptionsMenu::ChartOptionsMenu(QWidget *parent) : QPushButton(parent) {
   this->m_menu->addAction(this->m_displayValues);
 
   this->setMenu(this->m_menu);
-  this->setText("Options");
 
   connect(this->m_saveData, SIGNAL(triggered()), this,
           SLOT(emitSaveDataSignal()));
@@ -48,6 +54,7 @@ ChartOptionsMenu::ChartOptionsMenu(QWidget *parent) : QPushButton(parent) {
           SLOT(emitResetChartSignal()));
   connect(this->m_displayValues, SIGNAL(triggered(bool)), this,
           SLOT(emitDisplayValuesSignal(bool)));
+  connect(this, SIGNAL(clicked()), this, SLOT(showMenu()));
 }
 
 void ChartOptionsMenu::emitSaveDataSignal() { emit saveDataTriggered(); }
