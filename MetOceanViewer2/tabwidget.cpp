@@ -5,6 +5,7 @@
 #include "newtabdialog.h"
 #include "noaatab.h"
 #include "tabbar.h"
+#include "usgstab.h"
 
 TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   //...Override the tab bar so that a double click renames
@@ -53,6 +54,9 @@ void TabWidget::addNewTab() {
         this->addTab(new NoaaTab(stations, this), d->tabName());
         this->setCurrentIndex(this->count() - 1);
         break;
+      case TabType::USGS:
+        this->addTab(new UsgsTab(stations, this), d->tabName());
+        this->setCurrentIndex(this->count() - 1);
       default:
         break;
     }

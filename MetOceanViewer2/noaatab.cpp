@@ -21,6 +21,9 @@ void NoaaTab::connectSignals() {
           SLOT(refreshStations(bool)));
   connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
           this->mapWidget(), SLOT(changeMap(int)));
+  connect(m_btn_refresh, SIGNAL(clicked()), this->mapWidget(),
+          SLOT(refreshStations()));
+  connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
   MapChartWidget::connectSignals();
 }
 
@@ -250,8 +253,8 @@ QGroupBox *NoaaTab::generateInputBox() {
                                                      << "english");
   this->mapWidget()->mapFunctions()->setMapTypes(this->m_cbx_mapType->combo());
 
-  QDateTime startDate = QDateTime::currentDateTime().addDays(-1);
-  QDateTime endDate = QDateTime::currentDateTime();
+  QDateTime startDate = QDateTime::currentDateTimeUtc().addDays(-1);
+  QDateTime endDate = QDateTime::currentDateTimeUtc();
 
   this->m_dte_startDate->dateEdit()->setDateTime(startDate);
   this->m_dte_endDate->dateEdit()->setDateTime(endDate);
@@ -269,10 +272,6 @@ QGroupBox *NoaaTab::generateInputBox() {
 
   this->m_cbx_timezones->combo()->setCurrentText("GMT");
   this->m_cbx_datum->combo()->setCurrentText("MSL");
-
-  connect(m_btn_refresh, SIGNAL(clicked()), this->mapWidget(),
-          SLOT(refreshStations()));
-  connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
 
   this->m_rowLayouts[0]->addLayout(this->m_dte_startDate->layout());
   this->m_rowLayouts[0]->addLayout(this->m_dte_endDate->layout());

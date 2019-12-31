@@ -12,6 +12,11 @@ TEMPLATE = app
 
 CONFIG += c++11
 
+debug{
+CONFIG += sanitizer
+CONFIG += sanitize_address
+}
+
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -41,7 +46,8 @@ SOURCES += \
     stationmodel.cpp \
     mapfunctions.cpp \
     tabbar.cpp \
-    tabwidget.cpp
+    tabwidget.cpp \
+    usgstab.cpp
 
 HEADERS += \
     chartoptions.h \
@@ -61,7 +67,8 @@ HEADERS += \
     tabtypes.h \
     stationmodel.h \
     mapfunctions.h \
-    tabwidget.h
+    tabwidget.h \
+    usgstab.h
 
 FORMS += \
     chartoptions.ui \
