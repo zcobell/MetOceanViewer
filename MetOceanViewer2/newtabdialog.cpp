@@ -4,9 +4,14 @@
 
 #include "ui_newtabdialog.h"
 
-std::array<QString, 7> c_names = {
-    "unknown",         "NOAA", "USGS", "NDBC", "XTIDE", "User Timeseries",
-    "High Water Marks"};
+std::array<QString, 8> c_names = {"unknown",
+                                  "NOAA",
+                                  "USGS",
+                                  "NDBC",
+                                  "CRMS",
+                                  "XTIDE",
+                                  "User Timeseries",
+                                  "High Water Marks"};
 
 NewTabDialog::NewTabDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::NewTabDialog), m_type(UNKNOWN) {

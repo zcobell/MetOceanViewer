@@ -18,40 +18,13 @@ void NoaaTab::connectSignals() {
   connect(this->m_chk_vdatum, SIGNAL(clicked(bool)), this,
           SLOT(updateDatumList(bool)));
   connect(this->m_chk_activeOnly, SIGNAL(clicked(bool)), this,
-          SLOT(refreshStations(bool)));
+          SLOT(refreshStations()));
   connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
           this->mapWidget(), SLOT(changeMap(int)));
   connect(m_btn_refresh, SIGNAL(clicked()), this->mapWidget(),
           SLOT(refreshStations()));
   connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
   MapChartWidget::connectSignals();
-}
-
-int NoaaTab::calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
-                               QDateTime &startDateGmt, QDateTime &endDateGmt,
-                               QString &timezoneString, qint64 &tzOffset) {
-  QString tzname = this->m_cbx_timezones->combo()->currentText();
-  QTimeZone tz(tzname.toUtf8());
-  startDate = this->m_dte_startDate->dateEdit()->dateTime();
-  endDate = this->m_dte_endDate->dateEdit()->dateTime();
-
-  if (startDate >= endDate) {
-    emit error("Dates are not in ascending order");
-    return 1;
-  }
-
-  QDateTime dmy = QDateTime::currentDateTime();
-  dmy.setTimeZone(tz);
-  timezoneString = tz.abbreviation(startDate);
-  tzOffset =
-      MetOcean::localMachineOffsetFromUTC() - tz.offsetFromUtc(startDate);
-
-  startDateGmt = startDate.addSecs(-MetOcean::localMachineOffsetFromUTC());
-  endDateGmt = endDate.addSecs(-MetOcean::localMachineOffsetFromUTC());
-  startDateGmt.setTimeSpec(Qt::UTC);
-  endDateGmt.setTimeSpec(Qt::UTC);
-
-  return 0;
 }
 
 std::pair<QString, bool> NoaaTab::getDatumParameters() {
@@ -131,22 +104,6 @@ void NoaaTab::performDatumTransformation(const Station &s, Hmdf *data) {
   }
 }
 
-void NoaaTab::setPlotAxis(Hmdf *data, const QDateTime &startDate,
-                          const QDateTime &endDate, const QString &tzAbbrev,
-                          const QString &datumString, const QString &unitString,
-                          const QString &productName) {
-  qint64 dateMin, dateMax;
-  double ymin, ymax;
-  data->dataBounds(dateMin, dateMax, ymin, ymax);
-  this->chartview()->setDateFormat(startDate, endDate);
-  this->chartview()->setAxisLimits(startDate, endDate, ymin, ymax);
-  this->chartview()->dateAxis()->setTitleText("Date (" + tzAbbrev + ")");
-  this->chartview()->yAxis()->setTitleText(productName + " (" + unitString +
-                                           ", " + datumString + ")");
-  this->chartOptionsChangeTriggered();
-  return;
-}
-
 void NoaaTab::addSeriesToChart(Hmdf *data, const qint64 &tzOffset) {
   for (size_t i = 0; i < data->nstations(); ++i) {
     QLineSeries *series = this->stationToSeries(data->station(i), tzOffset);
@@ -224,11 +181,11 @@ QGroupBox *NoaaTab::generateInputBox() {
 
   QVBoxLayout *allLayout = new QVBoxLayout();
 
-  this->m_dte_startDate = new DateBox("Start Time: ", this);
-  this->m_dte_endDate = new DateBox("End Time: ", this);
+  this->setStartDateEdit(new DateBox("Start Time: ", this));
+  this->setEndDateEdit(new DateBox("End Time: ", this));
   this->m_btn_refresh = new QPushButton(this);
   this->m_btn_plot = new QPushButton(this);
-  this->m_cbx_timezones = new ComboBox("Timezone: ", this);
+  this->setTimezoneCombo(new ComboBox("Timezone: ", this));
   this->m_cbx_datatype = new ComboBox("Product: ", this);
   this->m_cbx_datum = new ComboBox("Datum: ", this);
   this->m_chk_vdatum = new QCheckBox(this);
@@ -245,7 +202,7 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_chk_activeOnly->setCheckState(Qt::Checked);
   this->m_chk_vdatum->setCheckState(Qt::Unchecked);
 
-  this->m_cbx_timezones->combo()->addItems(timezoneList());
+  this->timezoneCombo()->combo()->addItems(timezoneList());
   this->m_cbx_datum->combo()->addItems(Datum::noaaDatumList());
   this->m_cbx_datatype->combo()->addItems(
       this->m_noaaProductList.productList());
@@ -256,29 +213,29 @@ QGroupBox *NoaaTab::generateInputBox() {
   QDateTime startDate = QDateTime::currentDateTimeUtc().addDays(-1);
   QDateTime endDate = QDateTime::currentDateTimeUtc();
 
-  this->m_dte_startDate->dateEdit()->setDateTime(startDate);
-  this->m_dte_endDate->dateEdit()->setDateTime(endDate);
+  this->startDateEdit()->dateEdit()->setDateTime(startDate);
+  this->endDateEdit()->dateEdit()->setDateTime(endDate);
 
-  this->m_dte_startDate->setMinimumWidth(160);
-  this->m_dte_startDate->setMaximumWidth(160);
-  this->m_dte_endDate->setMinimumWidth(160);
-  this->m_dte_endDate->setMaximumWidth(160);
-  this->m_cbx_timezones->combo()->setMinimumWidth(200);
-  this->m_cbx_timezones->combo()->setMaximumWidth(200);
+  this->startDateEdit()->setMinimumWidth(160);
+  this->startDateEdit()->setMaximumWidth(160);
+  this->endDateEdit()->setMinimumWidth(160);
+  this->endDateEdit()->setMaximumWidth(160);
+  this->timezoneCombo()->combo()->setMinimumWidth(200);
+  this->timezoneCombo()->combo()->setMaximumWidth(200);
   this->m_cbx_datatype->combo()->setMinimumWidth(400);
   this->m_cbx_datatype->combo()->setMaximumWidth(400);
   this->m_cbx_datum->combo()->setMinimumWidth(100);
   this->m_cbx_datum->combo()->setMaximumWidth(100);
 
-  this->m_cbx_timezones->combo()->setCurrentText("GMT");
+  this->timezoneCombo()->combo()->setCurrentText("GMT");
   this->m_cbx_datum->combo()->setCurrentText("MSL");
 
-  this->m_rowLayouts[0]->addLayout(this->m_dte_startDate->layout());
-  this->m_rowLayouts[0]->addLayout(this->m_dte_endDate->layout());
+  this->m_rowLayouts[0]->addLayout(this->startDateEdit()->layout());
+  this->m_rowLayouts[0]->addLayout(this->endDateEdit()->layout());
   this->m_rowLayouts[0]->addWidget(this->m_chk_activeOnly);
   this->m_rowLayouts[1]->addLayout(this->m_cbx_datatype->layout());
   this->m_rowLayouts[1]->addLayout(this->m_cbx_datum->layout());
-  this->m_rowLayouts[2]->addLayout(this->m_cbx_timezones->layout());
+  this->m_rowLayouts[2]->addLayout(this->timezoneCombo()->layout());
   this->m_rowLayouts[2]->addLayout(this->m_cbx_units->layout());
   this->m_rowLayouts[2]->addWidget(this->m_chk_vdatum);
   this->m_rowLayouts[3]->addLayout(this->m_cbx_mapType->layout());
@@ -303,7 +260,8 @@ QGroupBox *NoaaTab::generateInputBox() {
   return input;
 }
 
-void NoaaTab::refreshStations(bool b) {
+void NoaaTab::refreshStations() {
+  bool b = this->m_chk_activeOnly->isChecked();
   this->mapWidget()->refreshStations(true, b);
 }
 

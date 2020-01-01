@@ -47,7 +47,8 @@ SOURCES += \
     mapfunctions.cpp \
     tabbar.cpp \
     tabwidget.cpp \
-    usgstab.cpp
+    usgstab.cpp \
+    xtidetab.cpp
 
 HEADERS += \
     chartoptions.h \
@@ -68,7 +69,8 @@ HEADERS += \
     stationmodel.h \
     mapfunctions.h \
     tabwidget.h \
-    usgstab.h
+    usgstab.h \
+    xtidetab.h
 
 FORMS += \
     chartoptions.ui \

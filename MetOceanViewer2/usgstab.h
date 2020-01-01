@@ -20,17 +20,10 @@ class UsgsTab : public MapChartWidget {
  private slots:
   void plot() override;
   void replot(int);
-  void refreshStations();
 
  private:
   QGroupBox *generateInputBox() override;
   void connectSignals() override;
-  int calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
-                        QDateTime &startDateGmt, QDateTime &endDateGmt,
-                        QString &timezoneString, qint64 &tzOffset);
-  void setPlotAxis(Hmdf *data, const QDateTime &startDate,
-                   const QDateTime &endDate, const QString &tzAbbrev,
-                   const QString &unitString, const QString &productName);
   std::tuple<QString, QString> splitUsgsProductName(const QString &product);
   void addSeriesToChart(int const index, const QString &name, const qint64 tzoffset);
   int getDatabaseType();
@@ -42,10 +35,7 @@ class UsgsTab : public MapChartWidget {
   QRadioButton *m_rbtn_instant;
   QRadioButton *m_rbtn_daily;
   ComboBox *m_cbx_product;
-  ComboBox *m_cbx_timezone;
   ComboBox *m_cbx_mapType;
-  DateBox *m_dte_startDate;
-  DateBox *m_dte_endDate;
   QButtonGroup *m_buttonGroup;
   std::vector<QHBoxLayout *> m_rowLayouts;
   std::unique_ptr<Hmdf> m_data;

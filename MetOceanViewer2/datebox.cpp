@@ -1,9 +1,10 @@
 #include "datebox.h"
+#include <QDebug>
 
 DateBox::DateBox(QWidget *parent) : QWidget(parent) { this->initialize(); }
 
 DateBox::DateBox(const QString &label, QWidget *parent) : QWidget(parent) {
-  this->initialize(label);
+    this->initialize(label);
 }
 
 void DateBox::initialize(const QString &label) {

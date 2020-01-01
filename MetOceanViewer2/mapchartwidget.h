@@ -8,6 +8,8 @@
 
 #include "chartoptionsmenu.h"
 #include "chartview.h"
+#include "combobox.h"
+#include "datebox.h"
 #include "hmdf.h"
 #include "hmdfstation.h"
 #include "mapview.h"
@@ -48,10 +50,28 @@ class MapChartWidget : public QWidget {
   void warning(QString);
 
  protected:
-  void writeData(Hmdf *data);
+  virtual void writeData(Hmdf *data);
+  virtual int calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
+                                QDateTime &startDateGmt, QDateTime &endDateGmt,
+                                QString &timezoneString, qint64 &tzOffset);
+  virtual void setPlotAxis(Hmdf *data, const QDateTime &startDate,
+                           const QDateTime &endDate, const QString &tzAbbrev,
+                           const QString &datumString = QString(),
+                           const QString &unitString = QString(),
+                           const QString &productName = QString());
+
+  DateBox *startDateEdit();
+  void setStartDateEdit(DateBox *widget);
+
+  DateBox *endDateEdit();
+  void setEndDateEdit(DateBox *widget);
+
+  ComboBox *timezoneCombo();
+  void setTimezoneCombo(ComboBox *widget);
 
  protected slots:
   void chartOptionsChangeTriggered();
+  virtual void refreshStations();
 
  private slots:
   virtual void plot();
@@ -76,6 +96,9 @@ class MapChartWidget : public QWidget {
   QGroupBox *m_inputBox;
   ChartOptionsMenu *m_chartOptions;
   ChartView *m_chartview;
+  DateBox *m_dte_startDate;
+  DateBox *m_dte_endDate;
+  ComboBox *m_cbx_timezone;
 };
 
 #endif  // MAPCHARTWIDGET_H

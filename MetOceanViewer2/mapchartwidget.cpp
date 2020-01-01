@@ -15,7 +15,13 @@
 
 MapChartWidget::MapChartWidget(TabType type, QVector<Station> *stations,
                                QWidget *parent)
-    : QWidget(parent), m_stations(stations), m_type(type) {}
+    : QWidget(parent),
+      m_stations(stations),
+      m_type(type),
+      m_chartOptions(nullptr),
+      m_dte_startDate(nullptr),
+      m_dte_endDate(nullptr),
+      m_cbx_timezone(nullptr) {}
 
 void MapChartWidget::initialize() {
   this->m_windowLayout = new QVBoxLayout();
@@ -184,4 +190,84 @@ QStringList MapChartWidget::timezoneList() {
     tz.push_back(QString(t));
   }
   return tz;
+}
+
+int MapChartWidget::calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
+                                      QDateTime &startDateGmt,
+                                      QDateTime &endDateGmt,
+                                      QString &timezoneString,
+                                      qint64 &tzOffset) {
+  QTimeZone tz;
+  if (this->m_cbx_timezone != nullptr) {
+    tz = QTimeZone(this->m_cbx_timezone->combo()->currentText().toUtf8());
+  } else {
+    tz = QTimeZone("GMT");
+  }
+
+  startDate = this->startDateEdit()->dateEdit()->dateTime();
+  endDate = this->endDateEdit()->dateEdit()->dateTime();
+
+  if (startDate >= endDate) {
+    emit error("Dates are not in ascending order");
+    return 1;
+  }
+
+  QDateTime dmy = QDateTime::currentDateTime();
+  dmy.setTimeZone(tz);
+  timezoneString = tz.abbreviation(startDate);
+  tzOffset =
+      MetOcean::localMachineOffsetFromUTC() - tz.offsetFromUtc(startDate);
+
+  startDateGmt = startDate.addSecs(-MetOcean::localMachineOffsetFromUTC());
+  endDateGmt = endDate.addSecs(-MetOcean::localMachineOffsetFromUTC());
+  startDateGmt.setTimeSpec(Qt::UTC);
+  endDateGmt.setTimeSpec(Qt::UTC);
+
+  return 0;
+}
+
+void MapChartWidget::refreshStations() {
+  this->mapWidget()->refreshStations(true, false);
+}
+
+void MapChartWidget::setPlotAxis(Hmdf *data, const QDateTime &startDate,
+                                 const QDateTime &endDate,
+                                 const QString &tzAbbrev,
+                                 const QString &datumString,
+                                 const QString &unitString,
+                                 const QString &productName) {
+  qint64 dateMin, dateMax;
+  double ymin, ymax;
+  data->dataBounds(dateMin, dateMax, ymin, ymax);
+  this->chartview()->setDateFormat(startDate, endDate);
+  this->chartview()->setAxisLimits(startDate, endDate, ymin, ymax);
+  this->chartview()->dateAxis()->setTitleText("Date (" + tzAbbrev + ")");
+
+  if (datumString == QString()) {
+    this->chartview()->yAxis()->setTitleText(productName + " (" + unitString +
+                                             ")");
+  } else {
+    this->chartview()->yAxis()->setTitleText(productName + " (" + unitString +
+                                             ", " + datumString + ")");
+  }
+  this->chartOptionsChangeTriggered();
+  return;
+}
+
+DateBox *MapChartWidget::startDateEdit() { return this->m_dte_startDate; }
+
+void MapChartWidget::setStartDateEdit(DateBox *widget) {
+  this->m_dte_startDate = widget;
+}
+
+DateBox *MapChartWidget::endDateEdit() { return this->m_dte_endDate; }
+
+void MapChartWidget::setEndDateEdit(DateBox *widget) {
+  this->m_dte_endDate = widget;
+}
+
+ComboBox *MapChartWidget::timezoneCombo() { return this->m_cbx_timezone; }
+
+void MapChartWidget::setTimezoneCombo(ComboBox *widget) {
+  this->m_cbx_timezone = widget;
 }

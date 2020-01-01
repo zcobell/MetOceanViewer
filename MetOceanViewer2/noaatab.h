@@ -19,15 +19,12 @@ class NoaaTab : public MapChartWidget {
 
  private slots:
   void updateDatumList(bool b);
-  void refreshStations(bool b);
+  void refreshStations() override;
   void saveData() override;
 
  private:
   QGroupBox *generateInputBox() override;
   void connectSignals() override;
-  int calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
-                        QDateTime &startDateGmt, QDateTime &endDateGmt,
-                        QString &timezoneString, qint64 &tzOffset);
   std::pair<QString, bool> getDatumParameters();
   int getDataFromNoaa(const Station &s,
                       const NoaaProductList::NoaaProduct &product,
@@ -35,21 +32,14 @@ class NoaaTab : public MapChartWidget {
                       const QString &datumString, Hmdf *data);
   QString getUnitsLabel(const NoaaProductList::NoaaProduct &p);
   void performDatumTransformation(const Station &s, Hmdf *data);
-  void setPlotAxis(Hmdf *data, const QDateTime &startDate,
-                   const QDateTime &endDate, const QString &tzAbbrev,
-                   const QString &datumString, const QString &unitString,
-                   const QString &productName);
   void addSeriesToChart(Hmdf *data, const qint64 &tzOffset);
 
   //...Variables
   NoaaProductList m_noaaProductList;
 
   //...Widgets
-  DateBox *m_dte_startDate;
-  DateBox *m_dte_endDate;
   QPushButton *m_btn_refresh;
   QPushButton *m_btn_plot;
-  ComboBox *m_cbx_timezones;
   ComboBox *m_cbx_datum;
   ComboBox *m_cbx_datatype;
   ComboBox *m_cbx_units;
