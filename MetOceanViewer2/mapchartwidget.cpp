@@ -176,8 +176,6 @@ QHBoxLayout *MapChartWidget::generateMapChartLayout() {
   this->m_chartview->setContentsMargins(0, 0, 0, 0);
   this->m_mapWidget->setContentsMargins(0, 0, 0, 0);
 
-  this->m_chartview->setStyleSheet("#chart{background-color: white}");
-
   layout->addWidget(this->m_mapWidget);
   layout->addWidget(this->m_chartview);
   layout->addSpacing(0);

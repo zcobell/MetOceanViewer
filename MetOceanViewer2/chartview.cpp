@@ -79,6 +79,7 @@ ChartView::ChartView(QWidget *parent)
   this->chart()->legend()->setAlignment(Qt::AlignBottom);
   this->chart()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   this->m_coord->setPos(this->dateDisplayPosition());
+  this->setBackground(true);
 }
 
 ChartView::~ChartView() {}
@@ -226,6 +227,7 @@ void ChartView::initializeLegendMarkers() {
 }
 
 void ChartView::addSeries(QLineSeries *series, QString name) {
+  this->setBackground(false);
   this->m_series.push_back(series);
   this->m_legendNames.push_back(name);
 
@@ -449,6 +451,21 @@ void ChartView::resetAxisLimits() {
     this->m_currentYAxisMax = this->chart()->mapToValue(box.topRight()).y();
   }
   return;
+}
+
+void ChartView::setBackground(bool b) {
+  if (b) {
+    this->chart()->setBackgroundVisible(false);
+    this->setStyleSheet(
+        "#chart{background-color: white;"
+        "background-image: url(:/rsc/img/mov.png);"
+        "background-repeat: no-repeat; "
+        "background-attachment: fixed; "
+        "background-position: center;} ");
+  } else {
+    this->chart()->setBackgroundVisible(true);
+    this->setStyleSheet("#chart{background-color: white}");
+  }
 }
 
 QGraphicsTextItem *ChartView::infoItem() const { return m_infoItem; }

@@ -105,6 +105,7 @@ class ChartView : public QChartView {
 
  private:
   void resetAxisLimits();
+  void setBackground(bool b);
 
   QPointF dateDisplayPosition();
 
