@@ -20,7 +20,6 @@ class NoaaTab : public MapChartWidget {
  private slots:
   void updateDatumList(bool b);
   void refreshStations() override;
-  void saveData() override;
 
  private:
   QGroupBox *generateInputBox() override;
@@ -46,7 +45,6 @@ class NoaaTab : public MapChartWidget {
   ComboBox *m_cbx_mapType;
   QCheckBox *m_chk_activeOnly;
   QCheckBox *m_chk_vdatum;
-  std::unique_ptr<Hmdf> m_noaaData;
   std::vector<QHBoxLayout*> m_rowLayouts;
 };
 

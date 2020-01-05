@@ -20,6 +20,7 @@ class UsgsTab : public MapChartWidget {
  private slots:
   void plot() override;
   void replot(int);
+  void saveData() override;
 
  private:
   QGroupBox *generateInputBox() override;
@@ -38,7 +39,6 @@ class UsgsTab : public MapChartWidget {
   ComboBox *m_cbx_mapType;
   QButtonGroup *m_buttonGroup;
   std::vector<QHBoxLayout *> m_rowLayouts;
-  std::unique_ptr<Hmdf> m_data;
   Station m_currentStation;
   bool m_ready;
 };

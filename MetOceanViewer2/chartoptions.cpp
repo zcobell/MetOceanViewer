@@ -1,5 +1,6 @@
 #include "chartoptions.h"
 
+#include "chartview.h"
 #include "ui_chartoptions.h"
 
 ChartOptions::ChartOptions(int titleFontsize, int axisFontsize,
@@ -8,11 +9,8 @@ ChartOptions::ChartOptions(int titleFontsize, int axisFontsize,
     : QDialog(parent), ui(new Ui::ChartOptions) {
   ui->setupUi(this);
 
-  ui->combo_dateFormat->addItems(QStringList() << "auto"
-                                               << "MM/yyyy"
-                                               << "MM/dd/yyyy"
-                                               << "MM/dd hh:mm"
-                                               << "MM/dd/yyyy hh:mm");
+  ui->combo_dateFormat->addItems(QStringList()
+                                 << "auto" << ChartView::dateFormats());
 
   ui->spin_titleFont->setValue(titleFontsize);
   ui->spin_axisLabelFont->setValue(axisFontsize);

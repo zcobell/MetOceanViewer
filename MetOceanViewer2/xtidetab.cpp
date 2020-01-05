@@ -79,7 +79,6 @@ void XTideTab::plot() {
     emit error("No station was selected");
     return;
   }
-
   qint64 tzOffset;
   QDateTime start, end, startgmt, endgmt;
   QString tzAbbrev;
@@ -89,36 +88,37 @@ void XTideTab::plot() {
 
   Datum::VDatum datum =
       Datum::datumID(this->m_cbx_datum->combo()->currentText());
-  this->m_data.reset(new Hmdf());
+  this->data()->reset(new Hmdf());
 
   std::unique_ptr<XtideData> xtide(
       new XtideData(s, start, end, Generic::configDirectory()));
-  ierr = xtide->get(this->m_data.get(), datum);
+  ierr = xtide->get(this->data()->get(), datum);
   if (ierr != 0) {
     emit error(xtide->errorString());
     return;
   }
 
-  QString unitString = "meters";
+  QString unitString = "m";
   if (this->m_cbx_units->combo()->currentText() == "english") {
-    unitString = "feet";
-    for (size_t i = 0; i < this->m_data->station(0)->numSnaps(); ++i) {
-      this->m_data->station(0)->setData(
-          this->m_data->station(0)->data(i) * 3.28084, i);
+    unitString = "ft";
+    for (size_t i = 0; i < this->data()->get()->station(0)->numSnaps(); ++i) {
+      this->data()->get()->station(0)->setData(
+          this->data()->get()->station(0)->data(i) * 3.28084, i);
     }
   }
 
-  this->setPlotAxis(this->m_data.get(), start, end, tzAbbrev,
+  this->setPlotAxis(this->data()->get(), start, end, tzAbbrev,
                     Datum::datumName(datum), unitString, "Water Level");
-  this->addSeriesToChart(this->m_data.get(), tzOffset);
+  this->addSeriesToChart(this->data()->get(), tzOffset);
   this->chartview()->initializeAxisLimits();
   this->chartview()->initializeLegendMarkers();
+  this->chartview()->chart()->setTitle("XTide: " + s.name());
   return;
 }
 
 void XTideTab::addSeriesToChart(Hmdf *data, const qint64 tzOffset) {
   QLineSeries *series =
-      this->stationToSeries(this->m_data->station(0), tzOffset);
+      this->stationToSeries(this->data()->get()->station(0), tzOffset);
   series->setName(data->station(0)->name());
   series->setPen(
       QPen(QColor(Qt::green), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));

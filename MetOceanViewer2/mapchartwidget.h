@@ -69,6 +69,8 @@ class MapChartWidget : public QWidget {
   ComboBox *timezoneCombo();
   void setTimezoneCombo(ComboBox *widget);
 
+  std::unique_ptr<Hmdf> *data();
+
  protected slots:
   void chartOptionsChangeTriggered();
   virtual void refreshStations();
@@ -99,6 +101,7 @@ class MapChartWidget : public QWidget {
   DateBox *m_dte_startDate;
   DateBox *m_dte_endDate;
   ComboBox *m_cbx_timezone;
+  std::unique_ptr<Hmdf> m_data;
 };
 
 #endif  // MAPCHARTWIDGET_H

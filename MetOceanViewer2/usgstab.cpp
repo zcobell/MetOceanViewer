@@ -17,7 +17,6 @@ void UsgsTab::connectSignals() {
           this->mapWidget(), SLOT(changeMap(int)));
   connect(this->m_cbx_product->combo(), SIGNAL(currentIndexChanged(int)), this,
           SLOT(replot(int)));
-
   MapChartWidget::connectSignals();
 }
 
@@ -105,19 +104,20 @@ void UsgsTab::plot() {
   };
 
   int type = this->getDatabaseType();
-  this->m_data.reset(new Hmdf());
+  this->data()->reset(new Hmdf());
   UsgsWaterdata *usgs = new UsgsWaterdata(
       this->m_currentStation, this->startDateEdit()->dateEdit()->dateTime(),
       this->endDateEdit()->dateEdit()->dateTime(), type, this);
-  int ierr = usgs->get(this->m_data.get());
+  int ierr = usgs->get(this->data()->get());
   if (ierr != 0) {
     emit error(usgs->errorString());
     return;
   }
 
   this->m_cbx_product->combo()->clear();
-  for (size_t i = 0; i < this->m_data->nstations(); ++i) {
-    this->m_cbx_product->combo()->addItem(this->m_data->station(i)->name());
+  for (size_t i = 0; i < this->data()->get()->nstations(); ++i) {
+    this->m_cbx_product->combo()->addItem(
+        this->data()->get()->station(i)->name());
   }
 
   this->m_ready = true;
@@ -127,7 +127,7 @@ void UsgsTab::plot() {
 }
 
 void UsgsTab::replot(int index) {
-  if (this->m_data && this->m_ready) {
+  if (this->data() && this->m_ready) {
     this->chartview()->clear();
     this->chartview()->initializeAxis();
 
@@ -140,8 +140,8 @@ void UsgsTab::replot(int index) {
     if (ierr != 0) return;
     QString unitString, productName;
     std::tie(productName, unitString) =
-        this->splitUsgsProductName(this->m_data->station(index)->name());
-    this->setPlotAxis(this->m_data.get(), start, end, tzAbbrev, QString(),
+        this->splitUsgsProductName(this->data()->get()->station(index)->name());
+    this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, QString(),
                       unitString, productName);
     this->chartview()->chart()->setTitle(this->m_currentStation.name());
     this->addSeriesToChart(index, "USGS" + this->m_currentStation.id(),
@@ -154,7 +154,7 @@ void UsgsTab::replot(int index) {
 void UsgsTab::addSeriesToChart(const int index, const QString &name,
                                const qint64 tzOffset) {
   QLineSeries *series =
-      this->stationToSeries(this->m_data->station(index), tzOffset);
+      this->stationToSeries(this->data()->get()->station(index), tzOffset);
   series->setName(name);
   series->setPen(
       QPen(QColor(Qt::blue), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
@@ -169,4 +169,17 @@ std::tuple<QString, QString> UsgsTab::splitUsgsProductName(
   name = split[0];
   if (split.size() > 1) unit = split.back().simplified();
   return std::tuple<QString, QString>(name, unit);
+}
+
+void UsgsTab::saveData() {
+  std::unique_ptr<Hmdf> data(new Hmdf());
+  data->setDatum(this->data()->get()->datum());
+  data->setUnits(this->data()->get()->units());
+  data->setHeader1(this->data()->get()->header1());
+  data->setHeader2(this->data()->get()->header2());
+  data->setHeader3(this->data()->get()->header3());
+  data->addStation(this->data()->get()->station(
+      this->m_cbx_product->combo()->currentIndex()));
+  this->writeData(data.get());
+  return;
 }

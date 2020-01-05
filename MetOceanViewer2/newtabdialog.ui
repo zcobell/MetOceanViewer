@@ -22,6 +22,26 @@
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <layout class="QGridLayout" name="gridLayout">
+        <item row="1" column="1">
+         <widget class="QPushButton" name="button_xtide">
+          <property name="text">
+           <string>xTide</string>
+          </property>
+          <property name="autoDefault">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QPushButton" name="button_ndbc">
+          <property name="text">
+           <string>NDBC</string>
+          </property>
+          <property name="autoDefault">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="0">
          <widget class="QPushButton" name="button_usgs">
           <property name="text">
@@ -42,20 +62,10 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="button_xtide">
+        <item row="2" column="0">
+         <widget class="QPushButton" name="button_crms">
           <property name="text">
-           <string>xTide</string>
-          </property>
-          <property name="autoDefault">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QPushButton" name="button_ndbc">
-          <property name="text">
-           <string>NDBC</string>
+           <string>CRMS</string>
           </property>
           <property name="autoDefault">
            <bool>false</bool>

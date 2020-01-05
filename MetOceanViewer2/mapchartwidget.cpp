@@ -88,7 +88,11 @@ void MapChartWidget::saveGraphic() {
   }
 }
 
-void MapChartWidget::saveData() {}
+void MapChartWidget::saveData() {
+  if (this->data()) {
+    this->writeData(this->data()->get());
+  }
+}
 
 void MapChartWidget::resetChart() { this->m_chartview->resetZoom(); }
 
@@ -271,3 +275,5 @@ ComboBox *MapChartWidget::timezoneCombo() { return this->m_cbx_timezone; }
 void MapChartWidget::setTimezoneCombo(ComboBox *widget) {
   this->m_cbx_timezone = widget;
 }
+
+std::unique_ptr<Hmdf> *MapChartWidget::data() { return &this->m_data; }

@@ -91,6 +91,11 @@ class ChartView : public QChartView {
   void setDateFormat(const QString &format);
   void setDateFormat(const QDateTime &start, const QDateTime &end);
 
+  static QStringList dateFormats();
+
+ public slots:
+  void handleLegendMarkerClicked();
+
  protected:
   void resizeEvent(QResizeEvent *event);
   void mouseMoveEvent(QMouseEvent *event);
@@ -105,10 +110,10 @@ class ChartView : public QChartView {
 
   static bool pointXLessThan(const QPointF &p1, const QPointF &p2);
 
-  qreal x_axis_min, x_axis_max;
-  qreal y_axis_min, y_axis_max;
-  qreal current_x_axis_min, current_x_axis_max;
-  qreal current_y_axis_min, current_y_axis_max;
+  qreal m_xAxisMin, m_xAxisMax;
+  qreal m_yAxisMin, m_yAxisMax;
+  qreal m_currentXAxisMin, m_currentXAxisMax;
+  qreal m_currentYAxisMin, m_currentYAxisMax;
   QStatusBar *m_statusBar;
   QVector<QString> m_legendNames;
   QVector<QLineSeries *> m_series;
@@ -144,9 +149,6 @@ class ChartView : public QChartView {
   void displayInstructionsOnStatusBar();
 
   void resetPlotLegend();
-
- public slots:
-  void handleLegendMarkerClicked();
 };
 
 #endif  // CHARTVIEW_H

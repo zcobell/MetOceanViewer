@@ -35,7 +35,9 @@ class NewTabDialog : public QDialog {
 
   void on_button_hwm_clicked();
 
- private:
+  void on_button_crms_clicked();
+
+  private:
   void closeEvent(QCloseEvent *event) override;
 
  private:

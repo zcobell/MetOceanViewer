@@ -62,3 +62,8 @@ void NewTabDialog::setType(const TabType &type) { m_type = type; }
 QString NewTabDialog::tabName() const {
   return c_names[static_cast<size_t>(m_type)];
 }
+
+void NewTabDialog::on_button_crms_clicked() {
+  this->setType(TabType::CRMS);
+  this->accept();
+}

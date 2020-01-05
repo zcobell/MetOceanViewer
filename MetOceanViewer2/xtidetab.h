@@ -22,7 +22,6 @@ class XTideTab : public MapChartWidget {
   ComboBox *m_cbx_units;
   QPushButton *m_btn_refresh;
   QPushButton *m_btn_compute;
-  std::unique_ptr<Hmdf> m_data;
 };
 
 #endif  // XTIDETAB_H

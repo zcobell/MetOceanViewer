@@ -139,18 +139,18 @@ void NoaaTab::plot() {
   std::tie(datumString, useVdatum) = this->getDatumParameters();
   QString unitLabel = this->getUnitsLabel(p);
 
-  this->m_noaaData.reset(new Hmdf());
+  this->data()->reset(new Hmdf());
   ierr = this->getDataFromNoaa(s, p, startgmt, endgmt, datumString,
-                               this->m_noaaData.get());
+                               this->data()->get());
   if (ierr != 0) return;
 
-  if (useVdatum) this->performDatumTransformation(s, this->m_noaaData.get());
+  if (useVdatum) this->performDatumTransformation(s, this->data()->get());
 
-  this->setPlotAxis(this->m_noaaData.get(), start, end, tzAbbrev, datumString,
+  this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, datumString,
                     unitLabel, QString::fromStdString(p.axisLabel()));
 
-  this->chartview()->chart()->setTitle(s.name());
-  this->addSeriesToChart(this->m_noaaData.get(), tzOffset);
+  this->chartview()->chart()->setTitle("NOAA Station "+s.id()+": "+s.name());
+  this->addSeriesToChart(this->data()->get(), tzOffset);
   this->chartview()->initializeAxisLimits();
   this->chartview()->initializeLegendMarkers();
 
@@ -263,8 +263,4 @@ QGroupBox *NoaaTab::generateInputBox() {
 void NoaaTab::refreshStations() {
   bool b = this->m_chk_activeOnly->isChecked();
   this->mapWidget()->refreshStations(true, b);
-}
-
-void NoaaTab::saveData() {
-  if (this->m_noaaData) this->writeData(this->m_noaaData.get());
 }
