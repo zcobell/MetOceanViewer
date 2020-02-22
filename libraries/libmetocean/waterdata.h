@@ -22,17 +22,18 @@
 
 #include <QNetworkReply>
 #include <QObject>
+
+#include "datum.h"
 #include "hmdf.h"
 #include "metocean_global.h"
 #include "station.h"
 #include "timezone.h"
-#include "datum.h"
 
 class WaterData : public QObject {
   Q_OBJECT
  public:
-  explicit WaterData(Station &station, QDateTime startDate, QDateTime endDate,
-                     QObject *parent = nullptr);
+  explicit WaterData(const Station &station, const QDateTime startDate,
+                     const QDateTime endDate, QObject *parent = nullptr);
 
   int get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 

@@ -263,7 +263,7 @@ void UserTimeseries::addMultipleStationsToPlot(
       double addY = this->m_table->item(index, 5)->text().toDouble();
 
       for (int j = 0; j < st->numSnaps(); j++) {
-        if (st->data(j) != HmdfStation::nullDataValue() &&
+        if (std::abs(st->data(j) - st->nullValue()) > 0.0001 &&
             st->date(j) >= startDate && st->date(j) <= endDate) {
           maxDate = std::max(st->date(j) + addX - offset, maxDate);
           minDate = std::min(st->date(j) + addX - offset, minDate);
@@ -592,7 +592,7 @@ int UserTimeseries::processData() {
 // and not show data where it doesn't exist for
 // certain files
 //-------------------------------------------//
-int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
+int UserTimeseries::getUniqueStationList(QVector<Hmdf *> &Data,
                                          QVector<double> &X,
                                          QVector<double> &Y) {
   for (int i = 0; i < Data.length(); i++) {
@@ -601,7 +601,7 @@ int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
       for (int k = 0; k < X.length(); k++) {
         double dx = Data[i]->station(j)->longitude() - X[k];
         double dy = Data[i]->station(j)->latitude() - Y[k];
-        double d = qSqrt(qPow(dx, 2.0) + qPow(dy, 2.0));
+        double d = std::sqrt(std::pow(dx, 2.0) + std::pow(dy, 2.0));
         if (d < this->m_duplicateStationTolerance) {
           found = true;
           break;
@@ -613,6 +613,7 @@ int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
       }
     }
   }
+  qDebug() << X.size();
   return MetOceanViewer::Error::NOERR;
 }
 //-------------------------------------------//
@@ -622,8 +623,9 @@ int UserTimeseries::getUniqueStationList(QVector<Hmdf *> Data,
 // which will have null data where there was
 // not data in the file
 //-------------------------------------------//
-int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
-                                      QVector<double> Y,
+int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data,
+                                      const QVector<double> &X,
+                                      const QVector<double> &Y,
                                       QVector<Hmdf *> &DataOut) {
   DataOut.resize(Data.length());
 
@@ -632,37 +634,28 @@ int UserTimeseries::buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
     DataOut[i]->setHeader1(Data[i]->header1());
     DataOut[i]->setHeader2(Data[i]->header2());
     DataOut[i]->setHeader3(Data[i]->header3());
-
-    for (int j = 0; j < X.length(); j++) {
-      HmdfStation *station = new HmdfStation(DataOut[i]);
-      station->setLongitude(X[j]);
-      station->setLatitude(Y[j]);
-      DataOut[i]->addStation(station);
-    }
   }
 
   for (int i = 0; i < Data.length(); i++) {
-    for (int j = 0; j < DataOut[i]->nstations(); j++) {
+    for (int j = 0; j < X.length(); j++) {
       bool found = false;
       for (int k = 0; k < Data[i]->nstations(); k++) {
-        double dx = Data[i]->station(k)->longitude() -
-                    DataOut[i]->station(j)->longitude();
-        double dy = Data[i]->station(k)->latitude() -
-                    DataOut[i]->station(j)->latitude();
-        double d = qSqrt(qPow(dx, 2.0) + qPow(dy, 2.0));
+        double dx = Data[i]->station(k)->longitude() - X[j];
+        double dy = Data[i]->station(k)->latitude() - Y[j];
+        double d = std::sqrt(std::pow(dx, 2.0) + std::pow(dy, 2.0));
         if (d < this->m_duplicateStationTolerance) {
-          DataOut[i]->station(j)->setName(Data[i]->station(k)->name());
-          DataOut[i]->station(j)->setData(Data[i]->station(k)->allData());
-          DataOut[i]->station(j)->setDate(Data[i]->station(k)->allDate());
-          DataOut[i]->station(j)->setNullValue(
-              Data[i]->station(k)->nullValue());
-          DataOut[i]->station(j)->setIsNull(false);
+          HmdfStation *p = Data[i]->station(k);
+          p->setIsNull(false);
+          DataOut[i]->addStation(p);
           found = true;
           break;
         }
       }
       if (!found) {
         // Build a station with a null dataset we can find later
+        DataOut[i]->addStation(new HmdfStation(DataOut[i]));
+        DataOut[i]->station(j)->setLongitude(X[j]);
+        DataOut[i]->station(j)->setLatitude(Y[j]);
         DataOut[i]->station(j)->setName("NONAME");
         DataOut[i]->station(j)->setNext(HmdfStation::nullDateValue(),
                                         HmdfStation::nullDataValue());

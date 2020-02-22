@@ -3,10 +3,10 @@ redist=1
 autoredist=0
 redistexe="/cygdrive/c/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Redist/MSVC/14.16.27012/vc_redist.x64.exe"
 msvcVersion=2017
-QtVersion=5_12_3
+QtVersion=5_13_1
 compileDirectory="../../build-MetOcean-Desktop_Qt_"$QtVersion"_MSVC"$msvcVersion"_64bit-Release"
-winDeployQtBinary=/cygdrive/c/Qt/5.12.3/msvc2017_64/bin/windeployqt.exe
-binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator.exe
+winDeployQtBinary=/cygdrive/c/Qt/5.13.1/msvc2017_64/bin/windeployqt.exe
+binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.1/bin/binarycreator.exe
 version=$(git describe --always --tags)
 
 if [ $redist == 1 ] ; then

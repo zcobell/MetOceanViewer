@@ -67,10 +67,10 @@ class UserTimeseries : public QObject {
   //...Private functions
   int getStationSelections();
   int setMarkerID();
-  int getUniqueStationList(QVector<Hmdf *> Data, QVector<double> &X,
+  int getUniqueStationList(QVector<Hmdf *> &Data, QVector<double> &X,
                            QVector<double> &Y);
-  int buildRevisedIMEDS(QVector<Hmdf *> Data, QVector<double> X,
-                        QVector<double> Y, QVector<Hmdf *> &DataOut);
+  int buildRevisedIMEDS(QVector<Hmdf *> Data, const QVector<double> &X,
+                        const QVector<double> &Y, QVector<Hmdf *> &DataOut);
   int getDataBounds(double &ymin, double &ymax, QDateTime &minDateOut,
                     QDateTime &maxDateOut, QVector<double> &timeAddList);
   int getMultipleMarkersFromMap();

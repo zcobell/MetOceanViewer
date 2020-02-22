@@ -86,7 +86,7 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
   for (size_t i = 0; i < this->nSnaps; ++i) {
     TempLine = MyFile.readLine().simplified();
     TempList = TempLine.split(" ");
-    this->time[i] = TempList.value(1).toDouble();
+    this->time[i] = TempList.value(0).toDouble();
     for (size_t j = 0; j < this->nStations; ++j) {
       TempLine = MyFile.readLine().simplified();
       TempList = TempLine.split(" ");

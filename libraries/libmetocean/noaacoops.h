@@ -28,8 +28,8 @@
 class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
-  NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
-            QString product, QString datum, bool useVdatum, QString units,
+  NoaaCoOps(const Station &station, const QDateTime startDate, const QDateTime endDate,
+            const QString &product, const QString &datum, const bool useVdatum,const QString &units,
             QObject *parent = nullptr);
 
  private:

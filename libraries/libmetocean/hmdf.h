@@ -28,6 +28,7 @@
 #include <ctime>
 #include <string>
 #include <vector>
+
 #include "hmdfstation.h"
 #include "metocean_global.h"
 #include "timezone.h"
@@ -82,7 +83,7 @@ class Hmdf : public QObject {
   void dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
                   double &maxValue);
 
-  bool applyDatumCorrection(Station &s, Datum::VDatum datum);
+  bool applyDatumCorrection(const Station &s, const Datum::VDatum &datum);
   bool applyDatumCorrection(QVector<Station> &s, Datum::VDatum datum);
 
  private:

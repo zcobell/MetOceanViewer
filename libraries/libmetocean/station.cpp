@@ -18,12 +18,13 @@
 //
 //-----------------------------------------------------------------------*/
 #include "station.h"
+
 #include <cmath>
 
 Station::Station()
     : m_coordinate(QGeoCoordinate()),
-      m_id(QString()),
-      m_name(QString()),
+      m_id("null"),
+      m_name("null"),
       m_measured(0.0),
       m_modeled(0.0),
       m_selected(false),
@@ -61,6 +62,16 @@ Station::Station(QGeoCoordinate coordinate, QString id, QString name,
       m_ngvd29Offset(0.0) {}
 
 Station::~Station() {}
+
+bool Station::operator==(const Station &s) {
+  if (this->id() == s.id() &&
+      this->coordinate().latitude() == s.coordinate().latitude() &&
+      this->coordinate().longitude() == s.coordinate().longitude() &&
+      this->name() == s.name()) {
+    return true;
+  }
+  return false;
+}
 
 QGeoCoordinate Station::coordinate() const { return this->m_coordinate; }
 

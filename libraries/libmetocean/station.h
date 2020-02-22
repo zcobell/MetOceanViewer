@@ -37,6 +37,8 @@ class Station {
 
   ~Station();
 
+  bool operator==(const Station &s);
+
   QGeoCoordinate coordinate() const;
   void setCoordinate(const QGeoCoordinate &coordinate);
   void setLatitude(const double latitude);

@@ -28,7 +28,7 @@ class XtideData : public WaterData {
   Q_OBJECT
  public:
   XtideData(Station &station, QDateTime startDate, QDateTime endDate,
-            QString rootDriectory, QObject *parent);
+            QString rootDriectory, QObject *parent = nullptr);
 
   int interval() const;
   void setInterval(int interval);

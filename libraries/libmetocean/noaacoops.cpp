@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "noaacoops.h"
+
 #include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -26,15 +27,17 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+
 #include "boost/algorithm/string/split.hpp"
 #include "boost/algorithm/string/trim.hpp"
 #include "boost/config/warning_disable.hpp"
 #include "boost/spirit/include/phoenix.hpp"
 #include "boost/spirit/include/qi.hpp"
 
-NoaaCoOps::NoaaCoOps(Station &station, QDateTime startDate, QDateTime endDate,
-                     QString product, QString datum, bool useVdatum,
-                     QString units, QObject *parent)
+NoaaCoOps::NoaaCoOps(const Station &station, const QDateTime startDate,
+                     const QDateTime endDate, const QString &product,
+                     const QString &datum, const bool useVdatum,
+                     const QString &units, QObject *parent)
     : WaterData(station, startDate, endDate, parent),
       m_product(product),
       m_units(units),
@@ -324,6 +327,7 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
   }
 
   if (station->numSnaps() > 3) {
+    station->setIsNull(false);
     outputData->addStation(station);
     return 0;
   } else {

@@ -66,7 +66,7 @@ int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
           .getStationRefByName(s.name().toStdString().c_str());
 
   if (sr) {
-    std::auto_ptr<libxtide::Station> station(sr->load());
+    std::unique_ptr<libxtide::Station> station(sr->load());
 
     station->step = interval;
 
