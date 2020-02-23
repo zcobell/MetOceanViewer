@@ -146,7 +146,7 @@ Rectangle {
         anchors.fill: parent
         activeMapType: supportedMapTypes[mapType]
         plugin: mapPlugin;
-        copyrightsVisible: false
+        copyrightsVisible: true
 
         property MovMapItem previousMarker
 

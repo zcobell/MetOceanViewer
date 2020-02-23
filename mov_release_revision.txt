@@ -1,1 +1,1 @@
-08/04/2019,v4.3.0,https://github.com/zcobell/MetOceanViewer/releases/tag/v4.3.0 
+02/22/2020,v4.4.0,https://github.com/zcobell/MetOceanViewer/releases/tag/v4.4.0 

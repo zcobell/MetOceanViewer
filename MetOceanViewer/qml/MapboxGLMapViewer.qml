@@ -28,6 +28,6 @@ MapViewer {
     Plugin {
         id: mapPlugin
         name: "mapboxgl"
-        PluginParameter { name: "mapbox.access_token"; value: mapboxKey }
+        PluginParameter { name: "mapboxgl.access_token"; value: mapboxKey }
     }
 }
