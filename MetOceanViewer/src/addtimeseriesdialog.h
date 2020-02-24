@@ -23,6 +23,7 @@
 
 #include <QDateTime>
 #include <QDialog>
+#include <QMenu>
 #include <QVector>
 #include <memory>
 #include "dflow.h"
@@ -109,7 +110,7 @@ class AddTimeseriesDialog : public QDialog {
   int lineStyle() const;
   void setLineStyle(int lineStyle);
 
-private slots:
+ private slots:
 
   void on_browse_filebrowse_clicked();
 
@@ -138,15 +139,18 @@ private slots:
 
  private slots:
   void throwErrorMessageBox(QString);
+  void setUnitValue(double);
 
  private:
   Ui::AddTimeseriesDialog *ui;
+  QMenu *m_unitMenu;
 
   void setVariableSelectElements(bool enabled);
   void setStationSelectElements(bool enabled);
   void setColdstartSelectElements(bool enabled);
   void setVerticalLayerElements(bool enabled);
   void setItemsByFiletype();
+  QMenu *buildUnitConversionMenu();
 
   QString m_previousDirectory;
   bool m_fileReadError;
