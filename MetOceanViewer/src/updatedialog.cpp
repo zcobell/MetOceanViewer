@@ -41,7 +41,11 @@ bool operator>(const UpdateDialog::gitVersion &version1,
       else if (version1.versionRev < version2.versionRev)
         return false;
       else {
-        if (version1.versionDev > version2.versionDev)
+        if (version1.versionDev != 0 && version2.versionDev == 0) {
+          return false;
+        } else if (version1.versionDev == 0 && version2.versionDev != 0) {
+          return true;
+        } else if (version1.versionDev > version2.versionDev)
           return true;
         else if (version1.versionDev < version2.versionDev)
           return false;
@@ -68,7 +72,11 @@ bool operator<(const UpdateDialog::gitVersion &version1,
     else if (version1.versionMinor > version2.versionMinor)
       return false;
     else {
-      if (version1.versionRev < version2.versionRev)
+      if (version1.versionDev == 0 && version2.versionDev != 0) {
+        return false;
+      } else if (version1.versionDev != 0 && version2.versionDev == 0) {
+        return true;
+      } else if (version1.versionRev < version2.versionRev)
         return true;
       else if (version1.versionRev > version2.versionRev)
         return false;
@@ -274,7 +282,7 @@ void UpdateDialog::setDialogText() {
   if (!this->networkError) {
     if (this->hasNewVersion)
       dialogHTML =
-          tr("A new version of MetOceanViewer is available for download") +
+          tr("A new version of MetOceanViewer is available for download ") +
           "<a href=\"" + this->latestVersionURL + "\">here</a><br><br>";
     else
       dialogHTML = dialogHTML +

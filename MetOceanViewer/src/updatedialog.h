@@ -22,6 +22,7 @@
 
 #include <QDateTime>
 #include <QDialog>
+#include "boost/format.hpp"
 
 namespace Ui {
 class UpdateDialog;
@@ -43,6 +44,10 @@ class UpdateDialog : public QDialog {
     int versionRev;
     int versionDev;
     int versionGit;
+    std::string toString() {
+      return boost::str(boost::format("%i - %i - %i - %i - %i") % versionMajor %
+                        versionMinor % versionRev % versionDev % versionGit);
+    }
   };
 
  private slots:
