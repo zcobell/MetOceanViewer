@@ -23,15 +23,15 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
       "}");
 
   //...Add a button to add new tabs
-  this->m_addTabButton = new QToolButton(this);
-  this->m_addTabButton->setObjectName("addButton");
-  this->m_addTabButton->setAutoFillBackground(false);
-  this->m_addTabButton->setText("+");
-  this->m_addTabButton->setToolButtonStyle(
-      Qt::ToolButtonStyle::ToolButtonTextOnly);
-  this->setCornerWidget(this->m_addTabButton, Qt::TopRightCorner);
-  this->m_addTabButton->setMinimumSize(this->m_addTabButton->sizeHint());
-  connect(this->m_addTabButton, SIGNAL(clicked()), this, SLOT(addNewTab()));
+  //  this->m_addTabButton = new QToolButton(this);
+  //  this->m_addTabButton->setObjectName("addButton");
+  //  this->m_addTabButton->setAutoFillBackground(false);
+  //  this->m_addTabButton->setText("+");
+  //  this->m_addTabButton->setToolButtonStyle(
+  //      Qt::ToolButtonStyle::ToolButtonTextOnly);
+  //  this->setCornerWidget(this->m_addTabButton, Qt::TopRightCorner);
+  //  this->m_addTabButton->setMinimumSize(this->m_addTabButton->sizeHint());
+  //  connect(this->m_addTabButton, SIGNAL(clicked()), this, SLOT(addNewTab()));
 
   //...Allow tabs to be closed and connect signals/slots
   this->setTabsClosable(true);

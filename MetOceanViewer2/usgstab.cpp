@@ -10,8 +10,6 @@ UsgsTab::UsgsTab(QVector<Station> *stations, QWidget *parent)
 }
 
 void UsgsTab::connectSignals() {
-  connect(this->m_btn_refresh, SIGNAL(clicked()), this,
-          SLOT(refreshStations()));
   connect(this->m_btn_fetch, SIGNAL(clicked()), this, SLOT(plot()));
   connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
           this->mapWidget(), SLOT(changeMap(int)));
@@ -33,7 +31,6 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->m_cbx_product = new ComboBox("Product:", this);
   this->m_cbx_mapType = new ComboBox("Map:", this);
   this->m_btn_fetch = new QPushButton("Fetch Data", this);
-  this->m_btn_refresh = new QPushButton("Refresh Stations", this);
 
   this->m_lbl_buttonGroup = new QLabel("Data Type:", this);
   this->m_rbtn_historic = new QRadioButton("Historic Data", this);
@@ -77,7 +74,6 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_daily);
   this->m_rowLayouts[2]->addWidget(this->m_btn_fetch);
   this->m_rowLayouts[3]->addLayout(this->m_cbx_product->layout());
-  this->m_rowLayouts[3]->addWidget(this->m_btn_refresh);
   this->m_rowLayouts[3]->addWidget(this->chartOptions());
 
   for (auto &r : this->m_rowLayouts) {

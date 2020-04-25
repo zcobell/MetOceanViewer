@@ -37,7 +37,6 @@ class NoaaTab : public MapChartWidget {
   NoaaProductList m_noaaProductList;
 
   //...Widgets
-  QPushButton *m_btn_refresh;
   QPushButton *m_btn_plot;
   ComboBox *m_cbx_datum;
   ComboBox *m_cbx_datatype;

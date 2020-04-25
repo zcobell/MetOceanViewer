@@ -30,7 +30,6 @@ class UsgsTab : public MapChartWidget {
   int getDatabaseType();
 
   QPushButton *m_btn_fetch;
-  QPushButton *m_btn_refresh;
   QLabel *m_lbl_buttonGroup;
   QRadioButton *m_rbtn_historic;
   QRadioButton *m_rbtn_instant;

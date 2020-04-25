@@ -1,9 +1,9 @@
 #ifndef TABWIDGET_H
 #define TABWIDGET_H
 
+#include <QLabel>
 #include <QTabWidget>
 #include <QToolButton>
-#include <QLabel>
 
 #include "stationlist.h"
 #include "tabbar.h"
@@ -13,8 +13,10 @@ class TabWidget : public QTabWidget {
  public:
   TabWidget(QWidget *parent = nullptr);
 
- private slots:
+ public slots:
   void addNewTab();
+
+ private slots:
   void closeTab(int);
 
  private:

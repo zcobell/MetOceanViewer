@@ -19,7 +19,10 @@ class MainWindow : public QMainWindow {
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 
- private:
+  private slots:
+  void on_actionNew_Tab_triggered();
+
+  private:
   Ui::MainWindow *ui;
   TabWidget *m_tabWidget;
 };

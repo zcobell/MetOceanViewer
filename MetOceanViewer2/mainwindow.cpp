@@ -21,3 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
+
+void MainWindow::on_actionNew_Tab_triggered() {
+  this->m_tabWidget->addNewTab();
+}

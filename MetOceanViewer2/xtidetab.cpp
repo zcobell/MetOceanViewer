@@ -9,8 +9,6 @@ XTideTab::XTideTab(QVector<Station> *stations, QWidget *parent)
 }
 
 void XTideTab::connectSignals() {
-  connect(this->m_btn_refresh, SIGNAL(clicked()), this,
-          SLOT(refreshStations()));
   connect(this->m_btn_compute, SIGNAL(clicked()), this, SLOT(plot()));
   MapChartWidget::connectSignals();
 }
@@ -29,7 +27,6 @@ QGroupBox *XTideTab::generateInputBox() {
       new ChartOptionsMenu(true, true, true, false, true, true, this));
   this->m_cbx_datum = new ComboBox("Datum:", this);
   this->m_cbx_units = new ComboBox("Units:", this);
-  this->m_btn_refresh = new QPushButton("Refresh Stations", this);
   this->m_btn_compute = new QPushButton("Compute Tides", this);
 
   this->m_cbx_datum->combo()->addItems(Datum::vDatumList());
@@ -54,7 +51,6 @@ QGroupBox *XTideTab::generateInputBox() {
   r1->addLayout(this->endDateEdit()->layout());
   r2->addLayout(this->m_cbx_datum->layout());
   r2->addLayout(this->m_cbx_units->layout());
-  r2->addWidget(this->m_btn_refresh);
   r2->addWidget(this->m_btn_compute);
   r2->addWidget(this->chartOptions());
   r1->addStretch();

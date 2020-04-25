@@ -17,12 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-import QtQuick.Window 2.11
-import QtQuick 2.11
+import QtQuick.Window 2.12
+import QtQuick 2.12
 import QtQuick.Controls 1.4
-import QtLocation 5.9
-import QtPositioning 5.8
-import QtQuick.Layouts 1.3
+import QtLocation 5.12
+import QtPositioning 5.12
+import QtQuick.Layouts 1.12
 
 Rectangle {
 
@@ -32,6 +32,7 @@ Rectangle {
     height: 600
 
     signal markerChanged(string msg)
+    signal mapViewChanged()
 
     property string stationText;
 
@@ -141,12 +142,18 @@ Rectangle {
         }
     }
 
+    function mapWindowChange(){
+        mapViewChanged()
+    }
+
     Map {
         id: map
         anchors.fill: parent
         activeMapType: supportedMapTypes[mapType]
         plugin: mapPlugin;
         copyrightsVisible: true
+        onZoomLevelChanged: mapWindowChange()
+        onCenterChanged: mapWindowChange()
 
         property MovMapItem previousMarker
 

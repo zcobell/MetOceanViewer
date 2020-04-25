@@ -21,8 +21,6 @@ void NoaaTab::connectSignals() {
           SLOT(refreshStations()));
   connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
           this->mapWidget(), SLOT(changeMap(int)));
-  connect(m_btn_refresh, SIGNAL(clicked()), this->mapWidget(),
-          SLOT(refreshStations()));
   connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
   MapChartWidget::connectSignals();
 }
@@ -183,7 +181,6 @@ QGroupBox *NoaaTab::generateInputBox() {
 
   this->setStartDateEdit(new DateBox("Start Time: ", this));
   this->setEndDateEdit(new DateBox("End Time: ", this));
-  this->m_btn_refresh = new QPushButton(this);
   this->m_btn_plot = new QPushButton(this);
   this->setTimezoneCombo(new ComboBox("Timezone: ", this));
   this->m_cbx_datatype = new ComboBox("Product: ", this);
@@ -195,7 +192,6 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->setChartOptions(
       new ChartOptionsMenu(true, true, true, false, true, true, this));
 
-  this->m_btn_refresh->setText("Show Stations");
   this->m_btn_plot->setText("Plot");
   this->m_chk_vdatum->setText("Use VDatum");
   this->m_chk_activeOnly->setText("Active Stations Only");
@@ -240,7 +236,6 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_rowLayouts[2]->addWidget(this->m_chk_vdatum);
   this->m_rowLayouts[3]->addLayout(this->m_cbx_mapType->layout());
   this->m_rowLayouts[3]->addWidget(this->m_btn_plot);
-  this->m_rowLayouts[3]->addWidget(this->m_btn_refresh);
   this->m_rowLayouts[3]->addWidget(this->chartOptions());
 
   for (auto l : this->m_rowLayouts) {
