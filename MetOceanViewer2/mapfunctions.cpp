@@ -89,7 +89,7 @@ static QStringList osmList = QStringList() << "Street Map";
 //                                           << "Hiking Map";
 
 MapFunctions::MapFunctions() {
-  this->m_mapSource = 0;
+  this->m_mapSource = MapSource::ESRI;
   this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
   this->m_stationModel.reset(new StationModel());
@@ -172,18 +172,6 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
   }
 }
 
-void MapFunctions::setMapTypes(QQuickWidget *map, QComboBox *comboBox) {
-  comboBox->clear();
-  if (this->m_mapSource == ESRI) {
-    comboBox->addItems(esriList);
-  } else if (this->m_mapSource == MapBox) {
-    comboBox->addItems(mapboxList);
-  } else if (this->m_mapSource == OSM) {
-    comboBox->addItems(osmList);
-  }
-  return;
-}
-
 void MapFunctions::setMapTypes(QComboBox *comboBox) {
   comboBox->clear();
   if (this->m_mapSource == ESRI) {
@@ -196,9 +184,11 @@ void MapFunctions::setMapTypes(QComboBox *comboBox) {
   return;
 }
 
-int MapFunctions::mapSource() const { return this->m_mapSource; }
+MapFunctions::MapSource MapFunctions::mapSource() const {
+  return this->m_mapSource;
+}
 
-void MapFunctions::setMapSource(int mapSource) {
+void MapFunctions::setMapSource(const MapSource mapSource) {
   this->m_mapSource = mapSource;
 }
 
@@ -276,7 +266,8 @@ void MapFunctions::getConfigurationFromDisk() {
       if (token == QXmlStreamReader::StartDocument) continue;
       if (token == QXmlStreamReader::StartElement) {
         if (xmlReader.name() == "MapSource") {
-          this->m_mapSource = xmlReader.readElementText().toInt();
+          this->m_mapSource =
+              static_cast<MapSource>(xmlReader.readElementText().toInt());
         } else if (xmlReader.name() == "MapIndex") {
           this->m_defaultMapIndex = xmlReader.readElementText().toInt();
         }

@@ -41,7 +41,6 @@ class NoaaTab : public MapChartWidget {
   ComboBox *m_cbx_datum;
   ComboBox *m_cbx_datatype;
   ComboBox *m_cbx_units;
-  ComboBox *m_cbx_mapType;
   QCheckBox *m_chk_activeOnly;
   QCheckBox *m_chk_vdatum;
   std::vector<QHBoxLayout*> m_rowLayouts;

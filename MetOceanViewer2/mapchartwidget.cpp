@@ -50,6 +50,8 @@ void MapChartWidget::connectSignals() {
           SLOT(saveGraphic()));
   connect(this->chartOptions(), SIGNAL(chartOptionsChanged()), this,
           SLOT(chartOptionsChangeTriggered()));
+  connect(this->cbx_mapType()->combo(), SIGNAL(currentIndexChanged(int)),
+          this->mapWidget(), SLOT(changeMap(int)));
 }
 
 void MapChartWidget::plot() { return; }
@@ -59,6 +61,13 @@ void MapChartWidget::chartOptionsChangeTriggered() {
   this->chartview()->setAxisFontsize(this->m_chartOptions->axisFontsize());
   this->chartview()->setLegendFontsize(this->m_chartOptions->legendFontsize());
   this->chartview()->setDateFormat(this->m_chartOptions->dateFormat());
+}
+
+void MapChartWidget::changeMapType(const MapFunctions::MapSource s) {
+  this->mapWidget()->changeMapSource(s);
+  MapFunctions m;
+  m.setMapSource(s);
+  m.setMapTypes(this->m_cbx_mapType->combo());
 }
 
 void MapChartWidget::saveGraphic() {
@@ -116,6 +125,12 @@ void MapChartWidget::keyPressEvent(QKeyEvent *event) {
   } else {
     QWidget::keyPressEvent(event);
   }
+}
+
+ComboBox *MapChartWidget::cbx_mapType() const { return m_cbx_mapType; }
+
+void MapChartWidget::setCbx_mapType(ComboBox *cbx_mapType) {
+  m_cbx_mapType = cbx_mapType;
 }
 
 ChartOptionsMenu *MapChartWidget::chartOptions() const {
@@ -275,3 +290,15 @@ void MapChartWidget::setTimezoneCombo(ComboBox *widget) {
 }
 
 std::unique_ptr<Hmdf> *MapChartWidget::data() { return &this->m_data; }
+
+void MapChartWidget::changeBasemapEsri() {
+  this->changeMapType(MapFunctions::MapSource::ESRI);
+}
+
+void MapChartWidget::changeBasemapOsm() {
+  this->changeMapType(MapFunctions::MapSource::OSM);
+}
+
+void MapChartWidget::changeBasemapMapbox() {
+  this->changeMapType(MapFunctions::MapSource::MapBox);
+}

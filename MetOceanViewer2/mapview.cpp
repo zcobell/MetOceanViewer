@@ -1,5 +1,7 @@
 #include "mapview.h"
 
+#include <QGeoRectangle>
+#include <QGeoShape>
 #include <QQmlContext>
 #include <QTimer>
 
@@ -22,14 +24,31 @@ MapView::MapView(QVector<Station> *s, QWidget *parent) : QQuickWidget(parent) {
   this->m_delayTimer = new QTimer(this);
   this->m_delayTimer->setInterval(this->m_delayLength);
   connect(this->m_delayTimer, SIGNAL(timeout()), this, SLOT(refreshStations()));
+  this->connectMarkerChanged();
+  this->connectStationRefresh();
+  QMetaObject::invokeMethod(this->rootObject(), "setMapLocation",
+                            Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
+                            Q_ARG(QVariant, 1.69));
+}
 
-  QObject *mapItem = this->rootObject();
-  QObject::connect(mapItem, SIGNAL(markerChanged(QString)), this,
+void MapView::connectMarkerChanged() {
+  QObject::connect(this->rootObject(), SIGNAL(markerChanged(QString)), this,
                    SLOT(changeMarker(QString)));
-  QObject::connect(mapItem, SIGNAL(mapViewChanged()), this,
+}
+
+void MapView::connectStationRefresh() {
+  QObject::connect(this->rootObject(), SIGNAL(mapViewChanged()), this,
                    SLOT(updateStations()));
-  QMetaObject::invokeMethod(mapItem, "setMapLocation", Q_ARG(QVariant, -124.66),
-                            Q_ARG(QVariant, 36.88), Q_ARG(QVariant, 1.69));
+}
+
+void MapView::disconnectMarkerChanged() {
+  QObject::disconnect(this->rootObject(), SIGNAL(markerChanged(QString)), this,
+                      SLOT(changeMarker(QString)));
+}
+
+void MapView::disconnectStationRefresh() {
+  QObject::disconnect(this->rootObject(), SIGNAL(mapViewChanged()), this,
+                      SLOT(updateStations()));
 }
 
 Station MapView::currentStation() {
@@ -59,4 +78,28 @@ void MapView::refreshStations(bool filter, bool activeOnly) {
 
 void MapView::changeMap(int index) {
   this->mapFunctions()->setMapType(index, this);
+}
+
+void MapView::changeMapSource(MapFunctions::MapSource s) {
+  this->disconnectStationRefresh();
+  this->disconnectMarkerChanged();
+
+  QVariant var;
+  QMetaObject::invokeMethod(this->rootObject(), "getVisibleRegion",
+                            Q_RETURN_ARG(QVariant, var));
+  QGeoShape visibleRegion = qvariant_cast<QGeoShape>(var);
+  QGeoCoordinate center = visibleRegion.boundingGeoRectangle().center();
+  QMetaObject::invokeMethod(this->rootObject(), "getCurrentZoomLevel",
+                            Q_RETURN_ARG(QVariant, var));
+  double zoomLevel = qvariant_cast<double>(var);
+
+  MapFunctions m;
+  m.setMapSource(s);
+  m.setMapQmlFile(this);
+  QMetaObject::invokeMethod(
+      this->rootObject(), "setMapLocation", Q_ARG(QVariant, center.longitude()),
+      Q_ARG(QVariant, center.latitude()), Q_ARG(QVariant, zoomLevel));
+
+  this->connectMarkerChanged();
+  this->connectStationRefresh();
 }

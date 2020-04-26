@@ -42,6 +42,39 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   this->m_stationList = new StationList();
 }
 
+void TabWidget::addNoaaTab(const NewTabDialog* d, QVector<Station>* stations) {
+  NoaaTab* n = new NoaaTab(stations, this);
+  connect(this, SIGNAL(signalChangeBasemapEsri()), n,
+          SLOT(changeBasemapEsri()));
+  connect(this, SIGNAL(signalChangeBasemapOsm()), n, SLOT(changeBasemapOsm()));
+  connect(this, SIGNAL(signalChangeBasemapMapbox()), n,
+          SLOT(changeBasemapMapbox()));
+  this->addTab(n, d->tabName());
+  this->setCurrentIndex(this->count() - 1);
+}
+
+void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<Station>* stations) {
+  UsgsTab* n = new UsgsTab(stations, this);
+  connect(this, SIGNAL(signalChangeBasemapEsri()), n,
+          SLOT(changeBasemapEsri()));
+  connect(this, SIGNAL(signalChangeBasemapOsm()), n, SLOT(changeBasemapOsm()));
+  connect(this, SIGNAL(signalChangeBasemapMapbox()), n,
+          SLOT(changeBasemapMapbox()));
+  this->addTab(new UsgsTab(stations, this), d->tabName());
+  this->setCurrentIndex(this->count() - 1);
+}
+
+void TabWidget::addXtideTab(const NewTabDialog* d, QVector<Station>* stations) {
+  XTideTab* n = new XTideTab(stations, this);
+  connect(this, SIGNAL(signalChangeBasemapEsri()), n,
+          SLOT(changeBasemapEsri()));
+  connect(this, SIGNAL(signalChangeBasemapOsm()), n, SLOT(changeBasemapOsm()));
+  connect(this, SIGNAL(signalChangeBasemapMapbox()), n,
+          SLOT(changeBasemapMapbox()));
+  this->addTab(new XTideTab(stations, this), d->tabName());
+  this->setCurrentIndex(this->count() - 1);
+}
+
 void TabWidget::addNewTab() {
   //...Pop up a dialog to generate a new tab
   NewTabDialog* d = new NewTabDialog(this);
@@ -52,16 +85,13 @@ void TabWidget::addNewTab() {
     QVector<Station>* stations = this->m_stationList->get(d->type());
     switch (d->type()) {
       case TabType::NOAA:
-        this->addTab(new NoaaTab(stations, this), d->tabName());
-        this->setCurrentIndex(this->count() - 1);
+        this->addNoaaTab(d, stations);
         break;
       case TabType::USGS:
-        this->addTab(new UsgsTab(stations, this), d->tabName());
-        this->setCurrentIndex(this->count() - 1);
+        this->addUsgsTab(d, stations);
         break;
       case TabType::XTIDE:
-        this->addTab(new XTideTab(stations, this), d->tabName());
-        this->setCurrentIndex(this->count() - 1);
+        this->addXtideTab(d, stations);
         break;
       default:
         break;
@@ -71,6 +101,12 @@ void TabWidget::addNewTab() {
   //...Delete the dialog
   d->deleteLater();
 }
+
+void TabWidget::changeBasemapEsri() { emit signalChangeBasemapEsri(); }
+
+void TabWidget::changeBasemapOsm() { emit signalChangeBasemapOsm(); }
+
+void TabWidget::changeBasemapMapbox() { emit signalChangeBasemapMapbox(); }
 
 void TabWidget::closeTab(int index) {
   //...Remove the tab

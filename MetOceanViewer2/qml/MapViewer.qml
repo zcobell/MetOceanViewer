@@ -36,8 +36,16 @@ Rectangle {
 
     property string stationText;
 
-    function getVisibleRegion() {
+    function getVisibleRegion(){
         return map.visibleRegion;
+    }
+
+    function getVisibleCenter() {
+        return map.visibleRegion.center();
+    }
+
+    function getCurrentZoomLevel() {
+        return map.zoomLevel;
     }
 
     function getMapTypes() {

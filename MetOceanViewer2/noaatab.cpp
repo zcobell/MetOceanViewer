@@ -19,7 +19,7 @@ void NoaaTab::connectSignals() {
           SLOT(updateDatumList(bool)));
   connect(this->m_chk_activeOnly, SIGNAL(clicked(bool)), this,
           SLOT(refreshStations()));
-  connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
+  connect(this->cbx_mapType()->combo(), SIGNAL(currentIndexChanged(int)),
           this->mapWidget(), SLOT(changeMap(int)));
   connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
   MapChartWidget::connectSignals();
@@ -147,7 +147,8 @@ void NoaaTab::plot() {
   this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, datumString,
                     unitLabel, QString::fromStdString(p.axisLabel()));
 
-  this->chartview()->chart()->setTitle("NOAA Station "+s.id()+": "+s.name());
+  this->chartview()->chart()->setTitle("NOAA Station " + s.id() + ": " +
+                                       s.name());
   this->addSeriesToChart(this->data()->get(), tzOffset);
   this->chartview()->initializeAxisLimits();
   this->chartview()->initializeLegendMarkers();
@@ -188,7 +189,7 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_chk_vdatum = new QCheckBox(this);
   this->m_chk_activeOnly = new QCheckBox(this);
   this->m_cbx_units = new ComboBox("Units: ", this);
-  this->m_cbx_mapType = new ComboBox("Map: ", this);
+  this->setCbx_mapType(new ComboBox("Map: ", this));
   this->setChartOptions(
       new ChartOptionsMenu(true, true, true, false, true, true, this));
 
@@ -204,7 +205,7 @@ QGroupBox *NoaaTab::generateInputBox() {
       this->m_noaaProductList.productList());
   this->m_cbx_units->combo()->addItems(QStringList() << "metric"
                                                      << "english");
-  this->mapWidget()->mapFunctions()->setMapTypes(this->m_cbx_mapType->combo());
+  this->mapWidget()->mapFunctions()->setMapTypes(this->cbx_mapType()->combo());
 
   QDateTime startDate = QDateTime::currentDateTimeUtc().addDays(-1);
   QDateTime endDate = QDateTime::currentDateTimeUtc();
@@ -222,6 +223,8 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_cbx_datatype->combo()->setMaximumWidth(400);
   this->m_cbx_datum->combo()->setMinimumWidth(100);
   this->m_cbx_datum->combo()->setMaximumWidth(100);
+  this->cbx_mapType()->combo()->setMinimumWidth(250);
+  this->cbx_mapType()->combo()->setMaximumWidth(250);
 
   this->timezoneCombo()->combo()->setCurrentText("GMT");
   this->m_cbx_datum->combo()->setCurrentText("MSL");
@@ -234,7 +237,7 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_rowLayouts[2]->addLayout(this->timezoneCombo()->layout());
   this->m_rowLayouts[2]->addLayout(this->m_cbx_units->layout());
   this->m_rowLayouts[2]->addWidget(this->m_chk_vdatum);
-  this->m_rowLayouts[3]->addLayout(this->m_cbx_mapType->layout());
+  this->m_rowLayouts[3]->addLayout(this->cbx_mapType()->layout());
   this->m_rowLayouts[3]->addWidget(this->m_btn_plot);
   this->m_rowLayouts[3]->addWidget(this->chartOptions());
 

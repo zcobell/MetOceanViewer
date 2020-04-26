@@ -69,10 +69,19 @@ class MapChartWidget : public QWidget {
   ComboBox *timezoneCombo();
   void setTimezoneCombo(ComboBox *widget);
 
+  ComboBox *cbx_mapType() const;
+  void setCbx_mapType(ComboBox *cbx_mapType);
+
   std::unique_ptr<Hmdf> *data();
+
+ public slots:
+  void changeBasemapEsri();
+  void changeBasemapOsm();
+  void changeBasemapMapbox();
 
  protected slots:
   void chartOptionsChangeTriggered();
+  void changeMapType(const MapFunctions::MapSource s);
   virtual void refreshStations();
 
  private slots:
@@ -101,6 +110,7 @@ class MapChartWidget : public QWidget {
   DateBox *m_dte_startDate;
   DateBox *m_dte_endDate;
   ComboBox *m_cbx_timezone;
+  ComboBox *m_cbx_mapType;
   std::unique_ptr<Hmdf> m_data;
 };
 

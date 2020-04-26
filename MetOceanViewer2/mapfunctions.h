@@ -44,11 +44,10 @@ class MapFunctions {
   int refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
                      QDateTime &start, QDateTime &end);
 
-  void setMapTypes(QQuickWidget *map, QComboBox *comboBox);
   void setMapTypes(QComboBox *comboBox);
 
-  int mapSource() const;
-  void setMapSource(int mapSource);
+  MapSource mapSource() const;
+  void setMapSource(const MapSource mapSource);
 
   void setMapQmlFile(QQuickWidget *map);
 
@@ -69,7 +68,7 @@ class MapFunctions {
   StationModel *getStationModel() const;
 
  private:
-  int m_mapSource;
+  MapSource m_mapSource;
   int m_defaultMapIndex;
   std::unique_ptr<StationModel> m_stationModel;
   QString m_configDirectory;

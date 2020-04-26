@@ -2,8 +2,8 @@
 #define MAPVIEW_H
 
 #include <QQuickWidget>
-#include <memory>
 #include <QTimer>
+#include <memory>
 
 #include "mapfunctions.h"
 #include "stationmodel.h"
@@ -20,12 +20,18 @@ class MapView : public QQuickWidget {
  public slots:
   void refreshStations(bool filter = true, bool activeOnly = true);
   void changeMap(int index);
+  void changeMapSource(MapFunctions::MapSource s);
 
  private slots:
   void changeMarker(QString);
   void updateStations();
 
  private:
+  void connectMarkerChanged();
+  void connectStationRefresh();
+  void disconnectMarkerChanged();
+  void disconnectStationRefresh();
+
   QVector<Station> *m_markerLocations;
   MapFunctions m_mapFunctions;
   QString m_currentMarker;

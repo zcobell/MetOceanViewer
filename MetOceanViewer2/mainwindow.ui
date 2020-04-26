@@ -35,7 +35,6 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNew_Tab"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -46,6 +45,9 @@
    </property>
    <property name="toolTip">
     <string>Open new tab</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+N</string>
    </property>
   </action>
  </widget>
