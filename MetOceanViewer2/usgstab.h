@@ -35,7 +35,6 @@ class UsgsTab : public MapChartWidget {
   QRadioButton *m_rbtn_instant;
   QRadioButton *m_rbtn_daily;
   ComboBox *m_cbx_product;
-  ComboBox *m_cbx_mapType;
   QButtonGroup *m_buttonGroup;
   std::vector<QHBoxLayout *> m_rowLayouts;
   Station m_currentStation;

@@ -11,8 +11,6 @@ UsgsTab::UsgsTab(QVector<Station> *stations, QWidget *parent)
 
 void UsgsTab::connectSignals() {
   connect(this->m_btn_fetch, SIGNAL(clicked()), this, SLOT(plot()));
-  connect(this->m_cbx_mapType->combo(), SIGNAL(currentIndexChanged(int)),
-          this->mapWidget(), SLOT(changeMap(int)));
   connect(this->m_cbx_product->combo(), SIGNAL(currentIndexChanged(int)), this,
           SLOT(replot(int)));
   MapChartWidget::connectSignals();
@@ -29,7 +27,7 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->setEndDateEdit(new DateBox("End Date:", this));
   this->setTimezoneCombo(new ComboBox("Time zone:", this));
   this->m_cbx_product = new ComboBox("Product:", this);
-  this->m_cbx_mapType = new ComboBox("Map:", this);
+  this->setCbx_mapType(new ComboBox("Map:", this));
   this->m_btn_fetch = new QPushButton("Fetch Data", this);
 
   this->m_lbl_buttonGroup = new QLabel("Data Type:", this);
@@ -59,7 +57,7 @@ QGroupBox *UsgsTab::generateInputBox() {
   }
 
   this->timezoneCombo()->combo()->addItems(timezoneList());
-  this->mapWidget()->mapFunctions()->setMapTypes(this->m_cbx_mapType->combo());
+  this->mapWidget()->mapFunctions()->setMapTypes(this->cbx_mapType()->combo());
 
   this->timezoneCombo()->combo()->setCurrentText("GMT");
   this->m_cbx_product->combo()->setMinimumWidth(350);
@@ -67,7 +65,7 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->m_rowLayouts[0]->addLayout(this->startDateEdit()->layout());
   this->m_rowLayouts[0]->addLayout(this->endDateEdit()->layout());
   this->m_rowLayouts[1]->addLayout(this->timezoneCombo()->layout());
-  this->m_rowLayouts[1]->addLayout(this->m_cbx_mapType->layout());
+  this->m_rowLayouts[1]->addLayout(this->cbx_mapType()->layout());
   this->m_rowLayouts[2]->addWidget(this->m_lbl_buttonGroup);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_historic);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_instant);

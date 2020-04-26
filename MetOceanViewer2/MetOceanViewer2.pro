@@ -39,6 +39,7 @@ SOURCES += \
     mapchartwidget.cpp \
     mapview.cpp \
     metocean.cpp \
+    ndbctab.cpp \
     newtabdialog.cpp \
     noaaproductlist.cpp \
     noaatab.cpp \
@@ -60,6 +61,7 @@ HEADERS += \
     chartview.h \
     mapview.h \
     metocean.h \
+    ndbctab.h \
     newtabdialog.h \
     noaaproductlist.h \
     noaatab.h \

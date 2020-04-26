@@ -28,10 +28,15 @@ QGroupBox *XTideTab::generateInputBox() {
   this->m_cbx_datum = new ComboBox("Datum:", this);
   this->m_cbx_units = new ComboBox("Units:", this);
   this->m_btn_compute = new QPushButton("Compute Tides", this);
+  this->setCbx_mapType(new ComboBox("Map:", this));
 
   this->m_cbx_datum->combo()->addItems(Datum::vDatumList());
   this->m_cbx_units->combo()->addItems(QStringList() << "metric"
                                                      << "english");
+
+  this->cbx_mapType()->setMinimumWidth(250);
+  this->cbx_mapType()->setMaximumWidth(250);
+  this->mapWidget()->mapFunctions()->setMapTypes(this->cbx_mapType()->combo());
 
   QTime tm(0, 0, 0);
   QDateTime startDate = QDateTime::currentDateTimeUtc().addDays(-7);
@@ -52,6 +57,7 @@ QGroupBox *XTideTab::generateInputBox() {
   r2->addLayout(this->m_cbx_datum->layout());
   r2->addLayout(this->m_cbx_units->layout());
   r2->addWidget(this->m_btn_compute);
+  r2->addLayout(this->cbx_mapType()->layout());
   r2->addWidget(this->chartOptions());
   r1->addStretch();
   r2->addStretch();

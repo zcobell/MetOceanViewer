@@ -2,6 +2,7 @@
 
 #include <QVariant>
 
+#include "ndbctab.h"
 #include "newtabdialog.h"
 #include "noaatab.h"
 #include "tabbar.h"
@@ -23,15 +24,7 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
       "}");
 
   //...Add a button to add new tabs
-  //  this->m_addTabButton = new QToolButton(this);
-  //  this->m_addTabButton->setObjectName("addButton");
-  //  this->m_addTabButton->setAutoFillBackground(false);
-  //  this->m_addTabButton->setText("+");
-  //  this->m_addTabButton->setToolButtonStyle(
-  //      Qt::ToolButtonStyle::ToolButtonTextOnly);
-  //  this->setCornerWidget(this->m_addTabButton, Qt::TopRightCorner);
-  //  this->m_addTabButton->setMinimumSize(this->m_addTabButton->sizeHint());
-  //  connect(this->m_addTabButton, SIGNAL(clicked()), this, SLOT(addNewTab()));
+  // this->addNewTabButton();
 
   //...Allow tabs to be closed and connect signals/slots
   this->setTabsClosable(true);
@@ -60,7 +53,7 @@ void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<Station>* stations) {
   connect(this, SIGNAL(signalChangeBasemapOsm()), n, SLOT(changeBasemapOsm()));
   connect(this, SIGNAL(signalChangeBasemapMapbox()), n,
           SLOT(changeBasemapMapbox()));
-  this->addTab(new UsgsTab(stations, this), d->tabName());
+  this->addTab(n, d->tabName());
   this->setCurrentIndex(this->count() - 1);
 }
 
@@ -71,7 +64,18 @@ void TabWidget::addXtideTab(const NewTabDialog* d, QVector<Station>* stations) {
   connect(this, SIGNAL(signalChangeBasemapOsm()), n, SLOT(changeBasemapOsm()));
   connect(this, SIGNAL(signalChangeBasemapMapbox()), n,
           SLOT(changeBasemapMapbox()));
-  this->addTab(new XTideTab(stations, this), d->tabName());
+  this->addTab(n, d->tabName());
+  this->setCurrentIndex(this->count() - 1);
+}
+
+void TabWidget::addNdbcTab(const NewTabDialog* d, QVector<Station>* stations) {
+  NdbcTab* n = new NdbcTab(stations, this);
+  connect(this, SIGNAL(signalChangeBasemapEsri()), n,
+          SLOT(changeBasemapEsri()));
+  connect(this, SIGNAL(signalChangeBasemapOsm()), n, SLOT(changeBasemapOsm()));
+  connect(this, SIGNAL(signalChangeBasemapMapbox()), n,
+          SLOT(changeBasemapMapbox()));
+  this->addTab(n, d->tabName());
   this->setCurrentIndex(this->count() - 1);
 }
 
@@ -93,6 +97,9 @@ void TabWidget::addNewTab() {
       case TabType::XTIDE:
         this->addXtideTab(d, stations);
         break;
+      case TabType::NDBC:
+        this->addNdbcTab(d, stations);
+        break;
       default:
         break;
     }
@@ -112,6 +119,18 @@ void TabWidget::closeTab(int index) {
   //...Remove the tab
   this->removeTab(index);
   return;
+}
+
+void TabWidget::addNewTabButton() {
+  this->m_addTabButton = new QToolButton(this);
+  this->m_addTabButton->setObjectName("addButton");
+  this->m_addTabButton->setAutoFillBackground(false);
+  this->m_addTabButton->setText("+");
+  this->m_addTabButton->setToolButtonStyle(
+      Qt::ToolButtonStyle::ToolButtonTextOnly);
+  this->setCornerWidget(this->m_addTabButton, Qt::TopRightCorner);
+  this->m_addTabButton->setMinimumSize(this->m_addTabButton->sizeHint());
+  connect(this->m_addTabButton, SIGNAL(clicked()), this, SLOT(addNewTab()));
 }
 
 // QVariant property = this->widget(index)->property("workerObject");

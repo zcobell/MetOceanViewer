@@ -45,6 +45,8 @@ class MapChartWidget : public QWidget {
   virtual QGroupBox *generateInputBox();
   virtual void connectSignals();
 
+  MapFunctions *mapFunctions() const;
+
  signals:
   void error(QString);
   void warning(QString);
@@ -111,6 +113,7 @@ class MapChartWidget : public QWidget {
   DateBox *m_dte_endDate;
   ComboBox *m_cbx_timezone;
   ComboBox *m_cbx_mapType;
+  std::unique_ptr<MapFunctions> m_mapFunctions;
   std::unique_ptr<Hmdf> m_data;
 };
 

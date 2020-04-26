@@ -7,17 +7,19 @@
 
 #include "stationlocations.h"
 
-MapView::MapView(QVector<Station> *s, QWidget *parent) : QQuickWidget(parent) {
+MapView::MapView(QVector<Station> *s, MapFunctions *m, QWidget *parent)
+    : QQuickWidget(parent) {
   this->m_currentMarker = QString();
   this->m_markerLocations = s;
-  this->m_mapFunctions.getConfigurationFromDisk();
+  this->m_mapFunctions = m;
+  this->m_mapFunctions->getConfigurationFromDisk();
   this->rootContext()->setContextProperty(
-      "stationModel", this->m_mapFunctions.getStationModel());
+      "stationModel", this->m_mapFunctions->getStationModel());
   this->rootContext()->setContextProperty(
       "markerMode", MapFunctions::MapViewerMarkerModes::SingleSelectWithDates);
-  this->m_mapFunctions.setMapType(this->m_mapFunctions.getDefaultMapIndex(),
-                                  this);
-  this->m_mapFunctions.setMapQmlFile(this);
+  this->m_mapFunctions->setMapType(this->m_mapFunctions->getDefaultMapIndex(),
+                                   this);
+  this->m_mapFunctions->setMapQmlFile(this);
 
   //...Set up a delay timer for refreshing the stations
   this->m_delayLength = 150;
@@ -51,12 +53,12 @@ void MapView::disconnectStationRefresh() {
                       SLOT(updateStations()));
 }
 
+MapFunctions *MapView::mapFunctions() const { return m_mapFunctions; }
+
 Station MapView::currentStation() {
-  return this->m_mapFunctions.getStationModel()->findStation(
+  return this->m_mapFunctions->getStationModel()->findStation(
       this->m_currentMarker);
 }
-
-MapFunctions *MapView::mapFunctions() { return &this->m_mapFunctions; }
 
 void MapView::changeMarker(QString markerString) {
   this->m_currentMarker = markerString;
@@ -71,13 +73,13 @@ void MapView::updateStations() {
 
 void MapView::refreshStations(bool filter, bool activeOnly) {
   this->m_delayTimer->stop();
-  int n = this->m_mapFunctions.refreshMarkers(this, this->m_markerLocations,
-                                              filter, activeOnly);
+  int n = this->m_mapFunctions->refreshMarkers(this, this->m_markerLocations,
+                                               filter, activeOnly);
   // this->stationDisplayWarning(n);
 }
 
 void MapView::changeMap(int index) {
-  this->mapFunctions()->setMapType(index, this);
+  this->m_mapFunctions->setMapType(index, this);
 }
 
 void MapView::changeMapSource(MapFunctions::MapSource s) {

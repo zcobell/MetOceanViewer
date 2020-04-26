@@ -6,6 +6,7 @@
 #include "mapchartwidget.h"
 
 class XTideTab : public MapChartWidget {
+  Q_OBJECT
  public:
   XTideTab(QVector<Station> *stations, QWidget *parent = nullptr);
 

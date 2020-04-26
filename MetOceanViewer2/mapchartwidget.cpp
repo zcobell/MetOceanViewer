@@ -21,7 +21,11 @@ MapChartWidget::MapChartWidget(TabType type, QVector<Station> *stations,
       m_chartOptions(nullptr),
       m_dte_startDate(nullptr),
       m_dte_endDate(nullptr),
-      m_cbx_timezone(nullptr) {}
+      m_cbx_timezone(nullptr),
+      m_mapFunctions(new MapFunctions()) {
+  this->m_mapFunctions->getConfigurationFromDisk();
+  this->m_mapFunctions->getMapboxKeyFromDisk();
+}
 
 void MapChartWidget::initialize() {
   this->m_windowLayout = new QVBoxLayout();
@@ -65,9 +69,8 @@ void MapChartWidget::chartOptionsChangeTriggered() {
 
 void MapChartWidget::changeMapType(const MapFunctions::MapSource s) {
   this->mapWidget()->changeMapSource(s);
-  MapFunctions m;
-  m.setMapSource(s);
-  m.setMapTypes(this->m_cbx_mapType->combo());
+  this->m_mapFunctions->setMapSource(s);
+  this->m_mapFunctions->setMapTypes(this->m_cbx_mapType->combo());
 }
 
 void MapChartWidget::saveGraphic() {
@@ -127,6 +130,10 @@ void MapChartWidget::keyPressEvent(QKeyEvent *event) {
   }
 }
 
+MapFunctions *MapChartWidget::mapFunctions() const {
+  return m_mapFunctions.get();
+}
+
 ComboBox *MapChartWidget::cbx_mapType() const { return m_cbx_mapType; }
 
 void MapChartWidget::setCbx_mapType(ComboBox *cbx_mapType) {
@@ -173,7 +180,8 @@ void MapChartWidget::setMapWidget(MapView *mapWidget) {
 
 QHBoxLayout *MapChartWidget::generateMapChartLayout() {
   QHBoxLayout *layout = new QHBoxLayout();
-  this->m_mapWidget = new MapView(this->m_stations, this);
+  this->m_mapWidget =
+      new MapView(this->m_stations, this->m_mapFunctions.get(), this);
   this->m_chartview = new ChartView(this);
   this->m_chartview->setObjectName("chart");
 

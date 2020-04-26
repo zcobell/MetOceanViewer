@@ -34,10 +34,12 @@ class TabWidget : public QTabWidget {
   void addNoaaTab(const NewTabDialog *d, QVector<Station> *stations);
   void addUsgsTab(const NewTabDialog *d, QVector<Station> *stations);
   void addXtideTab(const NewTabDialog *d, QVector<Station> *stations);
+  void addNdbcTab(const NewTabDialog *d, QVector<Station> *stations);
 
   TabBar *m_tabBar;
   QToolButton *m_addTabButton;
   StationList *m_stationList;
+  void addNewTabButton();
 };
 
 #endif  // TABWIDGET_H

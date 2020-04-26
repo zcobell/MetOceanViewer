@@ -19,9 +19,7 @@ void NoaaTab::connectSignals() {
           SLOT(updateDatumList(bool)));
   connect(this->m_chk_activeOnly, SIGNAL(clicked(bool)), this,
           SLOT(refreshStations()));
-  connect(this->cbx_mapType()->combo(), SIGNAL(currentIndexChanged(int)),
-          this->mapWidget(), SLOT(changeMap(int)));
-  connect(m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
+  connect(this->m_btn_plot, SIGNAL(clicked()), this, SLOT(plot()));
   MapChartWidget::connectSignals();
 }
 
