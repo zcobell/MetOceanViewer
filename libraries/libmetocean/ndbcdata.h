@@ -21,6 +21,7 @@
 #define NDBCDATA_H
 
 #include <QMap>
+
 #include "metocean_global.h"
 #include "waterdata.h"
 
@@ -31,11 +32,12 @@ class NdbcData : public WaterData {
 
   static QStringList dataTypes();
   static QStringList dataNames();
-  static QMap<QString,QString> dataMap();
+  static QMap<QString, QString> dataMap();
+  static QString units(const QString &parameter);
 
  private:
   int retrieveData(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
-  static QMap<QString,QString> buildDataNameMap();
+  static QMap<QString, QString> buildDataNameMap();
   int download(QUrl url, QVector<QStringList> &dldata);
   int readNdbcResponse(QNetworkReply *reply, QVector<QStringList> &data);
   int formatNdbcResponse(QVector<QStringList> &serverResponse, Hmdf *data);

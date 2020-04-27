@@ -4,9 +4,8 @@
 #include "usgswaterdata.h"
 
 UsgsTab::UsgsTab(QVector<Station> *stations, QWidget *parent)
-    : MapChartWidget(TabType::USGS, stations, parent) {
+    : MapChartWidget(TabType::USGS, stations, parent), m_ready(false) {
   this->initialize();
-  this->m_ready = false;
 }
 
 void UsgsTab::connectSignals() {

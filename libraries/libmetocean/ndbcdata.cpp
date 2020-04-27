@@ -18,6 +18,7 @@
 //
 //-----------------------------------------------------------------------*/
 #include "ndbcdata.h"
+
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -57,10 +58,33 @@ const QStringList c_dataNames = QStringList() << "Wind Direction"
                                               << "Visibility"
                                               << "Water Level";
 
+const QStringList c_dataUnits = QStringList() << "deg"
+                                              << "deg"
+                                              << "m/s"
+                                              << "m/s"
+                                              << "m"
+                                              << "s"
+                                              << "s"
+                                              << "deg"
+                                              << "mb"
+                                              << "mb"
+                                              << "degC"
+                                              << "degC"
+                                              << "degC"
+                                              << "nm"
+                                              << "m";
+
 NdbcData::NdbcData(Station &station, QDateTime startDate, QDateTime endDate,
                    QObject *parent)
     : WaterData(station, startDate, endDate, parent) {
   this->m_dataNameMap = this->buildDataNameMap();
+}
+
+QString NdbcData::units(const QString &parameter) {
+  for (size_t i = 0; i < c_dataNames.size(); ++i) {
+    if (c_dataNames.at(i) == parameter) return c_dataUnits.at(i);
+  }
+  return QStringLiteral("--");
 }
 
 QMap<QString, QString> NdbcData::buildDataNameMap() {

@@ -2,26 +2,30 @@
 #define NDBCTAB_H
 
 #include <QObject>
-#include "mapchartwidget.h"
 #include <QPushButton>
 
-class NdbcTab : public MapChartWidget
-{
-    Q_OBJECT
-public:
-    NdbcTab(QVector<Station> *stations, QWidget *parent = nullptr);
-    void plot() override;
+#include "mapchartwidget.h"
 
-private slots:
+class NdbcTab : public MapChartWidget {
+  Q_OBJECT
+ public:
+  NdbcTab(QVector<Station> *stations, QWidget *parent = nullptr);
+  void plot() override;
 
-private:
-    QGroupBox * generateInputBox() override;
-    void connectSignals() override;
+ private slots:
+  void draw(int index);
 
-    int getDataFromNdbc(const Station &s);
+ private:
+  QGroupBox *generateInputBox() override;
+  void connectSignals() override;
+  int getDataFromNdbc(const Station &s);
+  void addSeriesToChart(const int index, const QString &name,
+                        const qint64 tzOffset);
 
-    QPushButton *m_btn_fetchData;
-
+  bool m_ready;
+  Station m_currentStation;
+  QPushButton *m_btn_fetchData;
+  ComboBox *m_cbx_product;
 };
 
-#endif // NDBCTAB_H
+#endif  // NDBCTAB_H
