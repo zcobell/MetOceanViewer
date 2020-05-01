@@ -27,6 +27,8 @@ Timezone::Timezone(QObject *parent) : QObject(parent) {
       this->m_timezones[std::make_pair(TZData::Worldwide, TZData::UTC)];
 }
 
+Timezone::~Timezone() {}
+
 int Timezone::localMachineOffsetFromUtc() {
   QDateTime now = QDateTime::currentDateTime();
   return now.offsetFromUtc();

@@ -26,23 +26,25 @@
 class CrmsData : public WaterData {
   Q_OBJECT
  public:
-  CrmsData(Station &station, QDateTime startDate, QDateTime endDate,
-           const QVector<QString> &header, const QMap<QString, size_t> &mapping,
-           const QString &filename, QObject *parent = nullptr);
+  METOCEANSHARED_EXPORT CrmsData(Station &station, QDateTime startDate,
+                                 QDateTime endDate,
+                                 const QVector<QString> &header,
+                                 const QMap<QString, size_t> &mapping,
+                                 const QString &filename,
+                                 QObject *parent = nullptr);
 
-  static bool readHeader(const QString &filename, QVector<QString> &header);
+  static bool METOCEANSHARED_EXPORT readHeader(const QString &filename,
+                                               QVector<QString> &header);
 
-  static bool generateStationMapping(const QString &filename,
-                                     QMap<QString, size_t> &mapping);
+  static bool METOCEANSHARED_EXPORT generateStationMapping(
+      const QString &filename, QMap<QString, size_t> &mapping);
 
-  static bool readStationList(const QString &filename,
-                              QVector<double> &latitude,
-                              QVector<double> &longitude,
-                              QVector<QString> &stationNames,
-                              QVector<QDateTime> &startDate,
-                              QVector<QDateTime> &endDate);
+  static bool METOCEANSHARED_EXPORT
+  readStationList(const QString &filename, QVector<double> &latitude,
+                  QVector<double> &longitude, QVector<QString> &stationNames,
+                  QVector<QDateTime> &startDate, QVector<QDateTime> &endDate);
 
-  static bool inquireCrmsStatus(QString filename);
+  static bool METOCEANSHARED_EXPORT inquireCrmsStatus(QString filename);
 
  private:
   int retrieveData(Hmdf *data, Datum::VDatum datum);

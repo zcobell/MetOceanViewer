@@ -30,14 +30,15 @@
 class TidePrediction : public QObject {
   Q_OBJECT
  public:
-  explicit TidePrediction(QString root, QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT TidePrediction(QString root,
+                                                QObject *parent = nullptr);
 
-  ~TidePrediction();
+  METOCEANSHARED_EXPORT ~TidePrediction();
 
-  void deleteHarmonicsOnExit(bool b);
+  void METOCEANSHARED_EXPORT deleteHarmonicsOnExit(bool b);
 
-  int get(Station &s, QDateTime startDate, QDateTime endDate, int interval,
-          Hmdf *data);
+  int METOCEANSHARED_EXPORT get(Station &s, QDateTime startDate,
+                                QDateTime endDate, int interval, Hmdf *data);
 
  private:
   void initHarmonicsDatabase();

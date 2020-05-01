@@ -27,11 +27,12 @@
 class XtideData : public WaterData {
   Q_OBJECT
  public:
-  XtideData(Station &station, QDateTime startDate, QDateTime endDate,
-            QString rootDriectory, QObject *parent = nullptr);
+  METOCEANSHARED_EXPORT XtideData(Station &station, QDateTime startDate,
+                                  QDateTime endDate, QString rootDriectory,
+                                  QObject *parent = nullptr);
 
-  int interval() const;
-  void setInterval(int interval);
+  int METOCEANSHARED_EXPORT interval() const;
+  void METOCEANSHARED_EXPORT setInterval(int interval);
 
  private:
   int retrieveData(Hmdf *data, Datum::VDatum datum);

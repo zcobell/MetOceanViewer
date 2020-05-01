@@ -26,10 +26,10 @@
 class UsgsWaterdata : public WaterData {
   Q_OBJECT
  public:
-  UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
+  METOCEANSHARED_EXPORT UsgsWaterdata(Station &station, QDateTime startDate, QDateTime endDate,
                 int databaseOption, QObject *parent = nullptr);
 
-  int get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
+  int METOCEANSHARED_EXPORT get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 
  private:
   int fetch(Hmdf *data);

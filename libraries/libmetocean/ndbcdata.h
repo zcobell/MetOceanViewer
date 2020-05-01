@@ -27,13 +27,13 @@
 
 class NdbcData : public WaterData {
  public:
-  NdbcData(Station &station, QDateTime startDate, QDateTime endDate,
-           QObject *parent);
+  METOCEANSHARED_EXPORT NdbcData(Station &station, QDateTime startDate,
+                                 QDateTime endDate, QObject *parent);
 
-  static QStringList dataTypes();
-  static QStringList dataNames();
-  static QMap<QString, QString> dataMap();
-  static QString units(const QString &parameter);
+  static QStringList METOCEANSHARED_EXPORT dataTypes();
+  static QStringList METOCEANSHARED_EXPORT dataNames();
+  static QMap<QString, QString> METOCEANSHARED_EXPORT dataMap();
+  static QString METOCEANSHARED_EXPORT units(const QString &parameter);
 
  private:
   int retrieveData(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);

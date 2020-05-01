@@ -1,9 +1,10 @@
 #include <QApplication>
 
 #include "mainwindow.h"
+#include "metocean_init.h"
 
 int main(int argc, char *argv[]) {
-  Q_INIT_RESOURCE(resource_files);
+  Metocean_init::init();
   QApplication a(argc, argv);
   MainWindow w;
   w.show();

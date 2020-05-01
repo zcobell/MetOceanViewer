@@ -22,23 +22,24 @@
 #include "boost/algorithm/string/split.hpp"
 #include "boost/algorithm/string/trim.hpp"
 
-vector<string> StringUtil::stringSplitToVector(string s, string delim) {
-  vector<string> elems;
+std::vector<std::string> StringUtil::stringSplitToVector(std::string s,
+                                                         std::string delim) {
+  std::vector<std::string> elems;
   boost::trim_if(s, boost::is_any_of(delim));
   boost::algorithm::split(elems, s, boost::is_any_of(delim),
                           boost::token_compress_on);
   return elems;
 }
 
-vector<string> StringUtil::stringSplitToVector(string s) {
-  vector<string> elems;
+std::vector<std::string> StringUtil::stringSplitToVector(std::string s) {
+  std::vector<std::string> elems;
   boost::trim_if(s, boost::is_any_of(" "));
   boost::algorithm::split(elems, s, boost::is_any_of(" "),
                           boost::token_compress_on);
   return elems;
 }
 
-double StringUtil::stringToDouble(string a, bool &ok) {
+double StringUtil::stringToDouble(std::string a, bool &ok) {
   ok = true;
   try {
     return std::stod(a);
@@ -48,7 +49,7 @@ double StringUtil::stringToDouble(string a, bool &ok) {
   }
 }
 
-float StringUtil::stringToFloat(string a, bool &ok) {
+float StringUtil::stringToFloat(std::string a, bool &ok) {
   ok = true;
   try {
     return std::stof(a);
@@ -58,7 +59,7 @@ float StringUtil::stringToFloat(string a, bool &ok) {
   }
 }
 
-int StringUtil::stringToInt(string a, bool &ok) {
+int StringUtil::stringToInt(std::string a, bool &ok) {
   ok = true;
   try {
     return std::stoi(a);
@@ -68,8 +69,8 @@ int StringUtil::stringToInt(string a, bool &ok) {
   }
 }
 
-string StringUtil::sanitizeString(string &a) {
-  string b = a;
+std::string StringUtil::sanitizeString(std::string &a) {
+  std::string b = a;
   boost::algorithm::trim(b);
   b.erase(std::remove(b.begin(), b.end(), '\r'), b.end());
   return b;

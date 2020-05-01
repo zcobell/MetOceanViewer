@@ -37,54 +37,58 @@ class Hmdf : public QObject {
   Q_OBJECT
 
  public:
-  explicit Hmdf(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT Hmdf(QObject *parent = nullptr);
 
-  void clear();
+  METOCEANSHARED_EXPORT ~Hmdf();
+
+  void METOCEANSHARED_EXPORT clear();
 
   enum HmdfFileType { HmdfImeds, HmdfCsv, HmdfNetCdf };
 
-  int write(QString filename, HmdfFileType fileType);
-  int write(QString filename);
-  int writeImeds(QString filename);
-  int writeCsv(QString filename);
-  int writeNetcdf(QString filename);
+  int METOCEANSHARED_EXPORT write(QString filename, HmdfFileType fileType);
+  int METOCEANSHARED_EXPORT write(QString filename);
+  int METOCEANSHARED_EXPORT writeImeds(QString filename);
+  int METOCEANSHARED_EXPORT writeCsv(QString filename);
+  int METOCEANSHARED_EXPORT writeNetcdf(QString filename);
 
-  int readImeds(QString filename);
-  int readNetcdf(QString filename);
+  int METOCEANSHARED_EXPORT readImeds(QString filename);
+  int METOCEANSHARED_EXPORT readNetcdf(QString filename);
 
-  size_t nstations() const;
+  size_t METOCEANSHARED_EXPORT nstations() const;
   // void setNstations(size_t nstations);
 
-  QString header1() const;
-  void setHeader1(const QString &header1);
+  QString METOCEANSHARED_EXPORT header1() const;
+  void METOCEANSHARED_EXPORT setHeader1(const QString &header1);
 
-  QString header2() const;
-  void setHeader2(const QString &header2);
+  QString METOCEANSHARED_EXPORT header2() const;
+  void METOCEANSHARED_EXPORT setHeader2(const QString &header2);
 
-  QString header3() const;
-  void setHeader3(const QString &header3);
+  QString METOCEANSHARED_EXPORT header3() const;
+  void METOCEANSHARED_EXPORT setHeader3(const QString &header3);
 
-  QString units() const;
-  void setUnits(const QString &units);
+  QString METOCEANSHARED_EXPORT units() const;
+  void METOCEANSHARED_EXPORT setUnits(const QString &units);
 
-  QString datum() const;
-  void setDatum(const QString &datum);
+  QString METOCEANSHARED_EXPORT datum() const;
+  void METOCEANSHARED_EXPORT setDatum(const QString &datum);
 
-  HmdfStation *station(int index);
-  void setStation(int index, HmdfStation *station);
-  void addStation(HmdfStation *station);
+  HmdfStation METOCEANSHARED_EXPORT *station(int index);
+  void METOCEANSHARED_EXPORT setStation(int index, HmdfStation *station);
+  void METOCEANSHARED_EXPORT addStation(HmdfStation *station);
 
-  bool success() const;
-  void setSuccess(bool success);
+  bool METOCEANSHARED_EXPORT success() const;
+  void METOCEANSHARED_EXPORT setSuccess(bool success);
 
-  bool null() const;
-  void setNull(bool null);
+  bool METOCEANSHARED_EXPORT null() const;
+  void METOCEANSHARED_EXPORT setNull(bool null);
 
-  void dataBounds(qint64 &dateMin, qint64 &dateMax, double &minValue,
-                  double &maxValue);
+  void METOCEANSHARED_EXPORT dataBounds(qint64 &dateMin, qint64 &dateMax,
+                                        double &minValue, double &maxValue);
 
-  bool applyDatumCorrection(const Station &s, const Datum::VDatum &datum);
-  bool applyDatumCorrection(QVector<Station> &s, Datum::VDatum datum);
+  bool METOCEANSHARED_EXPORT applyDatumCorrection(const Station &s,
+                                                  const Datum::VDatum &datum);
+  bool METOCEANSHARED_EXPORT applyDatumCorrection(QVector<Station> &s,
+                                                  Datum::VDatum datum);
 
  private:
   void init();

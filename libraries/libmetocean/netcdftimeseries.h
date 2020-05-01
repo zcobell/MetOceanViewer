@@ -29,21 +29,21 @@
 class NetcdfTimeseries : public QObject {
   Q_OBJECT
  public:
-  explicit NetcdfTimeseries(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT NetcdfTimeseries(QObject *parent = nullptr);
 
-  int read();
+  int METOCEANSHARED_EXPORT read();
 
-  int toHmdf(Hmdf *hmdf);
+  int METOCEANSHARED_EXPORT toHmdf(Hmdf *hmdf);
 
-  QString filename() const;
-  void setFilename(const QString &filename);
+  QString METOCEANSHARED_EXPORT filename() const;
+  void METOCEANSHARED_EXPORT setFilename(const QString &filename);
 
-  int epsg() const;
-  void setEpsg(int epsg);
+  int METOCEANSHARED_EXPORT epsg() const;
+  void METOCEANSHARED_EXPORT setEpsg(int epsg);
 
-  static int getEpsg(QString file);
+  static int METOCEANSHARED_EXPORT getEpsg(QString file);
 
-private:
+ private:
   QString m_filename;
   QString m_units;
   QString m_verticalDatum;

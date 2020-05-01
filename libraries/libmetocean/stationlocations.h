@@ -29,11 +29,11 @@
 class StationLocations : public QObject {
   Q_OBJECT
  public:
-  explicit StationLocations(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT StationLocations(QObject *parent = nullptr);
 
   enum MarkerType { NOAA, USGS, XTIDE, NDBC, CRMS };
 
-  static QVector<Station> readMarkers(MarkerType markerType);
+  static METOCEANSHARED_EXPORT QVector<Station> readMarkers(MarkerType markerType);
 
  private:
   static QVector<Station> readNoaaMarkers();

@@ -21,6 +21,7 @@
 #include <QApplication>
 #include "generic.h"
 #include "mainwindow.h"
+#include "metocean_init.h"
 
 int main(int argc, char *argv[]) {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  Q_INIT_RESOURCE(resource_files);
+  Metocean_init::init();
 
   //...Display the splash screen
   QPixmap pixmap(":/rsc/img/logo_full.png");

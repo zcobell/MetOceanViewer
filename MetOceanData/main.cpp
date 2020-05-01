@@ -20,6 +20,7 @@
 #include <QCoreApplication>
 #include <QTimer>
 #include <iostream>
+#include "metocean_init.h"
 #include "metoceandata.h"
 #include "options.h"
 #include "version.h"
@@ -30,7 +31,7 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setApplicationVersion(
       QString::fromStdString(metoceanVersion()));
 
-  Q_INIT_RESOURCE(resource_files);
+  Metocean_init::init();
 
   Options *option = new Options(&a);
 

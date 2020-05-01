@@ -24,18 +24,21 @@
 #include <QNetworkInterface>
 #include <QString>
 #include <QtCore>
+#include "metocean_global.h"
 
 class Generic : public QObject {
   Q_OBJECT
  public:
-  static void splitPath(QString input, QString &filename, QString &directory);
-  static void delay(int delayTime);
-  static void delayM(int delayTime);
-  static bool isConnectedToNetwork();
-  static bool createConfigDirectory();
-  static bool createConfigDirectory(QString &configDirectory);
-  static QString configDirectory();
-  static QString crmsDataFile();
+  static void METOCEANSHARED_EXPORT splitPath(QString input, QString &filename,
+                                              QString &directory);
+  static void METOCEANSHARED_EXPORT delay(int delayTime);
+  static void METOCEANSHARED_EXPORT delayM(int delayTime);
+  static bool METOCEANSHARED_EXPORT isConnectedToNetwork();
+  static bool METOCEANSHARED_EXPORT createConfigDirectory();
+  static bool METOCEANSHARED_EXPORT
+  createConfigDirectory(QString &configDirectory);
+  static QString METOCEANSHARED_EXPORT configDirectory();
+  static QString METOCEANSHARED_EXPORT crmsDataFile();
 
  private:
   static QString dummyConfigDir;

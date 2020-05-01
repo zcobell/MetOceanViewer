@@ -17,24 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef STRINGUTIL_H
-#define STRINGUTIL_H
+#include "metocean_init.h"
+#include <QtGlobal>
 
-#include <sstream>
-#include <string>
-#include <vector>
-#include "metocean_global.h"
-
-class StringUtil {
- public:
-  static METOCEANSHARED_EXPORT std::vector<std::string> stringSplitToVector(
-      std::string s, std::string delim);
-  static METOCEANSHARED_EXPORT std::vector<std::string> stringSplitToVector(
-      std::string s);
-  static int METOCEANSHARED_EXPORT stringToInt(std::string a, bool &ok);
-  static float METOCEANSHARED_EXPORT stringToFloat(std::string a, bool &ok);
-  static double METOCEANSHARED_EXPORT stringToDouble(std::string a, bool &ok);
-  static std::string METOCEANSHARED_EXPORT sanitizeString(std::string &a);
-};
-
-#endif  // STRINGUTIL_H
+void Metocean_init::init() { Q_INIT_RESOURCE(resource_files); }

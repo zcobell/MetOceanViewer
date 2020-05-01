@@ -17,24 +17,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef STRINGUTIL_H
-#define STRINGUTIL_H
+#ifndef METOCEANINIT_H
+#define METOCEANINIT_H
 
-#include <sstream>
-#include <string>
-#include <vector>
 #include "metocean_global.h"
 
-class StringUtil {
+class Metocean_init {
  public:
-  static METOCEANSHARED_EXPORT std::vector<std::string> stringSplitToVector(
-      std::string s, std::string delim);
-  static METOCEANSHARED_EXPORT std::vector<std::string> stringSplitToVector(
-      std::string s);
-  static int METOCEANSHARED_EXPORT stringToInt(std::string a, bool &ok);
-  static float METOCEANSHARED_EXPORT stringToFloat(std::string a, bool &ok);
-  static double METOCEANSHARED_EXPORT stringToDouble(std::string a, bool &ok);
-  static std::string METOCEANSHARED_EXPORT sanitizeString(std::string &a);
+  static METOCEANSHARED_EXPORT void init();
 };
 
-#endif  // STRINGUTIL_H
+#endif  // METOCEANINIT_H

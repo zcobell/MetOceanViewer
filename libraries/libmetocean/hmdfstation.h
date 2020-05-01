@@ -32,62 +32,63 @@ class HmdfStation : public QObject {
   Q_OBJECT
 
  public:
-  explicit HmdfStation(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT HmdfStation(QObject *parent = nullptr);
 
-  void clear();
+  void METOCEANSHARED_EXPORT clear();
 
-  static constexpr double nullDataValue() {
+  static constexpr double METOCEANSHARED_EXPORT nullDataValue() {
     return -std::numeric_limits<double>::max();
   }
 
-  static constexpr qint64 nullDateValue() {
+  static constexpr qint64 METOCEANSHARED_EXPORT nullDateValue() {
     return -std::numeric_limits<qint64>::max();
   }
 
-  QGeoCoordinate *coordinate();
-  void setCoordinate(const QGeoCoordinate coordinate);
+  QGeoCoordinate METOCEANSHARED_EXPORT *coordinate();
+  void METOCEANSHARED_EXPORT setCoordinate(const QGeoCoordinate coordinate);
 
-  double latitude() const;
-  double longitude() const;
+  double METOCEANSHARED_EXPORT latitude() const;
+  double METOCEANSHARED_EXPORT longitude() const;
 
-  void setLatitude(const double latitude);
-  void setLongitude(const double longitude);
+  void METOCEANSHARED_EXPORT setLatitude(const double latitude);
+  void METOCEANSHARED_EXPORT setLongitude(const double longitude);
 
-  QString name() const;
-  void setName(const QString &name);
+  QString METOCEANSHARED_EXPORT name() const;
+  void METOCEANSHARED_EXPORT setName(const QString &name);
 
-  QString id() const;
-  void setId(const QString &id);
+  QString METOCEANSHARED_EXPORT id() const;
+  void METOCEANSHARED_EXPORT setId(const QString &id);
 
-  size_t numSnaps() const;
+  size_t METOCEANSHARED_EXPORT numSnaps() const;
 
-  int stationIndex() const;
-  void setStationIndex(int stationIndex);
+  int METOCEANSHARED_EXPORT stationIndex() const;
+  void METOCEANSHARED_EXPORT setStationIndex(int stationIndex);
 
-  qint64 date(int index) const;
-  void setDate(const qint64 &date, int index);
-  void setDate(const QVector<qint64> &date);
+  qint64 METOCEANSHARED_EXPORT date(int index) const;
+  void METOCEANSHARED_EXPORT setDate(const qint64 &date, int index);
+  void METOCEANSHARED_EXPORT setDate(const QVector<qint64> &date);
 
-  void setNext(const qint64 &date, const double &data);
+  void METOCEANSHARED_EXPORT setNext(const qint64 &date, const double &data);
 
-  bool isNull() const;
-  void setIsNull(bool isNull);
+  bool METOCEANSHARED_EXPORT isNull() const;
+  void METOCEANSHARED_EXPORT setIsNull(bool isNull);
 
-  double data(int index) const;
-  void setData(const double &data, int index);
-  void setData(const QVector<double> &data);
-  void setData(const QVector<float> &data);
+  double METOCEANSHARED_EXPORT data(int index) const;
+  void METOCEANSHARED_EXPORT setData(const double &data, int index);
+  void METOCEANSHARED_EXPORT setData(const QVector<double> &data);
+  void METOCEANSHARED_EXPORT setData(const QVector<float> &data);
 
-  QVector<qint64> allDate() const;
-  QVector<double> allData() const;
+  QVector<qint64> METOCEANSHARED_EXPORT allDate() const;
+  QVector<double> METOCEANSHARED_EXPORT allData() const;
 
-  void dataBounds(qint64 &minDate, qint64 &maxDate, double &minValue,
-                  double &maxValue);
+  void METOCEANSHARED_EXPORT dataBounds(qint64 &minDate, qint64 &maxDate,
+                                        double &minValue, double &maxValue);
 
-  double nullValue() const;
-  void setNullValue(double nullValue);
+  double METOCEANSHARED_EXPORT nullValue() const;
+  void METOCEANSHARED_EXPORT setNullValue(double nullValue);
 
-  int applyDatumCorrection(Station s, Datum::VDatum datum);
+  int METOCEANSHARED_EXPORT applyDatumCorrection(Station s,
+                                                 Datum::VDatum datum);
 
  private:
   QGeoCoordinate m_coordinate;

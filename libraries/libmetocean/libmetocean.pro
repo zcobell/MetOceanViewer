@@ -23,7 +23,7 @@ QT       += network positioning
 TARGET = metocean
 TEMPLATE = lib
 CONFIG += c++11
-CONFIG += staticlib
+CONFIG += skip_target_version_ext
 
 DEFINES += METOCEAN_LIBRARY
 
@@ -46,6 +46,7 @@ SOURCES += hmdfasciiparser.cpp  \
            crmsdata.cpp \
            hmdf.cpp  \
            hmdfstation.cpp  \
+           metocean_init.cpp \
            netcdftimeseries.cpp  \
            noaacoops.cpp  \
            stringutil.cpp  \
@@ -68,6 +69,7 @@ HEADERS += hmdfasciiparser.h  \
            datum.h \
            hmdf.h  \
            hmdfstation.h  \
+           metocean_init.h \
            netcdftimeseries.h  \
            noaacoops.h  \
            stringutil.h  \

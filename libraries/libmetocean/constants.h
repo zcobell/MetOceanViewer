@@ -1,29 +1,34 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include "metocean_global.h"
+
 class Constants {
  public:
   Constants();
-  static double equitoralRadius();
-  static double polarRadius();
-  static double e();
-  static double pi();
-  static double twoPi();
-  static double halfPi();
-  static double deg2rad();
-  static double rad2deg();
-  static double toRadians(double degrees);
-  static double toDegrees(double radians);
-  static double radiusEarth(double latitude);
-  static double radiusEarth();
-  static double g();
-  static double rhoAir();
-  static double distance(double x1, double y1, double x2, double y2, bool geodesic = false);
-  static double azimuth(double x1, double y1, double  x2, double y2);
+  static double METOCEANSHARED_EXPORT equitoralRadius();
+  static double METOCEANSHARED_EXPORT polarRadius();
+  static double METOCEANSHARED_EXPORT e();
+  static double METOCEANSHARED_EXPORT pi();
+  static double METOCEANSHARED_EXPORT twoPi();
+  static double METOCEANSHARED_EXPORT halfPi();
+  static double METOCEANSHARED_EXPORT deg2rad();
+  static double METOCEANSHARED_EXPORT rad2deg();
+  static double METOCEANSHARED_EXPORT toRadians(double degrees);
+  static double METOCEANSHARED_EXPORT toDegrees(double radians);
+  static double METOCEANSHARED_EXPORT radiusEarth(double latitude);
+  static double METOCEANSHARED_EXPORT radiusEarth();
+  static double METOCEANSHARED_EXPORT g();
+  static double METOCEANSHARED_EXPORT rhoAir();
+  static double METOCEANSHARED_EXPORT distance(double x1, double y1, double x2,
+                                               double y2,
+                                               bool geodesic = false);
+  static double METOCEANSHARED_EXPORT azimuth(double x1, double y1, double x2,
+                                              double y2);
 
-private:
+ private:
   static double geodesic_distance(double x1, double y1, double x2, double y2);
   static double cartesian_distance(double x1, double y1, double x2, double y2);
 };
 
-#endif // CONSTANTS_H
+#endif  // CONSTANTS_H

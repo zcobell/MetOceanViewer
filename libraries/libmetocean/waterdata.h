@@ -32,15 +32,15 @@
 class WaterData : public QObject {
   Q_OBJECT
  public:
-  explicit WaterData(const Station &station, const QDateTime startDate,
+  explicit METOCEANSHARED_EXPORT WaterData(const Station &station, const QDateTime startDate,
                      const QDateTime endDate, QObject *parent = nullptr);
 
-  int get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
+  int METOCEANSHARED_EXPORT get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 
-  QString errorString() const;
+  QString METOCEANSHARED_EXPORT errorString() const;
 
-  Timezone *getTimezone() const;
-  void setTimezone(Timezone *timezone);
+  Timezone METOCEANSHARED_EXPORT *getTimezone() const;
+  void METOCEANSHARED_EXPORT setTimezone(Timezone *timezone);
 
  protected:
   virtual int retrieveData(Hmdf *data, Datum::VDatum datum);

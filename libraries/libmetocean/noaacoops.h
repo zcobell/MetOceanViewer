@@ -28,9 +28,12 @@
 class NoaaCoOps : public WaterData {
   Q_OBJECT
  public:
-  NoaaCoOps(const Station &station, const QDateTime startDate, const QDateTime endDate,
-            const QString &product, const QString &datum, const bool useVdatum,const QString &units,
-            QObject *parent = nullptr);
+  METOCEANSHARED_EXPORT NoaaCoOps(const Station &station,
+                                  const QDateTime startDate,
+                                  const QDateTime endDate,
+                                  const QString &product, const QString &datum,
+                                  const bool useVdatum, const QString &units,
+                                  QObject *parent = nullptr);
 
  private:
   int retrieveData(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);

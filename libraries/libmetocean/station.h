@@ -26,76 +26,75 @@
 
 class Station {
  public:
-  Station();
-  Station(QGeoCoordinate coordinate, QString id, QString name,
-          double measured = 0.0, double modeled = 0.0, int category = 0,
-          bool active = true,
-          QDateTime startValidDate = QDateTime(QDate(1900, 1, 1),
-                                               QTime(0, 0, 0)),
-          QDateTime endValidDate = QDateTime(QDate(2050, 1, 1),
-                                             QTime(0, 0, 0)));
+  METOCEANSHARED_EXPORT Station();
+  METOCEANSHARED_EXPORT Station(
+      QGeoCoordinate coordinate, QString id, QString name,
+      double measured = 0.0, double modeled = 0.0, int category = 0,
+      bool active = true,
+      QDateTime startValidDate = QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0)),
+      QDateTime endValidDate = QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0)));
 
-  ~Station();
+  METOCEANSHARED_EXPORT ~Station();
 
-  bool operator==(const Station &s);
+  bool METOCEANSHARED_EXPORT operator==(const Station &s);
 
-  QGeoCoordinate coordinate() const;
-  void setCoordinate(const QGeoCoordinate &coordinate);
-  void setLatitude(const double latitude);
-  void setLongitude(const double longitude);
+  QGeoCoordinate METOCEANSHARED_EXPORT coordinate() const;
+  void METOCEANSHARED_EXPORT setCoordinate(const QGeoCoordinate &coordinate);
+  void METOCEANSHARED_EXPORT setLatitude(const double latitude);
+  void METOCEANSHARED_EXPORT setLongitude(const double longitude);
 
-  QString name() const;
-  void setName(const QString &name);
+  QString METOCEANSHARED_EXPORT name() const;
+  void METOCEANSHARED_EXPORT setName(const QString &name);
 
-  QString id() const;
-  void setId(const QString &id);
+  QString METOCEANSHARED_EXPORT id() const;
+  void METOCEANSHARED_EXPORT setId(const QString &id);
 
-  bool selected() const;
-  void setSelected(bool selcted);
+  bool METOCEANSHARED_EXPORT selected() const;
+  void METOCEANSHARED_EXPORT setSelected(bool selcted);
 
-  double modeled() const;
-  void setModeled(double modeled);
+  double METOCEANSHARED_EXPORT modeled() const;
+  void METOCEANSHARED_EXPORT setModeled(double modeled);
 
-  double measured() const;
-  void setMeasured(double measured);
+  double METOCEANSHARED_EXPORT measured() const;
+  void METOCEANSHARED_EXPORT setMeasured(double measured);
 
-  int category() const;
-  void setCategory(int category);
+  int METOCEANSHARED_EXPORT category() const;
+  void METOCEANSHARED_EXPORT setCategory(int category);
 
-  double difference() const;
+  double METOCEANSHARED_EXPORT difference() const;
 
-  QDateTime startValidDate() const;
-  void setStartValidDate(const QDateTime &startValidDate);
+  QDateTime METOCEANSHARED_EXPORT startValidDate() const;
+  void METOCEANSHARED_EXPORT setStartValidDate(const QDateTime &startValidDate);
 
-  QDateTime endValidDate() const;
-  void setEndValidDate(const QDateTime &endValidDate);
+  QDateTime METOCEANSHARED_EXPORT endValidDate() const;
+  void METOCEANSHARED_EXPORT setEndValidDate(const QDateTime &endValidDate);
 
-  bool active() const;
-  void setActive(bool active);
+  bool METOCEANSHARED_EXPORT active() const;
+  void METOCEANSHARED_EXPORT setActive(bool active);
 
-  double navd88Offset() const;
-  void setNavd88Offset(double navd88Offset);
+  double METOCEANSHARED_EXPORT navd88Offset() const;
+  void METOCEANSHARED_EXPORT setNavd88Offset(double navd88Offset);
 
-  double mslOffset() const;
-  void setMslOffset(double mslOffset);
+  double METOCEANSHARED_EXPORT mslOffset() const;
+  void METOCEANSHARED_EXPORT setMslOffset(double mslOffset);
 
-  double ngvd29Offset() const;
-  void setNgvd29Offset(double ngvd29Offset);
+  double METOCEANSHARED_EXPORT ngvd29Offset() const;
+  void METOCEANSHARED_EXPORT setNgvd29Offset(double ngvd29Offset);
 
-  double mlwOffset() const;
-  void setMlwOffset(double mlwOffset);
+  double METOCEANSHARED_EXPORT mlwOffset() const;
+  void METOCEANSHARED_EXPORT setMlwOffset(double mlwOffset);
 
-  double mllwOffset() const;
-  void setMllwOffset(double mllwOffset);
+  double METOCEANSHARED_EXPORT mllwOffset() const;
+  void METOCEANSHARED_EXPORT setMllwOffset(double mllwOffset);
 
-  double mhwOffset() const;
-  void setMhwOffset(double mhwOffset);
+  double METOCEANSHARED_EXPORT mhwOffset() const;
+  void METOCEANSHARED_EXPORT setMhwOffset(double mhwOffset);
 
-  double mhhwOffset() const;
-  void setMhhwOffset(double mhhwOffset);
+  double METOCEANSHARED_EXPORT mhhwOffset() const;
+  void METOCEANSHARED_EXPORT setMhhwOffset(double mhhwOffset);
 
-  static constexpr double nullOffset() { return -9999.0; }
-  bool isNullOffset(double offset);
+  static constexpr double METOCEANSHARED_EXPORT nullOffset() { return -9999.0; }
+  bool METOCEANSHARED_EXPORT isNullOffset(double offset);
 
  private:
   QGeoCoordinate m_coordinate;

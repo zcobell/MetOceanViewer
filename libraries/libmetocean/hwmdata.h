@@ -22,29 +22,32 @@
 
 #include <QGeoCoordinate>
 #include <QObject>
+#include "metocean_global.h"
 
 class HwmData : public QObject {
   Q_OBJECT
  public:
-  explicit HwmData(QObject *parent = nullptr);
-  explicit HwmData(QGeoCoordinate coordinate, double topoElevation,
-                   double modeledElevation, double observedElevation,
-                   QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT HwmData(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT HwmData(QGeoCoordinate coordinate,
+                                         double topoElevation,
+                                         double modeledElevation,
+                                         double observedElevation,
+                                         QObject *parent = nullptr);
 
-  double topoElevation() const;
-  void setTopoElevation(double topoElevation);
+  double METOCEANSHARED_EXPORT topoElevation() const;
+  void METOCEANSHARED_EXPORT setTopoElevation(double topoElevation);
 
-  double modeledElevation() const;
-  void setModeledElevation(double modeledElevation);
+  double METOCEANSHARED_EXPORT modeledElevation() const;
+  void METOCEANSHARED_EXPORT setModeledElevation(double modeledElevation);
 
-  double observedElevation() const;
-  void setObservedElevation(double observedElevation);
+  double METOCEANSHARED_EXPORT observedElevation() const;
+  void METOCEANSHARED_EXPORT setObservedElevation(double observedElevation);
 
-  bool isValid();
+  bool METOCEANSHARED_EXPORT isValid();
 
-  double modeledError();
+  double METOCEANSHARED_EXPORT modeledError();
 
-  QGeoCoordinate *coordinate();
+  QGeoCoordinate METOCEANSHARED_EXPORT *coordinate();
 
  private:
   double m_topoElevation;

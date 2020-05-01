@@ -21,12 +21,15 @@
 #define HMDFASCIIPARSER_H
 
 #include <string>
+#include "metocean_global.h"
 
 class HmdfAsciiParser {
  public:
-  static bool splitStringHmdfFormat(std::string &data, int &yr, int &month,
-                                    int &day, int &hr, int &min, int &sec,
-                                    double &value);
+  static bool METOCEANSHARED_EXPORT splitStringHmdfFormat(std::string &data,
+                                                          int &yr, int &month,
+                                                          int &day, int &hr,
+                                                          int &min, int &sec,
+                                                          double &value);
 };
 
 #endif  // HMDFASCIIPARSER_H

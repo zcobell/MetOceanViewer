@@ -21,33 +21,35 @@
 #define TIMEZONESTRUCT_H
 
 #include <QString>
+#include "metocean_global.h"
 #include "tzdata.h"
 
 class TimezoneStruct {
  public:
-  explicit TimezoneStruct();
-  explicit TimezoneStruct(TZData::Location locationCode,
-                          TZData::Abbreviation abbreviationCode,
-                          QString abbreviation, QString name, QString location,
-                          int offsetSeconds);
+  explicit METOCEANSHARED_EXPORT TimezoneStruct();
+  explicit METOCEANSHARED_EXPORT TimezoneStruct(
+      TZData::Location locationCode, TZData::Abbreviation abbreviationCode,
+      QString abbreviation, QString name, QString location, int offsetSeconds);
 
-  QString name() const;
-  void setName(const QString &name);
+  QString METOCEANSHARED_EXPORT name() const;
+  void METOCEANSHARED_EXPORT setName(const QString &name);
 
-  QString abbreviation() const;
-  void setAbbreviation(const QString &abbreviation);
+  QString METOCEANSHARED_EXPORT abbreviation() const;
+  void METOCEANSHARED_EXPORT setAbbreviation(const QString &abbreviation);
 
-  int getOffsetSeconds() const;
-  void setOffsetSeconds(int value);
+  int METOCEANSHARED_EXPORT getOffsetSeconds() const;
+  void METOCEANSHARED_EXPORT setOffsetSeconds(int value);
 
-  QString getLocation() const;
-  void setLocation(const QString &location);
+  QString METOCEANSHARED_EXPORT getLocation() const;
+  void METOCEANSHARED_EXPORT setLocation(const QString &location);
 
-  TZData::Location getLocationCode() const;
-  void setLocationCode(const TZData::Location &locationCode);
+  TZData::Location METOCEANSHARED_EXPORT getLocationCode() const;
+  void METOCEANSHARED_EXPORT
+  setLocationCode(const TZData::Location &locationCode);
 
-  TZData::Abbreviation getAbbreviationCode() const;
-  void setAbbreviationCode(const TZData::Abbreviation &abbreviationCode);
+  TZData::Abbreviation METOCEANSHARED_EXPORT getAbbreviationCode() const;
+  void METOCEANSHARED_EXPORT
+  setAbbreviationCode(const TZData::Abbreviation &abbreviationCode);
 
  private:
   TZData::Location m_locationCode;

@@ -35,6 +35,8 @@
 
 Hmdf::Hmdf(QObject *parent) : QObject(parent) { this->init(); }
 
+Hmdf::~Hmdf() {}
+
 void Hmdf::init() {
   this->setHeader1("");
   this->setHeader2("");

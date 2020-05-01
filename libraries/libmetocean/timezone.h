@@ -29,28 +29,31 @@ class Timezone : public QObject {
   Q_OBJECT
 
  public:
-  explicit Timezone(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT Timezone(QObject *parent = nullptr);
 
-  static int localMachineOffsetFromUtc();
+  METOCEANSHARED_EXPORT ~Timezone();
 
-  static int offsetFromUtc(QString value,
-                           TZData::Location location = TZData::NorthAmerica);
+  static int METOCEANSHARED_EXPORT localMachineOffsetFromUtc();
 
-  bool fromAbbreviation(QString value,
-                        TZData::Location location = TZData::NorthAmerica);
+  static int METOCEANSHARED_EXPORT offsetFromUtc(
+      QString value, TZData::Location location = TZData::NorthAmerica);
 
-  bool initialized();
+  bool METOCEANSHARED_EXPORT fromAbbreviation(
+      QString value, TZData::Location location = TZData::NorthAmerica);
 
-  int utcOffset();
+  bool METOCEANSHARED_EXPORT initialized();
 
-  int offsetTo(Timezone &zone);
+  int METOCEANSHARED_EXPORT utcOffset();
 
-  QString abbreviation();
+  int METOCEANSHARED_EXPORT offsetTo(Timezone &zone);
 
-  QStringList getAllTimezoneAbbreviations();
-  QStringList getAllTimezoneNames();
-  QStringList getTimezoneAbbreviations(TZData::Location location);
-  QStringList getTimezoneNames(TZData::Location location);
+  QString METOCEANSHARED_EXPORT abbreviation();
+
+  QStringList METOCEANSHARED_EXPORT getAllTimezoneAbbreviations();
+  QStringList METOCEANSHARED_EXPORT getAllTimezoneNames();
+  QStringList METOCEANSHARED_EXPORT
+  getTimezoneAbbreviations(TZData::Location location);
+  QStringList METOCEANSHARED_EXPORT getTimezoneNames(TZData::Location location);
 
  private:
   void build();
