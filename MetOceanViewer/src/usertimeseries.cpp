@@ -456,6 +456,8 @@ int UserTimeseries::processDataFiles() {
   int ierr;
 
   for (int i = 0; i < this->m_table->rowCount(); i++) {
+    if (this->m_table->item(i, 0)->checkState() == Qt::Unchecked) continue;
+
     int inputFileType =
         Filetypes::getIntegerFiletype(this->m_table->item(i, 6)->text());
     this->m_epsg.push_back(this->m_table->item(i, 11)->text().toInt());
