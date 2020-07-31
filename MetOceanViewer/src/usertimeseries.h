@@ -123,6 +123,7 @@ class UserTimeseries : public QObject {
   QStatusBar *m_statusBar;
   StationModel *m_stationmodel;
   QString *m_currentStation;
+  QVector<QVector<QTableWidgetItem *>> m_checkedSeries;
 };
 
 #endif  // USERTIMESERIES_H

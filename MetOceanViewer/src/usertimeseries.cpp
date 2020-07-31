@@ -200,20 +200,21 @@ void UserTimeseries::addSingleStationToPlot(Hmdf *h, int &plottedSeriesCounter,
   QLineSeries *s = series.last();
   QColor seriesColor;
 
-  s->setName(this->m_table->item(seriesCounter - 1, 1)->text());
-  seriesColor.setNamedColor(this->m_table->item(seriesCounter - 1, 2)->text());
+  s->setName(m_checkedSeries[seriesCounter - 1][1]->text());
+
+  seriesColor.setNamedColor(m_checkedSeries[seriesCounter - 1][2]->text());
   Qt::PenStyle lineStyle =
-      setPenStyle(this->m_table->item(seriesCounter - 1, 14)->text().toInt());
+      setPenStyle(m_checkedSeries[seriesCounter - 1][14]->text().toInt());
   s->setPen(QPen(seriesColor, 3, lineStyle, Qt::RoundCap, Qt::RoundJoin));
 
   double unitConversion =
-      this->m_table->item(seriesCounter - 1, 3)->text().toDouble();
+      m_checkedSeries[seriesCounter - 1][3]->text().toDouble();
   qint64 addX = static_cast<qint64>(
-      this->m_table->item(seriesCounter - 1, 4)->text().toDouble() * 3.6e+6);
-  double addY = this->m_table->item(seriesCounter - 1, 5)->text().toDouble();
+      m_checkedSeries[seriesCounter - 1][4]->text().toDouble() * 3.6e+6);
+  double addY = m_checkedSeries[seriesCounter - 1][5]->text().toDouble();
 
   HmdfStation *st = h->station(this->m_markerId);
-  for (int j = 0; j < h->station(this->m_markerId)->numSnaps(); j++) {
+  for (size_t j = 0; j < h->station(this->m_markerId)->numSnaps(); j++) {
     if (std::abs(st->data(j) - st->nullValue()) > 0.0001 &&
         st->date(j) >= startDate && st->date(j) <= endDate) {
       maxDate = std::max(st->date(j) + addX - offset, maxDate);
@@ -250,19 +251,19 @@ void UserTimeseries::addMultipleStationsToPlot(
       QLineSeries *s = series.last();
 
       s->setName(st->name() + QStringLiteral(": ") +
-                 this->m_table->item(index, 1)->text());
+                 m_checkedSeries[index][1]->text());
       QColor seriesColor = this->m_randomColorList[colorCounter];
 
       Qt::PenStyle lineStyle =
-          setPenStyle(this->m_table->item(index, 14)->text().toInt());
+          setPenStyle(m_checkedSeries[index][14]->text().toInt());
       s->setPen(QPen(seriesColor, 3, lineStyle, Qt::RoundCap, Qt::RoundJoin));
 
-      double unitConversion = this->m_table->item(index, 3)->text().toDouble();
+      double unitConversion = m_checkedSeries[index][3]->text().toDouble();
       qint64 addX = static_cast<qint64>(
-          this->m_table->item(index, 4)->text().toDouble() * 3.6e+6);
-      double addY = this->m_table->item(index, 5)->text().toDouble();
+          m_checkedSeries[index][4]->text().toDouble() * 3.6e+6);
+      double addY = m_checkedSeries[index][5]->text().toDouble();
 
-      for (int j = 0; j < st->numSnaps(); j++) {
+      for (size_t j = 0; j < st->numSnaps(); j++) {
         if (std::abs(st->data(j) - st->nullValue()) > 0.0001 &&
             st->date(j) >= startDate && st->date(j) <= endDate) {
           maxDate = std::max(st->date(j) + addX - offset, maxDate);
@@ -452,11 +453,20 @@ int UserTimeseries::processGenericNetcdfData(int tableIndex, Hmdf *data) {
   return MetOceanViewer::Error::NOERR;
 }
 
+QVector<QTableWidgetItem *> grabTableRow(QTableWidget *table, int row) {
+  QVector<QTableWidgetItem *> rowItems;
+  for (int col = 0; col < table->columnCount(); ++col)
+    rowItems.push_back(table->item(row, col));
+  return rowItems;
+}
+
 int UserTimeseries::processDataFiles() {
   int ierr;
 
   for (int i = 0; i < this->m_table->rowCount(); i++) {
     if (this->m_table->item(i, 0)->checkState() == Qt::Unchecked) continue;
+
+    this->m_checkedSeries.push_back(grabTableRow(this->m_table, i));
 
     int inputFileType =
         Filetypes::getIntegerFiletype(this->m_table->item(i, 6)->text());
