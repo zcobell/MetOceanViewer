@@ -117,9 +117,9 @@ int NoaaCoOps::downloadDataFromNoaaServer(
 
     // Build the URL to request data from the NOAA CO-OPS API
     QString requestURL =
-        QStringLiteral("http://tidesandcurrents.noaa.gov/api/datagetter?") +
+        QStringLiteral("https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?") +
         QStringLiteral("product=") + this->m_productParsed[0] +
-        QStringLiteral("&application=metoceanviewer") +
+        QStringLiteral("&application=MetOceanViewer") +
         QStringLiteral("&begin_date=") + startString +
         QStringLiteral("&end_date=") + endString + QStringLiteral("&station=") +
         this->station().id() + QStringLiteral("&time_zone=GMT&units=") +
