@@ -27,6 +27,7 @@
 #include <QMainWindow>
 #include <QNetworkInterface>
 #include <QQuickWidget>
+#include <QTimer>
 #include <QUrl>
 #include <QVector>
 #include <QtCharts>
@@ -221,12 +222,6 @@ class MainWindow : public QMainWindow {
 
   void on_button_hwmDisplayValues_toggled(bool checked);
 
-  void on_button_refreshUsgsStations_clicked();
-
-  void on_button_refreshNoaaStations_clicked();
-
-  void on_button_refreshXtideStations_clicked();
-
   void on_combo_hwmMaptype_currentIndexChanged(int index);
 
   void on_actionESRI_toggled(bool arg1);
@@ -275,7 +270,25 @@ class MainWindow : public QMainWindow {
 
   void on_check_noaa_usevdatum_clicked(bool checked);
 
-private:
+  void refreshNoaaStations();
+
+  void updateNoaaStations();
+
+  void refreshNdbcStations();
+
+  void updateNdbcStations();
+
+  void refreshUsgsStations();
+
+  void updateUsgsStations();
+
+  void refreshXTideStations();
+
+  void updateXTideStations();
+
+  void on_check_noaaActiveOnly_toggled(bool checked);
+
+  private:
   enum MapViewerMarkerModes {
     SingleSelect,
     MultipleSelect,
@@ -387,12 +400,17 @@ private:
   QString userSelectedStations;
   QString crmsSelectedStations;
 
+  QTimer *m_noaaDelayTimer;
+  QTimer *m_usgsDelayTimer;
+  QTimer *m_xtideDelayTimer;
+  QTimer *m_ndbcDelayTimer;
+
   bool processCommandLine;
   bool initialized;
 
   void filterCrmsStationsByDate();
 
-protected:
+ protected:
   void closeEvent(QCloseEvent *);
 };
 

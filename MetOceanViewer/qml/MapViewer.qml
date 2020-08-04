@@ -32,6 +32,7 @@ Rectangle {
     height: 600
 
     signal markerChanged(string msg)
+    signal mapViewChanged()
 
     property string stationText;
 
@@ -141,12 +142,18 @@ Rectangle {
         }
     }
 
+    function mapWindowChange(){
+        mapViewChanged()
+    }
+
     Map {
         id: map
         anchors.fill: parent
         activeMapType: supportedMapTypes[mapType]
         plugin: mapPlugin;
         copyrightsVisible: true
+        onZoomLevelChanged: mapWindowChange()
+        onCenterChanged: mapWindowChange()
 
         property MovMapItem previousMarker
 

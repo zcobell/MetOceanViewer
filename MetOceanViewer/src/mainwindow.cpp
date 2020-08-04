@@ -381,9 +381,29 @@ void MainWindow::setupNoaaMap() {
   QMetaObject::invokeMethod(noaaItem, "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
-  this->on_button_refreshNoaaStations_clicked();
+
+  this->m_noaaDelayTimer = new QTimer(this);
+  this->m_noaaDelayTimer->setInterval(150);
+  connect(this->m_noaaDelayTimer, SIGNAL(timeout()), this,
+          SLOT(refreshNoaaStations()));
+  connect(ui->quick_noaaMap->rootObject(), SIGNAL(mapViewChanged()), this,
+          SLOT(updateNoaaStations()));
 
   return;
+}
+
+void MainWindow::refreshNoaaStations() {
+  this->m_noaaDelayTimer->stop();
+  bool active = ui->check_noaaActiveOnly->isChecked();
+  this->mapFunctions->refreshMarkers(this->noaaStationModel, ui->quick_noaaMap,
+                                     this->noaaMarkerLocations, true, active);
+}
+
+void MainWindow::updateNoaaStations() {
+  if (this->m_noaaDelayTimer->isActive()) {
+    this->m_noaaDelayTimer->stop();
+  }
+  this->m_noaaDelayTimer->start(150);
 }
 
 void MainWindow::setupNdbcMap() {
@@ -417,7 +437,27 @@ void MainWindow::setupNdbcMap() {
   this->mapFunctions->refreshMarkers(this->ndbcStationModel, ui->quick_ndbcMap,
                                      this->ndbcMarkerLocations, false, true);
 
+  this->m_ndbcDelayTimer = new QTimer(this);
+  this->m_ndbcDelayTimer->setInterval(150);
+  connect(this->m_ndbcDelayTimer, SIGNAL(timeout()), this,
+          SLOT(refreshNdbcStations()));
+  connect(ui->quick_ndbcMap->rootObject(), SIGNAL(mapViewChanged()), this,
+          SLOT(updateNdbcStations()));
+
   return;
+}
+
+void MainWindow::refreshNdbcStations() {
+  this->m_ndbcDelayTimer->stop();
+  this->mapFunctions->refreshMarkers(this->ndbcStationModel, ui->quick_ndbcMap,
+                                     this->ndbcMarkerLocations, true, false);
+}
+
+void MainWindow::updateNdbcStations() {
+  if (this->m_ndbcDelayTimer->isActive()) {
+    this->m_ndbcDelayTimer->stop();
+  }
+  this->m_ndbcDelayTimer->start(150);
 }
 
 void MainWindow::setupUsgsMap() {
@@ -454,7 +494,27 @@ void MainWindow::setupUsgsMap() {
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
 
+  this->m_usgsDelayTimer = new QTimer(this);
+  this->m_usgsDelayTimer->setInterval(250);
+  connect(this->m_usgsDelayTimer, SIGNAL(timeout()), this,
+          SLOT(refreshUsgsStations()));
+  connect(ui->quick_usgsMap->rootObject(), SIGNAL(mapViewChanged()), this,
+          SLOT(updateUsgsStations()));
+
   return;
+}
+
+void MainWindow::refreshUsgsStations() {
+  this->m_usgsDelayTimer->stop();
+  this->mapFunctions->refreshMarkers(this->usgsStationModel, ui->quick_usgsMap,
+                                     this->usgsMarkerLocations, true, false);
+}
+
+void MainWindow::updateUsgsStations() {
+  if (this->m_usgsDelayTimer->isActive()) {
+    this->m_usgsDelayTimer->stop();
+  }
+  this->m_usgsDelayTimer->start(150);
 }
 
 void MainWindow::setupCrmsMap() {
@@ -531,7 +591,29 @@ void MainWindow::setupXTideMap() {
   QMetaObject::invokeMethod(xtideItem, "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
+
+  this->m_xtideDelayTimer = new QTimer(this);
+  this->m_xtideDelayTimer->setInterval(150);
+  connect(this->m_xtideDelayTimer, SIGNAL(timeout()), this,
+          SLOT(refreshXTideStations()));
+  connect(ui->quick_xtideMap->rootObject(), SIGNAL(mapViewChanged()), this,
+          SLOT(updateXTideStations()));
+
   return;
+}
+
+void MainWindow::refreshXTideStations() {
+  this->m_xtideDelayTimer->stop();
+  this->mapFunctions->refreshMarkers(this->xtideStationModel,
+                                     ui->quick_xtideMap,
+                                     this->xtideMarkerLocations, true, false);
+}
+
+void MainWindow::updateXTideStations() {
+  if (this->m_xtideDelayTimer->isActive()) {
+    this->m_xtideDelayTimer->stop();
+  }
+  this->m_xtideDelayTimer->start(150);
 }
 
 void MainWindow::setupMarkerClasses(QQuickWidget *widget) {
@@ -731,31 +813,6 @@ void MainWindow::on_button_hwmDisplayValues_toggled(bool checked) {
   ui->graphics_hwm->setDisplayValues(checked);
 }
 
-void MainWindow::on_button_refreshUsgsStations_clicked() {
-  int n = this->mapFunctions->refreshMarkers(
-      this->usgsStationModel, ui->quick_usgsMap, this->usgsMarkerLocations,
-      true, true);
-  this->stationDisplayWarning(n);
-  return;
-}
-
-void MainWindow::on_button_refreshNoaaStations_clicked() {
-  bool active = ui->check_noaaActiveOnly->isChecked();
-  int n = this->mapFunctions->refreshMarkers(
-      this->noaaStationModel, ui->quick_noaaMap, this->noaaMarkerLocations,
-      true, active);
-  this->stationDisplayWarning(n);
-  return;
-}
-
-void MainWindow::on_button_refreshXtideStations_clicked() {
-  int n = this->mapFunctions->refreshMarkers(
-      this->xtideStationModel, ui->quick_xtideMap, this->xtideMarkerLocations,
-      true, true);
-  this->stationDisplayWarning(n);
-  return;
-}
-
 void MainWindow::stationDisplayWarning(int n) {
   if (n > MAX_NUM_DISPLAYED_STATIONS) {
     QMessageBox::critical(this, "Error",
@@ -869,4 +926,9 @@ void MainWindow::on_date_crmsEndtime_dateChanged(const QDate &date) {
     this->filterCrmsStationsByDate();
   }
   return;
+}
+
+void MainWindow::on_check_noaaActiveOnly_toggled(bool checked) {
+  Q_UNUSED(checked);
+  this->updateNoaaStations();
 }

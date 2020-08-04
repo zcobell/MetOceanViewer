@@ -755,25 +755,6 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="button_refreshNoaaStations">
-                   <property name="minimumSize">
-                    <size>
-                     <width>130</width>
-                     <height>27</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>27</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Refresh Stations</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
                   <widget class="QCheckBox" name="check_noaaActiveOnly">
                    <property name="minimumSize">
                     <size>
@@ -1391,25 +1372,6 @@
                      <width>350</width>
                      <height>25</height>
                     </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="button_refreshUsgsStations">
-                   <property name="minimumSize">
-                    <size>
-                     <width>130</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>130</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Refresh Stations</string>
                    </property>
                   </widget>
                  </item>
@@ -2232,25 +2194,6 @@
                 </property>
                 <property name="text">
                  <string>Compute Tides</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_refreshXtideStations">
-                <property name="minimumSize">
-                 <size>
-                  <width>140</width>
-                  <height>25</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>140</width>
-                  <height>25</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Refresh Stations</string>
                 </property>
                </widget>
               </item>
@@ -5326,7 +5269,7 @@
      <x>0</x>
      <y>0</y>
      <width>850</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

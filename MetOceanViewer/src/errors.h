@@ -24,7 +24,7 @@
 #include <QObject>
 #include "metoceanviewer.h"
 
-#define MAX_NUM_DISPLAYED_STATIONS 500
+#define MAX_NUM_DISPLAYED_STATIONS 250
 
 class Errors : public QObject {
   Q_OBJECT
