@@ -16,14 +16,13 @@ class ComboBox : public QWidget {
 
   QLabel *label() const;
 
-  QHBoxLayout *layout() const;
+  void setToSizeHint();
 
  private:
   void initialize(const QString &label = QString());
 
   QComboBox *m_combo;
   QLabel *m_label;
-  QHBoxLayout *m_layout;
 };
 
 #endif  // COMBOBOX_H

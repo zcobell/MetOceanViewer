@@ -11,13 +11,16 @@
 class MapView : public QQuickWidget {
   Q_OBJECT
  public:
-  MapView(QVector<Station> *s, MapFunctions *m, QWidget *parent);
+  MapView(QVector<Station> *s = nullptr, MapFunctions *m = nullptr,
+          QWidget *parent = nullptr);
 
   Station currentStation();
 
   MapFunctions *mapFunctions() const;
 
-public slots:
+  void setStationList(QVector<Station> *stations);
+
+ public slots:
   void refreshStations(bool filter = true, bool activeOnly = true);
   void changeMap(int index);
   void changeMapSource(MapFunctions::MapSource s);

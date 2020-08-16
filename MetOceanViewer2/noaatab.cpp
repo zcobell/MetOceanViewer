@@ -211,47 +211,48 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->startDateEdit()->dateEdit()->setDateTime(startDate);
   this->endDateEdit()->dateEdit()->setDateTime(endDate);
 
-  this->startDateEdit()->setMinimumWidth(160);
-  this->startDateEdit()->setMaximumWidth(160);
-  this->endDateEdit()->setMinimumWidth(160);
-  this->endDateEdit()->setMaximumWidth(160);
-  this->timezoneCombo()->combo()->setMinimumWidth(200);
-  this->timezoneCombo()->combo()->setMaximumWidth(200);
-  this->m_cbx_datatype->combo()->setMinimumWidth(400);
-  this->m_cbx_datatype->combo()->setMaximumWidth(400);
-  this->m_cbx_datum->combo()->setMinimumWidth(100);
-  this->m_cbx_datum->combo()->setMaximumWidth(100);
-  this->cbx_mapType()->combo()->setMinimumWidth(250);
-  this->cbx_mapType()->combo()->setMaximumWidth(250);
-
   this->timezoneCombo()->combo()->setCurrentText("GMT");
   this->m_cbx_datum->combo()->setCurrentText("MSL");
 
-  this->m_rowLayouts[0]->addLayout(this->startDateEdit()->layout());
-  this->m_rowLayouts[0]->addLayout(this->endDateEdit()->layout());
+  this->m_rowLayouts[0]->addWidget(this->startDateEdit());
+  this->m_rowLayouts[0]->addWidget(this->endDateEdit());
   this->m_rowLayouts[0]->addWidget(this->m_chk_activeOnly);
-  this->m_rowLayouts[1]->addLayout(this->m_cbx_datatype->layout());
-  this->m_rowLayouts[1]->addLayout(this->m_cbx_datum->layout());
-  this->m_rowLayouts[2]->addLayout(this->timezoneCombo()->layout());
-  this->m_rowLayouts[2]->addLayout(this->m_cbx_units->layout());
+  this->m_rowLayouts[0]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
+  this->m_rowLayouts[1]->addWidget(this->m_cbx_datatype);
+  this->m_rowLayouts[1]->addWidget(this->m_cbx_datum);
+  this->m_rowLayouts[1]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
+  this->m_rowLayouts[2]->addWidget(this->timezoneCombo());
+  this->m_rowLayouts[2]->addWidget(this->m_cbx_units);
   this->m_rowLayouts[2]->addWidget(this->m_chk_vdatum);
-  this->m_rowLayouts[3]->addLayout(this->cbx_mapType()->layout());
+  this->m_rowLayouts[2]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
+  this->m_rowLayouts[3]->addWidget(this->cbx_mapType());
   this->m_rowLayouts[3]->addWidget(this->m_btn_plot);
   this->m_rowLayouts[3]->addWidget(this->chartOptions());
+  this->m_rowLayouts[3]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
 
   for (auto l : this->m_rowLayouts) {
     l->addStretch();
     l->addSpacing(0);
+    l->setContentsMargins(0, 0, 0, 0);
+    l->setSizeConstraint(QLayout::SetFixedSize);
     allLayout->addLayout(l);
   }
 
   allLayout->addStretch();
   allLayout->addSpacing(0);
-  allLayout->setContentsMargins(5, 0, 5, 5);
+  allLayout->setContentsMargins(0, 0, 0, 0);
+  allLayout->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Preferred, QSizePolicy::Expanding));
 
-  input->setMaximumHeight(175);
-  input->setMinimumHeight(175);
+  input->setContentsMargins(0, 0, 0, 0);
   input->setLayout(allLayout);
+
+  input->setMinimumHeight(input->minimumSizeHint().height());
+  input->setMaximumHeight(input->minimumSizeHint().height() + 10);
 
   return input;
 }

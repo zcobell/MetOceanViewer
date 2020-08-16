@@ -61,17 +61,25 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->timezoneCombo()->combo()->setCurrentText("GMT");
   this->m_cbx_product->combo()->setMinimumWidth(350);
 
-  this->m_rowLayouts[0]->addLayout(this->startDateEdit()->layout());
-  this->m_rowLayouts[0]->addLayout(this->endDateEdit()->layout());
-  this->m_rowLayouts[1]->addLayout(this->timezoneCombo()->layout());
-  this->m_rowLayouts[1]->addLayout(this->cbx_mapType()->layout());
+  this->m_rowLayouts[0]->addWidget(this->startDateEdit());
+  this->m_rowLayouts[0]->addWidget(this->endDateEdit());
+  this->m_rowLayouts[0]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
+  this->m_rowLayouts[1]->addWidget(this->timezoneCombo());
+  this->m_rowLayouts[1]->addWidget(this->cbx_mapType());
+  this->m_rowLayouts[1]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
   this->m_rowLayouts[2]->addWidget(this->m_lbl_buttonGroup);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_historic);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_instant);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_daily);
   this->m_rowLayouts[2]->addWidget(this->m_btn_fetch);
-  this->m_rowLayouts[3]->addLayout(this->m_cbx_product->layout());
+  this->m_rowLayouts[2]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
+  this->m_rowLayouts[3]->addWidget(this->m_cbx_product);
   this->m_rowLayouts[3]->addWidget(this->chartOptions());
+  this->m_rowLayouts[3]->addSpacerItem(
+      new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
 
   for (auto &r : this->m_rowLayouts) {
     r->addStretch();
@@ -80,8 +88,8 @@ QGroupBox *UsgsTab::generateInputBox() {
 
   v->addStretch();
   input->setLayout(v);
-  input->setMinimumHeight(200);
-  input->setMaximumHeight(200);
+  input->setMinimumHeight(input->minimumSizeHint().height());
+  input->setMaximumHeight(input->minimumSizeHint().height() + 10);
 
   return input;
 }

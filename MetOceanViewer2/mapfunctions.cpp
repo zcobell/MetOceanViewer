@@ -29,7 +29,10 @@
 
 #include "generic.h"
 
-constexpr size_t maxDisplayedStations() { return 400; }
+template <typename T>
+constexpr T maxDisplayedStations() {
+  return 400;
+}
 
 #if defined(_MSC_VER)
 #define USE_MAPBOXGL 0
@@ -105,7 +108,7 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
                                  QDateTime &start, QDateTime &end) {
   this->m_stationModel->clear();
   QVector<Station> visibleMarkers;
-  for (size_t i = 0; i < locations->size(); ++i) {
+  for (int i = 0; i < locations->size(); ++i) {
     if (isBetween<QDateTime>(locations->at(i).startValidDate(),
                              locations->at(i).endValidDate(), start, end)) {
       visibleMarkers.push_back(locations->at(i));
@@ -146,23 +149,25 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
     QVector<Station> visibleMarkers;
 
     //...Get the objects inside the viewport
-    for (int i = 0; i < locations->size(); i++) {
-      double x = locations->at(i).coordinate().longitude();
-      double y = locations->at(i).coordinate().latitude();
+    if (locations != nullptr) {
+      for (int i = 0; i < locations->size(); i++) {
+        double x = locations->at(i).coordinate().longitude();
+        double y = locations->at(i).coordinate().latitude();
 
-      if (x < 0.0) x = x + 360.0;
+        if (x < 0.0) x = x + 360.0;
 
-      if (x <= xr && x >= xl && y <= yt && y >= yb) {
-        if (activeOnly) {
-          if (locations->at(i).active()) {
+        if (x <= xr && x >= xl && y <= yt && y >= yb) {
+          if (activeOnly) {
+            if (locations->at(i).active()) {
+              visibleMarkers.push_back(locations->at(i));
+            }
+          } else
             visibleMarkers.push_back(locations->at(i));
-          }
-        } else
-          visibleMarkers.push_back(locations->at(i));
+        }
       }
     }
 
-    if (visibleMarkers.size() <= maxDisplayedStations()) {
+    if (visibleMarkers.size() <= maxDisplayedStations<int>()) {
       this->m_stationModel->addMarkers(visibleMarkers);
     }
     return visibleMarkers.length();

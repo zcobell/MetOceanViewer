@@ -10,13 +10,26 @@
 MapView::MapView(QVector<Station> *s, MapFunctions *m, QWidget *parent)
     : QQuickWidget(parent) {
   this->m_currentMarker = QString();
-  this->m_markerLocations = s;
+
+  if (s != nullptr) {
+    this->setStationList(s);
+  } else {
+    this->m_markerLocations = nullptr;
+  }
+
   this->m_mapFunctions = m;
   this->m_mapFunctions->getConfigurationFromDisk();
+
+  if (this->m_mapFunctions->getStationModel() != nullptr) {
+    this->rootContext()->setContextProperty(
+        "stationModel", this->m_mapFunctions->getStationModel());
+  } else {
+    this->rootContext()->setContextProperty("stationModel",
+                                            new StationModel(this));
+  }
+
   this->rootContext()->setContextProperty(
-      "stationModel", this->m_mapFunctions->getStationModel());
-  this->rootContext()->setContextProperty(
-      "markerMode", MapFunctions::MapViewerMarkerModes::SingleSelectWithDates);
+      "markerMode", MapFunctions::MapViewerMarkerModes::SingleSelect);
   this->m_mapFunctions->setMapType(this->m_mapFunctions->getDefaultMapIndex(),
                                    this);
   this->m_mapFunctions->setMapQmlFile(this);
@@ -31,6 +44,10 @@ MapView::MapView(QVector<Station> *s, MapFunctions *m, QWidget *parent)
   QMetaObject::invokeMethod(this->rootObject(), "setMapLocation",
                             Q_ARG(QVariant, -124.66), Q_ARG(QVariant, 36.88),
                             Q_ARG(QVariant, 1.69));
+}
+
+void MapView::setStationList(QVector<Station> *stations) {
+  this->m_markerLocations = stations;
 }
 
 void MapView::connectMarkerChanged() {

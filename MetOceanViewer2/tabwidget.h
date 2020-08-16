@@ -35,6 +35,7 @@ class TabWidget : public QTabWidget {
   void addUsgsTab(const NewTabDialog *d, QVector<Station> *stations);
   void addXtideTab(const NewTabDialog *d, QVector<Station> *stations);
   void addNdbcTab(const NewTabDialog *d, QVector<Station> *stations);
+  void addUserdataTab(const NewTabDialog *d);
 
   TabBar *m_tabBar;
   QToolButton *m_addTabButton;

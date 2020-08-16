@@ -6,6 +6,7 @@
 #include "newtabdialog.h"
 #include "noaatab.h"
 #include "tabbar.h"
+#include "userdatatab.h"
 #include "usgstab.h"
 #include "xtidetab.h"
 
@@ -14,9 +15,10 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   this->m_tabBar = new TabBar(this);
   this->m_tabBar->setObjectName("TabBar");
   this->setTabBar(this->m_tabBar);
-  this->setObjectName("TabWidget");
+  this->setObjectName("MainTabs");
+  this->setAccessibleName("MainTabs");
   this->setStyleSheet(
-      "#qt_tabwidget_stackedwidget{"
+      "#MainTabs::pane {"
       "background-image: url(:/rsc/img/mov.png);"
       "background-repeat: no-repeat; "
       "background-attachment: fixed; "
@@ -79,6 +81,12 @@ void TabWidget::addNdbcTab(const NewTabDialog* d, QVector<Station>* stations) {
   this->setCurrentIndex(this->count() - 1);
 }
 
+void TabWidget::addUserdataTab(const NewTabDialog* d) {
+  UserdataTab* n = new UserdataTab(this);
+  this->addTab(n, d->tabName());
+  this->setCurrentIndex(this->count() - 1);
+}
+
 void TabWidget::addNewTab() {
   //...Pop up a dialog to generate a new tab
   NewTabDialog* d = new NewTabDialog(this);
@@ -86,20 +94,21 @@ void TabWidget::addNewTab() {
   //...If the user doesn't close the tab, get the station list and
   // send to the newly created tab
   if (d->exec() == QDialog::Accepted) {
-    QVector<Station>* stations = this->m_stationList->get(d->type());
     switch (d->type()) {
       case TabType::NOAA:
-        this->addNoaaTab(d, stations);
+        this->addNoaaTab(d, this->m_stationList->get(d->type()));
         break;
       case TabType::USGS:
-        this->addUsgsTab(d, stations);
+        this->addUsgsTab(d, this->m_stationList->get(d->type()));
         break;
       case TabType::XTIDE:
-        this->addXtideTab(d, stations);
+        this->addXtideTab(d, this->m_stationList->get(d->type()));
         break;
       case TabType::NDBC:
-        this->addNdbcTab(d, stations);
+        this->addNdbcTab(d, this->m_stationList->get(d->type()));
         break;
+      case TabType::USERTS:
+        this->addUserdataTab(d);
       default:
         break;
     }

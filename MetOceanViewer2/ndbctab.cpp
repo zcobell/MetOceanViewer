@@ -39,24 +39,17 @@ QGroupBox *NdbcTab::generateInputBox() {
   this->timezoneCombo()->combo()->addItems(timezoneList());
   this->timezoneCombo()->combo()->setCurrentText("GMT");
 
-  this->startDateEdit()->setMinimumWidth(160);
-  this->startDateEdit()->setMaximumWidth(160);
-  this->endDateEdit()->setMinimumWidth(160);
-  this->endDateEdit()->setMaximumWidth(160);
-  this->m_cbx_product->combo()->setMinimumWidth(200);
-  this->m_cbx_product->combo()->setMaximumWidth(200);
-
   QHBoxLayout *r1 = new QHBoxLayout();
-  r1->addLayout(this->startDateEdit()->layout());
-  r1->addLayout(this->endDateEdit()->layout());
+  r1->addWidget(this->startDateEdit());
+  r1->addWidget(this->endDateEdit());
   r1->addWidget(this->m_btn_fetchData);
 
   QHBoxLayout *r2 = new QHBoxLayout();
-  r2->addLayout(this->m_cbx_product->layout());
-  r2->addLayout(this->cbx_mapType()->layout());
+  r2->addWidget(this->m_cbx_product);
+  r2->addWidget(this->cbx_mapType());
 
   QHBoxLayout *r3 = new QHBoxLayout();
-  r3->addLayout(this->timezoneCombo()->layout());
+  r3->addWidget(this->timezoneCombo());
   r3->addWidget(this->chartOptions());
 
   r1->addStretch();
@@ -72,11 +65,12 @@ QGroupBox *NdbcTab::generateInputBox() {
   allLayout->addLayout(r3);
   allLayout->addStretch();
   allLayout->addSpacing(0);
-  allLayout->setContentsMargins(5, 0, 5, 5);
+  allLayout->setContentsMargins(0, 0, 0, 0);
+  allLayout->setMargin(0);
 
-  box->setMaximumHeight(150);
-  box->setMinimumHeight(150);
   box->setLayout(allLayout);
+  box->setMinimumHeight(box->minimumSizeHint().height());
+  box->setMaximumHeight(box->minimumSizeHint().height() + 10);
 
   return box;
 }

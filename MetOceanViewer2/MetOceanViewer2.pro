@@ -33,6 +33,7 @@ SOURCES += \
     chartoptionsmenu.cpp \
     combobox.cpp \
     datebox.cpp \
+    fileinfo.cpp \
     main.cpp \
     mainwindow.cpp \
     chartview.cpp \
@@ -48,6 +49,12 @@ SOURCES += \
     mapfunctions.cpp \
     tabbar.cpp \
     tabwidget.cpp \
+    unitsmenu.cpp \
+    userdataform.cpp \
+    userdatamap.cpp \
+    userdataseries.cpp \
+    userdatatab.cpp \
+    userdatatable.cpp \
     usgstab.cpp \
     xtidetab.cpp
 
@@ -56,6 +63,7 @@ HEADERS += \
     chartoptionsmenu.h \
     combobox.h \
     datebox.h \
+    fileinfo.h \
     mainwindow.h \
     mapchartwidget.h \
     chartview.h \
@@ -71,8 +79,16 @@ HEADERS += \
     stationmodel.h \
     mapfunctions.h \
     tabwidget.h \
+    textentry.h \
+    unitsmenu.h \
+    userdataform.h \
+    userdatamap.h \
+    userdataseries.h \
+    userdatatab.h \
+    userdatatable.h \
     usgstab.h \
-    xtidetab.h
+    xtidetab.h \
+    colors.h
 
 FORMS += \
     chartoptions.ui \

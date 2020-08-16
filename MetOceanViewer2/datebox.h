@@ -16,14 +16,13 @@ class DateBox : public QWidget {
 
   QLabel *label() const;
 
-  QHBoxLayout *layout() const;
+  void setToSizeHints();
 
  private:
   void initialize(const QString &label = QString());
 
   QDateTimeEdit *m_dateEdit;
   QLabel *m_label;
-  QHBoxLayout *m_layout;
 };
 
 #endif  // DATEBOX_H

@@ -19,7 +19,7 @@ class MapChartWidget : public QWidget {
   Q_OBJECT
 
  public:
-  MapChartWidget(TabType type, QVector<Station> *stations,
+  MapChartWidget(TabType type, QVector<Station> *stations = nullptr,
                  QWidget *parent = nullptr);
 
   TabType type() const;
@@ -38,6 +38,8 @@ class MapChartWidget : public QWidget {
   void setMapWidget(MapView *mapWidget);
 
   void setChartview(ChartView *chartview);
+
+  void setStations(QVector<Station> *station);
 
   QLineSeries *stationToSeries(HmdfStation *s, qint64 offset);
 

@@ -34,8 +34,6 @@ QGroupBox *XTideTab::generateInputBox() {
   this->m_cbx_units->combo()->addItems(QStringList() << "metric"
                                                      << "english");
 
-  this->cbx_mapType()->setMinimumWidth(250);
-  this->cbx_mapType()->setMaximumWidth(250);
   this->mapWidget()->mapFunctions()->setMapTypes(this->cbx_mapType()->combo());
 
   QTime tm(0, 0, 0);
@@ -51,25 +49,28 @@ QGroupBox *XTideTab::generateInputBox() {
 
   QHBoxLayout *r1 = new QHBoxLayout();
   QHBoxLayout *r2 = new QHBoxLayout();
+  QHBoxLayout *r3 = new QHBoxLayout();
 
-  r1->addLayout(this->startDateEdit()->layout());
-  r1->addLayout(this->endDateEdit()->layout());
-  r2->addLayout(this->m_cbx_datum->layout());
-  r2->addLayout(this->m_cbx_units->layout());
+  r1->addWidget(this->startDateEdit());
+  r1->addWidget(this->endDateEdit());
+  r2->addWidget(this->m_cbx_datum);
+  r2->addWidget(this->m_cbx_units);
   r2->addWidget(this->m_btn_compute);
-  r2->addLayout(this->cbx_mapType()->layout());
-  r2->addWidget(this->chartOptions());
+  r3->addWidget(this->cbx_mapType());
+  r3->addWidget(this->chartOptions());
   r1->addStretch();
   r2->addStretch();
+  r3->addStretch();
 
   QVBoxLayout *v = new QVBoxLayout();
   v->addLayout(r1);
   v->addLayout(r2);
+  v->addLayout(r3);
   v->addStretch();
 
   input->setLayout(v);
-  input->setMinimumHeight(120);
-  input->setMaximumHeight(120);
+  input->setMinimumHeight(input->minimumSizeHint().height());
+  input->setMaximumHeight(input->minimumSizeHint().height() + 10);
   return input;
 }
 
