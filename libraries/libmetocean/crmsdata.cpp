@@ -18,23 +18,25 @@
 //
 //-----------------------------------------------------------------------*/
 #include "crmsdata.h"
+
 #include <QFileInfo>
 #include <QGeoCoordinate>
 #include <QMap>
 #include <QString>
 #include <QStringList>
+
 #include "netcdf.h"
 
-CrmsData::CrmsData(Station &station, QDateTime startDate, QDateTime endDate,
+CrmsData::CrmsData(MovStation &station, QDateTime startDate, QDateTime endDate,
                    const QVector<QString> &header,
                    const QMap<QString, size_t> &mapping,
-                   const QString &filename, QObject *parent)
-    : m_mapping(mapping),
-      m_header(header),
+                   const QString &filename)
+    : WaterData(station, startDate, endDate),
       m_filename(filename),
-      WaterData(station, startDate, endDate, parent) {}
+      m_header(header),
+      m_mapping(mapping) {}
 
-int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
+int CrmsData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   Q_UNUSED(datum)
   int ncid;
   int ierr = nc_open(this->m_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
@@ -52,9 +54,9 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   int varid_data, varid_time, dimid_n, dimid_param;
   size_t n, np;
   QString stationDataString, stationTimeString, stationLengthString;
-  stationLengthString.sprintf("stationLength_%6.6llu", index + 1);
-  stationDataString.sprintf("data_station_%6.6llu", index + 1);
-  stationTimeString.sprintf("time_station_%6.6llu", index + 1);
+  stationLengthString.asprintf("stationLength_%6.6lu", index + 1);
+  stationDataString.asprintf("data_station_%6.6lu", index + 1);
+  stationTimeString.asprintf("time_station_%6.6lu", index + 1);
   ierr +=
       nc_inq_dimid(ncid, stationLengthString.toStdString().c_str(), &dimid_n);
   ierr += nc_inq_dimid(ncid, "numParam", &dimid_param);
@@ -73,10 +75,9 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
     size_t start[2] = {i, 0};
     size_t count[2] = {1, n};
     ierr += nc_get_vara_float(ncid, varid_data, start, count, v);
-    HmdfStation *s = new HmdfStation(data);
 
-    QVector<double> tsdata;
-    QVector<long long> time;
+    std::vector<double> tsdata;
+    std::vector<long long> time;
     tsdata.reserve(n);
     time.reserve(n);
 
@@ -88,15 +89,19 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
     }
     delete[] v;
 
-    if (tsdata.length() < 5) continue;
+    if (tsdata.size() < 5) continue;
 
-    s->setName(this->m_header[i]);
-    s->setLongitude(this->station().coordinate().longitude());
-    s->setLatitude(this->station().coordinate().latitude());
-    s->setId(QString::number(i));
-    s->setData(tsdata);
-    s->setDate(time);
-    s->setIsNull(false);
+    Hmdf::Station s(0, this->station().coordinate().longitude(),
+                    this->station().coordinate().latitude());
+    s.setName(this->m_header[i].toStdString());
+    s.setId(QString::number(i).toStdString());
+
+    s.allocate(tsdata.size());
+    for (size_t i = 0; i < tsdata.size(); ++i) {
+      Hmdf::Date d;
+      d.fromMSeconds(time[i]);
+      s << Hmdf::Timepoint(d, tsdata[i]);
+    }
 
     data->addStation(s);
   }
@@ -119,7 +124,7 @@ bool CrmsData::generateStationMapping(const QString &filename,
   for (size_t i = 0; i < n; ++i) {
     int varid_station;
     QString stationDataString;
-    stationDataString.sprintf("data_station_%6.6llu", i + 1);
+    stationDataString.asprintf("data_station_%6.6lu", i + 1);
     ierr += nc_inq_varid(ncid, stationDataString.toStdString().c_str(),
                          &varid_station);
     char *nm = new char[stringlen];
@@ -201,8 +206,8 @@ bool CrmsData::readStationList(const QString &filename,
     memset(nm, '\0', stringsize);
 
     QString stationDataString, stationTimeString;
-    stationDataString.sprintf("data_station_%6.6llu", i + 1);
-    stationTimeString.sprintf("time_station_%6.6llu", i + 1);
+    stationDataString.asprintf("data_station_%6.6lu", i + 1);
+    stationTimeString.asprintf("time_station_%6.6lu", i + 1);
     ierr += nc_inq_varid(ncid, stationDataString.toStdString().c_str(),
                          &varid_data);
     ierr += nc_inq_varid(ncid, stationTimeString.toStdString().c_str(),

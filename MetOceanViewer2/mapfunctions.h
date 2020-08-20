@@ -25,6 +25,7 @@
 
 #include "station.h"
 #include "stationmodel.h"
+#include "movStation.h"
 
 class MapFunctions {
  public:
@@ -38,10 +39,10 @@ class MapFunctions {
 
   explicit MapFunctions();
 
-  int refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
+  int refreshMarkers(QQuickWidget *map, QVector<MovStation> *locations,
                      bool filter = true, bool activeOnly = true);
 
-  int refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
+  int refreshMarkers(QQuickWidget *map, QVector<MovStation> *locations,
                      QDateTime &start, QDateTime &end);
 
   void setMapTypes(QComboBox *comboBox);

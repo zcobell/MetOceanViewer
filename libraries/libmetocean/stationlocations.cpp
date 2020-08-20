@@ -18,12 +18,14 @@
 //
 //-----------------------------------------------------------------------*/
 #include "stationlocations.h"
+
 #include <QFile>
+
 #include "generic.h"
 
 StationLocations::StationLocations(QObject *parent) : QObject(parent) {}
 
-QVector<Station> StationLocations::readMarkers(
+QVector<MovStation> StationLocations::readMarkers(
     StationLocations::MarkerType markerType) {
   if (markerType == NOAA) {
     return StationLocations::readNoaaMarkers();
@@ -36,13 +38,13 @@ QVector<Station> StationLocations::readMarkers(
   } else if (markerType == CRMS) {
     return StationLocations::readCrmsMarkers();
   } else {
-    QVector<Station> output;
+    QVector<MovStation> output;
     return output;
   }
 }
 
-QVector<Station> StationLocations::readNoaaMarkers() {
-  QVector<Station> output;
+QVector<MovStation> StationLocations::readNoaaMarkers() {
+  QVector<MovStation> output;
 
   QFile stationFile(":/stations/data/noaa_stations.csv");
 
@@ -72,13 +74,13 @@ QVector<Station> StationLocations::readNoaaMarkers() {
     endDate.setTimeSpec(Qt::UTC);
 
     if (startDate.isValid() || endDate.isValid()) {
-      Station s = Station();
+      MovStation s = MovStation();
       if (endDateString == "present") {
-        s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, true,
-                    startDate, endDate);
+        s = MovStation(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, true,
+                       startDate, endDate);
       } else {
-        s = Station(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, false,
-                    startDate, endDate);
+        s = MovStation(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, false,
+                       startDate, endDate);
       }
       double mllw = list.value(6).toDouble();
       double mlw = list.value(7).toDouble();
@@ -111,8 +113,8 @@ QVector<Station> StationLocations::readNoaaMarkers() {
   return output;
 }
 
-QVector<Station> StationLocations::readUsgsMarkers() {
-  QVector<Station> output;
+QVector<MovStation> StationLocations::readUsgsMarkers() {
+  QVector<MovStation> output;
 
   QFile stationFile(":/stations/data/usgs_stations.csv");
 
@@ -132,7 +134,7 @@ QVector<Station> StationLocations::readUsgsMarkers() {
       double lat = temp.toDouble();
       temp = list.value(3);
       double lon = temp.toDouble();
-      Station s = Station(QGeoCoordinate(lat, lon), id, name);
+      MovStation s = MovStation(QGeoCoordinate(lat, lon), id, name);
       output.push_back(s);
     }
   }
@@ -142,8 +144,8 @@ QVector<Station> StationLocations::readUsgsMarkers() {
   return output;
 }
 
-QVector<Station> StationLocations::readXtideMarkers() {
-  QVector<Station> output;
+QVector<MovStation> StationLocations::readXtideMarkers() {
+  QVector<MovStation> output;
   QFile stationFile(":/stations/data/xtide_stations.csv");
 
   if (!stationFile.open(QIODevice::ReadOnly)) return output;
@@ -162,7 +164,7 @@ QVector<Station> StationLocations::readXtideMarkers() {
       double lat = temp.toDouble();
       temp = list.value(1);
       double lon = temp.toDouble();
-      Station s = Station(QGeoCoordinate(lat, lon), id, name);
+      MovStation s = MovStation(QGeoCoordinate(lat, lon), id, name);
 
       double mlw = list.value(6).toDouble();
       double msl = list.value(7).toDouble();
@@ -195,8 +197,8 @@ QVector<Station> StationLocations::readXtideMarkers() {
   return output;
 }
 
-QVector<Station> StationLocations::readNdbcMarkers() {
-  QVector<Station> output;
+QVector<MovStation> StationLocations::readNdbcMarkers() {
+  QVector<MovStation> output;
   QFile stationFile(":/stations/data/ndbc_stations.csv");
 
   if (!stationFile.open(QIODevice::ReadOnly)) return output;
@@ -214,7 +216,7 @@ QVector<Station> StationLocations::readNdbcMarkers() {
       double lon = temp.toDouble();
       temp = list.value(2);
       double lat = temp.toDouble();
-      Station s = Station(QGeoCoordinate(lat, lon), id, name);
+      MovStation s = MovStation(QGeoCoordinate(lat, lon), id, name);
       output.push_back(s);
     }
   }
@@ -224,8 +226,8 @@ QVector<Station> StationLocations::readNdbcMarkers() {
   return output;
 }
 
-QVector<Station> StationLocations::readCrmsMarkers() {
-  QVector<Station> output;
+QVector<MovStation> StationLocations::readCrmsMarkers() {
+  QVector<MovStation> output;
   QVector<double> latitude, longitude;
   QVector<QString> name;
   QVector<QDateTime> startDate, endDate;
@@ -239,7 +241,7 @@ QVector<Station> StationLocations::readCrmsMarkers() {
     QGeoCoordinate c(latitude[i], longitude[i]);
     QString id;
     id.sprintf("%zu", i);
-    Station s(c, id, name[i], 0, 0, 0, true, startDate[i], endDate[i]);
+    MovStation s(c, id, name[i], 0, 0, 0, true, startDate[i], endDate[i]);
     output.push_back(s);
   }
 

@@ -40,7 +40,7 @@ void StationModel::buildRoles() {
   return;
 }
 
-void StationModel::addMarker(Station &station) {
+void StationModel::addMarker(MovStation &station) {
   this->beginInsertRows(QModelIndex(), rowCount(), rowCount());
   this->m_stations.append(station);
   this->m_stationMap[station.id()] =
@@ -49,16 +49,16 @@ void StationModel::addMarker(Station &station) {
   this->endInsertRows();
 }
 
-void StationModel::addMarkers(QVector<Station> &stations) {
+void StationModel::addMarkers(QVector<MovStation> &stations) {
   for (size_t i = 0; i < stations.size(); i++) {
     this->addMarker(stations[i]);
   }
   return;
 }
 
-void StationModel::addMarkers(QVector<Station> *stations) {
+void StationModel::addMarkers(QVector<MovStation> *stations) {
   for (size_t i = 0; i < stations->size(); i++) {
-    Station s = stations->at(i);
+    MovStation s = stations->at(i);
     this->addMarker(s);
   }
   return;
@@ -110,11 +110,11 @@ QVariant StationModel::data(const QModelIndex &index, int role) const {
 
 QHash<int, QByteArray> StationModel::roleNames() const { return this->m_roles; }
 
-Station StationModel::findStation(QString stationName) {
+MovStation StationModel::findStation(QString stationName) {
   if (this->m_stationMap.contains(stationName)) {
     return this->m_stationMap[stationName];
   } else {
-    return Station();
+    return MovStation();
   }
 }
 

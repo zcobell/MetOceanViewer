@@ -24,7 +24,7 @@
 #include <QVector>
 #include "crmsdata.h"
 #include "metocean_global.h"
-#include "station.h"
+#include "movStation.h"
 
 class StationLocations : public QObject {
   Q_OBJECT
@@ -33,14 +33,14 @@ class StationLocations : public QObject {
 
   enum MarkerType { NOAA, USGS, XTIDE, NDBC, CRMS };
 
-  static METOCEANSHARED_EXPORT QVector<Station> readMarkers(MarkerType markerType);
+  static METOCEANSHARED_EXPORT QVector<MovStation> readMarkers(MarkerType markerType);
 
  private:
-  static QVector<Station> readNoaaMarkers();
-  static QVector<Station> readUsgsMarkers();
-  static QVector<Station> readXtideMarkers();
-  static QVector<Station> readNdbcMarkers();
-  static QVector<Station> readCrmsMarkers();
+  static QVector<MovStation> readNoaaMarkers();
+  static QVector<MovStation> readUsgsMarkers();
+  static QVector<MovStation> readXtideMarkers();
+  static QVector<MovStation> readNdbcMarkers();
+  static QVector<MovStation> readCrmsMarkers();
 };
 
 #endif  // STATIONLOCATIONS_H

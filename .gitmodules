@@ -1,3 +1,3 @@
-[submodule "thirdparty/ezproj"]
-	path = thirdparty/ezproj
-	url = https://github.com/zcobell/ezproj
+[submodule "thirdparty/hmdf"]
+	path = thirdparty/hmdf
+	url = https://github.com/zcobell/hmdf

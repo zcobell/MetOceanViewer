@@ -19,25 +19,20 @@
 //-----------------------------------------------------------------------*/
 #include "xtidedata.h"
 
-XtideData::XtideData(Station &station, QDateTime startDate, QDateTime endDate,
-                     QString rootDriectory, QObject *parent)
-    : WaterData(station, startDate, endDate, parent) {
-  //...Root application directory. We'll store the harmonics file here
-  this->m_rootDirectory = rootDriectory;
-
-  //...Creates the tide prediction object
-  this->m_tidePrediction = new TidePrediction(this->m_rootDirectory, this);
+XtideData::XtideData(MovStation &station, QDateTime startDate,
+                     QDateTime endDate, QString rootDriectory)
+    : WaterData(station, startDate, endDate),
+      m_interval(300),
+      m_rootDirectory(rootDriectory),
+      m_tidePrediction(new TidePrediction(rootDriectory)) {
   this->m_tidePrediction->deleteHarmonicsOnExit(false);
-
-  //...Default tide prediction interval in seconds, 5 minutes
-  this->m_interval = 300;
 }
 
-int XtideData::retrieveData(Hmdf *data, Datum::VDatum datum) {
-  Station s = this->station();
+int XtideData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
+  MovStation s = this->station();
   int ierr = this->m_tidePrediction->get(s, this->startDate(), this->endDate(),
                                          this->interval(), data);
-  ierr += data->applyDatumCorrection(s, datum) ? 0 : 1;
+  data->station(0)->shift(0, s.offset(datum));
   return ierr;
 }
 

@@ -29,7 +29,7 @@
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QGraphicsTextItem>
 
-#include "timezone.h"
+#include "metocean.h"
 
 const QStringList c_dateFormats = QStringList() << "MM/dd/yyyy hh:mmap"
                                                 << "MM/dd/yyyy hh:mm"
@@ -182,7 +182,7 @@ void ChartView::setAxisLimits(double xmin, double xmax, double ymin,
 
 void ChartView::setAxisLimits(QDateTime startDate, QDateTime endDate,
                               double ymin, double ymax) {
-  int offset = Timezone::localMachineOffsetFromUtc();
+  int offset = MetOcean::localMachineOffsetFromUTC();
   if (startDate.timeSpec() == Qt::LocalTime)
     this->dateAxis()->setMin(startDate);
   else
@@ -523,7 +523,7 @@ void ChartView::initializeAxisLimits() {
   this->yAxis()->applyNiceNumbers();
   if (this->style() == 2) this->xAxis()->applyNiceNumbers();
 
-  QRectF box = this->chart()->plotArea();
+  const QRectF box = this->chart()->plotArea();
   this->m_xAxisMin = this->chart()->mapToValue(box.bottomLeft()).x();
   this->m_yAxisMin = this->chart()->mapToValue(box.bottomLeft()).y();
   this->m_xAxisMax = this->chart()->mapToValue(box.topRight()).x();

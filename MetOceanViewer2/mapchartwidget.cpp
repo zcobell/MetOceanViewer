@@ -11,9 +11,10 @@
 #include "chartview.h"
 #include "mapview.h"
 #include "metocean.h"
+#include "movStation.h"
 #include "noaacoops.h"
 
-MapChartWidget::MapChartWidget(TabType type, QVector<Station> *stations,
+MapChartWidget::MapChartWidget(TabType type, QVector<MovStation> *stations,
                                QWidget *parent)
     : QWidget(parent),
       m_stations(stations),
@@ -148,20 +149,22 @@ void MapChartWidget::setChartOptions(ChartOptionsMenu *chartOptions) {
   m_chartOptions = chartOptions;
 }
 
-void MapChartWidget::writeData(Hmdf *data) {
+void MapChartWidget::writeData(Hmdf::HmdfData *data) {
   QString filename = QFileDialog::getSaveFileName(
       this, "Save As...", MetOcean::lastDirectory(), "*.nc ;; *.imeds");
-  if (!filename.isNull()) data->write(filename);
+  if (!filename.isNull()) data->write(filename.toStdString());
 }
 
 QGroupBox *MapChartWidget::generateInputBox() { return nullptr; }
 
 TabType MapChartWidget::type() const { return m_type; }
 
-QLineSeries *MapChartWidget::stationToSeries(HmdfStation *s, qint64 offset) {
+QLineSeries *MapChartWidget::stationToSeries(Hmdf::Station *s,
+                                             const qint64 offset) {
   QLineSeries *series = new QLineSeries(this->m_chartview->chart());
-  for (size_t i = 0; i < s->numSnaps(); ++i) {
-    series->append(s->date(i) + offset, s->data(i));
+  for (auto &t : *(s)) {
+    series->append(t.date().toMSeconds() + offset, t.value());
+    qDebug() << t.value();
   }
   return series;
 }
@@ -255,15 +258,15 @@ void MapChartWidget::refreshStations() {
   this->mapWidget()->refreshStations(true, false);
 }
 
-void MapChartWidget::setPlotAxis(Hmdf *data, const QDateTime &startDate,
-                                 const QDateTime &endDate,
-                                 const QString &tzAbbrev,
-                                 const QString &datumString,
-                                 const QString &unitString,
-                                 const QString &productName) {
-  qint64 dateMin, dateMax;
+void MapChartWidget::setPlotAxis(
+    Hmdf::HmdfData *data, const QDateTime &startDate, const QDateTime &endDate,
+    const QString &tzAbbrev, const QString &datumString,
+    const QString &unitString, const QString &productName) {
+  Hmdf::Date dmin, dmax;
   double ymin, ymax;
-  data->dataBounds(dateMin, dateMax, ymin, ymax);
+  data->bounds(dmin, dmax, ymin, ymax);
+  //  qint64 dateMin = dmin.toMSeconds();
+  //  qint64 dateMax = dmax.toMSeconds();
   this->chartview()->setDateFormat(startDate, endDate);
   this->chartview()->setAxisLimits(startDate, endDate, ymin, ymax);
   this->chartview()->dateAxis()->setTitleText("Date (" + tzAbbrev + ")");
@@ -297,7 +300,9 @@ void MapChartWidget::setTimezoneCombo(ComboBox *widget) {
   this->m_cbx_timezone = widget;
 }
 
-std::unique_ptr<Hmdf> *MapChartWidget::data() { return &this->m_data; }
+std::unique_ptr<Hmdf::HmdfData> *MapChartWidget::data() {
+  return &this->m_data;
+}
 
 void MapChartWidget::changeBasemapEsri() {
   this->changeMapType(MapFunctions::MapSource::ESRI);

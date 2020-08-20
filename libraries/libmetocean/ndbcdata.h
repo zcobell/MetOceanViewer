@@ -27,8 +27,8 @@
 
 class NdbcData : public WaterData {
  public:
-  METOCEANSHARED_EXPORT NdbcData(Station &station, QDateTime startDate,
-                                 QDateTime endDate, QObject *parent);
+  METOCEANSHARED_EXPORT NdbcData(MovStation &station, QDateTime startDate,
+                                 QDateTime endDate);
 
   static QStringList METOCEANSHARED_EXPORT dataTypes();
   static QStringList METOCEANSHARED_EXPORT dataNames();
@@ -36,11 +36,11 @@ class NdbcData : public WaterData {
   static QString METOCEANSHARED_EXPORT units(const QString &parameter);
 
  private:
-  int retrieveData(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
+  int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
   static QMap<QString, QString> buildDataNameMap();
   int download(QUrl url, QVector<QStringList> &dldata);
   int readNdbcResponse(QNetworkReply *reply, QVector<QStringList> &data);
-  int formatNdbcResponse(QVector<QStringList> &serverResponse, Hmdf *data);
+  int formatNdbcResponse(QVector<QStringList> &serverResponse, Hmdf::HmdfData *data);
 
   QMap<QString, QString> m_dataNameMap;
 };

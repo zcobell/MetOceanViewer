@@ -22,20 +22,18 @@ include($$PWD/global.pri)
 
 TEMPLATE = subdirs
 
-equals(GUI_DISABLE,1) {
-  SUBDIRS = libraries MetOceanData
-} else {
-  SUBDIRS  = libraries MetOceanViewer MetOceanData
+SUBDIRS = libraries/libtide \
+          thirdparty/Hmdf \
+          libraries/libmetocean
+
+!equals(GUI_DISABLE,1) {
+  SUBDIRS  += MetOceanViewer2
 }
 
 CONFIG += ordered           
 
 HEADERS += version.h
 
-SUBDIRS += \
-    MetOceanHWMStats \
-    MetOceanViewer2
-
 unix {
-SUBDIRS+=ProcessCrmsDatabase
+  #SUBDIRS+=ProcessCrmsDatabase
 }

@@ -20,18 +20,17 @@
 #ifndef CRMSDATA_H
 #define CRMSDATA_H
 
-#include <QMap>
+#include <unordered_map>
+
 #include "waterdata.h"
 
 class CrmsData : public WaterData {
-  Q_OBJECT
  public:
-  METOCEANSHARED_EXPORT CrmsData(Station &station, QDateTime startDate,
+  METOCEANSHARED_EXPORT CrmsData(MovStation &station, QDateTime startDate,
                                  QDateTime endDate,
                                  const QVector<QString> &header,
                                  const QMap<QString, size_t> &mapping,
-                                 const QString &filename,
-                                 QObject *parent = nullptr);
+                                 const QString &filename);
 
   static bool METOCEANSHARED_EXPORT readHeader(const QString &filename,
                                                QVector<QString> &header);
@@ -47,7 +46,7 @@ class CrmsData : public WaterData {
   static bool METOCEANSHARED_EXPORT inquireCrmsStatus(QString filename);
 
  private:
-  int retrieveData(Hmdf *data, Datum::VDatum datum);
+  int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
   QDateTime m_startTime;
   QDateTime m_endTime;

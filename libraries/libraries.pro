@@ -20,8 +20,8 @@
 
 TEMPLATE = subdirs
 
-SUBDIRS  = ../thirdparty/ezproj \
-           libtide \
-           libmetocean
+SUBDIRS  = libtide \
+           ../thirdparty/hmdf \
+           libmetocean 
 
 CONFIG += ordered

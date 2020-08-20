@@ -2,12 +2,13 @@
 #define TEXTENTRY_H
 
 #include <QDebug>
-#include <QDoubleSpinBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QWidget>
+
+#include "doublespinbox.h"
 
 template <typename T>
 class TextEntry : public QWidget {
@@ -19,7 +20,7 @@ class TextEntry : public QWidget {
                 nullptr)
       : QWidget(parent),
         m_label(new QLabel(parent)),
-        m_double(new QDoubleSpinBox(parent)) {
+        m_double(new DoubleSpinBox(parent)) {
     this->setLayout(new QHBoxLayout());
     this->m_double->setMinimumHeight(30);
     this->m_double->setAlignment(Qt::AlignLeft);
@@ -86,7 +87,7 @@ class TextEntry : public QWidget {
   }
 
   template <typename U = T>
-  QDoubleSpinBox *box(
+  DoubleSpinBox *box(
       typename std::enable_if<std::is_floating_point<U>::value>::type * =
           nullptr) {
     return this->m_double;
@@ -109,7 +110,7 @@ class TextEntry : public QWidget {
  private:
   QLabel *m_label;
   QLineEdit *m_text;
-  QDoubleSpinBox *m_double;
+  DoubleSpinBox *m_double;
   QSpinBox *m_integer;
 
   void setWidth(QWidget *w, int width) {

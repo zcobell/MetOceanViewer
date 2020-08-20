@@ -33,6 +33,7 @@ SOURCES += \
     chartoptionsmenu.cpp \
     combobox.cpp \
     datebox.cpp \
+    doublespinbox.cpp \
     fileinfo.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -63,6 +64,7 @@ HEADERS += \
     chartoptionsmenu.h \
     combobox.h \
     datebox.h \
+    doublespinbox.h \
     fileinfo.h \
     mainwindow.h \
     mapchartwidget.h \
@@ -108,16 +110,35 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 #...Libraries
 unix|win32: LIBS += -lnetcdf
 
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../thirdparty/Hmdf/libhmdf/release/ -lhmdf
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../thirdparty/Hmdf/libhmdf/debug/ -lhmdf
+else:unix: LIBS += -L$$OUT_PWD/../thirdparty/Hmdf/libhmdf/ -lhmdf
+
+INCLUDEPATH += $$PWD/../thirdparty/Hmdf/libhmdf
+DEPENDPATH += $$PWD/../thirdparty/Hmdf/libhmdf
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/libhmdf/release/libhmdf.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/libhmdf/debug/libhmdf.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/libhmdf/release/hmdf.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/libhmdf/debug/hmdf.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/libhmdf/libhmdf.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/release/ -lezproj
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/debug/ -lezproj
+else:unix: LIBS += -L$$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/ -lezproj
+
+INCLUDEPATH += $$PWD/../thirdparty/Hmdf/thirdparty/ezproj/src
+DEPENDPATH += $$PWD/../thirdparty/Hmdf/thirdparty/ezproj/src
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/release/libezproj.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/debug/libezproj.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/release/ezproj.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/debug/ezproj.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../thirdparty/Hmdf/thirdparty/ezproj/src/libezproj.a
+
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libraries/libmetocean/release/ -lmetocean
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libraries/libmetocean/debug/ -lmetocean
 else:unix: LIBS += -L$$OUT_PWD/../libraries/libmetocean/ -lmetocean
 
-INCLUDEPATH += $$PWD/../libraries/libmetocean
+INCLUDEPATH += $$PWD/../libraries/libmetocean $$PWD/../thirdparty/hmdf/libhmdf/include $$PWD/../thirdparty/ezproj/src
 DEPENDPATH += $$PWD/../libraries/libmetocean
-
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../thirdparty/ezproj/src/release/ -lezproj
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../thirdparty/ezproj/src/debug/ -lezproj
-else:unix: LIBS += -L$$OUT_PWD/../thirdparty/ezproj/src/ -lezproj
-
-INCLUDEPATH += $$PWD/../thirdparty/ezproj/src
-DEPENDPATH += $$PWD/../thirdparty/ezproj/src

@@ -18,15 +18,15 @@
 //
 //-----------------------------------------------------------------------*/
 #include "tideprediction.h"
+
 #include <QFile>
 #include <QStringList>
-#include "libxtide.hh"
-#include "station.h"
-#include "timezone.h"
 
-TidePrediction::TidePrediction(QString root, QObject *parent)
-    : QObject(parent) {
-  this->m_harmonicsDatabase = root + "/harmonics.tcd";
+#include "libxtide.hh"
+#include "timefunc.h"
+
+TidePrediction::TidePrediction(QString root)
+    : m_harmonicsDatabase(root + "/harmonics.tcd") {
   this->initHarmonicsDatabase();
 }
 
@@ -51,14 +51,12 @@ void TidePrediction::deleteHarmonicsOnExit(bool b) {
   this->m_deleteHarmonicsOnExit = b;
 }
 
-int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
-                        int interval, Hmdf *data) {
-  HmdfStation *st = new HmdfStation(data);
+int TidePrediction::get(MovStation &s, QDateTime startDate, QDateTime endDate,
+                        int interval, Hmdf::HmdfData *data) {
+  Hmdf::Station st(0, s.coordinate().longitude(), s.coordinate().latitude());
 
-  st->setName(s.name());
-  st->setId(s.id());
-  st->setCoordinate(s.coordinate());
-  st->setStationIndex(0);
+  st.setName(s.name().toStdString());
+  st.setId(s.id().toStdString());
 
   const libxtide::StationRef *sr =
       libxtide::Global::stationIndex(
@@ -94,14 +92,12 @@ int TidePrediction::get(Station &s, QDateTime startDate, QDateTime endDate,
       QString val = tide[i].mid(23, tide[i].length()).simplified();
       QDateTime d = QDateTime::fromString(datestr, "yyyy-MM-dd h:mm AP");
       d.setTimeSpec(Qt::UTC);
+      Hmdf::Date dt = Timefunc::fromQDateTime(d);
       if (d.isValid()) {
-        st->setNext(d.toMSecsSinceEpoch(), val.toDouble());
+        st << Hmdf::Timepoint(dt, val.toDouble());
       }
     }
-    st->setIsNull(false);
     data->addStation(st);
-    data->setUnits("m");
-    data->setDatum("mllw");
 
     return 0;
   } else {

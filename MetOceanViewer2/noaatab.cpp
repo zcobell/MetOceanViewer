@@ -9,7 +9,7 @@
 
 std::array<QColor, 2> c_noaaColors = {QColor(Qt::blue), QColor(Qt::green)};
 
-NoaaTab::NoaaTab(QVector<Station> *stations, QWidget *parent)
+NoaaTab::NoaaTab(QVector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::NOAA, stations, parent) {
   this->initialize();
 }
@@ -36,15 +36,15 @@ std::pair<QString, bool> NoaaTab::getDatumParameters() {
   return std::pair<QString, bool>(datumString, useVdatum);
 }
 
-int NoaaTab::getDataFromNoaa(const Station &s,
+int NoaaTab::getDataFromNoaa(const MovStation &s,
                              const NoaaProductList::NoaaProduct &product,
                              const QDateTime startDate, const QDateTime endDate,
-                             const QString &datumString, Hmdf *data) {
+                             const QString &datumString, Hmdf::HmdfData *data) {
   if (product.nProducts() == 1) {
-    NoaaCoOps *n = new NoaaCoOps(
+    std::unique_ptr<NoaaCoOps> n(new NoaaCoOps(
         s, startDate, endDate,
         QString::fromStdString(product.noaaDataString(0)), datumString, false,
-        this->m_cbx_units->combo()->currentText(), this);
+        this->m_cbx_units->combo()->currentText()));
     int ierr = n->get(data);
     if (ierr != 0) {
       emit error(n->errorString());
@@ -59,7 +59,7 @@ int NoaaTab::getDataFromNoaa(const Station &s,
         s, startDate, endDate,
         QString::fromStdString(product.noaaDataString(1)), datumString, false,
         this->m_cbx_units->combo()->currentText()));
-    std::unique_ptr<Hmdf> noaaData1(new Hmdf());
+    std::unique_ptr<Hmdf::HmdfData> noaaData1(new Hmdf::HmdfData());
     int ierr = n1->get(data);
     if (ierr != 0) {
       emit error(n1->errorString());
@@ -70,12 +70,11 @@ int NoaaTab::getDataFromNoaa(const Station &s,
       emit error(n2->errorString());
       return 1;
     }
-    data->addStation(noaaData1->station(0));
-    data->station(1)->setParent(data);
-    data->station(0)->setName(QString::fromStdString(product.seriesName(0)));
-    data->station(1)->setName(QString::fromStdString(product.seriesName(1)));
+    data->addStation(*(noaaData1->station(0)));
+    data->station(0)->setName(product.seriesName(0));
+    data->station(1)->setName(product.seriesName(1));
   }
-  if (data->nstations() < 1) {
+  if (data->nStations() < 1) {
     emit error("No station data was found");
     return 1;
   }
@@ -90,28 +89,33 @@ QString NoaaTab::getUnitsLabel(const NoaaProductList::NoaaProduct &p) {
   }
 }
 
-void NoaaTab::performDatumTransformation(const Station &s, Hmdf *data) {
+void NoaaTab::performDatumTransformation(const MovStation &s,
+                                         Hmdf::HmdfData *data) {
   Datum::VDatum d = Datum::datumID(this->m_cbx_datum->combo()->currentText());
-  bool datumValid = data->applyDatumCorrection(s, d);
-  if (!datumValid) {
+  if (d != Datum::NullDatum) {
     emit warning(
         "VDatum did not provide a valid datum converstaion at the specified "
         "station. Proceeding with MSL");
+  } else {
+    for (size_t i = 0; i < data->nStations(); ++i) {
+      data->station(i)->shift(0, s.offset(d));
+    }
   }
 }
 
-void NoaaTab::addSeriesToChart(Hmdf *data, const qint64 &tzOffset) {
-  for (size_t i = 0; i < data->nstations(); ++i) {
+void NoaaTab::addSeriesToChart(Hmdf::HmdfData *data, const qint64 &tzOffset) {
+  for (size_t i = 0; i < data->nStations(); ++i) {
     QLineSeries *series = this->stationToSeries(data->station(i), tzOffset);
-    series->setName(data->station(i)->name());
+    series->setName(QString::fromStdString(data->station(i)->name()));
     series->setPen(
         QPen(c_noaaColors[i], 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    this->chartview()->addSeries(series, data->station(i)->name());
+    this->chartview()->addSeries(
+        series, QString::fromStdString(data->station(i)->name()));
   }
 }
 
 void NoaaTab::plot() {
-  Station s = this->mapWidget()->currentStation();
+  MovStation s = this->mapWidget()->currentStation();
   if (s.id() == "null") {
     emit error("No station was selected");
     return;
@@ -135,7 +139,7 @@ void NoaaTab::plot() {
   std::tie(datumString, useVdatum) = this->getDatumParameters();
   QString unitLabel = this->getUnitsLabel(p);
 
-  this->data()->reset(new Hmdf());
+  this->data()->reset(new Hmdf::HmdfData());
   ierr = this->getDataFromNoaa(s, p, startgmt, endgmt, datumString,
                                this->data()->get());
   if (ierr != 0) return;

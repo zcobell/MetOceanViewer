@@ -3,7 +3,7 @@
 #include "metocean.h"
 #include "usgswaterdata.h"
 
-UsgsTab::UsgsTab(QVector<Station> *stations, QWidget *parent)
+UsgsTab::UsgsTab(QVector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::USGS, stations, parent), m_ready(false) {
   this->initialize();
 }
@@ -105,10 +105,10 @@ void UsgsTab::plot() {
   };
 
   int type = this->getDatabaseType();
-  this->data()->reset(new Hmdf());
-  UsgsWaterdata *usgs = new UsgsWaterdata(
+  this->data()->reset(new Hmdf::HmdfData());
+  std::unique_ptr<UsgsWaterdata> usgs(new UsgsWaterdata(
       this->m_currentStation, this->startDateEdit()->dateEdit()->dateTime(),
-      this->endDateEdit()->dateEdit()->dateTime(), type, this);
+      this->endDateEdit()->dateEdit()->dateTime(), type));
   int ierr = usgs->get(this->data()->get());
   if (ierr != 0) {
     emit error(usgs->errorString());
@@ -116,9 +116,9 @@ void UsgsTab::plot() {
   }
 
   this->m_cbx_product->combo()->clear();
-  for (size_t i = 0; i < this->data()->get()->nstations(); ++i) {
+  for (size_t i = 0; i < this->data()->get()->nStations(); ++i) {
     this->m_cbx_product->combo()->addItem(
-        this->data()->get()->station(i)->name());
+        QString::fromStdString(this->data()->get()->station(i)->name()));
   }
 
   this->m_ready = true;
@@ -140,8 +140,8 @@ void UsgsTab::replot(int index) {
                                        tzOffset);
     if (ierr != 0) return;
     QString unitString, productName;
-    std::tie(productName, unitString) =
-        this->splitUsgsProductName(this->data()->get()->station(index)->name());
+    std::tie(productName, unitString) = this->splitUsgsProductName(
+        QString::fromStdString(this->data()->get()->station(index)->name()));
     this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, QString(),
                       unitString, productName);
     this->chartview()->chart()->setTitle(this->m_currentStation.name());
@@ -173,14 +173,11 @@ std::tuple<QString, QString> UsgsTab::splitUsgsProductName(
 }
 
 void UsgsTab::saveData() {
-  std::unique_ptr<Hmdf> data(new Hmdf());
-  data->setDatum(this->data()->get()->datum());
-  data->setUnits(this->data()->get()->units());
-  data->setHeader1(this->data()->get()->header1());
-  data->setHeader2(this->data()->get()->header2());
-  data->setHeader3(this->data()->get()->header3());
-  data->addStation(this->data()->get()->station(
-      this->m_cbx_product->combo()->currentIndex()));
-  this->writeData(data.get());
+  Hmdf::HmdfData data;
+  data.station(0)->setDatum(this->data()->get()->station(0)->datum());
+  data.station(0)->setUnits(this->data()->get()->station(0)->units());
+  data.addStation(*(this->data()->get()->station(
+      this->m_cbx_product->combo()->currentIndex())));
+  this->writeData(&data);
   return;
 }

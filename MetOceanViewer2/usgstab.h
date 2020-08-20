@@ -15,7 +15,7 @@
 class UsgsTab : public MapChartWidget {
   Q_OBJECT
  public:
-  UsgsTab(QVector<Station> *stations, QWidget *parent = nullptr);
+  UsgsTab(QVector<MovStation> *stations, QWidget *parent = nullptr);
 
  private slots:
   void plot() override;
@@ -37,7 +37,7 @@ class UsgsTab : public MapChartWidget {
   ComboBox *m_cbx_product;
   QButtonGroup *m_buttonGroup;
   std::vector<QHBoxLayout *> m_rowLayouts;
-  Station m_currentStation;
+  MovStation m_currentStation;
   bool m_ready;
 };
 

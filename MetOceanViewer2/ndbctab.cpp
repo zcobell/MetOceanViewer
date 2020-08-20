@@ -2,7 +2,7 @@
 
 #include "ndbcdata.h"
 
-NdbcTab::NdbcTab(QVector<Station> *stations, QWidget *parent)
+NdbcTab::NdbcTab(QVector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::NDBC, stations, parent), m_ready(false) {
   this->initialize();
 }
@@ -82,10 +82,10 @@ void NdbcTab::plot() {
     emit error("No station was selected");
   }
 
-  this->data()->reset(new Hmdf());
-  NdbcData *ndbc = new NdbcData(
+  this->data()->reset(new Hmdf::HmdfData());
+  std::unique_ptr<NdbcData> ndbc(new NdbcData(
       this->m_currentStation, this->startDateEdit()->dateEdit()->dateTime(),
-      this->endDateEdit()->dateEdit()->dateTime(), this);
+      this->endDateEdit()->dateEdit()->dateTime()));
   int ierr = ndbc->get(this->data()->get());
   if (ierr != 0) {
     emit error(ndbc->errorString());
@@ -93,9 +93,9 @@ void NdbcTab::plot() {
   }
 
   this->m_cbx_product->combo()->clear();
-  for (size_t i = 0; i < this->data()->get()->nstations(); ++i) {
+  for (size_t i = 0; i < this->data()->get()->nStations(); ++i) {
     this->m_cbx_product->combo()->addItem(
-        this->data()->get()->station(i)->name());
+        QString::fromStdString(this->data()->get()->station(i)->name()));
   }
 
   this->m_ready = true;
@@ -115,11 +115,13 @@ void NdbcTab::draw(int index) {
                                        tzOffset);
     if (ierr != 0) return;
 
-    QString unit = NdbcData::units(this->data()->get()->station(index)->name());
+    QString unit = NdbcData::units(
+        QString::fromStdString(this->data()->get()->station(index)->name()));
 
-    this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, QString(),
-                      unit, this->data()->get()->station(index)->name());
-    this->chartview()->chart()->setTitle(this->m_currentStation.name());
+    this->setPlotAxis(
+        this->data()->get(), start, end, tzAbbrev, QString(), unit,
+        QString::fromStdString(this->data()->get()->station(index)->name()));
+    this->chartview()->chart()->setTitle((this->m_currentStation.name()));
     this->addSeriesToChart(index, "NDBC" + this->m_currentStation.id(),
                            tzOffset);
     this->chartview()->initializeAxisLimits();

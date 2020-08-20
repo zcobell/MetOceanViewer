@@ -42,18 +42,13 @@ INCLUDEPATH += $$PWD/../../thirdparty/boost_1_67_0
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-SOURCES += hmdfasciiparser.cpp  \
+SOURCES +=  \
            crmsdata.cpp \
-           hmdf.cpp  \
-           hmdfstation.cpp  \
            metocean_init.cpp \
-           netcdftimeseries.cpp  \
+           movStation.cpp \
            noaacoops.cpp  \
            stringutil.cpp  \
-           timezone.cpp  \
-           timezonestruct.cpp  \
            waterdata.cpp \
-           station.cpp \ 
            usgswaterdata.cpp \
            xtidedata.cpp \
            tideprediction.cpp \
@@ -64,20 +59,15 @@ SOURCES += hmdfasciiparser.cpp  \
            highwatermarks.cpp \
            hwmdata.cpp
 
-HEADERS += hmdfasciiparser.h  \
+HEADERS +=  \
            crmsdata.h \
            datum.h \
-           hmdf.h  \
-           hmdfstation.h  \
            metocean_init.h \
-           netcdftimeseries.h  \
+           movStation.h \
            noaacoops.h  \
            stringutil.h  \
-           timezone.h  \
-           timezonestruct.h  \
-           tzdata.h  \
+           timefunc.h \
            waterdata.h \
-           station.h \ 
            usgswaterdata.h \
            xtidedata.h \
            tideprediction.h \
@@ -111,3 +101,42 @@ RESOURCES += \
     resource_files.qrc
 
 unix|win32: LIBS += -lnetcdf
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/release/ -lnefis
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/debug/ -lnefis
+else:unix: LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/ -lnefis
+
+INCLUDEPATH += $$PWD/../../thirdparty/Hmdf/thirdparty/nefis
+DEPENDPATH += $$PWD/../../thirdparty/Hmdf/thirdparty/nefis
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/release/libnefis.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/debug/libnefis.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/release/nefis.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/debug/nefis.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/nefis/libnefis.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/libhmdf/release/ -lhmdf
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/libhmdf/debug/ -lhmdf
+else:unix: LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/libhmdf/ -lhmdf
+
+INCLUDEPATH += $$PWD/../../thirdparty/Hmdf/libhmdf/include
+DEPENDPATH += $$PWD/../../thirdparty/Hmdf/libhmdf
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/libhmdf/release/libhmdf.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/libhmdf/debug/libhmdf.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/libhmdf/release/hmdf.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/libhmdf/debug/hmdf.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/libhmdf/libhmdf.a
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/release/ -lezproj
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/debug/ -lezproj
+else:unix: LIBS += -L$$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/ -lezproj
+
+INCLUDEPATH += $$PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src
+DEPENDPATH += $$PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src
+
+win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/release/libezproj.a
+else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/debug/libezproj.a
+else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/release/ezproj.lib
+else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/debug/ezproj.lib
+else:unix: PRE_TARGETDEPS += $$OUT_PWD/../../thirdparty/Hmdf/thirdparty/ezproj/src/libezproj.a

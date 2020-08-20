@@ -85,13 +85,13 @@ void changeButtonColor(QPushButton *button, const QColor color) {
   return;
 }
 
-void selectButtonColor(QPushButton *button) {
+QColor selectButtonColor(QPushButton *button) {
   QPalette pal = button->palette();
   QColor c = pal.color(QPalette::Button);
   QColor n = QColorDialog::getColor(c);
-  if (!n.isValid()) return;
+  if (!n.isValid()) return QColor();
   Colors::changeButtonColor(button, n);
-  return;
+  return n;
 }
 
 };  // namespace Colors

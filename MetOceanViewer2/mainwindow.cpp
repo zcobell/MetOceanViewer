@@ -1,12 +1,11 @@
 #include "mainwindow.h"
 
-#include <QDebug>
 #include <QInputDialog>
+#include <QKeySequence>
 #include <QPushButton>
 
 #include "generic.h"
 #include "newtabdialog.h"
-#include "noaatab.h"
 #include "tabwidget.h"
 #include "ui_mainwindow.h"
 
@@ -26,10 +25,6 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
-
-void MainWindow::on_actionNew_Tab_triggered() {
-  this->m_tabWidget->addNewTab();
-}
 
 void MainWindow::generateMenus() {
   this->m_menuFile = new QMenu(this);

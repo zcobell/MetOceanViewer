@@ -22,21 +22,20 @@
 
 #include <QNetworkReply>
 #include <QObject>
+
 #include "metocean_global.h"
 #include "waterdata.h"
 
 class NoaaCoOps : public WaterData {
-  Q_OBJECT
  public:
-  METOCEANSHARED_EXPORT NoaaCoOps(const Station &station,
+  METOCEANSHARED_EXPORT NoaaCoOps(const MovStation &station,
                                   const QDateTime startDate,
                                   const QDateTime endDate,
                                   const QString &product, const QString &datum,
-                                  const bool useVdatum, const QString &units,
-                                  QObject *parent = nullptr);
+                                  const bool useVdatum, const QString &units);
 
  private:
-  int retrieveData(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
+  int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
 
   int parseProduct();
 
@@ -51,11 +50,11 @@ class NoaaCoOps : public WaterData {
                        std::vector<std::string> &retrieveData);
 
   int formatNoaaResponse(std::vector<std::string> &downloadedData,
-                         Hmdf *outputData);
+                         Hmdf::HmdfData *outputData);
   int formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
-                            Hmdf *outputData);
+                            Hmdf::HmdfData *outputData);
   int formatNoaaResponseJson(std::vector<std::string> &downloadedData,
-                             Hmdf *outputData);
+                             Hmdf::HmdfData *outputData);
   void parseCsvToValuePair(std::string &data, QDateTime &date, double &value);
 
   QString m_product;

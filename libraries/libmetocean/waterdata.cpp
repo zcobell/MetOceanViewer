@@ -19,24 +19,22 @@
 //-----------------------------------------------------------------------*/
 #include "waterdata.h"
 
-WaterData::WaterData(const Station &station, const QDateTime startDate, const QDateTime endDate,
-                     QObject *parent)
-    : QObject(parent) {
-  this->m_errorString = QString();
-  this->m_station = station;
-  this->m_startDate = startDate;
-  this->m_endDate = endDate;
-  this->m_timezone = new Timezone(this);
-}
+WaterData::WaterData(const MovStation &station, const QDateTime startDate,
+                     const QDateTime endDate)
+    : m_errorString(QString()),
+      m_station(station),
+      m_startDate(startDate),
+      m_endDate(endDate) {}
 
-int WaterData::get(Hmdf *data, Datum::VDatum datum) {
+int WaterData::get(Hmdf::HmdfData *data, Datum::VDatum datum) {
   return this->retrieveData(data, datum);
 }
 
 QString WaterData::errorString() const { return this->m_errorString; }
 
-int WaterData::retrieveData(Hmdf *data, Datum::VDatum datum) {
+int WaterData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   Q_UNUSED(data);
+  Q_UNUSED(datum);
   return 0;
 }
 
@@ -46,19 +44,15 @@ void WaterData::setEndDate(const QDateTime &endDate) {
   this->m_endDate = endDate;
 }
 
-Timezone *WaterData::getTimezone() const { return this->m_timezone; }
-
-void WaterData::setTimezone(Timezone *timezone) { this->m_timezone = timezone; }
-
 QDateTime WaterData::startDate() const { return this->m_startDate; }
 
 void WaterData::setStartDate(const QDateTime &startDate) {
   this->m_startDate = startDate;
 }
 
-Station WaterData::station() const { return this->m_station; }
+MovStation WaterData::station() const { return this->m_station; }
 
-void WaterData::setStation(const Station &station) {
+void WaterData::setStation(const MovStation &station) {
   this->m_station = station;
 }
 

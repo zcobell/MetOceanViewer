@@ -18,7 +18,11 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   this->setObjectName("MainTabs");
   this->setAccessibleName("MainTabs");
   this->setStyleSheet(
+#ifdef WIN32
+      "#qt_tabwidget_stackedwidget {"
+#else
       "#MainTabs::pane {"
+#endif
       "background-image: url(:/rsc/img/mov.png);"
       "background-repeat: no-repeat; "
       "background-attachment: fixed; "
@@ -37,7 +41,7 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   this->m_stationList = new StationList();
 }
 
-void TabWidget::addNoaaTab(const NewTabDialog* d, QVector<Station>* stations) {
+void TabWidget::addNoaaTab(const NewTabDialog* d, QVector<MovStation>* stations) {
   NoaaTab* n = new NoaaTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));
@@ -48,7 +52,7 @@ void TabWidget::addNoaaTab(const NewTabDialog* d, QVector<Station>* stations) {
   this->setCurrentIndex(this->count() - 1);
 }
 
-void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<Station>* stations) {
+void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<MovStation>* stations) {
   UsgsTab* n = new UsgsTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));
@@ -59,7 +63,7 @@ void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<Station>* stations) {
   this->setCurrentIndex(this->count() - 1);
 }
 
-void TabWidget::addXtideTab(const NewTabDialog* d, QVector<Station>* stations) {
+void TabWidget::addXtideTab(const NewTabDialog* d, QVector<MovStation> *stations) {
   XTideTab* n = new XTideTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));
@@ -70,7 +74,7 @@ void TabWidget::addXtideTab(const NewTabDialog* d, QVector<Station>* stations) {
   this->setCurrentIndex(this->count() - 1);
 }
 
-void TabWidget::addNdbcTab(const NewTabDialog* d, QVector<Station>* stations) {
+void TabWidget::addNdbcTab(const NewTabDialog* d, QVector<MovStation>* stations) {
   NdbcTab* n = new NdbcTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));

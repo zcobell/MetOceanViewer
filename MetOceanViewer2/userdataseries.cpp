@@ -77,3 +77,7 @@ void UserdataSeries::setLayer(int layer) { m_layer = layer; }
 int UserdataSeries::linestyle() const { return m_linestyle; }
 
 void UserdataSeries::setLinestyle(int linestyle) { m_linestyle = linestyle; }
+
+double UserdataSeries::timeUnits() const { return m_timeUnits; }
+
+void UserdataSeries::setTimeUnits(double timeUnits) { m_timeUnits = timeUnits; }

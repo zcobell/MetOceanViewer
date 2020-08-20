@@ -15,6 +15,7 @@
 #include <QWidget>
 
 #include "textentry.h"
+#include "userdataseries.h"
 
 class UserdataTable : public QWidget {
   Q_OBJECT
@@ -57,12 +58,16 @@ class UserdataTable : public QWidget {
   QHBoxLayout *generateButtonBar();
   QHBoxLayout *generateAxisOptions();
   QGroupBox *generateLabelOptions();
+  void placeSeriesInTable(const UserdataSeries &s, const int position = -1);
 
-  struct SeriesObject {
+  void setFilename(const int position, const QString &file);
+  void setSeriesName(const int position, const QString &name);
+  void setColor(const int position, const QColor &color);
+  void setUnitConversion(const int position, const double v);
+  void setXshift(const int position, const double v);
+  void setYshift(const int position, const double v);
 
-  };
-
-  QVector<SeriesObject> m_seriesList;
+  QVector<UserdataSeries> m_seriesList;
 };
 
 #endif  // USERDATATABLE_H

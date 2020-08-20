@@ -11,15 +11,15 @@
 #include "combobox.h"
 #include "datebox.h"
 #include "hmdf.h"
-#include "hmdfstation.h"
 #include "mapview.h"
+#include "movStation.h"
 #include "tabtypes.h"
 
 class MapChartWidget : public QWidget {
   Q_OBJECT
 
  public:
-  MapChartWidget(TabType type, QVector<Station> *stations = nullptr,
+  MapChartWidget(TabType type, QVector<MovStation> *stations = nullptr,
                  QWidget *parent = nullptr);
 
   TabType type() const;
@@ -39,9 +39,9 @@ class MapChartWidget : public QWidget {
 
   void setChartview(ChartView *chartview);
 
-  void setStations(QVector<Station> *station);
+  void setStations(QVector<MovStation> *station);
 
-  QLineSeries *stationToSeries(HmdfStation *s, qint64 offset);
+  QLineSeries *stationToSeries(Hmdf::Station *s, const qint64 offset);
 
   QHBoxLayout *generateMapChartLayout();
   virtual QGroupBox *generateInputBox();
@@ -54,11 +54,11 @@ class MapChartWidget : public QWidget {
   void warning(QString);
 
  protected:
-  virtual void writeData(Hmdf *data);
+  virtual void writeData(Hmdf::HmdfData *data);
   virtual int calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
                                 QDateTime &startDateGmt, QDateTime &endDateGmt,
                                 QString &timezoneString, qint64 &tzOffset);
-  virtual void setPlotAxis(Hmdf *data, const QDateTime &startDate,
+  virtual void setPlotAxis(Hmdf::HmdfData *data, const QDateTime &startDate,
                            const QDateTime &endDate, const QString &tzAbbrev,
                            const QString &datumString = QString(),
                            const QString &unitString = QString(),
@@ -76,7 +76,7 @@ class MapChartWidget : public QWidget {
   ComboBox *cbx_mapType() const;
   void setCbx_mapType(ComboBox *cbx_mapType);
 
-  std::unique_ptr<Hmdf> *data();
+  std::unique_ptr<Hmdf::HmdfData> *data();
 
  public slots:
   void changeBasemapEsri();
@@ -103,7 +103,7 @@ class MapChartWidget : public QWidget {
   void keyPressEvent(QKeyEvent *event) override;
 
  private:
-  QVector<Station> *m_stations;
+  QVector<MovStation> *m_stations;
   const TabType m_type;
   MapView *m_mapWidget;
   QHBoxLayout *m_mapLayout;
@@ -116,7 +116,7 @@ class MapChartWidget : public QWidget {
   ComboBox *m_cbx_timezone;
   ComboBox *m_cbx_mapType;
   std::unique_ptr<MapFunctions> m_mapFunctions;
-  std::unique_ptr<Hmdf> m_data;
+  std::unique_ptr<Hmdf::HmdfData> m_data;
 };
 
 #endif  // MAPCHARTWIDGET_H

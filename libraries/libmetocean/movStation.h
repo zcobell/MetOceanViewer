@@ -17,26 +17,29 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-#ifndef STATION_H
-#define STATION_H
+#ifndef MOVSTATION_H
+#define MOVSTATION_H
 
 #include <QDateTime>
 #include <QGeoCoordinate>
+#include <array>
+
+#include "datum.h"
 #include "metocean_global.h"
 
-class Station {
+class MovStation {
  public:
-  METOCEANSHARED_EXPORT Station();
-  METOCEANSHARED_EXPORT Station(
+  METOCEANSHARED_EXPORT MovStation();
+  METOCEANSHARED_EXPORT MovStation(
       QGeoCoordinate coordinate, QString id, QString name,
       double measured = 0.0, double modeled = 0.0, int category = 0,
       bool active = true,
       QDateTime startValidDate = QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0)),
       QDateTime endValidDate = QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0)));
 
-  METOCEANSHARED_EXPORT ~Station();
+  METOCEANSHARED_EXPORT ~MovStation();
 
-  bool METOCEANSHARED_EXPORT operator==(const Station &s);
+  bool METOCEANSHARED_EXPORT operator==(const MovStation &s);
 
   QGeoCoordinate METOCEANSHARED_EXPORT coordinate() const;
   void METOCEANSHARED_EXPORT setCoordinate(const QGeoCoordinate &coordinate);
@@ -93,6 +96,10 @@ class Station {
   double METOCEANSHARED_EXPORT mhhwOffset() const;
   void METOCEANSHARED_EXPORT setMhhwOffset(double mhhwOffset);
 
+  double METOCEANSHARED_EXPORT offset(const Datum::VDatum &d) const;
+  void METOCEANSHARED_EXPORT setOffset(const Datum::VDatum &d,
+                                       const double value);
+
   static constexpr double METOCEANSHARED_EXPORT nullOffset() { return -9999.0; }
   bool METOCEANSHARED_EXPORT isNullOffset(double offset);
 
@@ -100,21 +107,22 @@ class Station {
   QGeoCoordinate m_coordinate;
   QString m_name;
   QString m_id;
+  std::array<double, 7> m_offset;
   double m_modeled;
   double m_measured;
-  double m_navd88Offset;
-  double m_ngvd29Offset;
-  double m_mslOffset;
-  double m_mlwOffset;
-  double m_mllwOffset;
-  double m_mhwOffset;
-  double m_mhhwOffset;
+//  double m_navd88Offset;
+//  double m_ngvd29Offset;
+//  double m_mslOffset;
+//  double m_mlwOffset;
+//  double m_mllwOffset;
+//  double m_mhwOffset;
+//  double m_mhhwOffset;
   int m_category;
   bool m_selected;
   bool m_active;
   QDateTime m_startValidDate;
   QDateTime m_endValidDate;
 };
-Q_DECLARE_METATYPE(Station)
+Q_DECLARE_METATYPE(MovStation)
 
-#endif  // STATION_H
+#endif  // MOVTATION_H

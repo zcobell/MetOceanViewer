@@ -52,13 +52,17 @@ class UserdataSeries {
   int linestyle() const;
   void setLinestyle(int linestyle);
 
- private:
+  double timeUnits() const;
+  void setTimeUnits(double timeUnits);
+
+private:
   QString m_filename;
   QString m_seriesName;
   QColor m_color;
   double m_unitConversion;
   double m_xshift;
   double m_yshift;
+  double m_timeUnits;
   QDateTime m_coldStart;
   QString m_fileType;
   QString m_stationFilePath;

@@ -3,7 +3,7 @@
 #include "generic.h"
 #include "xtidedata.h"
 
-XTideTab::XTideTab(QVector<Station> *stations, QWidget *parent)
+XTideTab::XTideTab(QVector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::XTIDE, stations, parent) {
   this->initialize();
 }
@@ -77,7 +77,7 @@ QGroupBox *XTideTab::generateInputBox() {
 void XTideTab::plot() {
   this->chartview()->clear();
   this->chartview()->initializeAxis();
-  Station s = this->mapWidget()->currentStation();
+  MovStation s = this->mapWidget()->currentStation();
   if (s.id() == "null") {
     emit error("No station was selected");
     return;
@@ -91,7 +91,7 @@ void XTideTab::plot() {
 
   Datum::VDatum datum =
       Datum::datumID(this->m_cbx_datum->combo()->currentText());
-  this->data()->reset(new Hmdf());
+  this->data()->reset(new Hmdf::HmdfData());
 
   std::unique_ptr<XtideData> xtide(
       new XtideData(s, start, end, Generic::configDirectory()));
@@ -104,9 +104,9 @@ void XTideTab::plot() {
   QString unitString = "m";
   if (this->m_cbx_units->combo()->currentText() == "english") {
     unitString = "ft";
-    for (size_t i = 0; i < this->data()->get()->station(0)->numSnaps(); ++i) {
-      this->data()->get()->station(0)->setData(
-          this->data()->get()->station(0)->data(i) * 3.28084, i);
+    for (size_t i = 0; i < this->data()->get()->station(0)->size(); ++i) {
+      Hmdf::Timepoint *t = this->data()->get()->station(0)->at(i);
+      //t->set(t->date(), t->value() * 3.28084);
     }
   }
 
@@ -119,11 +119,12 @@ void XTideTab::plot() {
   return;
 }
 
-void XTideTab::addSeriesToChart(Hmdf *data, const qint64 tzOffset) {
+void XTideTab::addSeriesToChart(Hmdf::HmdfData *data, const qint64 tzOffset) {
   QLineSeries *series =
       this->stationToSeries(this->data()->get()->station(0), tzOffset);
-  series->setName(data->station(0)->name());
+  series->setName(QString::fromStdString(data->station(0)->name()));
   series->setPen(
       QPen(QColor(Qt::green), 3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-  this->chartview()->addSeries(series, data->station(0)->name());
+  this->chartview()->addSeries(
+      series, QString::fromStdString(data->station(0)->name()));
 }

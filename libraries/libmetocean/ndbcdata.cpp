@@ -26,6 +26,8 @@
 #include <QString>
 #include <QStringList>
 
+#include "timefunc.h"
+
 const QStringList c_dataTypes = QStringList() << "WD"
                                               << "WDIR"
                                               << "WSPD"
@@ -74,9 +76,8 @@ const QStringList c_dataUnits = QStringList() << "deg"
                                               << "nm"
                                               << "m";
 
-NdbcData::NdbcData(Station &station, QDateTime startDate, QDateTime endDate,
-                   QObject *parent)
-    : WaterData(station, startDate, endDate, parent) {
+NdbcData::NdbcData(MovStation &station, QDateTime startDate, QDateTime endDate)
+    : WaterData(station, startDate, endDate) {
   this->m_dataNameMap = this->buildDataNameMap();
 }
 
@@ -95,7 +96,7 @@ QMap<QString, QString> NdbcData::buildDataNameMap() {
   return map;
 }
 
-int NdbcData::retrieveData(Hmdf *data, Datum::VDatum datum) {
+int NdbcData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   Q_UNUSED(datum)
   int yearStart = startDate().date().year();
   int yearEnd = endDate().date().year();
@@ -116,12 +117,12 @@ int NdbcData::retrieveData(Hmdf *data, Datum::VDatum datum) {
 
 int NdbcData::download(QUrl url, QVector<QStringList> &dldata) {
   // Send the request
-  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+  std::unique_ptr<QNetworkAccessManager> manager(new QNetworkAccessManager());
   QEventLoop loop;
   QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(url)));
-  connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-  connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-          SLOT(quit()));
+  QObject::connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+  QObject::connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
+                   SLOT(quit()));
   loop.exec();
 
   QVariant redirectionTargetURL =
@@ -129,9 +130,9 @@ int NdbcData::download(QUrl url, QVector<QStringList> &dldata) {
   if (!redirectionTargetURL.isNull()) {
     QNetworkReply *reply2 =
         manager->get(QNetworkRequest(redirectionTargetURL.toUrl()));
-    connect(reply2, SIGNAL(finished()), &loop, SLOT(quit()));
-    connect(reply2, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-            SLOT(quit()));
+    QObject::connect(reply2, SIGNAL(finished()), &loop, SLOT(quit()));
+    QObject::connect(reply2, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
+                     SLOT(quit()));
     loop.exec();
     reply->deleteLater();
     return this->readNdbcResponse(reply2, dldata);
@@ -161,10 +162,10 @@ int NdbcData::readNdbcResponse(QNetworkReply *reply,
 }
 
 int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
-                                 Hmdf *data) {
+                                 Hmdf::HmdfData *data) {
   //...Create stations
   QStringList d = serverResponse[0].at(0).simplified().split(" ");
-  QVector<HmdfStation *> st;
+  std::vector<Hmdf::Station> st;
 
   int n, p = 0, q, r;
 
@@ -186,16 +187,15 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
   n = d.length() - r;
 
   for (int i = 0; i < n; i++) {
-    HmdfStation *s = new HmdfStation(data);
+    Hmdf::Station s(i, this->station().coordinate().longitude(),
+                    this->station().coordinate().latitude());
 
-    s->setCoordinate(this->station().coordinate());
     if (this->m_dataNameMap.contains(d[i + r])) {
-      s->setName(this->m_dataNameMap[d[i + r]]);
+      s.setName(this->m_dataNameMap[d[i + r]].toStdString());
     } else {
-      s->setName(d[i + r]);
+      s.setName(d[i + r].toStdString());
     }
-    s->setId(d[i + r]);
-    s->setStationIndex(i);
+    s.setId(d[i + r].toStdString());
     st.push_back(s);
   }
 
@@ -223,7 +223,7 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
             if (v[k] != "999" && v[k] != "99.0" && v[k] != "99.00" &&
                 v[k] != "999.0") {
               double vl = v[k].toDouble();
-              st[k]->setNext(dm, vl);
+              st[k] << Hmdf::Timepoint(Timefunc::fromQDateTime(d), vl);
             }
           }
         }
@@ -232,18 +232,17 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
   }
 
   //...Check for null values
-  for (int i = st.length() - 1; i >= 0; i--) {
-    if (st[i]->numSnaps() < 3) {
-      delete st[i];
-      st.removeAt(i);
+  for (int i = st.size() - 1; i >= 0; i--) {
+    if (st[i].size() < 3) {
+      st.erase(st.begin() + i);
     }
   }
 
-  for (int i = 0; i < st.length(); i++) {
+  for (size_t i = 0; i < st.size(); i++) {
     data->addStation(st[i]);
   }
 
-  if (data->nstations() == 0) {
+  if (data->nStations() == 0) {
     this->setErrorString("No valid station data found.");
     return 1;
   }

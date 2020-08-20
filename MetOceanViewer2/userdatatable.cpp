@@ -28,6 +28,35 @@ UserdataTable::UserdataTable(QWidget *parent)
   this->layout()->addWidget(this->generateLabelOptions());
 }
 
+void UserdataTable::setFilename(const int position, const QString &file) {
+  this->m_tableWidget->setItem(position, 0, new QTableWidgetItem(file));
+}
+
+void UserdataTable::setSeriesName(const int position, const QString &name) {
+  this->m_tableWidget->setItem(position, 1, new QTableWidgetItem(name));
+}
+
+void UserdataTable::setColor(const int position, const QColor &color) {
+  this->m_tableWidget->setItem(position, 2, new QTableWidgetItem(color.name()));
+  this->m_tableWidget->item(position, 2)->setBackground(color);
+  this->m_tableWidget->item(position, 2)->setForeground(color);
+}
+
+void UserdataTable::setUnitConversion(const int position, const double v) {
+  this->m_tableWidget->setItem(position, 3,
+                               new QTableWidgetItem(QString::number(v)));
+}
+
+void UserdataTable::setXshift(const int position, const double v) {
+  this->m_tableWidget->setItem(position, 4,
+                               new QTableWidgetItem(QString::number(v)));
+}
+
+void UserdataTable::setYshift(const int position, const double v) {
+  this->m_tableWidget->setItem(position, 5,
+                               new QTableWidgetItem(QString::number(v)));
+}
+
 QHBoxLayout *UserdataTable::generateButtonBar() {
   this->m_addButton = new QPushButton(this);
   this->m_editButton = new QPushButton(this);
@@ -178,6 +207,25 @@ QGroupBox *UserdataTable::generateLabelOptions() {
   return gb;
 }
 
+void UserdataTable::placeSeriesInTable(const UserdataSeries &s,
+                                       const int position) {
+  int p = 0;
+  if (position == -1) {
+    this->m_tableWidget->insertRow(this->m_tableWidget->rowCount());
+    p = this->m_tableWidget->rowCount() - 1;
+  } else {
+    assert(position < this->m_tableWidget->rowCount());
+    p = position;
+  }
+
+  this->setFilename(p, s.filename());
+  this->setSeriesName(p, s.seriesName());
+  this->setColor(p, s.color());
+  this->setXshift(p, s.xshift());
+  this->setYshift(p, s.yshift());
+  this->setUnitConversion(p, s.unitConversion());
+}
+
 void UserdataTable::onCheckDateAxisAuto(bool checked) {
   this->m_startDate->setEnabled(!checked);
   this->m_endDate->setEnabled(!checked);
@@ -192,16 +240,54 @@ void UserdataTable::onClickAddSeries() {
   UserdataForm *form = new UserdataForm(this);
   auto status = form->exec();
   if (status == QDialog::DialogCode::Accepted) {
-    qDebug() << "HERE!";
+    this->m_seriesList.push_back(form->series());
+    this->placeSeriesInTable(this->m_seriesList.back());
   }
 }
 
-void UserdataTable::onClickCopySeries() {}
+void UserdataTable::onClickCopySeries() {
+  int row = this->m_tableWidget->currentRow();
+  if (row == -1) return;
+  this->m_seriesList.push_back(this->m_seriesList[row]);
+  this->placeSeriesInTable(this->m_seriesList.back());
+  return;
+}
 
-void UserdataTable::onClickEditSeries() {}
+void UserdataTable::onClickEditSeries() {
+  int row = this->m_tableWidget->currentRow();
+  if (row == -1) return;
+  UserdataForm *form = new UserdataForm(this);
+  form->setSeriesData(this->m_seriesList[row]);
+  auto status = form->exec();
+  if (status == QDialog::DialogCode::Accepted) {
+    this->m_seriesList[row] = form->series();
+    this->placeSeriesInTable(this->m_seriesList.back(), row);
+  }
+}
 
-void UserdataTable::onClickDeleteSeries() {}
+void UserdataTable::onClickDeleteSeries() {
+  int row = this->m_tableWidget->currentRow();
+  if (row == -1) return;
+  this->m_seriesList.erase(this->m_seriesList.begin() + row);
+  this->m_tableWidget->removeRow(row);
+  return;
+}
 
-void UserdataTable::onClickMoveUpSeries() {}
+void UserdataTable::onClickMoveUpSeries() {
+  int row = this->m_tableWidget->currentRow();
+  if (row <= 0) return;
+  std::swap(this->m_seriesList[row], this->m_seriesList[row - 1]);
+  this->placeSeriesInTable(this->m_seriesList[row], row);
+  this->placeSeriesInTable(this->m_seriesList[row - 1], row - 1);
+  this->m_tableWidget->selectRow(row - 1);
+  return;
+}
 
-void UserdataTable::onClickMoveDownSeries() {}
+void UserdataTable::onClickMoveDownSeries() {
+  int row = this->m_tableWidget->currentRow();
+  if (row == -1 || row == this->m_tableWidget->rowCount() - 1) return;
+  std::swap(this->m_seriesList[row], this->m_seriesList[row + 1]);
+  this->placeSeriesInTable(this->m_seriesList[row], row);
+  this->placeSeriesInTable(this->m_seriesList[row + 1], row + 1);
+  this->m_tableWidget->selectRow(row + 1);
+}

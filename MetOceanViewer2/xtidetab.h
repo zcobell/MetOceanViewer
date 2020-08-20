@@ -8,7 +8,7 @@
 class XTideTab : public MapChartWidget {
   Q_OBJECT
  public:
-  XTideTab(QVector<Station> *stations, QWidget *parent = nullptr);
+  XTideTab(QVector<MovStation> *stations, QWidget *parent = nullptr);
 
  private slots:
   void plot() override;
@@ -17,7 +17,7 @@ class XTideTab : public MapChartWidget {
  private:
   QGroupBox *generateInputBox() override;
   void connectSignals() override;
-  void addSeriesToChart(Hmdf *data, const qint64 tzOffset);
+  void addSeriesToChart(Hmdf::HmdfData *data, const qint64 tzOffset);
 
   ComboBox *m_cbx_datum;
   ComboBox *m_cbx_units;

@@ -24,7 +24,6 @@ class MainWindow : public QMainWindow {
   void generateMenus();
 
  private slots:
-  void on_actionNew_Tab_triggered();
   void setMapboxApiKey();
   void saveSettings();
   void setBasemapEsri();

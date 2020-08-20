@@ -21,34 +21,31 @@
 #define WATERDATA_H
 
 #include <QNetworkReply>
-#include <QObject>
 
+#include "date.h"
 #include "datum.h"
 #include "hmdf.h"
 #include "metocean_global.h"
-#include "station.h"
-#include "timezone.h"
+#include "movStation.h"
 
-class WaterData : public QObject {
-  Q_OBJECT
+class WaterData {
  public:
-  explicit METOCEANSHARED_EXPORT WaterData(const Station &station, const QDateTime startDate,
-                     const QDateTime endDate, QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT WaterData(const MovStation &station,
+                                           const QDateTime startDate,
+                                           const QDateTime endDate);
 
-  int METOCEANSHARED_EXPORT get(Hmdf *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
+  int METOCEANSHARED_EXPORT get(Hmdf::HmdfData *data,
+                                Datum::VDatum datum = Datum::VDatum::NullDatum);
 
   QString METOCEANSHARED_EXPORT errorString() const;
 
-  Timezone METOCEANSHARED_EXPORT *getTimezone() const;
-  void METOCEANSHARED_EXPORT setTimezone(Timezone *timezone);
-
  protected:
-  virtual int retrieveData(Hmdf *data, Datum::VDatum datum);
+  virtual int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
   void setErrorString(const QString &errorString);
 
-  Station station() const;
-  void setStation(const Station &station);
+  MovStation station() const;
+  void setStation(const MovStation &station);
 
   QDateTime startDate() const;
   void setStartDate(const QDateTime &startDate);
@@ -58,10 +55,9 @@ class WaterData : public QObject {
 
  private:
   QString m_errorString;
-  Station m_station;
+  MovStation m_station;
   QDateTime m_startDate;
   QDateTime m_endDate;
-  Timezone *m_timezone;
 };
 
 #endif  // WATERDATA_H

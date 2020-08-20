@@ -4,10 +4,15 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <array>
 
 #include "colors.h"
 #include "ezproj.h"
 #include "fileinfo.h"
+
+constexpr std::array<QColor, 4> s_colorPresets{
+    QColor(0, 0, 255), QColor(0, 255, 0), QColor(255, 0, 0),
+    QColor(255, 20, 147)};
 
 UserdataForm::UserdataForm(QWidget *parent)
     : QDialog(parent),
@@ -36,11 +41,7 @@ UserdataForm::UserdataForm(QWidget *parent)
       m_unitMenuButton(new UnitsMenu(this->m_unitConversion->box(), this)),
       m_buttons(new QDialogButtonBox(
           QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this)),
-      m_proj(new Ezproj()),
-      m_colorPresets{QColor(0, 0, 255), QColor(0, 255, 0), QColor(255, 0, 0),
-                     QColor(255, 20, 147)}
-
-{
+      m_proj(new Ezproj()) {
   this->setMinimumWidth(600);
   this->setMaximumWidth(600);
   this->setMinimumHeight(600);
@@ -58,6 +59,12 @@ UserdataForm::UserdataForm(QWidget *parent)
                                                      << "Dash"
                                                      << "Dash Dot"
                                                      << "Dash Dot Dot");
+
+  this->m_timeUnits->addItems(QStringList() << "days"
+                                            << "hours"
+                                            << "minutes"
+                                            << "seconds");
+  this->m_timeUnits->setCurrentText("hours");
 
   this->m_label->layout()->setAlignment(Qt::AlignLeft);
   this->m_fileType->layout()->setAlignment(Qt::AlignLeft);
@@ -87,25 +94,39 @@ UserdataForm::UserdataForm(QWidget *parent)
 
   this->m_filename->box()->setReadOnly(true);
   this->m_fileType->box()->setReadOnly(true);
-  this->m_unitConversion->box()->setDecimals(6);
+  this->m_unitConversion->box()->setDecimals(16);
 
   connect(this->m_buttons, SIGNAL(accepted()), this, SLOT(accept()));
   connect(this->m_buttons, SIGNAL(rejected()), this, SLOT(reject()));
   connect(this->m_colorSelectButton, SIGNAL(clicked()), this,
           SLOT(selectColor()));
   connect(m_colorShortcut1, &QPushButton::clicked,
-          [=] { this->changeButtonColor(m_colorPresets[0]); });
+          [=] { this->changeButtonColor(s_colorPresets[0]); });
   connect(m_colorShortcut2, &QPushButton::clicked,
-          [=] { this->changeButtonColor(m_colorPresets[1]); });
+          [=] { this->changeButtonColor(s_colorPresets[1]); });
   connect(m_colorShortcut3, &QPushButton::clicked,
-          [=] { this->changeButtonColor(m_colorPresets[2]); });
+          [=] { this->changeButtonColor(s_colorPresets[2]); });
   connect(m_colorShortcut4, &QPushButton::clicked,
-          [=] { this->changeButtonColor(m_colorPresets[3]); });
+          [=] { this->changeButtonColor(s_colorPresets[3]); });
   connect(m_coordinateSystem->box(), SIGNAL(valueChanged(int)), this,
           SLOT(checkEpsgCode(int)));
   connect(m_coordinateSystemDescription, SIGNAL(clicked()), this,
           SLOT(showEpsgDescription()));
   connect(m_browseFile, SIGNAL(clicked()), this, SLOT(browseFile()));
+
+  this->getFormData();
+}
+
+void UserdataForm::setSeriesData(const UserdataSeries &data) {
+  this->m_filename->box()->setText(FileInfo::basename(data.filename()));
+  this->m_label->box()->setText(data.seriesName());
+  this->m_unitConversion->box()->setValue(data.unitConversion());
+  this->m_timeAdjustment->box()->setValue(data.xshift());
+  this->m_timeUnits->setCurrentIndex(timeUnitToIndex(data.timeUnits()));
+  this->m_yAdjustment->box()->setValue(data.yshift());
+  this->m_selectedColor = data.color();
+  Colors::changeButtonColor(this->m_colorSelectButton, this->m_selectedColor);
+  this->m_coordinateSystem->box()->setValue(data.epsg());
 }
 
 QHBoxLayout *UserdataForm::makeFileLayout() {
@@ -195,16 +216,12 @@ QHBoxLayout *UserdataForm::makeColorLayout() {
   color->addSpacerItem(
       new QSpacerItem(15, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
 
-  Colors::changeButtonColor(this->m_colorSelectButton,
-                            Colors::generateRandomColor());
-  Colors::changeButtonColor(this->m_colorShortcut1, m_colorPresets[0]);
-  Colors::changeButtonColor(this->m_colorShortcut2, m_colorPresets[1]);
-  Colors::changeButtonColor(this->m_colorShortcut3, m_colorPresets[2]);
-  Colors::changeButtonColor(this->m_colorShortcut4, m_colorPresets[3]);
-
-  // color->setAlignment(Qt::AlignLeft);
-
-  // color->addStretch();
+  this->m_selectedColor = Colors::generateRandomColor();
+  Colors::changeButtonColor(this->m_colorSelectButton, this->m_selectedColor);
+  Colors::changeButtonColor(this->m_colorShortcut1, s_colorPresets[0]);
+  Colors::changeButtonColor(this->m_colorShortcut2, s_colorPresets[1]);
+  Colors::changeButtonColor(this->m_colorShortcut3, s_colorPresets[2]);
+  Colors::changeButtonColor(this->m_colorShortcut4, s_colorPresets[3]);
 
   return color;
 }
@@ -231,11 +248,51 @@ QHBoxLayout *UserdataForm::makeLinestyleLayout() {
 }
 
 void UserdataForm::selectColor() {
-  Colors::selectButtonColor(this->m_colorSelectButton);
+  this->m_selectedColor = Colors::selectButtonColor(this->m_colorSelectButton);
 }
 
 void UserdataForm::changeButtonColor(const QColor c) {
+  this->m_selectedColor = c;
   Colors::changeButtonColor(this->m_colorSelectButton, c);
+}
+
+int UserdataForm::timeUnitToIndex(const double t) {
+  if (t == 86400.0)
+    return 0;
+  else if (t == 3600.0)
+    return 1;
+  else if (t == 60.0)
+    return 2;
+  else
+    return 3;
+}
+
+double UserdataForm::timeUnitConversion(const int index) {
+  switch (index) {
+    case 0:
+      return 86400.0;
+    case 1:
+      return 3600.0;
+    case 2:
+      return 60.0;
+    case 3:
+      return 1.0;
+    default:
+      return 1.0;
+  }
+}
+
+void UserdataForm::getFormData() {
+  this->m_series.setSeriesName(this->m_label->box()->text());
+  this->m_series.setUnitConversion(this->m_unitConversion->box()->value());
+  this->m_series.setXshift(this->m_timeAdjustment->box()->value());
+  this->m_series.setYshift(this->m_yAdjustment->box()->value());
+  this->m_series.setTimeUnits(
+      this->timeUnitConversion(this->m_timeUnits->currentIndex()));
+  this->m_series.setLinestyle(this->m_linestyle->combo()->currentIndex());
+  this->m_series.setEpsg(this->m_coordinateSystem->box()->value());
+  this->m_series.setColor(this->m_selectedColor);
+  return;
 }
 
 void UserdataForm::checkEpsgCode(int epsg) {
@@ -296,4 +353,7 @@ void UserdataForm::browseFile() {
   return;
 }
 
-UserdataSeries UserdataForm::series() const { return this->m_series; }
+UserdataSeries UserdataForm::series() {
+  this->getFormData();
+  return this->m_series;
+}

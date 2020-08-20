@@ -6,19 +6,20 @@
 #include <memory>
 
 #include "mapfunctions.h"
+#include "movStation.h"
 #include "stationmodel.h"
 
 class MapView : public QQuickWidget {
   Q_OBJECT
  public:
-  MapView(QVector<Station> *s = nullptr, MapFunctions *m = nullptr,
+  MapView(QVector<MovStation> *s = nullptr, MapFunctions *m = nullptr,
           QWidget *parent = nullptr);
 
-  Station currentStation();
+  MovStation currentStation();
 
   MapFunctions *mapFunctions() const;
 
-  void setStationList(QVector<Station> *stations);
+  void setStationList(QVector<MovStation> *stations);
 
  public slots:
   void refreshStations(bool filter = true, bool activeOnly = true);
@@ -35,7 +36,7 @@ class MapView : public QQuickWidget {
   void disconnectMarkerChanged();
   void disconnectStationRefresh();
 
-  QVector<Station> *m_markerLocations;
+  QVector<MovStation> *m_markerLocations;
   QString m_currentMarker;
   MapFunctions *m_mapFunctions;
   QTimer *m_delayTimer;

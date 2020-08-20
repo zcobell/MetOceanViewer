@@ -25,21 +25,19 @@
 #include "waterdata.h"
 
 class XtideData : public WaterData {
-  Q_OBJECT
  public:
-  METOCEANSHARED_EXPORT XtideData(Station &station, QDateTime startDate,
-                                  QDateTime endDate, QString rootDriectory,
-                                  QObject *parent = nullptr);
+  METOCEANSHARED_EXPORT XtideData(MovStation &station, QDateTime startDate,
+                                  QDateTime endDate, QString rootDriectory);
 
   int METOCEANSHARED_EXPORT interval() const;
   void METOCEANSHARED_EXPORT setInterval(int interval);
 
  private:
-  int retrieveData(Hmdf *data, Datum::VDatum datum);
+  int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
   int m_interval;
   QString m_rootDirectory;
-  TidePrediction *m_tidePrediction;
+  std::unique_ptr<TidePrediction> m_tidePrediction;
 };
 
 #endif  // XTIDEDATA_H

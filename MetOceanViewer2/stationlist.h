@@ -3,21 +3,21 @@
 
 #include <QVector>
 
-#include "station.h"
+#include "movStation.h"
 #include "tabtypes.h"
 
 class StationList {
  public:
   StationList();
 
-  QVector<Station> *get(TabType t);
+  QVector<MovStation> *get(TabType t);
 
  private:
-  QVector<Station> m_noaa;
-  QVector<Station> m_usgs;
-  QVector<Station> m_ndbc;
-  QVector<Station> m_crms;
-  QVector<Station> m_xtide;
+  QVector<MovStation> m_noaa;
+  QVector<MovStation> m_usgs;
+  QVector<MovStation> m_ndbc;
+  QVector<MovStation> m_crms;
+  QVector<MovStation> m_xtide;
 };
 
 #endif  // STATIONLIST_H

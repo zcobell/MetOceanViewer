@@ -104,10 +104,10 @@ inline bool isBetween(T start, T end, T rangeStart, T rangeEnd) {
   return (start <= rangeEnd && end >= rangeStart);
 }
 
-int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
+int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<MovStation> *locations,
                                  QDateTime &start, QDateTime &end) {
   this->m_stationModel->clear();
-  QVector<Station> visibleMarkers;
+  QVector<MovStation> visibleMarkers;
   for (int i = 0; i < locations->size(); ++i) {
     if (isBetween<QDateTime>(locations->at(i).startValidDate(),
                              locations->at(i).endValidDate(), start, end)) {
@@ -118,7 +118,7 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
   return visibleMarkers.length();
 }
 
-int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
+int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<MovStation> *locations,
                                  bool filter, bool activeOnly) {
   //...Clear current markers
   this->m_stationModel->clear();
@@ -146,7 +146,7 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<Station> *locations,
     double yb = std::min(y1, y2);
     double yt = std::max(y1, y2);
 
-    QVector<Station> visibleMarkers;
+    QVector<MovStation> visibleMarkers;
 
     //...Get the objects inside the viewport
     if (locations != nullptr) {

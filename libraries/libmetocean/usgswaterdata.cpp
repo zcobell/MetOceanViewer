@@ -18,23 +18,24 @@
 //
 //-----------------------------------------------------------------------*/
 #include "usgswaterdata.h"
+
 #include <QEventLoop>
 #include <QMap>
 #include <QVector>
 
-UsgsWaterdata::UsgsWaterdata(Station &station, QDateTime startDate,
-                             QDateTime endDate, int databaseOption,
-                             QObject *parent)
-    : WaterData(station, startDate, endDate, parent) {
-  this->m_databaseOption = databaseOption;
-}
+#include "timefunc.h"
 
-int UsgsWaterdata::get(Hmdf *data, Datum::VDatum datum) {
+UsgsWaterdata::UsgsWaterdata(MovStation &station, QDateTime startDate,
+                             QDateTime endDate, int databaseOption)
+    : WaterData(station, startDate, endDate),
+      m_databaseOption(databaseOption) {}
+
+int UsgsWaterdata::get(Hmdf::HmdfData *data, Datum::VDatum datum) {
   Q_UNUSED(datum)
   return this->fetch(data);
 }
 
-int UsgsWaterdata::fetch(Hmdf *data) {
+int UsgsWaterdata::fetch(Hmdf::HmdfData *data) {
   if (this->station().id() == QString()) {
     this->setErrorString("You must select a station");
     return 1;
@@ -73,15 +74,15 @@ QUrl UsgsWaterdata::buildUrl() {
   return QUrl(requestUrl);
 }
 
-int UsgsWaterdata::download(QUrl url, Hmdf *data) {
-  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+int UsgsWaterdata::download(QUrl url, Hmdf::HmdfData *data) {
+  std::unique_ptr<QNetworkAccessManager> manager(new QNetworkAccessManager());
   QEventLoop loop;
 
   //...Make the request to the server
   QNetworkReply *reply = manager->get(QNetworkRequest(url));
-  connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-  connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-          SLOT(quit()));
+  QObject::connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+  QObject::connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
+                   SLOT(quit()));
   loop.exec();
 
   if (reply->error() != QNetworkReply::NoError) {
@@ -92,18 +93,16 @@ int UsgsWaterdata::download(QUrl url, Hmdf *data) {
   int ierr = this->readDownloadedData(reply, data);
 
   reply->deleteLater();
-
-  delete manager;
-
   return ierr;
 }
 
-int UsgsWaterdata::readDownloadedData(QNetworkReply *reply, Hmdf *output) {
+int UsgsWaterdata::readDownloadedData(QNetworkReply *reply,
+                                      Hmdf::HmdfData *output) {
   QByteArray data = reply->readAll();
   return this->readUsgsData(data, output);
 }
 
-int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
+int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
   bool doubleok;
   int ParamStart, ParamStop;
   int HeaderEnd;
@@ -112,7 +111,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
 
   QString InputData(data);
   QStringList SplitByLine =
-      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
+      InputData.split(QRegExp("[\n]"), Qt::SkipEmptyParts);
 
   ParamStart = -1;
   ParamStop = -1;
@@ -135,14 +134,14 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   this->setErrorString(e);
 
   //...Start by finding the header and reading the parameters from it
-  for (size_t i = 0; i < SplitByLine.length(); i++) {
+  for (int i = 0; i < SplitByLine.length(); i++) {
     if (SplitByLine.value(i).left(15) == "# Data provided") {
       ParamStart = i + 2;
       break;
     }
   }
 
-  for (size_t i = ParamStart; i < SplitByLine.length(); i++) {
+  for (int i = ParamStart; i < SplitByLine.length(); i++) {
     tempLine = SplitByLine.value(i);
     if (tempLine == "#") {
       ParamStop = i - 1;
@@ -159,9 +158,9 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   };
   QVector<UsgsParameter> params;
 
-  for (size_t i = ParamStart; i <= ParamStop; i++) {
+  for (int i = ParamStart; i <= ParamStop; i++) {
     tempLine = SplitByLine.value(i);
-    tempList = tempLine.split("  ", QString::SkipEmptyParts);
+    tempList = tempLine.split("  ", Qt::SkipEmptyParts);
 
     UsgsParameter p;
     p.ts = tempList.value(1).simplified();
@@ -182,7 +181,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   }
 
   //...Find out where the header ends
-  for (size_t i = 0; i < SplitByLine.length(); i++) {
+  for (int i = 0; i < SplitByLine.length(); i++) {
     if (SplitByLine.value(i).left(1) != "#") {
       HeaderEnd = i + 2;
       break;
@@ -193,8 +192,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   QMap<int, int> parameterMapping, revParmeterMapping;
   QString mapString = SplitByLine[HeaderEnd - 2];
   QStringList mapList = mapString.split("\t");
-  for (size_t i = 4; i < mapList.length(); i++) {
-    for (size_t j = 0; j < params.length(); j++) {
+  for (int i = 4; i < mapList.length(); i++) {
+    for (int j = 0; j < params.length(); j++) {
       if (mapList[i] == params[j].code) {
         parameterMapping[i] = j;
         revParmeterMapping[j] = i;
@@ -203,21 +202,19 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   }
 
   //...Initialize the array
-  QVector<HmdfStation *> stations;
-  stations.resize(params.length());
-  for (size_t i = 0; i < stations.length(); i++) {
-    stations[i] = new HmdfStation(output);
-    stations[i]->setName(params[i].description);
-    stations[i]->setId(params[i].parameter);
-    stations[i]->setLatitude(station().coordinate().latitude());
-    stations[i]->setLongitude(station().coordinate().longitude());
+  for (int i = 0; i < params.length(); i++) {
+    Hmdf::Station s(i, station().coordinate().longitude(),
+                    station().coordinate().latitude());
+    s.setName(params[i].description.toStdString());
+    s.setId(params[i].parameter.toStdString());
+    output->addStation(s);
   }
 
   //...Sanity check
-  if (stations.length() == 0) return 1;
+  if (output->nStations() == 0) return 1;
 
   //...Read the data into the array
-  for (size_t i = HeaderEnd; i < SplitByLine.length(); i++) {
+  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
     tempLine = SplitByLine.value(i);
     tempList = tempLine.split(QRegExp("[\t]"));
     TempDateString = tempList.value(2);
@@ -232,47 +229,46 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
 
     //...Convert to UTC from the source timezone
     currentDate.setTimeSpec(Qt::UTC);
-    int offset = Timezone::offsetFromUtc(TempTimeZoneString);
-    currentDate = currentDate.addSecs(-offset);
 
-    if (stations[0]->numSnaps() > 0) {
-      if (currentDate.toMSecsSinceEpoch() >
-          stations[0]->date(stations[0]->numSnaps() - 1)) {
-        for (size_t j = 0; j < params.length(); j++) {
+    //**FIXME**//
+    // int offset = Timezone::offsetFromUtc(TempTimeZoneString);
+    // currentDate = currentDate.addSecs(-offset);
+
+    Hmdf::Date d = Timefunc::fromQDateTime(currentDate);
+
+    if (output->station(0)->size() > 0) {
+      if (d > output->station(0)->back().date()) {
+        for (int j = 0; j < params.length(); j++) {
           double data =
               tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
           if (doubleok) {
-            stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
+            output->station(j)->push_back(Hmdf::Timepoint(d, data));
           }
         }
       }
     } else {
-      for (size_t j = 0; j < params.length(); j++) {
+      for (int j = 0; j < params.length(); j++) {
         double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
         if (doubleok) {
-          stations[j]->setNext(currentDate.toMSecsSinceEpoch(), data);
+          output->station(j)->push_back(Hmdf::Timepoint(d, data));
         }
       }
     }
   }
 
-  for (int i = stations.size() - 1; i >= 0; i--) {
-    if (stations[i]->numSnaps() < 3) {
-      delete stations[i];
-      stations.removeAt(i);
+  for (int i = output->nStations() - 1; i >= 0; i--) {
+    if (output->station(i)->size() < 3) {
+      output->deleteStation(i);
     }
   }
 
   //...Sanity check
-  if (stations.length() == 0) {
+  if (output->nStations() == 0) {
     this->setErrorString(
         "No data available at this station for this time period\n" +
         this->errorString());
     return 1;
   }
-
-  //...Add stations to object
-  for (int i = 0; i < stations.length(); i++) output->addStation(stations[i]);
 
   return 0;
 }

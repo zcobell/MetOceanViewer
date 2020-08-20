@@ -28,7 +28,7 @@
 #include <QQuickView>
 #include <QQuickWidget>
 
-#include "station.h"
+#include "movStation.h"
 
 class StationModel : public QAbstractListModel {
   Q_OBJECT
@@ -54,11 +54,11 @@ class StationModel : public QAbstractListModel {
 
   StationModel(QObject *parent = nullptr);
 
-  Q_INVOKABLE void addMarker(Station &station);
+  Q_INVOKABLE void addMarker(MovStation &station);
 
-  void addMarkers(QVector<Station> &stations);
+  void addMarkers(QVector<MovStation> &stations);
 
-  void addMarkers(QVector<Station> *stations);
+  void addMarkers(QVector<MovStation> *stations);
 
   int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
@@ -67,7 +67,7 @@ class StationModel : public QAbstractListModel {
 
   QHash<int, QByteArray> roleNames() const override;
 
-  Station findStation(QString stationName);
+  MovStation findStation(QString stationName);
 
   void boundingBox(QRectF &box, bool activeOnly = true);
 
@@ -88,8 +88,8 @@ class StationModel : public QAbstractListModel {
   bool removeRows(int row, int count,
                   const QModelIndex &parent = QModelIndex()) override;
 
-  QList<Station> m_stations;
-  QHash<QString, Station> m_stationMap;
+  QList<MovStation> m_stations;
+  QHash<QString, MovStation> m_stationMap;
   QHash<QString, int> m_stationLocationMap;
   QHash<int, QByteArray> m_roles;
 };

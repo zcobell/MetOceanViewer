@@ -22,7 +22,8 @@ class UserdataForm : public QDialog {
  public:
   UserdataForm(QWidget *parent = nullptr);
 
-  UserdataSeries series() const;
+  void setSeriesData(const UserdataSeries &data);
+  UserdataSeries series();
 
  private slots:
   void selectColor();
@@ -55,7 +56,7 @@ class UserdataForm : public QDialog {
   QDialogButtonBox *m_buttons;
   std::unique_ptr<Ezproj> m_proj;
   QString m_defaultBoxStylesheet;
-  const QVector<QColor> m_colorPresets;
+  QColor m_selectedColor;
 
   QHBoxLayout *makeFileLayout();
   QHBoxLayout *makeUnitLayout();
@@ -65,6 +66,9 @@ class UserdataForm : public QDialog {
   QHBoxLayout *makeCoordinateLayout();
   QHBoxLayout *makeLinestyleLayout();
   void changeButtonColor(const QColor c);
+  void getFormData();
+  static double timeUnitConversion(const int index);
+  static int timeUnitToIndex(const double t);
 };
 
 #endif  // USERDATAFORM_H

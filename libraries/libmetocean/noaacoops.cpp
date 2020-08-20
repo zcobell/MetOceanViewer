@@ -33,12 +33,13 @@
 #include "boost/config/warning_disable.hpp"
 #include "boost/spirit/include/phoenix.hpp"
 #include "boost/spirit/include/qi.hpp"
+#include "timefunc.h"
 
-NoaaCoOps::NoaaCoOps(const Station &station, const QDateTime startDate,
+NoaaCoOps::NoaaCoOps(const MovStation &station, const QDateTime startDate,
                      const QDateTime endDate, const QString &product,
                      const QString &datum, const bool useVdatum,
-                     const QString &units, QObject *parent)
-    : WaterData(station, startDate, endDate, parent),
+                     const QString &units)
+    : WaterData(station, startDate, endDate),
       m_product(product),
       m_units(units),
       m_datum(datum),
@@ -52,7 +53,8 @@ int NoaaCoOps::parseProduct() {
   return 0;
 }
 
-int NoaaCoOps::retrieveData(Hmdf *data, Datum::VDatum datum) {
+int NoaaCoOps::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
+  Q_UNUSED(datum);
   QVector<QDateTime> startDateList, endDateList;
   std::vector<std::string> rawNoaaData;
   int ierr = this->generateDateRanges(startDateList, endDateList);
@@ -63,9 +65,10 @@ int NoaaCoOps::retrieveData(Hmdf *data, Datum::VDatum datum) {
   ierr = this->formatNoaaResponse(rawNoaaData, data);
   if (ierr != 0) return ierr;
   if (this->m_useVdatum) {
-    Datum::VDatum d = Datum::datumID(this->m_datum);
-    Station s = this->station();
-    data->applyDatumCorrection(s, d);
+    for (size_t i = 0; i < data->nStations(); ++i) {
+      data->station(i)->shift(
+          0, this->station().offset(Datum::datumID(this->m_datum)));
+    }
   }
   return 0;
 }
@@ -98,7 +101,7 @@ int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
 int NoaaCoOps::downloadDataFromNoaaServer(
     QVector<QDateTime> startDateList, QVector<QDateTime> endDateList,
     std::vector<std::string> &downloadedData) {
-  QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+  std::unique_ptr<QNetworkAccessManager> manager(new QNetworkAccessManager());
 
   for (int i = 0; i < startDateList.length(); i++) {
     // Make the date string
@@ -117,7 +120,8 @@ int NoaaCoOps::downloadDataFromNoaaServer(
 
     // Build the URL to request data from the NOAA CO-OPS API
     QString requestURL =
-        QStringLiteral("https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?") +
+        QStringLiteral(
+            "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?") +
         QStringLiteral("product=") + this->m_productParsed[0] +
         QStringLiteral("&application=MetOceanViewer") +
         QStringLiteral("&begin_date=") + startString +
@@ -138,9 +142,9 @@ int NoaaCoOps::downloadDataFromNoaaServer(
     // Send the request
     QEventLoop loop;
     QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(requestURL)));
-    connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-    connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-            SLOT(quit()));
+    QObject::connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+    QObject::connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
+                     SLOT(quit()));
     loop.exec();
 
     //...Check for a redirect from NOAA. This fixes bug #26
@@ -149,9 +153,9 @@ int NoaaCoOps::downloadDataFromNoaaServer(
     if (!redirectionTargetURL.isNull()) {
       QNetworkReply *reply2 =
           manager->get(QNetworkRequest(redirectionTargetURL.toUrl()));
-      connect(reply2, SIGNAL(finished()), &loop, SLOT(quit()));
-      connect(reply2, SIGNAL(error(QNetworkReply::NetworkError)), &loop,
-              SLOT(quit()));
+      QObject::connect(reply2, SIGNAL(finished()), &loop, SLOT(quit()));
+      QObject::connect(reply2, SIGNAL(error(QNetworkReply::NetworkError)),
+                       &loop, SLOT(quit()));
       loop.exec();
       reply->deleteLater();
       this->readNoaaResponse(reply2, downloadedData);
@@ -181,7 +185,7 @@ int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
 }
 
 int NoaaCoOps::formatNoaaResponse(std::vector<std::string> &downloadedData,
-                                  Hmdf *outputData) {
+                                  Hmdf::HmdfData *outputData) {
   if (this->m_useJson) {
     return this->formatNoaaResponseJson(downloadedData, outputData);
   } else {
@@ -223,7 +227,7 @@ void NoaaCoOps::parseCsvToValuePair(std::string &data, QDateTime &date,
 }
 
 int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
-                                     Hmdf *outputData) {
+                                     Hmdf::HmdfData *outputData) {
   std::vector<std::vector<std::string>> data(downloadedData.size());
 
   for (size_t i = 0; i < downloadedData.size(); ++i) {
@@ -231,11 +235,10 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
                             boost::token_compress_on);
   }
 
-  HmdfStation *station = new HmdfStation(outputData);
-  station->setCoordinate(this->station().coordinate());
-  station->setName(this->station().name());
-  station->setId(this->station().id());
-  station->setStationIndex(0);
+  Hmdf::Station station(0, this->station().coordinate().longitude(),
+                        this->station().coordinate().latitude());
+  station.setName(this->station().name().toStdString());
+  station.setId(this->station().id().toStdString());
 
   for (auto &d : data) {
     if (d.size() > 3) {
@@ -243,17 +246,17 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
         if (d2.size() == 0) continue;
 
         QDateTime date = QDateTime();
-        double value = HmdfStation::nullDataValue();
+        double value = Hmdf::Timepoint::nullValue();
         this->parseCsvToValuePair(d2, date, value);
 
-        if (std::abs(value - HmdfStation::nullDataValue()) > 0.001 &&
+        if (std::abs(value - Hmdf::Timepoint::nullValue()) > 0.001 &&
             date.isValid()) {
           qint64 t = date.toMSecsSinceEpoch();
-          if (station->numSnaps() > 0) {
-            if (station->date(station->numSnaps() - 1) != t)
-              station->setNext(t, value);
+          if (station.size() > 0) {
+            if (station.back().date().toMSeconds() != t)
+              station << Hmdf::Timepoint(Timefunc::fromQDateTime(date), value);
           } else {
-            station->setNext(t, value);
+            station << Hmdf::Timepoint(Timefunc::fromQDateTime(date), value);
           }
         }
       }
@@ -261,7 +264,7 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
   }
   outputData->addStation(station);
 
-  if (outputData->station(0)->numSnaps() < 5) {
+  if (outputData->station(0)->size() < 5) {
     this->setErrorString(QStringLiteral("No valid data was found."));
     return 1;
   }
@@ -270,12 +273,11 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
 }
 
 int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
-                                      Hmdf *outputData) {
-  HmdfStation *station = new HmdfStation(outputData);
-  station->setCoordinate(this->station().coordinate());
-  station->setName(this->station().name());
-  station->setId(this->station().id());
-  station->setStationIndex(0);
+                                      Hmdf::HmdfData *outputData) {
+  Hmdf::Station station(0, this->station().coordinate().longitude(),
+                        this->station().coordinate().latitude());
+  station.setName(this->station().name().toStdString());
+  station.setId(this->station().id().toStdString());
 
   for (size_t i = 0; i < downloadedData.size(); i++) {
     std::string data = downloadedData[i];
@@ -302,13 +304,13 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
     else
       start = 1;
 
-    for (size_t j = start; j < jsonArr.size(); j++) {
+    for (int j = start; j < jsonArr.size(); j++) {
       QJsonObject obj = jsonArr[j].toObject();
       QDateTime t =
           QDateTime::fromString(obj["t"].toString(), "yyyy-MM-dd hh:mm");
       t.setTimeSpec(Qt::UTC);
       bool ok = false;
-      double v = station->nullValue();
+      double v = Hmdf::Timepoint::nullValue();
       if (this->m_productParsed.size() == 1) {
         v = obj["v"].toString().toDouble(&ok);
       } else {
@@ -321,13 +323,12 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
         }
       }
       if (t.isValid() && ok) {
-        station->setNext(t.toMSecsSinceEpoch(), v);
+        station << Hmdf::Timepoint(Timefunc::fromQDateTime(t), v);
       }
     }
   }
 
-  if (station->numSnaps() > 3) {
-    station->setIsNull(false);
+  if (station.size() > 3) {
     outputData->addStation(station);
     return 0;
   } else {
