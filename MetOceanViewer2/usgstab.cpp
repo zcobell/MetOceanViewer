@@ -3,7 +3,7 @@
 #include "metocean.h"
 #include "usgswaterdata.h"
 
-UsgsTab::UsgsTab(QVector<MovStation> *stations, QWidget *parent)
+UsgsTab::UsgsTab(std::vector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::USGS, stations, parent), m_ready(false) {
   this->initialize();
 }
@@ -111,7 +111,7 @@ void UsgsTab::plot() {
       this->endDateEdit()->dateEdit()->dateTime(), type));
   int ierr = usgs->get(this->data()->get());
   if (ierr != 0) {
-    emit error(usgs->errorString());
+    emit error(QString::fromStdString(usgs->errorString()));
     return;
   }
 
@@ -144,9 +144,13 @@ void UsgsTab::replot(int index) {
         QString::fromStdString(this->data()->get()->station(index)->name()));
     this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, QString(),
                       unitString, productName);
-    this->chartview()->chart()->setTitle(this->m_currentStation.name());
-    this->addSeriesToChart(index, "USGS" + this->m_currentStation.id(),
-                           tzOffset);
+    this->chartview()->chart()->setTitle(
+        QString::fromStdString(this->m_currentStation.name().toStdString()));
+    this->addSeriesToChart(
+        index,
+        "USGS" +
+            QString::fromStdString(this->m_currentStation.id().toStdString()),
+        tzOffset);
     this->chartview()->initializeAxisLimits();
     this->chartview()->initializeLegendMarkers();
   }

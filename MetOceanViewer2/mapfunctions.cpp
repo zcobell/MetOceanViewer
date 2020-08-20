@@ -96,7 +96,7 @@ MapFunctions::MapFunctions() {
   this->m_defaultMapIndex = 0;
   this->m_mapboxApiKey = "";
   this->m_stationModel.reset(new StationModel());
-  this->m_configDirectory = Generic::configDirectory();
+  this->m_configDirectory = QString::fromStdString(Generic::configDirectory());
 }
 
 template <typename T>
@@ -104,21 +104,23 @@ inline bool isBetween(T start, T end, T rangeStart, T rangeEnd) {
   return (start <= rangeEnd && end >= rangeStart);
 }
 
-int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<MovStation> *locations,
+int MapFunctions::refreshMarkers(QQuickWidget *map,
+                                 std::vector<MovStation> *locations,
                                  QDateTime &start, QDateTime &end) {
   this->m_stationModel->clear();
-  QVector<MovStation> visibleMarkers;
-  for (int i = 0; i < locations->size(); ++i) {
+  std::vector<MovStation> visibleMarkers;
+  for (size_t i = 0; i < locations->size(); ++i) {
     if (isBetween<QDateTime>(locations->at(i).startValidDate(),
                              locations->at(i).endValidDate(), start, end)) {
       visibleMarkers.push_back(locations->at(i));
     }
   }
   this->m_stationModel->addMarkers(visibleMarkers);
-  return visibleMarkers.length();
+  return visibleMarkers.size();
 }
 
-int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<MovStation> *locations,
+int MapFunctions::refreshMarkers(QQuickWidget *map,
+                                 std::vector<MovStation> *locations,
                                  bool filter, bool activeOnly) {
   //...Clear current markers
   this->m_stationModel->clear();
@@ -146,11 +148,11 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<MovStation> *locatio
     double yb = std::min(y1, y2);
     double yt = std::max(y1, y2);
 
-    QVector<MovStation> visibleMarkers;
+    std::vector<MovStation> visibleMarkers;
 
     //...Get the objects inside the viewport
     if (locations != nullptr) {
-      for (int i = 0; i < locations->size(); i++) {
+      for (size_t i = 0; i < locations->size(); i++) {
         double x = locations->at(i).coordinate().longitude();
         double y = locations->at(i).coordinate().latitude();
 
@@ -170,10 +172,10 @@ int MapFunctions::refreshMarkers(QQuickWidget *map, QVector<MovStation> *locatio
     if (visibleMarkers.size() <= maxDisplayedStations<int>()) {
       this->m_stationModel->addMarkers(visibleMarkers);
     }
-    return visibleMarkers.length();
+    return visibleMarkers.size();
   } else {
     this->m_stationModel->addMarkers(locations);
-    return locations->length();
+    return locations->size();
   }
 }
 

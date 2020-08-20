@@ -31,10 +31,10 @@ class TabWidget : public QTabWidget {
   void signalChangeBasemapMapbox();
 
  private:
-  void addNoaaTab(const NewTabDialog *d, QVector<MovStation> *stations);
-  void addUsgsTab(const NewTabDialog *d, QVector<MovStation> *stations);
-  void addXtideTab(const NewTabDialog *d, QVector<MovStation> *stations);
-  void addNdbcTab(const NewTabDialog *d, QVector<MovStation> *stations);
+  void addNoaaTab(const NewTabDialog *d, std::vector<MovStation> *stations);
+  void addUsgsTab(const NewTabDialog *d, std::vector<MovStation> *stations);
+  void addXtideTab(const NewTabDialog *d, std::vector<MovStation> *stations);
+  void addNdbcTab(const NewTabDialog *d, std::vector<MovStation> *stations);
   void addUserdataTab(const NewTabDialog *d);
 
   TabBar *m_tabBar;

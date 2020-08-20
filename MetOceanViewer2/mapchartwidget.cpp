@@ -14,7 +14,7 @@
 #include "movStation.h"
 #include "noaacoops.h"
 
-MapChartWidget::MapChartWidget(TabType type, QVector<MovStation> *stations,
+MapChartWidget::MapChartWidget(TabType type, std::vector<MovStation> *stations,
                                QWidget *parent)
     : QWidget(parent),
       m_stations(stations),
@@ -164,7 +164,6 @@ QLineSeries *MapChartWidget::stationToSeries(Hmdf::Station *s,
   QLineSeries *series = new QLineSeries(this->m_chartview->chart());
   for (auto &t : *(s)) {
     series->append(t.date().toMSeconds() + offset, t.value());
-    qDebug() << t.value();
   }
   return series;
 }

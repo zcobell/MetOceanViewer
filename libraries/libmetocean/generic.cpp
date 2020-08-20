@@ -18,11 +18,17 @@
 //
 //-----------------------------------------------------------------------*/
 #include "generic.h"
+
 #include <netcdf.h>
+
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+
+#include "boost/algorithm/string.hpp"
+
+static std::string c_configDirectory = std::string();
 
 //-------------------------------------------//
 // Simple delay function which will pause
@@ -48,10 +54,11 @@ void Generic::delayM(int delayTime) {
 }
 //-------------------------------------------//
 
-void Generic::splitPath(QString input, QString &filename, QString &directory) {
-  QFileInfo in(input);
-  filename = in.fileName();
-  directory = in.absoluteDir().absolutePath();
+void Generic::splitPath(const std::string &input, std::string &filename,
+                        std::string &directory) {
+  QFileInfo in(QString::fromStdString(input));
+  filename = in.fileName().toStdString();
+  directory = in.absoluteDir().absolutePath().toStdString();
   return;
 }
 
@@ -69,7 +76,7 @@ bool Generic::isConnectedToNetwork() {
   QNetworkRequest req(QUrl("http://www.google.com"));
   QNetworkReply *reply = nam.get(req);
   QEventLoop loop;
-  connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+  QObject::connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
   loop.exec();
   if (reply->bytesAvailable())
     return true;
@@ -77,27 +84,26 @@ bool Generic::isConnectedToNetwork() {
     return false;
 }
 
+// bool Generic::createConfigDirectory(const std::string &configDirectory) {
 bool Generic::createConfigDirectory() {
-  QString dmy;
-  return Generic::createConfigDirectory(dmy);
-}
-
-bool Generic::createConfigDirectory(QString &configDirectory) {
-  configDirectory =
+  c_configDirectory =
       QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
-          .at(0);
-  if (!QDir(configDirectory).exists()) {
-    return QDir().mkpath(configDirectory);
+          .at(0)
+          .toStdString();
+  if (!QDir(QString::fromStdString(c_configDirectory)).exists()) {
+    return QDir().mkpath(QString::fromStdString(c_configDirectory));
   } else {
     return true;
   }
 }
 
-QString Generic::configDirectory() {
+std::string Generic::configDirectory() {
   return QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)
-      .at(0);
+      .at(0)
+      .toStdString();
 }
 
-QString Generic::crmsDataFile() {
+std::string Generic::crmsDataFile() {
   return Generic::configDirectory() + "/crms.nc";
 }
+

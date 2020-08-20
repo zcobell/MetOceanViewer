@@ -2,7 +2,7 @@
 
 #include "ndbcdata.h"
 
-NdbcTab::NdbcTab(QVector<MovStation> *stations, QWidget *parent)
+NdbcTab::NdbcTab(std::vector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::NDBC, stations, parent), m_ready(false) {
   this->initialize();
 }
@@ -88,7 +88,7 @@ void NdbcTab::plot() {
       this->endDateEdit()->dateEdit()->dateTime()));
   int ierr = ndbc->get(this->data()->get());
   if (ierr != 0) {
-    emit error(ndbc->errorString());
+    emit error(QString::fromStdString(ndbc->errorString()));
     return;
   }
 
@@ -115,15 +115,22 @@ void NdbcTab::draw(int index) {
                                        tzOffset);
     if (ierr != 0) return;
 
-    QString unit = NdbcData::units(
-        QString::fromStdString(this->data()->get()->station(index)->name()));
+    QString unit = QString::fromStdString(std::string(
+        NdbcData::units(this->data()->get()->station(index)->name())));
 
     this->setPlotAxis(
         this->data()->get(), start, end, tzAbbrev, QString(), unit,
         QString::fromStdString(this->data()->get()->station(index)->name()));
-    this->chartview()->chart()->setTitle((this->m_currentStation.name()));
-    this->addSeriesToChart(index, "NDBC" + this->m_currentStation.id(),
-                           tzOffset);
+
+    this->chartview()->chart()->setTitle(
+        QString::fromStdString(this->m_currentStation.name().toStdString()));
+
+    this->addSeriesToChart(
+        index,
+        "NDBC" +
+            QString::fromStdString(this->m_currentStation.id().toStdString()),
+        tzOffset);
+
     this->chartview()->initializeAxisLimits();
     this->chartview()->initializeLegendMarkers();
   }

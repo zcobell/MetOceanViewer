@@ -41,7 +41,7 @@ TabWidget::TabWidget(QWidget* parent) : QTabWidget(parent) {
   this->m_stationList = new StationList();
 }
 
-void TabWidget::addNoaaTab(const NewTabDialog* d, QVector<MovStation>* stations) {
+void TabWidget::addNoaaTab(const NewTabDialog* d, std::vector<MovStation>* stations) {
   NoaaTab* n = new NoaaTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));
@@ -52,7 +52,7 @@ void TabWidget::addNoaaTab(const NewTabDialog* d, QVector<MovStation>* stations)
   this->setCurrentIndex(this->count() - 1);
 }
 
-void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<MovStation>* stations) {
+void TabWidget::addUsgsTab(const NewTabDialog* d, std::vector<MovStation>* stations) {
   UsgsTab* n = new UsgsTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));
@@ -63,7 +63,7 @@ void TabWidget::addUsgsTab(const NewTabDialog* d, QVector<MovStation>* stations)
   this->setCurrentIndex(this->count() - 1);
 }
 
-void TabWidget::addXtideTab(const NewTabDialog* d, QVector<MovStation> *stations) {
+void TabWidget::addXtideTab(const NewTabDialog* d, std::vector<MovStation> *stations) {
   XTideTab* n = new XTideTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));
@@ -74,7 +74,7 @@ void TabWidget::addXtideTab(const NewTabDialog* d, QVector<MovStation> *stations
   this->setCurrentIndex(this->count() - 1);
 }
 
-void TabWidget::addNdbcTab(const NewTabDialog* d, QVector<MovStation>* stations) {
+void TabWidget::addNdbcTab(const NewTabDialog* d, std::vector<MovStation> *stations) {
   NdbcTab* n = new NdbcTab(stations, this);
   connect(this, SIGNAL(signalChangeBasemapEsri()), n,
           SLOT(changeBasemapEsri()));

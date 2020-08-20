@@ -20,9 +20,12 @@
 #include "usgswaterdata.h"
 
 #include <QEventLoop>
-#include <QMap>
+#include <QString>
+#include <QStringList>
 #include <QVector>
+#include <unordered_map>
 
+#include "stringutil.h"
 #include "timefunc.h"
 
 UsgsWaterdata::UsgsWaterdata(MovStation &station, QDateTime startDate,
@@ -36,7 +39,7 @@ int UsgsWaterdata::get(Hmdf::HmdfData *data, Datum::VDatum datum) {
 }
 
 int UsgsWaterdata::fetch(Hmdf::HmdfData *data) {
-  if (this->station().id() == QString()) {
+  if (this->station().id().isNull() || this->station().id().isEmpty()) {
     this->setErrorString("You must select a station");
     return 1;
   }
@@ -103,21 +106,15 @@ int UsgsWaterdata::readDownloadedData(QNetworkReply *reply,
 }
 
 int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
-  bool doubleok;
-  int ParamStart, ParamStop;
-  int HeaderEnd;
-  QStringList tempList;
-  QString tempLine, TempDateString, TempTimeZoneString;
+  std::string InputData(data);
+  std::vector<std::string> SplitByLine =
+      StringUtil::stringSplitToVector(InputData, "\n");
 
-  QString InputData(data);
-  QStringList SplitByLine =
-      InputData.split(QRegExp("[\n]"), Qt::SkipEmptyParts);
+  int ParamStart = -1;
+  int ParamStop = -1;
+  int HeaderEnd = -1;
 
-  ParamStart = -1;
-  ParamStop = -1;
-  HeaderEnd = -1;
-
-  if (InputData.isEmpty() || InputData.isNull()) {
+  if (InputData.size() == 0 || InputData == std::string()) {
     this->setErrorString(
         "This data is not available except from the USGS archive server.");
     return 1;
@@ -130,19 +127,20 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
 
   //...Save the potential error string
   // this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
-  QString e = InputData.split("\n").value(0).split("#").value(0).simplified();
+  std::string e = StringUtil::stringSplitToVector(InputData, "\n")[0];
+  e = StringUtil::stringSplitToVector(e, "#")[0];
   this->setErrorString(e);
 
   //...Start by finding the header and reading the parameters from it
-  for (int i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(15) == "# Data provided") {
+  for (size_t i = 0; i < SplitByLine.size(); i++) {
+    if (SplitByLine[i].substr(0, 15) == "# Data provided") {
       ParamStart = i + 2;
       break;
     }
   }
 
-  for (int i = ParamStart; i < SplitByLine.length(); i++) {
-    tempLine = SplitByLine.value(i);
+  for (size_t i = ParamStart; i < SplitByLine.size(); i++) {
+    std::string tempLine = SplitByLine[i];
     if (tempLine == "#") {
       ParamStop = i - 1;
       break;
@@ -156,11 +154,12 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
     QString parameter;
     QString code;
   };
-  QVector<UsgsParameter> params;
+  std::vector<UsgsParameter> params;
+  params.reserve(ParamStop - ParamStart);
 
   for (int i = ParamStart; i <= ParamStop; i++) {
-    tempLine = SplitByLine.value(i);
-    tempList = tempLine.split("  ", Qt::SkipEmptyParts);
+    QString tempLine = QString::fromStdString(SplitByLine[i]);
+    QStringList tempList = tempLine.split("  ", Qt::SkipEmptyParts);
 
     UsgsParameter p;
     p.ts = tempList.value(1).simplified();
@@ -181,19 +180,19 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
   }
 
   //...Find out where the header ends
-  for (int i = 0; i < SplitByLine.length(); i++) {
-    if (SplitByLine.value(i).left(1) != "#") {
+  for (size_t i = 0; i < SplitByLine.size(); i++) {
+    if (SplitByLine[i].substr(0, 1) != "#") {
       HeaderEnd = i + 2;
       break;
     }
   }
 
   //...Generate the mapping
-  QMap<int, int> parameterMapping, revParmeterMapping;
-  QString mapString = SplitByLine[HeaderEnd - 2];
+  std::unordered_map<int, int> parameterMapping, revParmeterMapping;
+  QString mapString = QString::fromStdString(SplitByLine[HeaderEnd - 2]);
   QStringList mapList = mapString.split("\t");
   for (int i = 4; i < mapList.length(); i++) {
-    for (int j = 0; j < params.length(); j++) {
+    for (size_t j = 0; j < params.size(); j++) {
       if (mapList[i] == params[j].code) {
         parameterMapping[i] = j;
         revParmeterMapping[j] = i;
@@ -202,7 +201,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
   }
 
   //...Initialize the array
-  for (int i = 0; i < params.length(); i++) {
+  for (size_t i = 0; i < params.size(); i++) {
     Hmdf::Station s(i, station().coordinate().longitude(),
                     station().coordinate().latitude());
     s.setName(params[i].description.toStdString());
@@ -214,11 +213,11 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
   if (output->nStations() == 0) return 1;
 
   //...Read the data into the array
-  for (int i = HeaderEnd; i < SplitByLine.length(); i++) {
-    tempLine = SplitByLine.value(i);
-    tempList = tempLine.split(QRegExp("[\t]"));
-    TempDateString = tempList.value(2);
-    TempTimeZoneString = tempList.value(3);
+  for (size_t i = HeaderEnd; i < SplitByLine.size(); i++) {
+    QString tempLine = QString::fromStdString(SplitByLine[i]);
+    QStringList tempList = tempLine.split(QRegExp("[\t]"));
+    QString TempDateString = tempList.value(2);
+    QString TempTimeZoneString = tempList.value(3);
 
     //...Account for both daily values (without time) and instant (with time)
     QDateTime currentDate =
@@ -238,7 +237,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
 
     if (output->station(0)->size() > 0) {
       if (d > output->station(0)->back().date()) {
-        for (int j = 0; j < params.length(); j++) {
+        for (size_t j = 0; j < params.size(); j++) {
+          bool doubleok;
           double data =
               tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
           if (doubleok) {
@@ -247,7 +247,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
         }
       }
     } else {
-      for (int j = 0; j < params.length(); j++) {
+      for (size_t j = 0; j < params.size(); j++) {
+        bool doubleok;
         double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
         if (doubleok) {
           output->station(j)->push_back(Hmdf::Timepoint(d, data));

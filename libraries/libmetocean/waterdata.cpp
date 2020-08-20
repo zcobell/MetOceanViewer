@@ -21,7 +21,7 @@
 
 WaterData::WaterData(const MovStation &station, const QDateTime startDate,
                      const QDateTime endDate)
-    : m_errorString(QString()),
+    : m_errorString(std::string()),
       m_station(station),
       m_startDate(startDate),
       m_endDate(endDate) {}
@@ -30,7 +30,7 @@ int WaterData::get(Hmdf::HmdfData *data, Datum::VDatum datum) {
   return this->retrieveData(data, datum);
 }
 
-QString WaterData::errorString() const { return this->m_errorString; }
+std::string WaterData::errorString() const { return this->m_errorString; }
 
 int WaterData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   Q_UNUSED(data);
@@ -56,6 +56,6 @@ void WaterData::setStation(const MovStation &station) {
   this->m_station = station;
 }
 
-void WaterData::setErrorString(const QString &errorString) {
+void WaterData::setErrorString(const std::string &errorString) {
   this->m_errorString = errorString;
 }

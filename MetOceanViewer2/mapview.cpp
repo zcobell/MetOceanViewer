@@ -7,7 +7,7 @@
 
 #include "stationlocations.h"
 
-MapView::MapView(QVector<MovStation> *s, MapFunctions *m, QWidget *parent)
+MapView::MapView(std::vector<MovStation> *s, MapFunctions *m, QWidget *parent)
     : QQuickWidget(parent) {
   this->m_currentMarker = QString();
 
@@ -46,7 +46,7 @@ MapView::MapView(QVector<MovStation> *s, MapFunctions *m, QWidget *parent)
                             Q_ARG(QVariant, 1.69));
 }
 
-void MapView::setStationList(QVector<MovStation> *stations) {
+void MapView::setStationList(std::vector<MovStation> *stations) {
   this->m_markerLocations = stations;
 }
 

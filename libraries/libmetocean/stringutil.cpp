@@ -18,16 +18,22 @@
 //
 //-----------------------------------------------------------------------*/
 #include "stringutil.h"
+
 #include "boost/algorithm/string/classification.hpp"
 #include "boost/algorithm/string/split.hpp"
 #include "boost/algorithm/string/trim.hpp"
 
-std::vector<std::string> StringUtil::stringSplitToVector(std::string s,
-                                                         std::string delim) {
+std::vector<std::string> StringUtil::stringSplitToVector(
+    std::string s, std::string delim, bool useTokenCompress) {
   std::vector<std::string> elems;
   boost::trim_if(s, boost::is_any_of(delim));
-  boost::algorithm::split(elems, s, boost::is_any_of(delim),
-                          boost::token_compress_on);
+  if (useTokenCompress) {
+    boost::algorithm::split(elems, s, boost::is_any_of(delim),
+                            boost::token_compress_on);
+  } else {
+    boost::algorithm::split(elems, s, boost::is_any_of(delim),
+                            boost::token_compress_off);
+  }
   return elems;
 }
 

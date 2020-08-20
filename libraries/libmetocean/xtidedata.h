@@ -27,7 +27,7 @@
 class XtideData : public WaterData {
  public:
   METOCEANSHARED_EXPORT XtideData(MovStation &station, QDateTime startDate,
-                                  QDateTime endDate, QString rootDriectory);
+                                  QDateTime endDate, std::string rootDriectory);
 
   int METOCEANSHARED_EXPORT interval() const;
   void METOCEANSHARED_EXPORT setInterval(int interval);
@@ -36,7 +36,7 @@ class XtideData : public WaterData {
   int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
   int m_interval;
-  QString m_rootDirectory;
+  std::string m_rootDirectory;
   std::unique_ptr<TidePrediction> m_tidePrediction;
 };
 

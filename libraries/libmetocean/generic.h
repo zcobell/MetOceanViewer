@@ -22,26 +22,21 @@
 
 #include <QDateTime>
 #include <QNetworkInterface>
-#include <QString>
 #include <QtCore>
+#include <string>
+
 #include "metocean_global.h"
 
-class Generic : public QObject {
-  Q_OBJECT
- public:
-  static void METOCEANSHARED_EXPORT splitPath(QString input, QString &filename,
-                                              QString &directory);
-  static void METOCEANSHARED_EXPORT delay(int delayTime);
-  static void METOCEANSHARED_EXPORT delayM(int delayTime);
-  static bool METOCEANSHARED_EXPORT isConnectedToNetwork();
-  static bool METOCEANSHARED_EXPORT createConfigDirectory();
-  static bool METOCEANSHARED_EXPORT
-  createConfigDirectory(QString &configDirectory);
-  static QString METOCEANSHARED_EXPORT configDirectory();
-  static QString METOCEANSHARED_EXPORT crmsDataFile();
-
- private:
-  static QString dummyConfigDir;
-};
+namespace Generic {
+void METOCEANSHARED_EXPORT splitPath(const std::string &input,
+                                     std::string &filename,
+                                     std::string &directory);
+void METOCEANSHARED_EXPORT delay(int delayTime);
+void METOCEANSHARED_EXPORT delayM(int delayTime);
+bool METOCEANSHARED_EXPORT isConnectedToNetwork();
+bool METOCEANSHARED_EXPORT createConfigDirectory();
+std::string METOCEANSHARED_EXPORT configDirectory();
+std::string METOCEANSHARED_EXPORT crmsDataFile();
+};  // namespace Generic
 
 #endif  // GENERIC_H

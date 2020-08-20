@@ -20,7 +20,7 @@
 #include "xtidedata.h"
 
 XtideData::XtideData(MovStation &station, QDateTime startDate,
-                     QDateTime endDate, QString rootDriectory)
+                     QDateTime endDate, std::string rootDriectory)
     : WaterData(station, startDate, endDate),
       m_interval(300),
       m_rootDirectory(rootDriectory),

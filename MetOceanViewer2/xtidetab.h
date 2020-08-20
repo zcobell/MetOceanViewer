@@ -8,7 +8,7 @@
 class XTideTab : public MapChartWidget {
   Q_OBJECT
  public:
-  XTideTab(QVector<MovStation> *stations, QWidget *parent = nullptr);
+  XTideTab(std::vector<MovStation> *stations, QWidget *parent = nullptr);
 
  private slots:
   void plot() override;

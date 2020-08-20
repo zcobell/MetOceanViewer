@@ -24,32 +24,32 @@
 
 MovStation::MovStation()
     : m_coordinate(QGeoCoordinate()),
-      m_id("null"),
       m_name("null"),
-      m_measured(0.0),
+      m_id("null"),
+      m_offset{0, 0, 0, 0, 0, 0, 0},
       m_modeled(0.0),
-      m_selected(false),
+      m_measured(0.0),
       m_category(0),
-      m_startValidDate(QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0))),
-      m_endValidDate(QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0))),
+      m_selected(false),
       m_active(true),
-      m_offset{0, 0, 0, 0, 0, 0, 0} {}
+      m_startValidDate(QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0))),
+      m_endValidDate(QDateTime(QDate(2050, 1, 1), QTime(0, 0, 0))) {}
 
-MovStation::MovStation(QGeoCoordinate coordinate, QString id, QString name,
-                       double measured, double modeled, int category,
-                       bool active, QDateTime startValidDate,
+MovStation::MovStation(QGeoCoordinate coordinate, QString id,
+                       QString name, double measured, double modeled,
+                       int category, bool active, QDateTime startValidDate,
                        QDateTime endValidDate)
     : m_coordinate(coordinate),
-      m_id(id),
       m_name(name),
-      m_measured(measured),
+      m_id(id),
+      m_offset{0, 0, 0, 0, 0, 0},
       m_modeled(modeled),
-      m_selected(false),
+      m_measured(measured),
       m_category(category),
-      m_startValidDate(startValidDate),
-      m_endValidDate(endValidDate),
+      m_selected(false),
       m_active(active),
-      m_offset{0, 0, 0, 0, 0, 0} {}
+      m_startValidDate(startValidDate),
+      m_endValidDate(endValidDate) {}
 
 MovStation::~MovStation() {}
 

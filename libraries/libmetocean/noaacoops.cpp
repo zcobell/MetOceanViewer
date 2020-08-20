@@ -33,23 +33,25 @@
 #include "boost/config/warning_disable.hpp"
 #include "boost/spirit/include/phoenix.hpp"
 #include "boost/spirit/include/qi.hpp"
+#include "generic.h"
+#include "stringutil.h"
 #include "timefunc.h"
 
 NoaaCoOps::NoaaCoOps(const MovStation &station, const QDateTime startDate,
-                     const QDateTime endDate, const QString &product,
-                     const QString &datum, const bool useVdatum,
-                     const QString &units)
+                     const QDateTime endDate, const std::string &product,
+                     const std::string &datum, const bool useVdatum,
+                     const std::string &units)
     : WaterData(station, startDate, endDate),
       m_product(product),
-      m_units(units),
       m_datum(datum),
-      m_useVdatum(useVdatum),
-      m_useJson(true) {
+      m_units(units),
+      m_useJson(true),
+      m_useVdatum(useVdatum) {
   this->parseProduct();
 }
 
 int NoaaCoOps::parseProduct() {
-  this->m_productParsed = this->m_product.split(":");
+  this->m_productParsed = StringUtil::stringSplitToVector(this->m_product, ":");
   return 0;
 }
 
@@ -105,13 +107,13 @@ int NoaaCoOps::downloadDataFromNoaaServer(
 
   for (int i = 0; i < startDateList.length(); i++) {
     // Make the date string
-    QString startString =
-        startDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
-    QString endString =
-        endDateList[i].toString(QStringLiteral("yyyyMMdd hh:mm"));
+    std::string startString =
+        startDateList[i].toString("yyyyMMdd hh:mm").toStdString();
+    std::string endString =
+        endDateList[i].toString("yyyyMMdd hh:mm").toStdString();
 
     //...Select parser type
-    QString format;
+    std::string format;
     if (this->m_useJson) {
       format = "json";
     } else {
@@ -122,20 +124,24 @@ int NoaaCoOps::downloadDataFromNoaaServer(
     QString requestURL =
         QStringLiteral(
             "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?") +
-        QStringLiteral("product=") + this->m_productParsed[0] +
+        QStringLiteral("product=") +
+        QString::fromStdString(this->m_productParsed[0]) +
         QStringLiteral("&application=MetOceanViewer") +
-        QStringLiteral("&begin_date=") + startString +
-        QStringLiteral("&end_date=") + endString + QStringLiteral("&station=") +
-        this->station().id() + QStringLiteral("&time_zone=GMT&units=") +
-        this->m_units + QStringLiteral("&interval=&format=") + format;
+        QStringLiteral("&begin_date=") + QString::fromStdString(startString) +
+        QStringLiteral("&end_date=") + QString::fromStdString(endString) +
+        QStringLiteral("&station=") + this->station().id() +
+        QStringLiteral("&time_zone=GMT&units=") +
+        QString::fromStdString(this->m_units) +
+        QStringLiteral("&interval=&format=") + QString::fromStdString(format);
 
     // Allow a different datum where allowed. Use VDatum if the user wants near
     // the coast
-    if (this->m_datum != QStringLiteral("Stnd")) {
+    if (this->m_datum != "Stnd") {
       if (this->m_useVdatum) {
         requestURL = requestURL + QStringLiteral("&datum=MSL");
       } else {
-        requestURL = requestURL + QStringLiteral("&datum=") + this->m_datum;
+        requestURL = requestURL + QStringLiteral("&datum=") +
+                     QString::fromStdString(this->m_datum);
       }
     }
 
@@ -170,7 +176,7 @@ int NoaaCoOps::readNoaaResponse(QNetworkReply *reply,
                                 std::vector<std::string> &downloadedData) {
   // Catch some errors during the download
   if (reply->error() != 0) {
-    this->setErrorString(QStringLiteral("ERROR: ") + reply->errorString());
+    this->setErrorString("ERROR: " + reply->errorString().toStdString());
     reply->deleteLater();
     return 1;
   }
@@ -265,7 +271,7 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
   outputData->addStation(station);
 
   if (outputData->station(0)->size() < 5) {
-    this->setErrorString(QStringLiteral("No valid data was found."));
+    this->setErrorString("No valid data was found.");
     return 1;
   }
 
@@ -294,7 +300,7 @@ int NoaaCoOps::formatNoaaResponseJson(std::vector<std::string> &downloadedData,
       QJsonValue val = jsonData.object()["error"];
       QJsonObject obj = val.toObject();
       QJsonValue val2 = obj["message"];
-      this->setErrorString(val2.toString());
+      this->setErrorString(val2.toString().toStdString());
     }
 
     //...Ditch duplicate data

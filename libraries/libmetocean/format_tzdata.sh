@@ -29,6 +29,6 @@ do
 
     offsetSeconds=$(echo "$offsetHour * 3600 + $offsetMin * 60" | bc)
 
-    echo "this->m_timezones.insert(std::make_pair<TZ::Location, TZ::Abbreviation>($country,$abrev),TimezoneStruct($country,$abrev,QStringLiteral(\"$abrev\"),QStringLiteral(\"$name\"),QStringLiteral(\"$country\"),$offsetSeconds));"
+    echo "this->m_timezones.insert(std::make_pair<TZ::Location, TZ::Abbreviation>($country,$abrev),TimezoneStruct($country,$abrev,std::stringLiteral(\"$abrev\"),std::stringLiteral(\"$name\"),std::stringLiteral(\"$country\"),$offsetSeconds));"
 
 done < timezones.csv

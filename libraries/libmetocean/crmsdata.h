@@ -28,31 +28,31 @@ class CrmsData : public WaterData {
  public:
   METOCEANSHARED_EXPORT CrmsData(MovStation &station, QDateTime startDate,
                                  QDateTime endDate,
-                                 const QVector<QString> &header,
-                                 const QMap<QString, size_t> &mapping,
-                                 const QString &filename);
-
-  static bool METOCEANSHARED_EXPORT readHeader(const QString &filename,
-                                               QVector<QString> &header);
-
-  static bool METOCEANSHARED_EXPORT generateStationMapping(
-      const QString &filename, QMap<QString, size_t> &mapping);
+                                 const QVector<std::string> &header,
+                                 const QMap<std::string, size_t> &mapping,
+                                 const std::string &filename);
 
   static bool METOCEANSHARED_EXPORT
-  readStationList(const QString &filename, QVector<double> &latitude,
-                  QVector<double> &longitude, QVector<QString> &stationNames,
-                  QVector<QDateTime> &startDate, QVector<QDateTime> &endDate);
+  readHeader(const std::string &filename, std::vector<std::string> &header);
 
-  static bool METOCEANSHARED_EXPORT inquireCrmsStatus(QString filename);
+  static bool METOCEANSHARED_EXPORT generateStationMapping(
+      const std::string &filename, QMap<std::string, size_t> &mapping);
+
+  static bool METOCEANSHARED_EXPORT readStationList(
+      const std::string &filename, std::vector<double> &latitude,
+      std::vector<double> &longitude, std::vector<std::string> &stationNames,
+      std::vector<QDateTime> &startDate, std::vector<QDateTime> &endDate);
+
+  static bool METOCEANSHARED_EXPORT inquireCrmsStatus(const std::string &filename);
 
  private:
   int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
   QDateTime m_startTime;
   QDateTime m_endTime;
-  QString m_filename;
-  QVector<QString> m_header;
-  QMap<QString, size_t> m_mapping;
+  std::string m_filename;
+  QVector<std::string> m_header;
+  QMap<std::string, size_t> m_mapping;
 };
 
 #endif  // CRMSDATA_H

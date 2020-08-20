@@ -21,18 +21,16 @@
 #define HWMDATA_H
 
 #include <QGeoCoordinate>
-#include <QObject>
+
 #include "metocean_global.h"
 
-class HwmData : public QObject {
-  Q_OBJECT
+class HwmData {
  public:
-  explicit METOCEANSHARED_EXPORT HwmData(QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT HwmData();
   explicit METOCEANSHARED_EXPORT HwmData(QGeoCoordinate coordinate,
                                          double topoElevation,
                                          double modeledElevation,
-                                         double observedElevation,
-                                         QObject *parent = nullptr);
+                                         double observedElevation);
 
   double METOCEANSHARED_EXPORT topoElevation() const;
   void METOCEANSHARED_EXPORT setTopoElevation(double topoElevation);

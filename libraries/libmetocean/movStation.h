@@ -30,8 +30,7 @@
 class MovStation {
  public:
   METOCEANSHARED_EXPORT MovStation();
-  METOCEANSHARED_EXPORT MovStation(
-      QGeoCoordinate coordinate, QString id, QString name,
+  METOCEANSHARED_EXPORT MovStation(QGeoCoordinate coordinate, QString id, QString name,
       double measured = 0.0, double modeled = 0.0, int category = 0,
       bool active = true,
       QDateTime startValidDate = QDateTime(QDate(1900, 1, 1), QTime(0, 0, 0)),
@@ -46,10 +45,10 @@ class MovStation {
   void METOCEANSHARED_EXPORT setLatitude(const double latitude);
   void METOCEANSHARED_EXPORT setLongitude(const double longitude);
 
-  QString METOCEANSHARED_EXPORT name() const;
+  QString name() const;
   void METOCEANSHARED_EXPORT setName(const QString &name);
 
-  QString METOCEANSHARED_EXPORT id() const;
+  QString id() const;
   void METOCEANSHARED_EXPORT setId(const QString &id);
 
   bool METOCEANSHARED_EXPORT selected() const;
@@ -110,13 +109,6 @@ class MovStation {
   std::array<double, 7> m_offset;
   double m_modeled;
   double m_measured;
-//  double m_navd88Offset;
-//  double m_ngvd29Offset;
-//  double m_mslOffset;
-//  double m_mlwOffset;
-//  double m_mllwOffset;
-//  double m_mhwOffset;
-//  double m_mhhwOffset;
   int m_category;
   bool m_selected;
   bool m_active;

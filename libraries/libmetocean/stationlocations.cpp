@@ -21,11 +21,13 @@
 
 #include <QFile>
 
+#include "boost/format.hpp"
 #include "generic.h"
+#include "stringutil.h"
 
 StationLocations::StationLocations(QObject *parent) : QObject(parent) {}
 
-QVector<MovStation> StationLocations::readMarkers(
+std::vector<MovStation> StationLocations::readMarkers(
     StationLocations::MarkerType markerType) {
   if (markerType == NOAA) {
     return StationLocations::readNoaaMarkers();
@@ -38,31 +40,30 @@ QVector<MovStation> StationLocations::readMarkers(
   } else if (markerType == CRMS) {
     return StationLocations::readCrmsMarkers();
   } else {
-    QVector<MovStation> output;
-    return output;
+    return std::vector<MovStation>();
   }
 }
 
-QVector<MovStation> StationLocations::readNoaaMarkers() {
-  QVector<MovStation> output;
-
+std::vector<MovStation> StationLocations::readNoaaMarkers() {
   QFile stationFile(":/stations/data/noaa_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
 
+  std::vector<MovStation> output;
   while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
-    QStringList list = line.split(";");
-    QString id = list.value(0);
-    QString name = list.value(1);
-    name = name.simplified();
-    QString temp = list.value(3);
-    double lat = temp.toDouble();
-    temp = list.value(2);
-    double lon = temp.toDouble();
+    std::string line = stationFile.readLine().simplified().toStdString();
+    std::vector<std::string> list =
+        StringUtil::stringSplitToVector(line, ";", false);
+    std::string id = list[0];
+    std::string name = list[1];
+    name = StringUtil::sanitizeString(name);
+    double lat = stod(list[3]);
+    double lon = stod(list[2]);
 
-    QString startDateString = list.value(4).simplified();
-    QString endDateString = list.value(5).simplified();
+    QString startDateString =
+        QString::fromStdString(StringUtil::sanitizeString(list[4]));
+    QString endDateString =
+        QString::fromStdString(StringUtil::sanitizeString(list[5]));
     QDateTime startDate =
         QDateTime::fromString(startDateString, "MMM dd, yyyy");
     startDate.setTimeSpec(Qt::UTC);
@@ -76,18 +77,20 @@ QVector<MovStation> StationLocations::readNoaaMarkers() {
     if (startDate.isValid() || endDate.isValid()) {
       MovStation s = MovStation();
       if (endDateString == "present") {
-        s = MovStation(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, true,
-                       startDate, endDate);
+        s = MovStation(QGeoCoordinate(lat, lon), QString::fromStdString(id),
+                       QString::fromStdString(name), 0, 0, 0, true, startDate,
+                       endDate);
       } else {
-        s = MovStation(QGeoCoordinate(lat, lon), id, name, 0, 0, 0, false,
-                       startDate, endDate);
+        s = MovStation(QGeoCoordinate(lat, lon), QString::fromStdString(id),
+                       QString::fromStdString(name), 0, 0, 0, false, startDate,
+                       endDate);
       }
-      double mllw = list.value(6).toDouble();
-      double mlw = list.value(7).toDouble();
-      double mhw = list.value(9).toDouble();
-      double mhhw = list.value(10).toDouble();
-      double ngvd = list.value(11).toDouble();
-      double navd = list.value(12).toDouble();
+      double mllw = stod(list[6]);
+      double mlw = stod(list[7]);
+      double mhw = stod(list[9]);
+      double mhhw = stod(list[10]);
+      double ngvd = stod(list[11]);
+      double navd = stod(list[12]);
 
       if (mlw < -900.0) mlw = s.nullOffset();
       if (mllw < -900.0) mllw = s.nullOffset();
@@ -113,28 +116,27 @@ QVector<MovStation> StationLocations::readNoaaMarkers() {
   return output;
 }
 
-QVector<MovStation> StationLocations::readUsgsMarkers() {
-  QVector<MovStation> output;
-
+std::vector<MovStation> StationLocations::readUsgsMarkers() {
   QFile stationFile(":/stations/data/usgs_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
 
   int index = 0;
 
+  std::vector<MovStation> output;
   while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
+    std::string line = stationFile.readLine().simplified().toStdString();
     index++;
     if (index > 1) {
-      QStringList list = line.split(";");
-      QString id = list.value(0);
-      QString name = list.value(1);
-      name = name.simplified();
-      QString temp = list.value(2);
-      double lat = temp.toDouble();
-      temp = list.value(3);
-      double lon = temp.toDouble();
-      MovStation s = MovStation(QGeoCoordinate(lat, lon), id, name);
+      std::vector<std::string> list =
+          StringUtil::stringSplitToVector(line, ";");
+      std::string id = list[0];
+      std::string name = StringUtil::sanitizeString(list[1]);
+      double lat = stod(list[2]);
+      double lon = stod(list[3]);
+      MovStation s =
+          MovStation(QGeoCoordinate(lat, lon), QString::fromStdString(id),
+                     QString::fromStdString(name));
       output.push_back(s);
     }
   }
@@ -144,34 +146,35 @@ QVector<MovStation> StationLocations::readUsgsMarkers() {
   return output;
 }
 
-QVector<MovStation> StationLocations::readXtideMarkers() {
-  QVector<MovStation> output;
+std::vector<MovStation> StationLocations::readXtideMarkers() {
   QFile stationFile(":/stations/data/xtide_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
 
   int index = 0;
 
+  std::vector<MovStation> output;
   while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
+    std::string line = stationFile.readLine().simplified().toStdString();
     index++;
     if (index > 1) {
-      QStringList list = line.split(";");
-      QString id = list.value(3);
-      QString name = list.value(4);
-      name = name.simplified();
-      QString temp = list.value(0);
-      double lat = temp.toDouble();
-      temp = list.value(1);
-      double lon = temp.toDouble();
-      MovStation s = MovStation(QGeoCoordinate(lat, lon), id, name);
+      std::vector<std::string> list =
+          StringUtil::stringSplitToVector(line, ";");
+      std::string id = list[3];
+      std::string name = list[4];
+      name = StringUtil::sanitizeString(name);
+      double lat = stod(list[0]);
+      double lon = stod(list[1]);
+      MovStation s =
+          MovStation(QGeoCoordinate(lat, lon), QString::fromStdString(id),
+                     QString::fromStdString(name));
 
-      double mlw = list.value(6).toDouble();
-      double msl = list.value(7).toDouble();
-      double mhw = list.value(8).toDouble();
-      double mhhw = list.value(9).toDouble();
-      double ngvd = list.value(10).toDouble();
-      double navd = list.value(11).toDouble();
+      double mlw = stod(list[6]);
+      double msl = stod(list[7]);
+      double mhw = stod(list[8]);
+      double mhhw = stod(list[9]);
+      double ngvd = stod(list[10]);
+      double navd = stod(list[11]);
 
       if (mlw < -900.0) mlw = s.nullOffset();
       if (msl < -900.0) msl = s.nullOffset();
@@ -197,26 +200,27 @@ QVector<MovStation> StationLocations::readXtideMarkers() {
   return output;
 }
 
-QVector<MovStation> StationLocations::readNdbcMarkers() {
-  QVector<MovStation> output;
+std::vector<MovStation> StationLocations::readNdbcMarkers() {
   QFile stationFile(":/stations/data/ndbc_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return output;
+  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
 
   int index = 0;
 
+  std::vector<MovStation> output;
   while (!stationFile.atEnd()) {
-    QString line = stationFile.readLine().simplified();
+    std::string line = stationFile.readLine().simplified().toStdString();
     index++;
     if (index > 1) {
-      QStringList list = line.split(",");
-      QString id = list.value(0).simplified();
-      QString name = "NDBC_" + id;
-      QString temp = list.value(1);
-      double lon = temp.toDouble();
-      temp = list.value(2);
-      double lat = temp.toDouble();
-      MovStation s = MovStation(QGeoCoordinate(lat, lon), id, name);
+      std::vector<std::string> list =
+          StringUtil::stringSplitToVector(line, ",");
+      std::string id = list[0];
+      std::string name = "NDBC_" + id;
+      double lon = stod(list[1]);
+      double lat = stod(list[2]);
+      MovStation s =
+          MovStation(QGeoCoordinate(lat, lon), QString::fromStdString(id),
+                     QString::fromStdString(name));
       output.push_back(s);
     }
   }
@@ -226,12 +230,12 @@ QVector<MovStation> StationLocations::readNdbcMarkers() {
   return output;
 }
 
-QVector<MovStation> StationLocations::readCrmsMarkers() {
-  QVector<MovStation> output;
-  QVector<double> latitude, longitude;
-  QVector<QString> name;
-  QVector<QDateTime> startDate, endDate;
-  QString filename = Generic::crmsDataFile();
+std::vector<MovStation> StationLocations::readCrmsMarkers() {
+  std::vector<MovStation> output;
+  std::vector<double> latitude, longitude;
+  std::vector<std::string> name;
+  std::vector<QDateTime> startDate, endDate;
+  std::string filename = Generic::crmsDataFile();
   bool success = CrmsData::readStationList(filename, latitude, longitude, name,
                                            startDate, endDate);
 
@@ -239,9 +243,9 @@ QVector<MovStation> StationLocations::readCrmsMarkers() {
 
   for (size_t i = 0; i < latitude.size(); ++i) {
     QGeoCoordinate c(latitude[i], longitude[i]);
-    QString id;
-    id.sprintf("%zu", i);
-    MovStation s(c, id, name[i], 0, 0, 0, true, startDate[i], endDate[i]);
+    std::string id = boost::str(boost::format("%llu") % i);
+    MovStation s(c, QString::fromStdString(id), QString::fromStdString(name[i]),
+                 0, 0, 0, true, startDate[i], endDate[i]);
     output.push_back(s);
   }
 

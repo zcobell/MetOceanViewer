@@ -20,7 +20,7 @@
 #ifndef NDBCDATA_H
 #define NDBCDATA_H
 
-#include <QMap>
+#include <unordered_map>
 
 #include "metocean_global.h"
 #include "waterdata.h"
@@ -30,19 +30,32 @@ class NdbcData : public WaterData {
   METOCEANSHARED_EXPORT NdbcData(MovStation &station, QDateTime startDate,
                                  QDateTime endDate);
 
-  static QStringList METOCEANSHARED_EXPORT dataTypes();
-  static QStringList METOCEANSHARED_EXPORT dataNames();
-  static QMap<QString, QString> METOCEANSHARED_EXPORT dataMap();
-  static QString METOCEANSHARED_EXPORT units(const QString &parameter);
+  static std::array<std::string_view, 15> METOCEANSHARED_EXPORT dataTypes();
+
+  static std::array<std::string_view, 15> METOCEANSHARED_EXPORT dataNames();
+
+  static std::unordered_map<std::string_view, std::string_view>
+      METOCEANSHARED_EXPORT dataMap();
+
+  static std::string_view METOCEANSHARED_EXPORT
+  units(const std::string_view &parameter);
 
  private:
-  int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
-  static QMap<QString, QString> buildDataNameMap();
-  int download(QUrl url, QVector<QStringList> &dldata);
-  int readNdbcResponse(QNetworkReply *reply, QVector<QStringList> &data);
-  int formatNdbcResponse(QVector<QStringList> &serverResponse, Hmdf::HmdfData *data);
+  int retrieveData(Hmdf::HmdfData *data,
+                   Datum::VDatum datum = Datum::VDatum::NullDatum);
 
-  QMap<QString, QString> m_dataNameMap;
+  static std::unordered_map<std::string_view, std::string_view>
+  buildDataNameMap();
+
+  int download(QUrl url, std::vector<std::vector<std::string>> &dldata);
+
+  int readNdbcResponse(QNetworkReply *reply,
+                       std::vector<std::vector<std::string>> &data);
+
+  int formatNdbcResponse(std::vector<std::vector<std::string>> &serverResponse,
+                         Hmdf::HmdfData *data);
+
+  std::unordered_map<std::string_view, std::string_view> m_dataNameMap;
 };
 
 #endif  // NDBCDATA_H

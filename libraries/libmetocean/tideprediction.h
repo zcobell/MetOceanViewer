@@ -30,7 +30,7 @@
 
 class TidePrediction {
  public:
-  explicit METOCEANSHARED_EXPORT TidePrediction(QString root);
+  explicit METOCEANSHARED_EXPORT TidePrediction(std::string root);
 
   METOCEANSHARED_EXPORT ~TidePrediction();
 
@@ -44,7 +44,7 @@ class TidePrediction {
 
   bool m_deleteHarmonicsOnExit = true;
 
-  QString m_harmonicsDatabase;
+  std::string m_harmonicsDatabase;
 };
 
 #endif  // TIDEPREDICTION_H

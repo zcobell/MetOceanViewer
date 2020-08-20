@@ -18,13 +18,14 @@
 //
 //-----------------------------------------------------------------------*/
 #include "highwatermarks.h"
+
 #include <QFile>
 #include <QString>
 #include <QStringList>
 #include <cmath>
 
-HighWaterMarks::HighWaterMarks(QObject *parent) : QObject(parent) {
-  this->m_filename = QString();
+HighWaterMarks::HighWaterMarks() {
+  this->m_filename = std::string();
   this->m_regressionThroughZero = true;
   this->m_n2 = 0;
   this->m_r2 = -1;
@@ -33,9 +34,8 @@ HighWaterMarks::HighWaterMarks(QObject *parent) : QObject(parent) {
   this->m_standardDeviation = 0.0;
 }
 
-HighWaterMarks::HighWaterMarks(QString filename, bool regressionThroughZero,
-                               QObject *parent)
-    : QObject(parent) {
+HighWaterMarks::HighWaterMarks(const std::string filename,
+                               bool regressionThroughZero) {
   this->m_filename = filename;
   this->m_regressionThroughZero = regressionThroughZero;
   this->m_n2 = 0;
@@ -53,15 +53,15 @@ void HighWaterMarks::setRegressionThroughZero(bool regressionThroughZero) {
   m_regressionThroughZero = regressionThroughZero;
 }
 
-QString HighWaterMarks::filename() const { return m_filename; }
+std::string HighWaterMarks::filename() const { return m_filename; }
 
-void HighWaterMarks::setFilename(const QString &filename) {
+void HighWaterMarks::setFilename(const std::string &filename) {
   m_filename = filename;
 }
 
 HwmData *HighWaterMarks::hwm(size_t index) {
   if (index < this->m_hwms.size())
-    return this->m_hwms[index];
+    return &this->m_hwms[index];
   else
     return nullptr;
 }
@@ -75,9 +75,9 @@ double HighWaterMarks::slope() const { return m_slope; }
 double HighWaterMarks::intercept() const { return m_intercept; }
 
 int HighWaterMarks::read() {
-  if (this->m_filename == QString()) return 1;
+  if (this->m_filename == std::string()) return 1;
 
-  QFile f(this->m_filename);
+  QFile f(QString::fromStdString(this->m_filename));
   if (!f.open(QIODevice::ReadOnly)) {
     return 1;
   }
@@ -91,7 +91,7 @@ int HighWaterMarks::read() {
     double measured = list.value(3).toDouble();
     double modeled = list.value(4).toDouble();
     this->m_hwms.push_back(
-        new HwmData(QGeoCoordinate(lat, lon), bathy, modeled, measured, this));
+        HwmData(QGeoCoordinate(lat, lon), bathy, modeled, measured));
   }
   f.close();
   if (this->m_hwms.size() > 0) {
@@ -115,16 +115,16 @@ int HighWaterMarks::calculateStats() {
   for (int i = 0; i < n; ++i) {
     // We ditch points that didn't wet since they
     // skew calculation
-    if (this->m_hwms[i]->modeledElevation() > -999) {
-      sumX = sumX + (this->m_hwms[i]->observedElevation());
-      sumY = sumY + (this->m_hwms[i]->modeledElevation());
-      sumXY = sumXY + (this->m_hwms[i]->observedElevation() *
-                       this->m_hwms[i]->modeledElevation());
-      sumX2 = sumX2 + (this->m_hwms[i]->observedElevation() *
-                       this->m_hwms[i]->observedElevation());
-      sumY2 = sumY2 + (this->m_hwms[i]->modeledElevation() *
-                       this->m_hwms[i]->modeledElevation());
-      sumErr = sumErr + this->m_hwms[i]->modeledError();
+    if (this->m_hwms[i].modeledElevation() > -999.0) {
+      sumX = sumX + (this->m_hwms[i].observedElevation());
+      sumY = sumY + (this->m_hwms[i].modeledElevation());
+      sumXY = sumXY + (this->m_hwms[i].observedElevation() *
+                       this->m_hwms[i].modeledElevation());
+      sumX2 = sumX2 + (this->m_hwms[i].observedElevation() *
+                       this->m_hwms[i].observedElevation());
+      sumY2 = sumY2 + (this->m_hwms[i].modeledElevation() *
+                       this->m_hwms[i].modeledElevation());
+      sumErr = sumErr + this->m_hwms[i].modeledError();
     } else {
       ndry = ndry + 1;
     }
@@ -143,8 +143,8 @@ int HighWaterMarks::calculateStats() {
     for (int i = 0; i < n; ++i) {
       // We ditch points that didn't wet since they
       // skew calculation
-      if (this->m_hwms[i]->modeledElevation() > -9999) {
-        sstot += pow((this->m_hwms[i]->modeledElevation() - ybar), 2.0);
+      if (this->m_hwms[i].modeledElevation() > -9999) {
+        sstot += pow((this->m_hwms[i].modeledElevation() - ybar), 2.0);
       }
     }
 
@@ -167,8 +167,8 @@ int HighWaterMarks::calculateStats() {
   meanErr = sumErr / this->m_n2;
   sumErr = 0;
   for (int i = 0; i < n; ++i)
-    if (this->m_hwms[i]->modeledElevation() > -999)
-      sumErr += pow(this->m_hwms[i]->modeledError() - meanErr, 2.0);
+    if (this->m_hwms[i].modeledElevation() > -999.0)
+      sumErr += pow(this->m_hwms[i].modeledError() - meanErr, 2.0);
 
   this->m_standardDeviation = sqrt(sumErr / this->m_n2);
 
@@ -180,9 +180,6 @@ size_t HighWaterMarks::n() { return this->m_hwms.size(); }
 size_t HighWaterMarks::nValid() { return this->m_n2; }
 
 void HighWaterMarks::clear() {
-  for (size_t i = 0; i < this->m_hwms.size(); ++i) {
-    delete this->m_hwms[i];
-  }
   this->m_hwms.clear();
   return;
 }

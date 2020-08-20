@@ -37,12 +37,12 @@ class WaterData {
   int METOCEANSHARED_EXPORT get(Hmdf::HmdfData *data,
                                 Datum::VDatum datum = Datum::VDatum::NullDatum);
 
-  QString METOCEANSHARED_EXPORT errorString() const;
+  std::string METOCEANSHARED_EXPORT errorString() const;
 
  protected:
   virtual int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
-  void setErrorString(const QString &errorString);
+  void setErrorString(const std::string &errorString);
 
   MovStation station() const;
   void setStation(const MovStation &station);
@@ -54,7 +54,7 @@ class WaterData {
   void setEndDate(const QDateTime &endDate);
 
  private:
-  QString m_errorString;
+  std::string m_errorString;
   MovStation m_station;
   QDateTime m_startDate;
   QDateTime m_endDate;

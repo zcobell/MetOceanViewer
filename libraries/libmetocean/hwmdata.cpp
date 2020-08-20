@@ -19,22 +19,18 @@
 //-----------------------------------------------------------------------*/
 #include "hwmdata.h"
 
-HwmData::HwmData(QObject *parent) : QObject(parent) {
-  this->m_coordinate = QGeoCoordinate();
-  this->m_modeledElevation = -9999;
-  this->m_observedElevation = -9999;
-  this->m_topoElevation = -9999;
-}
+HwmData::HwmData()
+    : m_topoElevation(-9999.0),
+      m_modeledElevation(-9999.0),
+      m_observedElevation(-9999.0),
+      m_coordinate(QGeoCoordinate()) {}
 
 HwmData::HwmData(QGeoCoordinate coordinate, double topoElevation,
-                 double modeledElevation, double observedElevation,
-                 QObject *parent)
-    : QObject(parent) {
-  this->m_coordinate = coordinate;
-  this->m_topoElevation = topoElevation;
-  this->m_modeledElevation = modeledElevation;
-  this->m_observedElevation = observedElevation;
-}
+                 double modeledElevation, double observedElevation)
+    : m_topoElevation(topoElevation),
+      m_modeledElevation(modeledElevation),
+      m_observedElevation(observedElevation),
+      m_coordinate(coordinate) {}
 
 double HwmData::topoElevation() const { return m_topoElevation; }
 

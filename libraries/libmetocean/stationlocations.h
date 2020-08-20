@@ -33,14 +33,14 @@ class StationLocations : public QObject {
 
   enum MarkerType { NOAA, USGS, XTIDE, NDBC, CRMS };
 
-  static METOCEANSHARED_EXPORT QVector<MovStation> readMarkers(MarkerType markerType);
+  static METOCEANSHARED_EXPORT std::vector<MovStation> readMarkers(MarkerType markerType);
 
  private:
-  static QVector<MovStation> readNoaaMarkers();
-  static QVector<MovStation> readUsgsMarkers();
-  static QVector<MovStation> readXtideMarkers();
-  static QVector<MovStation> readNdbcMarkers();
-  static QVector<MovStation> readCrmsMarkers();
+  static std::vector<MovStation> readNoaaMarkers();
+  static std::vector<MovStation> readUsgsMarkers();
+  static std::vector<MovStation> readXtideMarkers();
+  static std::vector<MovStation> readNdbcMarkers();
+  static std::vector<MovStation> readCrmsMarkers();
 };
 
 #endif  // STATIONLOCATIONS_H

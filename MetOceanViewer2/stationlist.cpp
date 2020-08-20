@@ -10,7 +10,7 @@ StationList::StationList() {
   this->m_xtide = StationLocations::readMarkers(StationLocations::XTIDE);
 }
 
-QVector<MovStation> *StationList::get(TabType t) {
+std::vector<MovStation> *StationList::get(TabType t) {
   switch (t) {
     case TabType::NOAA:
       return &this->m_noaa;

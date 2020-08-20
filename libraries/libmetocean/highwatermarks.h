@@ -20,18 +20,16 @@
 #ifndef HIGHWATERMARKS_H
 #define HIGHWATERMARKS_H
 
-#include <QObject>
-#include <QVector>
+#include <vector>
+
 #include "hwmdata.h"
 #include "metocean_global.h"
 
-class HighWaterMarks : public QObject {
-  Q_OBJECT
+class HighWaterMarks {
  public:
-  explicit METOCEANSHARED_EXPORT HighWaterMarks(QObject *parent = nullptr);
-  explicit METOCEANSHARED_EXPORT HighWaterMarks(QString filename,
-                                                bool regressionThroughZero,
-                                                QObject *parent = nullptr);
+  explicit METOCEANSHARED_EXPORT HighWaterMarks();
+  explicit METOCEANSHARED_EXPORT HighWaterMarks(const std::string filename,
+                                                bool regressionThroughZero);
 
   int METOCEANSHARED_EXPORT read();
   void METOCEANSHARED_EXPORT clear();
@@ -40,8 +38,8 @@ class HighWaterMarks : public QObject {
   void METOCEANSHARED_EXPORT
   setRegressionThroughZero(bool regressionThroughZero);
 
-  QString METOCEANSHARED_EXPORT filename() const;
-  void METOCEANSHARED_EXPORT setFilename(const QString &filename);
+  std::string METOCEANSHARED_EXPORT filename() const;
+  void METOCEANSHARED_EXPORT setFilename(const std::string &filename);
 
   HwmData METOCEANSHARED_EXPORT *hwm(size_t index);
 
@@ -59,8 +57,8 @@ class HighWaterMarks : public QObject {
   double METOCEANSHARED_EXPORT intercept() const;
 
  private:
-  QVector<HwmData *> m_hwms;
-  QString m_filename;
+  std::vector<HwmData> m_hwms;
+  std::string m_filename;
   bool m_regressionThroughZero;
   double m_r2;
   double m_standardDeviation;

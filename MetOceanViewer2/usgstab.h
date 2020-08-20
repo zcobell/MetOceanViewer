@@ -15,7 +15,7 @@
 class UsgsTab : public MapChartWidget {
   Q_OBJECT
  public:
-  UsgsTab(QVector<MovStation> *stations, QWidget *parent = nullptr);
+  UsgsTab(std::vector<MovStation> *stations, QWidget *parent = nullptr);
 
  private slots:
   void plot() override;
@@ -26,7 +26,8 @@ class UsgsTab : public MapChartWidget {
   QGroupBox *generateInputBox() override;
   void connectSignals() override;
   std::tuple<QString, QString> splitUsgsProductName(const QString &product);
-  void addSeriesToChart(int const index, const QString &name, const qint64 tzoffset);
+  void addSeriesToChart(int const index, const QString &name,
+                        const qint64 tzoffset);
   int getDatabaseType();
 
   QPushButton *m_btn_fetch;

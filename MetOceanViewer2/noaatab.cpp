@@ -9,7 +9,7 @@
 
 std::array<QColor, 2> c_noaaColors = {QColor(Qt::blue), QColor(Qt::green)};
 
-NoaaTab::NoaaTab(QVector<MovStation> *stations, QWidget *parent)
+NoaaTab::NoaaTab(std::vector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::NOAA, stations, parent) {
   this->initialize();
 }
@@ -39,35 +39,35 @@ std::pair<QString, bool> NoaaTab::getDatumParameters() {
 int NoaaTab::getDataFromNoaa(const MovStation &s,
                              const NoaaProductList::NoaaProduct &product,
                              const QDateTime startDate, const QDateTime endDate,
-                             const QString &datumString, Hmdf::HmdfData *data) {
+                             const std::string &datumString,
+                             Hmdf::HmdfData *data) {
   if (product.nProducts() == 1) {
     std::unique_ptr<NoaaCoOps> n(new NoaaCoOps(
-        s, startDate, endDate,
-        QString::fromStdString(product.noaaDataString(0)), datumString, false,
-        this->m_cbx_units->combo()->currentText()));
+        s, startDate, endDate, product.noaaDataString(0), datumString, false,
+        this->m_cbx_units->combo()->currentText().toStdString()));
     int ierr = n->get(data);
     if (ierr != 0) {
-      emit error(n->errorString());
+      emit error(QString::fromStdString(n->errorString()));
       return 1;
     }
   } else {
     std::unique_ptr<NoaaCoOps> n1(new NoaaCoOps(
-        s, startDate, endDate,
-        QString::fromStdString(product.noaaDataString(0)), datumString, false,
-        this->m_cbx_units->combo()->currentText()));
+        s, startDate, endDate, product.noaaDataString(0), datumString, false,
+        this->m_cbx_units->combo()->currentText().toStdString()));
+
     std::unique_ptr<NoaaCoOps> n2(new NoaaCoOps(
-        s, startDate, endDate,
-        QString::fromStdString(product.noaaDataString(1)), datumString, false,
-        this->m_cbx_units->combo()->currentText()));
+        s, startDate, endDate, product.noaaDataString(1), datumString, false,
+        this->m_cbx_units->combo()->currentText().toStdString()));
+
     std::unique_ptr<Hmdf::HmdfData> noaaData1(new Hmdf::HmdfData());
     int ierr = n1->get(data);
     if (ierr != 0) {
-      emit error(n1->errorString());
+      emit error(QString::fromStdString(n1->errorString()));
       return 1;
     }
     ierr = n2->get(noaaData1.get());
     if (ierr != 0) {
-      emit error(n2->errorString());
+      emit error(QString::fromStdString(n2->errorString()));
       return 1;
     }
     data->addStation(*(noaaData1->station(0)));
@@ -91,7 +91,9 @@ QString NoaaTab::getUnitsLabel(const NoaaProductList::NoaaProduct &p) {
 
 void NoaaTab::performDatumTransformation(const MovStation &s,
                                          Hmdf::HmdfData *data) {
-  Datum::VDatum d = Datum::datumID(this->m_cbx_datum->combo()->currentText());
+  Datum::VDatum d =
+      Datum::datumID(this->m_cbx_datum->combo()->currentText().toStdString());
+
   if (d != Datum::NullDatum) {
     emit warning(
         "VDatum did not provide a valid datum converstaion at the specified "
@@ -140,8 +142,8 @@ void NoaaTab::plot() {
   QString unitLabel = this->getUnitsLabel(p);
 
   this->data()->reset(new Hmdf::HmdfData());
-  ierr = this->getDataFromNoaa(s, p, startgmt, endgmt, datumString,
-                               this->data()->get());
+  ierr = this->getDataFromNoaa(s, p, startgmt, endgmt,
+                               datumString.toStdString(), this->data()->get());
   if (ierr != 0) return;
 
   if (useVdatum) this->performDatumTransformation(s, this->data()->get());
@@ -161,11 +163,19 @@ void NoaaTab::plot() {
 void NoaaTab::updateDatumList(bool b) {
   if (b) {
     this->m_cbx_datum->combo()->clear();
-    this->m_cbx_datum->combo()->addItems(Datum::vDatumList());
+    QStringList d;
+    for (auto dd : Datum::vDatumList()) {
+      d << QString::fromStdString(std::string(dd));
+    }
+    this->m_cbx_datum->combo()->addItems(d);
     this->m_cbx_datum->combo()->setCurrentText("MSL");
   } else {
+    QStringList d;
+    for (auto dd : Datum::noaaDatumList()) {
+      d << QString::fromStdString(std::string(dd));
+    }
     this->m_cbx_datum->combo()->clear();
-    this->m_cbx_datum->combo()->addItems(Datum::noaaDatumList());
+    this->m_cbx_datum->combo()->addItems(d);
     this->m_cbx_datum->combo()->setCurrentText("MSL");
   }
 }
@@ -202,7 +212,11 @@ QGroupBox *NoaaTab::generateInputBox() {
   this->m_chk_vdatum->setCheckState(Qt::Unchecked);
 
   this->timezoneCombo()->combo()->addItems(timezoneList());
-  this->m_cbx_datum->combo()->addItems(Datum::noaaDatumList());
+  QStringList d;
+  for (auto dd : Datum::noaaDatumList()) {
+    d << QString::fromStdString(std::string(dd));
+  }
+  this->m_cbx_datum->combo()->addItems(d);
   this->m_cbx_datatype->combo()->addItems(
       this->m_noaaProductList.productList());
   this->m_cbx_units->combo()->addItems(QStringList() << "metric"

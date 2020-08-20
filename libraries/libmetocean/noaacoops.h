@@ -28,14 +28,14 @@
 
 class NoaaCoOps : public WaterData {
  public:
-  METOCEANSHARED_EXPORT NoaaCoOps(const MovStation &station,
-                                  const QDateTime startDate,
-                                  const QDateTime endDate,
-                                  const QString &product, const QString &datum,
-                                  const bool useVdatum, const QString &units);
+  METOCEANSHARED_EXPORT NoaaCoOps(
+      const MovStation &station, const QDateTime startDate,
+      const QDateTime endDate, const std::string &product,
+      const std::string &datum, const bool useVdatum, const std::string &units);
 
  private:
-  int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum = Datum::VDatum::NullDatum);
+  int retrieveData(Hmdf::HmdfData *data,
+                   Datum::VDatum datum = Datum::VDatum::NullDatum);
 
   int parseProduct();
 
@@ -57,10 +57,10 @@ class NoaaCoOps : public WaterData {
                              Hmdf::HmdfData *outputData);
   void parseCsvToValuePair(std::string &data, QDateTime &date, double &value);
 
-  QString m_product;
-  QStringList m_productParsed;
-  QString m_datum;
-  QString m_units;
+  std::string m_product;
+  std::vector<std::string> m_productParsed;
+  std::string m_datum;
+  std::string m_units;
   bool m_useJson, m_useVdatum;
 };
 

@@ -3,7 +3,7 @@
 #include "generic.h"
 #include "xtidedata.h"
 
-XTideTab::XTideTab(QVector<MovStation> *stations, QWidget *parent)
+XTideTab::XTideTab(std::vector<MovStation> *stations, QWidget *parent)
     : MapChartWidget(TabType::XTIDE, stations, parent) {
   this->initialize();
 }
@@ -30,7 +30,12 @@ QGroupBox *XTideTab::generateInputBox() {
   this->m_btn_compute = new QPushButton("Compute Tides", this);
   this->setCbx_mapType(new ComboBox("Map:", this));
 
-  this->m_cbx_datum->combo()->addItems(Datum::vDatumList());
+  QStringList dList;
+  for (auto &i : Datum::vDatumList()) {
+    dList << QString::fromStdString(std::string(i));
+  }
+
+  this->m_cbx_datum->combo()->addItems(dList);
   this->m_cbx_units->combo()->addItems(QStringList() << "metric"
                                                      << "english");
 
@@ -90,14 +95,14 @@ void XTideTab::plot() {
   if (ierr != 0) return;
 
   Datum::VDatum datum =
-      Datum::datumID(this->m_cbx_datum->combo()->currentText());
+      Datum::datumID(this->m_cbx_datum->combo()->currentText().toStdString());
   this->data()->reset(new Hmdf::HmdfData());
 
   std::unique_ptr<XtideData> xtide(
       new XtideData(s, start, end, Generic::configDirectory()));
   ierr = xtide->get(this->data()->get(), datum);
   if (ierr != 0) {
-    emit error(xtide->errorString());
+    emit error(QString::fromStdString(xtide->errorString()));
     return;
   }
 
@@ -106,12 +111,13 @@ void XTideTab::plot() {
     unitString = "ft";
     for (size_t i = 0; i < this->data()->get()->station(0)->size(); ++i) {
       Hmdf::Timepoint *t = this->data()->get()->station(0)->at(i);
-      //t->set(t->date(), t->value() * 3.28084);
+      t->set(t->date(), t->value() * 3.28084);
     }
   }
 
   this->setPlotAxis(this->data()->get(), start, end, tzAbbrev,
-                    Datum::datumName(datum), unitString, "Water Level");
+                    QString::fromStdString(Datum::datumName(datum)), unitString,
+                    "Water Level");
   this->addSeriesToChart(this->data()->get(), tzOffset);
   this->chartview()->initializeAxisLimits();
   this->chartview()->initializeLegendMarkers();

@@ -19,7 +19,7 @@ class MapChartWidget : public QWidget {
   Q_OBJECT
 
  public:
-  MapChartWidget(TabType type, QVector<MovStation> *stations = nullptr,
+  MapChartWidget(TabType type, std::vector<MovStation> *stations = nullptr,
                  QWidget *parent = nullptr);
 
   TabType type() const;
@@ -103,7 +103,7 @@ class MapChartWidget : public QWidget {
   void keyPressEvent(QKeyEvent *event) override;
 
  private:
-  QVector<MovStation> *m_stations;
+  std::vector<MovStation> *m_stations;
   const TabType m_type;
   MapView *m_mapWidget;
   QHBoxLayout *m_mapLayout;

@@ -20,29 +20,32 @@
 #include "tideprediction.h"
 
 #include <QFile>
-#include <QStringList>
+#include <QString>
+#include <string>
 
 #include "libxtide.hh"
+#include "stringutil.h"
 #include "timefunc.h"
 
-TidePrediction::TidePrediction(QString root)
+TidePrediction::TidePrediction(std::string root)
     : m_harmonicsDatabase(root + "/harmonics.tcd") {
   this->initHarmonicsDatabase();
 }
 
 TidePrediction::~TidePrediction() {
   if (this->m_deleteHarmonicsOnExit) {
-    QFile file(this->m_harmonicsDatabase);
+    QFile file(QString::fromStdString(this->m_harmonicsDatabase));
     if (file.exists()) file.remove();
   }
   return;
 }
 
 void TidePrediction::initHarmonicsDatabase() {
-  QFile harm(this->m_harmonicsDatabase);
+  QFile harm(QString::fromStdString(this->m_harmonicsDatabase));
   if (!harm.exists()) {
     Q_INIT_RESOURCE(resource_files);
-    QFile::copy(":/rsc/harmonics.tcd", this->m_harmonicsDatabase);
+    QFile::copy(":/rsc/harmonics.tcd",
+                QString::fromStdString(this->m_harmonicsDatabase));
   }
   return;
 }
@@ -59,8 +62,7 @@ int TidePrediction::get(MovStation &s, QDateTime startDate, QDateTime endDate,
   st.setId(s.id().toStdString());
 
   const libxtide::StationRef *sr =
-      libxtide::Global::stationIndex(
-          this->m_harmonicsDatabase.toStdString().c_str())
+      libxtide::Global::stationIndex(this->m_harmonicsDatabase.c_str())
           .getStationRefByName(s.name().toStdString().c_str());
 
   if (sr) {
@@ -84,17 +86,20 @@ int TidePrediction::get(MovStation &s, QDateTime startDate, QDateTime endDate,
     station->print(text_out, startTime, endTime, libxtide::Mode::mediumRare,
                    libxtide::Format::text);
 
-    QStringList tide = QString(text_out.aschar()).split("\n");
+    // std::stringList tide = std::string(text_out.aschar()).split("\n");
+    std::vector<std::string> tide =
+        StringUtil::stringSplitToVector(std::string(text_out.aschar()), "\n");
 
-    for (int i = 0; i < tide.length(); i++) {
-      QString datestr = tide[i].mid(0, 20).simplified();
-      // QString tz = tide[i].mid(20, 3).simplified(); //(always UTC)
-      QString val = tide[i].mid(23, tide[i].length()).simplified();
-      QDateTime d = QDateTime::fromString(datestr, "yyyy-MM-dd h:mm AP");
+    for (size_t i = 0; i < tide.size(); i++) {
+      std::string datestr = StringUtil::sanitizeString(tide[i]).substr(0, 20);
+      std::string val =
+          StringUtil::sanitizeString(tide[i]).substr(23, tide[i].length());
+      QDateTime d = QDateTime::fromString(QString::fromStdString(datestr),
+                                          "yyyy-MM-dd h:mm AP");
       d.setTimeSpec(Qt::UTC);
       Hmdf::Date dt = Timefunc::fromQDateTime(d);
       if (d.isValid()) {
-        st << Hmdf::Timepoint(dt, val.toDouble());
+        st << Hmdf::Timepoint(dt, stod(val));
       }
     }
     data->addStation(st);

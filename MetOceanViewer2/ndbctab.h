@@ -9,7 +9,7 @@
 class NdbcTab : public MapChartWidget {
   Q_OBJECT
  public:
-  NdbcTab(QVector<MovStation> *stations, QWidget *parent = nullptr);
+  NdbcTab(std::vector<MovStation> *stations, QWidget *parent = nullptr);
   void plot() override;
 
  private slots:

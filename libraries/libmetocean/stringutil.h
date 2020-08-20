@@ -23,12 +23,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
 #include "metocean_global.h"
 
 class StringUtil {
  public:
   static METOCEANSHARED_EXPORT std::vector<std::string> stringSplitToVector(
-      std::string s, std::string delim);
+      std::string s, std::string delim, bool useTokenCompress = false);
   static METOCEANSHARED_EXPORT std::vector<std::string> stringSplitToVector(
       std::string s);
   static int METOCEANSHARED_EXPORT stringToInt(std::string a, bool &ok);

@@ -13,7 +13,7 @@
 class NoaaTab : public MapChartWidget {
   Q_OBJECT
  public:
-  NoaaTab(QVector<MovStation> *stations, QWidget *parent = nullptr);
+  NoaaTab(std::vector<MovStation> *stations, QWidget *parent = nullptr);
 
   void plot() override;
 
@@ -28,7 +28,7 @@ class NoaaTab : public MapChartWidget {
   int getDataFromNoaa(const MovStation &s,
                       const NoaaProductList::NoaaProduct &product,
                       const QDateTime startDate, const QDateTime endDate,
-                      const QString &datumString, Hmdf::HmdfData *data);
+                      const std::string &datumString, Hmdf::HmdfData *data);
   QString getUnitsLabel(const NoaaProductList::NoaaProduct &p);
   void performDatumTransformation(const MovStation &s, Hmdf::HmdfData *data);
   void addSeriesToChart(Hmdf::HmdfData *data, const qint64 &tzOffset);

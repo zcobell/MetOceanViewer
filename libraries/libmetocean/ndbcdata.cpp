@@ -25,73 +25,56 @@
 #include <QNetworkRequest>
 #include <QString>
 #include <QStringList>
+#include <array>
+#include <vector>
 
+#include "stringutil.h"
 #include "timefunc.h"
 
-const QStringList c_dataTypes = QStringList() << "WD"
-                                              << "WDIR"
-                                              << "WSPD"
-                                              << "GST"
-                                              << "WVHT"
-                                              << "DPD"
-                                              << "APD"
-                                              << "MWD"
-                                              << "BAR"
-                                              << "PRES"
-                                              << "ATMP"
-                                              << "WTMP"
-                                              << "DEWP"
-                                              << "VIS"
-                                              << "TIDE";
+static constexpr std::array<std::string_view, 15> c_dataTypes() {
+  return {"WD",  "WDIR", "WSPD", "GST",  "WVHT", "DPD", "APD", "MWD",
+          "BAR", "PRES", "ATMP", "WTMP", "DEWP", "VIS", "TIDE"};
+}
 
-const QStringList c_dataNames = QStringList() << "Wind Direction"
-                                              << "Wind Direction"
-                                              << "Wind Speed"
-                                              << "Wind Gusts"
-                                              << "Wave Height"
-                                              << "Dominant Wave Period"
-                                              << "Average Wave Period"
-                                              << "Mean Wave Direction"
-                                              << "Barometric Pressure"
-                                              << "Atmospheric Pressure"
-                                              << "Air Temperature"
-                                              << "Water Temperature"
-                                              << "Dewpoint"
-                                              << "Visibility"
-                                              << "Water Level";
+static constexpr std::array<std::string_view, 15> c_dataNames() {
+  return {"Wind Direction",
+          "Wind Direction",
+          "Wind Speed",
+          "Wind Gusts",
+          "Wave Height",
+          "Dominant Wave Period",
+          "Average Wave Period",
+          "Mean Wave Direction",
+          "Barometric Pressure",
+          "Atmospheric Pressure",
+          "Air Temperature",
+          "Water Temperature",
+          "Dewpoint",
+          "Visibility",
+          "Water Level"};
+}
 
-const QStringList c_dataUnits = QStringList() << "deg"
-                                              << "deg"
-                                              << "m/s"
-                                              << "m/s"
-                                              << "m"
-                                              << "s"
-                                              << "s"
-                                              << "deg"
-                                              << "mb"
-                                              << "mb"
-                                              << "degC"
-                                              << "degC"
-                                              << "degC"
-                                              << "nm"
-                                              << "m";
+constexpr std::array<std::string_view, 15> c_dataUnits() {
+  return {"deg", "deg", "m/s",  "m/s",  "m",    "s",  "s", "deg",
+          "mb",  "mb",  "degC", "degC", "degC", "nm", "m"};
+}
 
 NdbcData::NdbcData(MovStation &station, QDateTime startDate, QDateTime endDate)
-    : WaterData(station, startDate, endDate) {
-  this->m_dataNameMap = this->buildDataNameMap();
-}
+    : WaterData(station, startDate, endDate),
+      m_dataNameMap(this->buildDataNameMap()) {}
 
-QString NdbcData::units(const QString &parameter) {
-  for (size_t i = 0; i < c_dataNames.size(); ++i) {
-    if (c_dataNames.at(i) == parameter) return c_dataUnits.at(i);
+std::string_view NdbcData::units(const std::string_view &parameter) {
+  for (size_t i = 0; i < c_dataNames().size(); ++i) {
+    if (c_dataNames().at(i) == parameter) return c_dataUnits().at(i);
   }
-  return QStringLiteral("--");
+  return std::string_view("--");
 }
 
-QMap<QString, QString> NdbcData::buildDataNameMap() {
-  QMap<QString, QString> map;
-  for (size_t i = 0; i < c_dataTypes.size(); ++i) {
-    map[c_dataTypes[i]] = c_dataNames[i];
+std::unordered_map<std::string_view, std::string_view>
+NdbcData::buildDataNameMap() {
+  std::unordered_map<std::string_view, std::string_view> map;
+  for (size_t i = 0; i < c_dataTypes().size(); ++i) {
+    map[c_dataTypes().at(i)] = c_dataNames().at(i);
   }
   return map;
 }
@@ -101,21 +84,23 @@ int NdbcData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   int yearStart = startDate().date().year();
   int yearEnd = endDate().date().year();
 
-  QVector<QStringList> ndbcResponse;
+  std::vector<std::vector<std::string>> ndbcResponse;
 
-  for (int i = yearStart; i <= yearEnd; i++) {
-    QUrl url = QUrl("https://www.ndbc.noaa.gov/view_text_file.php?filename=" +
-                    this->station().id() + "h" + QString::number(i) +
-                    ".txt.gz&dir=data/historical/stdmet/");
+  for (int i = yearStart; i <= yearEnd; ++i) {
+    QUrl url = QUrl(QString::fromStdString(
+        "https://www.ndbc.noaa.gov/view_text_file.php?filename=" +
+        this->station().id().toStdString() + "h" + std::to_string(i) +
+        ".txt.gz&dir=data/historical/stdmet/"));
     this->download(url, ndbcResponse);
   }
 
-  if (ndbcResponse.length() == 0) return 1;
+  if (ndbcResponse.size() == 0) return 1;
 
   return this->formatNdbcResponse(ndbcResponse, data);
 }
 
-int NdbcData::download(QUrl url, QVector<QStringList> &dldata) {
+int NdbcData::download(QUrl url,
+                       std::vector<std::vector<std::string>> &dldata) {
   // Send the request
   std::unique_ptr<QNetworkAccessManager> manager(new QNetworkAccessManager());
   QEventLoop loop;
@@ -142,18 +127,20 @@ int NdbcData::download(QUrl url, QVector<QStringList> &dldata) {
 }
 
 int NdbcData::readNdbcResponse(QNetworkReply *reply,
-                               QVector<QStringList> &data) {
+                               std::vector<std::vector<std::string>> &data) {
   // Catch some errors during the download
   if (reply->error() != 0) {
-    this->setErrorString(QStringLiteral("ERROR: ") + reply->errorString());
+    this->setErrorString("ERROR: " + reply->errorString().toStdString());
     reply->deleteLater();
     return 1;
   }
 
   // Store the data
   QByteArray serverData = reply->readAll();
-  QStringList d = QString(serverData).split("\n");
-  if (d.length() > 4) data.push_back(d);
+  std::vector<std::string> d =
+      StringUtil::stringSplitToVector(serverData.toStdString());
+
+  if (d.size() > 4) data.push_back(d);
 
   // Delete this response
   reply->deleteLater();
@@ -161,21 +148,24 @@ int NdbcData::readNdbcResponse(QNetworkReply *reply,
   return 0;
 }
 
-int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
-                                 Hmdf::HmdfData *data) {
+int NdbcData::formatNdbcResponse(
+    std::vector<std::vector<std::string>> &serverResponse,
+    Hmdf::HmdfData *data) {
   //...Create stations
-  QStringList d = serverResponse[0].at(0).simplified().split(" ");
+  std::vector<std::string> d =
+      StringUtil::stringSplitToVector(serverResponse[0][0]);
   std::vector<Hmdf::Station> st;
 
-  int n, p = 0, q, r;
-
-  for (int i = 0; i < serverResponse[0].size(); i++) {
-    if (serverResponse[0][i].mid(0, 1) != "#") {
+  int p = 0;
+  for (size_t i = 0; i < serverResponse[0].size(); i++) {
+    if (serverResponse[0][i].substr(0, 1) != "#") {
       p = i;
       break;
     }
   }
 
+  int q = 0;
+  int r = 0;
   if (d[4] == "mm") {
     q = 16;
     r = 5;
@@ -184,45 +174,48 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
     r = 4;
   }
 
-  n = d.length() - r;
+  int n = d.size() - r;
 
   for (int i = 0; i < n; i++) {
     Hmdf::Station s(i, this->station().coordinate().longitude(),
                     this->station().coordinate().latitude());
 
-    if (this->m_dataNameMap.contains(d[i + r])) {
-      s.setName(this->m_dataNameMap[d[i + r]].toStdString());
+    auto it = this->m_dataNameMap.find(d[i + r]);
+    if (it != this->m_dataNameMap.end()) {
+      s.setName(std::string(it->second));
     } else {
-      s.setName(d[i + r].toStdString());
+      s.setName(d[i + r]);
     }
-    s.setId(d[i + r].toStdString());
+    s.setId(d[i + r]);
     st.push_back(s);
   }
 
   qint64 start = this->startDate().toMSecsSinceEpoch();
   qint64 end = this->endDate().toMSecsSinceEpoch();
 
-  for (int i = 0; i < serverResponse.length(); i++) {
-    for (int j = p; j < serverResponse[i].length(); j++) {
-      QString ds = serverResponse[i][j].mid(0, q).simplified();
+  for (size_t i = 0; i < serverResponse.size(); i++) {
+    for (size_t j = p; j < serverResponse[i].size(); j++) {
+      std::string m = serverResponse[i][j].substr(0, q);
+      std::string ds = StringUtil::sanitizeString(m);
 
       QDateTime d;
       if (q == 13)
-        d = QDateTime::fromString(ds, "yyyy MM dd hh");
+        d = QDateTime::fromString(QString::fromStdString(ds), "yyyy MM dd hh");
       else if (q == 16)
-        d = QDateTime::fromString(ds, "yyyy MM dd hh mm");
+        d = QDateTime::fromString(QString::fromStdString(ds),
+                                  "yyyy MM dd hh mm");
       d.setTimeSpec(Qt::UTC);
 
       if (d.isValid()) {
-        QString vs =
-            serverResponse[i][j].mid(q, serverResponse[i][j].length() - q);
-        QStringList v = vs.simplified().split(" ");
+        std::string vs =
+            serverResponse[i][j].substr(q, serverResponse[i][j].length() - q);
+        std::vector<std::string> v = StringUtil::stringSplitToVector(vs);
         qint64 dm = d.toMSecsSinceEpoch();
         if (dm >= start && dm <= end) {
           for (int k = 0; k < n; k++) {
             if (v[k] != "999" && v[k] != "99.0" && v[k] != "99.00" &&
                 v[k] != "999.0") {
-              double vl = v[k].toDouble();
+              double vl = std::stod(v[k]);
               st[k] << Hmdf::Timepoint(Timefunc::fromQDateTime(d), vl);
             }
           }
@@ -250,10 +243,10 @@ int NdbcData::formatNdbcResponse(QVector<QStringList> &serverResponse,
   return 0;
 }
 
-QStringList NdbcData::dataNames() { return c_dataNames; }
+std::array<std::string_view, 15> NdbcData::dataNames() { return c_dataNames(); }
 
-QStringList NdbcData::dataTypes() { return c_dataTypes; }
+std::array<std::string_view, 15> NdbcData::dataTypes() { return c_dataTypes(); }
 
-QMap<QString, QString> NdbcData::dataMap() {
+std::unordered_map<std::string_view, std::string_view> NdbcData::dataMap() {
   return NdbcData::buildDataNameMap();
 }

@@ -1,22 +1,23 @@
 #ifndef VDATUM_H
 #define VDATUM_H
 
-#include <QString>
-#include <QStringList>
+#include <array>
+#include <string>
+#include <string_view>
 
 namespace Datum {
 enum VDatum { NullDatum, MLLW, MLW, MSL, MHW, MHHW, NGVD29, NAVD88 };
 
-static QStringList noaaDatumList() {
+constexpr std::array<std::string_view, 11> noaaDatumList() {
   return {"MHHW", "MHW", "MTL", "MSL",  "MLW", "MLLW",
           "NAVD", "LWI", "HWI", "IGLD", "STND"};
 }
 
-static QStringList vDatumList() {
+constexpr std::array<std::string_view, 8> vDatumList() {
   return {"none", "MLLW", "MLW", "MSL", "MHW", "MHHW", "NGVD29", "NAVD88"};
 }
 
-static QString datumName(VDatum datum) {
+static std::string datumName(const VDatum &datum) {
   if (datum == NullDatum)
     return "none";
   else if (datum == MLLW)
@@ -37,7 +38,7 @@ static QString datumName(VDatum datum) {
     return "none";
 }
 
-static VDatum datumID(QString datum) {
+static VDatum datumID(const std::string &datum) {
   if (datum == "none")
     return NullDatum;
   else if (datum == "MLLW")

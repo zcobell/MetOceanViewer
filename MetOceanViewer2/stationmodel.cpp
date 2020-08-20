@@ -43,20 +43,20 @@ void StationModel::buildRoles() {
 void StationModel::addMarker(MovStation &station) {
   this->beginInsertRows(QModelIndex(), rowCount(), rowCount());
   this->m_stations.append(station);
-  this->m_stationMap[station.id()] =
-      this->m_stations.at(this->m_stations.length() - 1);
-  this->m_stationLocationMap[station.id()] = this->m_stations.length() - 1;
+  QString n = QString::fromStdString(station.id().toStdString());
+  this->m_stationMap[n] = this->m_stations.at(this->m_stations.length() - 1);
+  this->m_stationLocationMap[n] = this->m_stations.length() - 1;
   this->endInsertRows();
 }
 
-void StationModel::addMarkers(QVector<MovStation> &stations) {
+void StationModel::addMarkers(std::vector<MovStation> &stations) {
   for (size_t i = 0; i < stations.size(); i++) {
     this->addMarker(stations[i]);
   }
   return;
 }
 
-void StationModel::addMarkers(QVector<MovStation> *stations) {
+void StationModel::addMarkers(std::vector<MovStation> *stations) {
   for (size_t i = 0; i < stations->size(); i++) {
     MovStation s = stations->at(i);
     this->addMarker(s);
