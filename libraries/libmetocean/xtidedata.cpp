@@ -19,11 +19,12 @@
 //-----------------------------------------------------------------------*/
 #include "xtidedata.h"
 
+#include <utility>
+
 XtideData::XtideData(MovStation &station, QDateTime startDate,
-                     QDateTime endDate, std::string rootDriectory)
-    : WaterData(station, startDate, endDate),
-      m_interval(300),
-      m_rootDirectory(rootDriectory),
+                     QDateTime endDate, const std::string &rootDriectory)
+    : WaterData(station, std::move(startDate), std::move(endDate)),
+      m_interval(300), m_rootDirectory(rootDriectory),
       m_tidePrediction(new TidePrediction(rootDriectory)) {
   this->m_tidePrediction->deleteHarmonicsOnExit(false);
 }

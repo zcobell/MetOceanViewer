@@ -31,8 +31,8 @@
 #include "stringutil.h"
 
 CrmsData::CrmsData(MovStation &station, QDateTime startDate, QDateTime endDate,
-                   const QVector<std::string> &header,
-                   const QMap<std::string, size_t> &mapping,
+                   const std::vector<std::string> &header,
+                   const std::unordered_map<std::string, size_t> &mapping,
                    const std::string &filename)
     : WaterData(station, startDate, endDate),
       m_filename(filename),
@@ -49,7 +49,8 @@ int CrmsData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
 
   size_t index;
   auto sn = this->station().name().toStdString();
-  if (this->m_mapping.contains(sn)) {
+  auto it = this->m_mapping.find(sn);
+  if (it != this->m_mapping.end()) {
     index = this->m_mapping[sn];
   } else {
     return 1;
@@ -115,8 +116,9 @@ int CrmsData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   return 0;
 }
 
-bool CrmsData::generateStationMapping(const std::string &filename,
-                                      QMap<std::string, size_t> &mapping) {
+bool CrmsData::generateStationMapping(
+    const std::string &filename,
+    std::unordered_map<std::string, size_t> &mapping) {
   int ncid;
   int dimid_nstation, dimid_stringlen;
   size_t n, stringlen;

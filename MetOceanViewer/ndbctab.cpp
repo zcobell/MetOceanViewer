@@ -113,7 +113,8 @@ void NdbcTab::draw(int index) {
     QString tzAbbrev;
     int ierr = this->calculateDateInfo(start, end, startgmt, endgmt, tzAbbrev,
                                        tzOffset);
-    if (ierr != 0) return;
+    if (ierr != 0)
+      return;
 
     QString unit = QString::fromStdString(std::string(
         NdbcData::units(this->data()->get()->station(index)->name())));

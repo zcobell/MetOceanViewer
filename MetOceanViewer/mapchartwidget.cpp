@@ -1,6 +1,10 @@
 #include "mapchartwidget.h"
 
-#include <QDateTimeEdit>
+#include "chartview.h"
+#include "mapview.h"
+#include "metocean.h"
+#include "movStation.h"
+#include "noaacoops.h"
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QLabel>
@@ -8,22 +12,13 @@
 #include <QTimeZone>
 #include <QVBoxLayout>
 
-#include "chartview.h"
-#include "mapview.h"
-#include "metocean.h"
-#include "movStation.h"
-#include "noaacoops.h"
-
 MapChartWidget::MapChartWidget(TabType type, std::vector<MovStation> *stations,
                                QWidget *parent)
-    : QWidget(parent),
-      m_stations(stations),
-      m_type(type),
-      m_chartOptions(nullptr),
-      m_dte_startDate(nullptr),
-      m_dte_endDate(nullptr),
-      m_cbx_timezone(nullptr),
-      m_mapFunctions(new MapFunctions()) {
+    : QWidget(parent), m_stations(stations), m_type(type),
+      m_chartOptions(nullptr), m_dte_startDate(nullptr), m_dte_endDate(nullptr),
+      m_cbx_timezone(nullptr), m_mapFunctions(new MapFunctions()),
+      m_cbx_mapType(nullptr), m_chartview(nullptr), m_mapWidget(nullptr),
+      m_inputBox(nullptr), m_mapLayout(nullptr), m_windowLayout(nullptr) {
   this->m_mapFunctions->getConfigurationFromDisk();
   this->m_mapFunctions->getMapboxKeyFromDisk();
 }
@@ -80,9 +75,9 @@ void MapChartWidget::saveGraphic() {
   if (!filename.isNull()) {
     MetOcean::setLastDirectory(QFileInfo(filename).path());
     QFile outputFile(filename);
-    QSize imageSize(
-        this->m_mapWidget->size().width() + this->m_chartview->size().width(),
-        this->m_mapWidget->size().height());
+    QSize imageSize(this->m_mapWidget->size().width() +
+                        this->m_chartview->size().width(),
+                    this->m_mapWidget->size().height());
     QRect chartRect(this->m_mapWidget->size().width(), 0,
                     this->m_chartview->size().width(),
                     this->m_chartview->size().height());
@@ -135,7 +130,7 @@ MapFunctions *MapChartWidget::mapFunctions() const {
   return m_mapFunctions.get();
 }
 
-ComboBox *MapChartWidget::cbx_mapType() const { return m_cbx_mapType; }
+ComboBox *MapChartWidget::cbx_mapType() { return m_cbx_mapType; }
 
 void MapChartWidget::setCbx_mapType(ComboBox *cbx_mapType) {
   m_cbx_mapType = cbx_mapType;
@@ -152,7 +147,8 @@ void MapChartWidget::setChartOptions(ChartOptionsMenu *chartOptions) {
 void MapChartWidget::writeData(Hmdf::HmdfData *data) {
   QString filename = QFileDialog::getSaveFileName(
       this, "Save As...", MetOcean::lastDirectory(), "*.nc ;; *.imeds");
-  if (!filename.isNull()) data->write(filename.toStdString());
+  if (!filename.isNull())
+    data->write(filename.toStdString());
 }
 
 QGroupBox *MapChartWidget::generateInputBox() { return nullptr; }
@@ -260,12 +256,19 @@ void MapChartWidget::refreshStations() {
 void MapChartWidget::setPlotAxis(
     Hmdf::HmdfData *data, const QDateTime &startDate, const QDateTime &endDate,
     const QString &tzAbbrev, const QString &datumString,
-    const QString &unitString, const QString &productName) {
+    const QString &unitString, const QString &productName,
+    const int stationIndex) {
   Hmdf::Date dmin, dmax;
   double ymin, ymax;
-  data->bounds(dmin, dmax, ymin, ymax);
-  //  qint64 dateMin = dmin.toMSeconds();
-  //  qint64 dateMax = dmax.toMSeconds();
+
+  if (stationIndex == -std::numeric_limits<int>::max()) {
+    data->bounds(dmin, dmax, ymin, ymax);
+  } else {
+    dmin = data->station(stationIndex)->front().date();
+    dmax = data->station(stationIndex)->back().date();
+    data->station(stationIndex)->minmax(ymin, ymax);
+  }
+
   this->chartview()->setDateFormat(startDate, endDate);
   this->chartview()->setAxisLimits(startDate, endDate, ymin, ymax);
   this->chartview()->dateAxis()->setTitleText("Date (" + tzAbbrev + ")");
@@ -313,4 +316,18 @@ void MapChartWidget::changeBasemapOsm() {
 
 void MapChartWidget::changeBasemapMapbox() {
   this->changeMapType(MapFunctions::MapSource::MapBox);
+}
+void MapChartWidget::setStations(QVector<MovStation> *station) {
+  m_stations->clear();
+  m_stations->reserve(station->size());
+  for (const auto &s : *station) {
+    m_stations->push_back(s);
+  }
+}
+void MapChartWidget::setPlotAxis(
+    Hmdf::HmdfData *data, const QDateTime &startDate, const QDateTime &endDate,
+    const QString &tzAbbrev, const QString &datumString,
+    const QString &unitString, const QString &productName) {
+  this->setPlotAxis(data, startDate, endDate, tzAbbrev, datumString, unitString,
+                    productName, -std::numeric_limits<int>::max());
 }

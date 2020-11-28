@@ -41,12 +41,8 @@ NoaaCoOps::NoaaCoOps(const MovStation &station, const QDateTime startDate,
                      const QDateTime endDate, const std::string &product,
                      const std::string &datum, const bool useVdatum,
                      const std::string &units)
-    : WaterData(station, startDate, endDate),
-      m_product(product),
-      m_datum(datum),
-      m_units(units),
-      m_useJson(true),
-      m_useVdatum(useVdatum) {
+    : WaterData(station, startDate, endDate), m_product(product),
+      m_datum(datum), m_units(units), m_useJson(true), m_useVdatum(useVdatum) {
   this->parseProduct();
 }
 
@@ -57,15 +53,18 @@ int NoaaCoOps::parseProduct() {
 
 int NoaaCoOps::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   Q_UNUSED(datum);
-  QVector<QDateTime> startDateList, endDateList;
+  std::vector<QDateTime> startDateList, endDateList;
   std::vector<std::string> rawNoaaData;
   int ierr = this->generateDateRanges(startDateList, endDateList);
-  if (ierr != 0) return ierr;
+  if (ierr != 0)
+    return ierr;
   ierr =
       this->downloadDataFromNoaaServer(startDateList, endDateList, rawNoaaData);
-  if (ierr != 0) return ierr;
+  if (ierr != 0)
+    return ierr;
   ierr = this->formatNoaaResponse(rawNoaaData, data);
-  if (ierr != 0) return ierr;
+  if (ierr != 0)
+    return ierr;
   if (this->m_useVdatum) {
     for (size_t i = 0; i < data->nStations(); ++i) {
       data->station(i)->shift(
@@ -75,8 +74,8 @@ int NoaaCoOps::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
   return 0;
 }
 
-int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
-                                  QVector<QDateTime> &endDateList) {
+int NoaaCoOps::generateDateRanges(std::vector<QDateTime> &startDateList,
+                                  std::vector<QDateTime> &endDateList) {
   long long numDownloads = (this->startDate().daysTo(this->endDate()) / 30) + 1;
 
   this->startDate().setTime(QTime(this->startDate().time().hour(),
@@ -90,10 +89,11 @@ int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
     if (i == 0)
       startDate = this->startDate().addDays(i * 30).addDays(i);
     else
-      startDate = endDateList.last();
+      startDate = endDateList.back();
 
     QDateTime endDate = startDate.addDays(30);
-    if (endDate > this->endDate()) endDate = this->endDate();
+    if (endDate > this->endDate())
+      endDate = this->endDate();
     startDateList.push_back(startDate);
     endDateList.push_back(endDate);
   }
@@ -101,11 +101,11 @@ int NoaaCoOps::generateDateRanges(QVector<QDateTime> &startDateList,
 }
 
 int NoaaCoOps::downloadDataFromNoaaServer(
-    QVector<QDateTime> startDateList, QVector<QDateTime> endDateList,
+    std::vector<QDateTime> startDateList, std::vector<QDateTime> endDateList,
     std::vector<std::string> &downloadedData) {
   std::unique_ptr<QNetworkAccessManager> manager(new QNetworkAccessManager());
 
-  for (int i = 0; i < startDateList.length(); i++) {
+  for (size_t i = 0; i < startDateList.size(); i++) {
     // Make the date string
     std::string startString =
         startDateList[i].toString("yyyyMMdd hh:mm").toStdString();
@@ -249,7 +249,8 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
   for (auto &d : data) {
     if (d.size() > 3) {
       for (auto &d2 : d) {
-        if (d2.size() == 0) continue;
+        if (d2.size() == 0)
+          continue;
 
         QDateTime date = QDateTime();
         double value = Hmdf::Timepoint::nullValue();
@@ -268,7 +269,7 @@ int NoaaCoOps::formatNoaaResponseCsv(std::vector<std::string> &downloadedData,
       }
     }
   }
-  outputData->addStation(station);
+  outputData->moveStation(std::move(station));
 
   if (outputData->station(0)->size() < 5) {
     this->setErrorString("No valid data was found.");

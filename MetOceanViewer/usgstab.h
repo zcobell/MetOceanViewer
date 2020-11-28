@@ -14,25 +14,24 @@
 
 class UsgsTab : public MapChartWidget {
   Q_OBJECT
- public:
-  UsgsTab(std::vector<MovStation> *stations, QWidget *parent = nullptr);
+public:
+  explicit UsgsTab(std::vector<MovStation> *stations,
+                   QWidget *parent = nullptr);
 
- private slots:
+private slots:
   void plot() override;
   void replot(int);
   void saveData() override;
 
- private:
+private:
   QGroupBox *generateInputBox() override;
   void connectSignals() override;
-  std::tuple<QString, QString> splitUsgsProductName(const QString &product);
-  void addSeriesToChart(int const index, const QString &name,
-                        const qint64 tzoffset);
+  static QString splitUsgsProductName(const std::string &product);
+  void addSeriesToChart(int index, const QString &name, qint64 tzoffset);
   int getDatabaseType();
 
   QPushButton *m_btn_fetch;
   QLabel *m_lbl_buttonGroup;
-  QRadioButton *m_rbtn_historic;
   QRadioButton *m_rbtn_instant;
   QRadioButton *m_rbtn_daily;
   ComboBox *m_cbx_product;
@@ -42,4 +41,4 @@ class UsgsTab : public MapChartWidget {
   bool m_ready;
 };
 
-#endif  // USGSTAB_H
+#endif // USGSTAB_H

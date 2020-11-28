@@ -18,19 +18,20 @@
 class MapChartWidget : public QWidget {
   Q_OBJECT
 
- public:
-  MapChartWidget(TabType type, std::vector<MovStation> *stations = nullptr,
-                 QWidget *parent = nullptr);
+public:
+  explicit MapChartWidget(TabType type,
+                          std::vector<MovStation> *stations = nullptr,
+                          QWidget *parent = nullptr);
 
-  TabType type() const;
+  [[nodiscard]] TabType type() const;
 
   void initialize();
 
-  MapView *mapWidget() const;
-  ChartView *chartview() const;
+  [[nodiscard]] MapView *mapWidget() const;
+  [[nodiscard]] ChartView *chartview() const;
 
- protected:
-  ChartOptionsMenu *chartOptions() const;
+protected:
+  [[nodiscard]] ChartOptionsMenu *chartOptions() const;
   void setChartOptions(ChartOptionsMenu *chartOptions);
 
   QStringList timezoneList();
@@ -41,28 +42,35 @@ class MapChartWidget : public QWidget {
 
   void setStations(QVector<MovStation> *station);
 
-  QLineSeries *stationToSeries(Hmdf::Station *s, const qint64 offset);
+  QLineSeries *stationToSeries(Hmdf::Station *s, qint64 offset);
 
   QHBoxLayout *generateMapChartLayout();
   virtual QGroupBox *generateInputBox();
   virtual void connectSignals();
 
-  MapFunctions *mapFunctions() const;
+  [[nodiscard]] MapFunctions *mapFunctions() const;
 
- signals:
+signals:
   void error(QString);
   void warning(QString);
 
- protected:
+protected:
   virtual void writeData(Hmdf::HmdfData *data);
   virtual int calculateDateInfo(QDateTime &startDate, QDateTime &endDate,
                                 QDateTime &startDateGmt, QDateTime &endDateGmt,
                                 QString &timezoneString, qint64 &tzOffset);
+
   virtual void setPlotAxis(Hmdf::HmdfData *data, const QDateTime &startDate,
                            const QDateTime &endDate, const QString &tzAbbrev,
-                           const QString &datumString = QString(),
-                           const QString &unitString = QString(),
-                           const QString &productName = QString());
+                           const QString &datumString,
+                           const QString &unitString,
+                           const QString &productName, int stationIndex);
+
+  virtual void setPlotAxis(Hmdf::HmdfData *data, const QDateTime &startDate,
+                           const QDateTime &endDate, const QString &tzAbbrev,
+                           const QString &datumString,
+                           const QString &unitString,
+                           const QString &productName);
 
   DateBox *startDateEdit();
   void setStartDateEdit(DateBox *widget);
@@ -73,22 +81,22 @@ class MapChartWidget : public QWidget {
   ComboBox *timezoneCombo();
   void setTimezoneCombo(ComboBox *widget);
 
-  ComboBox *cbx_mapType() const;
+  ComboBox *cbx_mapType();
   void setCbx_mapType(ComboBox *cbx_mapType);
 
   std::unique_ptr<Hmdf::HmdfData> *data();
 
- public slots:
+public slots:
   void changeBasemapEsri();
   void changeBasemapOsm();
   void changeBasemapMapbox();
 
- protected slots:
+protected slots:
   void chartOptionsChangeTriggered();
-  void changeMapType(const MapFunctions::MapSource s);
+  void changeMapType(MapFunctions::MapSource s);
   virtual void refreshStations();
 
- private slots:
+private slots:
   virtual void plot();
 
   virtual void saveGraphic();
@@ -102,7 +110,7 @@ class MapChartWidget : public QWidget {
 
   void keyPressEvent(QKeyEvent *event) override;
 
- private:
+private:
   std::vector<MovStation> *m_stations;
   const TabType m_type;
   MapView *m_mapWidget;
@@ -119,4 +127,4 @@ class MapChartWidget : public QWidget {
   std::unique_ptr<Hmdf::HmdfData> m_data;
 };
 
-#endif  // MAPCHARTWIDGET_H
+#endif // MAPCHARTWIDGET_H

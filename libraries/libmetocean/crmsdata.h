@@ -28,15 +28,15 @@ class CrmsData : public WaterData {
  public:
   METOCEANSHARED_EXPORT CrmsData(MovStation &station, QDateTime startDate,
                                  QDateTime endDate,
-                                 const QVector<std::string> &header,
-                                 const QMap<std::string, size_t> &mapping,
+                                 const std::vector<std::string> &header,
+                                 const std::unordered_map<std::string, size_t> &mapping,
                                  const std::string &filename);
 
   static bool METOCEANSHARED_EXPORT
   readHeader(const std::string &filename, std::vector<std::string> &header);
 
   static bool METOCEANSHARED_EXPORT generateStationMapping(
-      const std::string &filename, QMap<std::string, size_t> &mapping);
+      const std::string &filename, std::unordered_map<std::string, size_t> &mapping);
 
   static bool METOCEANSHARED_EXPORT readStationList(
       const std::string &filename, std::vector<double> &latitude,
@@ -51,8 +51,8 @@ class CrmsData : public WaterData {
   QDateTime m_startTime;
   QDateTime m_endTime;
   std::string m_filename;
-  QVector<std::string> m_header;
-  QMap<std::string, size_t> m_mapping;
+  std::vector<std::string> m_header;
+  std::unordered_map<std::string, size_t> m_mapping;
 };
 
 #endif  // CRMSDATA_H

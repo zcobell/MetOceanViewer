@@ -1,6 +1,7 @@
 #include "noaatab.h"
 
 #include <array>
+#include <memory>
 #include <string>
 
 #include "metocean.h"
@@ -38,7 +39,8 @@ std::pair<QString, bool> NoaaTab::getDatumParameters() {
 
 int NoaaTab::getDataFromNoaa(const MovStation &s,
                              const NoaaProductList::NoaaProduct &product,
-                             const QDateTime startDate, const QDateTime endDate,
+                             const QDateTime &startDate,
+                             const QDateTime &endDate,
                              const std::string &datumString,
                              Hmdf::HmdfData *data) {
   if (product.nProducts() == 1) {
@@ -121,7 +123,7 @@ void NoaaTab::plot() {
   if (s.id() == "null") {
     emit error("No station was selected");
     return;
-  };
+  }
 
   this->chartview()->clear();
   this->chartview()->initializeAxis(1);
@@ -131,7 +133,8 @@ void NoaaTab::plot() {
   QString tzAbbrev;
   int ierr =
       this->calculateDateInfo(start, end, startgmt, endgmt, tzAbbrev, tzOffset);
-  if (ierr != 0) return;
+  if (ierr != 0)
+    return;
 
   NoaaProductList::NoaaProduct p = this->m_noaaProductList.product(
       this->m_cbx_datatype->combo()->currentIndex());
@@ -141,12 +144,14 @@ void NoaaTab::plot() {
   std::tie(datumString, useVdatum) = this->getDatumParameters();
   QString unitLabel = this->getUnitsLabel(p);
 
-  this->data()->reset(new Hmdf::HmdfData());
+  *this->data() = std::make_unique<Hmdf::HmdfData>();
   ierr = this->getDataFromNoaa(s, p, startgmt, endgmt,
                                datumString.toStdString(), this->data()->get());
-  if (ierr != 0) return;
+  if (ierr != 0)
+    return;
 
-  if (useVdatum) this->performDatumTransformation(s, this->data()->get());
+  if (useVdatum)
+    this->performDatumTransformation(s, this->data()->get());
 
   this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, datumString,
                     unitLabel, QString::fromStdString(p.axisLabel()));
@@ -156,8 +161,6 @@ void NoaaTab::plot() {
   this->addSeriesToChart(this->data()->get(), tzOffset);
   this->chartview()->initializeAxisLimits();
   this->chartview()->initializeLegendMarkers();
-
-  return;
 }
 
 void NoaaTab::updateDatumList(bool b) {
@@ -181,7 +184,7 @@ void NoaaTab::updateDatumList(bool b) {
 }
 
 QGroupBox *NoaaTab::generateInputBox() {
-  QGroupBox *input = new QGroupBox(this);
+  auto *input = new QGroupBox(this);
   input->setTitle("NOAA Station Download Options");
 
   const size_t nLayoutRows = 4;
@@ -190,7 +193,7 @@ QGroupBox *NoaaTab::generateInputBox() {
     l = new QHBoxLayout();
   }
 
-  QVBoxLayout *allLayout = new QVBoxLayout();
+  auto *allLayout = new QVBoxLayout();
 
   this->setStartDateEdit(new DateBox("Start Time: ", this));
   this->setEndDateEdit(new DateBox("End Time: ", this));

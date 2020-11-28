@@ -23,50 +23,33 @@
 #include <QLegendMarker>
 #include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
-#include <QtCharts/QSplineSeries>
 #include <QtGui/QMouseEvent>
-#include <QtGui/QResizeEvent>
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QGraphicsTextItem>
+#include <utility>
 
 #include "metocean.h"
 
-const QStringList c_dateFormats = QStringList() << "MM/dd/yyyy hh:mmap"
-                                                << "MM/dd/yyyy hh:mm"
-                                                << "MM/dd/yyyy"
-                                                << "MM/yyyy"
-                                                << "MM/dd"
-                                                << "MM/dd hhap"
-                                                << "MM/dd hh"
-                                                << "MM/dd hh:mmap"
-                                                << "MM/dd hh:mm";
+static const QStringList c_dateFormats = QStringList() << "MM/dd/yyyy hh:mmap"
+                                                       << "MM/dd/yyyy hh:mm"
+                                                       << "MM/dd/yyyy"
+                                                       << "MM/yyyy"
+                                                       << "MM/dd"
+                                                       << "MM/dd hhap"
+                                                       << "MM/dd hh"
+                                                       << "MM/dd hh:mmap"
+                                                       << "MM/dd hh:mm";
 
 ChartView::ChartView(QWidget *parent)
-    : QChartView(new QChart(), parent),
-      m_xAxisMin(0.0),
-      m_xAxisMax(0.0),
-      m_yAxisMin(0.0),
-      m_yAxisMax(0.0),
-      m_currentXAxisMin(0.0),
-      m_currentXAxisMax(0.0),
-      m_currentYAxisMin(0.0),
-      m_currentYAxisMax(0.0),
-      m_statusBar(nullptr),
-      m_legendNames(QVector<QString>()),
-      m_series(QVector<QLineSeries *>()),
-      m_yTraceLine(QLineF()),
-      m_xTraceLine(QLineF()),
-      m_yTraceLinePtr(nullptr),
-      m_xTraceLinePtr(nullptr),
-      m_displayValues(false),
-      m_dateAxis(nullptr),
-      m_xAxis(nullptr),
-      m_yAxis(nullptr),
-      m_coord(nullptr),
-      m_style(0),
-      m_infoString(QString()),
-      m_infoRectItem(nullptr),
-      m_infoItem(nullptr) {
+    : QChartView(new QChart(), parent), m_xAxisMin(0.0), m_xAxisMax(0.0),
+      m_yAxisMin(0.0), m_yAxisMax(0.0), m_currentXAxisMin(0.0),
+      m_currentXAxisMax(0.0), m_currentYAxisMin(0.0), m_currentYAxisMax(0.0),
+      m_statusBar(nullptr), m_legendNames(QVector<QString>()),
+      m_series(QVector<QLineSeries *>()), m_yTraceLine(QLineF()),
+      m_xTraceLine(QLineF()), m_yTraceLinePtr(nullptr),
+      m_xTraceLinePtr(nullptr), m_displayValues(false), m_dateAxis(nullptr),
+      m_xAxis(nullptr), m_yAxis(nullptr), m_coord(nullptr), m_style(0),
+      m_infoString(QString()), m_infoRectItem(nullptr), m_infoItem(nullptr) {
   this->m_coord = new QGraphicsSimpleTextItem(this->chart());
   this->setDragMode(QChartView::NoDrag);
   this->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -82,7 +65,7 @@ ChartView::ChartView(QWidget *parent)
   this->setBackground(true);
 }
 
-ChartView::~ChartView() {}
+ChartView::~ChartView() = default;
 
 bool ChartView::pointXLessThan(const QPointF &p1, const QPointF &p2) {
   return p1.x() < p2.x();
@@ -112,7 +95,8 @@ void ChartView::setTitleFontsize(int titleFontsize) {
 }
 
 QPointF ChartView::dateDisplayPosition() {
-  return QPointF(this->size().width() / 2 - 100, this->size().height() - 30);
+  return QPointF(this->size().width() / 2.0 - 100.0,
+                 this->size().height() - 30.0);
 }
 
 void ChartView::initializeAxis(int style) {
@@ -144,7 +128,6 @@ void ChartView::initializeAxis(int style) {
     this->yAxis()->setShadesVisible(true);
     this->yAxis()->setTitleFont(QFont("Helvetica", 14, QFont::Bold));
   }
-  return;
 }
 
 void ChartView::setDateFormat(const QString &format) {
@@ -158,7 +141,8 @@ void ChartView::setDateFormat(const QString &format) {
   }
 }
 
-void ChartView::setDateFormat(const QDateTime &start, const QDateTime &end) {
+void ChartView::setDateFormat(const QDateTime &start,
+                              const QDateTime &end) const {
   QString format;
   if (start.daysTo(end) > 90)
     format = "MM/yyyy";
@@ -172,16 +156,16 @@ void ChartView::setDateFormat(const QDateTime &start, const QDateTime &end) {
 QStringList ChartView::dateFormats() { return c_dateFormats; }
 
 void ChartView::setAxisLimits(double xmin, double xmax, double ymin,
-                              double ymax) {
+                              double ymax) const {
   this->xAxis()->setMin(xmin);
   this->xAxis()->setMax(xmax);
   this->yAxis()->setMin(ymin);
   this->yAxis()->setMax(ymax);
-  return;
 }
 
-void ChartView::setAxisLimits(QDateTime startDate, QDateTime endDate,
-                              double ymin, double ymax) {
+void ChartView::setAxisLimits(const QDateTime &startDate,
+                              const QDateTime &endDate, double ymin,
+                              double ymax) const {
   int offset = MetOcean::localMachineOffsetFromUTC();
   if (startDate.timeSpec() == Qt::LocalTime)
     this->dateAxis()->setMin(startDate);
@@ -195,21 +179,17 @@ void ChartView::setAxisLimits(QDateTime startDate, QDateTime endDate,
 
   this->yAxis()->setMin(ymin);
   this->yAxis()->setMax(ymax);
-  return;
 }
 
 void ChartView::clear() {
-  if (this->chart()->series().length() > 0) this->chart()->removeAllSeries();
+  if (this->chart()->series().length() > 0)
+    this->chart()->removeAllSeries();
   this->m_legendNames.clear();
   this->m_series.clear();
   this->removeTraceLines();
-  return;
 }
 
-void ChartView::setDisplayValues(bool value) {
-  this->m_displayValues = value;
-  return;
-}
+void ChartView::setDisplayValues(bool value) { this->m_displayValues = value; }
 
 void ChartView::initializeLegendMarkers() {
   for (int i = 0; i < this->chart()->legend()->markers().length(); i++)
@@ -223,10 +203,9 @@ void ChartView::initializeLegendMarkers() {
     QObject::connect(marker, SIGNAL(clicked()), this,
                      SLOT(handleLegendMarkerClicked()));
   }
-  return;
 }
 
-void ChartView::addSeries(QLineSeries *series, QString name) {
+void ChartView::addSeries(QLineSeries *series, const QString &name) {
   this->setBackground(false);
   this->m_series.push_back(series);
   this->m_legendNames.push_back(name);
@@ -238,13 +217,9 @@ void ChartView::addSeries(QLineSeries *series, QString name) {
     series->attachAxis(this->dateAxis());
 
   series->attachAxis(this->yAxis());
-  return;
 }
 
-void ChartView::rebuild() {
-  this->initializeAxisLimits();
-  return;
-}
+void ChartView::rebuild() { this->initializeAxisLimits(); }
 
 void ChartView::resizeEvent(QResizeEvent *event) {
   if (scene()) {
@@ -259,7 +234,6 @@ void ChartView::resizeEvent(QResizeEvent *event) {
     }
   }
   QChartView::resizeEvent(event);
-  return;
 }
 
 void ChartView::removeTraceLines() {
@@ -271,7 +245,6 @@ void ChartView::removeTraceLines() {
     this->scene()->removeItem(this->m_yTraceLinePtr);
     this->m_yTraceLinePtr = nullptr;
   }
-  return;
 }
 
 void ChartView::addXTraceLine(QMouseEvent *event) {
@@ -286,7 +259,6 @@ void ChartView::addXTraceLine(QMouseEvent *event) {
   this->removeTraceLines();
   this->m_xTraceLine.setLine(event->pos().x(), ymin, event->pos().x(), ymax);
   this->m_xTraceLinePtr = this->scene()->addLine(this->m_xTraceLine);
-  return;
 }
 
 void ChartView::addXYTraceLine(QMouseEvent *event) {
@@ -301,7 +273,6 @@ void ChartView::addXYTraceLine(QMouseEvent *event) {
                              event->pos().y());
   this->m_xTraceLinePtr = this->scene()->addLine(this->m_xTraceLine);
   this->m_yTraceLinePtr = this->scene()->addLine(this->m_yTraceLine);
-  return;
 }
 
 void ChartView::addTraceLines(QMouseEvent *event) {
@@ -310,7 +281,6 @@ void ChartView::addTraceLines(QMouseEvent *event) {
   } else if (this->m_style == 2) {
     this->addXYTraceLine(event);
   }
-  return;
 }
 
 bool ChartView::getNearestPointToCursor(qreal cursorXPosition, int seriesIndex,
@@ -345,7 +315,6 @@ void ChartView::addLineValuesToLegend(qreal x) {
   QDateTime date = QDateTime::fromMSecsSinceEpoch(x);
   QString dateString = QString("Date: ") + date.toString("MM/dd/yyyy hh:mm AP");
   this->m_coord->setText(dateString);
-  return;
 }
 
 void ChartView::addChartPositionToLegend(qreal x, qreal y) {
@@ -353,7 +322,7 @@ void ChartView::addChartPositionToLegend(qreal x, qreal y) {
       tr("Measured: %1     Modeled: %2     Diff: %3").arg(x).arg(y).arg(y - x));
 }
 
-bool ChartView::isOnPlot(qreal x, qreal y) {
+bool ChartView::isOnPlot(qreal x, qreal y) const {
   if (x < this->m_currentXAxisMax && x > this->m_currentXAxisMin &&
       y < this->m_currentYAxisMax && y > this->m_currentYAxisMin)
     return true;
@@ -367,7 +336,6 @@ void ChartView::makeDynamicLegendLabels(qreal x, qreal y) {
   } else if (this->m_style == 2) {
     this->addChartPositionToLegend(x, y);
   }
-  return;
 }
 
 void ChartView::displayInstructionsOnStatusBar() {
@@ -379,7 +347,8 @@ void ChartView::displayInstructionsOnStatusBar() {
 
 void ChartView::resetPlotLegend() {
   this->m_coord->setText("");
-  if (this->m_statusBar) this->m_statusBar->clearMessage();
+  if (this->m_statusBar)
+    this->m_statusBar->clearMessage();
   for (int i = 0; i < this->m_series.length(); i++)
     this->chart()->series().at(i)->setName(this->m_legendNames.at(i));
   this->removeTraceLines();
@@ -404,34 +373,32 @@ void ChartView::mouseMoveEvent(QMouseEvent *event) {
   }
 
   QChartView::mouseMoveEvent(event);
-  return;
 }
 
 void ChartView::mouseReleaseEvent(QMouseEvent *event) {
   QChartView::mouseReleaseEvent(event);
-  if (this->chart()) this->resetAxisLimits();
-  return;
+  if (this->chart())
+    this->resetAxisLimits();
 }
 
 void ChartView::mouseDoubleClickEvent(QMouseEvent *event) {
   QChartView::mouseDoubleClickEvent(event);
-  if (this->chart()) this->resetZoom();
-  return;
+  if (this->chart())
+    this->resetZoom();
 }
 
 void ChartView::wheelEvent(QWheelEvent *event) {
-  if (this->chart() == nullptr) return;
+  if (this->chart() == nullptr)
+    return;
 
-  if (event->delta() > 0)
+  if (event->angleDelta().y() > 0)
     this->chart()->zoomIn();
-  else if (event->delta() < 0)
+  else if (event->angleDelta().y() < 0)
     this->chart()->zoomOut();
 
   QChartView::wheelEvent(event);
 
   this->resetAxisLimits();
-
-  return;
 }
 
 void ChartView::resetZoom() {
@@ -439,7 +406,6 @@ void ChartView::resetZoom() {
     this->chart()->zoomReset();
     this->resetAxisLimits();
   }
-  return;
 }
 
 void ChartView::resetAxisLimits() {
@@ -450,18 +416,16 @@ void ChartView::resetAxisLimits() {
     this->m_currentYAxisMin = this->chart()->mapToValue(box.bottomLeft()).y();
     this->m_currentYAxisMax = this->chart()->mapToValue(box.topRight()).y();
   }
-  return;
 }
 
 void ChartView::setBackground(bool b) {
   if (b) {
     this->chart()->setBackgroundVisible(false);
-    this->setStyleSheet(
-        "#chart{background-color: white;"
-        "background-image: url(:/rsc/img/mov.png);"
-        "background-repeat: no-repeat; "
-        "background-attachment: fixed; "
-        "background-position: center;} ");
+    this->setStyleSheet("#chart{background-color: white;"
+                        "background-image: url(:/rsc/img/mov.png);"
+                        "background-repeat: no-repeat; "
+                        "background-attachment: fixed; "
+                        "background-position: center;} ");
   } else {
     this->chart()->setBackgroundVisible(true);
     this->setStyleSheet("#chart{background-color: white}");
@@ -496,9 +460,9 @@ QDateTimeAxis *ChartView::dateAxis() const { return this->m_dateAxis; }
 
 QString ChartView::infoString() const { return this->m_infoString; }
 
-void ChartView::setInfoString(QString regressionString,
-                              QString correlationString,
-                              QString standardDeviationString) {
+void ChartView::setInfoString(const QString &regressionString,
+                              const QString &correlationString,
+                              const QString &standardDeviationString) {
   this->setInfoString(
       "<table><tr><td align=\"right\"><b> " + tr("Regression Line") +
       ": </b></td><td>" + regressionString + "</td></tr>" +
@@ -506,14 +470,13 @@ void ChartView::setInfoString(QString regressionString,
       " (R&sup2;): </b></td><td>" + correlationString + "</td></tr>" +
       "<tr><td align=\"right\"><b> " + tr("Standard Deviation:") +
       " </b></td><td>" + standardDeviationString + "</td></tr></table>");
-  return;
 }
 
 void ChartView::setInfoString(QString infoString) {
-  this->m_infoString = infoString;
+  this->m_infoString = std::move(infoString);
 }
 
-int ChartView::style() const { return this->m_style; }
+int ChartView::chartStyle() const { return this->m_style; }
 
 void ChartView::setStyle(int style) { this->m_style = style; }
 
@@ -521,7 +484,8 @@ QGraphicsSimpleTextItem *ChartView::coord() const { return this->m_coord; }
 
 void ChartView::initializeAxisLimits() {
   this->yAxis()->applyNiceNumbers();
-  if (this->style() == 2) this->xAxis()->applyNiceNumbers();
+  if (this->chartStyle() == 2)
+    this->xAxis()->applyNiceNumbers();
 
   const QRectF box = this->chart()->plotArea();
   this->m_xAxisMin = this->chart()->mapToValue(box.bottomLeft()).x();
@@ -536,55 +500,54 @@ void ChartView::initializeAxisLimits() {
   this->m_currentYAxisMax = this->m_yAxisMax;
   this->m_currentXAxisMin = this->m_xAxisMin;
   this->m_currentYAxisMin = this->m_yAxisMin;
-  return;
 }
 
 void ChartView::setStatusBar(QStatusBar *inStatusBar) {
   this->m_statusBar = inStatusBar;
-  return;
 }
 
 void ChartView::handleLegendMarkerClicked() {
-  QLegendMarker *marker = qobject_cast<QLegendMarker *>(sender());
+  auto *marker = qobject_cast<QLegendMarker *>(sender());
 
   Q_ASSERT(marker);
 
   switch (marker->type()) {
-    case QLegendMarker::LegendMarkerTypeXY: {
-      // Toggle visibility of series
-      marker->series()->setVisible(!marker->series()->isVisible());
+  case QLegendMarker::LegendMarkerTypeXY: {
+    // Toggle visibility of series
+    marker->series()->setVisible(!marker->series()->isVisible());
 
-      // Turn legend marker back to visible, since hiding series also hides the
-      // marker and we don't want it to happen now.
-      marker->setVisible(true);
+    // Turn legend marker back to visible, since hiding series also hides the
+    // marker and we don't want it to happen now.
+    marker->setVisible(true);
 
-      // Dim the marker, if series is not visible
-      qreal alpha = 1.0;
+    // Dim the marker, if series is not visible
+    qreal alpha = 1.0;
 
-      if (!marker->series()->isVisible()) alpha = 0.5;
+    if (!marker->series()->isVisible())
+      alpha = 0.5;
 
-      QColor color;
-      QBrush brush = marker->labelBrush();
-      color = brush.color();
-      color.setAlphaF(alpha);
-      brush.setColor(color);
-      marker->setLabelBrush(brush);
+    QColor color;
+    QBrush brush = marker->labelBrush();
+    color = brush.color();
+    color.setAlphaF(alpha);
+    brush.setColor(color);
+    marker->setLabelBrush(brush);
 
-      brush = marker->brush();
-      color = brush.color();
-      color.setAlphaF(alpha);
-      brush.setColor(color);
-      marker->setBrush(brush);
+    brush = marker->brush();
+    color = brush.color();
+    color.setAlphaF(alpha);
+    brush.setColor(color);
+    marker->setBrush(brush);
 
-      QPen pen = marker->pen();
-      color = pen.color();
-      color.setAlphaF(alpha);
-      pen.setColor(color);
-      marker->setPen(pen);
+    QPen pen = marker->pen();
+    color = pen.color();
+    color.setAlphaF(alpha);
+    pen.setColor(color);
+    marker->setPen(pen);
 
-      break;
-    }
-    default:
-      break;
+    break;
+  }
+  default:
+    break;
   }
 }

@@ -33,6 +33,7 @@
 #include "RGBGraph.hh"
 #include "Skycal.hh"
 #include "SVGGraph.hh"
+#include <memory>
 
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
@@ -1051,7 +1052,7 @@ void Station::calendarMode (Dstr &text_out,
     plainMode (text_out, startTime, endTime, form);
   else {
     textBoilerplate (text_out, form, true);
-    std::auto_ptr<Calendar> cal (Calendar::factory (*this,
+    std::unique_ptr<Calendar> cal (Calendar::factory (*this,
 						    startTime,
 						    endTime,
 						    mode,
@@ -1089,7 +1090,7 @@ void Station::bannerMode (Dstr &text_out,
                           Timestamp startTime,
                           Timestamp endTime) {
   textBoilerplate (text_out, Format::text, true);
-  std::auto_ptr<Banner> banner (Banner::factory (*this,
+  std::unique_ptr<Banner> banner (Banner::factory (*this,
 						 Global::settings["tw"].u,
 						 startTime,
 						 endTime));

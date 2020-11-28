@@ -1,10 +1,13 @@
 #include "xtidetab.h"
 
+#include <memory>
+
 #include "generic.h"
 #include "xtidedata.h"
 
 XTideTab::XTideTab(std::vector<MovStation> *stations, QWidget *parent)
-    : MapChartWidget(TabType::XTIDE, stations, parent) {
+    : MapChartWidget(TabType::XTIDE, stations, parent), m_cbx_datum(nullptr),
+      m_cbx_units(nullptr), m_btn_compute(nullptr) {
   this->initialize();
 }
 
@@ -18,7 +21,7 @@ void XTideTab::refreshStations() {
 }
 
 QGroupBox *XTideTab::generateInputBox() {
-  QGroupBox *input = new QGroupBox(this);
+  auto *input = new QGroupBox(this);
   input->setTitle("Select a station to compute tides");
 
   this->setStartDateEdit(new DateBox("Start Date:", this));
@@ -52,9 +55,9 @@ QGroupBox *XTideTab::generateInputBox() {
   this->startDateEdit()->dateEdit()->setDisplayFormat("MM/dd/yyyy");
   this->endDateEdit()->dateEdit()->setDisplayFormat("MM/dd/yyyy");
 
-  QHBoxLayout *r1 = new QHBoxLayout();
-  QHBoxLayout *r2 = new QHBoxLayout();
-  QHBoxLayout *r3 = new QHBoxLayout();
+  auto *r1 = new QHBoxLayout();
+  auto *r2 = new QHBoxLayout();
+  auto *r3 = new QHBoxLayout();
 
   r1->addWidget(this->startDateEdit());
   r1->addWidget(this->endDateEdit());
@@ -67,7 +70,7 @@ QGroupBox *XTideTab::generateInputBox() {
   r2->addStretch();
   r3->addStretch();
 
-  QVBoxLayout *v = new QVBoxLayout();
+  auto *v = new QVBoxLayout();
   v->addLayout(r1);
   v->addLayout(r2);
   v->addLayout(r3);
@@ -92,14 +95,14 @@ void XTideTab::plot() {
   QString tzAbbrev;
   int ierr =
       this->calculateDateInfo(start, end, startgmt, endgmt, tzAbbrev, tzOffset);
-  if (ierr != 0) return;
+  if (ierr != 0)
+    return;
 
   Datum::VDatum datum =
       Datum::datumID(this->m_cbx_datum->combo()->currentText().toStdString());
   this->data()->reset(new Hmdf::HmdfData());
 
-  std::unique_ptr<XtideData> xtide(
-      new XtideData(s, start, end, Generic::configDirectory()));
+  auto xtide = std::make_unique<XtideData>(s,start,end,Generic::configDirectory());
   ierr = xtide->get(this->data()->get(), datum);
   if (ierr != 0) {
     emit error(QString::fromStdString(xtide->errorString()));
@@ -109,9 +112,8 @@ void XTideTab::plot() {
   QString unitString = "m";
   if (this->m_cbx_units->combo()->currentText() == "english") {
     unitString = "ft";
-    for (size_t i = 0; i < this->data()->get()->station(0)->size(); ++i) {
-      Hmdf::Timepoint *t = this->data()->get()->station(0)->at(i);
-      t->set(t->date(), t->value() * 3.28084);
+    for (auto t : *this->data()->get()->station(0)) {
+      t.set(t.date(), t.value() * 3.28084);
     }
   }
 
@@ -122,7 +124,6 @@ void XTideTab::plot() {
   this->chartview()->initializeAxisLimits();
   this->chartview()->initializeLegendMarkers();
   this->chartview()->chart()->setTitle("XTide: " + s.name());
-  return;
 }
 
 void XTideTab::addSeriesToChart(Hmdf::HmdfData *data, const qint64 tzOffset) {

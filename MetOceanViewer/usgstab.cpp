@@ -1,10 +1,14 @@
 #include "usgstab.h"
 
+#include <memory>
+
 #include "metocean.h"
 #include "usgswaterdata.h"
 
 UsgsTab::UsgsTab(std::vector<MovStation> *stations, QWidget *parent)
-    : MapChartWidget(TabType::USGS, stations, parent), m_ready(false) {
+    : MapChartWidget(TabType::USGS, stations, parent), m_ready(false),
+      m_btn_fetch(nullptr), m_buttonGroup(nullptr), m_lbl_buttonGroup(nullptr),
+      m_cbx_product(nullptr), m_rbtn_daily(nullptr), m_rbtn_instant(nullptr) {
   this->initialize();
 }
 
@@ -16,11 +20,11 @@ void UsgsTab::connectSignals() {
 }
 
 QGroupBox *UsgsTab::generateInputBox() {
-  QGroupBox *input = new QGroupBox(this);
+  auto *input = new QGroupBox(this);
   input->setTitle(
       "Select a station and click fetch to generate list of available "
       "products");
-  QVBoxLayout *v = new QVBoxLayout();
+  auto *v = new QVBoxLayout();
 
   this->setStartDateEdit(new DateBox("Start Date:", this));
   this->setEndDateEdit(new DateBox("End Date:", this));
@@ -30,16 +34,14 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->m_btn_fetch = new QPushButton("Fetch Data", this);
 
   this->m_lbl_buttonGroup = new QLabel("Data Type:", this);
-  this->m_rbtn_historic = new QRadioButton("Historic Data", this);
   this->m_rbtn_instant = new QRadioButton("Instant Data", this);
   this->m_rbtn_daily = new QRadioButton("Daily Data", this);
 
   this->m_buttonGroup = new QButtonGroup(this);
-  this->m_buttonGroup->addButton(this->m_rbtn_historic, 0);
   this->m_buttonGroup->addButton(this->m_rbtn_instant, 1);
   this->m_buttonGroup->addButton(this->m_rbtn_daily, 2);
 
-  this->m_rbtn_historic->setChecked(true);
+  this->m_rbtn_instant->setChecked(true);
 
   this->setChartOptions(
       new ChartOptionsMenu(true, true, true, false, true, true, this));
@@ -70,7 +72,6 @@ QGroupBox *UsgsTab::generateInputBox() {
   this->m_rowLayouts[1]->addSpacerItem(
       new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Preferred));
   this->m_rowLayouts[2]->addWidget(this->m_lbl_buttonGroup);
-  this->m_rowLayouts[2]->addWidget(this->m_rbtn_historic);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_instant);
   this->m_rowLayouts[2]->addWidget(this->m_rbtn_daily);
   this->m_rowLayouts[2]->addWidget(this->m_btn_fetch);
@@ -102,10 +103,10 @@ void UsgsTab::plot() {
   if (this->m_currentStation.id() == "null") {
     emit error("No station was selected");
     return;
-  };
+  }
 
   int type = this->getDatabaseType();
-  this->data()->reset(new Hmdf::HmdfData());
+  *this->data() = std::make_unique<Hmdf::HmdfData>();
   std::unique_ptr<UsgsWaterdata> usgs(new UsgsWaterdata(
       this->m_currentStation, this->startDateEdit()->dateEdit()->dateTime(),
       this->endDateEdit()->dateEdit()->dateTime(), type));
@@ -123,8 +124,6 @@ void UsgsTab::plot() {
 
   this->m_ready = true;
   this->replot(0);
-
-  return;
 }
 
 void UsgsTab::replot(int index) {
@@ -138,12 +137,14 @@ void UsgsTab::replot(int index) {
     QString tzAbbrev;
     int ierr = this->calculateDateInfo(start, end, startgmt, endgmt, tzAbbrev,
                                        tzOffset);
-    if (ierr != 0) return;
-    QString unitString, productName;
-    std::tie(productName, unitString) = this->splitUsgsProductName(
-        QString::fromStdString(this->data()->get()->station(index)->name()));
+    if (ierr != 0)
+      return;
+    QString unitString =
+        QString::fromStdString(data()->get()->station(index)->units());
+    QString productName = UsgsTab::splitUsgsProductName(
+        this->data()->get()->station(index)->name());
     this->setPlotAxis(this->data()->get(), start, end, tzAbbrev, QString(),
-                      unitString, productName);
+                      unitString, productName, index);
     this->chartview()->chart()->setTitle(
         QString::fromStdString(this->m_currentStation.name().toStdString()));
     this->addSeriesToChart(
@@ -166,14 +167,8 @@ void UsgsTab::addSeriesToChart(const int index, const QString &name,
   this->chartview()->addSeries(series, name);
 }
 
-std::tuple<QString, QString> UsgsTab::splitUsgsProductName(
-    const QString &product) {
-  QString name, unit;
-  unit = "unknown";
-  QStringList split = product.split(",");
-  name = split[0];
-  if (split.size() > 1) unit = split.back().simplified();
-  return std::tuple<QString, QString>(name, unit);
+QString UsgsTab::splitUsgsProductName(const std::string &product) {
+  return QString::fromStdString(product.substr(0, product.rfind(',')));
 }
 
 void UsgsTab::saveData() {
@@ -183,5 +178,4 @@ void UsgsTab::saveData() {
   data.addStation(*(this->data()->get()->station(
       this->m_cbx_product->combo()->currentIndex())));
   this->writeData(&data);
-  return;
 }

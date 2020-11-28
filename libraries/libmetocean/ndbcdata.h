@@ -44,9 +44,6 @@ class NdbcData : public WaterData {
   int retrieveData(Hmdf::HmdfData *data,
                    Datum::VDatum datum = Datum::VDatum::NullDatum);
 
-  static std::unordered_map<std::string_view, std::string_view>
-  buildDataNameMap();
-
   int download(QUrl url, std::vector<std::vector<std::string>> &dldata);
 
   int readNdbcResponse(QNetworkReply *reply,
@@ -54,8 +51,6 @@ class NdbcData : public WaterData {
 
   int formatNdbcResponse(std::vector<std::vector<std::string>> &serverResponse,
                          Hmdf::HmdfData *data);
-
-  std::unordered_map<std::string_view, std::string_view> m_dataNameMap;
 };
 
 #endif  // NDBCDATA_H

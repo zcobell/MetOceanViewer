@@ -21,6 +21,7 @@
 #define WATERDATA_H
 
 #include <QNetworkReply>
+#include <string>
 
 #include "date.h"
 #include "datum.h"
@@ -37,20 +38,20 @@ class WaterData {
   int METOCEANSHARED_EXPORT get(Hmdf::HmdfData *data,
                                 Datum::VDatum datum = Datum::VDatum::NullDatum);
 
-  std::string METOCEANSHARED_EXPORT errorString() const;
+  [[nodiscard]] std::string METOCEANSHARED_EXPORT errorString() const;
 
  protected:
   virtual int retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum);
 
   void setErrorString(const std::string &errorString);
 
-  MovStation station() const;
+  [[nodiscard]] MovStation station() const;
   void setStation(const MovStation &station);
 
-  QDateTime startDate() const;
+  [[nodiscard]] QDateTime startDate() const;
   void setStartDate(const QDateTime &startDate);
 
-  QDateTime endDate() const;
+  [[nodiscard]] QDateTime endDate() const;
   void setEndDate(const QDateTime &endDate);
 
  private:

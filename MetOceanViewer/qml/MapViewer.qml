@@ -17,12 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 //-----------------------------------------------------------------------*/
-import QtQuick.Window 2.11
-import QtQuick 2.11
+import QtQuick.Window 2.12
+import QtQuick 2.12
 import QtQuick.Controls 1.4
-import QtLocation 5.9
-import QtPositioning 5.8
-import QtQuick.Layouts 1.3
+import QtLocation 5.12
+import QtPositioning 5.12
+import QtQuick.Layouts 1.12
 
 Rectangle {
 
@@ -36,8 +36,16 @@ Rectangle {
 
     property string stationText;
 
-    function getVisibleRegion() {
+    function getVisibleRegion(){
         return map.visibleRegion;
+    }
+
+    function getVisibleCenter() {
+        return map.visibleRegion.center();
+    }
+
+    function getCurrentZoomLevel() {
+        return map.zoomLevel;
     }
 
     function getMapTypes() {

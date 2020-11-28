@@ -19,18 +19,19 @@
 //-----------------------------------------------------------------------*/
 #include "usgswaterdata.h"
 
-#include <QEventLoop>
-#include <QString>
-#include <QStringList>
-#include <QVector>
-#include <unordered_map>
-
-#include "stringutil.h"
 #include "timefunc.h"
+#include <QEventLoop>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QString>
+#include <utility>
+#include <vector>
 
 UsgsWaterdata::UsgsWaterdata(MovStation &station, QDateTime startDate,
                              QDateTime endDate, int databaseOption)
-    : WaterData(station, startDate, endDate),
+    : WaterData(station, std::move(startDate), std::move(endDate)),
       m_databaseOption(databaseOption) {}
 
 int UsgsWaterdata::get(Hmdf::HmdfData *data, Datum::VDatum datum) {
@@ -54,30 +55,22 @@ QUrl UsgsWaterdata::buildUrl() {
       "&endDT=" + this->endDate().addDays(1).toString("yyyy-MM-dd");
   QString startDateString1 =
       "&startDT=" + this->startDate().toString("yyyy-MM-dd");
-  QString endDateString2 =
-      "&end_date=" + this->endDate().addDays(1).toString("yyyy-MM-dd");
-  QString startDateString2 =
-      "&begin_date=" + this->startDate().toString("yyyy-MM-dd");
 
   //...Construct the correct request URL
   QString requestUrl;
-  if (this->m_databaseOption == 0)
-    requestUrl =
-        "https://nwis.waterdata.usgs.gov/usa/nwis/uv?format=rdb&site_no=" +
-        this->station().id() + startDateString2 + endDateString2;
-  else if (this->m_databaseOption == 1)
+  if (this->m_databaseOption == 0 || this->m_databaseOption == 1)
     requestUrl = "https://waterservices.usgs.gov/nwis/iv/?sites=" +
                  this->station().id() + startDateString1 + endDateString1 +
-                 "&format=rdb";
+                 "&format=json";
   else
     requestUrl = "https://waterservices.usgs.gov/nwis/dv/?sites=" +
                  this->station().id() + startDateString1 + endDateString1 +
-                 "&format=rdb";
+                 "&format=json";
 
   return QUrl(requestUrl);
 }
 
-int UsgsWaterdata::download(QUrl url, Hmdf::HmdfData *data) {
+int UsgsWaterdata::download(const QUrl &url, Hmdf::HmdfData *data) {
   std::unique_ptr<QNetworkAccessManager> manager(new QNetworkAccessManager());
   QEventLoop loop;
 
@@ -102,173 +95,59 @@ int UsgsWaterdata::download(QUrl url, Hmdf::HmdfData *data) {
 int UsgsWaterdata::readDownloadedData(QNetworkReply *reply,
                                       Hmdf::HmdfData *output) {
   QByteArray data = reply->readAll();
-  return this->readUsgsData(data, output);
+  return this->readUsgsDataJson(data, output);
 }
 
-int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf::HmdfData *output) {
-  std::string InputData(data);
-  std::vector<std::string> SplitByLine =
-      StringUtil::stringSplitToVector(InputData, "\n");
+int UsgsWaterdata::readUsgsDataJson(const QByteArray &data,
+                                    Hmdf::HmdfData *output) {
 
-  int ParamStart = -1;
-  int ParamStop = -1;
-  int HeaderEnd = -1;
+  auto doc = QJsonDocument::fromJson(data);
+  auto obj = doc.object();
+  auto valueObj = obj["value"].toObject();
+  auto tsObject = valueObj["timeSeries"].toArray();
 
-  if (InputData.size() == 0 || InputData == std::string()) {
-    this->setErrorString(
-        "This data is not available except from the USGS archive server.");
+  if (tsObject.empty()) {
+    this->setErrorString("No variables found for this station.");
     return 1;
   }
 
-  if (SplitByLine.size() < 3) {
-    this->setErrorString("Data is not available from this location.");
-    return 1;
-  }
-
-  //...Save the potential error string
-  // this->setErrorString(InputData.remove(QRegExp("[\n\t\r]")));
-  std::string e = StringUtil::stringSplitToVector(InputData, "\n")[0];
-  e = StringUtil::stringSplitToVector(e, "#")[0];
-  this->setErrorString(e);
-
-  //...Start by finding the header and reading the parameters from it
-  for (size_t i = 0; i < SplitByLine.size(); i++) {
-    if (SplitByLine[i].substr(0, 15) == "# Data provided") {
-      ParamStart = i + 2;
-      break;
-    }
-  }
-
-  for (size_t i = ParamStart; i < SplitByLine.size(); i++) {
-    std::string tempLine = SplitByLine[i];
-    if (tempLine == "#") {
-      ParamStop = i - 1;
-      break;
-    }
-  }
-
-  struct UsgsParameter {
-    QString description;
-    QString ts;
-    QString statistic;
-    QString parameter;
-    QString code;
-  };
-  std::vector<UsgsParameter> params;
-  params.reserve(ParamStop - ParamStart);
-
-  for (int i = ParamStart; i <= ParamStop; i++) {
-    QString tempLine = QString::fromStdString(SplitByLine[i]);
-    QStringList tempList = tempLine.split("  ", Qt::SkipEmptyParts);
-
-    UsgsParameter p;
-    p.ts = tempList.value(1).simplified();
-    p.parameter = tempList.value(2).simplified();
-    if (tempList.length() == 6) {
-      p.description = tempList.value(5).simplified();
-      p.statistic = tempList.value(3).simplified();
-      p.code = p.ts + "_" + p.parameter + "_" + p.statistic;
-    } else if (tempList.length() == 5) {
-      p.description = tempList.value(4);
-      p.statistic = tempList.value(3);
-      p.code = p.ts + "_" + p.parameter + "_" + p.statistic;
-    } else {
-      p.description = tempList.value(3).simplified();
-      p.code = p.ts + "_" + p.parameter;
-    }
-    params.push_back(p);
-  }
-
-  //...Find out where the header ends
-  for (size_t i = 0; i < SplitByLine.size(); i++) {
-    if (SplitByLine[i].substr(0, 1) != "#") {
-      HeaderEnd = i + 2;
-      break;
-    }
-  }
-
-  //...Generate the mapping
-  std::unordered_map<int, int> parameterMapping, revParmeterMapping;
-  QString mapString = QString::fromStdString(SplitByLine[HeaderEnd - 2]);
-  QStringList mapList = mapString.split("\t");
-  for (int i = 4; i < mapList.length(); i++) {
-    for (size_t j = 0; j < params.size(); j++) {
-      if (mapList[i] == params[j].code) {
-        parameterMapping[i] = j;
-        revParmeterMapping[j] = i;
-      }
-    }
-  }
-
-  //...Initialize the array
-  for (size_t i = 0; i < params.size(); i++) {
-    Hmdf::Station s(i, station().coordinate().longitude(),
-                    station().coordinate().latitude());
-    s.setName(params[i].description.toStdString());
-    s.setId(params[i].parameter.toStdString());
-    output->addStation(s);
-  }
-
-  //...Sanity check
-  if (output->nStations() == 0) return 1;
-
-  //...Read the data into the array
-  for (size_t i = HeaderEnd; i < SplitByLine.size(); i++) {
-    QString tempLine = QString::fromStdString(SplitByLine[i]);
-    QStringList tempList = tempLine.split(QRegExp("[\t]"));
-    QString TempDateString = tempList.value(2);
-    QString TempTimeZoneString = tempList.value(3);
-
-    //...Account for both daily values (without time) and instant (with time)
-    QDateTime currentDate =
-        QDateTime::fromString(TempDateString, "yyyy-MM-dd hh:mm");
-    if (!currentDate.isValid()) {
-      currentDate = QDateTime::fromString(TempDateString, "yyyy-MM-dd");
+  for (auto j : tsObject) {
+    auto jo = j.toObject();
+    auto vo = jo["variable"].toObject();
+    auto vc = vo["variableCode"]
+                  .toArray()[0]
+                  .toObject()["value"]
+                  .toString()
+                  .toStdString();
+    auto des = vo["variableDescription"].toString().toStdString();
+    auto unit = vo["unit"].toObject()["unitCode"].toString().toStdString();
+    auto vdata = jo["values"].toArray()[0].toObject()["value"].toArray();
+    auto options = vo["options"].toObject()["option"].toArray()[0].toObject();
+    auto defaultValue = vo["noDataValue"].toDouble();
+    auto code = options["optionCode"].toString();
+    if (code != "00000") {
+      auto stat = options["value"].toString().toStdString();
+      des = des.substr(0, des.rfind(',')) + ", " + stat + "," +
+            des.substr(des.rfind(',') + 1, des.length());
     }
 
-    //...Convert to UTC from the source timezone
-    currentDate.setTimeSpec(Qt::UTC);
+    Hmdf::Station stn;
+    stn.setId(vc);
+    stn.setName(des);
+    stn.setUnits(unit);
 
-    //**FIXME**//
-    // int offset = Timezone::offsetFromUtc(TempTimeZoneString);
-    // currentDate = currentDate.addSecs(-offset);
-
-    Hmdf::Date d = Timefunc::fromQDateTime(currentDate);
-
-    if (output->station(0)->size() > 0) {
-      if (d > output->station(0)->back().date()) {
-        for (size_t j = 0; j < params.size(); j++) {
-          bool doubleok;
-          double data =
-              tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
-          if (doubleok) {
-            output->station(j)->push_back(Hmdf::Timepoint(d, data));
-          }
-        }
-      }
-    } else {
-      for (size_t j = 0; j < params.size(); j++) {
-        bool doubleok;
-        double data = tempList.value(revParmeterMapping[j]).toDouble(&doubleok);
-        if (doubleok) {
-          output->station(j)->push_back(Hmdf::Timepoint(d, data));
-        }
-      }
+    for (auto val : vdata) {
+      auto vv = val.toObject();
+      auto date = Timefunc::fromQDateTime(
+          QDateTime::fromString(vv["dateTime"].toString(), Qt::ISODate)
+              .toTimeSpec(Qt::UTC));
+      double value = vv["value"].toString().toDouble();
+      if (value == defaultValue)
+        stn << Hmdf::Timepoint(date, Hmdf::Timepoint::nullValue());
+      else
+        stn << Hmdf::Timepoint(date, value);
     }
-  }
-
-  for (int i = output->nStations() - 1; i >= 0; i--) {
-    if (output->station(i)->size() < 3) {
-      output->deleteStation(i);
-    }
-  }
-
-  //...Sanity check
-  if (output->nStations() == 0) {
-    this->setErrorString(
-        "No data available at this station for this time period\n" +
-        this->errorString());
-    return 1;
+    output->moveStation(std::move(stn));
   }
 
   return 0;

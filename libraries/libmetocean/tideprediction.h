@@ -22,7 +22,7 @@
 
 #include <QDateTime>
 #include <QObject>
-#include <QVector>
+#include <vector>
 
 #include "hmdf.h"
 #include "metocean_global.h"
@@ -30,14 +30,15 @@
 
 class TidePrediction {
  public:
-  explicit METOCEANSHARED_EXPORT TidePrediction(std::string root);
+  explicit METOCEANSHARED_EXPORT TidePrediction(const std::string& root);
 
   METOCEANSHARED_EXPORT ~TidePrediction();
 
   void METOCEANSHARED_EXPORT deleteHarmonicsOnExit(bool b);
 
   int METOCEANSHARED_EXPORT get(MovStation &s, QDateTime startDate,
-                                QDateTime endDate, int interval, Hmdf::HmdfData *data);
+                                QDateTime endDate, int interval,
+                                Hmdf::HmdfData *data);
 
  private:
   void initHarmonicsDatabase();

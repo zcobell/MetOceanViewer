@@ -22,13 +22,12 @@
 #include <QFile>
 
 #include "boost/format.hpp"
+#include "crmsdata.h"
 #include "generic.h"
 #include "stringutil.h"
 
-StationLocations::StationLocations(QObject *parent) : QObject(parent) {}
-
-std::vector<MovStation> StationLocations::readMarkers(
-    StationLocations::MarkerType markerType) {
+std::vector<MovStation>
+StationLocations::readMarkers(StationLocations::MarkerType markerType) {
   if (markerType == NOAA) {
     return StationLocations::readNoaaMarkers();
   } else if (markerType == USGS) {
@@ -47,7 +46,8 @@ std::vector<MovStation> StationLocations::readMarkers(
 std::vector<MovStation> StationLocations::readNoaaMarkers() {
   QFile stationFile(":/stations/data/noaa_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
+  if (!stationFile.open(QIODevice::ReadOnly))
+    return std::vector<MovStation>();
 
   std::vector<MovStation> output;
   while (!stationFile.atEnd()) {
@@ -92,12 +92,18 @@ std::vector<MovStation> StationLocations::readNoaaMarkers() {
       double ngvd = stod(list[11]);
       double navd = stod(list[12]);
 
-      if (mlw < -900.0) mlw = s.nullOffset();
-      if (mllw < -900.0) mllw = s.nullOffset();
-      if (mhw < -900.0) mhw = s.nullOffset();
-      if (mhhw < -900.0) mhhw = s.nullOffset();
-      if (ngvd < -900.0) ngvd = s.nullOffset();
-      if (navd < -900.0) navd = s.nullOffset();
+      if (mlw < -900.0)
+        mlw = MovStation::nullOffset();
+      if (mllw < -900.0)
+        mllw = MovStation::nullOffset();
+      if (mhw < -900.0)
+        mhw = MovStation::nullOffset();
+      if (mhhw < -900.0)
+        mhhw = MovStation::nullOffset();
+      if (ngvd < -900.0)
+        ngvd = MovStation::nullOffset();
+      if (navd < -900.0)
+        navd = MovStation::nullOffset();
 
       s.setMllwOffset(mllw);
       s.setMlwOffset(mlw);
@@ -119,7 +125,8 @@ std::vector<MovStation> StationLocations::readNoaaMarkers() {
 std::vector<MovStation> StationLocations::readUsgsMarkers() {
   QFile stationFile(":/stations/data/usgs_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
+  if (!stationFile.open(QIODevice::ReadOnly))
+    return std::vector<MovStation>();
 
   int index = 0;
 
@@ -149,7 +156,8 @@ std::vector<MovStation> StationLocations::readUsgsMarkers() {
 std::vector<MovStation> StationLocations::readXtideMarkers() {
   QFile stationFile(":/stations/data/xtide_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
+  if (!stationFile.open(QIODevice::ReadOnly))
+    return std::vector<MovStation>();
 
   int index = 0;
 
@@ -176,12 +184,18 @@ std::vector<MovStation> StationLocations::readXtideMarkers() {
       double ngvd = stod(list[10]);
       double navd = stod(list[11]);
 
-      if (mlw < -900.0) mlw = s.nullOffset();
-      if (msl < -900.0) msl = s.nullOffset();
-      if (mhw < -900.0) mhw = s.nullOffset();
-      if (mhhw < -900.0) mhhw = s.nullOffset();
-      if (ngvd < -900.0) ngvd = s.nullOffset();
-      if (navd < -900.0) navd = s.nullOffset();
+      if (mlw < -900.0)
+        mlw = MovStation::nullOffset();
+      if (msl < -900.0)
+        msl = MovStation::nullOffset();
+      if (mhw < -900.0)
+        mhw = MovStation::nullOffset();
+      if (mhhw < -900.0)
+        mhhw = MovStation::nullOffset();
+      if (ngvd < -900.0)
+        ngvd = MovStation::nullOffset();
+      if (navd < -900.0)
+        navd = MovStation::nullOffset();
 
       s.setMllwOffset(0.0);
       s.setMlwOffset(mlw);
@@ -203,7 +217,8 @@ std::vector<MovStation> StationLocations::readXtideMarkers() {
 std::vector<MovStation> StationLocations::readNdbcMarkers() {
   QFile stationFile(":/stations/data/ndbc_stations.csv");
 
-  if (!stationFile.open(QIODevice::ReadOnly)) return std::vector<MovStation>();
+  if (!stationFile.open(QIODevice::ReadOnly))
+    return std::vector<MovStation>();
 
   int index = 0;
 
@@ -239,7 +254,8 @@ std::vector<MovStation> StationLocations::readCrmsMarkers() {
   bool success = CrmsData::readStationList(filename, latitude, longitude, name,
                                            startDate, endDate);
 
-  if (!success) return output;
+  if (!success)
+    return output;
 
   for (size_t i = 0; i < latitude.size(); ++i) {
     QGeoCoordinate c(latitude[i], longitude[i]);

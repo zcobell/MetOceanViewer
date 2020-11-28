@@ -28,6 +28,9 @@ MapViewer {
     Plugin {
         id: mapPlugin
         name: "mapbox"
-        PluginParameter { name: "mapbox.access_token"; value: mapboxKey }
+        parameters: [
+            PluginParameter { name: "mapbox.access_token"; value: mapboxKey },
+            PluginParameter { name: "mapbox.mapping.highdpi_tiles"; value: true }
+        ]
     }
 }

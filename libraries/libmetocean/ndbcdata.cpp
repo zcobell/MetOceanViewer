@@ -60,23 +60,17 @@ constexpr std::array<std::string_view, 15> c_dataUnits() {
 }
 
 NdbcData::NdbcData(MovStation &station, QDateTime startDate, QDateTime endDate)
-    : WaterData(station, startDate, endDate),
-      m_dataNameMap(this->buildDataNameMap()) {}
+    : WaterData(station, startDate, endDate) {}
 
 std::string_view NdbcData::units(const std::string_view &parameter) {
+  auto it = std::find(c_dataNames().begin(), c_dataNames().end(), parameter);
+  return it == c_dataNames().end() ? std::string_view("--")
+                                   : c_dataUnits()[it - c_dataNames().begin()];
   for (size_t i = 0; i < c_dataNames().size(); ++i) {
-    if (c_dataNames().at(i) == parameter) return c_dataUnits().at(i);
+    if (c_dataNames().at(i) == parameter)
+      return c_dataUnits().at(i);
   }
   return std::string_view("--");
-}
-
-std::unordered_map<std::string_view, std::string_view>
-NdbcData::buildDataNameMap() {
-  std::unordered_map<std::string_view, std::string_view> map;
-  for (size_t i = 0; i < c_dataTypes().size(); ++i) {
-    map[c_dataTypes().at(i)] = c_dataNames().at(i);
-  }
-  return map;
 }
 
 int NdbcData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
@@ -94,7 +88,8 @@ int NdbcData::retrieveData(Hmdf::HmdfData *data, Datum::VDatum datum) {
     this->download(url, ndbcResponse);
   }
 
-  if (ndbcResponse.size() == 0) return 1;
+  if (ndbcResponse.size() == 0)
+    return 1;
 
   return this->formatNdbcResponse(ndbcResponse, data);
 }
@@ -140,7 +135,8 @@ int NdbcData::readNdbcResponse(QNetworkReply *reply,
   std::vector<std::string> d =
       StringUtil::stringSplitToVector(serverData.toStdString());
 
-  if (d.size() > 4) data.push_back(d);
+  if (d.size() > 4)
+    data.push_back(d);
 
   // Delete this response
   reply->deleteLater();
@@ -164,8 +160,8 @@ int NdbcData::formatNdbcResponse(
     }
   }
 
-  int q = 0;
-  int r = 0;
+  size_t q = 0;
+  size_t r = 0;
   if (d[4] == "mm") {
     q = 16;
     r = 5;
@@ -174,15 +170,15 @@ int NdbcData::formatNdbcResponse(
     r = 4;
   }
 
-  int n = d.size() - r;
+  size_t n = d.size() - r;
 
-  for (int i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; i++) {
     Hmdf::Station s(i, this->station().coordinate().longitude(),
                     this->station().coordinate().latitude());
 
-    auto it = this->m_dataNameMap.find(d[i + r]);
-    if (it != this->m_dataNameMap.end()) {
-      s.setName(std::string(it->second));
+    auto it = std::find(c_dataTypes().begin(), c_dataTypes().end(), d[i + r]);
+    if (it != c_dataTypes().end()) {
+      s.setName(std::string(*(it)));
     } else {
       s.setName(d[i + r]);
     }
@@ -193,30 +189,30 @@ int NdbcData::formatNdbcResponse(
   qint64 start = this->startDate().toMSecsSinceEpoch();
   qint64 end = this->endDate().toMSecsSinceEpoch();
 
-  for (size_t i = 0; i < serverResponse.size(); i++) {
-    for (size_t j = p; j < serverResponse[i].size(); j++) {
-      std::string m = serverResponse[i][j].substr(0, q);
+  for (auto &i : serverResponse) {
+    for (size_t j = p; j < i.size(); j++) {
+      std::string m = i[j].substr(0, q);
       std::string ds = StringUtil::sanitizeString(m);
 
-      QDateTime d;
-      if (q == 13)
-        d = QDateTime::fromString(QString::fromStdString(ds), "yyyy MM dd hh");
-      else if (q == 16)
-        d = QDateTime::fromString(QString::fromStdString(ds),
-                                  "yyyy MM dd hh mm");
-      d.setTimeSpec(Qt::UTC);
+      QDateTime dt;
+      if (q == 13) {
+        dt = QDateTime::fromString(QString::fromStdString(ds), "yyyy MM dd hh");
+      } else if (q == 16) {
+        dt = QDateTime::fromString(QString::fromStdString(ds),
+                                   "yyyy MM dd hh mm");
+      }
+      dt.setTimeSpec(Qt::UTC);
 
-      if (d.isValid()) {
-        std::string vs =
-            serverResponse[i][j].substr(q, serverResponse[i][j].length() - q);
+      if (dt.isValid()) {
+        std::string vs = i[j].substr(q, i[j].length() - q);
         std::vector<std::string> v = StringUtil::stringSplitToVector(vs);
-        qint64 dm = d.toMSecsSinceEpoch();
+        qint64 dm = dt.toMSecsSinceEpoch();
         if (dm >= start && dm <= end) {
-          for (int k = 0; k < n; k++) {
+          for (size_t k = 0; k < n; k++) {
             if (v[k] != "999" && v[k] != "99.0" && v[k] != "99.00" &&
                 v[k] != "999.0") {
               double vl = std::stod(v[k]);
-              st[k] << Hmdf::Timepoint(Timefunc::fromQDateTime(d), vl);
+              st[k] << Hmdf::Timepoint(Timefunc::fromQDateTime(dt), vl);
             }
           }
         }
@@ -225,14 +221,14 @@ int NdbcData::formatNdbcResponse(
   }
 
   //...Check for null values
-  for (int i = st.size() - 1; i >= 0; i--) {
+  for (size_t i = st.size() - 1; i >= 0; i--) {
     if (st[i].size() < 3) {
       st.erase(st.begin() + i);
     }
   }
 
-  for (size_t i = 0; i < st.size(); i++) {
-    data->addStation(st[i]);
+  for (auto &i : st) {
+    data->moveStation(std::move(i));
   }
 
   if (data->nStations() == 0) {
@@ -246,7 +242,3 @@ int NdbcData::formatNdbcResponse(
 std::array<std::string_view, 15> NdbcData::dataNames() { return c_dataNames(); }
 
 std::array<std::string_view, 15> NdbcData::dataTypes() { return c_dataTypes(); }
-
-std::unordered_map<std::string_view, std::string_view> NdbcData::dataMap() {
-  return NdbcData::buildDataNameMap();
-}

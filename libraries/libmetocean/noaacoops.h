@@ -39,11 +39,11 @@ class NoaaCoOps : public WaterData {
 
   int parseProduct();
 
-  int generateDateRanges(QVector<QDateTime> &startDateList,
-                         QVector<QDateTime> &endDateList);
+  int generateDateRanges(std::vector<QDateTime> &startDateList,
+                         std::vector<QDateTime> &endDateList);
 
-  int downloadDataFromNoaaServer(QVector<QDateTime> startDateList,
-                                 QVector<QDateTime> endDateList,
+  int downloadDataFromNoaaServer(std::vector<QDateTime> startDateList,
+                                 std::vector<QDateTime> endDateList,
                                  std::vector<std::string> &downloadedData);
 
   int readNoaaResponse(QNetworkReply *reply,

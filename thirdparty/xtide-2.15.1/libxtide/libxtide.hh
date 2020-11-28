@@ -63,13 +63,13 @@
   C. T. Sennett, ed., High-Integrity Software, Plenum Press, New York
   and London, 1989.
 */
-#ifdef NDEBUG
-#ifdef USE_PRAGMA_MESSAGE
-#pragma message("WARNING:  NDEBUG is defined.  This configuration is unsupported and discouraged.")
-#else
-#warning NDEBUG is defined.  This configuration is unsupported and discouraged.
-#endif
-#endif
+//#ifdef NDEBUG
+//#ifdef USE_PRAGMA_MESSAGE
+//#pragma message("WARNING:  NDEBUG is defined.  This configuration is unsupported and discouraged.")
+//#else
+//#warning NDEBUG is defined.  This configuration is unsupported and discouraged.
+//#endif
+//#endif
 
 // In cases where the program relies on side-effects from what would
 // be an assert expression, the following macro is used to ensure that

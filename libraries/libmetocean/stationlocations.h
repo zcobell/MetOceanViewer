@@ -20,22 +20,19 @@
 #ifndef STATIONLOCATIONS_H
 #define STATIONLOCATIONS_H
 
-#include <QObject>
-#include <QVector>
-#include "crmsdata.h"
+#include <vector>
+
 #include "metocean_global.h"
 #include "movStation.h"
 
-class StationLocations : public QObject {
-  Q_OBJECT
- public:
-  explicit METOCEANSHARED_EXPORT StationLocations(QObject *parent = nullptr);
-
+class StationLocations {
+public:
   enum MarkerType { NOAA, USGS, XTIDE, NDBC, CRMS };
 
-  static METOCEANSHARED_EXPORT std::vector<MovStation> readMarkers(MarkerType markerType);
+  static METOCEANSHARED_EXPORT std::vector<MovStation>
+  readMarkers(MarkerType markerType);
 
- private:
+private:
   static std::vector<MovStation> readNoaaMarkers();
   static std::vector<MovStation> readUsgsMarkers();
   static std::vector<MovStation> readXtideMarkers();
@@ -43,4 +40,4 @@ class StationLocations : public QObject {
   static std::vector<MovStation> readCrmsMarkers();
 };
 
-#endif  // STATIONLOCATIONS_H
+#endif // STATIONLOCATIONS_H

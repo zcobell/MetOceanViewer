@@ -24,25 +24,25 @@
 #include "waterdata.h"
 
 class UsgsWaterdata : public WaterData {
- public:
+public:
   METOCEANSHARED_EXPORT UsgsWaterdata(MovStation &station, QDateTime startDate,
                                       QDateTime endDate, int databaseOption);
 
   int METOCEANSHARED_EXPORT get(Hmdf::HmdfData *data,
                                 Datum::VDatum datum = Datum::VDatum::NullDatum);
 
- private:
-     int fetch(Hmdf::HmdfData *data);
+private:
+  int fetch(Hmdf::HmdfData *data);
 
   QUrl buildUrl();
 
-  int download(QUrl url, Hmdf::HmdfData *data);
+  int download(const QUrl &url, Hmdf::HmdfData *data);
 
   int readDownloadedData(QNetworkReply *reply, Hmdf::HmdfData *output);
 
-  int readUsgsData(QByteArray &data, Hmdf::HmdfData *output);
+  int readUsgsDataJson(const QByteArray &data, Hmdf::HmdfData *output);
 
   int m_databaseOption;
 };
 
-#endif  // USGSWATERDATA_H
+#endif // USGSWATERDATA_H

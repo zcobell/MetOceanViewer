@@ -43,43 +43,44 @@ QT_CHARTS_USE_NAMESPACE
 class ChartView : public QChartView {
   Q_OBJECT
 
- public:
-  ChartView(QWidget *parent = nullptr);
+public:
+  explicit ChartView(QWidget *parent = nullptr);
 
-  ~ChartView();
+  ~ChartView() override;
 
   void initializeAxisLimits();
   void resetZoom();
   void setStatusBar(QStatusBar *inStatusBar);
-  void addSeries(QLineSeries *series, QString name);
+  void addSeries(QLineSeries *series, const QString &name);
   void setDisplayValues(bool value);
   void rebuild();
   void clear();
 
-  QGraphicsSimpleTextItem *coord() const;
+  [[nodiscard]] QGraphicsSimpleTextItem *coord() const;
 
-  int style() const;
+  [[nodiscard]] int chartStyle() const;
   void setStyle(int style);
 
-  QString infoString() const;
+  [[nodiscard]] QString infoString() const;
   void setInfoString(QString infoString);
-  void setInfoString(QString regressionString, QString correlationString,
-                     QString standardDeviationString);
+  void setInfoString(const QString &regressionString,
+                     const QString &correlationString,
+                     const QString &standardDeviationString);
 
-  QDateTimeAxis *dateAxis() const;
-  QValueAxis *xAxis() const;
-  QValueAxis *yAxis() const;
+  [[nodiscard]] QDateTimeAxis *dateAxis() const;
+  [[nodiscard]] QValueAxis *xAxis() const;
+  [[nodiscard]] QValueAxis *yAxis() const;
 
   void initializeLegendMarkers();
   void initializeAxis(int style = 1);
-  void setAxisLimits(QDateTime startDate, QDateTime endDate, double ymin,
-                     double ymax);
-  void setAxisLimits(double xmin, double xmax, double ymin, double ymax);
+  void setAxisLimits(const QDateTime &startDate, const QDateTime &endDate,
+                     double ymin, double ymax) const;
+  void setAxisLimits(double xmin, double xmax, double ymin, double ymax) const;
 
-  QGraphicsRectItem *infoRectItem() const;
+  [[nodiscard]] QGraphicsRectItem *infoRectItem() const;
   void setInfoRectItem(QGraphicsRectItem *infoRectItem);
 
-  QGraphicsTextItem *infoItem() const;
+  [[nodiscard]] QGraphicsTextItem *infoItem() const;
   void setInfoItem(QGraphicsTextItem *infoItem);
 
   void setTitleFontsize(int titleFontsize);
@@ -89,21 +90,21 @@ class ChartView : public QChartView {
   void setAxisFontsize(int axisFontsize);
 
   void setDateFormat(const QString &format);
-  void setDateFormat(const QDateTime &start, const QDateTime &end);
+  void setDateFormat(const QDateTime &start, const QDateTime &end) const;
 
   static QStringList dateFormats();
 
- public slots:
+public slots:
   void handleLegendMarkerClicked();
 
- protected:
-  void resizeEvent(QResizeEvent *event);
-  void mouseMoveEvent(QMouseEvent *event);
-  void mouseDoubleClickEvent(QMouseEvent *event);
-  void mouseReleaseEvent(QMouseEvent *event);
-  void wheelEvent(QWheelEvent *event);
+protected:
+  void resizeEvent(QResizeEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseDoubleClickEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event) override;
+  void wheelEvent(QWheelEvent *event) override;
 
- private:
+private:
   void resetAxisLimits();
   void setBackground(bool b);
 
@@ -135,7 +136,7 @@ class ChartView : public QChartView {
 
   bool getNearestPointToCursor(qreal cursorXPosition, int seriesIndex, qreal &x,
                                qreal &y);
-  bool isOnPlot(qreal x, qreal y);
+  [[nodiscard]] bool isOnPlot(qreal x, qreal y) const;
   void addTraceLines(QMouseEvent *event);
   void addXTraceLine(QMouseEvent *event);
   void addXYTraceLine(QMouseEvent *event);
@@ -152,4 +153,4 @@ class ChartView : public QChartView {
   void resetPlotLegend();
 };
 
-#endif  // CHARTVIEW_H
+#endif // CHARTVIEW_H

@@ -27,7 +27,7 @@ class NoaaTab : public MapChartWidget {
   std::pair<QString, bool> getDatumParameters();
   int getDataFromNoaa(const MovStation &s,
                       const NoaaProductList::NoaaProduct &product,
-                      const QDateTime startDate, const QDateTime endDate,
+                      const QDateTime& startDate, const QDateTime& endDate,
                       const std::string &datumString, Hmdf::HmdfData *data);
   QString getUnitsLabel(const NoaaProductList::NoaaProduct &p);
   void performDatumTransformation(const MovStation &s, Hmdf::HmdfData *data);
@@ -37,12 +37,12 @@ class NoaaTab : public MapChartWidget {
   NoaaProductList m_noaaProductList;
 
   //...Widgets
-  QPushButton *m_btn_plot;
-  ComboBox *m_cbx_datum;
-  ComboBox *m_cbx_datatype;
-  ComboBox *m_cbx_units;
-  QCheckBox *m_chk_activeOnly;
-  QCheckBox *m_chk_vdatum;
+  QPushButton *m_btn_plot{};
+  ComboBox *m_cbx_datum{};
+  ComboBox *m_cbx_datatype{};
+  ComboBox *m_cbx_units{};
+  QCheckBox *m_chk_activeOnly{};
+  QCheckBox *m_chk_vdatum{};
   std::vector<QHBoxLayout *> m_rowLayouts;
 };
 

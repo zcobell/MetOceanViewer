@@ -12,7 +12,6 @@
 
 #include "combobox.h"
 #include "datebox.h"
-#include "ezproj.h"
 #include "textentry.h"
 #include "unitsmenu.h"
 #include "userdataseries.h"
@@ -54,7 +53,6 @@ class UserdataForm : public QDialog {
   QPushButton *m_browseFile;
   QPushButton *m_unitMenuButton;
   QDialogButtonBox *m_buttons;
-  std::unique_ptr<Ezproj> m_proj;
   QString m_defaultBoxStylesheet;
   QColor m_selectedColor;
 

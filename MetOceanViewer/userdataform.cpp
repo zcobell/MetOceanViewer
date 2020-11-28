@@ -7,8 +7,8 @@
 #include <array>
 
 #include "colors.h"
-#include "ezproj.h"
 #include "fileinfo.h"
+#include "projection.h"
 
 constexpr std::array<QColor, 4> s_colorPresets{
     QColor(0, 0, 255), QColor(0, 255, 0), QColor(255, 0, 0),
@@ -40,8 +40,7 @@ UserdataForm::UserdataForm(QWidget *parent)
       m_browseFile(new QPushButton("Browse", this)),
       m_unitMenuButton(new UnitsMenu(this->m_unitConversion->box(), this)),
       m_buttons(new QDialogButtonBox(
-          QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this)),
-      m_proj(new Ezproj()) {
+          QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this)) {
   this->setMinimumWidth(600);
   this->setMaximumWidth(600);
   this->setMinimumHeight(600);
@@ -269,16 +268,16 @@ int UserdataForm::timeUnitToIndex(const double t) {
 
 double UserdataForm::timeUnitConversion(const int index) {
   switch (index) {
-    case 0:
-      return 86400.0;
-    case 1:
-      return 3600.0;
-    case 2:
-      return 60.0;
-    case 3:
-      return 1.0;
-    default:
-      return 1.0;
+  case 0:
+    return 86400.0;
+  case 1:
+    return 3600.0;
+  case 2:
+    return 60.0;
+  case 3:
+    return 1.0;
+  default:
+    return 1.0;
   }
 }
 
@@ -296,7 +295,7 @@ void UserdataForm::getFormData() {
 }
 
 void UserdataForm::checkEpsgCode(int epsg) {
-  if (this->m_proj->containsEpsg(epsg)) {
+  if (Projection::containsEpsg(epsg)) {
     this->m_coordinateSystem->box()->setStyleSheet(
         this->m_defaultBoxStylesheet);
   } else {
@@ -311,21 +310,16 @@ void UserdataForm::showEpsgDescription() {
   msgBox.setTextFormat(Qt::RichText);
   QString description;
 
-  if (this->m_proj->containsEpsg(this->m_coordinateSystem->box()->value())) {
+  if (Projection::containsEpsg(this->m_coordinateSystem->box()->value())) {
     int proj4code = this->m_coordinateSystem->box()->value();
-    QString projInitString = QString::fromStdString(
-        this->m_proj->projInitializationString(proj4code));
-    QString csDescription =
-        QString::fromStdString(this->m_proj->description(proj4code));
-    description = QStringLiteral(
-                      "<b>Coordinate System Reference:</b> <a "
-                      "href=\"http://spatialreference.org/ref/epsg/") +
-                  QString::number(proj4code) +
-                  QStringLiteral("/\">SpatialReference.org</a>") +
-                  QStringLiteral("<br><b>Coordinate System Description:</b> ") +
-                  csDescription +
-                  QStringLiteral("<br><b>Proj4 Initialization String:</b> ") +
-                  projInitString;
+    QString csDescription = "";
+    description =
+        QStringLiteral("<b>Coordinate System Reference:</b> <a "
+                       "href=\"http://spatialreference.org/ref/epsg/") +
+        QString::number(proj4code) +
+        QStringLiteral("/\">SpatialReference.org</a>") +
+        QStringLiteral("<br><b>Coordinate System Description:</b> ") +
+        csDescription;
   } else {
     description = "<b>Error:</b> Invalid EPSG";
   }
@@ -344,7 +338,8 @@ void UserdataForm::browseFile() {
       "DFlow-FM History Files (*_his.nc) ;; "
       "ADCIRC Output Files (*.61 *.62 *.71 *.72) ;; All Files (*.*)");
 
-  if (path.isEmpty()) return;
+  if (path.isEmpty())
+    return;
 
   this->m_series.setFilename(path);
   this->m_filename->box()->setText(FileInfo::basename(path));

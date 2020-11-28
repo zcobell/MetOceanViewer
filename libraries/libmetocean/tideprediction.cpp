@@ -21,13 +21,14 @@
 
 #include <QFile>
 #include <QString>
+#include <memory>
 #include <string>
 
 #include "libxtide.hh"
 #include "stringutil.h"
 #include "timefunc.h"
 
-TidePrediction::TidePrediction(std::string root)
+TidePrediction::TidePrediction(const std::string &root)
     : m_harmonicsDatabase(root + "/harmonics.tcd") {
   this->initHarmonicsDatabase();
 }
@@ -35,9 +36,9 @@ TidePrediction::TidePrediction(std::string root)
 TidePrediction::~TidePrediction() {
   if (this->m_deleteHarmonicsOnExit) {
     QFile file(QString::fromStdString(this->m_harmonicsDatabase));
-    if (file.exists()) file.remove();
+    if (file.exists())
+      file.remove();
   }
-  return;
 }
 
 void TidePrediction::initHarmonicsDatabase() {
@@ -47,7 +48,6 @@ void TidePrediction::initHarmonicsDatabase() {
     QFile::copy(":/rsc/harmonics.tcd",
                 QString::fromStdString(this->m_harmonicsDatabase));
   }
-  return;
 }
 
 void TidePrediction::deleteHarmonicsOnExit(bool b) {
@@ -86,21 +86,27 @@ int TidePrediction::get(MovStation &s, QDateTime startDate, QDateTime endDate,
     station->print(text_out, startTime, endTime, libxtide::Mode::mediumRare,
                    libxtide::Format::text);
 
-    // std::stringList tide = std::string(text_out.aschar()).split("\n");
     std::vector<std::string> tide =
         StringUtil::stringSplitToVector(std::string(text_out.aschar()), "\n");
 
-    for (size_t i = 0; i < tide.size(); i++) {
-      std::string datestr = StringUtil::sanitizeString(tide[i]).substr(0, 20);
-      std::string val =
-          StringUtil::sanitizeString(tide[i]).substr(23, tide[i].length());
-      QDateTime d = QDateTime::fromString(QString::fromStdString(datestr),
-                                          "yyyy-MM-dd h:mm AP");
-      d.setTimeSpec(Qt::UTC);
-      Hmdf::Date dt = Timefunc::fromQDateTime(d);
-      if (d.isValid()) {
-        st << Hmdf::Timepoint(dt, stod(val));
+    for (auto &i : tide) {
+      std::string datestr = StringUtil::sanitizeString(i).substr(0, 20);
+      std::string val = StringUtil::sanitizeString(i).substr(23, i.length());
+
+      int year = stoi(datestr.substr(0, 4));
+      int month = stoi(datestr.substr(5, 2));
+      int day = stoi(datestr.substr(8, 2));
+      int hour = stoi(datestr.substr(11, 2));
+      int minute = stoi(datestr.substr(14, 2));
+      bool ampm = datestr.substr(17, 2) == "PM";
+      if (!ampm && hour == 12) {
+        hour = 0;
+      } else if (ampm && hour != 12) {
+        hour += 12;
       }
+
+      Hmdf::Date dt(year, month, day, hour, minute);
+      st << Hmdf::Timepoint(dt, stod(val));
     }
     data->addStation(st);
 

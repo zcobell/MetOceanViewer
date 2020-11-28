@@ -5,16 +5,17 @@
 
 #include "date.h"
 
-namespace Timefunc {
-inline Hmdf::Date fromQDateTime(const QDateTime &d) {
-  return Hmdf::Date(d.date().year(), d.date().month(), d.date().day(),
-                    d.time().hour(), d.time().minute(), d.time().second());
-}
+class Timefunc {
+public:
+  static Hmdf::Date fromQDateTime(const QDateTime &d) {
+    return Hmdf::Date(d.date().year(), d.date().month(), d.date().day(),
+                      d.time().hour(), d.time().minute(), d.time().second());
+  }
 
-inline QDateTime fromDate(const Hmdf::Date &d) {
-  return QDateTime(QDate(d.year(), d.month(), d.day()),
-                   QTime(d.hour(), d.minute(), d.second()));
-}
-}  // namespace Timefunc
+  static QDateTime fromDate(const Hmdf::Date &d) {
+    return QDateTime(QDate(d.year(), d.month(), d.day()),
+                     QTime(d.hour(), d.minute(), d.second()));
+  }
+};
 
-#endif  // TIMEFUNC_H
+#endif // TIMEFUNC_H
