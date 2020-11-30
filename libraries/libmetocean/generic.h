@@ -37,6 +37,7 @@ bool METOCEANSHARED_EXPORT isConnectedToNetwork();
 bool METOCEANSHARED_EXPORT createConfigDirectory();
 std::string METOCEANSHARED_EXPORT configDirectory();
 std::string METOCEANSHARED_EXPORT crmsDataFile();
+void METOCEANSHARED_EXPORT findProjDatabase();
 };  // namespace Generic
 
 #endif  // GENERIC_H

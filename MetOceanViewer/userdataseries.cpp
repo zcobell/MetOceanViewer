@@ -2,7 +2,7 @@
 
 #include "fileinfo.h"
 
-UserdataSeries::UserdataSeries() {}
+UserdataSeries::UserdataSeries() = default;
 
 QString UserdataSeries::filename() const {
   return FileInfo::basename(this->m_filename);

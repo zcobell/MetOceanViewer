@@ -19,8 +19,7 @@
 //-----------------------------------------------------------------------*/
 #include "generic.h"
 
-#include <netcdf.h>
-
+#include "projection.h"
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
@@ -50,7 +49,6 @@ void Generic::delayM(int delayTime) {
   QTime dieTime = QTime::currentTime().addMSecs(delayTime);
   while (QTime::currentTime() < dieTime)
     QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-  return;
 }
 //-------------------------------------------//
 
@@ -59,7 +57,6 @@ void Generic::splitPath(const std::string &input, std::string &filename,
   QFileInfo in(QString::fromStdString(input));
   filename = in.fileName().toStdString();
   directory = in.absoluteDir().absolutePath().toStdString();
-  return;
 }
 
 //-------------------------------------------//
@@ -107,3 +104,22 @@ std::string Generic::crmsDataFile() {
   return Generic::configDirectory() + "/crms.nc";
 }
 
+void Generic::findProjDatabase() {
+  std::string db_location;
+  bool db_found = false;
+  QDirIterator it(QDir::currentPath(), QDirIterator::Subdirectories);
+  while (it.hasNext()) {
+    auto filename = it.next();
+    auto file = QFileInfo(filename);
+    if (file.isDir()) {
+      continue;
+    }
+    if (file.fileName().contains("proj.db", Qt::CaseInsensitive)) {
+      db_found = true;
+      db_location = file.absoluteFilePath().toStdString();
+      break;
+    }
+  }
+  if (db_found)
+    Hmdf::Projection::setProjDatabaseLocation(db_location);
+}

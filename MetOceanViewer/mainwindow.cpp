@@ -17,6 +17,8 @@ MainWindow::MainWindow(QWidget *parent)
   this->m_mapFunctions.getConfigurationFromDisk();
   this->m_mapFunctions.getMapboxKeyFromDisk();
 
+  Generic::findProjDatabase();
+
   //...Create a tab widget and add to the central widget
   this->m_tabWidget = new TabWidget(this);
   ui->centralwidget->layout()->addWidget(this->m_tabWidget);

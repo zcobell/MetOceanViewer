@@ -8,7 +8,7 @@ void UserdataMap::plot() {}
 void UserdataMap::refreshStations() {}
 
 QGroupBox *UserdataMap::generateInputBox() {
-  QGroupBox *input = new QGroupBox(this);
+  auto *input = new QGroupBox(this);
 
   this->setCbx_mapType(new ComboBox("Map: ", this));
   this->setChartOptions(
@@ -18,7 +18,7 @@ QGroupBox *UserdataMap::generateInputBox() {
   this->cbx_mapType()->setMinimumWidth(250);
   this->cbx_mapType()->setMaximumWidth(250);
 
-  QHBoxLayout *hlayout = new QHBoxLayout();
+  auto *hlayout = new QHBoxLayout();
   hlayout->addWidget(this->cbx_mapType());
   hlayout->addWidget(this->chartOptions());
   hlayout->addStretch();

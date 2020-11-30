@@ -268,16 +268,11 @@ int UserdataForm::timeUnitToIndex(const double t) {
 
 double UserdataForm::timeUnitConversion(const int index) {
   switch (index) {
-  case 0:
-    return 86400.0;
-  case 1:
-    return 3600.0;
-  case 2:
-    return 60.0;
-  case 3:
-    return 1.0;
-  default:
-    return 1.0;
+    case 0:return 86400.0;
+    case 1:return 3600.0;
+    case 2:return 60.0;
+    case 3:return 1.0;
+    default:return 1.0;
   }
 }
 
@@ -295,7 +290,7 @@ void UserdataForm::getFormData() {
 }
 
 void UserdataForm::checkEpsgCode(int epsg) {
-  if (Projection::containsEpsg(epsg)) {
+  if (Hmdf::Projection::containsEpsg(epsg)) {
     this->m_coordinateSystem->box()->setStyleSheet(
         this->m_defaultBoxStylesheet);
   } else {
@@ -310,16 +305,18 @@ void UserdataForm::showEpsgDescription() {
   msgBox.setTextFormat(Qt::RichText);
   QString description;
 
-  if (Projection::containsEpsg(this->m_coordinateSystem->box()->value())) {
+  int epsg = this->m_coordinateSystem->box()->value();
+
+  if (Hmdf::Projection::containsEpsg(epsg)) {
     int proj4code = this->m_coordinateSystem->box()->value();
-    QString csDescription = "";
+    QString csDescription = QString::fromStdString(Hmdf::Projection::epsgDescription(epsg));
     description =
         QStringLiteral("<b>Coordinate System Reference:</b> <a "
                        "href=\"http://spatialreference.org/ref/epsg/") +
-        QString::number(proj4code) +
-        QStringLiteral("/\">SpatialReference.org</a>") +
-        QStringLiteral("<br><b>Coordinate System Description:</b> ") +
-        csDescription;
+            QString::number(proj4code) +
+            QStringLiteral("/\">SpatialReference.org</a>") +
+            QStringLiteral("<br><b>Coordinate System Description:</b> ") +
+            csDescription;
   } else {
     description = "<b>Error:</b> Invalid EPSG";
   }

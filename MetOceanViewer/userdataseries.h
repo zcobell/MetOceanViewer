@@ -59,17 +59,17 @@ private:
   QString m_filename;
   QString m_seriesName;
   QColor m_color;
-  double m_unitConversion;
-  double m_xshift;
-  double m_yshift;
-  double m_timeUnits;
+  double m_unitConversion{};
+  double m_xshift{};
+  double m_yshift{};
+  double m_timeUnits{};
   QDateTime m_coldStart;
   QString m_fileType;
   QString m_stationFilePath;
-  int m_epsg;
+  int m_epsg{};
   QString m_dflowvar;
-  int m_layer;
-  int m_linestyle;
+  int m_layer{};
+  int m_linestyle{};
 };
 
 #endif  // USERDATASERIES_H
