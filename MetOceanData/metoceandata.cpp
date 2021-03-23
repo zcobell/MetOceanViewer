@@ -569,7 +569,7 @@ QString MetOceanData::indexToDatum() {
       }
       std::cout << "==> ";
       std::cin >> selection;
-      if (selection > 0 && selection < vDatum.size()) {
+      if (selection > 0 && selection < vDatum.size() + 1) {
         this->m_datum = selection;
         return vDatum[this->m_datum];
       } else {
