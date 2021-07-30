@@ -52,36 +52,28 @@ QString Filetypes::getStringFiletype(QString filename) {
 bool Filetypes::_checkNetcdfAdcirc(QString filename) {
   int ncid, ierr;
   size_t attlen;
-  char *attname = strdup("model");
-  char *model;
+  std::string attname = "model";
 
   ierr = nc_open(filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != 0) {
-    delete[] attname;
     return false;
   }
 
-  ierr = nc_inq_attlen(ncid, NC_GLOBAL, attname, &attlen);
+  ierr = nc_inq_attlen(ncid, NC_GLOBAL, &attname[0], &attlen);
   if (ierr != 0) {
-    delete[] attname;
     ierr = nc_close(ncid);
     return false;
   }
 
-  model = new char[attlen];
-  ierr = nc_get_att(ncid, NC_GLOBAL, attname, model);
+  std::string model(attlen, ' ');
+  ierr = nc_get_att(ncid, NC_GLOBAL, &attname[0], &model[0]);
   if (ierr != 0) {
-    delete[] attname;
-    delete[] model;
     nc_close(ncid);
     return false;
   }
   nc_close(ncid);
 
-  QString models = QString(model).mid(0, (int)attlen);
-
-  delete[] attname;
-  delete[] model;
+  QString models = QString::fromStdString(model).mid(0, (int)attlen);
 
   if (models == QStringLiteral("ADCIRC"))
     return true;
@@ -90,30 +82,26 @@ bool Filetypes::_checkNetcdfAdcirc(QString filename) {
 }
 
 bool Filetypes::_checkNetcdfDflow(QString filename) {
-  int ierr, ncid;
-  int varid_stationx, varid_stationy;
-  char *varname_stationx = strdup("station_x_coordinate");
-  char *varname_stationy = strdup("station_y_coordinate");
 
-  ierr = nc_open(filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  std::string varname_stationx = "station_x_coordinate";
+  std::string varname_stationy = "station_y_coordinate";
+
+  int ncid;
+  int ierr = nc_open(filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != 0) {
-    delete[] varname_stationx;
-    delete[] varname_stationy;
     return false;
   }
 
-  ierr = nc_inq_varid(ncid, varname_stationx, &varid_stationx);
+  int varid_stationx;
+  ierr = nc_inq_varid(ncid, &varname_stationx[0], &varid_stationx);
   if (ierr != 0) {
-    delete[] varname_stationx;
-    delete[] varname_stationy;
     ierr = nc_close(ncid);
     return false;
   }
 
-  ierr = nc_inq_varid(ncid, varname_stationy, &varid_stationy);
+  int varid_stationy;
+  ierr = nc_inq_varid(ncid, &varname_stationy[0], &varid_stationy);
   if (ierr != 0) {
-    delete[] varname_stationx;
-    delete[] varname_stationy;
     ierr = nc_close(ncid);
     return false;
   }

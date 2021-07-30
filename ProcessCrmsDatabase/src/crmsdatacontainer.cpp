@@ -24,11 +24,11 @@ CrmsDataContainer::CrmsDataContainer(size_t size)
       m_valid(false),
       m_size(size),
       m_datetime(0),
-      m_values(new float[size]) {}
+      m_values(size, 0) {}
 
 CrmsDataContainer::CrmsDataContainer(const CrmsDataContainer &c) {
   this->m_size = c.size();
-  this->m_values = new float[this->m_size];
+  this->m_values.resize(m_size);
   this->m_id = c.id();
   this->m_valid = c.valid();
   this->m_datetime = c.datetime();
@@ -36,8 +36,6 @@ CrmsDataContainer::CrmsDataContainer(const CrmsDataContainer &c) {
     this->m_values[i] = c.value(i);
   }
 }
-
-CrmsDataContainer::~CrmsDataContainer() { delete[] this->m_values; }
 
 std::string CrmsDataContainer::id() const { return this->m_id; }
 

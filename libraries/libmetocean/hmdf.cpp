@@ -259,20 +259,16 @@ void Hmdf::deallocNcArrays(long long *time, double *data, char *name,
 }
 
 int Hmdf::writeNetcdf(QString filename) {
-  int ncid;
-  int dimid_nstations, dimid_stationNameLength;
-  int varid_stationName, varid_stationx, varid_stationy;
-  int varid_stationId;
-
-  QVector<int> dimid_stationLength;
-  QVector<int> varid_stationDate, varid_stationData;
 
   //...Open file
+  int ncid;
   NCCHECK(nc_create(filename.toStdString().c_str(), NC_NETCDF4, &ncid));
 
   //...Dimensions
+  int dimid_nstations, dimid_stationNameLength;
   NCCHECK(nc_def_dim(ncid, "numStations", this->nstations(), &dimid_nstations));
   NCCHECK(nc_def_dim(ncid, "stationNameLen", 200, &dimid_stationNameLength));
+  std::vector<int> dimid_stationLength;
   for (int i = 0; i < this->nstations(); i++) {
     QString dimname;
     int d;
@@ -287,6 +283,7 @@ int Hmdf::writeNetcdf(QString filename) {
   int nstationDims[1] = {dimid_nstations};
   int wgs84[1] = {4326};
 
+  int varid_stationName, varid_stationId, varid_stationx, varid_stationy;
   NCCHECK(nc_def_var(ncid, "stationName", NC_CHAR, 2, stationNameDims,
                      &varid_stationName));
   NCCHECK(nc_def_var(ncid, "stationId", NC_CHAR, 2, stationNameDims,
@@ -306,7 +303,8 @@ int Hmdf::writeNetcdf(QString filename) {
   NCCHECK(nc_put_att_int(ncid, varid_stationy, "HorizontalProjectionEPSG",
                          NC_INT, 1, wgs84));
 
-  for (int i = 0; i < this->nstations(); i++) {
+  std::vector<int> varid_stationDate, varid_stationData;
+  for (size_t i = 0; i < this->nstations(); i++) {
     QString stationName, timeVarName, dataVarName;
     int d[1] = {dimid_stationLength[i]};
     char epoch[20] = "1970-01-01 00:00:00";
@@ -330,6 +328,7 @@ int Hmdf::writeNetcdf(QString filename) {
     NCCHECK(nc_put_att_text(ncid, v, "timezone", 3, utc));
     NCCHECK(nc_put_att_text(ncid, v, "units", 3, timeunit));
     NCCHECK(nc_def_var_deflate(ncid, v, 1, 1, 2));
+
     varid_stationDate.push_back(v);
 
     NCCHECK(nc_def_var(ncid, dataVarName.toStdString().c_str(), NC_DOUBLE, 1, d,
@@ -380,68 +379,51 @@ int Hmdf::writeNetcdf(QString filename) {
     double lat[1] = {this->station(i)->latitude()};
     double lon[1] = {this->station(i)->longitude()};
 
-    long long *time = new long long[this->station(i)->numSnaps()];
-    double *data = new double[this->station(i)->numSnaps()];
-    char *name = new char[200];
-    char *id = new char[200];
+    std::vector<long long> time(this->station(i)->numSnaps());
+    std::vector<double> data(this->station(i)->numSnaps());
+    auto name = this->station(i)->name().toStdString();
+    auto id = this->station(i)->id().toStdString();
 
-    memset(name, ' ', 200);
-    memset(id, ' ', 200);
-
-    this->station(i)->name().toStdString().copy(
-        name, this->station(i)->name().length(), 0);
-    this->station(i)->id().toStdString().copy(
-        id, this->station(i)->id().length(), 0);
-
-    for (int j = 0; j < this->station(i)->numSnaps(); j++) {
+    for (size_t j = 0; j < this->station(i)->numSnaps(); j++) {
       time[j] = this->station(i)->date(j) / 1000;
       data[j] = this->station(i)->data(j);
     }
 
     int status = nc_put_var1_double(ncid, varid_stationx, stindex, lon);
     if (status != NC_NOERR) {
-      this->deallocNcArrays(time, data, name, id);
       nc_close(ncid);
       return status;
     }
 
     status = nc_put_var1_double(ncid, varid_stationy, stindex, lat);
     if (status != NC_NOERR) {
-      this->deallocNcArrays(time, data, name, id);
       nc_close(ncid);
       return status;
     }
 
-    status = nc_put_var_longlong(ncid, varid_stationDate[i], time);
+    status = nc_put_var_longlong(ncid, varid_stationDate[i], time.data());
     if (status != NC_NOERR) {
-      this->deallocNcArrays(time, data, name, id);
       nc_close(ncid);
       return status;
     }
 
-    status = nc_put_var_double(ncid, varid_stationData[i], data);
+    status = nc_put_var_double(ncid, varid_stationData[i], data.data());
     if (status != NC_NOERR) {
-      this->deallocNcArrays(time, data, name, id);
       nc_close(ncid);
       return status;
     }
 
-    status = nc_put_vara_text(ncid, varid_stationName, index, count, name);
+    status = nc_put_vara_text(ncid, varid_stationName, index, count, &name[0]);
     if (status != NC_NOERR) {
-      this->deallocNcArrays(time, data, name, id);
       nc_close(ncid);
       return status;
     }
 
-    status = nc_put_vara_text(ncid, varid_stationId, index, count, id);
+    status = nc_put_vara_text(ncid, varid_stationId, index, count, &id[0]);
     if (status != NC_NOERR) {
-      this->deallocNcArrays(time, data, name, id);
       nc_close(ncid);
       return status;
     }
-
-    ;
-    this->deallocNcArrays(time, data, name, id);
   }
 
   nc_close(ncid);

@@ -65,14 +65,14 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   ierr +=
       nc_inq_varid(ncid, stationTimeString.toStdString().c_str(), &varid_time);
 
-  long long *t = new long long[n];
-  ierr += nc_get_var_longlong(ncid, varid_time, t);
+  std::vector<long long> t(n, 0);
+  ierr += nc_get_var_longlong(ncid, varid_time, t.data());
 
   for (size_t i = 0; i < np; ++i) {
-    float *v = new float[n];
+    std::vector<float> v(n, 0.0);
     size_t start[2] = {i, 0};
     size_t count[2] = {1, n};
-    ierr += nc_get_vara_float(ncid, varid_data, start, count, v);
+    ierr += nc_get_vara_float(ncid, varid_data, start, count, v.data());
     HmdfStation *s = new HmdfStation(data);
 
     QVector<double> tsdata;
@@ -86,7 +86,6 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
         tsdata.push_back(static_cast<double>(v[j]));
       }
     }
-    delete[] v;
 
     if (tsdata.length() < 5) continue;
 
@@ -100,7 +99,6 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
 
     data->addStation(s);
   }
-  delete[] t;
 
   return 0;
 }
@@ -122,12 +120,10 @@ bool CrmsData::generateStationMapping(const QString &filename,
     stationDataString.sprintf("data_station_%6.6llu", i + 1);
     ierr += nc_inq_varid(ncid, stationDataString.toStdString().c_str(),
                          &varid_station);
-    char *nm = new char[stringlen];
-    memset(nm, '\0', stringlen);
-    ierr += nc_get_att_text(ncid, varid_station, "station_name", nm);
-    QString name(nm);
+    std::string nm(stringlen,' ');
+    ierr += nc_get_att_text(ncid, varid_station, "station_name", &nm[0]);
+    auto name = QString::fromStdString(nm);
     mapping[name] = i;
-    delete[] nm;
   }
   return ierr == 0;
 }
@@ -145,15 +141,13 @@ bool CrmsData::readHeader(const QString &filename, QVector<QString> &header) {
   nc_inq_varid(ncid, "sensors", &varid_sensors);
 
   for (size_t i = 0; i < np; ++i) {
-    char *n = new char[stringlen];
-    memset(n, '\0', stringlen);
+    std::string n(stringlen,' ');
     size_t start[2] = {i, 0};
     size_t count[2] = {1, stringlen};
-    ierr += nc_get_vara_text(ncid, varid_sensors, start, count, n);
-    QString h = QString(n);
+    ierr += nc_get_vara_text(ncid, varid_sensors, start, count, &n[0]);
+    QString h = QString::fromStdString(n);
     h = h.remove("\xEF\xBF\xBD");
     header.push_back(h);
-    delete[] n;
   }
   return ierr == 0;
 }
@@ -197,8 +191,7 @@ bool CrmsData::readStationList(const QString &filename,
 
   for (size_t i = 0; i < nstations; ++i) {
     int varid_data, varid_time;
-    char *nm = new char[stringsize];
-    memset(nm, '\0', stringsize);
+    std::string nm(stringsize,' ');
 
     QString stationDataString, stationTimeString;
     stationDataString.sprintf("data_station_%6.6llu", i + 1);
@@ -208,9 +201,8 @@ bool CrmsData::readStationList(const QString &filename,
     ierr += nc_inq_varid(ncid, stationTimeString.toStdString().c_str(),
                          &varid_time);
 
-    ierr += nc_get_att_text(ncid, varid_data, "station_name", nm);
-    QString name(nm);
-    delete[] nm;
+    ierr += nc_get_att_text(ncid, varid_data, "station_name", &nm[0]);
+    auto name = QString::fromStdString(nm);
 
     QGeoCoordinate p;
     if (nameMap.contains(name)) {
@@ -219,19 +211,14 @@ bool CrmsData::readStationList(const QString &filename,
       continue;
     }
 
-    char *tms = new char[stringsize];
-    char *tme = new char[stringsize];
+    std::string tms(stringsize,' ');
+    std::string tme(stringsize, ' ');
 
-    memset(tms, '\0', stringsize);
-    memset(tme, '\0', stringsize);
+    ierr += nc_get_att_text(ncid, varid_time, "minimum", &tms[0]);
+    ierr += nc_get_att_text(ncid, varid_time, "maximum", &tme[0]);
 
-    ierr += nc_get_att_text(ncid, varid_time, "minimum", tms);
-    ierr += nc_get_att_text(ncid, varid_time, "maximum", tme);
-
-    QString dateBeginString(tms);
-    QString dateEndString(tme);
-    delete[] tms;
-    delete[] tme;
+    auto dateBeginString = QString::fromStdString(tms);
+    auto dateEndString = QString::fromStdString(tme);
 
     QDateTime dateBegin =
         QDateTime::fromString(dateBeginString, "yyyy/MM/dd hh:mm:ss");

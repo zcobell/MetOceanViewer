@@ -1,9 +1,10 @@
 #include "dflow.h"
 #include <QtMath>
-#include "netcdf.h"
+#include "boost/algorithm/string.hpp"
 #include "errors.h"
 #include "hmdf.h"
 #include "metoceanviewer.h"
+#include "netcdf.h"
 
 Dflow::Dflow(QString filename, QObject *parent) : QObject(parent) {
   this->_isInitialized = false;
@@ -306,19 +307,17 @@ int Dflow::_get3d() {
   return MetOceanViewer::Error::NOERR;
 }
 
+#include <iostream>
 int Dflow::_getPlottingVariables() {
-  int ncid, nvar, ndim;
-  int nd;
-  int i, ierr;
-  QString sname;
-
-  ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  int ncid;
+  int ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   this->error->setNcErrorCode(ierr);
   if (this->error->isNcError()) {
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     return this->error->errorCode();
   }
 
+  int nvar;
   ierr = nc_inq_nvars(ncid, &nvar);
   this->error->setNcErrorCode(ierr);
   if (this->error->isNcError()) {
@@ -327,6 +326,7 @@ int Dflow::_getPlottingVariables() {
     return this->error->errorCode();
   }
 
+  int ndim;
   ierr = nc_inq_ndims(ncid, &ndim);
   this->error->setNcErrorCode(ierr);
   if (this->error->isNcError()) {
@@ -335,51 +335,52 @@ int Dflow::_getPlottingVariables() {
     return this->error->errorCode();
   }
 
-  char *varname = new char[NC_MAX_NAME + 1];
-  int *dims = new int[NC_MAX_DIMS];
+  std::vector<int> dims(NC_MAX_DIMS);
 
-  for (i = 0; i < ndim; i++) {
-    ierr = nc_inq_dimname(ncid, i, varname);
+  for (auto i = 0; i < ndim; i++) {
+    std::string varname(NC_MAX_NAME + 1, ' ');
+    ierr = nc_inq_dimname(ncid, i, &varname[0]);
     if (ierr != NC_NOERR) {
-      delete[] varname;
-      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
       return MetOceanViewer::Error::NETCDF;
     }
-    sname = QString(varname);
+    boost::trim_right(varname);
+    varname.erase(std::find(varname.begin(), varname.end(), '\0'),
+                  varname.end());
+    auto sname = QByteArray::fromStdString(varname);
     this->_dimnames[sname] = i;
   }
 
-  for (i = 0; i < nvar; i++) {
-    ierr = nc_inq_varname(ncid, i, varname);
+  for (auto i = 0; i < nvar; i++) {
+    std::string varname(NC_MAX_NAME + 1, ' ');
+    ierr = nc_inq_varname(ncid, i, &varname[0]);
     if (ierr != NC_NOERR) {
-      delete[] varname;
-      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
       return MetOceanViewer::Error::NETCDF;
     }
-    sname = QString(varname);
 
+    boost::trim_right(varname);
+    varname.erase(std::find(varname.begin(), varname.end(), '\0'),
+                  varname.end());
+    auto sname = QString::fromStdString(varname);
+
+    int nd;
     ierr = nc_inq_varndims(ncid, i, &nd);
     if (ierr != NC_NOERR) {
-      delete[] varname;
-      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
       return MetOceanViewer::Error::NETCDF;
     }
 
-    this->_nDims[sname] = (int)nd;
+    this->_nDims[sname] = nd;
 
-    ierr = nc_inq_vardimid(ncid, i, dims);
+    ierr = nc_inq_vardimid(ncid, i, dims.data());
     if (ierr != NC_NOERR) {
-      delete[] varname;
-      delete[] dims;
       this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
       this->error->setNcErrorCode(ierr);
       ierr = nc_close(ncid);
@@ -402,9 +403,6 @@ int Dflow::_getPlottingVariables() {
     }
     this->_varnames[sname] = i;
   }
-
-  delete[] varname;
-  delete[] dims;
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
@@ -466,121 +464,88 @@ int Dflow::_getStations() {
 
   this->_nStations = nstation;
 
-  char *stationName = new char[name_len * nstation];
-  double *xcoor = new double[nstation];
-  double *ycoor = new double[nstation];
+  std::string stationName(name_len * nstation, ' ');
   this->_xCoordinates.resize(this->_nStations);
   this->_yCoordinates.resize(this->_nStations);
   this->_stationNames.resize(this->_nStations);
 
-  ierr += nc_get_var_text(ncid, varid_namevar, stationName);
+  ierr += nc_get_var_text(ncid, varid_namevar, &stationName[0]);
   if (ierr != 0) {
-    delete[] xcoor;
-    delete[] ycoor;
-    delete[] stationName;
     return MetOceanViewer::Error::DFLOW_FILEREADERROR;
   }
 
   for (size_t i = 0; i < nstation; i++) {
-    char *n = new char[name_len + 1];
-    memcpy(n, &stationName[i * name_len], name_len);
-    this->_stationNames[i] = n;
-    delete[] n;
+    QString s = QByteArray::fromStdString(stationName.substr(200 * i, 200))
+                    .simplified();
+    this->_stationNames[i] = s;
   }
 
-  ierr += nc_get_var(ncid, varid_xcoor, xcoor);
-  ierr += nc_get_var(ncid, varid_ycoor, ycoor);
+  ierr += nc_get_var(ncid, varid_xcoor, this->_xCoordinates.data());
+  ierr += nc_get_var(ncid, varid_ycoor, this->_yCoordinates.data());
   if (ierr != 0) {
-    delete[] xcoor;
-    delete[] ycoor;
-    delete[] stationName;
     return MetOceanViewer::Error::DFLOW_FILEREADERROR;
   }
 
-  for (size_t i = 0; i < this->_nStations; i++) {
-    this->_xCoordinates[i] = xcoor[i];
-    this->_yCoordinates[i] = ycoor[i];
-  }
-
   nc_close(ncid);
-
-  delete[] xcoor;
-  delete[] ycoor;
-  delete[] stationName;
-
   return 0;
 }
 
 int Dflow::_getTime(QVector<qint64> &timeList) {
-  int i, ierr, ncid;
-  size_t nsteps, unitsLen;
-  double *time;
   int varid_time = this->_varnames["time"];
   int dimid_time = this->_dimnames["time"];
-  char *units = strdup("units");
-  QString refString;
+  std::string units = "units";
 
-  ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  int ncid;
+  int ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    delete[] units;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
+  size_t nsteps;
   ierr = nc_inq_dimlen(ncid, dimid_time, &nsteps);
   if (ierr != NC_NOERR) {
-    delete[] units;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  ierr = nc_inq_attlen(ncid, varid_time, units, &unitsLen);
+  size_t unitsLen;
+  ierr = nc_inq_attlen(ncid, varid_time, units.data(), &unitsLen);
   if (ierr != NC_NOERR) {
-    delete[] units;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  char *refstring = new char[unitsLen];
-
-  ierr = nc_get_att(ncid, varid_time, units, refstring);
+  std::string refstring(unitsLen, ' ');
+  ierr = nc_get_att(ncid, varid_time, units.data(), &refstring[0]);
   if (ierr != NC_NOERR) {
-    delete[] units;
-    delete[] refstring;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  refString = QString(refstring);
-  refString = refString.mid(0, (int)unitsLen).right(19);
-  delete[] units;
-  delete[] refstring;
-
+  QString refString = QString::fromStdString(refstring.substr(14, 19));
   this->_refTime =
       QDateTime::fromString(refString, QStringLiteral("yyyy-MM-dd hh:mm:ss"));
   this->_refTime.setTimeSpec(Qt::UTC);
 
-  timeList.resize(nsteps);
-  time = new double[nsteps];
+  std::vector<double> times(nsteps);
   this->_nSteps = nsteps;
-
-  ierr = nc_get_var_double(ncid, varid_time, time);
+  ierr = nc_get_var_double(ncid, varid_time, times.data());
   if (ierr != NC_NOERR) {
-    delete[] time;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  for (i = 0; i < this->_nSteps; i++)
+  timeList.resize(nsteps);
+  for (size_t i = 0; i < this->_nSteps; i++) {
     timeList[i] =
-        this->_refTime.addMSecs(qRound64(time[i] * 1000.0)).toMSecsSinceEpoch();
-
-  delete[] time;
+        this->_refTime.addSecs(qRound64(times[i])).toMSecsSinceEpoch();
+  }
 
   return MetOceanViewer::Error::NOERR;
 }
@@ -596,34 +561,27 @@ int Dflow::_getVar(QString variable, int layer,
 }
 
 int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
-  int ierr, ncid, varid;
-  double *d = new double[this->_nSteps * this->_nStations];
-  size_t *start = new size_t[2];
-  size_t *count = new size_t[2];
-
   data.resize(this->_nStations);
   for (size_t i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
 
-  varid = this->_varnames[variable];
-  ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  int ncid;
+  int varid = this->_varnames[variable];
+  int ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    delete[] start;
-    delete[] count;
-    delete[] d;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
+  std::vector<size_t> start(2, 0);
+  std::vector<size_t> count(2, 0);
+  std::vector<double> d(this->_nSteps * this->_nStations);
   start[0] = 0;
   start[1] = 0;
   count[0] = this->_nSteps;
   count[1] = this->_nStations;
-  ierr = nc_get_vara_double(ncid, varid, start, count, d);
+  ierr = nc_get_vara_double(ncid, varid, start.data(), count.data(), d.data());
   if (ierr != NC_NOERR) {
-    delete[] start;
-    delete[] count;
-    delete[] d;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -636,10 +594,6 @@ int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
       else
         data[j][i] = d[i * this->_nStations + j];
     }
-
-  delete[] start;
-  delete[] count;
-  delete[] d;
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {
@@ -653,20 +607,17 @@ int Dflow::_getVar2D(QString variable, QVector<QVector<double>> &data) {
 
 int Dflow::_getVar3D(QString variable, int layer,
                      QVector<QVector<double>> &data) {
-  int ierr, ncid, varid;
-  double *d = new double[this->_nSteps * this->_nStations];
-  size_t *start = new size_t[3];
-  size_t *count = new size_t[3];
+  std::vector<double> d(this->_nSteps * this->_nStations, 0);
+  std::vector<size_t> start(3, 0);
+  std::vector<size_t> count(3, 0);
 
   data.resize(this->_nStations);
   for (size_t i = 0; i < this->_nStations; i++) data[i].resize(this->_nSteps);
 
-  varid = this->_varnames[variable];
-  ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
+  int ncid;
+  int varid = this->_varnames[variable];
+  int ierr = nc_open(this->_filename.toStdString().c_str(), NC_NOWRITE, &ncid);
   if (ierr != NC_NOERR) {
-    delete[] start;
-    delete[] count;
-    delete[] d;
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
@@ -678,24 +629,21 @@ int Dflow::_getVar3D(QString variable, int layer,
   count[0] = this->_nSteps;
   count[1] = this->_nStations;
   count[2] = 1;
-  ierr = nc_get_vara_double(ncid, varid, start, count, d);
+  ierr = nc_get_vara_double(ncid, varid, start.data(), count.data(), d.data());
   if (ierr != NC_NOERR) {
     this->error->setErrorCode(MetOceanViewer::Error::NETCDF);
     this->error->setNcErrorCode(ierr);
     return MetOceanViewer::Error::NETCDF;
   }
 
-  for (size_t i = 0; i < this->_nSteps; i++)
+  for (size_t i = 0; i < this->_nSteps; i++) {
     for (size_t j = 0; j < this->_nStations; j++) {
       if (d[i * this->_nStations + j] == -999.0)
         data[j][i] = HmdfStation::nullDataValue();
       else
         data[j][i] = d[i * this->_nStations + j];
     }
-
-  delete[] start;
-  delete[] count;
-  delete[] d;
+  }
 
   ierr = nc_close(ncid);
   if (ierr != NC_NOERR) {

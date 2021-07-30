@@ -106,7 +106,7 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
   // Now read the station location file
   TempLine = StationFile.readLine().simplified();
   TempList = TempLine.split(" ");
-  int TempStations = TempList.value(0).toInt();
+  size_t TempStations = TempList.value(0).toULongLong();
   if (TempStations != this->nStations)
     return MetOceanViewer::Error::WRONG_NUMBER_OF_STATIONS;
 
@@ -210,11 +210,8 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   }
 
   // Size the output variables
-  this->latitude.reserve(station_size);
-  this->longitude.reserve(station_size);
   this->nStations = station_size;
   this->nSnaps = time_size;
-  this->time.reserve(time_size);
   this->data.resize(station_size);
   for (size_t i = 0; i < station_size; ++i) this->data[i].resize(time_size);
 
@@ -244,60 +241,47 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
     return this->_error;
   }
 
-  double *timeData = new double[time_size];
-  this->_ncerr = nc_get_var_double(ncid, varid_time, timeData);
+  this->time.resize(time_size);
+  this->_ncerr = nc_get_var_double(ncid, varid_time, this->time.data());
   if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
-    delete[] timeData;
     return this->_error;
   }
-  this->time.reserve(time_size);
-  std::copy(timeData, timeData + time_size, std::back_inserter(this->time));
-  delete[] timeData;
 
-  double *coor = new double[station_size];
-  this->_ncerr = nc_get_var_double(ncid, varid_lon, coor);
+  this->longitude.resize(station_size);
+  this->_ncerr = nc_get_var_double(ncid, varid_lon, this->longitude.data());
   if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
-    delete[] coor;
     return this->_error;
   }
-  std::copy(coor, coor + station_size, std::back_inserter(this->longitude));
-  delete[] coor;
 
-  coor = new double[station_size];
-  this->_ncerr = nc_get_var_double(ncid, varid_lat, coor);
+  this->latitude.resize(station_size);
+  this->_ncerr = nc_get_var_double(ncid, varid_lat, this->latitude.data());
   if (this->_ncerr != NC_NOERR) {
     this->_error = MetOceanViewer::Error::NETCDF;
-    delete[] coor;
     return this->_error;
   }
-  std::copy(coor, coor + station_size, std::back_inserter(this->latitude));
-  delete[] coor;
 
   // Loop over the stations, reading the data into memory
   for (size_t i = 0; i < station_size; ++i) {
-    double *tempVar1 = new double[time_size];
-    double *tempVar2 = new double[time_size];
+    std::vector<double> tempVar1(time_size);
+    std::vector<double> tempVar2(time_size);
 
     // Read from netCDF
     start[0] = 0;
     start[1] = i;
     count[0] = time_size;
     count[1] = 1;
-    this->_ncerr = nc_get_vara(ncid, varid_zeta, start, count, tempVar1);
+    this->_ncerr = nc_get_vara(ncid, varid_zeta, start, count, tempVar1.data());
     if (this->_ncerr != NC_NOERR) {
-      delete[] tempVar1;
-      delete[] tempVar2;
       this->_error = MetOceanViewer::Error::NETCDF;
       return this->_error;
     }
 
     if (isVector) {
-      this->_ncerr = nc_get_vara(ncid, varid_zeta2, start, count, tempVar2);
+      this->_ncerr =
+          nc_get_vara(ncid, varid_zeta2, start, count, tempVar2.data());
       if (this->_ncerr != NC_NOERR) {
-        delete[] tempVar1;
-        delete[] tempVar2;
         this->_error = MetOceanViewer::Error::NETCDF;
         return this->_error;
       }
@@ -318,9 +302,6 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
         }
       }
     }
-
-    delete[] tempVar1;
-    delete[] tempVar2;
   }
   this->_error = nc_close(ncid);
   if (this->_error != NC_NOERR) {
@@ -333,21 +314,21 @@ int AdcircStationOutput::readNetCDF(QString AdcircOutputFile) {
   // we can get fancy and try to get the ADCIRC written names in
   // the NetCDF file
   this->station_name.resize(station_size);
-  for (int i = 0; i < station_size; ++i)
+  for (size_t i = 0; i < station_size; ++i)
     this->station_name[i] = tr("Station ") + QString::number(i);
 
   return 0;
 }
 
 int AdcircStationOutput::toHmdf(Hmdf *outputHmdf) {
-  for (int i = 0; i < this->nStations; ++i) {
+  for (size_t i = 0; i < this->nStations; ++i) {
     HmdfStation *tempStation = new HmdfStation(outputHmdf);
     tempStation->setName(this->station_name[i]);
     tempStation->setId(this->station_name[i]);
     tempStation->setLongitude(this->longitude[i]);
     tempStation->setLatitude(this->latitude[i]);
     tempStation->setStationIndex(i);
-    for (int j = 0; j < this->nSnaps; ++j) {
+    for (size_t j = 0; j < this->nSnaps; ++j) {
       tempStation->setNext(
           this->coldStartTime.addSecs(this->time[j]).toMSecsSinceEpoch(),
           this->data[i][j]);

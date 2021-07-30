@@ -18,6 +18,8 @@
 //
 //-----------------------------------------------------------------------*/
 #include "netcdftimeseries.h"
+#include <string>
+#include "boost/format.hpp"
 #include "netcdf.h"
 
 #define NCCHECK(ierr)     \
@@ -48,17 +50,11 @@ void NetcdfTimeseries::setEpsg(int epsg) { this->m_epsg = epsg; }
 int NetcdfTimeseries::read() {
   if (this->m_filename == QString()) return 1;
 
-  QDateTime refTime;
-  refTime.setTimeSpec(Qt::UTC);
-  QString station_dim_string, station_time_var_string, station_data_var_string,
-      stationNameString;
   size_t stationNameLength, length;
   int ierr, ncid;
   int dimid_nstations, dimidStationLength, dimid_stationNameLen;
   int varid_time, varid_data, varid_xcoor, varid_ycoor, varid_stationName;
   int epsg;
-  char timeChar[80];
-
   NCCHECK(nc_open(this->m_filename.toStdString().c_str(), NC_NOWRITE, &ncid));
   NCCHECK(nc_inq_dimid(ncid, "numStations", &dimid_nstations));
   NCCHECK(nc_inq_dimlen(ncid, dimid_nstations, &this->m_numStations));
@@ -71,68 +67,56 @@ int NetcdfTimeseries::read() {
 
   this->setEpsg(epsg);
 
-  double *xcoor = new double[this->m_numStations];
-  double *ycoor = new double[this->m_numStations];
+  this->m_xcoor.resize(this->m_numStations);
+  this->m_ycoor.resize(this->m_numStations);
 
-  ierr = nc_get_var_double(ncid, varid_xcoor, xcoor);
+  ierr = nc_get_var_double(ncid, varid_xcoor, m_xcoor.data());
   if (ierr != NC_NOERR) {
-    delete[] xcoor;
-    delete[] ycoor;
     nc_close(ncid);
     return ierr;
   }
 
-  ierr = nc_get_var_double(ncid, varid_ycoor, ycoor);
+  ierr = nc_get_var_double(ncid, varid_ycoor, m_ycoor.data());
   if (ierr != NC_NOERR) {
-    delete[] xcoor;
-    delete[] ycoor;
     nc_close(ncid);
     return ierr;
   }
 
+  auto stationName =
+      std::string((stationNameLength + 1) * this->m_numStations, ' ');
+
+  NCCHECK(nc_get_var_text(ncid, varid_stationName, &stationName[0]));
   for (size_t i = 0; i < this->m_numStations; i++) {
-    this->m_xcoor.push_back(xcoor[i]);
-    this->m_ycoor.push_back(ycoor[i]);
-  }
-
-  delete[] xcoor;
-  delete[] ycoor;
-
-  char *stationName = new char[stationNameLength * this->m_numStations];
-
-  NCCHECK(nc_get_var_text(ncid, varid_stationName, stationName));
-  stationNameString = QString(stationName);
-
-  delete[] stationName;
-
-  for (size_t i = 0; i < this->m_numStations; i++) {
-    this->m_stationName.push_back(
-        stationNameString.mid(200 * i, 200).simplified());
+    QString s = QByteArray::fromStdString(stationName.substr(200 * i, 200))
+                    .simplified();
+    this->m_stationName.push_back(s);
   }
 
   this->m_time.resize(this->m_numStations);
   this->m_data.resize(this->m_numStations);
 
   for (size_t i = 0; i < this->m_numStations; i++) {
-    station_dim_string.sprintf("stationLength_%4.4d", i + 1);
-    station_time_var_string.sprintf("time_station_%4.4d", i + 1);
-    station_data_var_string.sprintf("data_station_%4.4d", i + 1);
+    auto station_dim_string =
+        boost::str(boost::format("stationLength_%04i") % (i + 1));
+    auto station_time_var_string =
+        boost::str(boost::format("time_station_%04i") % (i + 1));
+    auto station_data_var_string =
+        boost::str(boost::format("data_station_%04i") % (i + 1));
 
-    NCCHECK(nc_inq_dimid(ncid, station_dim_string.toStdString().c_str(),
-                         &dimidStationLength));
+    NCCHECK(
+        nc_inq_dimid(ncid, station_dim_string.c_str(), &dimidStationLength));
 
     NCCHECK(nc_inq_dimlen(ncid, dimidStationLength, &length));
     this->m_stationLength.push_back(length);
 
-    NCCHECK(nc_inq_varid(ncid, station_time_var_string.toStdString().c_str(),
-                         &varid_time));
+    NCCHECK(nc_inq_varid(ncid, station_time_var_string.c_str(), &varid_time));
 
-    NCCHECK(nc_inq_varid(ncid, station_data_var_string.toStdString().c_str(),
-                         &varid_data));
+    NCCHECK(nc_inq_varid(ncid, station_data_var_string.c_str(), &varid_data));
 
-    NCCHECK(nc_get_att_text(ncid, varid_time, "referenceDate", timeChar));
-    QString timeString = QString(timeChar).mid(0, 19);
-    refTime = QDateTime::fromString(timeString, "yyyy-MM-dd hh:mm:ss");
+    std::string timeStdString(80,' ');
+    NCCHECK(nc_get_att_text(ncid, varid_time, "referenceDate", &timeStdString[0]));
+    QString timeString = QString::fromStdString(timeStdString.substr(0, 19));
+    QDateTime refTime = QDateTime::fromString(timeString, "yyyy-MM-dd hh:mm:ss");
     refTime.setTimeSpec(Qt::UTC);
 
     double fillValue;
@@ -140,21 +124,17 @@ int NetcdfTimeseries::read() {
     if (fillValue == NC_FILL_DOUBLE) fillValue = -99999.0;
     this->m_fillValue.push_back(fillValue);
 
-    qint64 *timeData = new qint64[length];
-    double *varData = new double[length];
+    std::vector<qint64> timeData(length);
+    std::vector<double> varData(length);
 
-    ierr = nc_get_var_double(ncid, varid_data, varData);
+    ierr = nc_get_var_double(ncid, varid_data, varData.data());
     if (ierr != NC_NOERR) {
-      delete[] timeData;
-      delete[] varData;
       nc_close(ncid);
       return ierr;
     }
 
-    ierr = nc_get_var_longlong(ncid, varid_time, timeData);
+    ierr = nc_get_var_longlong(ncid, varid_time, timeData.data());
     if (ierr != NC_NOERR) {
-      delete[] timeData;
-      delete[] varData;
       nc_close(ncid);
       return ierr;
     }
@@ -167,8 +147,6 @@ int NetcdfTimeseries::read() {
       this->m_time[i][j] = refTime.addSecs(timeData[j]).toMSecsSinceEpoch();
     }
 
-    delete[] timeData;
-    delete[] varData;
   }
 
   NCCHECK(nc_close(ncid));

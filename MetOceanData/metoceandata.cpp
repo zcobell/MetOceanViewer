@@ -285,10 +285,10 @@ void MetOceanData::getNdbcData() {
     }
 
     if (useStation) {
-      data->station(this->m_product - 1)->setName(s[i].name());
-      data->station(this->m_product - 1)->setId(s[i].id());
-      dataOut->addStation(data->station(this->m_product - 1));
-      data->station(this->m_product - 1)->setParent(dataOut);
+      data->station(this->m_product)->setName(s[i].name());
+      data->station(this->m_product)->setId(s[i].id());
+      dataOut->addStation(data->station(this->m_product));
+      data->station(this->m_product)->setParent(dataOut);
     }
 
     delete ndbc;
@@ -395,7 +395,7 @@ void MetOceanData::getUsgsData() {
     if (productId != QString()) {
       productIndex = this->getUSGSProductIndex(data, productId);
     } else {
-      productIndex = this->m_product - 1;
+      productIndex = this->m_product;
       productId = data->station(productIndex)->id();
     }
 
@@ -423,7 +423,7 @@ void MetOceanData::getUsgsData() {
 }
 
 int MetOceanData::printAvailableProducts(Hmdf *data, bool reselect) {
-  if (reselect && this->m_product > 0 && this->m_product <= data->nstations()) {
+  if (reselect && this->m_product >= 0 && this->m_product < data->nstations()) {
     if (this->m_previousProduct != QString() &&
         this->m_previousProduct == data->station(this->m_product)->name()) {
       return 0;
@@ -440,10 +440,11 @@ int MetOceanData::printAvailableProducts(Hmdf *data, bool reselect) {
   }
   std::cout << "==> ";
   std::cin >> selection;
+  selection -= 1;
 
-  if (selection > 0 && selection <= data->nstations()) {
+  if (selection >= 0 && selection < data->nstations()) {
     this->m_product = selection;
-    this->m_previousProduct = data->station(selection - 1)->name();
+    this->m_previousProduct = data->station(selection)->name();
     return 0;
   } else {
     emit error("Invalid selection");
@@ -535,7 +536,7 @@ void MetOceanData::getNoaaData() {
 }
 
 QString MetOceanData::noaaIndexToProduct() {
-  if (this->m_product < 1 || this->m_product > noaaProducts.size() + 1) {
+  if (this->m_product < 0 || this->m_product > noaaProducts.size()) {
     int selection;
     std::cout << "Select NOAA product" << std::endl;
     for (int i = 0; i < noaaProducts.size(); i++) {
@@ -544,7 +545,7 @@ QString MetOceanData::noaaIndexToProduct() {
     }
     std::cout << "==> ";
     std::cin >> selection;
-    if (selection > 0 && selection < noaaProducts.size())
+    if (selection >= 0 && selection < noaaProducts.size())
       this->m_product = selection;
     else {
       emit error("Invalid product selection.");

@@ -183,8 +183,8 @@ void CrmsDatabase::putNextStation(std::vector<CrmsDataContainer *> &data,
 
   size_t nData = data.size() * this->m_categoryMap.size();
 
-  long long *t = new long long[data.size()];
-  float *v = new float[nData];
+  std::vector<long long> t(data.size(), 0);
+  std::vector<float> v(nData, 0.0);
   size_t idx = 0;
 
   for (size_t i = 0; i < data.size(); ++i) {
@@ -198,15 +198,13 @@ void CrmsDatabase::putNextStation(std::vector<CrmsDataContainer *> &data,
     }
   }
 
-  ierr += nc_put_var_longlong(this->m_ncid, varid_time, t);
-  ierr += nc_put_var_float(this->m_ncid, varid_data, v);
+  ierr += nc_put_var_longlong(this->m_ncid, varid_time, t.data());
+  ierr += nc_put_var_float(this->m_ncid, varid_data, v.data());
 
   if (ierr != NC_NOERR) {
     std::cout << "Error placing variable into netCDF file." << std::endl;
   }
 
-  delete[] t;
-  delete[] v;
   return;
 }
 

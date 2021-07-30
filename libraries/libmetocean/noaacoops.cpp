@@ -135,6 +135,8 @@ int NoaaCoOps::downloadDataFromNoaaServer(
       }
     }
 
+    qDebug() << requestURL;
+
     // Send the request
     QEventLoop loop;
     QNetworkReply *reply = manager->get(QNetworkRequest(QUrl(requestURL)));
