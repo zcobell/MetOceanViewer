@@ -1,10 +1,10 @@
 #!/bin/bash
 redist=1
-QtVersion=5_13_2
+QtVersion=5_14_2
 compileDirectory="../../build-MetOcean-Desktop_Qt_"$QtVersion"_MinGW_64_bit-Release"
-mingwPath=/cygdrive/c/Qt/5.13.2/mingw73_64/bin
+mingwPath=/cygdrive/c/Qt/5.14.2/mingw73_64/bin
 winDeployQtBinary=$mingwPath/windeployqt.exe
-binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.1/bin/binarycreator.exe
+binaryCreator=/cygdrive/c/Qt/Tools/QtInstallerFramework/3.2/bin/binarycreator.exe
 version=$(git describe --always --tags)
 winPackDir=packages_windows
 
@@ -26,6 +26,7 @@ mkdir -p $winPackDir/com.zachcobell.metoceanviewer/data
 #...Grab the MetOceanViewer executable
 cp $compileDirectory/MetOceanViewer/release/MetOceanViewer.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
 cp $compileDirectory/MetOceanData/release/MetOceanData.exe $winPackDir/com.zachcobell.metoceanviewer/data/.
+cp $compileDirectory/thirdparty/ezproj/src/release/ezproj.dll $winPackDir/com.zachcobell.metoceanviewer/data/.
 
 #...Grab the icon
 cp ../MetOceanViewer/img/mov.ico $winPackDir/com.zachcobell.metoceanviewer/data/.
