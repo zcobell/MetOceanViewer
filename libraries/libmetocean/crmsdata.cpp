@@ -23,6 +23,7 @@
 #include <QMap>
 #include <QString>
 #include <QStringList>
+#include "boost/algorithm/string.hpp"
 #include "netcdf.h"
 
 CrmsData::CrmsData(Station &station, QDateTime startDate, QDateTime endDate,
@@ -46,6 +47,7 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   if (this->m_mapping.contains(this->station().name())) {
     index = this->m_mapping[this->station().name()];
   } else {
+    nc_close(ncid);
     return 1;
   }
 
@@ -100,6 +102,7 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
     data->addStation(s);
   }
 
+  nc_close(ncid);
   return 0;
 }
 
@@ -120,11 +123,14 @@ bool CrmsData::generateStationMapping(const QString &filename,
     stationDataString.sprintf("data_station_%6.6llu", i + 1);
     ierr += nc_inq_varid(ncid, stationDataString.toStdString().c_str(),
                          &varid_station);
-    std::string nm(stringlen,' ');
+    std::string nm(stringlen, ' ');
     ierr += nc_get_att_text(ncid, varid_station, "station_name", &nm[0]);
-    auto name = QString::fromStdString(nm);
+    boost::trim_right(nm);
+    nm.erase(std::find(nm.begin(), nm.end(), '\0'), nm.end());
+    QString name = QByteArray::fromStdString(nm);
     mapping[name] = i;
   }
+  nc_close(ncid);
   return ierr == 0;
 }
 
@@ -141,14 +147,16 @@ bool CrmsData::readHeader(const QString &filename, QVector<QString> &header) {
   nc_inq_varid(ncid, "sensors", &varid_sensors);
 
   for (size_t i = 0; i < np; ++i) {
-    std::string n(stringlen,' ');
+    std::string n(stringlen, ' ');
     size_t start[2] = {i, 0};
     size_t count[2] = {1, stringlen};
     ierr += nc_get_vara_text(ncid, varid_sensors, start, count, &n[0]);
-    QString h = QString::fromStdString(n);
-    h = h.remove("\xEF\xBF\xBD");
+    boost::trim_right(n);
+    n.erase(std::find(n.begin(), n.end(), '\0'), n.end());
+    QString h = QByteArray::fromStdString(n);
     header.push_back(h);
   }
+  nc_close(ncid);
   return ierr == 0;
 }
 
@@ -191,7 +199,7 @@ bool CrmsData::readStationList(const QString &filename,
 
   for (size_t i = 0; i < nstations; ++i) {
     int varid_data, varid_time;
-    std::string nm(stringsize,' ');
+    std::string nm(stringsize, ' ');
 
     QString stationDataString, stationTimeString;
     stationDataString.sprintf("data_station_%6.6llu", i + 1);
@@ -202,7 +210,10 @@ bool CrmsData::readStationList(const QString &filename,
                          &varid_time);
 
     ierr += nc_get_att_text(ncid, varid_data, "station_name", &nm[0]);
-    auto name = QString::fromStdString(nm);
+
+    boost::trim_right(nm);
+    nm.erase(std::find(nm.begin(), nm.end(), '\0'), nm.end());
+    auto name = QByteArray::fromStdString(nm);
 
     QGeoCoordinate p;
     if (nameMap.contains(name)) {
@@ -211,13 +222,18 @@ bool CrmsData::readStationList(const QString &filename,
       continue;
     }
 
-    std::string tms(stringsize,' ');
+    std::string tms(stringsize, ' ');
     std::string tme(stringsize, ' ');
 
     ierr += nc_get_att_text(ncid, varid_time, "minimum", &tms[0]);
     ierr += nc_get_att_text(ncid, varid_time, "maximum", &tme[0]);
 
-    auto dateBeginString = QString::fromStdString(tms);
+    boost::trim_right(tms);
+    tms.erase(std::find(tms.begin(), tms.end(), '\0'), tms.end());
+    auto dateBeginString = QByteArray::fromStdString(tms);
+
+    boost::trim_right(tme);
+    tme.erase(std::find(tme.begin(), tme.end(), '\0'), tme.end());
     auto dateEndString = QString::fromStdString(tme);
 
     QDateTime dateBegin =
