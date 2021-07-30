@@ -1,25 +1,25 @@
 sudo: required
 
-dist: trusty
+dist: xenial
 
 language: cpp
 
 compiler: gcc
 
 before_install:
-- sudo add-apt-repository --yes ppa:beineri/opt-qt-5.10.1-trusty
+- sudo add-apt-repository --yes ppa:beineri/opt-qt-5.15.2-xenial
 - sudo apt-get update  -qq
-- sudo apt-get install -qq libsqlite3-dev libnetcdf-dev
-- sudo apt-cache search qt510
-- sudo apt-get install -qq qt510base qt510charts-no-lgpl qt510webengine qt510imageformats qt510connectivity qt510graphicaleffects qt510script qt510sensors qt510webchannel qt510svg qt510xmlpatterns qt510location qt510quickcontrols2 qt510quickcontrols 
-- export PATH=/opt/qt510/bin:$PATH
+- sudo apt-get install -qq libsqlite3-dev libnetcdf-dev libgl-dev
+- sudo apt-cache search qt515
+- sudo apt-get install -qq qt515base qt515charts-no-lgpl qt515webengine qt515imageformats qt515connectivity qt515graphicaleffects qt515script qt515sensors qt515webchannel qt515svg qt515xmlpatterns qt515location qt515quickcontrols2 qt515quickcontrols 
+- export PATH=/opt/qt515/bin:$PATH
 
 script:
 - uname -a
 - which qmake
 - gcc --version
 - g++ --version
-- . /opt/qt510/bin/qt510-env.sh
+- . /opt/qt515/bin/qt515-env.sh
 - git submodule update --init --recursive
-- /opt/qt510/bin/qmake MetOcean.pro 
+- /opt/qt515/bin/qmake MetOcean.pro 
 - make -j4
