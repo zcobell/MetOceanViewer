@@ -261,7 +261,7 @@ void ChartView::addTraceLines(QMouseEvent *event) {
 
 bool ChartView::getNearestPointToCursor(qreal cursorXPosition, int seriesIndex,
                                         qreal &x, qreal &y) {
-  QVector<QPointF> pv = this->m_series[seriesIndex]->pointsVector();
+  QVector<QPointF> pv = this->m_series[seriesIndex]->points();
   qreal x_ll = pv.at(0).x();
   qreal x_ul = pv.last().x();
 
@@ -368,9 +368,9 @@ void ChartView::mouseDoubleClickEvent(QMouseEvent *event) {
 void ChartView::wheelEvent(QWheelEvent *event) {
   if (this->chart() == nullptr) return;
 
-  if (event->delta() > 0)
+  if (event->angleDelta().y() > 0)
     this->chart()->zoomIn();
-  else if (event->delta() < 0)
+  else if (event->angleDelta().y() < 0)
     this->chart()->zoomOut();
 
   QChartView::wheelEvent(event);

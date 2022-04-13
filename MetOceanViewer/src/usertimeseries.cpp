@@ -91,9 +91,9 @@ int UserTimeseries::getDataBounds(double &ymin, double &ymax,
 int UserTimeseries::saveImage(QString filename, QString filter) {
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
+    printer.setPageSize(QPageSize::Letter);
     printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setPageOrientation(QPageLayout::Landscape);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(filename);
 
@@ -148,7 +148,7 @@ int UserTimeseries::getClickedMarkerID() {
 }
 
 int UserTimeseries::getStationSelections() {
-  if (this->m_currentStation == QString()) {
+  if (this->m_currentStation->isEmpty()) {
     emit timeseriesError(tr("No stations selected!"));
     return 1;
   }

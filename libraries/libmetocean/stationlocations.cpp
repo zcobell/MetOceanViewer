@@ -238,7 +238,7 @@ QVector<Station> StationLocations::readCrmsMarkers() {
   for (size_t i = 0; i < latitude.size(); ++i) {
     QGeoCoordinate c(latitude[i], longitude[i]);
     QString id;
-    id.sprintf("%zu", i);
+    id.asprintf("%zu", i);
     Station s(c, id, name[i], 0, 0, 0, true, startDate[i], endDate[i]);
     output.push_back(s);
   }

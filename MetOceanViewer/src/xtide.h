@@ -32,8 +32,6 @@
 #include "hmdf.h"
 #include "stationmodel.h"
 
-using namespace QtCharts;
-
 class XTide : public QObject {
   Q_OBJECT
 

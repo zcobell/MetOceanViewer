@@ -227,7 +227,7 @@ void MapFunctions::getMapboxKeyFromDisk() {
       QXmlStreamReader::TokenType token = xmlReader.readNext();
       if (token == QXmlStreamReader::StartDocument) continue;
       if (token == QXmlStreamReader::StartElement) {
-        if (xmlReader.name() == "ApiKey") {
+        if (xmlReader.name() == QStringLiteral("ApiKey")) {
           this->m_mapboxApiKey = xmlReader.readElementText();
         }
       }
@@ -265,9 +265,9 @@ void MapFunctions::getConfigurationFromDisk() {
       QXmlStreamReader::TokenType token = xmlReader.readNext();
       if (token == QXmlStreamReader::StartDocument) continue;
       if (token == QXmlStreamReader::StartElement) {
-        if (xmlReader.name() == "MapSource") {
+        if (xmlReader.name() == QStringLiteral("MapSource")) {
           this->m_mapSource = xmlReader.readElementText().toInt();
-        } else if (xmlReader.name() == "MapIndex") {
+        } else if (xmlReader.name() == QStringLiteral("MapIndex")) {
           this->m_defaultMapIndex = xmlReader.readElementText().toInt();
         }
       }

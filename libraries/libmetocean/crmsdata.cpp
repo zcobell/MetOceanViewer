@@ -54,9 +54,9 @@ int CrmsData::retrieveData(Hmdf *data, Datum::VDatum datum) {
   int varid_data, varid_time, dimid_n, dimid_param;
   size_t n, np;
   QString stationDataString, stationTimeString, stationLengthString;
-  stationLengthString.sprintf("stationLength_%6.6llu", index + 1);
-  stationDataString.sprintf("data_station_%6.6llu", index + 1);
-  stationTimeString.sprintf("time_station_%6.6llu", index + 1);
+  stationLengthString.asprintf("stationLength_%6.6llu", index + 1);
+  stationDataString.asprintf("data_station_%6.6llu", index + 1);
+  stationTimeString.asprintf("time_station_%6.6llu", index + 1);
   ierr +=
       nc_inq_dimid(ncid, stationLengthString.toStdString().c_str(), &dimid_n);
   ierr += nc_inq_dimid(ncid, "numParam", &dimid_param);
@@ -120,7 +120,7 @@ bool CrmsData::generateStationMapping(const QString &filename,
   for (size_t i = 0; i < n; ++i) {
     int varid_station;
     QString stationDataString;
-    stationDataString.sprintf("data_station_%6.6llu", i + 1);
+    stationDataString.asprintf("data_station_%6.6llu", i + 1);
     ierr += nc_inq_varid(ncid, stationDataString.toStdString().c_str(),
                          &varid_station);
     std::string nm(stringlen, ' ');
@@ -202,8 +202,8 @@ bool CrmsData::readStationList(const QString &filename,
     std::string nm(stringsize, ' ');
 
     QString stationDataString, stationTimeString;
-    stationDataString.sprintf("data_station_%6.6llu", i + 1);
-    stationTimeString.sprintf("time_station_%6.6llu", i + 1);
+    stationDataString.asprintf("data_station_%6.6llu", i + 1);
+    stationTimeString.asprintf("time_station_%6.6llu", i + 1);
     ierr += nc_inq_varid(ncid, stationDataString.toStdString().c_str(),
                          &varid_data);
     ierr += nc_inq_varid(ncid, stationTimeString.toStdString().c_str(),

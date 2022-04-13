@@ -37,8 +37,6 @@
 //...Forward declare classes
 class ChartView;
 
-using namespace QtCharts;
-
 class Noaa : public QObject {
   Q_OBJECT
 

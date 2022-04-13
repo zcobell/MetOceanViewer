@@ -34,8 +34,6 @@
 #include "usgswaterdata.h"
 #include "timezone.h"
 
-using namespace QtCharts;
-
 class Usgs : public QObject {
   Q_OBJECT
 

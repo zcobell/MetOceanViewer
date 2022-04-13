@@ -37,7 +37,7 @@ void MainWindow::on_browse_hwm_clicked() {
   QString HighWaterMarkFile = QFileDialog::getOpenFileName(
       this, tr("Select High Water Mark File"), this->previousDirectory,
       tr("High Water Mark File (*.csv) ;; All Files (*.*)"));
-  if (HighWaterMarkFile == NULL) return;
+  if (HighWaterMarkFile.isEmpty()) return;
 
   Generic::splitPath(HighWaterMarkFile, filename, this->previousDirectory);
   ui->Text_HWMFile->setText(HighWaterMarkFile);
@@ -140,7 +140,7 @@ void MainWindow::on_button_saveHWMMap_clicked() {
       this, tr("Save as..."), this->previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL) return;
+  if (TempString.isEmpty()) return;
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 
@@ -221,7 +221,7 @@ void MainWindow::on_button_saveHWMScatter_clicked() {
       this, tr("Save as..."), this->previousDirectory,
       "JPG (*.jpg *.jpeg) ;; PDF (*.pdf)", &filter);
 
-  if (TempString == NULL) return;
+  if (TempString.isEmpty()) return;
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 

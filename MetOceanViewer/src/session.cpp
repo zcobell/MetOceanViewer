@@ -795,8 +795,8 @@ int Session::open(QString openFilename) {
       this->tableWidget->setItem(
           nrow - 1, 14, new QTableWidgetItem(QString::number(lineStyle)));
       CellColor.setNamedColor(color);
-      this->tableWidget->item(nrow - 1, 2)->setBackgroundColor(CellColor);
-      this->tableWidget->item(nrow - 1, 2)->setTextColor(CellColor);
+      this->tableWidget->item(nrow - 1, 2)->setBackground(CellColor);
+      this->tableWidget->item(nrow - 1, 2)->setForeground(CellColor);
       this->tableWidget->item(nrow - 1, 0)->setCheckState(checkState);
       ColdStart = QDateTime::fromString(coldstartstring, "yyyy-MM-dd hh:mm:ss");
     }

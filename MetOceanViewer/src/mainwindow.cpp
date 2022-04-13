@@ -182,7 +182,7 @@ void MainWindow::on_actionLoad_Session_triggered() {
       this, tr("Open Session..."), this->previousDirectory,
       tr("MetOcean Viewer Sessions (*.mvs)"));
 
-  if (LoadFile == NULL) return;
+  if (LoadFile.isEmpty()) return;
 
   Generic::splitPath(LoadFile, BaseFile, this->previousDirectory);
   int ierr = this->sessionState->open(LoadFile);
@@ -207,7 +207,7 @@ void MainWindow::on_actionSave_Session_As_triggered() {
   QString SaveFile = QFileDialog::getSaveFileName(
       this, tr("Save Session..."), this->previousDirectory,
       tr("MetOcean Viewer Sessions (*.mvs)"));
-  if (SaveFile != NULL) {
+  if (SaveFile.isEmpty()) {
     this->sessionState->setSessionFilename(SaveFile);
     this->sessionState->save();
   }
@@ -466,8 +466,8 @@ void MainWindow::setupUsgsMap() {
   }
   ui->Date_usgsStart->setDateTime(QDateTime::currentDateTime().addDays(-7));
   ui->Date_usgsEnd->setDateTime(QDateTime::currentDateTime());
-  ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
-  ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
+  ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1),QTime(0,0,0)));
+  ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1),QTime(0,0,0)));
   ui->Date_usgsEnd->setMaximumDateTime(QDateTime::currentDateTime());
   ui->Date_usgsStart->setMaximumDateTime(QDateTime::currentDateTime());
   ui->combo_usgsTimezoneLocation->setCurrentIndex(12);

@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <QRegularExpression>
 #include "errors.h"
 #include "hmdf.h"
 #include "netcdf.h"
@@ -114,9 +115,12 @@ int AdcircStationOutput::readAscii(QString AdcircOutputFile,
   this->latitude.resize(this->nStations);
   this->station_name.resize(this->nStations);
 
+  QRegularExpression re(",| ");
+
   for (size_t i = 0; i < TempStations; ++i) {
     TempLine = StationFile.readLine().simplified();
-    TempList = TempLine.split(QRegExp(",| "));
+
+    TempList = TempLine.split(re);
     this->longitude[i] = TempList.value(0).toDouble();
     this->latitude[i] = TempList.value(1).toDouble();
 

@@ -116,13 +116,13 @@ int Hwm::plotRegression() {
   this->m_chartView->initializeAxis(2);
 
   if (this->m_checkForceZero->isChecked())
-    RegressionString.sprintf("y = %0.2fx", this->m_hwm->slope());
+    RegressionString.asprintf("y = %0.2fx", this->m_hwm->slope());
   else
-    RegressionString.sprintf("y = %0.2fx + %0.2f", this->m_hwm->slope(),
+    RegressionString.asprintf("y = %0.2fx + %0.2f", this->m_hwm->slope(),
                              this->m_hwm->intercept());
 
-  CorrelationString.sprintf("%0.2f", this->m_hwm->r2());
-  StandardDeviationString.sprintf("%0.2f", this->m_hwm->standardDeviation());
+  CorrelationString.asprintf("%0.2f", this->m_hwm->r2());
+  StandardDeviationString.asprintf("%0.2f", this->m_hwm->standardDeviation());
 
   RegressionTitle = this->m_plotTitleBox->text();
   YLabel = this->m_modeledAxisLabelBox->text();
@@ -343,9 +343,9 @@ int Hwm::readHWMData() {
 int Hwm::saveHWMMap(QString outputFile, QString filter) {
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
+    printer.setPageSize(QPageSize::Letter);
     printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setPageOrientation(QPageLayout::Landscape);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(outputFile);
 
@@ -386,9 +386,9 @@ int Hwm::saveHWMMap(QString outputFile, QString filter) {
 int Hwm::saveRegressionPlot(QString outputFile, QString filter) {
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
+    printer.setPageSize(QPageSize::Letter);
     printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setPageOrientation(QPageLayout::Landscape);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(outputFile);
 

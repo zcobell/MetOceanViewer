@@ -31,7 +31,7 @@
 #include "boost/algorithm/string/split.hpp"
 #include "boost/algorithm/string/trim.hpp"
 #include "boost/config/warning_disable.hpp"
-#include "boost/spirit/include/phoenix.hpp"
+#include "boost/phoenix.hpp"
 #include "boost/spirit/include/qi.hpp"
 
 NoaaCoOps::NoaaCoOps(const Station &station, const QDateTime startDate,

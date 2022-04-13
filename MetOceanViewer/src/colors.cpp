@@ -68,7 +68,7 @@ QColor Colors::generateRandomColor() {
   QTime SeedTime;
 
   SeedTime = QTime::currentTime();
-  qsrand((uint)SeedTime.msec());
+  srand((uint)SeedTime.msec());
 
 #if 0
   QColor Mix;
@@ -76,13 +76,13 @@ QColor Colors::generateRandomColor() {
   Mix.setGreen(255);
   Mix.setBlue(255);
 
-  MyColor.setRed((qrand() % 255 + Mix.red()) / 2);
-  MyColor.setGreen((qrand() % 255 + Mix.green()) / 2);
-  MyColor.setBlue((qrand() % 255 + Mix.blue()) / 2);
+  MyColor.setRed((rand() % 255 + Mix.red()) / 2);
+  MyColor.setGreen((rand() % 255 + Mix.green()) / 2);
+  MyColor.setBlue((rand() % 255 + Mix.blue()) / 2);
 #else
-  MyColor.setRed(qrand() % 255);
-  MyColor.setGreen(qrand() % 255);
-  MyColor.setBlue(qrand() % 255);
+  MyColor.setRed(rand() % 255);
+  MyColor.setGreen(rand() % 255);
+  MyColor.setBlue(rand() % 255);
 #endif
 
   return MyColor;

@@ -126,7 +126,7 @@ int Hmdf::readImeds(QString filename) {
     templine = StringUtil::sanitizeString(templine);
 
     QStringList templist =
-        QString::fromStdString(templine).split(" ", QString::SkipEmptyParts);
+        QString::fromStdString(templine).split(" ", Qt::SkipEmptyParts);
 
     station->setName(templist.at(0));
     station->setLongitude(templist.at(2).toDouble());
@@ -199,7 +199,7 @@ int Hmdf::writeCsv(QString filename) {
       QDateTime d =
           QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i), Qt::UTC);
       if (d.isValid()) {
-        value.sprintf("%10.4e", this->station(s)->data(i));
+        value.asprintf("%10.4e", this->station(s)->data(i));
         output.write(
             QString(d.toString("MM/dd/yyyy,hh:mm,") + value + "\n").toUtf8());
       }
@@ -237,7 +237,7 @@ int Hmdf::writeImeds(QString filename) {
           QDateTime::fromMSecsSinceEpoch(this->station(s)->date(i), Qt::UTC);
 
       if (d.isValid()) {
-        value.sprintf("%10.4e", this->station(s)->data(i));
+        value.asprintf("%10.4e", this->station(s)->data(i));
         outputFile.write(
             QString(d.toString("yyyy    MM    dd    hh    mm    ss") + "    " +
                     value + "\n")
@@ -272,7 +272,7 @@ int Hmdf::writeNetcdf(QString filename) {
   for (int i = 0; i < this->nstations(); i++) {
     QString dimname;
     int d;
-    dimname.sprintf("%s%4.4i", "stationLength_", i + 1);
+    dimname.asprintf("%s%4.4i", "stationLength_", i + 1);
     NCCHECK(nc_def_dim(ncid, dimname.toStdString().c_str(),
                        this->station(i)->numSnaps(), &d));
     dimid_stationLength.push_back(d);
@@ -312,7 +312,7 @@ int Hmdf::writeNetcdf(QString filename) {
     char timeunit[27] = "second since referenceDate";
     int v;
 
-    stationName.sprintf("%s%4.4i", "station_", i + 1);
+    stationName.asprintf("%s%4.4i", "station_", i + 1);
     timeVarName = "time_" + stationName;
     dataVarName = "data_" + stationName;
 

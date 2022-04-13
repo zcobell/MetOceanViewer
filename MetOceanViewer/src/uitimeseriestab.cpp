@@ -117,9 +117,9 @@ void MainWindow::setTimeseriesTableRow(int row, AddTimeseriesDialog *dialog) {
   ui->table_TimeseriesData->setItem(
       row, 14, new QTableWidgetItem(QString::number(dialog->lineStyle())));
 
-  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(
+  ui->table_TimeseriesData->item(row, 2)->setBackground(
       dialog->randomButtonColor());
-  ui->table_TimeseriesData->item(row, 2)->setTextColor(
+  ui->table_TimeseriesData->item(row, 2)->setForeground(
       dialog->randomButtonColor());
   ui->table_TimeseriesData->item(row, 0)->setCheckState(Qt::Checked);
 
@@ -328,8 +328,8 @@ void MainWindow::on_button_TimeseriesCopyRow_clicked() {
 
   CellColor.setNamedColor(
       ui->table_TimeseriesData->item(currentRow, 2)->text());
-  ui->table_TimeseriesData->item(row, 2)->setBackgroundColor(CellColor);
-  ui->table_TimeseriesData->item(row, 2)->setTextColor(CellColor);
+  ui->table_TimeseriesData->item(row, 2)->setBackground(CellColor);
+  ui->table_TimeseriesData->item(row, 2)->setForeground(CellColor);
   ui->table_TimeseriesData->item(row, 0)->setCheckState(Qt::Checked);
   ui->table_TimeseriesData->item(row, 0)->setToolTip(
       ui->table_TimeseriesData->item(row, 6)->text());

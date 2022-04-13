@@ -108,7 +108,7 @@ int Ndbc::plot(int index) {
   QDateTime startDate = this->m_startDateEdit->dateTime();
   QDateTime endDate = this->m_endDateEdit->dateTime();
   startDate.setTime(QTime(0, 0, 0));
-  endDate.addDays(1);
+  endDate = endDate.addDays(1);
   endDate.setTime(QTime(0, 0, 0));
 
   QLineSeries *series1 = new QLineSeries(this->m_chartView->chart());
@@ -139,9 +139,9 @@ int Ndbc::plot(int index) {
 int Ndbc::saveImage(QString filename, QString filter) {
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
+    printer.setPageSize(QPageSize::Letter);
     printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setPageOrientation(QPageLayout::Landscape);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(filename);
 

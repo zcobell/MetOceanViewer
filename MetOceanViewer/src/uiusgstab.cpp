@@ -84,8 +84,8 @@ void MainWindow::on_radio_usgs_instant_clicked() {
 //-------------------------------------------//
 void MainWindow::on_radio_usgsDaily_clicked() {
   if (this->m_usgs != nullptr) m_usgs->setUSGSBeenPlotted(false);
-  ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
-  ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
+  ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1),QTime(0,0,0)));
+  ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1),QTime(0,0,0)));
   return;
 }
 //-------------------------------------------//
@@ -96,8 +96,8 @@ void MainWindow::on_radio_usgsDaily_clicked() {
 //-------------------------------------------//
 void MainWindow::on_radio_usgshistoric_clicked() {
   if (this->m_usgs != nullptr) m_usgs->setUSGSBeenPlotted(false);
-  ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
-  ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1)));
+  ui->Date_usgsStart->setMinimumDateTime(QDateTime(QDate(1900, 1, 1),QTime(0,0,0)));
+  ui->Date_usgsEnd->setMinimumDateTime(QDateTime(QDate(1900, 1, 1),QTime(0,0,0)));
   return;
 }
 //-------------------------------------------//

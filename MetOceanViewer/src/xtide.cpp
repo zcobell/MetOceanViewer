@@ -53,7 +53,7 @@ ChartView *XTide::chartview() { return this->m_chartView; }
 //...Overall routine for plotting XTide
 int XTide::plotXTideStation() {
   //...Check if there is a station selected
-  if (this->m_currentStation == QString()) return 1;
+  if (this->m_currentStation->isEmpty()) return 1;
 
   //...Get the selected station
   this->m_station =
@@ -184,9 +184,9 @@ int XTide::saveXTideData(QString filename, QString format) {
 int XTide::saveXTidePlot(QString filename, QString filter) {
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
+    printer.setPageSize(QPageSize::Letter);
     printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setPageOrientation(QPageLayout::Landscape);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(filename);
 

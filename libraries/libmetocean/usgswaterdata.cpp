@@ -21,6 +21,7 @@
 #include <QEventLoop>
 #include <QMap>
 #include <QVector>
+#include <QRegularExpression>
 
 UsgsWaterdata::UsgsWaterdata(Station &station, QDateTime startDate,
                              QDateTime endDate, int databaseOption,
@@ -110,9 +111,9 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   QStringList tempList;
   QString tempLine, TempDateString, TempTimeZoneString;
 
+  QRegularExpression re("[\n]");
   QString InputData(data);
-  QStringList SplitByLine =
-      InputData.split(QRegExp("[\n]"), QString::SkipEmptyParts);
+  QStringList SplitByLine = InputData.split(re, Qt::SkipEmptyParts);
 
   ParamStart = -1;
   ParamStop = -1;
@@ -161,7 +162,7 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
 
   for (size_t i = ParamStart; i <= ParamStop; i++) {
     tempLine = SplitByLine.value(i);
-    tempList = tempLine.split("  ", QString::SkipEmptyParts);
+    tempList = tempLine.split("  ", Qt::SkipEmptyParts);
 
     UsgsParameter p;
     p.ts = tempList.value(1).simplified();
@@ -219,7 +220,8 @@ int UsgsWaterdata::readUsgsData(QByteArray &data, Hmdf *output) {
   //...Read the data into the array
   for (size_t i = HeaderEnd; i < SplitByLine.length(); i++) {
     tempLine = SplitByLine.value(i);
-    tempList = tempLine.split(QRegExp("[\t]"));
+    QRegularExpression re("[\t]");
+    tempList = tempLine.split(re);
     TempDateString = tempList.value(2);
     TempTimeZoneString = tempList.value(3);
 

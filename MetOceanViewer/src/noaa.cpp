@@ -71,9 +71,7 @@ int Noaa::fetchNOAAData() {
   QString product1, product2;
 
   // Check for valid date range
-  if (this->m_startDate.operator==(this->m_endDate) ||
-      this->m_endDate.operator<(this->m_startDate))
-    return MetOceanViewer::Error::NOAA_INVALIDDATERANGE;
+  if (this->m_startDate==this->m_endDate || this->m_endDate<this->m_startDate) return MetOceanViewer::Error::NOAA_INVALIDDATERANGE;
 
   // Begin organizing the dates for download
   QDateTime localStartDate = this->m_startDate.addMSecs(-this->m_offsetSeconds);
@@ -288,7 +286,7 @@ int Noaa::plotNOAAStation() {
   } else {
     this->m_station =
         this->m_stationModel->findStation(*(this->m_selectedStation));
-    this->m_station.id() = this->m_station.id().toInt();
+    //this->m_station.id() = this->m_station.id().toInt();
 
     //...Grab the options from the UI
     this->m_startDate = this->m_startDateEdit->dateTime();
@@ -389,9 +387,9 @@ int Noaa::getNoaaProductSeriesNaming(QString &product1, QString &product2) {
 int Noaa::saveNOAAImage(QString filename, QString filter) {
   if (filter == "PDF (*.pdf)") {
     QPrinter printer(QPrinter::HighResolution);
-    printer.setPageSize(QPrinter::Letter);
+    printer.setPageSize(QPageSize::Letter);
     printer.setResolution(400);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setPageOrientation(QPageLayout::Landscape);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(filename);
 

@@ -117,7 +117,7 @@ void MainWindow::on_button_xtide_savedata_clicked() {
   QStringList filter2 = filter.split(" ");
   QString format = filter2.value(0);
 
-  if (TempString == NULL) return;
+  if (TempString.isEmpty()) return;
 
   Generic::splitPath(TempString, filename, this->previousDirectory);
 

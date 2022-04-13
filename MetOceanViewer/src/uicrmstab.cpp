@@ -47,7 +47,7 @@ void MainWindow::on_button_crms_savechart_clicked() {
   QString markerID = this->m_crms->getLoadedStation();
   QString markerID2 = this->m_crms->getCurrentStation();
 
-  if (markerID == -1) {
+  if (markerID == "-1") {
     QMessageBox::critical(this, tr("ERROR"),
                           tr("No Station has been selected."));
     return;

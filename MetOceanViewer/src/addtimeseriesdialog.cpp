@@ -242,19 +242,19 @@ QMenu *AddTimeseriesDialog::buildUnitConversionMenu() {
   QAction *miles2kilo = length->addAction("miles --> kilometers");
 
   connect(meters2feet, &QAction::triggered,
-          [=] { this->setUnitValue(3.28084); });
+          [this] { this->setUnitValue(3.28084); });
   connect(feet2meters, &QAction::triggered,
-          [=] { this->setUnitValue(0.3048); });
+          [this] { this->setUnitValue(0.3048); });
   connect(meters2inches, &QAction::triggered,
-          [=] { this->setUnitValue(39.3701); });
-  connect(feet2inches, &QAction::triggered, [=] { this->setUnitValue(12.0); });
+          [this] { this->setUnitValue(39.3701); });
+  connect(feet2inches, &QAction::triggered, [this] { this->setUnitValue(12.0); });
   connect(miles2meters, &QAction::triggered,
-          [=] { this->setUnitValue(1609.34); });
-  connect(miles2feet, &QAction::triggered, [=] { this->setUnitValue(5280.0); });
+          [this] { this->setUnitValue(1609.34); });
+  connect(miles2feet, &QAction::triggered, [this] { this->setUnitValue(5280.0); });
   connect(kilo2miles, &QAction::triggered,
-          [=] { this->setUnitValue(0.621371); });
+          [this] { this->setUnitValue(0.621371); });
   connect(miles2kilo, &QAction::triggered,
-          [=] { this->setUnitValue(1.60934); });
+          [this] { this->setUnitValue(1.60934); });
 
   QAction *mpsmph = speed->addAction("m/s --> mph");
   QAction *mphmps = speed->addAction("mph --> m/s");
@@ -266,15 +266,15 @@ QMenu *AddTimeseriesDialog::buildUnitConversionMenu() {
   QAction *fpskt = speed->addAction("f/s --> knots");
   QAction *ktfps = speed->addAction("knots --> f/s");
 
-  connect(mpsmph, &QAction::triggered, [=] { this->setUnitValue(2.23694); });
-  connect(mphmps, &QAction::triggered, [=] { this->setUnitValue(0.44704); });
-  connect(mphfps, &QAction::triggered, [=] { this->setUnitValue(1.46667); });
-  connect(mpskt, &QAction::triggered, [=] { this->setUnitValue(1.94384); });
-  connect(ktmps, &QAction::triggered, [=] { this->setUnitValue(0.514444); });
-  connect(mpsfps, &QAction::triggered, [=] { this->setUnitValue(3.28084); });
-  connect(fpsmps, &QAction::triggered, [=] { this->setUnitValue(0.3048); });
-  connect(fpskt, &QAction::triggered, [=] { this->setUnitValue(0.592484); });
-  connect(ktfps, &QAction::triggered, [=] { this->setUnitValue(1.68781); });
+  connect(mpsmph, &QAction::triggered, [this] { this->setUnitValue(2.23694); });
+  connect(mphmps, &QAction::triggered, [this] { this->setUnitValue(0.44704); });
+  connect(mphfps, &QAction::triggered, [this] { this->setUnitValue(1.46667); });
+  connect(mpskt, &QAction::triggered,  [this] { this->setUnitValue(1.94384); });
+  connect(ktmps, &QAction::triggered,  [this] { this->setUnitValue(0.514444); });
+  connect(mpsfps, &QAction::triggered, [this] { this->setUnitValue(3.28084); });
+  connect(fpsmps, &QAction::triggered, [this] { this->setUnitValue(0.3048); });
+  connect(fpskt, &QAction::triggered,  [this] { this->setUnitValue(0.592484); });
+  connect(ktfps, &QAction::triggered,  [this] { this->setUnitValue(1.68781); });
 
   QAction *mh202mb = pressure->addAction("mH20 --> mb");
   QAction *mb2mh20 = pressure->addAction("mb --> mH20");
@@ -283,13 +283,13 @@ QMenu *AddTimeseriesDialog::buildUnitConversionMenu() {
   QAction *mb2pa = pressure->addAction("mb --> pa");
   QAction *pa2mb = pressure->addAction("pa --> mb");
 
-  connect(mh202mb, &QAction::triggered, [=] { this->setUnitValue(98.07); });
-  connect(mb2mh20, &QAction::triggered, [=] { this->setUnitValue(0.010197); });
-  connect(mH202pa, &QAction::triggered, [=] { this->setUnitValue(9806.38); });
+  connect(mh202mb, &QAction::triggered, [this] { this->setUnitValue(98.07); });
+  connect(mb2mh20, &QAction::triggered, [this] { this->setUnitValue(0.010197); });
+  connect(mH202pa, &QAction::triggered, [this] { this->setUnitValue(9806.38); });
   connect(pa2mH20, &QAction::triggered,
-          [=] { this->setUnitValue(0.00010197442889221); });
-  connect(mb2pa, &QAction::triggered, [=] { this->setUnitValue(100.0); });
-  connect(pa2mb, &QAction::triggered, [=] { this->setUnitValue(0.01); });
+          [this] { this->setUnitValue(0.00010197442889221); });
+  connect(mb2pa, &QAction::triggered, [this] { this->setUnitValue(100.0); });
+  connect(pa2mb, &QAction::triggered, [this] { this->setUnitValue(0.01); });
 
   menu->addMenu(length);
   menu->addMenu(speed);
