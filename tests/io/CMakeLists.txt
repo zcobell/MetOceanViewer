@@ -8,6 +8,9 @@ mov_add_test(
         test_error.cpp
         test_read.cpp
         test_read_chain.cpp
+        test_text.cpp
+        test_text_file.cpp
+        test_atomic_file.cpp
     LIBRARIES mov::io
 )
 

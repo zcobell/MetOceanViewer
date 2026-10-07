@@ -10,7 +10,7 @@ find_package(PROJ CONFIG REQUIRED)
 
 mov_add_module(
     io
-    SOURCES error.cpp netcdf_library.cpp warning.cpp
+    SOURCES atomic_file.cpp error.cpp netcdf_library.cpp text.cpp text_file.cpp warning.cpp
     PUBLIC_LINK mov::core
     PRIVATE_LINK netCDF::netcdf PROJ::proj
 )
