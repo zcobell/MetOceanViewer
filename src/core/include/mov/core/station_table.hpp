@@ -3,17 +3,22 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cassert>
 #include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <optional>
 #include <ranges>
 #include <span>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "mov/core/detail/core_key.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -248,6 +253,23 @@ class StationTable {
 
   /// The number of samples over all stations and columns.
   [[nodiscard]] std::size_t total_samples() const noexcept;
+
+  /// Core only (convert): column k with metadata `meta` and f applied to
+  /// every sample at every station. The caller keeps the schema's tokens
+  /// unique (convert changes only the unit). Precondition:
+  /// k.value() < schema().size().
+  template <std::invocable<Sample> F>
+    requires std::same_as<std::invoke_result_t<F&, Sample>, Sample>
+  [[nodiscard]] StationTable rewrite_column(const detail::CoreKey& /*key*/,
+                                            ColumnIndex k, SeriesMeta meta,
+                                            F f) && {
+    assert(k.value() < schema_.size());
+    schema_[k.value()] = std::move(meta);
+    for (Column& column : columns_[k.value()]) {
+      std::ranges::transform(column, column.begin(), f);
+    }
+    return std::move(*this);
+  }
 
   friend bool operator==(const StationTable& a, const StationTable& b);
 

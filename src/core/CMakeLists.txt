@@ -18,3 +18,6 @@ target_include_directories(mov_core PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generat
 
 # HWM statistics (WP4).
 target_sources(mov_core PRIVATE hwm_stats.cpp)
+
+# Series operations and the datum shift (WP3).
+target_sources(mov_core PRIVATE series_ops.cpp datum_shift.cpp)
