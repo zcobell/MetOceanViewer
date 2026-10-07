@@ -5,7 +5,7 @@
 
 mov_add_module(
     core
-    SOURCES version.cpp units.cpp quantity.cpp meta.cpp timeseries.cpp station_table.cpp
+    SOURCES version.cpp units.cpp quantity.cpp meta.cpp timeseries.cpp station_table.cpp vector_series.cpp
 )
 
 # Generated from project(VERSION); private, the public API is mov/core/version.hpp.
