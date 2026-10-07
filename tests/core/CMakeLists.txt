@@ -81,3 +81,13 @@ elseif(MOV_REQUIRE_GOLDEN_CHECKS)
 else()
     message(STATUS "Python >= 3.11 not found: hwm_golden_is_current is not registered")
 endif()
+
+# Series operations and the datum shift (WP3). A separate executable keeps this
+# package's edit to the file a pure append; it can be folded into
+# mov_core_tests above.
+mov_add_test(
+    mov_core_ops_tests
+    SOURCES test_series_ops.cpp test_datum_shift.cpp
+    CONSTEXPR_SOURCES test_series_ops_constexpr.cpp
+    LIBRARIES mov::core
+)
