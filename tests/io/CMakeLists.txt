@@ -11,6 +11,9 @@ mov_add_test(
         test_text.cpp
         test_text_file.cpp
         test_atomic_file.cpp
+        test_cf_time.cpp
+        test_projection.cpp
+    CONSTEXPR_SOURCES test_cf_time_constexpr.cpp
     LIBRARIES mov::io
 )
 
