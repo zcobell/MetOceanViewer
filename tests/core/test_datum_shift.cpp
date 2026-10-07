@@ -45,6 +45,7 @@ using mov::core::TimeSeries;
 using mov::core::to_string;
 using mov::core::Unit;
 using mov::core::UnknownSourceDatum;
+using mov::core::UnknownUnit;
 using mov::core::VerticalDatum;
 using mov::test::axis_of;
 using mov::test::level_meta;
@@ -211,7 +212,8 @@ TEST_CASE(
     "[core][datum_shift]") {
   const DatumTable empty;  // knows MSL only
 
-  // 1. Not a length: before everything, including a missing datum.
+  // 1. No unit, or a unit that is not a length: before everything, including
+  // a missing datum.
   const auto wind = SeriesMeta::make(
       {.quantity = Quantity::wind_speed, .unit = SpeedUnit::meter_per_second});
   CHECK(shift(make_series(axis_of({0}), {val(1.0)}, wind), VerticalDatum::mllw,
@@ -219,7 +221,12 @@ TEST_CASE(
   const auto no_unit = level_meta(std::nullopt, VerticalDatum::msl);
   CHECK(shift(make_series(axis_of({0}), {val(1.0)}, no_unit),
               VerticalDatum::mllw,
-              empty) == std::unexpected{ShiftError{NotALengthSeries{}}});
+              empty) == std::unexpected{ShiftError{UnknownUnit{}}});
+  // No unit and no datum: the unit is checked first.
+  CHECK(shift(make_series(axis_of({0}), {val(1.0)},
+                          level_meta(std::nullopt, std::nullopt)),
+              VerticalDatum::mllw,
+              empty) == std::unexpected{ShiftError{UnknownUnit{}}});
   // A generic series can carry a datum, but a temperature is no length.
   const auto celsius =
       level_meta(Unit{TemperatureUnit::celsius}, VerticalDatum::msl, "t",

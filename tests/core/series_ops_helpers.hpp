@@ -5,12 +5,15 @@
 
 #pragma once
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <numeric>
 #include <optional>
 #include <random>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -39,7 +42,15 @@ namespace mov::test {
   REQUIRE(q.stats.has_value());
   const core::Extreme none{.value = 0.0, .time = at_ms(0)};
   return q.stats.value_or(
-      core::ValueStats{.min = none, .max = none, .mean = 0.0});
+      core::ValueStats{.count = 0, .min = none, .max = none, .mean = 0.0});
+}
+
+/// A Calibration that must be valid.
+[[nodiscard]] inline core::Calibration calibration(double scale,
+                                                   double offset) {
+  const auto c = core::Calibration::make({.scale = scale, .offset = offset});
+  REQUIRE(c.has_value());
+  return c.value_or(core::Calibration{});
 }
 
 /// parse_unit of text that must be a unit.
@@ -98,30 +109,61 @@ namespace mov::test {
   std::uniform_int_distribution<int> step{1, 5};
   std::uniform_int_distribution<int> quarter{-32, 32};
   std::uniform_int_distribution<int> kind{0, 9};
-  std::vector<core::Point> rows;
-  rows.reserve(n);
-  std::int64_t t = 0;
-  for (std::size_t i = 0; i < n; ++i) {
-    t += step(rng);
+  std::vector<std::int64_t> ms(n);
+  std::ranges::generate(ms, [&] { return std::int64_t{step(rng)}; });
+  std::partial_sum(ms.begin(), ms.end(), ms.begin());
+  std::vector<core::Point> rows(n);
+  std::ranges::transform(ms, rows.begin(), [&](std::int64_t t) {
     const int k = kind(rng);
     const core::Sample s = k == 0   ? core::Sample{core::Missing{}}
                            : k == 1 ? core::Sample{core::Dry{}}
                                     : val(quarter(rng) * 0.25);
-    rows.push_back({.time = at_ms(t), .sample = s});
-  }
+    return core::Point{.time = at_ms(t), .sample = s};
+  });
   return rows;
 }
 
 [[nodiscard]] inline core::TimeSeries series_of_rows(
     const std::vector<core::Point>& rows,
     core::SeriesMeta meta = core::SeriesMeta{}) {
-  core::TimeAxis times;
-  std::vector<core::Sample> samples;
-  for (const core::Point& p : rows) {
-    times.push_back(p.time);
-    samples.push_back(p.sample);
-  }
+  core::TimeAxis times(rows.size());
+  std::vector<core::Sample> samples(rows.size());
+  std::ranges::transform(rows, times.begin(), &core::Point::time);
+  std::ranges::transform(rows, samples.begin(), &core::Point::sample);
   return make_series(std::move(times), std::move(samples), std::move(meta));
+}
+
+/// The Bucket of rows: the ordered left fold.
+[[nodiscard]] inline core::Bucket bucket_of(std::span<const core::Point> rows) {
+  return std::accumulate(rows.begin(), rows.end(), core::Bucket{},
+                         [](const core::Bucket& acc, const core::Point& p) {
+                           return acc + core::Bucket::of(p.time, p.sample);
+                         });
+}
+
+// What a Bucket knows about its values, as optionals (no unchecked access in
+// the tests).
+[[nodiscard]] inline std::optional<core::Extreme> min_of(
+    const core::Bucket& b) {
+  return b.summary().transform(&core::ValueSummary::min);
+}
+[[nodiscard]] inline std::optional<core::Extreme> max_of(
+    const core::Bucket& b) {
+  return b.summary().transform(&core::ValueSummary::max);
+}
+[[nodiscard]] inline std::optional<core::Extreme> first_of(
+    const core::Bucket& b) {
+  return b.summary().transform(&core::ValueSummary::first);
+}
+[[nodiscard]] inline std::optional<core::Extreme> last_of(
+    const core::Bucket& b) {
+  return b.summary().transform(&core::ValueSummary::last);
+}
+[[nodiscard]] inline std::optional<double> sum_of(const core::Bucket& b) {
+  return b.summary().transform(&core::ValueSummary::sum);
+}
+[[nodiscard]] inline std::optional<double> mean_of(const core::Bucket& b) {
+  return b.summary().transform(&core::ValueSummary::mean);
 }
 
 }  // namespace mov::test

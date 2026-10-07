@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// Private to src/core: the value mapping shared by scale_offset, convert and
+// Private to src/core: the one value-mapping path of scale_offset, convert and
 // shift, so the three treat Missing, Dry and overflow alike.
 
 #pragma once
@@ -17,29 +17,32 @@
 
 namespace mov::core::detail {
 
-/// a applied to a value; Missing and Dry unchanged; a result that is not
-/// finite becomes Missing. The identity Affine returns every sample as it is
-/// (so -0.0 keeps its sign).
+/// a applied to one sample: Missing and Dry unchanged; a value that maps to a
+/// non-finite number becomes Missing.
 [[nodiscard]] inline Sample apply_affine(const Affine& a, Sample s) noexcept {
-  if (a == Affine{}) {
-    return s;
-  }
   if (const auto v = s.value()) {
     return finite_or_missing(a(*v));
   }
   return s;
 }
 
-/// The series with a applied to its values and `meta` as its metadata. The
-/// caller says how meta relates to the values (a unit or datum rewrite).
-[[nodiscard]] inline TimeSeries rebuilt(TimeSeries s, SeriesMeta meta,
-                                        const Affine& a) {
+/// The parts of `s` with a applied to the samples. The identity Affine is
+/// recognized here, once, and leaves the samples as they are (so -0.0 keeps
+/// its sign and no pass is made).
+[[nodiscard]] inline TimeSeriesParts mapped(TimeSeries s, const Affine& a) {
   TimeSeriesParts parts = std::move(s).into_parts();
-  std::ranges::transform(
-      parts.samples, parts.samples.begin(),
-      [&a](Sample x) noexcept { return apply_affine(a, x); });
+  if (not(a == Affine{})) {
+    std::ranges::transform(
+        parts.samples, parts.samples.begin(),
+        [&a](Sample x) noexcept { return apply_affine(a, x); });
+  }
+  return parts;
+}
+
+/// The series made of parts whose invariant is the one TimeSeries had.
+[[nodiscard]] inline TimeSeries assembled(TimeSeriesParts parts) {
   return TimeSeries{CoreAccess::key(), std::move(parts.times),
-                    std::move(parts.samples), std::move(meta)};
+                    std::move(parts.samples), std::move(parts.meta)};
 }
 
 }  // namespace mov::core::detail

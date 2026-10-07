@@ -20,27 +20,30 @@ namespace mov::core {
 std::expected<TimeSeries, ShiftError> shift(TimeSeries s, VerticalDatum to,
                                             const DatumTable& table) {
   const std::optional<Unit>& unit = s.meta().unit();
-  const LengthUnit* length = unit ? std::get_if<LengthUnit>(&*unit) : nullptr;
+  if (not unit) {
+    return std::unexpected{ShiftError{UnknownUnit{}}};
+  }
+  const LengthUnit* length = std::get_if<LengthUnit>(&*unit);
   if (length == nullptr) {
     return std::unexpected{ShiftError{NotALengthSeries{}}};
   }
-  // `from` and the rewritten metadata are one fact: both are engaged iff the
-  // series has a datum.
-  const std::optional<VerticalDatum> from = s.meta().datum();
-  std::optional<SeriesMeta> shifted =
+  // The source datum and the rewritten metadata come together.
+  std::optional<DatumRewrite> rewrite =
       s.meta().rewrite_datum(detail::CoreAccess::key(), to);
-  if (not from or not shifted) {
+  if (not rewrite) {
     return std::unexpected{ShiftError{UnknownSourceDatum{}}};
   }
-  if (*from == to) {
+  if (rewrite->from == to) {
     return s;
   }
-  const auto offset = table.offset(*from, to);
+  const auto offset = table.offset(rewrite->from, to);
   if (not offset) {
     return std::unexpected{ShiftError{offset.error()}};
   }
-  return detail::rebuilt(std::move(s), std::move(*shifted),
-                         Affine{.scale = 1.0, .offset = offset->as(*length)});
+  TimeSeriesParts parts = detail::mapped(
+      std::move(s), Affine{.scale = 1.0, .offset = offset->as(*length)});
+  parts.meta = std::move(rewrite->meta);
+  return detail::assembled(std::move(parts));
 }
 
 }  // namespace mov::core

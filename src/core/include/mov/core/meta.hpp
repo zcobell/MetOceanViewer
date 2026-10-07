@@ -17,6 +17,8 @@
 
 namespace mov::core {
 
+struct DatumRewrite;
+
 enum class AssumeUnitError : std::uint8_t { already_set };
 enum class AssumeDatumError : std::uint8_t { already_set, not_applicable };
 
@@ -81,18 +83,11 @@ class SeriesMeta {
     return copy;
   }
 
-  /// For shift(): the metadata after the values were shifted to `to`.
-  /// Replaces an engaged datum only (which implies datum_applicable);
-  /// nullopt if none is engaged.
-  [[nodiscard]] std::optional<SeriesMeta> rewrite_datum(
-      const detail::CoreKey& /*key*/, VerticalDatum to) const {
-    if (not datum_) {
-      return std::nullopt;
-    }
-    SeriesMeta copy = *this;
-    copy.datum_ = to;
-    return copy;
-  }
+  /// For shift(): the datum the series has and the metadata after the values
+  /// were shifted to `to`. Replaces an engaged datum only (which implies
+  /// datum_applicable); nullopt if none is engaged.
+  [[nodiscard]] std::optional<DatumRewrite> rewrite_datum(
+      const detail::CoreKey& key, VerticalDatum to) const;
 
   friend bool operator==(const SeriesMeta&, const SeriesMeta&) = default;
 
@@ -102,5 +97,22 @@ class SeriesMeta {
   Fields f_;
   std::optional<VerticalDatum> datum_;
 };
+
+/// What SeriesMeta::rewrite_datum returns: the old datum and the new metadata,
+/// so a caller cannot read one without the other.
+struct DatumRewrite {
+  VerticalDatum from;
+  SeriesMeta meta;
+};
+
+inline std::optional<DatumRewrite> SeriesMeta::rewrite_datum(
+    const detail::CoreKey& /*key*/, VerticalDatum to) const {
+  if (not datum_) {
+    return std::nullopt;
+  }
+  SeriesMeta copy = *this;
+  copy.datum_ = to;
+  return DatumRewrite{.from = *datum_, .meta = std::move(copy)};
+}
 
 }  // namespace mov::core

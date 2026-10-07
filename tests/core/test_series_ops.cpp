@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "mov/core/datum.hpp"
+#include "mov/core/datum_shift.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
@@ -34,10 +35,9 @@
 #include "series_ops_helpers.hpp"
 #include "test_helpers.hpp"
 
-using mov::core::Affine;
 using mov::core::Bucket;
+using mov::core::Calibration;
 using mov::core::ColumnIndex;
-using mov::core::combine;
 using mov::core::convert;
 using mov::core::DataSource;
 using mov::core::Dry;
@@ -47,9 +47,10 @@ using mov::core::Extreme;
 using mov::core::FileStation;
 using mov::core::GenericQuantity;
 using mov::core::IncompatibleUnits;
+using mov::core::index_window;
+using mov::core::join;
 using mov::core::LengthUnit;
 using mov::core::Location;
-using mov::core::max_abs_time_ms;
 using mov::core::Missing;
 using mov::core::ObsVsPred;
 using mov::core::Point;
@@ -61,6 +62,7 @@ using mov::core::ResidualErrc;
 using mov::core::Sample;
 using mov::core::scale_offset;
 using mov::core::SeriesMeta;
+using mov::core::shift;
 using mov::core::shift_time;
 using mov::core::slice;
 using mov::core::SpeedUnit;
@@ -79,26 +81,28 @@ using mov::core::UnitError;
 using mov::core::UnknownUnit;
 using mov::core::ValueRange;
 using mov::core::VerticalDatum;
+using mov::core::Window;
 using mov::test::at_ms;
 using mov::test::axis_of;
+using mov::test::bucket_of;
+using mov::test::calibration;
+using mov::test::first_of;
+using mov::test::last_of;
 using mov::test::level_meta;
 using mov::test::make_series;
+using mov::test::max_of;
+using mov::test::mean_of;
+using mov::test::min_of;
 using mov::test::near;
 using mov::test::near_abs;
 using mov::test::random_rows;
 using mov::test::series_of_rows;
 using mov::test::stats_of;
+using mov::test::sum_of;
 using mov::test::unit_of;
 using mov::test::val;
 
 namespace {
-
-Bucket bucket_of(std::span<const Point> rows) {
-  return std::accumulate(rows.begin(), rows.end(), Bucket{},
-                         [](const Bucket& acc, const Point& p) {
-                           return acc + Bucket::of(p.time, p.sample);
-                         });
-}
 
 std::vector<Sample> samples_of(const TimeSeries& s) {
   return {s.samples().begin(), s.samples().end()};
@@ -108,31 +112,59 @@ std::vector<Time> times_of(const TimeSeries& s) {
   return {s.times().begin(), s.times().end()};
 }
 
+std::uint64_t bits(double v) { return std::bit_cast<std::uint64_t>(v); }
+
+// Three buckets from a random cut of rows: the pieces of a left-to-right run.
+struct Pieces {
+  Bucket a;
+  Bucket b;
+  Bucket c;
+  Bucket whole;
+};
+
+Pieces cut_randomly(std::mt19937& rng, const std::vector<Point>& rows) {
+  std::uniform_int_distribution<std::size_t> cut{0, rows.size()};
+  std::size_t i = cut(rng);
+  std::size_t j = cut(rng);
+  if (i > j) {
+    std::swap(i, j);
+  }
+  const std::span<const Point> all{rows};
+  return {.a = bucket_of(all.first(i)),
+          .b = bucket_of(all.subspan(i, j - i)),
+          .c = bucket_of(all.subspan(j)),
+          .whole = bucket_of(all)};
+}
+
 }  // namespace
 
 // ---- Bucket ----
 
 TEST_CASE("Bucket::of classifies one sample", "[core][series_ops][bucket]") {
   const Bucket v = Bucket::of(at_ms(7), val(2.5));
+  const Extreme only{.value = 2.5, .time = at_ms(7)};
   CHECK(v.values() == 1);
   CHECK(v.missing() == 0);
   CHECK(v.dry() == 0);
-  CHECK(v.min() == Extreme{.value = 2.5, .time = at_ms(7)});
-  CHECK(v.max() == v.min());
-  CHECK(v.sum() == 2.5);
+  CHECK(min_of(v) == only);
+  CHECK(max_of(v) == only);
+  CHECK(first_of(v) == only);
+  CHECK(last_of(v) == only);
+  CHECK(sum_of(v) == 2.5);
+  CHECK(mean_of(v) == 2.5);
   CHECK(not v.has_gap());
 
   const Bucket m = Bucket::of(at_ms(1), Sample{Missing{}});
   CHECK(m.missing() == 1);
   CHECK(m.values() == 0);
   CHECK(m.dry() == 0);
-  CHECK(not m.min());
-  CHECK(not m.max());
+  CHECK(not m.summary());
   CHECK(m.has_gap());
 
   const Bucket d = Bucket::of(at_ms(1), Sample{Dry{}});
   CHECK(d.dry() == 1);
   CHECK(d.missing() == 0);
+  CHECK(not d.summary());
   CHECK(d.has_gap());
 }
 
@@ -141,7 +173,7 @@ TEST_CASE("Bucket: the default is an exact two-sided identity",
   std::mt19937 rng = mov::test::fixed_rng();
   CHECK(Bucket{} == Bucket{});
   CHECK(Bucket{}.values() == 0);
-  CHECK(not Bucket{}.min());
+  CHECK(not Bucket{}.summary());
   for (int trial = 0; trial < 100; ++trial) {
     const auto rows =
         random_rows(rng, 1 + (static_cast<std::size_t>(trial) % 40));
@@ -157,20 +189,11 @@ TEST_CASE("Bucket: + is associative, exactly on dyadic data",
   for (int trial = 0; trial < 200; ++trial) {
     const auto rows =
         random_rows(rng, 3 + (static_cast<std::size_t>(trial) % 60));
-    std::uniform_int_distribution<std::size_t> cut{0, rows.size()};
-    std::size_t i = cut(rng);
-    std::size_t j = cut(rng);
-    if (i > j) {
-      std::swap(i, j);
-    }
-    const std::span<const Point> all{rows};
-    const Bucket a = bucket_of(all.first(i));
-    const Bucket b = bucket_of(all.subspan(i, j - i));
-    const Bucket c = bucket_of(all.subspan(j));
-    INFO("cut points " << i << ", " << j << " of " << rows.size());
+    const auto [a, b, c, whole] = cut_randomly(rng, rows);
     CHECK((a + b) + c == a + (b + c));
-    // Any grouping equals the whole fold, because the sums are exact.
-    CHECK((a + b) + c == bucket_of(all));
+    // Any grouping equals the whole fold, because the sums are exact. That
+    // includes first, last, min and max.
+    CHECK((a + b) + c == whole);
   }
 }
 
@@ -180,29 +203,22 @@ TEST_CASE("Bucket: + is associative within rounding on arbitrary doubles",
   std::uniform_real_distribution<double> value{-1000.0, 1000.0};
   for (int trial = 0; trial < 200; ++trial) {
     const std::size_t n = 3 + (static_cast<std::size_t>(trial) % 60);
-    std::vector<Point> rows;
-    rows.reserve(n);
-    for (std::size_t k = 0; k < n; ++k) {
-      rows.push_back({.time = at_ms(static_cast<std::int64_t>(k)),
-                      .sample = val(value(rng))});
-    }
-    std::uniform_int_distribution<std::size_t> cut{0, n};
-    std::size_t i = cut(rng);
-    std::size_t j = cut(rng);
-    if (i > j) {
-      std::swap(i, j);
-    }
-    const std::span<const Point> all{rows};
-    const Bucket a = bucket_of(all.first(i));
-    const Bucket b = bucket_of(all.subspan(i, j - i));
-    const Bucket c = bucket_of(all.subspan(j));
+    std::vector<Point> rows(n);
+    std::ranges::generate(rows, [&, k = std::int64_t{0}]() mutable {
+      return Point{.time = at_ms(k++), .sample = val(value(rng))};
+    });
+    const auto [a, b, c, whole] = cut_randomly(rng, rows);
     const Bucket left = (a + b) + c;
     const Bucket right = a + (b + c);
     CHECK(left.values() == right.values());
-    CHECK(left.min() == right.min());
-    CHECK(left.max() == right.max());
-    CHECK(near_abs(left.sum(), right.sum(), 1e-9));
-    CHECK(near_abs(left.sum(), bucket_of(all).sum(), 1e-9));
+    CHECK(min_of(left) == min_of(right));
+    CHECK(max_of(left) == max_of(right));
+    CHECK(first_of(left) == first_of(right));
+    CHECK(last_of(left) == last_of(right));
+    CHECK(near_abs(sum_of(left).value_or(0.0), sum_of(right).value_or(0.0),
+                   1e-9));
+    CHECK(near_abs(sum_of(left).value_or(0.0), sum_of(whole).value_or(0.0),
+                   1e-9));
   }
 }
 
@@ -210,10 +226,47 @@ TEST_CASE("Bucket: the first of equal extremes wins and + is not commutative",
           "[core][series_ops][bucket]") {
   const Bucket early = Bucket::of(at_ms(1), val(5.0));
   const Bucket late = Bucket::of(at_ms(2), val(5.0));
-  CHECK((early + late).max() == Extreme{.value = 5.0, .time = at_ms(1)});
-  CHECK((early + late).min() == Extreme{.value = 5.0, .time = at_ms(1)});
-  CHECK((late + early).max() == Extreme{.value = 5.0, .time = at_ms(2)});
+  CHECK(max_of(early + late) == Extreme{.value = 5.0, .time = at_ms(1)});
+  CHECK(min_of(early + late) == Extreme{.value = 5.0, .time = at_ms(1)});
+  CHECK(max_of(late + early) == Extreme{.value = 5.0, .time = at_ms(2)});
   CHECK(early + late != late + early);
+}
+
+TEST_CASE("Bucket: first and last are the earliest and latest value",
+          "[core][series_ops][bucket]") {
+  const Bucket gap = Bucket::of(at_ms(0), Sample{Missing{}});
+  const Bucket dry = Bucket::of(at_ms(1), Sample{Dry{}});
+  const Bucket p = Bucket::of(at_ms(2), val(1.0));
+  const Bucket q = Bucket::of(at_ms(3), val(9.0));
+  const Extreme at_p{.value = 1.0, .time = at_ms(2)};
+  const Extreme at_q{.value = 9.0, .time = at_ms(3)};
+  CHECK(first_of(gap + dry + p + q) == at_p);
+  CHECK(last_of(gap + dry + p + q) == at_q);
+  CHECK(first_of(p + q + gap) == at_p);
+  CHECK(last_of(p + q + gap + dry) == at_q);
+  // Left-biased first, right-biased last.
+  CHECK(first_of(q + p) == at_q);
+  CHECK(last_of(q + p) == at_p);
+
+  std::mt19937 rng = mov::test::fixed_rng();
+  for (int trial = 0; trial < 100; ++trial) {
+    const auto rows =
+        random_rows(rng, 1 + (static_cast<std::size_t>(trial) % 40));
+    const auto is_value = [](const Point& r) { return r.sample.is_value(); };
+    const Bucket b = bucket_of(rows);
+    const auto first_row = std::ranges::find_if(rows, is_value);
+    const auto last_row =
+        std::ranges::find_if(rows.rbegin(), rows.rend(), is_value);
+    if (first_row == rows.end()) {
+      CHECK(not b.summary());
+      continue;
+    }
+    CHECK(first_of(b) ==
+          Extreme{.value = first_row->sample.value().value_or(0.0),
+                  .time = first_row->time});
+    CHECK(last_of(b) == Extreme{.value = last_row->sample.value().value_or(0.0),
+                                .time = last_row->time});
+  }
 }
 
 TEST_CASE("Bucket: counts, extremes and the gap flag of a mixed run",
@@ -227,20 +280,80 @@ TEST_CASE("Bucket: counts, extremes and the gap flag of a mixed run",
   CHECK(b.values() == 3);
   CHECK(b.missing() == 1);
   CHECK(b.dry() == 1);
-  CHECK(b.min() == Extreme{.value = -1.0, .time = at_ms(2)});
-  CHECK(b.max() == Extreme{.value = 3.0, .time = at_ms(0)});
-  CHECK(b.sum() == 5.0);
+  CHECK(min_of(b) == Extreme{.value = -1.0, .time = at_ms(2)});
+  CHECK(max_of(b) == Extreme{.value = 3.0, .time = at_ms(0)});
+  CHECK(first_of(b) == Extreme{.value = 3.0, .time = at_ms(0)});
+  CHECK(last_of(b) == Extreme{.value = 3.0, .time = at_ms(4)});
+  CHECK(sum_of(b) == 5.0);
   CHECK(b.has_gap());
 }
 
-TEST_CASE("summarize is the ordered left fold of the points",
+TEST_CASE("Bucket: the mean is bit-identical to the plain sum over n",
+          "[core][series_ops][bucket]") {
+  std::mt19937 rng = mov::test::fixed_rng();
+  std::uniform_real_distribution<double> value{-1e6, 1e6};
+  std::uniform_real_distribution<double> tiny{-1e-20, 1e-20};
+  for (int trial = 0; trial < 200; ++trial) {
+    const std::size_t n = 1 + (static_cast<std::size_t>(trial) % 80);
+    std::vector<double> v(n);
+    std::ranges::generate(v, [&] { return value(rng) + tiny(rng); });
+    std::vector<Point> rows(n);
+    std::ranges::transform(v, rows.begin(),
+                           [k = std::int64_t{0}](double x) mutable {
+                             return Point{.time = at_ms(k++), .sample = val(x)};
+                           });
+    // The ordered left fold of the plain doubles.
+    const double plain = std::accumulate(v.begin(), v.end(), 0.0);
+    const Bucket b = bucket_of(rows);
+    REQUIRE(sum_of(b).has_value());
+    CHECK(bits(sum_of(b).value_or(0.0)) == bits(plain));
+    CHECK(bits(mean_of(b).value_or(0.0)) ==
+          bits(plain / static_cast<double>(n)));
+  }
+}
+
+TEST_CASE("Bucket: huge values neither overflow nor make a NaN",
+          "[core][series_ops][bucket]") {
+  constexpr double huge = 1.7e308;
+  const auto at = [](std::int64_t t, double x) {
+    return Bucket::of(at_ms(t), val(x));
+  };
+  // The sum of three of them is out of range, but the mean is not.
+  const Bucket triple = at(0, huge) + at(1, huge) + at(2, huge);
+  CHECK(not std::isfinite(sum_of(triple).value_or(0.0)));
+  CHECK(near(mean_of(triple).value_or(0.0), huge));
+
+  // inf + -inf would be NaN; here every grouping gives the same exact answer.
+  const Bucket a = at(0, huge);
+  const Bucket b = at(1, huge);
+  const Bucket c = at(2, -huge);
+  const Bucket d = at(3, -huge);
+  const Bucket left = ((a + b) + c) + d;
+  CHECK(left == a + (b + (c + d)));
+  CHECK(left == (a + b) + (c + d));
+  CHECK(left == (a + (b + c)) + d);
+  CHECK(sum_of(left) == 0.0);
+  CHECK(mean_of(left) == 0.0);
+  CHECK(std::isfinite(mean_of(a + b + c).value_or(0.0)));
+  CHECK(near(mean_of(a + b + c).value_or(0.0), huge / 3.0));
+}
+
+TEST_CASE("summarize is the ordered left fold, over a series or spans",
           "[core][series_ops][bucket]") {
   CHECK(summarize(TimeSeries{}) == Bucket{});
   std::mt19937 rng = mov::test::fixed_rng();
   for (int trial = 0; trial < 50; ++trial) {
     const auto rows =
         random_rows(rng, 1 + (static_cast<std::size_t>(trial) % 50));
-    CHECK(summarize(series_of_rows(rows)) == bucket_of(rows));
+    const TimeSeries s = series_of_rows(rows);
+    CHECK(summarize(s) == bucket_of(rows));
+    CHECK(summarize(s.times(), s.samples()) == summarize(s));
+    // A sub-span summarizes that part of the series.
+    const std::size_t from = rows.size() / 3;
+    const std::size_t to = rows.size() - (rows.size() / 4);
+    CHECK(summarize(s.times().subspan(from, to - from),
+                    s.samples().subspan(from, to - from)) ==
+          bucket_of(std::span<const Point>{rows}.subspan(from, to - from)));
   }
 }
 
@@ -284,22 +397,21 @@ TEST_CASE("extent of several series is the true min and max (B13)",
   CHECK(extent(empties) == std::nullopt);
 }
 
-TEST_CASE("combine of extents is a semilattice with the empty extent as unit",
+TEST_CASE("join of extents is a semilattice with the empty extent as unit",
           "[core][series_ops][extent]") {
   std::mt19937 rng = mov::test::fixed_rng();
   std::vector<std::optional<Extent>> pool{std::nullopt};
-  for (int k = 0; k < 12; ++k) {
-    pool.push_back(extent(
-        series_of_rows(random_rows(rng, static_cast<std::size_t>(k) % 5))));
+  for (std::size_t k = 0; k < 12; ++k) {
+    pool.push_back(extent(series_of_rows(random_rows(rng, k % 5))));
   }
   for (const auto& a : pool) {
-    CHECK(combine(a, std::nullopt) == a);
-    CHECK(combine(std::nullopt, a) == a);
-    CHECK(combine(a, a) == a);
+    CHECK(join(a, std::nullopt) == a);
+    CHECK(join(std::nullopt, a) == a);
+    CHECK(join(a, a) == a);
     for (const auto& b : pool) {
-      CHECK(combine(a, b) == combine(b, a));
+      CHECK(join(a, b) == join(b, a));
       for (const auto& c : pool) {
-        CHECK(combine(combine(a, b), c) == combine(a, combine(b, c)));
+        CHECK(join(join(a, b), c) == join(a, join(b, c)));
       }
     }
   }
@@ -308,13 +420,15 @@ TEST_CASE("combine of extents is a semilattice with the empty extent as unit",
 // ---- quick_stats ----
 
 TEST_CASE("quick_stats is total", "[core][series_ops][quick_stats]") {
-  CHECK(quick_stats(TimeSeries{}) ==
-        QuickStats{.values = 0, .missing = 0, .dry = 0, .stats = std::nullopt});
+  const QuickStats none = quick_stats(TimeSeries{});
+  CHECK(none == QuickStats{.missing = 0, .dry = 0, .stats = std::nullopt});
+  CHECK(none.values() == 0);
   const TimeSeries gaps = make_series(
       axis_of({1, 2, 3}), {Sample{Missing{}}, Sample{Dry{}}, Sample{Missing{}}},
       level_meta());
-  CHECK(quick_stats(gaps) ==
-        QuickStats{.values = 0, .missing = 2, .dry = 1, .stats = std::nullopt});
+  const QuickStats g = quick_stats(gaps);
+  CHECK(g == QuickStats{.missing = 2, .dry = 1, .stats = std::nullopt});
+  CHECK(g.values() == 0);
 }
 
 TEST_CASE("quick_stats counts and summarizes",
@@ -324,10 +438,11 @@ TEST_CASE("quick_stats counts and summarizes",
       {val(1.0), Sample{Missing{}}, val(4.0), Sample{Dry{}}, val(1.0)},
       level_meta());
   const QuickStats q = quick_stats(s);
-  CHECK(q.values == 3);
+  CHECK(q.values() == 3);
   CHECK(q.missing == 1);
   CHECK(q.dry == 1);
   const mov::core::ValueStats stats = stats_of(q);
+  CHECK(stats.count == 3);
   CHECK(stats.min == Extreme{.value = 1.0, .time = at_ms(0)});  // first
   CHECK(stats.max == Extreme{.value = 4.0, .time = at_ms(20)});
   CHECK(stats.mean == 2.0);
@@ -358,7 +473,7 @@ TEST_CASE("quick_stats peak is the first maximum, as max_element finds it",
     CHECK(stats.max.value == peak->sample.value());
     CHECK(stats.min.time == lowest->time);
     CHECK(stats.min.value == lowest->sample.value());
-    CHECK(q.values == values.size());
+    CHECK(q.values() == values.size());
   }
 }
 
@@ -368,18 +483,13 @@ TEST_CASE("quick_stats mean stays finite when the sum overflows",
   const TimeSeries same = make_series(
       axis_of({0, 1, 2, 3, 4}),
       {val(huge), Sample{Missing{}}, val(huge), Sample{Dry{}}, val(huge)});
-  const QuickStats q = quick_stats(same);
-  CHECK(near(stats_of(q).mean, huge));
+  CHECK(near(stats_of(quick_stats(same)).mean, huge));
 
   // inf + (-inf) would be NaN.
   const TimeSeries opposite = make_series(
       axis_of({0, 1, 2, 3}), {val(huge), val(huge), val(-huge), val(-huge)});
-  const QuickStats r = quick_stats(opposite);
-  CHECK(near_abs(stats_of(r).mean, 0.0, 1e300));
-  CHECK(std::isfinite(stats_of(r).mean));
+  CHECK(stats_of(quick_stats(opposite)).mean == 0.0);
 }
-
-// ---- residual ----
 
 namespace {
 
@@ -399,6 +509,7 @@ ObsVsPred pair_of(const SeriesMeta& o, const SeriesMeta& p) {
 
 }  // namespace
 
+// ---- residual ----
 TEST_CASE("residual is observed minus predicted on equal times only",
           "[core][series_ops][residual]") {
   const ObsVsPred pair{.observed = make_series(axis_of({0, 1, 2, 3, 5}),
@@ -418,7 +529,7 @@ TEST_CASE("residual is observed minus predicted on equal times only",
 }
 
 TEST_CASE("residual merge-join edge cases", "[core][series_ops][residual]") {
-  const auto join = [](TimeAxis a, TimeAxis b) {
+  const auto joined_times = [](TimeAxis a, TimeAxis b) {
     const std::size_t n = a.size();
     const std::size_t m = b.size();
     const ObsVsPred pair{
@@ -437,40 +548,139 @@ TEST_CASE("residual merge-join edge cases", "[core][series_ops][residual]") {
     }
     return out;
   };
-  CHECK(join({}, {}).empty());
-  CHECK(join(axis_of({1, 2}), {}).empty());
-  CHECK(join({}, axis_of({1, 2})).empty());
-  CHECK(join(axis_of({1, 2, 3}), axis_of({4, 5})).empty());  // disjoint
-  CHECK(join(axis_of({4, 5}), axis_of({1, 2, 3})).empty());
-  CHECK(join(axis_of({1, 3, 5}), axis_of({2, 4, 6})).empty());  // interleaved
-  CHECK(join(axis_of({1, 2, 3}), axis_of({1, 2, 3})) == at({1, 2, 3}));
-  CHECK(join(axis_of({1, 2, 3, 4, 5}), axis_of({3})) == at({3}));
-  CHECK(join(axis_of({3}), axis_of({1, 2, 3, 4, 5})) == at({3}));
+  CHECK(joined_times({}, {}).empty());
+  CHECK(joined_times(axis_of({1, 2}), {}).empty());
+  CHECK(joined_times({}, axis_of({1, 2})).empty());
+  CHECK(joined_times(axis_of({1, 2, 3}), axis_of({4, 5})).empty());  // disjoint
+  CHECK(joined_times(axis_of({4, 5}), axis_of({1, 2, 3})).empty());
+  CHECK(joined_times(axis_of({1, 3, 5}), axis_of({2, 4, 6}))
+            .empty());  // interleaved
+  CHECK(joined_times(axis_of({1, 2, 3}), axis_of({1, 2, 3})) == at({1, 2, 3}));
+  CHECK(joined_times(axis_of({1, 2, 3, 4, 5}), axis_of({3})) == at({3}));
+  CHECK(joined_times(axis_of({3}), axis_of({1, 2, 3, 4, 5})) == at({3}));
   // Only the first and the last match.
-  CHECK(join(axis_of({1, 2, 9}), axis_of({1, 5, 9})) == at({1, 9}));
+  CHECK(joined_times(axis_of({1, 2, 9}), axis_of({1, 5, 9})) == at({1, 9}));
   // Neighbouring milliseconds are not equal times.
-  CHECK(join(axis_of({10}), axis_of({11})).empty());
+  CHECK(joined_times(axis_of({10}), axis_of({11})).empty());
 }
 
-TEST_CASE("residual meta: generic value, common unit, no datum, minus label",
+TEST_CASE("residual output: the difference quantity, common unit, no datum",
           "[core][series_ops][residual]") {
   const auto r = residual(pair_of(obs_meta(), pred_meta()));
   REQUIRE(r.has_value());
-  CHECK(r->meta().quantity() ==
-        mov::core::QuantityId{GenericQuantity::value()});
+  CHECK(r->meta().quantity() == mov::core::QuantityId{Quantity::difference});
   CHECK(r->meta().unit() == std::optional<Unit>{metre});
   CHECK(r->meta().datum() == std::nullopt);
   // "obs" U+2212 "pred", with the sign as its UTF-8 bytes.
   CHECK(r->meta().label() == "obs \xE2\x88\x92 pred");
+  // Not a water level: a datum cannot be added, and it cannot be shifted.
+  CHECK(r->meta().assume_datum(VerticalDatum::msl) ==
+        std::unexpected{mov::core::AssumeDatumError::not_applicable});
+  CHECK(
+      shift(*r, VerticalDatum::mllw, mov::core::DatumTable{}) ==
+      std::unexpected{mov::core::ShiftError{mov::core::UnknownSourceDatum{}}});
+}
+
+TEST_CASE("a residual can feed a residual", "[core][series_ops][residual]") {
+  const auto first = residual(pair_of(obs_meta(), pred_meta()));
+  REQUIRE(first.has_value());
+  const auto second =
+      residual(ObsVsPred{.observed = *first, .predicted = *first});
+  REQUIRE(second.has_value());
+  CHECK(second->meta().quantity() ==
+        mov::core::QuantityId{Quantity::difference});
+  CHECK(samples_of(*second) == std::vector<Sample>(2, val(0.0)));
+  // But a difference is not a water level.
+  const auto level =
+      make_series(axis_of({0, 1}), {val(1.0), val(1.0)}, pred_meta());
+  CHECK(residual(ObsVsPred{.observed = *first, .predicted = level}) ==
+        std::unexpected{ResidualErrc::quantities_differ});
+}
+
+TEST_CASE("residual needs the same quantity or an observed and its prediction",
+          "[core][series_ops][residual]") {
+  const auto meta_for = [](Quantity q, const char* label) {
+    const bool takes_datum = mov::core::datum_applicable(q);
+    return level_meta(
+        metre, takes_datum ? std::optional{VerticalDatum::msl} : std::nullopt,
+        label, q);
+  };
+  const auto with = [&meta_for](Quantity o, Quantity p) {
+    return pair_of(meta_for(o, "o"), meta_for(p, "p"));
+  };
+  CHECK(residual(with(Quantity::water_level, Quantity::water_level_prediction))
+            .has_value());
+  CHECK(
+      residual(with(Quantity::water_level, Quantity::water_level)).has_value());
+  CHECK(residual(with(Quantity::water_level_prediction,
+                      Quantity::water_level_prediction))
+            .has_value());
+  // The pair is ordered: observed first.
+  CHECK(
+      residual(with(Quantity::water_level_prediction, Quantity::water_level)) ==
+      std::unexpected{ResidualErrc::quantities_differ});
+  CHECK(residual(with(Quantity::water_level, Quantity::wave_height)) ==
+        std::unexpected{ResidualErrc::quantities_differ});
+  CHECK(residual(with(Quantity::wind_speed, Quantity::wind_gust)) ==
+        std::unexpected{ResidualErrc::quantities_differ});
+
+  // Generic quantities match by token.
+  const auto generic = [](const char* token, const char* standard) {
+    const auto g =
+        GenericQuantity::parse({.token = token, .standard_name = standard});
+    REQUIRE(g.has_value());
+    return mov::core::QuantityId{g.value_or(GenericQuantity::value())};
+  };
+  const auto meta_of = [](mov::core::QuantityId q) {
+    return level_meta(metre, VerticalDatum::msl, "g", std::move(q));
+  };
+  CHECK(residual(
+            pair_of(meta_of(generic("ph", "a")), meta_of(generic("ph", "b"))))
+            .has_value());
+  CHECK(residual(
+            pair_of(meta_of(generic("ph", "")), meta_of(generic("sal", "")))) ==
+        std::unexpected{ResidualErrc::quantities_differ});
+  CHECK(residual(pair_of(meta_of(generic("ph", "")),
+                         level_meta(metre, VerticalDatum::msl, "w",
+                                    Quantity::water_level))) ==
+        std::unexpected{ResidualErrc::quantities_differ});
+}
+
+TEST_CASE("residual checks quantities, then units, temperatures, datums",
+          "[core][series_ops][residual]") {
+  const auto feet = [](Quantity q, const char* label) {
+    return level_meta(Unit{LengthUnit::foot}, std::nullopt, label, q);
+  };
+  // Quantities come first: the units and datums are also wrong here.
+  CHECK(residual(pair_of(
+            level_meta(std::nullopt, std::nullopt, "o", Quantity::wave_height),
+            feet(Quantity::water_level, "p"))) ==
+        std::unexpected{ResidualErrc::quantities_differ});
+  // Then units.
+  CHECK(residual(pair_of(obs_meta(std::nullopt),
+                         feet(Quantity::water_level_prediction, "p"))) ==
+        std::unexpected{ResidualErrc::units_differ});
+  // Then temperatures, then datums.
+  const auto air = [](TemperatureUnit u) {
+    return level_meta(Unit{u}, std::nullopt, "t", Quantity::air_temperature);
+  };
+  CHECK(residual(pair_of(air(TemperatureUnit::celsius),
+                         air(TemperatureUnit::celsius))) ==
+        std::unexpected{ResidualErrc::temperature_difference});
+  CHECK(residual(pair_of(obs_meta(std::nullopt), pred_meta(std::nullopt))) ==
+        std::unexpected{ResidualErrc::datum_unknown});
 }
 
 TEST_CASE("residual needs known, equal units", "[core][series_ops][residual]") {
-  const auto no_unit = level_meta(std::nullopt, VerticalDatum::msl);
-  CHECK(residual(pair_of(no_unit, pred_meta())) ==
-        std::unexpected{ResidualErrc::unit_unknown});
+  const auto no_unit = level_meta(std::nullopt, VerticalDatum::msl, "p",
+                                  Quantity::water_level_prediction);
   CHECK(residual(pair_of(obs_meta(), no_unit)) ==
         std::unexpected{ResidualErrc::unit_unknown});
-  CHECK(residual(pair_of(no_unit, no_unit)) ==
+  const auto obs_no_unit =
+      level_meta(std::nullopt, VerticalDatum::msl, "o", Quantity::water_level);
+  CHECK(residual(pair_of(obs_no_unit, pred_meta())) ==
+        std::unexpected{ResidualErrc::unit_unknown});
+  CHECK(residual(pair_of(obs_no_unit, no_unit)) ==
         std::unexpected{ResidualErrc::unit_unknown});
   // Equal after conversion is still unequal: no silent conversion.
   const auto feet = level_meta(Unit{LengthUnit::foot}, VerticalDatum::msl,
@@ -534,13 +744,7 @@ TEST_CASE("residual of quantities that carry no datum needs none",
   const auto r = residual(pair_of(wind("a"), wind("b")));
   REQUIRE(r.has_value());
   CHECK(r->meta().unit() == std::optional<Unit>{SpeedUnit::meter_per_second});
-  // One side that can carry a datum is enough to require both.
-  CHECK(residual(pair_of(obs_meta(), wind("b"))) ==
-        std::unexpected{ResidualErrc::units_differ});
-  const auto ms = level_meta(Unit{SpeedUnit::meter_per_second},
-                             VerticalDatum::msl, "g", GenericQuantity::value());
-  CHECK(residual(pair_of(ms, wind("b"))) ==
-        std::unexpected{ResidualErrc::datum_unknown});
+  CHECK(r->meta().quantity() == mov::core::QuantityId{Quantity::difference});
 }
 
 TEST_CASE("residual does not modify its inputs",
@@ -616,6 +820,33 @@ TEST_CASE("slice agrees with filtering by contains, for both overloads",
   }
 }
 
+TEST_CASE("index_window gives the half-open index range of a time range",
+          "[core][series_ops][slice]") {
+  const TimeSeries s =
+      make_series(axis_of({10, 20, 30, 40}), std::vector<Sample>(4, val(1.0)));
+  CHECK(index_window(s.times(), range(20, 40)) == Window{.lo = 1, .hi = 3});
+  CHECK(index_window(s.times(), range(0, 100)) == Window{.lo = 0, .hi = 4});
+  CHECK(index_window(s.times(), range(21, 30)) == Window{.lo = 2, .hi = 2});
+  CHECK(index_window(s.times(), range(41, 50)) == Window{.lo = 4, .hi = 4});
+  CHECK(index_window(s.times(), range(0, 10)) == Window{.lo = 0, .hi = 0});
+  CHECK(index_window({}, range(0, 10)) == Window{.lo = 0, .hi = 0});
+}
+
+TEST_CASE("slice is index_window and a copy; summarize needs no copy",
+          "[core][series_ops][slice]") {
+  std::mt19937 rng = mov::test::fixed_rng();
+  for (int trial = 0; trial < 100; ++trial) {
+    const auto rows = random_rows(rng, static_cast<std::size_t>(trial) % 60);
+    const TimeSeries s = series_of_rows(rows, level_meta());
+    const TimeRange r = range(10 + (trial % 7), 80 + (trial % 11));
+    const Window w = index_window(s.times(), r);
+    const TimeSeries cut = slice(s, r);
+    CHECK(cut.size() == w.hi - w.lo);
+    CHECK(summarize(cut) == summarize(s.times().subspan(w.lo, w.hi - w.lo),
+                                      s.samples().subspan(w.lo, w.hi - w.lo)));
+  }
+}
+
 // ---- shift_time ----
 
 TEST_CASE("shift_time moves every time and nothing else",
@@ -639,10 +870,11 @@ TEST_CASE("shift_time moves every time and nothing else",
   CHECK(shift_time(TimeSeries{}, milliseconds{5}) == TimeSeries{});
 }
 
-TEST_CASE("shift_time is bounded by +-2^53 ms and names the first offender",
+TEST_CASE("shift_time is limited only by 64-bit overflow",
           "[core][series_ops][shift_time]") {
   using std::chrono::milliseconds;
-  const std::int64_t top = max_abs_time_ms;
+  constexpr std::int64_t top = std::numeric_limits<std::int64_t>::max();
+  constexpr std::int64_t bottom = std::numeric_limits<std::int64_t>::min();
   const TimeSeries high =
       make_series(axis_of({0, top - 1, top}), {val(1.0), val(2.0), val(3.0)});
   CHECK(shift_time(high, milliseconds{0}) == high);
@@ -650,68 +882,80 @@ TEST_CASE("shift_time is bounded by +-2^53 ms and names the first offender",
         std::unexpected{TimeOverflow{.index = 2}});
   CHECK(shift_time(high, milliseconds{top}) ==
         std::unexpected{TimeOverflow{.index = 1}});
+  CHECK(shift_time(high, milliseconds{-1}).has_value());
 
-  const TimeSeries low =
-      make_series(axis_of({-top, -top + 5, 0}), {val(1.0), val(2.0), val(3.0)});
+  const TimeSeries low = make_series(axis_of({bottom, bottom + 5, 0}),
+                                     {val(1.0), val(2.0), val(3.0)});
   CHECK(shift_time(low, milliseconds{-1}) ==
         std::unexpected{TimeOverflow{.index = 0}});
   CHECK(shift_time(low, milliseconds{1}).has_value());
-
-  // The extreme steps overflow 64 bits, not only the bound.
-  constexpr auto biggest = milliseconds::max();
-  constexpr auto smallest = milliseconds::min();
-  CHECK(shift_time(high, biggest) == std::unexpected{TimeOverflow{.index = 0}});
-  CHECK(shift_time(high, smallest) ==
+  CHECK(shift_time(low, milliseconds{5}).has_value());
+  const TimeSeries near_bottom =
+      make_series(axis_of({-1, 0}), {val(1.0), val(2.0)});
+  CHECK(shift_time(near_bottom, milliseconds::min()) ==
         std::unexpected{TimeOverflow{.index = 0}});
+  const TimeSeries from_zero =
+      make_series(axis_of({0, 1}), {val(1.0), val(2.0)});
+  CHECK(shift_time(from_zero, milliseconds::max()) ==
+        std::unexpected{TimeOverflow{.index = 1}});
+  CHECK(shift_time(from_zero, milliseconds::min()).has_value());
 }
 
-TEST_CASE("shift_time can bring a series that is out of bounds back in",
+TEST_CASE("shift_time(s, 0) is s for any legal series",
           "[core][series_ops][shift_time]") {
   using std::chrono::milliseconds;
-  const std::int64_t beyond = max_abs_time_ms + 10;
-  const TimeSeries s =
-      make_series(axis_of({beyond - 5, beyond}), {val(1.0), val(2.0)});
-  // Not shifted at all: the unshifted times already leave the range.
-  CHECK(shift_time(s, milliseconds{0}) ==
-        std::unexpected{TimeOverflow{.index = 0}});
-  // Only the later sample is out of range once the series moves back by 7.
-  CHECK(shift_time(s, milliseconds{-7}) ==
-        std::unexpected{TimeOverflow{.index = 1}});
-  const auto back = shift_time(s, milliseconds{-20});
-  REQUIRE(back.has_value());
-  CHECK(times_of(*back) ==
-        std::vector<Time>{at_ms(beyond - 25), at_ms(beyond - 20)});
+  // Beyond the +-2^53 ms file bound, which StationTable enforces, not this.
+  const std::int64_t beyond = mov::core::max_abs_time_ms + 10;
+  const TimeSeries s = make_series(axis_of({-beyond, 0, beyond}),
+                                   {val(1.0), val(2.0), val(3.0)});
+  CHECK(shift_time(s, milliseconds{0}) == s);
+  const auto moved = shift_time(s, milliseconds{20});
+  REQUIRE(moved.has_value());
+  CHECK(times_of(*moved) ==
+        std::vector<Time>{at_ms(-beyond + 20), at_ms(20), at_ms(beyond + 20)});
 }
 
 // ---- scale_offset ----
+
+TEST_CASE("a Calibration has finite coefficients",
+          "[core][series_ops][scale_offset]") {
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  const double inf = std::numeric_limits<double>::infinity();
+  CHECK(not Calibration::make({.scale = nan, .offset = 0.0}));
+  CHECK(not Calibration::make({.scale = 1.0, .offset = nan}));
+  CHECK(not Calibration::make({.scale = inf, .offset = 0.0}));
+  CHECK(not Calibration::make({.scale = 1.0, .offset = -inf}));
+  const Calibration c = calibration(0.0, 3.0);  // zero is allowed
+  CHECK(c.scale() == 0.0);
+  CHECK(c.offset() == 3.0);
+  CHECK(Calibration{} == Calibration::make({.scale = 1.0, .offset = 0.0}));
+  CHECK(Calibration{}.scale() == 1.0);
+  CHECK(Calibration{}.offset() == 0.0);
+}
 
 TEST_CASE("scale_offset is y = scale * x + offset on values only",
           "[core][series_ops][scale_offset]") {
   const TimeSeries s = make_series(
       axis_of({0, 1, 2, 3}),
       {val(1.0), Sample{Dry{}}, Sample{Missing{}}, val(-0.5)}, level_meta());
-  const TimeSeries r = scale_offset(s, Affine{.scale = 2.0, .offset = 1.0});
+  const TimeSeries r = scale_offset(s, calibration(2.0, 1.0));
   CHECK(samples_of(r) == std::vector<Sample>{val(3.0), Sample{Dry{}},
                                              Sample{Missing{}}, val(0.0)});
   CHECK(times_of(r) == times_of(s));
   CHECK(r.meta() == s.meta());  // a calibration: unit and datum stay
 }
 
-TEST_CASE("scale_offset turns non-finite results into Missing",
+TEST_CASE("scale_offset turns an overflowing result into Missing",
           "[core][series_ops][scale_offset]") {
   const TimeSeries s = make_series(axis_of({0, 1}), {val(1e300), val(1.0)});
-  const TimeSeries r = scale_offset(s, Affine{.scale = 1e300, .offset = 0.0});
-  CHECK(samples_of(r) == std::vector<Sample>{Sample{Missing{}}, val(1e300)});
-  const double nan = std::numeric_limits<double>::quiet_NaN();
-  CHECK(samples_of(scale_offset(s, Affine{.scale = nan, .offset = 0.0})) ==
-        std::vector<Sample>(2, Sample{Missing{}}));
+  CHECK(samples_of(scale_offset(s, calibration(1e300, 0.0))) ==
+        std::vector<Sample>{Sample{Missing{}}, val(1e300)});
 }
 
 TEST_CASE("scale_offset by the identity changes nothing, not even -0.0",
           "[core][series_ops][scale_offset]") {
   const TimeSeries s = make_series(axis_of({0}), {val(-0.0)});
-  const TimeSeries r = scale_offset(s, Affine{});
-  REQUIRE(r.samples().front().value().has_value());
+  const TimeSeries r = scale_offset(s, Calibration{});
   CHECK(std::signbit(r.samples().front().value().value_or(1.0)));
   CHECK(r == s);
 }

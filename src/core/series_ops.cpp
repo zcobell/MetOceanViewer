@@ -7,10 +7,13 @@
 #include <cassert>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -19,8 +22,6 @@
 #include <vector>
 
 #include "core_access.hpp"
-#include "mov/core/detail/numeric.hpp"
-#include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -34,30 +35,32 @@ namespace mov::core {
 
 // ---- Bucket, extent, quick_stats ----
 
-Bucket summarize(const TimeSeries& s) {
+Bucket summarize(std::span<const Time> times, std::span<const Sample> samples) {
+  assert(times.size() == samples.size());
   // An ordered left fold, not reduce: the sum is only approximately
   // associative, and ties between extremes keep the left operand. (Not
   // ranges::fold_left, which Apple libc++ lacks.)
-  const auto points = s.points();
-  return std::accumulate(points.begin(), points.end(), Bucket{},
-                         [](const Bucket& acc, const Point& p) noexcept {
-                           return acc + Bucket::of(p.time, p.sample);
+  const auto indices = std::views::iota(std::size_t{0}, samples.size());
+  return std::accumulate(indices.begin(), indices.end(), Bucket{},
+                         [&](const Bucket& acc, std::size_t i) {
+                           return acc + Bucket::of(times[i], samples[i]);
                          });
+}
+
+Bucket summarize(const TimeSeries& s) {
+  return summarize(s.times(), s.samples());
 }
 
 std::optional<Extent> extent(const TimeSeries& s) {
   if (s.empty()) {
     return std::nullopt;
   }
-  const Bucket b = summarize(s);
-  const std::optional<Extreme> lo = b.min();
-  const std::optional<Extreme> hi = b.max();
-  std::optional<ValueRange> values;
-  if (lo and hi) {
-    values = ValueRange{.min = lo->value, .max = hi->value};
-  }
-  return Extent{
-      .first = s.times().front(), .last = s.times().back(), .values = values};
+  const auto range_of = [](const ValueSummary& v) {
+    return ValueRange{.min = v.min().value, .max = v.max().value};
+  };
+  return Extent{.first = s.times().front(),
+                .last = s.times().back(),
+                .values = summarize(s).summary().transform(range_of)};
 }
 
 std::optional<Extent> extent(std::span<const TimeSeries> all) {
@@ -66,53 +69,42 @@ std::optional<Extent> extent(std::span<const TimeSeries> all) {
   return std::transform_reduce(
       all.begin(), all.end(), std::optional<Extent>{},
       [](const std::optional<Extent>& a, const std::optional<Extent>& b) {
-        return combine(a, b);
+        return join(a, b);
       },
       [](const TimeSeries& s) { return extent(s); });
 }
 
-namespace {
-
-// sum / n, or, when the sum overflowed (or became NaN), the sum of the
-// samples divided by n one at a time: each term is at most the largest
-// magnitude, so nothing overflows.
-double mean_of(const Bucket& b, const TimeSeries& s) {
-  const auto n = static_cast<double>(b.values());
-  const double mean = b.sum() / n;
-  if (detail::is_finite(mean)) {
-    return mean;
-  }
-  const auto scaled = [n](Sample x) noexcept {
-    const std::optional<double> v = x.value();
-    return v ? *v / n : 0.0;  // Missing and Dry add nothing
-  };
-  const std::span<const Sample> samples = s.samples();
-  return std::transform_reduce(samples.begin(), samples.end(), 0.0, std::plus{},
-                               scaled);
-}
-
-}  // namespace
-
 QuickStats quick_stats(const TimeSeries& s) {
   const Bucket b = summarize(s);
-  const std::optional<Extreme> lo = b.min();
-  const std::optional<Extreme> hi = b.max();
-  std::optional<ValueStats> stats;
-  if (lo and hi) {
-    stats = ValueStats{.min = *lo, .max = *hi, .mean = mean_of(b, s)};
-  }
-  return {.values = b.values(),
-          .missing = b.missing(),
+  const auto stats_of = [](const ValueSummary& v) {
+    return ValueStats{
+        .count = v.count(), .min = v.min(), .max = v.max(), .mean = v.mean()};
+  };
+  return {.missing = b.missing(),
           .dry = b.dry(),
-          .stats = stats};
+          .stats = b.summary().transform(stats_of)};
 }
 
-// ---- residual ---------------------------------------------------------------
+// ---- residual ----
 
 namespace {
 
 // "<obs> - <pred>" with U+2212 as UTF-8 bytes (sources hold no non-ASCII).
 constexpr std::string_view minus_sign = " \xE2\x88\x92 ";
+
+bool is(const QuantityId& q, Quantity expected) noexcept {
+  const Quantity* registry = std::get_if<Quantity>(&q);
+  return registry != nullptr and *registry == expected;
+}
+
+// The same quantity (generic ones by token), or an observed water level and
+// its prediction.
+bool compatible_quantities(const QuantityId& obs,
+                           const QuantityId& pred) noexcept {
+  return token(obs) == token(pred) or
+         (is(obs, Quantity::water_level) and
+          is(pred, Quantity::water_level_prediction));
+}
 
 std::expected<Unit, ResidualErrc> common_unit(const SeriesMeta& o,
                                               const SeriesMeta& p) {
@@ -130,10 +122,11 @@ std::expected<Unit, ResidualErrc> common_unit(const SeriesMeta& o,
   return *uo;
 }
 
+// The quantities are compatible, so both series have the same
+// datum_applicable answer; asking the observed one is enough.
 std::optional<ResidualErrc> datum_fault(const SeriesMeta& o,
                                         const SeriesMeta& p) {
-  if (not datum_applicable(o.quantity()) and
-      not datum_applicable(p.quantity())) {
+  if (not datum_applicable(o.quantity())) {
     return std::nullopt;
   }
   const std::optional<VerticalDatum> d_o = o.datum();
@@ -149,19 +142,21 @@ std::optional<ResidualErrc> datum_fault(const SeriesMeta& o,
 
 std::expected<SeriesMeta, ResidualErrc> residual_meta(const SeriesMeta& o,
                                                       const SeriesMeta& p) {
-  auto unit = common_unit(o, p);
-  if (not unit) {
-    return std::unexpected{unit.error()};
+  if (not compatible_quantities(o.quantity(), p.quantity())) {
+    return std::unexpected{ResidualErrc::quantities_differ};
   }
-  if (const auto fault = datum_fault(o, p)) {
-    return std::unexpected{*fault};
-  }
-  std::string label{o.label()};
-  label += minus_sign;
-  label += p.label();
-  return SeriesMeta::make({.quantity = GenericQuantity::value(),
-                           .label = std::move(label),
-                           .unit = std::move(*unit)});
+  return common_unit(o, p).and_then(
+      [&](Unit unit) -> std::expected<SeriesMeta, ResidualErrc> {
+        if (const auto fault = datum_fault(o, p)) {
+          return std::unexpected{*fault};
+        }
+        std::string label{o.label()};
+        label += minus_sign;
+        label += p.label();
+        return SeriesMeta::make({.quantity = Quantity::difference,
+                                 .label = std::move(label),
+                                 .unit = std::move(unit)});
+      });
 }
 
 // The merge-join of two strictly increasing axes: calls f(i, j) for every
@@ -187,45 +182,34 @@ void for_each_common_time(std::span<const Time> a, std::span<const Time> b,
 std::expected<TimeSeries, ResidualErrc> residual(const ObsVsPred& pair) {
   const TimeSeries& o = pair.observed;
   const TimeSeries& p = pair.predicted;
-  auto meta = residual_meta(o.meta(), p.meta());
-  if (not meta) {
-    return std::unexpected{meta.error()};
-  }
-  TimeAxis times;
-  std::vector<Sample> samples;
-  const std::size_t capacity = std::min(o.size(), p.size());
-  times.reserve(capacity);
-  samples.reserve(capacity);
-  for_each_common_time(o.times(), p.times(), [&](std::size_t i, std::size_t j) {
-    times.push_back(o.times()[i]);
-    samples.push_back(
-        combine(o.samples()[i], p.samples()[j], std::minus<double>{}));
+  return residual_meta(o.meta(), p.meta()).transform([&](SeriesMeta meta) {
+    TimeAxis times;
+    std::vector<Sample> samples;
+    const std::size_t capacity = std::min(o.size(), p.size());
+    times.reserve(capacity);
+    samples.reserve(capacity);
+    for_each_common_time(
+        o.times(), p.times(), [&](std::size_t i, std::size_t j) {
+          times.push_back(o.times()[i]);
+          samples.push_back(
+              combine(o.samples()[i], p.samples()[j], std::minus<double>{}));
+        });
+    return TimeSeries{detail::CoreAccess::key(), std::move(times),
+                      std::move(samples), std::move(meta)};
   });
-  return TimeSeries{detail::CoreAccess::key(), std::move(times),
-                    std::move(samples), std::move(*meta)};
 }
 
 // ---- slice, shift_time, scale_offset ----
 
-namespace {
-
-// The half-open index window [lo, hi) of the times in r.
-struct Window {
-  std::size_t lo;
-  std::size_t hi;
-};
-
-Window window_of(std::span<const Time> times, TimeRange r) {
+Window index_window(std::span<const Time> times, TimeRange r) {
   const auto first = std::ranges::lower_bound(times, r.begin());
   const auto last = std::ranges::lower_bound(first, times.end(), r.end());
   return {.lo = static_cast<std::size_t>(first - times.begin()),
           .hi = static_cast<std::size_t>(last - times.begin())};
 }
 
-}  // namespace
-
 TimeSeries slice(const TimeSeries& s, TimeRange r) {
-  const Window w = window_of(s.times(), r);
+  const Window w = index_window(s.times(), r);
   const auto times = s.times().subspan(w.lo, w.hi - w.lo);
   const auto samples = s.samples().subspan(w.lo, w.hi - w.lo);
   return TimeSeries{
@@ -234,7 +218,7 @@ TimeSeries slice(const TimeSeries& s, TimeRange r) {
 }
 
 TimeSeries slice(TimeSeries&& s, TimeRange r) {
-  const Window w = window_of(s.times(), r);
+  const Window w = index_window(s.times(), r);
   TimeSeriesParts parts = std::move(s).into_parts();
   const auto drop = [&w](auto& v) {
     v.erase(v.begin() + static_cast<std::ptrdiff_t>(w.hi), v.end());
@@ -242,84 +226,99 @@ TimeSeries slice(TimeSeries&& s, TimeRange r) {
   };
   drop(parts.times);
   drop(parts.samples);
-  return TimeSeries{detail::CoreAccess::key(), std::move(parts.times),
-                    std::move(parts.samples), std::move(parts.meta)};
+  return detail::assembled(std::move(parts));
 }
+
+namespace {
+
+// The index of the first time that t + dt pushes out of the 64-bit range, if
+// any. The times increase, so for dt < 0 only a prefix can underflow (the
+// front decides) and for dt > 0 only a suffix can overflow (a binary search
+// finds where it starts).
+std::optional<std::size_t> first_overflow(std::span<const Time> times,
+                                          std::chrono::milliseconds dt) {
+  constexpr std::int64_t int64_min = std::numeric_limits<std::int64_t>::min();
+  constexpr std::int64_t int64_max = std::numeric_limits<std::int64_t>::max();
+  const std::int64_t d = dt.count();
+  if (times.empty() or d == 0) {
+    return std::nullopt;
+  }
+  if (d < 0) {
+    const bool front_underflows =
+        times.front().time_since_epoch().count() < int64_min - d;
+    return front_underflows ? std::optional<std::size_t>{0} : std::nullopt;
+  }
+  const std::int64_t limit = int64_max - d;
+  const auto fits = [limit](Time t) noexcept {
+    return t.time_since_epoch().count() <= limit;
+  };
+  const auto it = std::ranges::partition_point(times, fits);
+  if (it == times.end()) {
+    return std::nullopt;
+  }
+  return static_cast<std::size_t>(it - times.begin());
+}
+
+}  // namespace
 
 std::expected<TimeSeries, TimeOverflow> shift_time(
     TimeSeries s, std::chrono::milliseconds dt) {
-  const std::span<const Time> times = s.times();
-  const auto leaves_range = [dt](Time t) noexcept {
-    return not detail::offset_time(t, dt.count());
-  };
-  const auto bad = std::ranges::find_if(times, leaves_range);
-  if (bad != times.end()) {
-    return std::unexpected{
-        TimeOverflow{.index = static_cast<std::size_t>(bad - times.begin())}};
+  if (const auto bad = first_overflow(s.times(), dt)) {
+    return std::unexpected{TimeOverflow{.index = *bad}};
   }
-  // Every shifted time is in range, so the addition below cannot overflow,
-  // and a uniform shift keeps the times strictly increasing.
+  // Nothing overflows, so the addition cannot, and a uniform shift keeps the
+  // times strictly increasing.
   TimeSeriesParts parts = std::move(s).into_parts();
   std::ranges::transform(parts.times, parts.times.begin(),
                          [dt](Time t) noexcept { return t + dt; });
-  return TimeSeries{detail::CoreAccess::key(), std::move(parts.times),
-                    std::move(parts.samples), std::move(parts.meta)};
+  return detail::assembled(std::move(parts));
 }
 
-TimeSeries scale_offset(TimeSeries s, Affine a) {
-  return std::move(s).transform_samples(
-      detail::CoreAccess::key(),
-      [a](Sample x) noexcept { return detail::apply_affine(a, x); });
+TimeSeries scale_offset(TimeSeries s, const Calibration& c) {
+  return detail::assembled(detail::mapped(std::move(s), c.affine()));
 }
 
 // ---- convert ----
 
 namespace {
 
-// How to move a series (or column) to another unit: the value map and the
-// metadata that goes with it.
-struct ConversionPlan {
-  Affine affine;
-  SeriesMeta meta;
-};
-
-std::expected<ConversionPlan, UnitError> plan_conversion(const SeriesMeta& meta,
-                                                         const Unit& to) {
+// The value map from the unit of `meta` to `to`.
+std::expected<Affine, UnitError> conversion_from(const SeriesMeta& meta,
+                                                 const Unit& to) {
   const std::optional<Unit>& from = meta.unit();
   if (not from) {
     return std::unexpected{UnitError{UnknownUnit{}}};
   }
-  const auto affine = conversion(*from, to);
-  if (not affine) {
-    return std::unexpected{UnitError{affine.error()}};
-  }
-  return ConversionPlan{
-      .affine = *affine,
-      .meta = meta.rewrite_unit(detail::CoreAccess::key(), to)};
+  return conversion(*from, to).transform_error(
+      [](IncompatibleUnits e) { return UnitError{std::move(e)}; });
 }
 
 }  // namespace
 
 std::expected<TimeSeries, UnitError> convert(TimeSeries s, const Unit& to) {
-  auto plan = plan_conversion(s.meta(), to);
-  if (not plan) {
-    return std::unexpected{plan.error()};
-  }
-  return detail::rebuilt(std::move(s), std::move(plan->meta), plan->affine);
+  return conversion_from(s.meta(), to).transform([&](const Affine& a) {
+    TimeSeriesParts parts = detail::mapped(std::move(s), a);
+    parts.meta = parts.meta.rewrite_unit(detail::CoreAccess::key(), to);
+    return detail::assembled(std::move(parts));
+  });
 }
 
 std::expected<StationTable, UnitError> convert(StationTable t,
                                                ColumnIndex column,
                                                const Unit& to) {
   assert(column.value() < t.schema().size());
-  auto plan = plan_conversion(t.schema()[column.value()], to);
-  if (not plan) {
-    return std::unexpected{plan.error()};
-  }
-  const Affine affine = plan->affine;
-  return std::move(t).rewrite_column(
-      detail::CoreAccess::key(), column, std::move(plan->meta),
-      [affine](Sample x) noexcept { return detail::apply_affine(affine, x); });
+  return conversion_from(t.schema()[column.value()], to)
+      .transform([&](const Affine& a) {
+        const detail::CoreKey key = detail::CoreAccess::key();
+        StationTable renamed =
+            std::move(t).rewrite_column_unit(key, column, to);
+        if (a == Affine{}) {  // the values stay as they are
+          return renamed;
+        }
+        return std::move(renamed).transform_column(
+            key, column,
+            [a](Sample x) noexcept { return detail::apply_affine(a, x); });
+      });
 }
 
 }  // namespace mov::core

@@ -25,6 +25,7 @@
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/timeseries.hpp"
+#include "mov/core/units.hpp"
 
 namespace mov::core {
 
@@ -254,17 +255,24 @@ class StationTable {
   /// The number of samples over all stations and columns.
   [[nodiscard]] std::size_t total_samples() const noexcept;
 
-  /// Core only (convert): column k with metadata `meta` and f applied to
-  /// every sample at every station. The caller keeps the schema's tokens
-  /// unique (convert changes only the unit). Precondition:
-  /// k.value() < schema().size().
+  /// Core only (convert): column k's unit replaced. The values are not
+  /// touched; the caller maps them with transform_column when the unit change
+  /// needs it. The token is unchanged, so the schema stays unique.
+  /// Precondition: k.value() < schema().size().
+  [[nodiscard]] StationTable rewrite_column_unit(const detail::CoreKey& key,
+                                                 ColumnIndex k, Unit unit) && {
+    assert(k.value() < schema_.size());
+    schema_[k.value()] = schema_[k.value()].rewrite_unit(key, std::move(unit));
+    return std::move(*this);
+  }
+
+  /// Core only (convert): f applied to every sample of column k at every
+  /// station. Precondition: k.value() < schema().size().
   template <std::invocable<Sample> F>
     requires std::same_as<std::invoke_result_t<F&, Sample>, Sample>
-  [[nodiscard]] StationTable rewrite_column(const detail::CoreKey& /*key*/,
-                                            ColumnIndex k, SeriesMeta meta,
-                                            F f) && {
+  [[nodiscard]] StationTable transform_column(const detail::CoreKey& /*key*/,
+                                              ColumnIndex k, F f) && {
     assert(k.value() < schema_.size());
-    schema_[k.value()] = std::move(meta);
     for (Column& column : columns_[k.value()]) {
       std::ranges::transform(column, column.begin(), f);
     }
