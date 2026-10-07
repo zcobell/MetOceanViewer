@@ -53,6 +53,6 @@ mov_add_fuzz_test(
 # IMEDS and CSV (WP7).
 mov_add_test(
     mov_io_text_formats_tests
-    SOURCES test_imeds.cpp test_imeds_format.cpp
+    SOURCES test_imeds.cpp test_imeds_format.cpp test_csv_export.cpp
     LIBRARIES mov::io
 )

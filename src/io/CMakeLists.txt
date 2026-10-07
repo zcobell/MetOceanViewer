@@ -18,4 +18,4 @@ mov_add_module(
 )
 
 # IMEDS and CSV (WP7).
-target_sources(mov_io PRIVATE imeds.cpp imeds_write.cpp station_names.cpp)
+target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_names.cpp)
