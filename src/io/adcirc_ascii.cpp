@@ -49,21 +49,6 @@ auto fail(E&& e) {
   return std::unexpected{lift<Error>(std::forward<E>(e))};
 }
 
-bool blank_text(std::string_view text) noexcept {
-  return detail::skip_space(text).empty();
-}
-
-// The first line with something on it, or nullopt when only blank lines
-// remain. Takes the cursor by value: the caller's position is unchanged.
-std::optional<Line> first_nonblank(detail::LineCursor cursor) noexcept {
-  while (const auto line = cursor.next()) {
-    if (not blank_text(line->text)) {
-      return line;
-    }
-  }
-  return std::nullopt;
-}
-
 ParseError whole_line(ParseErrc code, const Line& line) {
   return ParseError::make(code, {.line = line.number}, line.text);
 }
@@ -252,7 +237,7 @@ class AsciiReader {
       } else {
         // The last thing in the text is a cut-off record; anything after a
         // malformed line means the file is damaged.
-        if (first_nonblank(cursor_)) {
+        if (cursor_.peek_nonblank()) {
           return fail(std::get<Malformed>(*outcome).error);
         }
         return Ending::cut_off;
@@ -276,8 +261,8 @@ class AsciiReader {
     if (not head) {
       return RecordOutcome{CleanEnd{}};
     }
-    if (is_blank(*head)) {
-      return first_nonblank(cursor_) ? RecordOutcome{Malformed{whole_line(
+    if (detail::is_blank(head->text)) {
+      return cursor_.peek_nonblank() ? RecordOutcome{Malformed{whole_line(
                                            ParseErrc::corrupt_record, *head)}}
                                      : RecordOutcome{CleanEnd{}};
     }
@@ -307,10 +292,6 @@ class AsciiReader {
     return read_stations(*time);
   }
 
-  static bool is_blank(const Line& line) noexcept {
-    return blank_text(line.text);
-  }
-
   static RecordOutcome malformed_at(const Line& line, std::string_view token) {
     return Malformed{detail::at(line, token, ParseErrc::corrupt_record)};
   }
@@ -323,7 +304,7 @@ class AsciiReader {
       }
       // A blank line is never a station, selected or not; the other lines of
       // stations nobody selected are skipped, not read.
-      if (is_blank(*line)) {
+      if (detail::is_blank(line->text)) {
         return Malformed{whole_line(ParseErrc::corrupt_record, *line)};
       }
       const std::optional<std::size_t>& slot = slot_[i];
@@ -445,33 +426,34 @@ class AsciiReader {
       Ending ended, std::size_t complete_records,
       const core::NormalizeReport& axis) const {
     std::vector<Warning> out;
-    const auto add = [&out](WarningCode code, std::string subject,
-                            std::size_t count) {
-      if (count > 0) {
-        out.push_back(Warning{
-            .code = code, .subject = std::move(subject), .count = count});
-      }
-    };
-    add(WarningCode::nonfinite_masked,
-        "first at line " + std::to_string(first_masked_line_), nonfinite_);
-    if (ended == Ending::cut_off) {
-      add(WarningCode::partial_record_dropped,
-          "record " + std::to_string(complete_records + 1), 1);
-    }
-    const std::string counts = "NSnaps " + std::to_string(header_.snapshots) +
-                               ", read " + std::to_string(complete_records);
-    if (complete_records < header_.snapshots) {
-      add(WarningCode::fewer_snapshots_than_header, counts,
-          header_.snapshots - complete_records);
-    }
-    if (complete_records > header_.snapshots) {
-      add(WarningCode::more_snapshots_than_header, counts,
-          complete_records - header_.snapshots);
-    }
-    add(WarningCode::times_reordered, {}, axis.descents);
-    add(WarningCode::duplicate_times_dropped, {}, axis.duplicates_dropped);
-    add(WarningCode::conflicting_duplicate_times, {},
-        axis.conflicting_duplicates);
+    const std::size_t planned = header_.snapshots;
+    const std::string counts = "NSnaps " + std::to_string(planned) + ", read " +
+                               std::to_string(complete_records);
+    append_if_counted(
+        out, {.code = WarningCode::nonfinite_masked,
+              .subject = "first at line " + std::to_string(first_masked_line_),
+              .count = nonfinite_});
+    append_if_counted(
+        out, {.code = WarningCode::partial_record_dropped,
+              .subject = "record " + std::to_string(complete_records + 1),
+              .count = ended == Ending::cut_off ? 1U : 0U});
+    append_if_counted(out,
+                      {.code = WarningCode::fewer_snapshots_than_header,
+                       .subject = counts,
+                       .count = planned - std::min(planned, complete_records)});
+    append_if_counted(
+        out, {.code = WarningCode::more_snapshots_than_header,
+              .subject = counts,
+              .count = complete_records - std::min(planned, complete_records)});
+    append_if_counted(out, {.code = WarningCode::times_reordered,
+                            .subject = {},
+                            .count = axis.descents});
+    append_if_counted(out, {.code = WarningCode::duplicate_times_dropped,
+                            .subject = {},
+                            .count = axis.duplicates_dropped});
+    append_if_counted(out, {.code = WarningCode::conflicting_duplicate_times,
+                            .subject = {},
+                            .count = axis.conflicting_duplicates});
     return out;
   }
 

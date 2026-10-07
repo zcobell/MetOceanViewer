@@ -57,6 +57,11 @@ concept TemporaryString = std::same_as<std::remove_cvref_t<S>, std::string> and
   return text.substr(static_cast<std::size_t>(first - text.begin()));
 }
 
+/// True when `text` has no character but white space (the empty text too).
+[[nodiscard]] constexpr bool is_blank(std::string_view text) noexcept {
+  return skip_space(text).empty();
+}
+
 /// The primitive behind every whitespace-separated reader: skips the
 /// whitespace at the start of `rest`, returns the run of non-whitespace after
 /// it as a view, and moves `rest` past that run. nullopt when only whitespace

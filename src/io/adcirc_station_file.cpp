@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-#include <algorithm>
 #include <cstddef>
 #include <expected>
 #include <filesystem>
@@ -13,12 +12,12 @@
 #include <vector>
 
 #include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/utf8.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station.hpp"
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/station_names.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -40,48 +39,6 @@ constexpr bool is_separator(char c) noexcept {
   return c == ',' or core::detail::is_space(c);
 }
 
-// The next run of non-separators in `rest`, comma and white space both
-// separating; `rest` moves past it.
-std::optional<std::string_view> next_field(std::string_view& rest) noexcept {
-  const auto first = std::ranges::find_if_not(rest, is_separator);
-  rest.remove_prefix(static_cast<std::size_t>(first - rest.begin()));
-  if (rest.empty()) {
-    return std::nullopt;
-  }
-  const auto last = std::ranges::find_if(rest, is_separator);
-  const std::string_view field =
-      rest.substr(0, static_cast<std::size_t>(last - rest.begin()));
-  rest.remove_prefix(field.size());
-  return field;
-}
-
-std::optional<Line> next_nonblank(detail::LineCursor& cursor) noexcept {
-  while (const auto line = cursor.next()) {
-    if (not detail::skip_space(line->text).empty()) {
-      return line;
-    }
-  }
-  return std::nullopt;
-}
-
-// `text` with every byte that does not start or continue a well-formed UTF-8
-// sequence replaced by U+FFFD.
-std::string with_valid_utf8(std::string_view text) {
-  std::string out;
-  out.reserve(text.size());
-  while (not text.empty()) {
-    const std::size_t length = core::detail::utf8_sequence_length(text);
-    if (length == 0) {
-      out += "\xEF\xBF\xBD";
-      text.remove_prefix(1);
-    } else {
-      out += text.substr(0, length);
-      text.remove_prefix(length);
-    }
-  }
-  return out;
-}
-
 template <class E>
 auto fail(E&& e) {
   return std::unexpected{lift<Error>(std::forward<E>(e))};
@@ -96,8 +53,8 @@ struct StationLine {
 
 std::expected<StationLine, ParseError> split_station_line(const Line& line) {
   std::string_view rest = line.text;
-  const auto x = next_field(rest);
-  const auto y = next_field(rest);
+  const auto x = detail::next_word(rest, is_separator);
+  const auto y = detail::next_word(rest, is_separator);
   if (not x or not y) {
     return std::unexpected{ParseError::make(ParseErrc::wrong_field_count,
                                             {.line = line.number}, line.text)};
@@ -110,24 +67,13 @@ std::expected<StationLine, ParseError> split_station_line(const Line& line) {
 std::string joined_words(std::string_view rest) {
   rest = detail::cut_at_nul(rest);
   std::string name;
-  while (const auto word = next_field(rest)) {
+  while (const auto word = detail::next_word(rest, is_separator)) {
     if (not name.empty()) {
       name += ' ';
     }
     name += *word;
   }
   return name;
-}
-
-// A position that is not a Location blames the latitude when that is what is
-// wrong, the first coordinate otherwise.
-ParseError position_error(const Line& line, const StationLine& fields,
-                          const ToLocationError& why) {
-  const auto* location = std::get_if<core::LocationError>(&why);
-  const bool latitude = location != nullptr and
-                        *location == core::LocationError::latitude_out_of_range;
-  return detail::at(line, latitude ? fields.y : fields.x,
-                    ParseErrc::out_of_range);
 }
 
 class StationFileReader {
@@ -150,7 +96,7 @@ class StationFileReader {
           ctx_.stop.stop_requested()) {
         return std::unexpected{Error{Cancelled{}}};
       }
-      const auto line = next_nonblank(cursor_);
+      const auto line = cursor_.next_nonblank();
       if (not line) {
         return fail(too_few());
       }
@@ -158,7 +104,7 @@ class StationFileReader {
         return std::unexpected{std::move(added.error())};
       }
     }
-    if (const auto extra = next_nonblank(cursor_)) {
+    if (const auto extra = cursor_.next_nonblank()) {
       return fail(detail::at(*extra, extra->text, ParseErrc::count_mismatch));
     }
     return std::move(*this).finish();
@@ -169,14 +115,15 @@ class StationFileReader {
 
   // The first field of the first non-blank line.
   std::expected<std::size_t, ParseError> read_count() {
-    const auto line = next_nonblank(cursor_);
+    const auto line = cursor_.next_nonblank();
     if (not line) {
       return std::unexpected{
           ParseError::make(ParseErrc::empty_input, {.line = 1}, "")};
     }
     std::string_view rest = line->text;
     // A non-blank line has a first field (a line of commas has none).
-    const std::string_view token = next_field(rest).value_or(rest);
+    const std::string_view token =
+        detail::next_word(rest, is_separator).value_or(rest);
     const auto count = detail::int_at<std::size_t>(*line, token);
     if (count and *count > ctx_.limits.max_elements) {
       return std::unexpected{detail::at(*line, token, ParseErrc::too_large)};
@@ -214,31 +161,33 @@ class StationFileReader {
   [[nodiscard]] std::expected<void, Error> fail_position(
       const Line& line, const StationLine& fields,
       const ToLocationError& why) const {
-    if (const auto* projection = std::get_if<ProjectionError>(&why)) {
-      return fail(detail::to_format_error(*projection, stations_.size()));
+    if (const auto* location = std::get_if<core::LocationError>(&why)) {
+      return fail(detail::position_at(line, fields.x, fields.y, *location));
     }
-    return fail(position_error(line, fields, why));
+    return fail(detail::to_format_error(std::get<ProjectionError>(why),
+                                        stations_.size()));
   }
 
   std::expected<void, Error> append(const core::Location& where, core::Xy xy,
                                     std::string_view name_words) {
     const std::size_t index = stations_.size();
-    std::string name = joined_words(name_words);
-    if (not core::detail::is_valid_utf8(name)) {
-      name = with_valid_utf8(name);
+    // The name was cut at a NUL by joined_words, so only bad UTF-8 is left.
+    detail::CleanedText name =
+        detail::replace_invalid_utf8(joined_words(name_words));
+    if (name.replaced) {
       ++names_repaired_;
     }
     const std::string id = std::to_string(index);
-    if (name.empty()) {
-      name = "Station " + id;
-    }
     auto key = core::StationKey::make(id);
     if (not key) {
       return fail(detail::to_format_error(key.error(), index));
     }
-    auto text = core::StationText::make(std::move(name));
-    if (not text) {
-      return fail(detail::to_format_error(text.error(), index));
+    if (name.text.empty()) {
+      auto fallback = core::StationText::make("Station " + id);
+      if (not fallback) {
+        return fail(detail::to_format_error(fallback.error(), index));
+      }
+      name.text = *std::move(fallback);
     }
     std::optional<core::NativePoint> native;
     if (projector_.crs() != core::Epsg::wgs84()) {
@@ -248,7 +197,7 @@ class StationFileReader {
       }
     }
     stations_.push_back({.id = *std::move(key),
-                         .name = *std::move(text),
+                         .name = std::move(name.text),
                          .location = where,
                          .native = native,
                          .source = core::DataSource::adcirc});
@@ -257,11 +206,9 @@ class StationFileReader {
 
   Read<std::vector<core::FileStation>> finish() && {
     std::vector<Warning> warnings;
-    if (names_repaired_ > 0) {
-      warnings.push_back({.code = WarningCode::invalid_utf8_replaced,
-                          .subject = {},
-                          .count = names_repaired_});
-    }
+    append_if_counted(warnings, {.code = WarningCode::invalid_utf8_replaced,
+                                 .subject = {},
+                                 .count = names_repaired_});
     if (auto approximate = projector_.approximation_warning()) {
       warnings.push_back(std::move(*approximate));
     }

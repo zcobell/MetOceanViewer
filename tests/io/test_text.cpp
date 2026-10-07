@@ -764,3 +764,25 @@ TEST_CASE("at, double_at and int_at report the line, column and context",
                 .column()
                 .has_value());
 }
+
+TEST_CASE("position_at blames the latitude, else the first coordinate",
+          "[io][text]") {
+  const mov::io::detail::LineCursor::Line line{.number = 7,
+                                               .text = "200.5 95.25 name"};
+  const std::string_view x = std::string_view{line.text}.substr(0, 5);
+  const std::string_view y = std::string_view{line.text}.substr(6, 5);
+
+  using mov::core::LocationError;
+  const auto lat =
+      detail::position_at(line, x, y, LocationError::latitude_out_of_range);
+  CHECK(lat.code() == mov::io::ParseErrc::out_of_range);
+  CHECK(lat.line() == 7);
+  CHECK(lat.column() == std::optional<std::size_t>{6});
+
+  for (const LocationError other :
+       {LocationError::longitude_out_of_range, LocationError::not_finite}) {
+    const auto first = detail::position_at(line, x, y, other);
+    CHECK(first.code() == mov::io::ParseErrc::out_of_range);
+    CHECK(first.column() == std::optional<std::size_t>{0});
+  }
+}

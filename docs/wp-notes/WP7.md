@@ -32,12 +32,13 @@ appends to `src/io/CMakeLists.txt` (`target_sources`) and `tests/io/CMakeLists.t
   station costs a few hundred bytes (block, id, name, axis and column vectors), as much as
   sixteen samples, and a file of nothing but station lines would otherwise be unbounded.
   Checked in the line loop. A header line over 4 KiB is `too_large` as well.
-- **Shared helpers, for WP8 to adopt after the merge:** `detail/station_names.hpp`
-  (`replace_invalid_utf8` returns `{core::StationText, replaced}`; `uniquify_ids`);
-  `detail::split_on_into(text, delimiter, span)` (the comma counterpart of `split_ws_into`);
-  `detail::next_word(rest, is_separator)` (the one-argument form is `is_space`);
-  `LineCursor::next_nonblank()` and `peek_blank()`; `append_if_counted(warnings, w)` in
-  `warning.hpp`; `detail/civil_time.hpp` (below).
+- **Shared helpers** (WP8 adopted them; its local copies are gone):
+  `detail/station_names.hpp` (`replace_invalid_utf8` returns `{core::StationText,
+  replaced}`; `uniquify_ids`); `detail::split_on_into(text, delimiter, span)` (the comma
+  counterpart of `split_ws_into`); `detail::next_word(rest, is_separator)` (the one-argument
+  form is `is_space`); `detail::is_blank(text)`; `LineCursor::next_nonblank()`, `peek_blank()`
+  and `peek_nonblank()`; `detail::position_at` (`parse_at.hpp`); `append_if_counted(warnings, w)`
+  in `warning.hpp`; `detail/civil_time.hpp` (below).
 - New warning codes (appended after `legacy_dialect`): `row_shape_changed`, `empty_station`,
   `value_reads_as_missing`, `station_id_not_written`, `rows_omitted`.
 

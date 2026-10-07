@@ -50,7 +50,7 @@ class LineCursor {
   /// blank ones (they are still counted in `number`); nullopt at the end.
   [[nodiscard]] std::optional<Line> next_nonblank() noexcept {
     while (const auto line = next()) {
-      if (not skip_space(line->text).empty()) {
+      if (not is_blank(line->text)) {
         return line;
       }
     }
@@ -65,7 +65,14 @@ class LineCursor {
     if (not line) {
       return std::nullopt;
     }
-    return skip_space(line->text).empty();
+    return is_blank(line->text);
+  }
+
+  /// The line `next_nonblank()` would return, without consuming anything;
+  /// nullopt when only blank lines remain.
+  [[nodiscard]] std::optional<Line> peek_nonblank() const noexcept {
+    LineCursor ahead = *this;
+    return ahead.next_nonblank();
   }
 
   /// True when `next()` would return nullopt.
