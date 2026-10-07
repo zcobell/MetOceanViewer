@@ -208,7 +208,11 @@ std::expected<FilePtr, std::error_code> open_exclusive(
     const std::filesystem::path& temp) {
   errno = 0;
 #if defined(_WIN32)
-  std::FILE* const raw = ::_wfopen(temp.c_str(), L"wbx");
+  // _wfopen_s (not the deprecated _wfopen) returns its error directly.
+  std::FILE* raw = nullptr;
+  if (const errno_t err = ::_wfopen_s(&raw, temp.c_str(), L"wbx"); err != 0) {
+    return std::unexpected{std::error_code{err, std::generic_category()}};
+  }
 #else
   std::FILE* const raw = std::fopen(temp.c_str(), "wbx");
 #endif

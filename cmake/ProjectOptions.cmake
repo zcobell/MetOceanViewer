@@ -50,6 +50,10 @@ macro(mov_create_option_targets)
     if(MSVC)
         # Standards conformance: two-phase lookup, the conforming preprocessor.
         target_compile_options(mov_options INTERFACE /permissive- /Zc:preprocessor)
+        # The CRT's "use the _s variant" deprecations (C4996 on getenv, fopen,
+        # ...) are Microsoft-only advice, not portable C++: silence them so
+        # /W4 /WX stays about real problems.
+        target_compile_definitions(mov_options INTERFACE _CRT_SECURE_NO_WARNINGS)
     endif()
 
     # No fused multiply-add: a * x + b must round twice everywhere, so that

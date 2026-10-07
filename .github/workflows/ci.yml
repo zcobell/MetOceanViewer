@@ -169,7 +169,7 @@ jobs:
         run: |
           failed="build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log"
           [[ -f "${failed}" ]] || exit 0
-          out="$(ctest --preset ${{ matrix.preset }} --rerun-failed --output-on-failure 2>&1 | tail -c 12000)"
+          out="$(ctest --preset ${{ matrix.preset }} --rerun-failed --output-on-failure 2>&1 | tail -c 12000 || true)"
           out="${out//'%'/'%25'}"; out="${out//$'\r'/'%0D'}"; out="${out//$'\n'/'%0A'}"
           echo "::error title=ctest failures::${out}"
 
