@@ -55,12 +55,19 @@ set(mln_core_submodules
 # ...and those of vendor/maplibre-native/vendor/maplibre-tile-spec.
 set(mln_tile_spec_submodules cpp/vendor/earcut cpp/vendor/fsst)
 
+# The Qt version of a Qt6 package directory (<prefix>/lib/cmake/Qt6).
+function(mov_qt_version_of qt6_dir out_var)
+    file(STRINGS "${qt6_dir}/Qt6ConfigVersionImpl.cmake" line REGEX "^set\\(PACKAGE_VERSION \"")
+    string(REGEX REPLACE "^set\\(PACKAGE_VERSION \"([^\"]*)\"\\)$" "\\1" version "${line}")
+    set(${out_var} "${version}" PARENT_SCOPE)
+endfunction()
+
 if(NOT DEFINED ENV{QT_ROOT_DIR})
     message(FATAL_ERROR "maplibre-native-qt needs Qt ${mov_qt_version}: set QT_ROOT_DIR to its prefix")
 endif()
 file(TO_CMAKE_PATH "$ENV{QT_ROOT_DIR}" qt_root)
-file(STRINGS "${qt_root}/lib/cmake/Qt6/Qt6ConfigVersionImpl.cmake" qt_version_line REGEX "^set\\(PACKAGE_VERSION \"")
-string(REGEX REPLACE "^set\\(PACKAGE_VERSION \"([^\"]*)\"\\)$" "\\1" qt_version "${qt_version_line}")
+set(qt6_dir "${qt_root}/lib/cmake/Qt6")
+mov_qt_version_of("${qt6_dir}" qt_version)
 if(NOT qt_version STREQUAL mov_qt_version)
     message(
         FATAL_ERROR
@@ -72,8 +79,11 @@ endif()
 # Qt builds shared libraries and plugins; QMapLibre follows it.
 vcpkg_check_linkage(ONLY_DYNAMIC_LIBRARY)
 # The app links release QMapLibre in every configuration; a debug copy would
-# double a long build for nothing.
+# double a long build for nothing. (cmake/MapLibre.cmake therefore rejects
+# MSVC Debug builds of the app.) With no debug set there is nothing to pair
+# the release binaries with; say so rather than rely on the release-only skip.
 set(VCPKG_BUILD_TYPE release)
+set(VCPKG_POLICY_MISMATCHED_NUMBER_OF_BINARIES enabled)
 
 # The GitHub archives omit submodules, so fetch with git: shallow, at pinned
 # commits (the core commit is pinned by mln_qt_ref's tree).
@@ -104,8 +114,10 @@ mov_git(tile-spec-deps -C vendor/maplibre-native/vendor/maplibre-tile-spec
         submodule update ${shallow} ${mln_tile_spec_submodules})
 # gersemi: on
 
-# The bindings' own tests are not installed; skip building them.
-vcpkg_replace_string("${SOURCE_PATH}/CMakeLists.txt" "add_subdirectory(test)" "" IGNORE_UNCHANGED)
+# The bindings' own tests are not installed; skip building them. Without
+# IGNORE_UNCHANGED, a bump that moves this line fails here instead of silently
+# building the tests.
+vcpkg_replace_string("${SOURCE_PATH}/CMakeLists.txt" "add_subdirectory(test)" "")
 
 if(VCPKG_TARGET_IS_OSX)
     # Qt Quick renders through Metal on macOS; OpenGL is deprecated there.
@@ -119,6 +131,9 @@ vcpkg_cmake_configure(
     OPTIONS
         ${renderer}
         "-DCMAKE_PREFIX_PATH=${qt_root}"
+        # Explicit, so no other Qt on the system can win the search.
+        "-DQt6_DIR=${qt6_dir}"
+        "-DQT_DIR=${qt6_dir}"
         -DQT_VERSION_MAJOR=6
         -DMLN_QT_WITH_LOCATION=ON
         -DMLN_QT_WITH_QUICK_PLUGIN=OFF
@@ -130,14 +145,40 @@ vcpkg_cmake_configure(
         -DMLN_WITH_WERROR=OFF
     MAYBE_UNUSED_VARIABLES
         MLN_QT_WITH_INTERNAL_ICU
+        QT_DIR
 )
+
+# Record the Qt the build actually resolved, not the one asked for.
+file(STRINGS "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-rel/CMakeCache.txt" used_qt6_dir REGEX "^Qt6_DIR:")
+string(REGEX REPLACE "^Qt6_DIR:[A-Z]+=" "" used_qt6_dir "${used_qt6_dir}")
+cmake_path(IS_PREFIX qt_root "${used_qt6_dir}" NORMALIZE qt_is_ours)
+if(NOT qt_is_ours)
+    message(FATAL_ERROR "MapLibre Native Qt resolved Qt6_DIR='${used_qt6_dir}', outside QT_ROOT_DIR (${qt_root})")
+endif()
+mov_qt_version_of("${used_qt6_dir}" used_qt_version)
+
 vcpkg_cmake_install()
 vcpkg_cmake_config_fixup(PACKAGE_NAME QMapLibre CONFIG_PATH lib/cmake/QMapLibre)
 
 file(
     WRITE "${CURRENT_PACKAGES_DIR}/share/QMapLibre/mov-qt-version.cmake"
     "# Written by the maplibre-native-qt overlay port; read by cmake/MapLibre.cmake.\n"
-    "set(MOV_MAPLIBRE_QT_VERSION ${mov_qt_version})\n"
+    "set(MOV_MAPLIBRE_QT_VERSION ${used_qt_version})\n"
 )
-file(GLOB licenses "${SOURCE_PATH}/LICENSES/*.txt")
-vcpkg_install_copyright(FILE_LIST ${licenses})
+
+# Notices for everything compiled into the binaries: the bindings' licenses,
+# the core's own and its aggregated vendor notices (LICENSES.core.md: Boost,
+# RapidJSON, earcut, FSST, FastPFOR, ...), and the vendored code that list
+# leaves out (ICU, nunicode, MapLibre Tile).
+set(core "${SOURCE_PATH}/vendor/maplibre-native")
+file(GLOB binding_licenses "${SOURCE_PATH}/LICENSES/*.txt")
+vcpkg_install_copyright(
+    FILE_LIST
+        ${binding_licenses}
+        "${core}/LICENSE.md"
+        "${core}/LICENSES.core.md"
+        "${core}/vendor/icu/LICENSE"
+        "${core}/vendor/nunicode/LICENSE"
+        "${core}/vendor/maplibre-tile-spec/LICENSE-MIT"
+        "${core}/vendor/maplibre-tile-spec/LICENSE-APACHE"
+)
