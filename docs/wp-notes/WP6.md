@@ -220,11 +220,11 @@ crashes. The tests avoid it by never holding two handles on a file whose strings
 are read.
 
 Readers that open the same file twice at once could hit it. v5 files have no
-`NC_STRING`, but foreign files may (SN §12.5). Options:
-- a process-wide "already open" refusal in `File::open`;
-- or documenting "one handle per file".
+`NC_STRING`, but foreign files may (SN §12.5).
 
-**Decision needed.** Not reported upstream yet.
+**Decision (maintainer, after WP6): one handle per file.** `File::open` documents it and
+debug builds assert on a second open of the same file (docs/wp-notes/WP9.md, "One handle
+per file"). Not reported upstream yet.
 
 ## Paths (Windows)
 

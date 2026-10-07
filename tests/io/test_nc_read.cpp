@@ -122,7 +122,8 @@ TEST_CASE("read of a scalar, a hyperslab and a 3-D variable", "[io][netcdf]") {
   REQUIRE(expected.size() == 24);
   CHECK(expected[23] == 123);
   // One handle per file: the next ones are opened after this one is closed.
-  REQUIRE(std::move(file).close().has_value());
+  const auto closed = std::move(file).close();
+  REQUIRE(closed.has_value());
   // The same values whatever the block size.
   for (const std::size_t block : {1UZ, 2UZ, 3UZ, 5UZ, 7UZ, 12UZ, 13UZ}) {
     CAPTURE(block);
@@ -193,7 +194,8 @@ TEST_CASE("read polls the stop request between blocks", "[io][netcdf]") {
       error_of(file.read_samples("data", whole, stopped))));
   CHECK(std::holds_alternative<Cancelled>(error_of(file.read<double>(
       "data", {{.start = 0, .count = 1}, {.start = 0, .count = 1}}, stopped))));
-  REQUIRE(std::move(file).close().has_value());  // one handle per file
+  const auto closed = std::move(file).close();  // one handle per file
+  REQUIRE(closed.has_value());
   const auto full = value_of(
       open(fx.path("m.nc"), {.slab_elements = 7}).read<double>("data", whole));
   CHECK(full.front() == 0);

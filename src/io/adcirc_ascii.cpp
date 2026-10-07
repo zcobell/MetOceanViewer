@@ -21,13 +21,12 @@
 
 #include "mov/core/hwm.hpp"
 #include "mov/core/meta.hpp"
-#include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/timeseries.hpp"
-#include "mov/core/units.hpp"
+#include "mov/io/detail/adcirc_schema.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/model_number.hpp"
 #include "mov/io/detail/parse_at.hpp"
@@ -145,32 +144,6 @@ Classified classify(AdcircKind kind,
     out.samples.fill(core::Sample{core::Missing{}});
   }
   return out;
-}
-
-core::SeriesMeta meta_of(core::Quantity q, core::Unit unit) {
-  return core::SeriesMeta::make({.quantity = q,
-                                 .label = std::string{core::info(q).long_name},
-                                 .unit = std::move(unit)});
-}
-
-std::vector<core::SeriesMeta> schema_of(AdcircKind kind) {
-  using core::Quantity;
-  const core::Unit metre{core::LengthUnit::meter};
-  const core::Unit speed{core::SpeedUnit::meter_per_second};
-  switch (kind) {
-    case AdcircKind::elevation:
-      return {meta_of(Quantity::water_level, metre)};
-    case AdcircKind::velocity:
-      return {meta_of(Quantity::current_u, speed),
-              meta_of(Quantity::current_v, speed)};
-    case AdcircKind::pressure:
-      return {meta_of(Quantity::air_pressure,
-                      core::Unit{core::PressureUnit::meter_of_water})};
-    case AdcircKind::wind:
-      return {meta_of(Quantity::wind_u, speed),
-              meta_of(Quantity::wind_v, speed)};
-  }
-  return {};
 }
 
 // ---- the records
@@ -488,7 +461,7 @@ class AsciiReader {
         warnings(ended, complete_records, order.report);
 
     std::vector<core::Variable> variables;
-    std::vector<core::SeriesMeta> schema = schema_of(request_.kind);
+    std::vector<core::SeriesMeta> schema = detail::adcirc_schema(request_.kind);
     variables.reserve(value_columns_);
     for (std::size_t j = 0; j < value_columns_; ++j) {
       variables.push_back({.meta = std::move(schema[j]),

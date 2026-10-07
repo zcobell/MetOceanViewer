@@ -172,7 +172,9 @@ TEST_CASE("a second handle on an open file asserts in debug builds",
   SECTION("a closed or destroyed handle is gone") {
     CHECK(run_in_child([&] {
             auto first = File::open(path, {});
-            static_cast<void>(std::move(*first).close());
+            if (not std::move(*first).close()) {
+              std::_Exit(EXIT_FAILURE);
+            }
             const auto second = File::open(path, {});
             if (not second) {
               std::_Exit(EXIT_FAILURE);
