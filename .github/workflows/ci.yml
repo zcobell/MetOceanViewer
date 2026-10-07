@@ -155,12 +155,23 @@ jobs:
       # xvfb-run with Mesa (tests/CMakeLists.txt sets the launcher); the
       # macOS and Windows jobs build it but do not run it yet.
       - name: Test
+        id: test
         run: |
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
             ctest --preset ${{ matrix.preset }}
           else
             ctest --preset ${{ matrix.preset }} --label-exclude gui
           fi
+
+      # Failed tests as one annotation, readable through the public API.
+      - name: Report failed tests
+        if: failure() && steps.test.outcome == 'failure'
+        run: |
+          failed="build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log"
+          [[ -f "${failed}" ]] || exit 0
+          out="$(ctest --preset ${{ matrix.preset }} --rerun-failed --output-on-failure 2>&1 | tail -c 12000)"
+          out="${out//'%'/'%25'}"; out="${out//$'\r'/'%0D'}"; out="${out//$'\n'/'%0A'}"
+          echo "::error title=ctest failures::${out}"
 
       - name: Upload GUI screenshot
         if: always() && runner.os == 'Linux' && env.BUILD_QT == 'true'
