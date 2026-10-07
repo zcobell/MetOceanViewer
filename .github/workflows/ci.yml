@@ -40,7 +40,7 @@ jobs:
             compiler-cache: ccache
             qt-arch: linux_gcc_64
           - name: macos-arm64-appleclang
-            os: macos-14
+            os: macos-15
             preset: ci-macos
             compiler-cache: ccache
             qt-arch: clang_64
@@ -70,13 +70,20 @@ jobs:
         if: runner.os == 'Linux'
         uses: ./.github/actions/setup-gcc
 
-      # Apple Clang must provide <expected> and <format>: Xcode 16 (Apple
-      # Clang 16) does; the macos-14 default Xcode 15.4 is not relied on.
-      - name: Select Xcode 16 (macOS)
+      # Apple Clang must provide <expected> and <format>: Xcode 16 and later
+      # do. macos-14 images are retired on 2026-11-02, so the job runs on
+      # macos-15, with Xcode 16.2 pinned: the same Apple Clang 16 that the job
+      # used on macos-14 (setup-xcode '16' resolved to 16.2 there), and the
+      # oldest toolchain we support. Its libc++ lacks constexpr
+      # variant<string>, stop_token, floating from_chars and ranges::fold_left;
+      # the code and tests are written for that, and the libcxx job below
+      # catches regressions earlier. The deployment target stays macOS 14
+      # (CMAKE_OSX_DEPLOYMENT_TARGET in the preset).
+      - name: Select Xcode 16.2 (macOS)
         if: runner.os == 'macOS'
         uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
-          xcode-version: '16'
+          xcode-version: '16.2'
 
       - name: MSVC developer environment (Windows)
         if: runner.os == 'Windows'
@@ -178,6 +185,32 @@ jobs:
         with:
           cache-key: linux-gcc
       - run: cmake --workflow --preset asan
+
+  # Clang + libc++ at Apple's level (LIBCXX_VERSION in tools/versions.env):
+  # catches the standard-library gaps of the macOS job (constexpr
+  # variant<string>, stop_token, floating from_chars, ranges) on Linux, where
+  # the build is fast and its log is readable. Blocking: it is deterministic
+  # and takes the time of one Debug build.
+  libcxx:
+    name: libc++ (linux-clang)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: ./.github/actions/setup-gcc # vcpkg builds the C ports with cc, as in the dev image
+      - uses: ./.github/actions/setup-libcxx
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: libcxx
+          max-size: 500M
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux-libcxx
+      - run: cmake --workflow --preset dev-libcxx
 
   fuzz:
     name: fuzz (linux-clang)

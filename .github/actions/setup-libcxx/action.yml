@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+
+name: Install Clang with libc++
+description: >
+  Install clang and libc++ at $LIBCXX_VERSION from the Ubuntu archive and
+  provide clang++-libcxx, the compiler of the dev-libcxx preset and the
+  x64-linux-libcxx vcpkg triplet, as in tools/dev/Dockerfile. Requires
+  load-versions first.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          "clang-${LIBCXX_VERSION}" "libc++-${LIBCXX_VERSION}-dev" \
+          "libc++abi-${LIBCXX_VERSION}-dev" "libunwind-${LIBCXX_VERSION}-dev"
+        sudo ln -sf "/usr/lib/llvm-${LIBCXX_VERSION}/bin/clang++" /usr/local/bin/clang++-libcxx
+        clang++-libcxx --version | head -1
