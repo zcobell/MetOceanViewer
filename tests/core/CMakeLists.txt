@@ -11,6 +11,7 @@ mov_add_test(
         test_quantity.cpp
         test_toolchain_probe.cpp
         test_meta.cpp
+        test_station.cpp
     CONSTEXPR_SOURCES
         test_version_constexpr.cpp
         test_numeric_constexpr.cpp
@@ -21,6 +22,7 @@ mov_add_test(
         test_datum_constexpr.cpp
         test_quantity_constexpr.cpp
         test_toolchain_probe_constexpr.cpp
+        test_station_constexpr.cpp
     LIBRARIES mov::core
 )
 
