@@ -145,8 +145,7 @@ class Bucket {
 /// The Bucket of the whole series: an ordered left fold over its samples.
 [[nodiscard]] Bucket summarize(const TimeSeries& s);
 
-// ---- Extent
-// ------------------------------------------------------------------
+// ---- Extent ----
 
 /// The smallest and largest value of a series.
 struct ValueRange {
@@ -197,8 +196,7 @@ struct Extent {
 /// (or there are none).
 [[nodiscard]] std::optional<Extent> extent(std::span<const TimeSeries> all);
 
-// ---- Quick statistics
-// ------------------------------------------------------------
+// ---- Quick statistics ----
 
 struct ValueStats {
   Extreme min;  // the first minimum
@@ -222,8 +220,7 @@ struct QuickStats {
 /// is finite even when the plain sum would overflow.
 [[nodiscard]] QuickStats quick_stats(const TimeSeries& s);
 
-// ---- Residual
-// -----------------------------------------------------------------------
+// ---- Residual ----
 
 /// Why observed - predicted is not defined, in the order the checks run.
 enum class ResidualErrc : std::uint8_t {
@@ -246,8 +243,7 @@ enum class ResidualErrc : std::uint8_t {
 [[nodiscard]] std::expected<TimeSeries, ResidualErrc> residual(
     const ObsVsPred& pair);
 
-// ---- Changing a series
-// -----------------------------------------------------------------
+// ---- Changing a series ----
 
 /// The samples with time in [r.begin(), r.end()): two binary searches. The
 /// rvalue overload erases in place.

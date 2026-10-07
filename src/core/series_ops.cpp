@@ -32,8 +32,7 @@
 
 namespace mov::core {
 
-// ---- Bucket, extent, quick_stats
-// ---------------------------------------------
+// ---- Bucket, extent, quick_stats ----
 
 Bucket summarize(const TimeSeries& s) {
   // An ordered left fold, not reduce: the sum is only approximately
@@ -84,9 +83,8 @@ double mean_of(const Bucket& b, const TimeSeries& s) {
     return mean;
   }
   const auto scaled = [n](Sample x) noexcept {
-    return x.visit([](Missing) noexcept { return 0.0; },
-                   [](Dry) noexcept { return 0.0; },
-                   [n](double v) noexcept { return v / n; });
+    const std::optional<double> v = x.value();
+    return v ? *v / n : 0.0;  // Missing and Dry add nothing
   };
   const std::span<const Sample> samples = s.samples();
   return std::transform_reduce(samples.begin(), samples.end(), 0.0, std::plus{},
@@ -207,8 +205,7 @@ std::expected<TimeSeries, ResidualErrc> residual(const ObsVsPred& pair) {
                     std::move(samples), std::move(*meta)};
 }
 
-// ---- slice, shift_time, scale_offset
-// ------------------------------------------
+// ---- slice, shift_time, scale_offset ----
 
 namespace {
 
@@ -275,8 +272,7 @@ TimeSeries scale_offset(TimeSeries s, Affine a) {
       [a](Sample x) noexcept { return detail::apply_affine(a, x); });
 }
 
-// ---- convert
-// ---------------------------------------------------------------------
+// ---- convert ----
 
 namespace {
 
