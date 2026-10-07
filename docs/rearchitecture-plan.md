@@ -513,6 +513,10 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     libstdc++) takes priority over the glibc floor; the AppImage may be built on a
     newer Ubuntu (e.g. 24.04, glibc 2.39) if 22.04 cannot carry the toolchain
     robustly. The resulting floor is recorded in `docs/packaging.md`.
+    **Resolved 2026-10-07:** the floor stays glibc 2.35. The AppImage builds on
+    Ubuntu 22.04 with GCC 14 (toolchain PPA) and carries its libstdc++/libgcc_s,
+    used only when the host's are older (AppRun hook). Verified on bare 22.04,
+    24.04 and Fedora.
 25. **R² of a through-origin HWM fit:** uncentred (`1 − SSres/Σy²`), as R and statsmodels
     report for no-intercept models. It differs from v4's centred value.
 26. **D-Flow FM:** no real `_his.nc` is available. Tests use synthetic fixtures built from
