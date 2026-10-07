@@ -102,7 +102,7 @@ class Golden {
       fields.erase(fields.begin(), fields.begin() + 2);
       values_[key] = std::move(fields);
     }
-    REQUIRE_FALSE(values_.empty());
+    REQUIRE(not values_.empty());
   }
 
   [[nodiscard]] bool has(const std::string& key) const {

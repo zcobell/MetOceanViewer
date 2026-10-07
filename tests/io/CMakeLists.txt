@@ -58,6 +58,8 @@ mov_add_test(
         test_table_error.cpp
         test_adcirc_station_file.cpp
         test_adcirc_ascii.cpp
+        test_hwm_file.cpp
+        test_hwm_golden.cpp
     LIBRARIES mov::io
 )
 if(MOV_PROJ_DB)
