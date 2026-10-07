@@ -53,6 +53,8 @@ RUN apt-get update \
         libclang-rt-${LLVM_VERSION}-dev \
         libunwind-${LIBCXX_VERSION}-dev \
         libtool \
+        # rsvg-convert renders the app icons (tools/make_icons.py).
+        librsvg2-bin \
         lld-${LLVM_VERSION} \
         llvm-${LLVM_VERSION} \
         locales \

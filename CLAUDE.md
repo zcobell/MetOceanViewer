@@ -94,7 +94,14 @@ tools/dev/run.sh ctest --preset dev -R <regex>        # rerun selected tests
 tools/dev/run.sh ctest --preset dev-qt -L 'qt|gui'   # qt: offscreen, no GL; gui: Xvfb + Mesa
 tools/dev/run.sh cmake --build --preset dev-qt --target all_qmllint   # QML type check (CI runs it)
 # On a machine with a display: build natively and run build/<preset>/src/ui/metoceanviewer
-# (macOS: metoceanviewer.app); see "Running the app" in tools/dev/README.md.
+# (macOS: MetOceanViewer.app); see "Running the app" in tools/dev/README.md.
+
+# Packages (docs/packaging.md). The AppImage builds in the Ubuntu 22.04 image (glibc 2.35
+# floor); the DMG and the Windows installer natively (package-macos, package-windows) or in
+# CI (.github/workflows/package.yml: tags v*, manual runs; signing gated on secrets).
+MOV_DEV_IMAGE=appimage tools/dev/run.sh cmake --workflow --preset package-linux
+tools/dev/run.sh packaging/smoke-test.sh build/package-linux/packages/<name>.AppImage  # runs --self-test
+tools/dev/run.sh python3 tools/make_icons.py       # after editing an icon SVG (outputs are committed)
 
 # clang-tidy gate (CI runs the same; the tidy preset includes the Qt layers):
 tools/dev/run.sh cmake --preset tidy

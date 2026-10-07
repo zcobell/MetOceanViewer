@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!--
+  Info.plist of MetOceanViewer.app, configured by mov_set_app_metadata()
+  (cmake/Packaging.cmake): identity of plan §6.19, version from
+  project(VERSION), minimum macOS of §6.24, and the session document type
+  (.mvs; JSON in v5, netCDF in v4, so it conforms to public.data only).
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>@MOV_APP_NAME@</string>
+  <key>CFBundleExecutable</key>
+  <string>@MOV_APP_NAME@</string>
+  <key>CFBundleIconFile</key>
+  <string>metoceanviewer.icns</string>
+  <key>CFBundleIdentifier</key>
+  <string>@MOV_APP_ID@</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>@MOV_APP_NAME@</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>@PROJECT_VERSION@</string>
+  <key>CFBundleVersion</key>
+  <string>@PROJECT_VERSION@</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>14.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright (c) 2026 Zach Cobell. GPL-3.0-or-later.</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>MetOceanViewer session</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>metoceanviewer.icns</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>@MOV_APP_ID@.session</string>
+      </array>
+    </dict>
+  </array>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>@MOV_APP_ID@.session</string>
+      <key>UTTypeDescription</key>
+      <string>MetOceanViewer session</string>
+      <key>UTTypeIconFile</key>
+      <string>metoceanviewer.icns</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>mvs</string>
+        </array>
+      </dict>
+    </dict>
+  </array>
+</dict>
+</plist>

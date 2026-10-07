@@ -9,6 +9,9 @@ find_package(netCDF CONFIG REQUIRED)
 # build is compiled in: the application tells mov::io where proj.db is
 # (set_projection_data_dir), or $MOV_PROJ_DATA does.
 find_package(PROJ CONFIG REQUIRED)
+# proj.db in that PROJ install (vcpkg: share/proj), which the application
+# ships (cmake/Packaging.cmake) and the projection tests point mov::io at.
+find_file(MOV_PROJ_DB proj.db PATHS "${PROJ_DIR}" "${PROJ_DIR}/.." NO_DEFAULT_PATH)
 
 # The netCDF wrapper lives in netcdf/: the only sources that include
 # <netcdf.h> (the netcdf_include_gate test checks it).

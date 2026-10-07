@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!-- The session file type (.mvs, plan §6.19) for shared-mime-info. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-metoceanviewer-session">
+    <comment>MetOceanViewer session</comment>
+    <icon name="io.github.zcobell.metoceanviewer"/>
+    <glob pattern="*.mvs"/>
+  </mime-type>
+</mime-info>

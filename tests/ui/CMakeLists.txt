@@ -6,6 +6,22 @@
 # Label qt: identity, version and the maplibre plugin, without GL.
 mov_add_test(mov_ui_qt_tests QT SOURCES main.cpp test_application.cpp LIBRARIES mov::ui mov::core Qt6::Location)
 mov_stage_maplibre_runtime(mov_ui_qt_tests)
+mov_stage_projection_data(mov_ui_qt_tests)
+
+# The application's own --self-test, as the packaging smoke test runs it
+# (docs/packaging.md), from the build tree.
+add_test(NAME metoceanviewer_self_test COMMAND metoceanviewer --self-test)
+set_tests_properties(
+    metoceanviewer_self_test
+    PROPERTIES LABELS qt TIMEOUT 120 ENVIRONMENT QT_QPA_PLATFORM=offscreen
+)
+if(WIN32)
+    set_property(
+        TEST metoceanviewer_self_test
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+    )
+endif()
 
 # Label gui: rendering, and the screenshot for humans.
 mov_add_test(

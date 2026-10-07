@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!--
+  Hardened-runtime entitlements of MetOceanViewer.app (packaging/macos/sign.sh).
+  allow-jit: the QML engine compiles JavaScript to machine code with
+  MAP_JIT memory, which the hardened runtime refuses without it. Nothing else
+  is relaxed: every library and plugin in the bundle is signed with the
+  same identity, so library validation stays on.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+</dict>
+</plist>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!--
+  Application manifest of metoceanviewer.exe, merged by the MSVC linker into
+  the embedded manifest (which adds the asInvoker execution level).
+  - activeCodePage UTF-8 (Windows 10 1903+): netCDF-C 4.9.3 reads paths in
+    the active code page, so non-ASCII paths need it to be UTF-8
+    (docs/wp-notes/WP6.md).
+  - longPathAware: paths over MAX_PATH; also needs the system's
+    LongPathsEnabled policy.
+  - dpiAwareness PerMonitorV2: what Qt 6 sets at startup anyway; declaring it
+    here makes it apply before Qt runs (dpiAware is the pre-1607 fallback).
+  - supportedOS: Windows 10 and 11 (plan §6.24: Windows 10 22H2 or later; the
+    installer enforces the build number).
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity
+      type="win32"
+      name="@MOV_APP_ID@"
+      version="@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@.0"
+      processorArchitecture="amd64"/>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+    </windowsSettings>
+  </application>
+</assembly>

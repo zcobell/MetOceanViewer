@@ -21,6 +21,15 @@ void select_graphics_api();
 /// icon. Must run after the QGuiApplication exists.
 void set_application_metadata();
 
+/// Tells mov::io where the PROJ database (proj.db) is: the directory a
+/// package ships it in, at a fixed path relative to the executable
+/// (share/metoceanviewer/proj beside bin/, or Resources/proj in a macOS
+/// bundle; the build tree has the same layout). If that directory has no
+/// proj.db, PROJ keeps its own defaults. `MOV_PROJ_DATA` in the environment
+/// still overrides it (mov::io::set_projection_data_dir). Must run after the
+/// QGuiApplication exists and before the first projection.
+void configure_projection_data();
+
 /// Loads the main window (MetOceanViewer/Main.qml) into `engine`. Returns
 /// false if it failed to load; the QML errors are already logged.
 [[nodiscard]] bool load_main_window(QQmlApplicationEngine& engine);

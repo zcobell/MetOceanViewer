@@ -17,9 +17,8 @@ mov_add_test(
     LIBRARIES mov::io
 )
 
-# The projection tests tell mov::io where this build's proj.db is. It sits in
-# the PROJ install that find_package found (vcpkg: share/proj).
-find_file(MOV_PROJ_DB proj.db PATHS "${PROJ_DIR}" "${PROJ_DIR}/.." NO_DEFAULT_PATH)
+# The projection tests tell mov::io where this build's proj.db is
+# (MOV_PROJ_DB, found by src/io/CMakeLists.txt in the PROJ install).
 if(MOV_PROJ_DB)
     get_filename_component(MOV_TEST_PROJ_DATA_DIR "${MOV_PROJ_DB}" DIRECTORY)
     set_source_files_properties(

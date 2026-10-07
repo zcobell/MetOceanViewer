@@ -228,6 +228,54 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       }
+    },
+    {
+      "name": "package-linux",
+      "inherits": [
+        "base",
+        "gcc",
+        "qt"
+      ],
+      "displayName": "Package: Linux AppImage",
+      "description": "Release build of the app, packaged as an AppImage by cpack (linuxdeploy). Run it in the Ubuntu 22.04 image (MOV_DEV_IMAGE=appimage tools/dev/run.sh) for the glibc 2.35 floor; see docs/packaging.md.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF",
+        "MOV_ENABLE_HARDENING": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "package-macos",
+      "inherits": [
+        "ci-macos",
+        "qt"
+      ],
+      "displayName": "Package: macOS DMG",
+      "description": "Release build of the app, packaged as a DMG by cpack; signed and notarized when the APPLE_* environment is set (docs/packaging.md).",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF",
+        "MOV_ENABLE_HARDENING": "OFF"
+      }
+    },
+    {
+      "name": "package-windows",
+      "inherits": [
+        "ci-windows",
+        "qt"
+      ],
+      "displayName": "Package: Windows installer and zip",
+      "description": "Release build of the app, packaged by cpack as an Inno Setup installer and a portable zip (docs/packaging.md). Run from a Visual Studio developer environment.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF",
+        "MOV_ENABLE_HARDENING": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -282,6 +330,18 @@
         "coverage"
       ],
       "description": "Runs the tests and writes build/coverage/coverage-report/ (index.html, coverage.xml, coverage.json, summary.txt); fails below the coverage floors."
+    },
+    {
+      "name": "package-linux",
+      "configurePreset": "package-linux"
+    },
+    {
+      "name": "package-macos",
+      "configurePreset": "package-macos"
+    },
+    {
+      "name": "package-windows",
+      "configurePreset": "package-windows"
     }
   ],
   "testPresets": [
@@ -356,6 +416,20 @@
       "name": "ci-windows",
       "inherits": "test-base",
       "configurePreset": "ci-windows"
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "package-linux",
+      "configurePreset": "package-linux"
+    },
+    {
+      "name": "package-macos",
+      "configurePreset": "package-macos"
+    },
+    {
+      "name": "package-windows",
+      "configurePreset": "package-windows"
     }
   ],
   "workflowPresets": [
@@ -492,6 +566,57 @@
         {
           "type": "build",
           "name": "coverage-report"
+        }
+      ]
+    },
+    {
+      "name": "package-linux",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "package-linux"
+        },
+        {
+          "type": "build",
+          "name": "package-linux"
+        },
+        {
+          "type": "package",
+          "name": "package-linux"
+        }
+      ]
+    },
+    {
+      "name": "package-macos",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "package-macos"
+        },
+        {
+          "type": "build",
+          "name": "package-macos"
+        },
+        {
+          "type": "package",
+          "name": "package-macos"
+        }
+      ]
+    },
+    {
+      "name": "package-windows",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "package-windows"
+        },
+        {
+          "type": "build",
+          "name": "package-windows"
+        },
+        {
+          "type": "package",
+          "name": "package-windows"
         }
       ]
     }

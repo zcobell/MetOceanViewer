@@ -15,15 +15,18 @@
 # tools/versions.env, the vcpkg baseline) and rebuilt when any of them change.
 #
 # Qt is installed with aqtinstall into ~/Qt on demand: when MOV_DEV_QT=1, or
-# when an argument names a Qt preset (one whose name ends in "-qt", or "tidy",
-# whose gate covers the Qt layers). A stamp file records version, arch and
-# modules; a mismatch reinstalls.
+# when an argument names a Qt preset (one whose name ends in "-qt", "tidy",
+# whose gate covers the Qt layers, or a package-* preset). A stamp file records
+# version, arch and modules; a mismatch reinstalls.
+#
+# MOV_DEV_IMAGE=appimage runs the command in the Ubuntu 22.04 image that
+# builds the AppImage (tools/dev/appimage/Dockerfile) instead.
 #
 # Persistent state lives on the host:
 #   ~/Qt                         Qt
 #   ~/.cache/metoceanviewer-dev  ccache, vcpkg downloads + binary cache, $HOME
 #
-# Environment overrides: MOV_DEV_QT, MOV_QT_ROOT, MOV_DEV_CACHE,
+# Environment overrides: MOV_DEV_IMAGE, MOV_DEV_QT, MOV_QT_ROOT, MOV_DEV_CACHE,
 # MOV_DOCKER_ARGS (extra `docker run` arguments).
 
 set -euo pipefail
@@ -51,21 +54,37 @@ qt_root="${MOV_QT_ROOT:-${HOME}/Qt}"
 qt_prefix="${qt_root}/${qt_version}/gcc_64"
 cache_root="${MOV_DEV_CACHE:-${HOME}/.cache/metoceanviewer-dev}"
 
-input_hash="$(cat "${script_dir}/Dockerfile" "${script_dir}/requirements.txt" "${versions_file}" \
+# MOV_DEV_IMAGE picks the image: "dev" (default, Ubuntu 24.04, mirrors CI) or
+# "appimage" (Ubuntu 22.04 + GCC from the toolchain PPA; the AppImage build,
+# see docs/packaging.md). Both share the caches and the Qt prefix below.
+case "${MOV_DEV_IMAGE:-dev}" in
+  dev) dockerfile="${script_dir}/Dockerfile" image_name=metoceanviewer-dev ;;
+  appimage) dockerfile="${script_dir}/appimage/Dockerfile" image_name=metoceanviewer-appimage ;;
+  *)
+    echo "run.sh: MOV_DEV_IMAGE must be dev or appimage, not '${MOV_DEV_IMAGE}'" >&2
+    exit 1
+    ;;
+esac
+
+input_hash="$(cat "${dockerfile}" "${script_dir}/requirements.txt" "${versions_file}" \
   <(echo "${vcpkg_commit}") | sha256sum | cut -c1-12)"
-image="metoceanviewer-dev:${input_hash}"
+image="${image_name}:${input_hash}"
 
 if ! docker image inspect "${image}" >/dev/null 2>&1; then
   echo "run.sh: building ${image}" >&2
+  # Each Dockerfile declares the build args it uses; Docker ignores the rest
+  # (with a warning).
   docker build \
+    --file "${dockerfile}" \
     --build-arg "UBUNTU_IMAGE=$(version_of UBUNTU_IMAGE)" \
+    --build-arg "APPIMAGE_UBUNTU_IMAGE=$(version_of APPIMAGE_UBUNTU_IMAGE)" \
     --build-arg "GCC_VERSION=$(version_of GCC_VERSION)" \
     --build-arg "LLVM_VERSION=$(version_of LLVM_VERSION)" \
     --build-arg "LIBCXX_VERSION=$(version_of LIBCXX_VERSION)" \
     --build-arg "CMAKE_VERSION=$(version_of CMAKE_VERSION)" \
     --build-arg "CMAKE_SHA256=$(version_of CMAKE_SHA256)" \
     --build-arg "VCPKG_COMMIT=${vcpkg_commit}" \
-    --tag "${image}" --tag metoceanviewer-dev:latest \
+    --tag "${image}" --tag "${image_name}:latest" \
     "${script_dir}"
 fi
 
@@ -117,7 +136,8 @@ fi
 
 needs_qt="${MOV_DEV_QT:-0}"
 for arg in "$@"; do
-  if [[ "${arg}" == *-qt || "${arg}" == --preset=*-qt || "${arg}" == tidy || "${arg}" == --preset=tidy ]]; then
+  if [[ "${arg}" == *-qt || "${arg}" == --preset=*-qt || "${arg}" == tidy || "${arg}" == --preset=tidy ||
+    "${arg}" == package-* || "${arg}" == --preset=package-* ]]; then
     needs_qt=1
   fi
 done

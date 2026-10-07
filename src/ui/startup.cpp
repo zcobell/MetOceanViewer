@@ -3,6 +3,8 @@
 
 #include "mov/ui/startup.hpp"
 
+#include <QCoreApplication>
+#include <QDir>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QMapLibre/Utils>
@@ -13,6 +15,7 @@
 #include <utility>
 
 #include "mov/core/version.hpp"
+#include "mov/io/projection.hpp"
 
 namespace mov::ui {
 
@@ -54,6 +57,15 @@ void set_application_metadata() {
   // their path relative to src/ui/qml.
   QGuiApplication::setWindowIcon(
       QIcon(QStringLiteral(":/qt/qml/MetOceanViewer/images/app-icon.svg")));
+}
+
+void configure_projection_data() {
+  // MOV_APP_PROJ_DATA_DIR comes from cmake/Packaging.cmake.
+  const QDir dir(QCoreApplication::applicationDirPath() + u'/' +
+                 QStringLiteral(MOV_APP_PROJ_DATA_DIR));
+  if (dir.exists(QStringLiteral("proj.db"))) {
+    io::set_projection_data_dir(dir.filesystemAbsolutePath());
+  }
 }
 
 bool load_main_window(QQmlApplicationEngine& engine) {
