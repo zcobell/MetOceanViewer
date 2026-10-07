@@ -6,16 +6,17 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <expected>
 #include <numbers>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "core_access.hpp"
 #include "mov/core/detail/ascii.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
@@ -26,8 +27,6 @@ namespace mov::core {
 
 namespace {
 
-enum class PairKind : std::uint8_t { wind, current, generic };
-
 bool is(const QuantityId& q, Quantity expected) noexcept {
   const Quantity* registry = std::get_if<Quantity>(&q);
   return registry != nullptr and *registry == expected;
@@ -37,50 +36,33 @@ bool is_generic(const QuantityId& q) noexcept {
   return std::holds_alternative<GenericQuantity>(q);
 }
 
-std::optional<PairKind> pair_kind(const QuantityId& u,
-                                  const QuantityId& v) noexcept {
-  if (is_generic(u) and is_generic(v)) {
-    return PairKind::generic;
-  }
+std::optional<VectorKind> registered_pair(const QuantityId& u,
+                                          const QuantityId& v) noexcept {
   if (is(u, Quantity::wind_u) and is(v, Quantity::wind_v)) {
-    return PairKind::wind;
+    return VectorKind::wind;
   }
   if (is(u, Quantity::current_u) and is(v, Quantity::current_v)) {
-    return PairKind::current;
+    return VectorKind::current;
   }
   return std::nullopt;
 }
 
-std::optional<AlignmentErrc> check_units(const SeriesMeta& a,
-                                         const SeriesMeta& b) {
-  if (not a.unit() or not b.unit()) {
-    return AlignmentErrc::unit_unknown;
-  }
-  if (*a.unit() != *b.unit()) {
-    return AlignmentErrc::units_differ;
-  }
-  return std::nullopt;
-}
-
-std::optional<AlignmentErrc> check_datums(const SeriesMeta& a,
-                                          const SeriesMeta& b) noexcept {
-  if (a.datum() == b.datum()) {
-    return std::nullopt;
-  }
-  return (a.datum() and b.datum()) ? AlignmentErrc::datums_differ
-                                   : AlignmentErrc::datum_unknown;
-}
-
-// Times, then units, then datums.
-std::optional<AlignmentErrc> check_aligned(const TimeSeries& a,
-                                           const TimeSeries& b) {
+// The common unit of two series on the same times; times first, then units.
+template <class Errc>
+std::expected<Unit, Errc> aligned_unit(const TimeSeries& a,
+                                       const TimeSeries& b) {
   if (not std::ranges::equal(a.times(), b.times())) {
-    return AlignmentErrc::times_differ;
+    return std::unexpected{Errc::times_differ};
   }
-  if (const auto e = check_units(a.meta(), b.meta())) {
-    return e;
+  const std::optional<Unit>& ua = a.meta().unit();
+  const std::optional<Unit>& ub = b.meta().unit();
+  if (not ua or not ub) {
+    return std::unexpected{Errc::unit_unknown};
   }
-  return check_datums(a.meta(), b.meta());
+  if (*ua != *ub) {
+    return std::unexpected{Errc::units_differ};
+  }
+  return *ua;
 }
 
 bool is_component_letter(char c) noexcept {
@@ -102,26 +84,22 @@ std::string generic_stem(std::string_view label) {
   return label.empty() ? std::string{"vector"} : std::string{label};
 }
 
-std::string stem(PairKind kind, std::string_view u_label) {
-  if (kind == PairKind::wind) {
+std::string stem(VectorKind kind, std::string_view u_label) {
+  if (kind == VectorKind::wind) {
     return "wind";
   }
-  if (kind == PairKind::current) {
+  if (kind == VectorKind::current) {
     return "current";
   }
   return generic_stem(u_label);
 }
 
-// A derived series has no datum, so make cannot fail.
-SeriesMeta derived_meta(QuantityId quantity, std::string label, Unit unit) {
-  return SeriesMeta::make({.quantity = std::move(quantity),
-                           .label = std::move(label),
-                           .unit = std::move(unit),
-                           .datum = std::nullopt})
-      .value_or(SeriesMeta{});
+TimeSeries derived(const TimeSeries& axis_source, std::vector<Sample> samples,
+                   SeriesMeta meta) {
+  const std::span<const Time> t = axis_source.times();
+  return TimeSeries{detail::CoreAccess::key(), TimeAxis(t.begin(), t.end()),
+                    std::move(samples), std::move(meta)};
 }
-
-Unit degree() { return parse_unit("degree").value_or(Unit{}); }
 
 template <class Op>
 std::vector<Sample> zip_samples(const TimeSeries& a, const TimeSeries& b,
@@ -133,6 +111,18 @@ std::vector<Sample> zip_samples(const TimeSeries& a, const TimeSeries& b,
 
 Sample hypot2(Sample a, Sample b) noexcept {
   return combine(a, b, [](double x, double y) { return std::hypot(x, y); });
+}
+
+// The combine rule over three samples, with std::hypot of three.
+Sample hypot3(Sample x, Sample y, Sample z) noexcept {
+  const std::optional<double> a = x.value();
+  const std::optional<double> b = y.value();
+  const std::optional<double> c = z.value();
+  if (a and b and c) {
+    return finite_or_missing(std::hypot(*a, *b, *c));
+  }
+  const bool missing = x.is_missing() or y.is_missing() or z.is_missing();
+  return missing ? Sample{Missing{}} : Sample{Dry{}};
 }
 
 // atan2(v, u) in degrees, in (-180, 180]; a zero vector is Missing.
@@ -151,75 +141,82 @@ Sample direction(Sample u, Sample v) noexcept {
   });
 }
 
-std::vector<Time> times_of(const TimeSeries& s) {
-  return {s.times().begin(), s.times().end()};
-}
-
 }  // namespace
 
-std::expected<VectorSeries, AlignmentErrc> VectorSeries::make(TimeSeries u,
-                                                              TimeSeries v) {
-  if (not pair_kind(u.meta().quantity(), v.meta().quantity())) {
-    return std::unexpected{AlignmentErrc::not_a_vector_pair};
+std::expected<VectorSeries, VectorErrc> VectorSeries::make(TimeSeries u,
+                                                           TimeSeries v) {
+  const auto kind = registered_pair(u.meta().quantity(), v.meta().quantity());
+  if (not kind) {
+    return std::unexpected{VectorErrc::not_a_vector_pair};
   }
-  if (const auto e = check_aligned(u, v)) {
-    return std::unexpected{*e};
+  return aligned_unit<VectorErrc>(u, v).transform([&](Unit unit) {
+    return VectorSeries{std::move(u), std::move(v), *kind, std::move(unit)};
+  });
+}
+
+std::expected<VectorSeries, VectorErrc> VectorSeries::assume_components(
+    TimeSeries u, TimeSeries v) {
+  if (not is_generic(u.meta().quantity()) or
+      not is_generic(v.meta().quantity())) {
+    return std::unexpected{VectorErrc::not_a_vector_pair};
   }
-  return VectorSeries{std::move(u), std::move(v)};
+  return aligned_unit<VectorErrc>(u, v).transform([&](Unit unit) {
+    return VectorSeries{std::move(u), std::move(v), VectorKind::generic,
+                        std::move(unit)};
+  });
 }
 
 TimeSeries VectorSeries::magnitude() const {
-  const PairKind kind = pair_kind(u_.meta().quantity(), v_.meta().quantity())
-                            .value_or(PairKind::generic);
-  const Unit unit = u_.meta().unit().value_or(Unit{});
   SeriesMeta meta =
-      kind == PairKind::wind
-          ? derived_meta(Quantity::wind_speed, "wind speed", unit)
-          : derived_meta(GenericQuantity::value(),
-                         stem(kind, u_.meta().label()) + " speed", unit);
-  return detail::trusted_series(times_of(u_), zip_samples(u_, v_, hypot2),
-                                std::move(meta));
+      kind_ == VectorKind::wind
+          ? SeriesMeta::make({.quantity = Quantity::wind_speed,
+                              .label = "wind speed",
+                              .unit = unit_})
+          : SeriesMeta::make(
+                {.quantity = GenericQuantity::value(),
+                 .label = stem(kind_, u_.meta().label()) + " speed",
+                 .unit = unit_});
+  return derived(u_, zip_samples(u_, v_, hypot2), std::move(meta));
 }
 
 TimeSeries VectorSeries::cartesian_direction() const {
-  const PairKind kind = pair_kind(u_.meta().quantity(), v_.meta().quantity())
-                            .value_or(PairKind::generic);
-  SeriesMeta meta = derived_meta(
-      GenericQuantity::value(),
-      stem(kind, u_.meta().label()) +
-          " direction (cartesian: degrees counter-clockwise from east, toward)",
-      degree());
-  return detail::trusted_series(times_of(u_), zip_samples(u_, v_, direction),
-                                std::move(meta));
+  SeriesMeta meta = SeriesMeta::make(
+      {.quantity = GenericQuantity::value(),
+       .label = stem(kind_, u_.meta().label()) +
+                " direction (cartesian: degrees counter-clockwise from east, "
+                "toward)",
+       .unit = degree()});
+  return derived(u_, zip_samples(u_, v_, direction), std::move(meta));
 }
 
-std::expected<VectorSeries, AlignmentErrc> vector_series(const StationTable& t,
-                                                         std::size_t station,
-                                                         std::size_t ku,
-                                                         std::size_t kv) {
+std::expected<VectorSeries, VectorErrc> vector_series(const StationTable& t,
+                                                      StationIndex station,
+                                                      ColumnIndex ku,
+                                                      ColumnIndex kv) {
   return VectorSeries::make(t.series(station, ku), t.series(station, kv));
 }
 
-std::expected<TimeSeries, AlignmentErrc> magnitude3(const TimeSeries& x,
-                                                    const TimeSeries& y,
-                                                    const TimeSeries& z) {
-  const auto kind = pair_kind(x.meta().quantity(), y.meta().quantity());
-  if (not kind or kind == PairKind::wind or
-      not is_generic(z.meta().quantity())) {
-    return std::unexpected{AlignmentErrc::not_a_vector_pair};
+std::expected<TimeSeries, VerticalErrc> magnitude3(
+    const VectorSeries& horizontal, const TimeSeries& w) {
+  if (not is_generic(w.meta().quantity())) {
+    return std::unexpected{VerticalErrc::not_generic};
   }
-  for (const TimeSeries* other : {&y, &z}) {
-    if (const auto e = check_aligned(x, *other)) {
-      return std::unexpected{*e};
-    }
+  if (auto e = aligned_unit<VerticalErrc>(horizontal.u(), w); not e) {
+    return std::unexpected{e.error()};
   }
-  std::vector<Sample> horizontal = zip_samples(x, y, hypot2);
-  std::vector<Sample> speed(x.size());
-  std::ranges::transform(horizontal, z.samples(), speed.begin(), hypot2);
-  return detail::trusted_series(
-      times_of(x), std::move(speed),
-      derived_meta(GenericQuantity::value(), "3D current speed",
-                   x.meta().unit().value_or(Unit{})));
+  const TimeSeries& u = horizontal.u();
+  std::vector<Sample> speed(u.size());
+  for (std::size_t i = 0; i < speed.size(); ++i) {
+    speed[i] =
+        hypot3(u.samples()[i], horizontal.v().samples()[i], w.samples()[i]);
+  }
+  return derived(
+      u, std::move(speed),
+      SeriesMeta::make(
+          {.quantity = GenericQuantity::value(),
+           .label =
+               "3D " + stem(horizontal.kind(), u.meta().label()) + " speed",
+           .unit = horizontal.unit()}));
 }
 
 }  // namespace mov::core
