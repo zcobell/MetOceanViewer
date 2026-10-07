@@ -56,3 +56,4 @@ mov_add_test(
     SOURCES test_imeds.cpp test_imeds_format.cpp test_csv_export.cpp
     LIBRARIES mov::io
 )
+mov_add_fuzz_test(fuzz_parse_imeds SOURCES fuzz_parse_imeds.cpp LIBRARIES mov::io CORPUS io/imeds)
