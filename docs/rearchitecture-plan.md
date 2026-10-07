@@ -254,7 +254,9 @@ legacy dialects; the writer emits only the new one.
 
 - Use **Qt Graphs** (`GraphsView`, `LineSeries`, `DateTimeAxis`). Qt Charts is being
   phased out in favor of Qt Graphs.
-- Add C++-side min/max-per-pixel-bucket **decimation**, so multi-year USGS or NDBC
+- Add C++-side **M4 decimation** (first/min/max/last per pixel column, which is
+  pixel-exact for line rasterization; refined from min/max on 2026-10-07, see
+  `docs/wp-notes/WP3.md`), so multi-year USGS or NDBC
   series stay smooth when zooming.
 - Hide the chart behind a thin `ChartModel` boundary. If Qt Graphs is inadequate for
   crosshair, tooltip or performance, a custom `QQuickItem` line renderer
