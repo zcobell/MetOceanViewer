@@ -73,10 +73,7 @@ std::optional<core::Unit> header_unit(std::string_view text,
     return std::nullopt;
   }
   std::optional<core::Unit> unit = core::parse_unit(trimmed);
-  if (not unit) {
-    return std::nullopt;
-  }
-  const auto* other = std::get_if<core::OtherUnit>(&*unit);
+  const auto* other = unit ? std::get_if<core::OtherUnit>(&*unit) : nullptr;
   if (other != nullptr and not core::is_canonical_other(*other)) {
     warnings.push_back({.code = WarningCode::unrecognized_unit,
                         .subject = std::string{trimmed}});
@@ -129,11 +126,9 @@ std::expected<HeaderRead, ParseError> parse_header(
 
 core::SeriesMeta column_meta(const ImedsHeader& header) {
   const core::SeriesMeta meta = core::SeriesMeta::make({.unit = header.unit});
-  if (not header.datum) {
-    return meta;
-  }
-  // The generic quantity can always carry a datum, so this never falls back.
-  return meta.assume_datum(*header.datum).value_or(meta);
+  // The generic quantity can always carry a datum, so assume_datum never
+  // falls back.
+  return header.datum ? meta.assume_datum(*header.datum).value_or(meta) : meta;
 }
 
 // ---- values
@@ -169,12 +164,8 @@ std::expected<RowValue, ParseError> parse_value(const LineCursor::Line& line,
   if (is_legacy_sentinel(*number)) {
     return RowValue{.sample = core::Missing{}, .masked = true};
   }
-  const std::optional<core::Sample> sample = core::Sample::of(*number);
-  if (not sample) {
-    return std::unexpected{
-        detail::at(line, token, ParseErrc::bad_number)};  // not reachable
-  }
-  return RowValue{.sample = *sample, .masked = false};
+  // parse_double yields only finite numbers: this is Sample::of, made total.
+  return RowValue{.sample = core::finite_or_missing(*number), .masked = false};
 }
 
 // ---- times

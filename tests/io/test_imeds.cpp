@@ -11,6 +11,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -71,6 +73,54 @@ std::vector<std::optional<double>> nums(const core::StationTable& t,
 std::size_t rows_of(const core::StationTable& t, std::size_t i) {
   return t.times(core::StationIndex{i}).size();
 }
+
+// The value of an environment variable, if set. std::getenv is C4996 with
+// MSVC, which the warning level turns into an error.
+std::optional<std::string> get_env(const char* name) {
+#ifdef _WIN32
+  char* buffer = nullptr;
+  std::size_t size = 0;
+  if (_dupenv_s(&buffer, &size, name) != 0 or buffer == nullptr) {
+    return std::nullopt;
+  }
+  std::string value{buffer};
+  std::free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+  return value;
+#else
+  const char* value = std::getenv(name);  // NOLINT(concurrency-mt-unsafe)
+  return value != nullptr ? std::optional<std::string>{value} : std::nullopt;
+#endif
+}
+
+// Sets TZ for the lifetime of the object and restores it afterwards.
+class ScopedTimeZone {
+ public:
+  explicit ScopedTimeZone(const char* zone) : previous_{get_env("TZ")} {
+    set(zone);
+  }
+  ScopedTimeZone(const ScopedTimeZone&) = delete;
+  ScopedTimeZone& operator=(const ScopedTimeZone&) = delete;
+  ScopedTimeZone(ScopedTimeZone&&) = delete;
+  ScopedTimeZone& operator=(ScopedTimeZone&&) = delete;
+  ~ScopedTimeZone() { set(previous_ ? previous_->c_str() : nullptr); }
+
+ private:
+  static void set(const char* zone) {
+#ifdef _WIN32
+    _putenv_s("TZ", zone ? zone : "");
+    _tzset();
+#else
+    if (zone != nullptr) {
+      ::setenv("TZ", zone, 1);
+    } else {
+      ::unsetenv("TZ");
+    }
+    ::tzset();
+#endif
+  }
+
+  std::optional<std::string> previous_;
+};
 
 void check_error(const io::ParseError& e, ParseErrc code, std::size_t line,
                  std::optional<std::size_t> column) {
@@ -222,8 +272,8 @@ TEST_CASE("an unknown datum or an unrecognized unit is a warning",
             Warning{.code = WarningCode::datum_unknown, .subject = "LWI"}});
 
   const auto unit = parse_fixture("header_unit_odd.imeds");
-  REQUIRE(unit.value.header.unit.has_value());
-  CHECK(std::holds_alternative<core::OtherUnit>(*unit.value.header.unit));
+  const std::optional<core::Unit> odd = unit.value.header.unit;
+  CHECK((odd.has_value() and std::holds_alternative<core::OtherUnit>(*odd)));
   CHECK(unit.warnings ==
         std::vector{Warning{.code = WarningCode::unrecognized_unit,
                             .subject = "furlongs"}});
@@ -340,6 +390,23 @@ TEST_CASE("white space: tabs, CRLF, a byte order mark", "[io][imeds]") {
   CHECK(nums(bom.value.table, 0) == std::vector<std::optional<double>>{1.5});
 }
 
+TEST_CASE("times are UTC whatever the TZ environment says (N5 family)",
+          "[io][imeds][regression][N5]") {
+  const std::string text = slurp("header_tz_cst.imeds");  // zone token CST
+  for (const char* zone :
+       {"UTC", "America/Chicago", "Asia/Kolkata", "Pacific/Auckland"}) {
+    const ScopedTimeZone scoped{zone};
+    INFO("TZ=" << zone);
+    const auto read = io::parse_imeds(text);
+    REQUIRE(read.has_value());
+    CHECK(read->value.table.times(core::StationIndex{0}).front() ==
+          test::utc(2020, 1, 1));
+    const auto written = io::format_imeds(read->value.table);
+    REQUIRE(written.has_value());
+    CHECK(written->value.contains("\n2020 01 01 00 00 00 "));
+  }
+}
+
 TEST_CASE("blank lines after the header are skipped (N13)",
           "[io][imeds][regression][N13]") {
   const auto read = parse_fixture("blank_line.imeds");
@@ -368,6 +435,43 @@ TEST_CASE("an impossible date or time is bad_date at its word", "[io][imeds]") {
   check_error(parse_error("bad_day.imeds"), ParseErrc::bad_date, 5, 8);
   check_error(parse_error("hour_24.imeds"), ParseErrc::bad_date, 5, 11);
   check_error(parse_error("year_10000.imeds"), ParseErrc::bad_date, 5, 0);
+}
+
+TEST_CASE("minutes, seconds and numbers of a row are checked one by one",
+          "[io][imeds]") {
+  const auto row_error = [](std::string_view row) {
+    const std::string text =
+        "a\nb\nNOAA UTC MSL\nS 1.0 2.0\n" + std::string{row} + "\n";
+    const auto parsed = io::parse_imeds(text);
+    REQUIRE(not parsed.has_value());
+    return parsed.error();
+  };
+  check_error(row_error("2020 01 01 00 60 00 1.0"), ParseErrc::bad_date, 5, 14);
+  check_error(row_error("2020 01 01 00 00 60 1.0"), ParseErrc::bad_date, 5, 17);
+  check_error(row_error("2020 01 01 00 -1 00 1.0"), ParseErrc::bad_date, 5, 14);
+  check_error(row_error("2020 00 01 00 00 00 1.0"), ParseErrc::bad_date, 5, 5);
+  check_error(row_error("2020 01 00 00 00 00 1.0"), ParseErrc::bad_date, 5, 8);
+  check_error(row_error("2020 01 32 00 00 00 1.0"), ParseErrc::bad_date, 5, 8);
+  check_error(row_error("-1 01 01 00 00 00 1.0"), ParseErrc::bad_date, 5, 0);
+  check_error(row_error("2020 jan 01 00 00 00 1.0"), ParseErrc::bad_integer, 5,
+              5);
+  check_error(row_error("2020 01 01 99999999999 00 00 1.0"),
+              ParseErrc::out_of_range, 5, 11);
+}
+
+TEST_CASE("a latitude or longitude that is not a number is an error",
+          "[io][imeds]") {
+  const auto station_error = [](std::string_view station) {
+    const std::string text =
+        "a\nb\nNOAA UTC MSL\n" + std::string{station} + "\n";
+    const auto parsed = io::parse_imeds(text);
+    REQUIRE(not parsed.has_value());
+    return parsed.error();
+  };
+  check_error(station_error("S north 2.0"), ParseErrc::bad_number, 4, 2);
+  check_error(station_error("S 1.0 west"), ParseErrc::bad_number, 4, 6);
+  check_error(station_error("S 1e999 2.0"), ParseErrc::out_of_range, 4, 2);
+  check_error(station_error("S nan 2.0"), ParseErrc::bad_number, 4, 2);
 }
 
 TEST_CASE("February 29 exists in a leap year", "[io][imeds]") {

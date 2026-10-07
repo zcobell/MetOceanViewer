@@ -107,7 +107,7 @@ TEST_CASE("a unit that is not in a family is written by its symbol",
           "[io][imeds][format]") {
   const auto unit = core::parse_unit("S m-1");
   REQUIRE(unit.has_value());
-  const auto table = test::one_column_table(meta_with(*unit, std::nullopt),
+  const auto table = test::one_column_table(meta_with(unit, std::nullopt),
                                             {{.id = "S",
                                               .name = "S",
                                               .where = test::location(1.0, 2.0),

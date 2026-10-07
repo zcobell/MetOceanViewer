@@ -121,7 +121,7 @@ RowFrame frame_of(const core::FileStation& station,
 
 // The CSV text, handed to `flush` in chunks of about chunk_bytes.
 template <class Flush>
-void emit_csv(const core::StationTable& table, Flush&& flush) {
+void emit_csv(const core::StationTable& table, Flush flush) {
   std::string buffer{header_row};
   for (const core::StationIndex i : table.stations()) {
     const std::span<const core::Time> times = table.times(i);

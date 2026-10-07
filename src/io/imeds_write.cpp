@@ -59,8 +59,8 @@ struct Counts {
 
 // One printed time: whole seconds, as the pieces of the row.
 struct Stamp {
-  chrono::sys_seconds seconds;
-  bool floored;
+  chrono::sys_seconds seconds{};
+  bool floored{false};
 };
 
 Stamp stamp_of(core::Time t) {
@@ -148,7 +148,7 @@ std::string header_text(const core::SeriesMeta& meta, std::string_view source) {
 namespace detail {
 
 std::string imeds_name(std::string_view name, std::size_t index) {
-  std::string cleaned = underscored(name);
+  const std::string cleaned = underscored(name);
   return cleaned.empty() ? std::format("station_{}", index) : cleaned;
 }
 

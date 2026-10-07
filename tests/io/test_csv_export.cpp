@@ -196,7 +196,7 @@ TEST_CASE("the unit and datum cells are text cells", "[io][csv]") {
   const auto unit = core::parse_unit("-x");
   REQUIRE(unit.has_value());
   const auto table =
-      test::one_column_table(core::SeriesMeta::make({.unit = *unit}),
+      test::one_column_table(core::SeriesMeta::make({.unit = unit}),
                              {{.id = "S",
                                .name = "S",
                                .where = test::location(1.0, 2.0),

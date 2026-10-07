@@ -37,10 +37,10 @@ std::expected<io::Read<std::string>, CliError> imeds_to_csv_in_feet(
     const std::filesystem::path& in) {
   return io::and_then_read(
       io::read_imeds(in, io::ReadContext{}).transform_error(io::lift<CliError>),
-      [](io::ImedsFile&& f) -> std::expected<io::Read<std::string>, CliError> {
+      [](io::ImedsFile f) -> std::expected<io::Read<std::string>, CliError> {
         return core::convert(std::move(f.table), core::ColumnIndex{0},
                              core::Unit{core::LengthUnit::foot})
-            .transform([](core::StationTable&& t) {
+            .transform([](const core::StationTable& t) {
               return io::Read<std::string>{.value = io::format_csv(t),
                                            .warnings = {}};
             })
