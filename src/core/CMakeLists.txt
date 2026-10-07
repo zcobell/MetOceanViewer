@@ -3,7 +3,7 @@
 
 # mov_core: Qt-free domain model (C++23, standard library only).
 
-mov_add_module(core SOURCES version.cpp)
+mov_add_module(core SOURCES version.cpp units.cpp quantity.cpp)
 
 # Generated from project(VERSION); private, the public API is mov/core/version.hpp.
 configure_file(

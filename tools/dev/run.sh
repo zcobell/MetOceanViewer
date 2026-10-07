@@ -93,6 +93,18 @@ docker_args=(
   # Read by the Qt presets (CMAKE_PREFIX_PATH), as in CI (install-qt-action).
   --env "QT_ROOT_DIR=${qt_prefix}"
 )
+# In a git worktree `.git` is a file that points into the main repository's
+# .git directory, which the repository mount above does not contain. Mount
+# that common directory read-only and this worktree's own gitdir read-write,
+# at their host paths, so git (and pre-commit) work inside the container.
+if [[ -f "${repo_root}/.git" ]]; then
+  git_common_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-common-dir)"
+  worktree_git_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-dir)"
+  docker_args+=(
+    --volume "${git_common_dir}:${git_common_dir}:ro"
+    --volume "${worktree_git_dir}:${worktree_git_dir}"
+  )
+fi
 if [[ -t 0 && -t 1 ]]; then
   docker_args+=(--interactive --tty)
 fi
