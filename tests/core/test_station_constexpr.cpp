@@ -72,6 +72,22 @@ constexpr bool same(std::string_view a, std::string_view b) {
   return x and y and *x == *y and not(*x < *y) and not(*y < *x);
 }
 
+constexpr bool text_is(std::string_view raw, std::string_view expected) {
+  const auto t = mov::core::StationText::make(std::string{raw});
+  return t.has_value() and t->view() == expected;
+}
+
+constexpr bool key_is(std::string_view raw, std::string_view expected) {
+  const auto k = mov::core::StationKey::make(std::string{raw});
+  return k.has_value() and k->view() == expected;
+}
+
+template <Provider P>
+constexpr bool id_key_is(std::string_view raw, std::string_view expected) {
+  const auto id = StationId<P>::make(raw);
+  return id.has_value() and id->key().view() == expected;
+}
+
 constexpr std::string repeated(char c, std::size_t n) {
   std::string s;
   s.assign(n, c);
@@ -101,6 +117,15 @@ TEST_CASE("station types are values", "[core][station][constexpr]") {
   STATIC_REQUIRE(std::copyable<GaugeStation<Usgs>>);
   STATIC_REQUIRE(std::equality_comparable<GaugeStation<Usgs>>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<GaugeStation<Usgs>>);
+  STATIC_REQUIRE(std::regular<mov::core::StationText>);
+  STATIC_REQUIRE(std::totally_ordered<mov::core::StationText>);
+  STATIC_REQUIRE(std::copyable<mov::core::StationKey>);
+  STATIC_REQUIRE(std::totally_ordered<mov::core::StationKey>);
+  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<mov::core::StationKey>);
+  STATIC_REQUIRE_FALSE(
+      std::is_constructible_v<mov::core::StationText, std::string>);
+  STATIC_REQUIRE_FALSE(
+      std::is_constructible_v<mov::core::StationKey, std::string>);
   STATIC_REQUIRE(std::copyable<FileStation>);
   STATIC_REQUIRE(std::equality_comparable<FileStation>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<FileStation>);
@@ -110,7 +135,12 @@ TEST_CASE("station types are values", "[core][station][constexpr]") {
 
 TEST_CASE("data source tokens round trip", "[core][station][constexpr]") {
   STATIC_REQUIRE(tokens_round_trip());
+  // All seven SN tokens, pinned.
   STATIC_REQUIRE(to_token(DataSource::noaa_coops) == "noaa_coops");
+  STATIC_REQUIRE(to_token(DataSource::usgs) == "usgs");
+  STATIC_REQUIRE(to_token(DataSource::ndbc) == "ndbc");
+  STATIC_REQUIRE(to_token(DataSource::xtide) == "xtide");
+  STATIC_REQUIRE(to_token(DataSource::adcirc) == "adcirc");
   STATIC_REQUIRE(to_token(DataSource::dflowfm) == "dflowfm");
   STATIC_REQUIRE(to_token(DataSource::user) == "user");
   STATIC_REQUIRE_FALSE(parse_data_source("NOAA_COOPS").has_value());
@@ -138,15 +168,19 @@ TEST_CASE("CO-OPS ids are seven digits", "[core][station][constexpr]") {
 
 TEST_CASE("USGS ids are agency-number", "[core][station][constexpr]") {
   STATIC_REQUIRE(Usgs::valid_id("USGS-07374000"));
-  STATIC_REQUIRE(Usgs::valid_id("a-1"));
+  STATIC_REQUIRE(Usgs::valid_id("A-1"));
+  STATIC_REQUIRE(Usgs::valid_id("USGS-abc1"));  // only the agency is folded
+  STATIC_REQUIRE_FALSE(Usgs::valid_id("usgs-07374000"));
   STATIC_REQUIRE_FALSE(Usgs::valid_id("07374000"));
   STATIC_REQUIRE_FALSE(Usgs::valid_id("USGS-"));
   STATIC_REQUIRE_FALSE(Usgs::valid_id("-07374000"));
   STATIC_REQUIRE_FALSE(Usgs::valid_id("USGS-0737-4000"));
   STATIC_REQUIRE_FALSE(Usgs::valid_id("USGS 07374000"));
   STATIC_REQUIRE_FALSE(Usgs::valid_id("USGS-0737_4000"));
-  // No case folding: the agency code is kept as given.
-  STATIC_REQUIRE(makes<Usgs>("\tusgs-07374000 ", "usgs-07374000"));
+  // The agency prefix is upper-cased; the number is kept as given.
+  STATIC_REQUIRE(makes<Usgs>("\tusgs-07374000 ", "USGS-07374000"));
+  STATIC_REQUIRE(makes<Usgs>("Usgs-ab1", "USGS-ab1"));
+  STATIC_REQUIRE(fails<Usgs>("usgs_07374000", StationIdError::invalid));
 }
 
 TEST_CASE("NDBC ids are five characters, upper-cased",
@@ -169,9 +203,39 @@ TEST_CASE("XTide ids are station names", "[core][station][constexpr]") {
   STATIC_REQUIRE_FALSE(Xtide::valid_id("a\tb"));
   STATIC_REQUIRE_FALSE(Xtide::valid_id("a\x7F"));
   STATIC_REQUIRE_FALSE(Xtide::valid_id(std::string_view{"a\0b", 3}));
+  STATIC_REQUIRE_FALSE(Xtide::valid_id("\xC3\x28"));  // not UTF-8
+  STATIC_REQUIRE_FALSE(Xtide::valid_id("Key West \xFF"));
   STATIC_REQUIRE(Xtide::valid_id(repeated('x', 255)));
   STATIC_REQUIRE_FALSE(Xtide::valid_id(repeated('x', 256)));
   STATIC_REQUIRE(makes<Xtide>("  Key West, Florida \r\n", "Key West, Florida"));
+}
+
+TEST_CASE("station text is UTF-8 without NUL", "[core][station][constexpr]") {
+  using mov::core::StationText;
+  using mov::core::StationTextError;
+  STATIC_REQUIRE(text_is("", ""));
+  STATIC_REQUIRE(text_is("\xC3\x89le", "\xC3\x89le"));
+  STATIC_REQUIRE(StationText::make(std::string{"a\0b", 3}) ==
+                 std::unexpected{StationTextError::embedded_nul});
+  STATIC_REQUIRE(StationText::make("\xC3\x28") ==
+                 std::unexpected{StationTextError::invalid_utf8});
+  STATIC_REQUIRE(StationText{}.empty());
+}
+
+TEST_CASE("station keys are non-empty station text",
+          "[core][station][constexpr]") {
+  using mov::core::StationKey;
+  using mov::core::StationKeyError;
+  STATIC_REQUIRE(key_is("0", "0"));
+  STATIC_REQUIRE(key_is(" padded ", " padded "));  // kept exactly (C14)
+  STATIC_REQUIRE(StationKey::make("") ==
+                 std::unexpected{StationKeyError::empty});
+  STATIC_REQUIRE(StationKey::make(std::string{"\0", 1}) ==
+                 std::unexpected{StationKeyError::embedded_nul});
+  STATIC_REQUIRE(StationKey::make("\xFF") ==
+                 std::unexpected{StationKeyError::invalid_utf8});
+  // Every provider id is a key.
+  STATIC_REQUIRE(id_key_is<Ndbc>("burl1", "BURL1"));
 }
 
 TEST_CASE("blank ids are empty, not invalid", "[core][station][constexpr]") {
