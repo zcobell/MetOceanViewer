@@ -59,7 +59,7 @@ runs:
           echo "VCPKG_ROOT=${root}"
           echo "VCPKG_BINARY_SOURCES=clear;files,${cache},readwrite"
         } >> "${GITHUB_ENV}"
-        prefix="${KEY_PREFIX}-$(printf '%s' "${toolchain}" | sha256sum | cut -c1-12)-"
+        prefix="${KEY_PREFIX}-$(printf '%s' "${toolchain}" | shasum -a 256 | cut -c1-12)-"
         {
           echo "cache=${cache}"
           echo "prefix=${prefix}"
