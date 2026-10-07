@@ -51,4 +51,18 @@ mov_add_fuzz_test(
 )
 
 # ADCIRC ASCII output and the HWM file (WP8).
-mov_add_test(mov_io_model_text_tests SOURCES test_model_number.cpp LIBRARIES mov::io)
+mov_add_test(
+    mov_io_model_text_tests
+    SOURCES
+        test_model_number.cpp
+        test_table_error.cpp
+        test_adcirc_station_file.cpp
+        test_adcirc_ascii.cpp
+    LIBRARIES mov::io
+)
+if(MOV_PROJ_DB)
+    set_source_files_properties(
+        test_adcirc_station_file.cpp
+        PROPERTIES COMPILE_DEFINITIONS "MOV_TEST_PROJ_DATA_DIR=\"${MOV_TEST_PROJ_DATA_DIR}\""
+    )
+endif()

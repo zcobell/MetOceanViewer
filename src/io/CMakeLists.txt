@@ -18,4 +18,4 @@ mov_add_module(
 )
 
 # ADCIRC ASCII output and the HWM file (WP8).
-target_sources(mov_io PRIVATE model_number.cpp)
+target_sources(mov_io PRIVATE model_number.cpp adcirc_station_file.cpp adcirc_ascii.cpp)

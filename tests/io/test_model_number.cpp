@@ -35,7 +35,7 @@ bool non_finite(std::string_view token) {
 
 NumberError error_of(std::string_view token) {
   const auto parsed = parse_model_number(token);
-  REQUIRE_FALSE(parsed.has_value());
+  REQUIRE(not(parsed.has_value()));
   return parsed.error();
 }
 
@@ -68,15 +68,15 @@ TEST_CASE("parse_model_number maps Fortran's non-numbers to NonFinite",
 TEST_CASE("parse_model_number rejects near misses of the non-numbers",
           "[io][detail][model_number]") {
   for (const std::string_view token :
-       {"na", "nan1", "infin", "infinit", "infinityy", "in", "*1", "1*", "**.*",
-        "-*", "+", "-", "NaN%", "n an", "--inf", "i nf"}) {
+       {"na", "nan1", "infin", "infinitx", "infinityy", "in", "*1", "1*",
+        "**.*", "-*", "+", "-", "NaN%", "n an", "--inf", "i nf"}) {
     INFO(token);
-    CHECK_FALSE(non_finite(token));
-    CHECK_FALSE(detail::is_nonfinite_token(token));
+    CHECK(not(non_finite(token)));
+    CHECK(not(detail::is_nonfinite_token(token)));
     CHECK(error_of(token) == NumberError::bad_syntax);
   }
   CHECK(error_of("") == NumberError::empty);
-  CHECK_FALSE(detail::is_nonfinite_token(""));
+  CHECK(not(detail::is_nonfinite_token("")));
 }
 
 TEST_CASE("parse_model_number: a magnitude no double holds is NonFinite",
@@ -101,7 +101,8 @@ TEST_CASE("parse_model_number reads a Fortran three-digit exponent",
   CHECK(non_finite("1.0+999"));
 }
 
-TEST_CASE("parse_model_number reads D exponents", "[io][detail][model_number]") {
+TEST_CASE("parse_model_number reads D exponents",
+          "[io][detail][model_number]") {
   CHECK(finite("1.5D+02") == 150.0);
   CHECK(finite("1.5d+02") == 150.0);
   CHECK(finite("1.5D-02") == 0.015);
