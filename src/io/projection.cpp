@@ -1,0 +1,263 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Zach Cobell
+
+#include "mov/io/projection.hpp"
+
+#include <proj.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <expected>
+#include <filesystem>
+#include <format>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "mov/core/detail/numeric.hpp"
+#include "mov/core/geo.hpp"
+#include "mov/io/error.hpp"
+
+namespace mov::io {
+
+namespace {
+
+// ---- where proj.db is ------------------------------------------------------
+
+struct DataDirSetting {
+  std::mutex mutex;
+  std::optional<std::string> dir;  // UTF-8
+};
+
+DataDirSetting& data_dir_setting() {
+  static DataDirSetting setting;
+  return setting;
+}
+
+// The directory PROJ is told to search: $MOV_PROJ_DATA, else what the
+// application set; nullopt leaves PROJ to its own defaults.
+std::optional<std::string> configured_data_dir() {
+  // NOLINTNEXTLINE(concurrency-mt-unsafe): read at context creation only
+  if (const char* env = std::getenv("MOV_PROJ_DATA");
+      env != nullptr and *env != '\0') {
+    return std::string{env};
+  }
+  const std::lock_guard lock{data_dir_setting().mutex};
+  return data_dir_setting().dir;
+}
+
+std::string utf8(const std::filesystem::path& p) {
+  const std::u8string text = p.u8string();
+  std::string out;
+  out.reserve(text.size());
+  std::ranges::transform(text, std::back_inserter(out),
+                         [](char8_t c) { return static_cast<char>(c); });
+  return out;
+}
+
+// ---- PROJ objects ----------------------------------------------------------
+
+struct ContextDeleter {
+  void operator()(PJ_CONTEXT* ctx) const noexcept { proj_context_destroy(ctx); }
+};
+struct ObjectDeleter {
+  void operator()(PJ* object) const noexcept { proj_destroy(object); }
+};
+
+using Context = std::unique_ptr<PJ_CONTEXT, ContextDeleter>;
+using Object = std::unique_ptr<PJ, ObjectDeleter>;
+
+// A context that logs nothing (a failure is reported through the result) and
+// looks for proj.db where configured.
+Context make_context() {
+  Context ctx{proj_context_create()};
+  if (not ctx) {
+    return ctx;
+  }
+  proj_log_level(ctx.get(), PJ_LOG_NONE);
+  if (const auto dir = configured_data_dir()) {
+    const char* const path = dir->c_str();
+    proj_context_set_search_paths(ctx.get(), 1, &path);
+  }
+  return ctx;
+}
+
+// PROJ found a proj.db and could open it: the path exists, and the database
+// answers a question about itself. (A file that is there but is not a database
+// has a path and no answers.)
+bool has_database(PJ_CONTEXT* ctx) {
+  const char* const path = proj_context_get_database_path(ctx);
+  return path != nullptr and *path != '\0' and
+         proj_context_get_database_metadata(
+             ctx, "DATABASE.LAYOUT.VERSION.MAJOR") != nullptr;
+}
+
+// Only a CRS whose coordinates are positions on the ground can be turned into
+// a Location: a vertical or geocentric CRS converts to meaningless angles.
+bool is_horizontal_crs(const PJ* crs) {
+  switch (proj_get_type(crs)) {
+    case PJ_TYPE_GEOGRAPHIC_2D_CRS:
+    case PJ_TYPE_GEOGRAPHIC_3D_CRS:
+    case PJ_TYPE_PROJECTED_CRS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+std::string epsg_name(core::Epsg crs) {
+  return std::format("EPSG:{}", crs.code());
+}
+
+// The accuracy, in metres, above which a transformation is called approximate.
+constexpr double approximate_above_m = 1.0;
+
+}  // namespace
+
+// The PROJ objects, in the order they must be destroyed: the transformation
+// first, the context last.
+struct Projector::Impl {
+  Context context;
+  Object transformation;
+};
+
+Projector::Projector(core::Epsg crs, std::unique_ptr<Impl> impl) noexcept
+    : crs_{crs}, impl_{std::move(impl)} {}
+
+Projector::Projector(Projector&&) noexcept = default;
+Projector& Projector::operator=(Projector&&) noexcept = default;
+Projector::~Projector() = default;
+
+void set_projection_data_dir(const std::filesystem::path& dir) {
+  const std::lock_guard lock{data_dir_setting().mutex};
+  data_dir_setting().dir = utf8(dir);
+}
+
+std::expected<Projector, ProjectionError> Projector::make(core::Epsg crs) {
+  if (crs == core::Epsg::wgs84()) {
+    return Projector{crs, nullptr};
+  }
+  const auto fail = [crs](ProjectionErrc code) {
+    return std::unexpected{ProjectionError{.code = code, .crs = crs}};
+  };
+  Context context = make_context();
+  if (not context) {
+    return fail(ProjectionErrc::transform_failed);
+  }
+  if (not has_database(context.get())) {
+    return fail(ProjectionErrc::database_unavailable);
+  }
+  const std::string source = epsg_name(crs);
+  const Object source_crs{proj_create(context.get(), source.c_str())};
+  if (not source_crs or not is_horizontal_crs(source_crs.get())) {
+    return fail(ProjectionErrc::unknown_crs);
+  }
+  const Object raw{proj_create_crs_to_crs(context.get(), source.c_str(),
+                                          "EPSG:4326", nullptr)};
+  if (not raw) {
+    return fail(ProjectionErrc::transform_failed);
+  }
+  // Longitude/latitude order in and out, whatever the EPSG axis order says.
+  Object normalized{proj_normalize_for_visualization(context.get(), raw.get())};
+  if (not normalized) {
+    return fail(ProjectionErrc::transform_failed);
+  }
+  return Projector{crs, std::make_unique<Impl>(
+                            Impl{.context = std::move(context),
+                                 .transformation = std::move(normalized)})};
+}
+
+namespace {
+
+// Asking PROJ which operation it used for a point makes it build a new
+// operation object, about 200 microseconds against under one for the point
+// itself (measured, 100000 points of EPSG:26915: 21 s against 0.07 s). So only
+// a sample is asked: every one of the first points, which covers a small
+// file entirely, then one in a few dozen.
+constexpr std::size_t every_point_up_to = 256;
+constexpr std::size_t then_every = 64;
+
+bool is_sampled(std::size_t point_number) noexcept {
+  return point_number <= every_point_up_to or point_number % then_every == 0;
+}
+
+// Adds what the operation PROJ used for the last point says about itself.
+void note_last_operation(PJ_CONTEXT* ctx, PJ* transformation,
+                         ProjectionAccuracy& accuracy) {
+  ++accuracy.points;
+  if (not is_sampled(accuracy.points)) {
+    return;
+  }
+  ++accuracy.sampled_points;
+  const Object used{proj_trans_get_last_used_operation(transformation)};
+  if (not used) {
+    return;
+  }
+  if (proj_coordoperation_has_ballpark_transformation(ctx, used.get()) != 0) {
+    ++accuracy.ballpark_points;
+  }
+  const double stated = proj_coordoperation_get_accuracy(ctx, used.get());
+  if (stated >= 0.0 and
+      (not accuracy.worst_stated_m or stated > *accuracy.worst_stated_m)) {
+    accuracy.worst_stated_m = stated;
+  }
+}
+
+}  // namespace
+
+std::expected<core::Xy, ProjectionError> Projector::project(core::Xy p) {
+  if (not impl_) {
+    return p;
+  }
+  const PJ_COORD result = proj_trans(impl_->transformation.get(), PJ_FWD,
+                                     proj_coord(p.x, p.y, 0.0, HUGE_VAL));
+  note_last_operation(impl_->context.get(), impl_->transformation.get(),
+                      accuracy_);
+  if (not core::detail::is_finite(result.xy.x) or
+      not core::detail::is_finite(result.xy.y)) {
+    return std::unexpected{
+        ProjectionError{.code = ProjectionErrc::transform_failed, .crs = crs_}};
+  }
+  return core::Xy{.x = result.xy.x, .y = result.xy.y};
+}
+
+std::expected<core::Location, ToLocationError> Projector::to_location(
+    core::Xy p) {
+  return project(p)
+      .transform_error(lift<ToLocationError>)
+      .and_then([](core::Xy out) {
+        return core::Location::make({.lat = out.y, .lon = out.x})
+            .transform_error(lift<ToLocationError>);
+      });
+}
+
+std::optional<Warning> Projector::approximation_warning() const {
+  const bool approximate = accuracy_.ballpark_points > 0 or
+                           (accuracy_.worst_stated_m and
+                            *accuracy_.worst_stated_m > approximate_above_m);
+  if (not approximate) {
+    return std::nullopt;
+  }
+  return Warning{.code = WarningCode::crs_approximate,
+                 .subject = epsg_name(crs_),
+                 .count = accuracy_.points};
+}
+
+std::expected<core::Location, ToLocationError> to_location(
+    const core::NativePoint& p) {
+  if (p.crs() == core::Epsg::wgs84()) {
+    return core::Location::make({.lat = p.y(), .lon = p.x()})
+        .transform_error(lift<ToLocationError>);
+  }
+  return Projector::make(p.crs())
+      .transform_error(lift<ToLocationError>)
+      .and_then([&p](Projector projector) {
+        return projector.to_location({.x = p.x(), .y = p.y()});
+      });
+}
+
+}  // namespace mov::io

@@ -55,6 +55,7 @@ RUN apt-get update \
         libtool \
         lld-${LLVM_VERSION} \
         llvm-${LLVM_VERSION} \
+        locales \
         make \
         ninja-build \
         pkg-config \
@@ -94,6 +95,12 @@ RUN apt-get update \
         # MapLibre Native (vcpkg port maplibre-native-qt) links the system zlib.
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# de_DE.UTF-8 makes the locale-independence tests of mov::io non-vacuous: the
+# decimal separator there is a comma, so a parser that honours the C locale
+# misreads "1.5". The test asserts that the locale exists and fails if not.
+RUN locale-gen de_DE.UTF-8 \
+    && locale -a | grep -qi '^de_DE\.utf-\?8$'
 
 # GCC is the default cc/c++/gcov; the presets name the compiler they want
 # (g++ or clang++). Unversioned LLVM tool names point at LLVM_VERSION, and a

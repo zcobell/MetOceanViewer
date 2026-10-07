@@ -55,6 +55,16 @@ Persistent state stays on the host:
 Overrides: `MOV_QT_ROOT`, `MOV_DEV_CACHE`, and `MOV_DOCKER_ARGS` for extra
 `docker run` arguments.
 
+## Locales
+
+The image generates `de_DE.UTF-8`. The locale-independence tests of `mov::io`
+(`parse_double` under a comma-decimal locale) assert that the locale exists
+and fail, rather than skip, when it does not: every preset sets
+`MOV_REQUIRE_LOCALES=ON`, and CI generates the locale on the Linux jobs
+(`.github/actions/setup-locales`). On a native machine without it, either
+`locale-gen de_DE.UTF-8` (Debian/Ubuntu) or configure with
+`-DMOV_REQUIRE_LOCALES=OFF` to turn the failure into a skip.
+
 ## libc++ build (macOS stand-in)
 
 `cmake --workflow --preset dev-libcxx` builds and tests with Clang and libc++

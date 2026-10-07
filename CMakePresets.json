@@ -16,7 +16,8 @@
       "cacheVariables": {
         "BUILD_TESTING": "ON",
         "MOV_WARNINGS_AS_ERRORS": "ON",
-        "MOV_ENABLE_HARDENING": "ON"
+        "MOV_ENABLE_HARDENING": "ON",
+        "MOV_REQUIRE_LOCALES": "ON"
       },
       "environment": {
         "VCPKG_KEEP_ENV_VARS": "$penv{VCPKG_KEEP_ENV_VARS};QT_ROOT_DIR"

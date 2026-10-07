@@ -26,6 +26,11 @@ macro(mov_declare_options)
     option(MOV_BUILD_FUZZ_TESTS "Build the libFuzzer targets (Clang only) and register bounded fuzz runs" OFF)
     set(MOV_FUZZ_SECONDS "10" CACHE STRING "Wall-clock seconds each registered fuzz test runs")
     option(MOV_ENABLE_CLANG_TIDY "Run clang-tidy while compiling first-party targets" OFF)
+    option(
+        MOV_REQUIRE_LOCALES
+        "Tests that need a comma-decimal locale (de_DE.UTF-8) fail instead of skipping when it is missing"
+        OFF
+    )
     option(MOV_ENABLE_CACHE "Use ccache/sccache as the compiler launcher when found" ON)
 endmacro()
 
