@@ -26,6 +26,10 @@ host path, so build trees and `compile_commands.json` paths match on both
 sides. The compiler is chosen by the preset (`g++` or `clang++`), never by
 `CC`/`CXX`.
 
+In a git worktree (`.git` is a file), `run.sh` also mounts the main
+repository's git directory read-only and the worktree's own gitdir read-write,
+at their host paths, so `git` and `pre-commit` work in the container.
+
 The image is tagged `metoceanviewer-dev:<hash>`, a hash of the Dockerfile,
 `requirements.txt`, `tools/versions.env` and the vcpkg baseline; `run.sh`
 rebuilds it (about 3 minutes) whenever one of them changes, and also tags it
