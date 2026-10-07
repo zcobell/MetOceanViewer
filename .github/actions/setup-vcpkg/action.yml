@@ -59,7 +59,8 @@ runs:
           echo "VCPKG_ROOT=${root}"
           echo "VCPKG_BINARY_SOURCES=clear;files,${cache},readwrite"
         } >> "${GITHUB_ENV}"
-        prefix="${KEY_PREFIX}-$(printf '%s' "${toolchain}" | shasum -a 256 | cut -c1-12)-"
+        # sha256sum on Linux/Windows (Git Bash), shasum on macOS.
+        prefix="${KEY_PREFIX}-$(printf '%s' "${toolchain}" | { command -v sha256sum >/dev/null && sha256sum || shasum -a 256; } | cut -c1-12)-"
         {
           echo "cache=${cache}"
           echo "prefix=${prefix}"
