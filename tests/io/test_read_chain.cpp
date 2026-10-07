@@ -2,109 +2,54 @@
 // Copyright (c) 2026 Zach Cobell
 
 // The CLI chain read -> convert -> export of core-design.md section 5.0 must
-// type-check with exhaustive errors. WP7 supplies the real IMEDS reader, the
-// StationTable (WP2) and the CSV writer; here a stub reader, a one-column
-// table and a stub exporter stand in, over the real core units and the real
-// io::Error, Read and lift. The shape of the chain is the one the design pins.
+// type-check with exhaustive errors, and run: the real IMEDS reader, the real
+// unit conversion of a StationTable column, the real CSV writer, composed with
+// Read, expected and lift.
 
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>
-#include <cstddef>
 #include <expected>
 #include <filesystem>
-#include <format>
-#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "mov/core/series_ops.hpp"
+#include "mov/core/station_table.hpp"
 #include "mov/core/units.hpp"
+#include "mov/io/csv_export.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/imeds.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/warning.hpp"
+#include "mov/test/fixture.hpp"
+#include "mov/test/scratch_dir.hpp"
 
 namespace {
 
 namespace core = mov::core;
 namespace io = mov::io;
 
-// Stand-in for core::StationTable: one column of values with an optional unit.
-struct StubTable {
-  std::vector<double> values;
-  std::optional<core::Unit> unit;
-};
-
-// Stand-in for io::ImedsFile.
-struct StubFile {
-  std::string source;
-  StubTable table;
-};
-
 using CliError = std::variant<io::Error, core::UnitError>;
 
-// Stand-in for read_imeds: the file name picks the outcome.
-std::expected<io::Read<StubFile>, io::Error> read_stub(
-    const std::filesystem::path& p) {
-  const std::string name = p.filename().string();
-  if (name == "missing.imeds") {
-    return std::unexpected{
-        io::Error{io::FileError{.op = io::FileOp::open, .path = p, .ec = {}}}};
-  }
-  std::optional<core::Unit> unit = core::Unit{core::LengthUnit::meter};
-  if (name == "pressure.imeds") {
-    unit = core::Unit{core::PressureUnit::pascal};
-  } else if (name == "unitless.imeds") {
-    unit = std::nullopt;
-  }
-  return io::Read<StubFile>{
-      .value =
-          StubFile{.source = "stub",
-                   .table = StubTable{.values = {0.3048, 1.0}, .unit = unit}},
-      .warnings = {io::Warning{.code = io::WarningCode::header_line_skipped,
-                               .subject = name}}};
-}
-
-// Stand-in for convert(StationTable, column, unit): the real unit algebra.
-std::expected<StubTable, core::UnitError> convert_stub(StubTable t,
-                                                       const core::Unit& to) {
-  if (not t.unit) {
-    return std::unexpected{core::UnitError{core::UnknownUnit{}}};
-  }
-  const auto affine = core::conversion(*t.unit, to);
-  if (not affine) {
-    return std::unexpected{core::UnitError{affine.error()}};
-  }
-  for (double& v : t.values) {
-    v = (*affine)(v);
-  }
-  t.unit = to;
-  return t;
-}
-
-std::string format_stub(const StubTable& t) {
-  std::string out;
-  for (const double v : t.values) {
-    out += std::format("{:.4f}\n", v);
-  }
-  return out;
-}
-
-// The chain of the design, with the stubs in the places of read_imeds,
-// convert and format_csv.
 std::expected<io::Read<std::string>, CliError> imeds_to_csv_in_feet(
     const std::filesystem::path& in) {
   return io::and_then_read(
-      read_stub(in).transform_error(io::lift<CliError>),
-      [](StubFile f) -> std::expected<io::Read<std::string>, CliError> {
-        return convert_stub(std::move(f.table),
-                            core::Unit{core::LengthUnit::foot})
-            .transform([](const StubTable& t) {
-              return io::Read<std::string>{.value = format_stub(t),
+      io::read_imeds(in, io::ReadContext{}).transform_error(io::lift<CliError>),
+      [](io::ImedsFile&& f) -> std::expected<io::Read<std::string>, CliError> {
+        return core::convert(std::move(f.table), core::ColumnIndex{0},
+                             core::Unit{core::LengthUnit::foot})
+            .transform([](core::StationTable&& t) {
+              return io::Read<std::string>{.value = io::format_csv(t),
                                            .warnings = {}};
             })
             .transform_error(io::lift<CliError>);
       });
+}
+
+std::filesystem::path fixture(std::string_view name) {
+  return mov::test::fixture(std::string{"io/imeds/"} + std::string{name});
 }
 
 }  // namespace
@@ -115,38 +60,66 @@ TEST_CASE("the read -> convert -> export chain has an exhaustive error type",
                               std::expected<io::Read<std::string>, CliError>>);
 }
 
-TEST_CASE("the chain keeps the reader's warnings in the result",
-          "[io][read][chain]") {
-  const auto out = imeds_to_csv_in_feet("length.imeds");
+TEST_CASE("the chain converts and exports an IMEDS file", "[io][read][chain]") {
+  const auto out =
+      imeds_to_csv_in_feet(fixture("tabs.imeds"));  // 1.5 m, 1.75 m
   REQUIRE(out.has_value());
-  CHECK(out->value == "1.0000\n3.2808\n");
-  CHECK(out->warnings ==
-        std::vector{io::Warning{.code = io::WarningCode::header_line_skipped,
-                                .subject = "length.imeds"}});
+  CHECK(out->value ==
+        "station_id,station_name,time_utc,quantity,value,status,unit,datum\r\n"
+        "T1,T1,2020-01-01T00:00:00.000Z,value,4.921260,value,ft,MSL\r\n"
+        "T1,T1,2020-01-01T00:06:00.000Z,value,5.741470,value,ft,MSL\r\n");
+  CHECK(out->warnings.empty());
 }
 
-TEST_CASE("a unit mismatch surfaces as the UnitError alternative",
+TEST_CASE("the chain keeps the reader's warnings in the result",
           "[io][read][chain]") {
-  const auto out = imeds_to_csv_in_feet("pressure.imeds");
-  REQUIRE(not out.has_value());
-  REQUIRE(std::holds_alternative<core::UnitError>(out.error()));
-  CHECK(std::holds_alternative<core::IncompatibleUnits>(
-      std::get<core::UnitError>(out.error())));
+  const mov::test::ScratchDir dir;
+  mov::test::write_bytes(
+      dir / "cst.imeds",
+      "a\nb\nNOAA CST MSL m\nS 1.0 2.0\n2020 01 01 00 00 00 1.0\n"
+      "2020 01 01 00 06 00 -99999\n");
+  const auto out = imeds_to_csv_in_feet(dir / "cst.imeds");
+  REQUIRE(out.has_value());
+  CHECK(out->warnings ==
+        std::vector{io::Warning{.code = io::WarningCode::tz_assumed_utc,
+                                .subject = "CST"},
+                    io::Warning{.code = io::WarningCode::legacy_sentinel_masked,
+                                .subject = "",
+                                .count = 1}});
+  CHECK(out->value.contains(
+      "S,S,2020-01-01T00:06:00.000Z,value,,missing,ft,MSL"));
+}
 
-  const auto unknown = imeds_to_csv_in_feet("unitless.imeds");
-  REQUIRE(not unknown.has_value());
-  const auto* unit_error = std::get_if<core::UnitError>(&unknown.error());
+TEST_CASE("a column that is not a length surfaces as the UnitError alternative",
+          "[io][read][chain]") {
+  const auto speed =
+      imeds_to_csv_in_feet(fixture("header_tokens.imeds"));  // m s-1
+  REQUIRE(not speed.has_value());
+  const auto* unit_error = std::get_if<core::UnitError>(&speed.error());
   REQUIRE(unit_error != nullptr);
-  CHECK(std::holds_alternative<core::UnknownUnit>(*unit_error));
+  CHECK(std::holds_alternative<core::IncompatibleUnits>(*unit_error));
+
+  const auto unitless = imeds_to_csv_in_feet(fixture("mllw_small.imeds"));
+  REQUIRE(not unitless.has_value());
+  const auto* unknown = std::get_if<core::UnitError>(&unitless.error());
+  REQUIRE(unknown != nullptr);
+  CHECK(std::holds_alternative<core::UnknownUnit>(*unknown));
 }
 
 TEST_CASE("a reader error surfaces as the io::Error alternative",
           "[io][read][chain]") {
-  const auto out = imeds_to_csv_in_feet("missing.imeds");
-  REQUIRE(not out.has_value());
-  const auto* io_error = std::get_if<io::Error>(&out.error());
+  const mov::test::ScratchDir dir;
+  const auto missing = imeds_to_csv_in_feet(dir / "missing.imeds");
+  REQUIRE(not missing.has_value());
+  const auto* io_error = std::get_if<io::Error>(&missing.error());
   REQUIRE(io_error != nullptr);
   const auto* file_error = std::get_if<io::FileError>(io_error);
   REQUIRE(file_error != nullptr);
   CHECK(file_error->op == io::FileOp::open);
+
+  const auto bad = imeds_to_csv_in_feet(fixture("bad_date.imeds"));
+  REQUIRE(not bad.has_value());
+  const auto* bad_io = std::get_if<io::Error>(&bad.error());
+  REQUIRE(bad_io != nullptr);
+  CHECK(std::holds_alternative<io::ParseError>(*bad_io));
 }
