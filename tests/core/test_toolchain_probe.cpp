@@ -91,12 +91,20 @@ TEST_CASE("probe: std::format of a millisecond time point", "[core][probe]") {
   CHECK(std::format("{:%FT%T}Z", t) == "2005-08-28T12:30:45.123Z");
 }
 
+// Apple libc++ (LLVM 18 and 19) declares stop_token only with
+// -fexperimental-library; libc++ 20 and the other libraries always do.
 TEST_CASE("probe: stop_token", "[core][probe]") {
-  const std::stop_source source;
+#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
+  // Not const: request_stop() is non-const in the standard (libstdc++ and
+  // clang-tidy think otherwise); MSVC STL enforces it.
+  std::stop_source source;  // NOLINT(misc-const-correctness)
   const std::stop_token token = source.get_token();
   CHECK_FALSE(token.stop_requested());
   source.request_stop();
   CHECK(token.stop_requested());
+#else
+  SKIP("std::stop_token is missing (libc++ without -fexperimental-library)");
+#endif
 }
 
 // The core never calls std::chrono::parse (libc++ lacks it); this only

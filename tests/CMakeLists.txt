@@ -144,10 +144,16 @@ set_tests_properties(layering_guard_rejects_violations qt_include_scanner_reject
 # Negative-compile checks of the core's strong types (GCC/Clang flag syntax;
 # MSVC's warning flags differ and are not covered yet).
 if(NOT MSVC)
+    # The harness runs the compiler by hand, so it needs the flags that pick
+    # the standard library and SDK (-stdlib=libc++, -isysroot on macOS) too.
+    set(compile_fail_flags "${CMAKE_CXX_FLAGS}")
+    if(CMAKE_OSX_SYSROOT)
+        string(APPEND compile_fail_flags " -isysroot ${CMAKE_OSX_SYSROOT}")
+    endif()
     add_test(
         NAME core_compile_fail_checks
         COMMAND
-            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DCXX_FLAGS=${compile_fail_flags}"
             "-DINCLUDE_DIR=${PROJECT_SOURCE_DIR}/src/core/include"
             "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail" -P
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail/run.cmake"

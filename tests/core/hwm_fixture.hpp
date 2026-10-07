@@ -8,8 +8,10 @@
 #pragma once
 
 #include <catch2/catch_test_macros.hpp>
+#include <cerrno>
 #include <charconv>
 #include <cstddef>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -17,6 +19,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <version>
 
 #include "mov/core/geo.hpp"
 #include "mov/core/hwm.hpp"
@@ -27,10 +30,20 @@ namespace mov::test {
 
 [[nodiscard]] inline double parse_number(const std::string& text) {
   double value = 0.0;
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
   const auto [end, ec] =
       std::from_chars(text.data(), text.data() + text.size(), value);
   REQUIRE(ec == std::errc{});
   REQUIRE(end == text.data() + text.size());
+#else
+  // No floating-point from_chars (libc++ defines no __cpp_lib_to_chars). The
+  // tests run in the "C" locale, which strtod then reads.
+  char* end = nullptr;
+  errno = 0;
+  value = std::strtod(text.c_str(), &end);
+  REQUIRE(errno == 0);
+  REQUIRE(end == text.c_str() + text.size());
+#endif
   return value;
 }
 

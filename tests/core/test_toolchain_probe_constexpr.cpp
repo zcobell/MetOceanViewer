@@ -15,8 +15,11 @@
 //   constexpr std::isfinite: available.
 //   constexpr std::fabs and std::llround: GCC yes, Clang NO. The core
 //   therefore uses its own helpers (mov/core/detail/numeric.hpp).
-// Still to confirm on the macOS (Apple Clang, libc++) and Windows (MSVC STL)
-// CI runners: every test below.
+// Clang 18 with libc++ 18 (dev-libcxx preset; Apple Clang 16 stand-in): zip,
+// chunk_by, constexpr from_chars, chrono calendar and expected monadic
+// operations: available. fold_left, enumerate: missing (SKIP). std::isfinite:
+// constexpr. Still to confirm on the Windows (MSVC STL) CI runner: every test
+// below. See docs/wp-notes/portability.md.
 
 #include <algorithm>
 #include <array>
@@ -26,6 +29,7 @@
 #include <cmath>
 #include <expected>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <ranges>
 #include <string_view>
@@ -48,6 +52,19 @@ inline constexpr bool fabs_is_constexpr =
 template <double V>
 inline constexpr bool isfinite_is_constexpr =
     requires { typename std::integral_constant<bool, std::isfinite(V)>; };
+
+// Dependent on Available, so a library whose std::isfinite is not constexpr
+// (MSVC STL) never compiles the call. True when there is nothing to check.
+template <bool Available, class T>
+constexpr bool isfinite_behaves() {
+  if constexpr (Available) {
+    return std::isfinite(T{1.5}) and
+           not std::isfinite(std::numeric_limits<T>::infinity()) and
+           not std::isfinite(std::numeric_limits<T>::quiet_NaN());
+  } else {
+    return true;
+  }
+}
 
 // ---- ranges
 // ---------------------------------------------------------------------
@@ -125,10 +142,11 @@ constexpr int expected_chain() {
 }  // namespace
 
 TEST_CASE("probe: constexpr std::isfinite", "[core][probe][constexpr]") {
-  STATIC_REQUIRE(isfinite_is_constexpr<1.0>);
-  STATIC_REQUIRE(std::isfinite(1.5));
-  STATIC_REQUIRE_FALSE(std::isfinite(std::numeric_limits<double>::infinity()));
-  STATIC_REQUIRE_FALSE(std::isfinite(std::numeric_limits<double>::quiet_NaN()));
+  constexpr bool available = isfinite_is_constexpr<1.0>;
+  STATIC_REQUIRE(isfinite_behaves<available, double>());  // vacuous if absent
+  if constexpr (not available) {
+    SKIP("std::isfinite is not constexpr: the core uses detail::is_finite");
+  }
 }
 
 // The core avoids std::fabs and std::llround in constant expressions. This
