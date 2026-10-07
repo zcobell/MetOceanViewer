@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <random>
+#include <utility>
 
 #include "mov/core/time.hpp"
 #include "mov/io/detail/civil_time.hpp"
@@ -41,7 +42,8 @@ static_assert(detail::in_imeds_range(detail::imeds_end -
 
 TEST_CASE("civil_fields agrees with std::chrono wherever chrono has the year",
           "[io][civil_time]") {
-  std::mt19937_64 gen{12345};
+  std::seed_seq seed{12345};
+  std::mt19937_64 gen{seed};
   // +-30,000 years in milliseconds.
   std::uniform_int_distribution<std::int64_t> any{-946'000'000'000'000LL,
                                                   946'000'000'000'000LL};
@@ -55,16 +57,17 @@ TEST_CASE("civil_fields agrees with std::chrono wherever chrono has the year",
     REQUIRE(c.year == static_cast<int>(date.year()));
     REQUIRE(c.month == static_cast<unsigned>(date.month()));
     REQUIRE(c.day == static_cast<unsigned>(date.day()));
-    REQUIRE(c.hour == static_cast<unsigned>(clock.hours().count()));
-    REQUIRE(c.minute == static_cast<unsigned>(clock.minutes().count()));
-    REQUIRE(c.second == static_cast<unsigned>(clock.seconds().count()));
-    REQUIRE(c.millisecond == static_cast<unsigned>(clock.subseconds().count()));
+    REQUIRE(std::cmp_equal(c.hour, clock.hours().count()));
+    REQUIRE(std::cmp_equal(c.minute, clock.minutes().count()));
+    REQUIRE(std::cmp_equal(c.second, clock.seconds().count()));
+    REQUIRE(std::cmp_equal(c.millisecond, clock.subseconds().count()));
   }
 }
 
 TEST_CASE("time_of inverts civil_fields over the whole file range",
           "[io][civil_time]") {
-  std::mt19937_64 gen{777};
+  std::seed_seq seed{777};
+  std::mt19937_64 gen{seed};
   std::uniform_int_distribution<std::int64_t> any{-mov::core::max_abs_time_ms,
                                                   mov::core::max_abs_time_ms};
   for (int i = 0; i < 50000; ++i) {

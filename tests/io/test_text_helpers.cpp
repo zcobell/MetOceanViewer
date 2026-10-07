@@ -57,6 +57,8 @@ TEST_CASE("next_word with a separator predicate", "[io][text]") {
   CHECK(detail::next_word(spaced) == std::nullopt);
 }
 
+namespace {
+
 constexpr bool first_field_at_compile_time() {
   std::string_view text = ";x,y";
   const auto word = detail::next_word(text, comma_or_semicolon);
@@ -65,6 +67,8 @@ constexpr bool first_field_at_compile_time() {
          fields[1] == "q";
 }
 static_assert(first_field_at_compile_time());
+
+}  // namespace
 
 TEST_CASE("split_on_into keeps empty fields and reports overflow",
           "[io][text]") {
@@ -96,24 +100,23 @@ TEST_CASE("LineCursor skips blank lines and peeks at the next one",
           "[io][text]") {
   detail::LineCursor cursor{"a\n\n  \t\nb\r\n\nc"};
   CHECK(cursor.peek_blank() == std::optional<bool>{false});
-  CHECK(cursor.next_nonblank()->text == "a");
+  const auto a = cursor.next_nonblank();
+  CHECK((a.has_value() and a->text == "a"));
   CHECK(cursor.peek_blank() == std::optional<bool>{true});  // the empty line
   const auto b = cursor.next_nonblank();
-  REQUIRE(b.has_value());
-  CHECK(b->text == "b");
-  CHECK(b->number == 4);  // blank lines are counted
+  CHECK((b.has_value() and b->text == "b"));
+  CHECK((b.has_value() and b->number == 4));  // blank lines are counted
   CHECK(cursor.peek_blank() == std::optional<bool>{true});
   const auto c = cursor.next_nonblank();
-  REQUIRE(c.has_value());
-  CHECK(c->text == "c");
-  CHECK(c->number == 6);
+  CHECK((c.has_value() and c->text == "c"));
+  CHECK((c.has_value() and c->number == 6));
   CHECK(cursor.peek_blank() == std::nullopt);
   CHECK(cursor.next_nonblank() == std::nullopt);
 
   detail::LineCursor only_blank{"\n \n\r\n"};
   CHECK(only_blank.next_nonblank() == std::nullopt);
   CHECK(only_blank.at_end());
-  detail::LineCursor empty{""};
+  const detail::LineCursor empty{""};
   CHECK(empty.peek_blank() == std::nullopt);
 }
 

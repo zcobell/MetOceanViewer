@@ -154,6 +154,7 @@ std::string format_csv(const core::StationTable& table) {
   emit_csv(table, std::numeric_limits<std::size_t>::max(),
            [&out](std::string& buffer) {
              out = std::move(buffer);
+             buffer.clear();
              return true;
            });
   return out;

@@ -270,6 +270,7 @@ std::expected<Read<std::string>, FormatError> format_imeds(
   emit_imeds(table, source, std::numeric_limits<std::size_t>::max(),
              [&out](std::string& buffer) {
                out = std::move(buffer);
+               buffer.clear();
                return true;
              });
   return Read<std::string>{.value = std::move(out),

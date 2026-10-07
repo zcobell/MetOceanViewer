@@ -561,12 +561,14 @@ std::expected<Read<core::StationTable>, Error> assemble(
 // The column's metadata: the generic quantity with the header's unit and datum.
 std::expected<core::SeriesMeta, ParseError> column_meta(
     const ImedsHeader& header) {
-  const core::SeriesMeta meta = core::SeriesMeta::make({.unit = header.unit});
+  const auto generic = [&header] {
+    return core::SeriesMeta::make({.unit = header.unit});
+  };
   if (not header.datum) {
-    return meta;
+    return generic();
   }
   // The generic quantity can carry a datum: failing here is a bug.
-  auto with_datum = meta.assume_datum(*header.datum);
+  auto with_datum = generic().assume_datum(*header.datum);
   if (not with_datum) {
     return std::unexpected{internal_error("datum on the generic quantity")};
   }

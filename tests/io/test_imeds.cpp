@@ -545,8 +545,8 @@ TEST_CASE("NaN, Inf and Fortran stars are Missing with a count",
     const auto read = parse_fixture(name);
     const auto values = nums(read.value.table, 0);
     const std::size_t missing = name == "nan_value.imeds" ? 1 : 6;
-    CHECK(static_cast<std::size_t>(
-              std::ranges::count(values, std::optional<double>{})) == missing);
+    const auto found = std::ranges::count(values, std::optional<double>{});
+    CHECK(std::cmp_equal(found, missing));
     CHECK(read.warnings ==
           std::vector{Warning{.code = WarningCode::nonfinite_masked,
                               .subject = "",
