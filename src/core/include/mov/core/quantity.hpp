@@ -13,6 +13,7 @@
 #include <utility>
 #include <variant>
 
+#include "mov/core/detail/ascii.hpp"
 #include "mov/core/units.hpp"
 
 namespace mov::core {
@@ -75,11 +76,11 @@ class GenericQuantity {
   [[nodiscard]] constexpr std::string_view token() const& noexcept {
     return token_;
   }
-  std::string_view token() && = delete;
+  std::string_view token() const&& = delete;
   [[nodiscard]] constexpr std::string_view standard_name() const& noexcept {
     return standard_name_;
   }
-  std::string_view standard_name() && = delete;
+  std::string_view standard_name() const&& = delete;
 
   friend bool operator==(const GenericQuantity&,
                          const GenericQuantity&) = default;
@@ -246,6 +247,13 @@ std::string_view token(QuantityId&&) = delete;
   return registry == nullptr or *registry == Quantity::water_level or
          *registry == Quantity::water_level_prediction;
 }
+
+static_assert(
+    std::ranges::none_of(detail::quantity_registry,
+                         [](const QuantityInfo& row) {
+                           return detail::trim(row.canonical_unit).empty();
+                         }),
+    "canonical_unit relies on non-blank registry units");
 
 /// The unit the writers store for a registry quantity: parse_unit of
 /// info(q).canonical_unit.

@@ -38,7 +38,8 @@ std::optional<GenericQuantity> GenericQuantity::parse(Spec spec) {
 }
 
 Unit canonical_unit(Quantity q) {
-  return parse_unit(info(q).canonical_unit).value_or(Unit{});
+  // Every registry spelling is non-blank (static_assert in quantity.hpp).
+  return detail::unit_of_nonblank(info(q).canonical_unit);
 }
 
 }  // namespace mov::core

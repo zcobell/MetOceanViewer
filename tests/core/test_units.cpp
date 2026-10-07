@@ -218,6 +218,18 @@ TEST_CASE("parse_unit canonicalizes OtherUnit aliases",
   CHECK(parse_unit("%") == parse_unit("percent"));
 }
 
+TEST_CASE("degree() is the parsed degree unit", "[core][units]") {
+  const Unit deg = mov::core::degree();
+  CHECK(std::optional<Unit>{deg} == parse_unit("degree"));
+  CHECK(std::optional<Unit>{deg} == parse_unit("deg"));
+  CHECK(std::optional<Unit>{deg} == parse_unit(" degrees_true "));
+  CHECK(symbol(deg) == "degree");
+  CHECK(udunits(deg) == "degree");
+  const auto* other = std::get_if<OtherUnit>(&deg);
+  REQUIRE(other != nullptr);
+  CHECK(is_canonical_other(*other));
+}
+
 TEST_CASE("parse_unit keeps an unknown unit as an OtherUnit",
           "[core][units][parse]") {
   CHECK(other_symbol("furlong") == "furlong");
