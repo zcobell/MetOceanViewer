@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "maplibre-native-qt",
+  "version-date": "2026-09-20",
+  "description": "MapLibre Native Qt: the QMapLibre libraries and the Qt Location 'maplibre' geoservices plugin, built against the Qt in $QT_ROOT_DIR (see portfile.cmake).",
+  "homepage": "https://github.com/maplibre/maplibre-native-qt",
+  "license": "BSD-2-Clause AND (GPL-2.0-only OR GPL-3.0-only OR LGPL-3.0-only)",
+  "supports": "linux | osx | (windows & x64 & !uwp)",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}
