@@ -18,8 +18,20 @@ add_subdirectory(support)
 #                             check fails the build
 #   <name>_relaxed_constexpr  CATCH_CONFIG_RUNTIME_STATIC_REQUIRE: the same
 #                             checks at run time, for a debugger and coverage
+#
+# mov_add_test(<name> GUI SOURCES ... LIBRARIES ...)
+#
+# A Qt Quick test executable. Its sources supply main() (one QGuiApplication
+# per process, created before Catch2 runs), so it is one ctest test labelled
+# `gui`; jobs without a display or GL exclude it with `-LE gui`. On Linux it
+# runs under xvfb-run when available: MapLibre needs an OpenGL context, which
+# Mesa provides in software.
 function(mov_add_test name)
-    cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "SOURCES;CONSTEXPR_SOURCES;LIBRARIES")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "GUI" "" "SOURCES;CONSTEXPR_SOURCES;LIBRARIES")
+    if(arg_GUI)
+        _mov_add_gui_test_executable(${name} "${arg_SOURCES}" "${arg_LIBRARIES}")
+        return()
+    endif()
     if(arg_SOURCES)
         _mov_add_test_executable(${name} "${arg_SOURCES}" "${arg_LIBRARIES}")
     endif()
@@ -50,8 +62,33 @@ function(_mov_add_test_executable name sources libraries)
     )
 endfunction()
 
+function(_mov_add_gui_test_executable name sources libraries)
+    add_executable(${name} ${sources})
+    target_link_libraries(
+        ${name}
+        PRIVATE ${libraries} mov::test_support Catch2::Catch2 mov::options mov::warnings
+    )
+    mov_enable_static_analysis(${name})
+    set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_program(MOV_XVFB_RUN xvfb-run)
+        if(MOV_XVFB_RUN)
+            # xvfb-run's default screen is 8-bit; GL wants 24.
+            set_property(
+                TARGET ${name}
+                PROPERTY TEST_LAUNCHER "${MOV_XVFB_RUN}" --auto-servernum "--server-args=-screen 0 1600x1000x24"
+            )
+        endif()
+    endif()
+    add_test(NAME ${name} COMMAND ${name} --warn NoAssertions)
+    set_tests_properties(${name} PROPERTIES LABELS gui TIMEOUT 120)
+endfunction()
+
 add_subdirectory(core)
 add_subdirectory(io)
+if(MOV_ENABLE_QT)
+    add_subdirectory(ui)
+endif()
 
 # core and io stay Qt-free at the source level too; cmake/Layering.cmake
 # guards the link level.

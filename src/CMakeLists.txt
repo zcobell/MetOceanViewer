@@ -7,5 +7,5 @@ add_subdirectory(core)
 add_subdirectory(io)
 
 if(MOV_ENABLE_QT)
-    add_subdirectory(app)
+    add_subdirectory(ui)
 endif()

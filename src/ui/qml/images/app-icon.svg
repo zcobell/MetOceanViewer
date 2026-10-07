@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!-- Placeholder application icon: a gauge mark over waves. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="#0b62d6"/>
+  <path d="M40 150 q22 -22 44 0 t44 0 t44 0 t44 0" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M40 192 q22 -22 44 0 t44 0 t44 0 t44 0" fill="none" stroke="#9cc7ff" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="128" cy="88" r="22" fill="#ffffff"/>
+  <rect x="122" y="104" width="12" height="40" rx="6" fill="#ffffff"/>
+</svg>
