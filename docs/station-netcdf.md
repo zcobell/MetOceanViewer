@@ -140,7 +140,7 @@ Each data variable carries one physical quantity for all stations (`double`, sam
 | `long_name` | human label from the registry, or the source label for `value` | yes | §3.2 |
 | `units` | UDUNITS string from the registry (§6); for `value` the source unit text, or the attribute is omitted when the unit is unknown | yes | §3.1 |
 | `units_metadata` | `"temperature: on_scale"` on temperature variables only (new in CF 1.11) | on temperatures | §3.1.2 |
-| `vertical_datum` | token (§10.2); `water_level*` only; omitted when the datum is unspecified | if known | non-CF, §2.6 |
+| `vertical_datum` | token (§10.2); `water_level*` and generic (`value`) quantities; omitted when the datum is unspecified | if known | non-CF, §2.6 |
 | `ancillary_variables` | `"<quantity>_status"` when a status variable exists | per §8.2 | §3.4 |
 | `comment` | optional free text (e.g. "shifted from MSL to NAVD88 with NOAA VDatum") | no | §2.6.2 |
 
@@ -249,7 +249,7 @@ those to an explicit `Dry` state; the file stores it as a CF status flag, not as
 | Attributes | `_FillValue=-128b`, `standard_name="status_flag"`, `long_name="<label> wet/dry status"`, `flag_values=0b,1b`, `flag_meanings="dry wet"`, `valid_range=0b,1b`. The data variable gets `ancillary_variables="<quantity>_status"`. |
 | Sample states | status 0 (dry): data MUST be `_FillValue`. status 1 (wet): data MUST be a valid value. status missing (`-128`): unclassified; data is a value or missing. L2 padding: status is `-128` (CF §9.6). |
 | Reader | The two MUST-rules above are validation errors if violated (`WetDryInconsistent{station, index}`). The in-memory sample is `Value(x)`, `Dry` or `Missing`. A dry sample never carries a number. |
-| Reading legacy numeric sources | The model-output readers (ADCIRC ASCII/netCDF, D-Flow) apply decision 16 (`value <= -999` is dry) once, at their boundary, before anything reaches this writer. |
+| Reading legacy numeric sources | The ADCIRC model-output readers (ASCII and netCDF elevation) apply decision 16 (`value <= -999` is dry) once, at their boundary, before anything reaches this writer. D-Flow has no dry sentinel (a dry station reports bed level, which can lie below −999 m), so the rule does not apply to it. |
 
 ---
 
@@ -435,7 +435,7 @@ coordinates. xarray promotes the byte status flag to float32 because of its `_Fi
 
 ### 10.2 Vertical datum
 
-`vertical_datum` (variable attribute, `water_level*` only) holds the `VerticalDatum` enum token, upper case:
+`vertical_datum` (variable attribute, `water_level*` and generic `value` quantities) holds the `VerticalDatum` enum token, upper case:
 `MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `STND` (station/gauge datum). The enum in `core` is authoritative; `NullDatum` is
 represented by **omitting** the attribute, never by `"none"`. Unknown token on read => warning `W-DATUM-UNKNOWN`, datum treated as unspecified (no guessing; the text is kept in
 diagnostics). Datum shifts are applied in `core` (decision 18), never in the reader/writer. The attribute is not CF; CF's own channel for a vertical datum is a compound `crs_wkt`
