@@ -144,14 +144,18 @@ TEST_CASE("the largest file time formats", "[io][csv]") {
                  .where = test::location(1.0, 2.0),
                  .times = {earliest, latest},
                  .samples = {test::value(1.0), test::value(2.0)}}});
-  const std::string csv = io::format_csv(table);
-  CHECK(csv.contains("S,S,-"));
-  CHECK(csv.contains("Z,value"));
+  // chrono's year_month_day stops at +-32767; these are about +-285,000.
+  CHECK(io::format_csv(table) ==
+        std::string{header} +
+            "S,S,-283457-03-21T15:00:59.009Z,value,1.000000,value,,\r\n"
+            "S,S,287396-10-12T08:59:00.991Z,value,2.000000,value,,\r\n");
 }
 
 TEST_CASE("quoting follows RFC 4180", "[io][csv]") {
   CHECK(row_of(named("plain")).starts_with("S1,plain,"));
   CHECK(row_of(named("a,b")).starts_with("S1,\"a,b\","));
+  // A semicolon separates fields in the locales with a decimal comma.
+  CHECK(row_of(named("a;b")).starts_with("S1,\"a;b\","));
   CHECK(row_of(named("say \"hi\"")).starts_with("S1,\"say \"\"hi\"\"\","));
   CHECK(row_of(named("two\nlines")).starts_with("S1,\"two\nlines\","));
   CHECK(row_of(named("cr\rhere")).starts_with("S1,\"cr\rhere\","));

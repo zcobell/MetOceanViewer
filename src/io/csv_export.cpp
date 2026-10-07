@@ -4,44 +4,48 @@
 #include "mov/io/csv_export.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <ostream>
 #include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/units.hpp"
+#include "mov/io/detail/civil_time.hpp"
 #include "mov/io/text_file.hpp"
 
 namespace mov::io {
 
 namespace {
 
-namespace chrono = std::chrono;
-
 constexpr std::string_view header_row{
     "station_id,station_name,time_utc,quantity,value,status,unit,datum\r\n"};
 constexpr std::size_t chunk_bytes = std::size_t{1} << 16;
+// A row of a short station id and name and a value: a hint for reserve.
+constexpr std::size_t typical_row_bytes = 80;
 
 // The characters a spreadsheet takes as the start of a formula (OWASP).
 constexpr bool starts_formula(char c) {
   return c == '=' or c == '+' or c == '-' or c == '@' or c == '\t' or c == '\r';
 }
 
-// RFC 4180 quoting, with the formula guard in front of the text.
+// RFC 4180 quoting (a semicolon too: it separates fields in the locales that
+// write a decimal comma), with the formula guard in front of the text.
 void append_text_cell(std::string& out, std::string_view text) {
   const bool guard = not text.empty() and starts_formula(text.front());
-  const bool quote = text.find_first_of(",\"\r\n") != std::string_view::npos;
+  const bool quote = text.find_first_of(",;\"\r\n") != std::string_view::npos;
   if (quote) {
     out += '"';
   }
@@ -66,18 +70,11 @@ std::string text_cell(std::string_view text) {
 }
 
 void append_time(std::string& out, core::Time t) {
-  const auto day = chrono::floor<chrono::days>(t);
-  const chrono::year_month_day date{day};
-  const chrono::hh_mm_ss<chrono::milliseconds> clock{t - day};
-  const int year = static_cast<int>(date.year());
-  std::format_to(
-      std::back_inserter(out), "{}{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
-      year < 0 ? "-" : "", std::abs(year), static_cast<unsigned>(date.month()),
-      static_cast<unsigned>(date.day()),
-      static_cast<int>(clock.hours().count()),
-      static_cast<int>(clock.minutes().count()),
-      static_cast<int>(clock.seconds().count()),
-      static_cast<int>(clock.subseconds().count()));
+  const detail::CivilTime c = detail::civil_fields(t);
+  std::format_to(std::back_inserter(out),
+                 "{}{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+                 c.year < 0 ? "-" : "", c.year < 0 ? -c.year : c.year, c.month,
+                 c.day, c.hour, c.minute, c.second, c.millisecond);
 }
 
 void append_sample(std::string& out, const core::Sample& sample) {
@@ -119,9 +116,11 @@ RowFrame frame_of(const core::FileStation& station,
   return frame;
 }
 
-// The CSV text, handed to `flush` in chunks of about chunk_bytes.
+// The CSV text, built in `buffer` and handed to `flush` whenever it holds at
+// least `chunk` bytes, and at the end. flush takes the text out of the buffer
+// (clearing it) and returns false to stop, as a failed stream does.
 template <class Flush>
-void emit_csv(const core::StationTable& table, Flush flush) {
+void emit_csv(const core::StationTable& table, std::size_t chunk, Flush flush) {
   std::string buffer{header_row};
   for (const core::StationIndex i : table.stations()) {
     const std::span<const core::Time> times = table.times(i);
@@ -137,21 +136,26 @@ void emit_csv(const core::StationTable& table, Flush flush) {
         buffer += frame.after_time;
         append_sample(buffer, samples[j]);
         buffer += frame.after_value;
-        if (buffer.size() >= chunk_bytes) {
-          flush(std::string_view{buffer});
-          buffer.clear();
+        if (buffer.size() >= chunk and not flush(buffer)) {
+          return;
         }
       }
     }
   }
-  flush(std::string_view{buffer});
+  flush(buffer);
 }
 
 }  // namespace
 
 std::string format_csv(const core::StationTable& table) {
   std::string out;
-  emit_csv(table, [&out](std::string_view chunk) { out += chunk; });
+  out.reserve(header_row.size() + table.total_samples() * typical_row_bytes);
+  // One chunk: the buffer is the result.
+  emit_csv(table, std::numeric_limits<std::size_t>::max(),
+           [&out](std::string& buffer) {
+             out = std::move(buffer);
+             return true;
+           });
   return out;
 }
 
@@ -159,8 +163,10 @@ std::expected<void, Error> write_csv(const std::filesystem::path& path,
                                      const core::StationTable& table) {
   return write_file_atomic(
       path, [&table](std::ostream& out) -> std::expected<void, FileError> {
-        emit_csv(table, [&out](std::string_view chunk) {
-          out.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
+        emit_csv(table, chunk_bytes, [&out](std::string& buffer) {
+          out.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+          buffer.clear();
+          return static_cast<bool>(out);  // a full disk stops the export
         });
         return {};
       });
