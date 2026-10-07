@@ -91,7 +91,7 @@ tools/dev/run.sh ctest --preset dev -R <regex>        # rerun selected tests
 
 # The app (Qt layers). This host is headless: the GUI test runs it under Xvfb
 # and writes build/dev-qt/tests/ui/screenshots/main-window.png.
-tools/dev/run.sh ctest --preset dev-qt -L gui
+tools/dev/run.sh ctest --preset dev-qt -L 'qt|gui'   # qt: offscreen, no GL; gui: Xvfb + Mesa
 tools/dev/run.sh cmake --build --preset dev-qt --target all_qmllint   # QML type check (CI runs it)
 # On a machine with a display: build natively and run build/<preset>/src/ui/metoceanviewer
 # (macOS: metoceanviewer.app); see "Running the app" in tools/dev/README.md.
@@ -119,7 +119,8 @@ tools/dev/run.sh pre-commit run --all-files
   `mov_add_fuzz_test(<name> SOURCES ... LIBRARIES ... CORPUS <module>/<dir>)`.
 - `MOV_ENABLE_QT` (the `-qt` presets and `tidy`) finds Qt, selects the vcpkg
   feature `gui` (MapLibre Native Qt, overlay port `cmake/vcpkg-ports/`) and adds
-  `src/ui` (QML module, `metoceanviewer` executable) and `tests/ui`. GUI tests use
-  `mov_add_test(<name> GUI ...)`: label `gui`, run under `xvfb-run` on Linux.
+  `src/ui` (QML module, `metoceanviewer` executable) and `tests/ui`. Qt tests use
+  `mov_add_test(<name> QT ...)` (label `qt`, offscreen, every CI OS) or
+  `mov_add_test(<name> GUI ...)` (label `gui`, renders; `xvfb-run` on Linux).
 - New files need the two-line `SPDX-License-Identifier: GPL-3.0-or-later` /
   `Copyright (c) <year> Zach Cobell` header (`tools/check_license_header.py`).
