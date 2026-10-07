@@ -61,6 +61,7 @@ enum class ParseErrc : std::uint8_t {
   count_mismatch,
   corrupt_record,
   trailing_text,
+  too_large,  // a result over ReadLimits (the one code for every limit)
 };
 
 namespace detail {
@@ -199,6 +200,7 @@ enum class FormatErrc : std::uint8_t {
   unsupported_layout,
   unsupported_calendar,
   unsupported_crs,
+  projection_unavailable,  // the CRS is fine, the projection database is not
   no_data_variables,
   bad_ancillary,
   dimension_mismatch,

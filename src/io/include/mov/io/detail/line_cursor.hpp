@@ -51,6 +51,11 @@ class LineCursor {
     return position_ >= text_.size();
   }
 
+  /// The bytes of the text that `next()` has not consumed (after any BOM).
+  [[nodiscard]] std::size_t remaining_bytes() const noexcept {
+    return text_.size() - std::min(position_, text_.size());
+  }
+
   /// How many lines `next()` has returned; the number of the last one.
   [[nodiscard]] std::size_t lines_read() const noexcept { return number_; }
 

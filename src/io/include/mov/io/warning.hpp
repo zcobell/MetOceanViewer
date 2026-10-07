@@ -24,6 +24,7 @@ enum class WarningCode : std::uint8_t {
   // model text
   partial_record_dropped,
   fewer_snapshots_than_header,
+  more_snapshots_than_header,  // a restart appended records past NSnaps
   epoch_used,  // no cold start given: times are relative to the epoch
   time_precision_dropped,  // sub-millisecond digits of a time were rounded away
   header_line_skipped,

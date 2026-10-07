@@ -6,9 +6,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <expected>
-#include <functional>
 #include <iterator>
-#include <numeric>
 #include <span>
 #include <string>
 #include <utility>
@@ -18,82 +16,12 @@ namespace mov::core {
 
 namespace {
 
-// Adjacent input pairs with t[i+1] < t[i]. (A transform_reduce over the
-// shifted range: views::pairwise is not on every target standard library.)
-std::size_t count_descents(std::span<const Point> rows) {
-  if (rows.empty()) {
-    return 0;
-  }
-  return std::transform_reduce(
-      rows.begin(), std::prev(rows.end()), std::next(rows.begin()),
-      std::size_t{0}, std::plus{}, [](const Point& a, const Point& b) {
-        return b.time < a.time ? std::size_t{1} : std::size_t{0};
-      });
-}
-
-// What dropping all but the first row of each run of equal times costs: a
-// commutative monoid under +, with {} as identity.
-struct DedupCounts {
-  std::size_t dropped{};
-  std::size_t conflicting{};
-  friend constexpr DedupCounts operator+(DedupCounts a,
-                                         DedupCounts b) noexcept {
-    return {.dropped = a.dropped + b.dropped,
-            .conflicting = a.conflicting + b.conflicting};
-  }
-};
-
-// One run of equal times: everything after the first row is dropped.
-DedupCounts run_counts(std::span<const Point> run) {
-  const Sample& kept = run.front().sample;
-  const auto differs = [&kept](const Point& p) { return p.sample != kept; };
-  return {.dropped = run.size() - 1,
-          .conflicting = static_cast<std::size_t>(
-              std::ranges::count_if(run.subspan(1), differs))};
-}
-
-// The sum of run_counts over the runs of equal times of a sorted range.
-// (The runs are found by hand: views::chunk_by is not on every target
-// standard library.)
-DedupCounts dedup_counts(std::span<const Point> sorted) {
-  DedupCounts total;
-  auto first = sorted.begin();
-  while (first != sorted.end()) {
-    const auto last = std::ranges::find_if(
-        first, sorted.end(),
-        [t = first->time](const Point& p) { return p.time != t; });
-    total = total + run_counts({first, last});
-    first = last;
-  }
-  return total;
-}
-
-// Sorts and deduplicates rows that are not strictly increasing.
-NormalizeReport sort_and_deduplicate(std::vector<Point>& rows) {
-  const std::size_t descents = count_descents(rows);
-  if (descents > 0) {
-    std::ranges::stable_sort(rows, std::less{}, &Point::time);
-  }
-  const DedupCounts counts = dedup_counts(rows);
-  const auto duplicates = std::ranges::unique(rows, {}, &Point::time);
-  rows.erase(duplicates.begin(), duplicates.end());
-  return {.descents = descents,
-          .duplicates_dropped = counts.dropped,
-          .conflicting_duplicates = counts.conflicting};
-}
-
 std::pair<TimeAxis, std::vector<Sample>> unzip(std::span<const Point> rows) {
   TimeAxis times(rows.size());
   std::vector<Sample> samples(rows.size());
   std::ranges::transform(rows, times.begin(), &Point::time);
   std::ranges::transform(rows, samples.begin(), &Point::sample);
   return {std::move(times), std::move(samples)};
-}
-
-bool strictly_increasing(std::span<const Point> rows) {
-  return std::ranges::adjacent_find(rows, [](const Point& a, const Point& b) {
-           return not(a.time < b.time);
-         }) == rows.end();
 }
 
 }  // namespace
@@ -168,13 +96,23 @@ std::expected<TimeSeries, LengthMismatch> TimeSeries::with_samples(
 }
 
 Normalized normalize(std::vector<Point> rows, SeriesMeta meta) {
-  const NormalizeReport report = strictly_increasing(rows)
-                                     ? NormalizeReport{}
-                                     : sort_and_deduplicate(rows);
+  TimeAxis input_times(rows.size());
+  std::ranges::transform(rows, input_times.begin(), &Point::time);
+  const NormalizingOrder order = normalizing_order(
+      input_times, [&rows](std::size_t kept, std::size_t dropped) {
+        return rows[kept].sample != rows[dropped].sample;
+      });
+  if (not order.report.clean()) {
+    std::vector<Point> kept_rows;
+    kept_rows.reserve(order.kept.size());
+    std::ranges::transform(order.kept, std::back_inserter(kept_rows),
+                           [&rows](std::size_t i) { return rows[i]; });
+    rows = std::move(kept_rows);
+  }
   auto [times, samples] = unzip(rows);
   return {.series =
               TimeSeries{std::move(times), std::move(samples), std::move(meta)},
-          .report = report};
+          .report = order.report};
 }
 
 }  // namespace mov::core

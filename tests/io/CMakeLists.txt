@@ -49,3 +49,40 @@ mov_add_fuzz_test(
     LIBRARIES mov::io
     CORPUS io/parse_cf_time_units
 )
+
+# ADCIRC ASCII output and the HWM file (WP8).
+mov_add_test(
+    mov_io_model_text_tests
+    SOURCES
+        test_model_number.cpp
+        test_table_error.cpp
+        test_adcirc_station_file.cpp
+        test_adcirc_ascii.cpp
+        test_hwm_file.cpp
+        test_hwm_golden.cpp
+        test_throughput.cpp
+    LIBRARIES mov::io
+)
+if(MOV_PROJ_DB)
+    set_source_files_properties(
+        test_adcirc_station_file.cpp
+        PROPERTIES COMPILE_DEFINITIONS "MOV_TEST_PROJ_DATA_DIR=\"${MOV_TEST_PROJ_DATA_DIR}\""
+    )
+endif()
+
+# Replaces the global operator new to count allocations: its own executable.
+mov_add_test(mov_io_alloc_tests SOURCES test_adcirc_allocation.cpp LIBRARIES mov::io)
+
+mov_add_fuzz_test(
+    fuzz_parse_adcirc_ascii
+    SOURCES fuzz_parse_adcirc_ascii.cpp
+    LIBRARIES mov::io
+    CORPUS io/parse_adcirc_ascii
+)
+mov_add_fuzz_test(
+    fuzz_parse_adcirc_station_file
+    SOURCES fuzz_parse_adcirc_station_file.cpp
+    LIBRARIES mov::io
+    CORPUS io/parse_adcirc_station_file
+)
+mov_add_fuzz_test(fuzz_parse_hwm_csv SOURCES fuzz_parse_hwm_csv.cpp LIBRARIES mov::io CORPUS io/parse_hwm_csv)
