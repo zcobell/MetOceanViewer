@@ -17,6 +17,23 @@ mov_add_test(
     LIBRARIES mov::io
 )
 
+# The projection tests tell mov::io where this build's proj.db is. It sits in
+# the PROJ install that find_package found (vcpkg: share/proj).
+find_file(MOV_PROJ_DB proj.db PATHS "${PROJ_DIR}" "${PROJ_DIR}/.." NO_DEFAULT_PATH)
+if(MOV_PROJ_DB)
+    get_filename_component(MOV_TEST_PROJ_DATA_DIR "${MOV_PROJ_DB}" DIRECTORY)
+    set_source_files_properties(
+        test_projection.cpp
+        PROPERTIES COMPILE_DEFINITIONS "MOV_TEST_PROJ_DATA_DIR=\"${MOV_TEST_PROJ_DATA_DIR}\""
+    )
+else()
+    message(
+        WARNING
+        "proj.db not found under ${PROJ_DIR}: the projection tests that need a "
+        "database will fail unless $MOV_PROJ_DATA names its directory."
+    )
+endif()
+
 # The locale-independence tests need de_DE.UTF-8 (the dev image and CI
 # generate it). With the option on they fail, rather than skip, when it is
 # missing; MOV_REQUIRE_LOCALES=1 in the environment does the same at run time.

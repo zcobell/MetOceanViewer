@@ -3,8 +3,13 @@
 
 #include <array>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <expected>
+#include <filesystem>
+#include <optional>
+#include <string>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -12,6 +17,8 @@
 
 #include "mov/core/geo.hpp"
 #include "mov/io/projection.hpp"
+#include "mov/io/warning.hpp"
+#include "mov/test/scratch_dir.hpp"
 
 namespace {
 
@@ -24,6 +31,51 @@ using mov::io::ProjectionErrc;
 using mov::io::ProjectionError;
 using mov::io::Projector;
 using mov::io::to_location;
+
+// The directory of this build's proj.db (see tests/io/CMakeLists.txt); an
+// application would pass the one it ships.
+void configure_test_database() {
+#if defined(MOV_TEST_PROJ_DATA_DIR)
+  mov::io::set_projection_data_dir(MOV_TEST_PROJ_DATA_DIR);
+#endif
+}
+
+const bool database_configured = (configure_test_database(), true);
+
+// Sets (or, with nullopt, removes) an environment variable for the lifetime of
+// the object, then restores the old value.
+class ScopedEnv {
+ public:
+  ScopedEnv(const char* name, const std::optional<std::string>& value)
+      : name_{name} {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (const char* old = std::getenv(name)) {
+      previous_ = old;
+    }
+    set(value);
+  }
+  ScopedEnv(const ScopedEnv&) = delete;
+  ScopedEnv& operator=(const ScopedEnv&) = delete;
+  ScopedEnv(ScopedEnv&&) = delete;
+  ScopedEnv& operator=(ScopedEnv&&) = delete;
+  ~ScopedEnv() { set(previous_); }
+
+ private:
+  void set(const std::optional<std::string>& value) const {
+#ifdef _WIN32
+    _putenv_s(name_, value ? value->c_str() : "");
+#else
+    if (value) {
+      ::setenv(name_, value->c_str(), 1);
+    } else {
+      ::unsetenv(name_);
+    }
+#endif
+  }
+
+  const char* name_;
+  std::optional<std::string> previous_;
+};
 
 Epsg epsg(int code) {
   const auto made = Epsg::make(code);
@@ -170,8 +222,7 @@ TEST_CASE("an unknown EPSG code is reported with the code",
   CHECK(made.error().crs == epsg(999999));
 }
 
-TEST_CASE("the per-thread cache follows the CRS of the latest call",
-          "[io][projection]") {
+TEST_CASE("to_location is right for CRSs in any order", "[io][projection]") {
   const UtmCase& c = utm15n[0];
   const auto utm_point = native(c.easting, c.northing, 26915);
   const auto mercator_point =
@@ -195,7 +246,7 @@ TEST_CASE("threads convert independently", "[io][projection]") {
   std::vector<int> ok(4,
                       0);  // not vector<bool>: threads write adjacent elements
   {
-    std::vector<std::jthread> threads;
+    std::vector<std::thread> threads;
     threads.reserve(ok.size());
     for (int& slot : ok) {
       threads.emplace_back([&slot, &point] {
@@ -207,6 +258,9 @@ TEST_CASE("threads convert independently", "[io][projection]") {
         }
         slot = all ? 1 : 0;
       });
+    }
+    for (std::thread& thread : threads) {
+      thread.join();
     }
   }
   for (const int thread_ok : ok) {
@@ -242,4 +296,129 @@ TEST_CASE("a code that is not a horizontal CRS is not usable",
     REQUIRE(not made.has_value());
     CHECK(made.error().code == ProjectionErrc::unknown_crs);
   }
+}
+
+// ---- how good the transformation was ---------------------------------------
+
+namespace {
+
+// A placeholder for value_or: a test that finds no warning has already failed.
+mov::io::Warning no_warning() {
+  return mov::io::Warning{.code = mov::io::WarningCode::times_reordered};
+}
+
+// Converts `count` points around the centre of a CRS's useful area.
+void convert_points(Projector& projector, std::size_t count) {
+  for (std::size_t i = 0; i < count; ++i) {
+    const auto location = projector.to_location(
+        Xy{.x = 500000.0 + static_cast<double>(i), .y = 3300000.0});
+    REQUIRE(location.has_value());
+  }
+}
+
+}  // namespace
+
+TEST_CASE("an exact transformation reports no approximation",
+          "[io][projection][accuracy]") {
+  // WGS 84 / UTM zone 16N and Web Mercator are defined on WGS 84 itself.
+  for (const int code : {32616, 3857}) {
+    CAPTURE(code);
+    auto projector = Projector::make(epsg(code));
+    REQUIRE(projector.has_value());
+    convert_points(*projector, 5);
+    CHECK(projector->accuracy().points == 5);
+    CHECK(projector->accuracy().sampled_points == 5);
+    CHECK(projector->accuracy().ballpark_points == 0);
+    CHECK(not projector->accuracy().worst_stated_m.has_value());
+    CHECK(not projector->approximation_warning().has_value());
+  }
+}
+
+TEST_CASE("EPSG:4326 has nothing to report", "[io][projection][accuracy]") {
+  auto projector = Projector::make(Epsg::wgs84());
+  REQUIRE(projector.has_value());
+  CHECK(projector->to_location(Xy{.x = -90.5, .y = 30.5}).has_value());
+  CHECK(projector->accuracy().points == 0);
+  CHECK(not projector->approximation_warning().has_value());
+}
+
+// NAD83 to WGS 84 is a datum shift of a metre or two that PROJ states with an
+// accuracy; a reader must say so.
+TEST_CASE("a transformation with a stated accuracy worse than a metre warns",
+          "[io][projection][accuracy]") {
+  auto projector = Projector::make(epsg(26915));
+  REQUIRE(projector.has_value());
+  convert_points(*projector, 7);
+  CHECK(projector->accuracy().worst_stated_m.value_or(0.0) > 1.0);
+  const auto found = projector->approximation_warning();
+  REQUIRE(found.has_value());
+  const mov::io::Warning warning = found.value_or(no_warning());
+  CHECK(warning.code == mov::io::WarningCode::crs_approximate);
+  CHECK(warning.subject == "EPSG:26915");
+  CHECK(warning.count == 7);
+}
+
+// Where PROJ knows no operation between two datums for the point (NAD83 is
+// defined for North America, not China) it falls back to a ballpark
+// transformation, which can be metres off.
+TEST_CASE("a ballpark transformation warns", "[io][projection][accuracy]") {
+  for (const int code : {4269}) {
+    CAPTURE(code);
+    auto projector = Projector::make(epsg(code));
+    REQUIRE(projector.has_value());
+    const auto location = projector->to_location(Xy{.x = 100.0, .y = 40.0});
+    static_cast<void>(location);
+    CHECK(projector->accuracy().ballpark_points == 1);
+    const auto found = projector->approximation_warning();
+    REQUIRE(found.has_value());
+    const mov::io::Warning warning = found.value_or(no_warning());
+    CHECK(warning.code == mov::io::WarningCode::crs_approximate);
+    CHECK(warning.subject == "EPSG:" + std::to_string(code));
+  }
+}
+
+// Asking PROJ for the operation of every point costs 200 times the point; only
+// a sample is asked.
+TEST_CASE("the operation is asked for a sample of the points",
+          "[io][projection][accuracy]") {
+  auto projector = Projector::make(epsg(26915));
+  REQUIRE(projector.has_value());
+  convert_points(*projector, 1000);
+  CHECK(projector->accuracy().points == 1000);
+  // The first 256, then 320, 384, ..., 960.
+  CHECK(projector->accuracy().sampled_points == 256 + 11);
+}
+
+// ---- where proj.db is ------------------------------------------------------
+
+TEST_CASE("a missing database is database_unavailable, not unknown_crs",
+          "[io][projection][database]") {
+  const mov::test::ScratchDir broken;
+  mov::test::write_bytes(broken / "proj.db", "this is not a database");
+  const ScopedEnv env{"MOV_PROJ_DATA", broken.path().string()};
+  const auto made = Projector::make(epsg(26915));
+  REQUIRE(not made.has_value());
+  CHECK(made.error().code == ProjectionErrc::database_unavailable);
+  CHECK(made.error().crs == epsg(26915));
+  const auto located = to_location(native(500000.0, 3300000.0, 26915));
+  REQUIRE(not located.has_value());
+  CHECK(std::holds_alternative<ProjectionError>(located.error()));
+  // EPSG:4326 never needs the database.
+  CHECK(to_location(native(-90.0, 30.0, 4326)).has_value());
+}
+
+TEST_CASE("MOV_PROJ_DATA overrides the directory the application set",
+          "[io][projection][database]") {
+  REQUIRE(Projector::make(epsg(26915)).has_value());
+  {
+    const mov::test::ScratchDir broken;
+    mov::test::write_bytes(broken / "proj.db", "this is not a database");
+    const ScopedEnv env{"MOV_PROJ_DATA", broken.path().string()};
+    CHECK(not Projector::make(epsg(26915)).has_value());
+  }
+  // With the variable gone the application's setting works again.
+  CHECK(Projector::make(epsg(26915)).has_value());
+  // An empty variable is no variable.
+  const ScopedEnv blank{"MOV_PROJ_DATA", std::string{}};
+  CHECK(Projector::make(epsg(26915)).has_value());
 }
