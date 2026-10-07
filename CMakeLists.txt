@@ -4,6 +4,13 @@
 # 4.4: the only CMake version CI and the dev image exercise (tools/versions.env).
 cmake_minimum_required(VERSION 4.4)
 
+# The vcpkg toolchain installs the manifest during the first project() call,
+# so the features must be chosen before it. The Qt layers need the map
+# (vcpkg.json feature "gui": MapLibre Native Qt).
+if(MOV_ENABLE_QT)
+    list(APPEND VCPKG_MANIFEST_FEATURES gui)
+endif()
+
 # The single source of truth for the version: cmake/version.hpp.in, and later
 # Info.plist, the Windows VERSIONINFO and CPack metadata, are generated from it.
 project(
@@ -32,6 +39,21 @@ mov_declare_options()
 mov_create_option_targets()
 
 include(cmake/Layering.cmake)
+
+# Qt and the map, for src/ui and tests/ui; the layering check keeps them out
+# of core and io. The exact Qt is QT_VERSION in tools/versions.env; this is
+# the oldest the build accepts.
+set(MOV_QT_MINIMUM_VERSION 6.11)
+if(MOV_ENABLE_QT)
+    find_package(
+        Qt6
+        ${MOV_QT_MINIMUM_VERSION}
+        REQUIRED
+        COMPONENTS Gui Network Sql Qml Quick QuickControls2 Location Positioning Test
+    )
+    qt_standard_project_setup(REQUIRES ${MOV_QT_MINIMUM_VERSION})
+    include(cmake/MapLibre.cmake)
+endif()
 
 add_subdirectory(src)
 

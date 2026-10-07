@@ -28,7 +28,8 @@ jobs:
   build-test:
     name: build-test (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    # A cold vcpkg cache builds MapLibre Native Qt (see the Configure step).
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -49,10 +50,11 @@ jobs:
             compiler-cache: sccache
             qt-arch: win64_msvc2022_64
     env:
-      # No Qt target exists yet: with 'true' this job installs Qt and
-      # configures with MOV_ENABLE_QT=ON, which today only runs
-      # find_package(Qt6) in src/app. Flip it when the skeleton app lands.
-      BUILD_QT: 'false'
+      # 'true': install Qt and configure with MOV_ENABLE_QT=ON, which adds the
+      # Qt Quick app (src/ui), its GUI test and the vcpkg feature "gui"
+      # (MapLibre Native Qt). The Qt-free path (core, io) stays covered by the
+      # sanitizer, fuzz and coverage jobs.
+      BUILD_QT: 'true'
     defaults:
       run:
         shell: bash
@@ -89,33 +91,69 @@ jobs:
           variant: ${{ matrix.compiler-cache }}
           max-size: 500M
 
+      # Its own key: the Qt-free jobs save caches without MapLibre. Saved
+      # below right after the configure, which is where vcpkg builds. On a
+      # cold cache, this job (linux-gcc) and clang-tidy build MapLibre in
+      # parallel with the same key; whichever saves first wins, and the
+      # other's save is a harmless "cache already exists" warning.
       - uses: ./.github/actions/setup-vcpkg
+        id: vcpkg
         with:
-          cache-key: ${{ matrix.name }}
+          cache-key: ${{ matrix.name }}-gui
+          restore-only: 'true'
 
       - name: Qt
         if: env.BUILD_QT == 'true'
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: ./.github/actions/setup-qt
         with:
-          version: ${{ env.QT_VERSION }}
           arch: ${{ matrix.qt-arch }}
-          modules: ${{ env.QT_MODULES }}
-          cache: true
 
       - name: Configure
+        id: configure
         run: |
-          # install-qt-action exports QT_ROOT_DIR, which the qt presets use.
+          # setup-qt exports QT_ROOT_DIR; MOV_ENABLE_QT selects the vcpkg
+          # feature "gui", whose port builds MapLibre against that Qt.
           if [[ "${BUILD_QT}" == true ]]; then
             cmake --preset "${{ matrix.preset }}" -DMOV_ENABLE_QT=ON "-DCMAKE_PREFIX_PATH=${QT_ROOT_DIR}"
           else
             cmake --preset "${{ matrix.preset }}"
           fi
 
+      # Also after a failed configure: vcpkg archives only the ports it built
+      # successfully, so a partial cache still spares those rebuilds.
+      - name: Save vcpkg binary cache
+        if: always() && steps.configure.outcome != 'skipped' && steps.vcpkg.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.vcpkg.outputs.cache-path }}
+          key: ${{ steps.vcpkg.outputs.cache-key }}
+
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }}
 
+      - name: qmllint
+        if: env.BUILD_QT == 'true'
+        run: cmake --build --preset ${{ matrix.preset }} --target all_qmllint
+
+      # Label qt (offscreen, no GL: the maplibre plugin loads, app identity)
+      # runs everywhere. Label gui needs OpenGL: on Linux it runs under
+      # xvfb-run with Mesa (tests/CMakeLists.txt sets the launcher); the
+      # macOS and Windows jobs build it but do not run it yet.
       - name: Test
-        run: ctest --preset ${{ matrix.preset }}
+        run: |
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            ctest --preset ${{ matrix.preset }}
+          else
+            ctest --preset ${{ matrix.preset }} --label-exclude gui
+          fi
+
+      - name: Upload GUI screenshot
+        if: always() && runner.os == 'Linux' && env.BUILD_QT == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gui-screenshot
+          path: build/${{ matrix.preset }}/tests/ui/screenshots/
+          if-no-files-found: ignore
 
   sanitizers:
     name: asan-ubsan (linux-gcc)
@@ -210,7 +248,9 @@ jobs:
 
   clang-tidy:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # The tidy preset includes the Qt layers, so a cold vcpkg cache builds
+    # MapLibre Native Qt here too.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/load-versions
@@ -219,12 +259,24 @@ jobs:
           cmakeVersion: ${{ env.CMAKE_VERSION }}
       - uses: ./.github/actions/setup-gcc # vcpkg builds ports with c++, as in the dev image
       - uses: ./.github/actions/setup-llvm
+      # The same ports and compiler as build-test (linux-gcc): share its cache.
       - uses: ./.github/actions/setup-vcpkg
+        id: vcpkg
         with:
-          cache-key: linux-gcc
+          cache-key: linux-gcc-gui
+          restore-only: 'true'
+      - uses: ./.github/actions/setup-qt
+        with:
+          arch: linux_gcc_64
       # Configure only: the gate needs the compile database (and the headers
       # generated at configure time), not a build.
-      - run: cmake --preset tidy
+      - id: configure
+        run: cmake --preset tidy
+      - if: always() && steps.configure.outcome != 'skipped' && steps.vcpkg.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.vcpkg.outputs.cache-path }}
+          key: ${{ steps.vcpkg.outputs.cache-key }}
       - run: python3 tools/clang_tidy_gate.py -p build/tidy
 
   pre-commit:

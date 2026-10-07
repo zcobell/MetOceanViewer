@@ -9,7 +9,7 @@
     {
       "name": "base",
       "hidden": true,
-      "description": "Ninja, vcpkg manifest mode (VCPKG_ROOT must be set), strict warnings, standard-library hardening and tests. One build tree per preset under build/. The presets, not CC/CXX, choose the compiler.",
+      "description": "Ninja, vcpkg manifest mode (VCPKG_ROOT must be set), strict warnings, standard-library hardening and tests. One build tree per preset under build/. The presets, not CC/CXX, choose the compiler. VCPKG_KEEP_ENV_VARS passes QT_ROOT_DIR to vcpkg's port builds (the maplibre-native-qt port), which Windows otherwise runs in a sanitized environment.",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -17,6 +17,9 @@
         "BUILD_TESTING": "ON",
         "MOV_WARNINGS_AS_ERRORS": "ON",
         "MOV_ENABLE_HARDENING": "ON"
+      },
+      "environment": {
+        "VCPKG_KEEP_ENV_VARS": "$penv{VCPKG_KEEP_ENV_VARS};QT_ROOT_DIR"
       }
     },
     {
@@ -36,7 +39,7 @@
     {
       "name": "qt",
       "hidden": true,
-      "description": "Qt from $env{QT_ROOT_DIR} (set by tools/dev/run.sh and by install-qt-action in CI).",
+      "description": "Qt from $env{QT_ROOT_DIR} (set by tools/dev/run.sh and by install-qt-action in CI). MOV_ENABLE_QT also selects the vcpkg feature 'gui' (MapLibre Native Qt).",
       "cacheVariables": {
         "MOV_ENABLE_QT": "ON",
         "CMAKE_PREFIX_PATH": "$env{QT_ROOT_DIR}"
@@ -109,7 +112,7 @@
         "gcc"
       ],
       "displayName": "GCC debug + coverage",
-      "description": "gcov instrumentation; the coverage-report build preset writes the gcovr report and enforces >= 80% lines over src/ and >= 90% per Qt-free layer (src/core, src/io).",
+      "description": "gcov instrumentation; the coverage-report build preset writes the gcovr report and enforces >= 80% lines over src/ and >= 90% per Qt-free layer (src/core, src/io). Qt-free: the Qt layers (src/ui) are not measured yet.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "MOV_ENABLE_COVERAGE": "ON",
@@ -121,10 +124,11 @@
       "name": "tidy",
       "inherits": [
         "base",
-        "clang"
+        "clang",
+        "qt"
       ],
       "displayName": "Clang compile database for clang-tidy",
-      "description": "Configure-only: produces build/tidy/compile_commands.json for tools/clang_tidy_gate.py, fuzz targets included. Debug keeps assert bodies visible to the checks.",
+      "description": "Configure-only: produces build/tidy/compile_commands.json for tools/clang_tidy_gate.py, fuzz targets and the Qt layers included. Debug keeps assert bodies visible to the checks.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
@@ -167,7 +171,7 @@
       "name": "ci-macos",
       "inherits": "base",
       "displayName": "CI: macOS arm64 Apple Clang",
-      "description": "macOS build-and-test job. The deployment target (macOS 14, plan \u00a76.24) is passed to vcpkg's port builds through the environment.",
+      "description": "macOS build-and-test job. The deployment target (macOS 14, plan §6.24) is passed to vcpkg's port builds through the environment. A preset's environment key replaces the inherited one, so VCPKG_KEEP_ENV_VARS repeats base's QT_ROOT_DIR.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_CXX_COMPILER": "clang++",
@@ -177,7 +181,7 @@
       },
       "environment": {
         "MACOSX_DEPLOYMENT_TARGET": "14.0",
-        "VCPKG_KEEP_ENV_VARS": "MACOSX_DEPLOYMENT_TARGET"
+        "VCPKG_KEEP_ENV_VARS": "$penv{VCPKG_KEEP_ENV_VARS};QT_ROOT_DIR;MACOSX_DEPLOYMENT_TARGET"
       },
       "condition": {
         "type": "equals",

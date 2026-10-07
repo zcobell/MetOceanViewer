@@ -86,6 +86,8 @@ RUN apt-get update \
         libxkbcommon-x11-0 \
         xauth \
         xvfb \
+        # MapLibre Native (vcpkg port maplibre-native-qt) links the system zlib.
+        zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # GCC is the default cc/c++/gcov; the presets name the compiler they want

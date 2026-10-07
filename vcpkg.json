@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "metoceanviewer",
-  "description": "Dependencies of the MetOceanViewer v5 core, I/O and tests. Qt is installed separately (aqtinstall).",
+  "description": "Dependencies of MetOceanViewer v5. Qt is installed separately (aqtinstall).",
   "homepage": "https://github.com/zcobell/MetOceanViewer",
   "license": "GPL-3.0-or-later",
   "dependencies": [
@@ -13,5 +13,13 @@
         "netcdf-4"
       ]
     }
-  ]
+  ],
+  "features": {
+    "gui": {
+      "description": "The map of the Qt app: MapLibre Native Qt (cmake/vcpkg-ports), built against the Qt in $QT_ROOT_DIR. MOV_ENABLE_QT selects it.",
+      "dependencies": [
+        "maplibre-native-qt"
+      ]
+    }
+  }
 }

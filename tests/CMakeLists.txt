@@ -18,8 +18,35 @@ add_subdirectory(support)
 #                             check fails the build
 #   <name>_relaxed_constexpr  CATCH_CONFIG_RUNTIME_STATIC_REQUIRE: the same
 #                             checks at run time, for a debugger and coverage
+#
+# mov_add_test(<name> QT|GUI SOURCES ... LIBRARIES ...)
+#
+# A Qt test executable. Its sources supply main() (one QGuiApplication per
+# process, created before Catch2 runs), so it is one ctest test.
+#   QT   label `qt`: QT_QPA_PLATFORM=offscreen, no display or GL needed; runs
+#        on every CI platform.
+#   GUI  label `gui`: renders, so it needs a display and OpenGL. On Linux it
+#        runs under xvfb-run when available (Mesa provides GL in software),
+#        and RESOURCE_LOCK xvfb keeps parallel ctest from racing xvfb-run's
+#        server-number pick. Jobs without a display exclude it with -LE gui.
+# On Windows, Qt's bin directory goes on the test's PATH.
 function(mov_add_test name)
-    cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "SOURCES;CONSTEXPR_SOURCES;LIBRARIES")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "QT;GUI" "" "SOURCES;CONSTEXPR_SOURCES;LIBRARIES")
+    if(arg_QT OR arg_GUI)
+        if(arg_QT AND arg_GUI)
+            message(FATAL_ERROR "mov_add_test(${name}): QT and GUI are exclusive")
+        endif()
+        if(arg_CONSTEXPR_SOURCES)
+            message(FATAL_ERROR "mov_add_test(${name}): CONSTEXPR_SOURCES do not combine with QT or GUI")
+        endif()
+        if(arg_GUI)
+            set(label gui)
+        else()
+            set(label qt)
+        endif()
+        _mov_add_qt_test_executable(${name} ${label} "${arg_SOURCES}" "${arg_LIBRARIES}")
+        return()
+    endif()
     if(arg_SOURCES)
         _mov_add_test_executable(${name} "${arg_SOURCES}" "${arg_LIBRARIES}")
     endif()
@@ -50,8 +77,45 @@ function(_mov_add_test_executable name sources libraries)
     )
 endfunction()
 
+function(_mov_add_qt_test_executable name label sources libraries)
+    add_executable(${name} ${sources})
+    target_link_libraries(
+        ${name}
+        PRIVATE ${libraries} mov::test_support Catch2::Catch2 mov::options mov::warnings
+    )
+    mov_enable_static_analysis(${name})
+    set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
+    add_test(NAME ${name} COMMAND ${name} --warn NoAssertions)
+    set_tests_properties(${name} PROPERTIES LABELS ${label} TIMEOUT 120)
+    if(label STREQUAL "qt")
+        set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT QT_QPA_PLATFORM=offscreen)
+    else()
+        set_tests_properties(${name} PROPERTIES RESOURCE_LOCK xvfb)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            find_program(MOV_XVFB_RUN xvfb-run)
+            if(MOV_XVFB_RUN)
+                # xvfb-run's default screen is 8-bit; GL wants 24.
+                set_property(
+                    TARGET ${name}
+                    PROPERTY TEST_LAUNCHER "${MOV_XVFB_RUN}" --auto-servernum "--server-args=-screen 0 1600x1000x24"
+                )
+            endif()
+        endif()
+    endif()
+    if(WIN32)
+        set_property(
+            TEST ${name}
+            APPEND
+            PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+        )
+    endif()
+endfunction()
+
 add_subdirectory(core)
 add_subdirectory(io)
+if(MOV_ENABLE_QT)
+    add_subdirectory(ui)
+endif()
 
 # core and io stay Qt-free at the source level too; cmake/Layering.cmake
 # guards the link level.

@@ -171,8 +171,9 @@ cmake/
 src/core/        # C++23, NO Qt: domain types, units, datums, stats, time series
 src/io/          # NO Qt: RAII netCDF wrapper; IMEDS, ADCIRC (ascii/nc), DFlow, CSV, HWM, generic nc
 src/providers/   # NOAA CO-OPS, USGS, NDBC, XTide; Qt Network only at the edge
-src/app/         # view-models (QObject / QML_ELEMENT), AppState, commands, settings
-src/ui/qml/      # map shell, panels, chart, theme
+src/app/         # view-models (QObject / QML_ELEMENT), AppState, commands, settings (arrives in Phase 4)
+src/ui/          # startup code (mov_ui), main.cpp and the metoceanviewer executable
+src/ui/qml/      # QML module MetOceanViewer: map shell, panels, chart, theme
 src/cli/         # metocean-data CLI (+ hwm-stats subcommand)
 tools/           # station-list builder
 tests/           # Catch2; recorded API fixtures; golden files

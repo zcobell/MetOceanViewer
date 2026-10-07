@@ -74,7 +74,7 @@ repos:
     language: python
     files: |
       (?x)(
-        \.(cpp|hpp|h|cc|cxx|hxx|ipp|inl|tpp|ixx|cppm|cmake|py|sh|yml|yaml|env)
+        \.(cpp|hpp|h|cc|cxx|hxx|ipp|inl|tpp|ixx|cppm|cmake|py|sh|yml|yaml|env|qml|ini|svg)
         | \.(hpp|cmake)\.in
         | (^|/)(CMakeLists\.txt|Dockerfile|requirements\.txt)
       )$

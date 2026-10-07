@@ -80,7 +80,8 @@ pinned in `vcpkg-configuration.json`); each preset builds into
 ```sh
 tools/dev/run.sh cmake --workflow --preset dev        # GCC 14 debug: configure, build, test
 tools/dev/run.sh cmake --workflow --preset dev-clang  # same with Clang 20
-tools/dev/run.sh cmake --workflow --preset dev-qt     # dev + Qt (installs Qt 6.11.3 into ~/Qt on first use)
+tools/dev/run.sh cmake --workflow --preset dev-qt     # dev + Qt app + GUI test (installs Qt 6.11.3 into
+                                                      # ~/Qt on first use; vcpkg builds MapLibre once, then caches it)
 tools/dev/run.sh cmake --workflow --preset asan       # ASan + UBSan
 tools/dev/run.sh cmake --workflow --preset fuzz       # Clang libFuzzer targets, MOV_FUZZ_SECONDS each
 tools/dev/run.sh cmake --workflow --preset release    # as shipped (no stdlib hardening)
@@ -88,7 +89,14 @@ tools/dev/run.sh cmake --workflow --preset coverage   # report in build/coverage
                                                       # fails < 80% lines overall or < 90% in src/core, src/io
 tools/dev/run.sh ctest --preset dev -R <regex>        # rerun selected tests
 
-# clang-tidy gate (CI runs the same):
+# The app (Qt layers). This host is headless: the GUI test runs it under Xvfb
+# and writes build/dev-qt/tests/ui/screenshots/main-window.png.
+tools/dev/run.sh ctest --preset dev-qt -L 'qt|gui'   # qt: offscreen, no GL; gui: Xvfb + Mesa
+tools/dev/run.sh cmake --build --preset dev-qt --target all_qmllint   # QML type check (CI runs it)
+# On a machine with a display: build natively and run build/<preset>/src/ui/metoceanviewer
+# (macOS: metoceanviewer.app); see "Running the app" in tools/dev/README.md.
+
+# clang-tidy gate (CI runs the same; the tidy preset includes the Qt layers):
 tools/dev/run.sh cmake --preset tidy
 tools/dev/run.sh python3 tools/clang_tidy_gate.py -p build/tidy
 
@@ -109,6 +117,10 @@ tools/dev/run.sh pre-commit run --all-files
   `_relaxed_constexpr` runtime twin). Fixtures: `tests/fixtures/<module>/`, via
   `mov::test::fixture("<module>/...")`. Parsers get a libFuzzer target with
   `mov_add_fuzz_test(<name> SOURCES ... LIBRARIES ... CORPUS <module>/<dir>)`.
-- `MOV_ENABLE_QT` (the `-qt` presets) adds `src/app`, where Qt is found.
+- `MOV_ENABLE_QT` (the `-qt` presets and `tidy`) finds Qt, selects the vcpkg
+  feature `gui` (MapLibre Native Qt, overlay port `cmake/vcpkg-ports/`) and adds
+  `src/ui` (QML module, `metoceanviewer` executable) and `tests/ui`. Qt tests use
+  `mov_add_test(<name> QT ...)` (label `qt`, offscreen, every CI OS) or
+  `mov_add_test(<name> GUI ...)` (label `gui`, renders; `xvfb-run` on Linux).
 - New files need the two-line `SPDX-License-Identifier: GPL-3.0-or-later` /
   `Copyright (c) <year> Zach Cobell` header (`tools/check_license_header.py`).
