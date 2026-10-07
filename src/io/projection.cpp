@@ -6,6 +6,7 @@
 #include <proj.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <expected>
@@ -13,7 +14,7 @@
 #include <format>
 #include <iterator>
 #include <memory>
-#include <mutex>
+#include <mutex>  // std::once_flag, std::call_once
 #include <optional>
 #include <string>
 #include <utility>
@@ -28,15 +29,12 @@ namespace {
 
 // ---- where proj.db is ------------------------------------------------------
 
-struct DataDirSetting {
-  std::mutex mutex;
-  std::optional<std::string> dir;  // UTF-8
-};
-
-DataDirSetting& data_dir_setting() {
-  static DataDirSetting setting;
-  return setting;
-}
+// Set once (set_projection_data_dir), then only read: the first call stores
+// the directory and publishes a pointer to it; a reader loads the pointer.
+// No lock in io (C11): call_once runs the store once, the atomic pointer
+// makes it visible.
+std::once_flag data_dir_once;
+std::atomic<const std::string*> data_dir{nullptr};  // UTF-8
 
 // The directory PROJ is told to search: $MOV_PROJ_DATA, else what the
 // application set; nullopt leaves PROJ to its own defaults.
@@ -46,8 +44,8 @@ std::optional<std::string> configured_data_dir() {
       env != nullptr and *env != '\0') {
     return std::string{env};
   }
-  const std::lock_guard lock{data_dir_setting().mutex};
-  return data_dir_setting().dir;
+  const std::string* dir = data_dir.load(std::memory_order_acquire);
+  return dir == nullptr ? std::nullopt : std::optional{*dir};
 }
 
 std::string utf8(const std::filesystem::path& p) {
@@ -133,8 +131,10 @@ Projector& Projector::operator=(Projector&&) noexcept = default;
 Projector::~Projector() = default;
 
 void set_projection_data_dir(const std::filesystem::path& dir) {
-  const std::lock_guard lock{data_dir_setting().mutex};
-  data_dir_setting().dir = utf8(dir);
+  std::call_once(data_dir_once, [&dir] {
+    static const std::string stored = utf8(dir);
+    data_dir.store(&stored, std::memory_order_release);
+  });
 }
 
 std::expected<Projector, ProjectionError> Projector::make(core::Epsg crs) {

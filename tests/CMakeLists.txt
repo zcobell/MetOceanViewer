@@ -159,4 +159,30 @@ if(NOT MSVC)
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail/run.cmake"
     )
     set_tests_properties(core_compile_fail_checks PROPERTIES TIMEOUT 300)
+    # The same for io's netCDF names (compile-time checked literals, no view
+    # of a temporary). Those headers need only the standard library.
+    add_test(
+        NAME io_compile_fail_checks
+        COMMAND
+            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DCXX_FLAGS=${compile_fail_flags}"
+            "-DINCLUDE_DIR=${PROJECT_SOURCE_DIR}/src/io/include"
+            "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail_io" -P
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail/run.cmake"
+    )
+    set_tests_properties(io_compile_fail_checks PROPERTIES TIMEOUT 300)
 endif()
+
+# netCDF-C is included only by the wrapper's sources (core-design.md 4.1),
+# and the gate rejects what it exists to reject.
+add_test(
+    NAME netcdf_include_gate
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_SOURCE_ROOT=${PROJECT_SOURCE_DIR}/src" -P
+        "${PROJECT_SOURCE_DIR}/cmake/CheckNetcdfInclude.cmake"
+)
+add_test(
+    NAME netcdf_include_gate_rejects_violations
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/netcdf_include/run.cmake"
+)

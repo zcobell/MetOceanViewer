@@ -10,9 +10,26 @@ find_package(netCDF CONFIG REQUIRED)
 # (set_projection_data_dir), or $MOV_PROJ_DATA does.
 find_package(PROJ CONFIG REQUIRED)
 
+# The netCDF wrapper lives in netcdf/: the only sources that include
+# <netcdf.h> (the netcdf_include_gate test checks it).
 mov_add_module(
     io
-    SOURCES atomic_file.cpp cf_time.cpp error.cpp netcdf_library.cpp projection.cpp text.cpp text_file.cpp warning.cpp
+    SOURCES
+        atomic_file.cpp
+        cf_time.cpp
+        error.cpp
+        netcdf/attribute.cpp
+        netcdf/blocks.cpp
+        netcdf/file.cpp
+        netcdf/library.cpp
+        netcdf/masking.cpp
+        netcdf/path.cpp
+        netcdf/read.cpp
+        netcdf/write.cpp
+        projection.cpp
+        text.cpp
+        text_file.cpp
+        warning.cpp
     PUBLIC_LINK mov::core
     PRIVATE_LINK netCDF::netcdf PROJ::proj
 )
