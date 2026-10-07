@@ -46,6 +46,28 @@ class LineCursor {
     return Line{.number = ++number_, .text = without_cr(line)};
   }
 
+  /// The next line that has a character other than white space, skipping
+  /// blank ones (they are still counted in `number`); nullopt at the end.
+  [[nodiscard]] std::optional<Line> next_nonblank() noexcept {
+    while (const auto line = next()) {
+      if (not skip_space(line->text).empty()) {
+        return line;
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Whether the line `next()` would return is blank, without consuming it;
+  /// nullopt at the end.
+  [[nodiscard]] std::optional<bool> peek_blank() const noexcept {
+    LineCursor ahead = *this;
+    const auto line = ahead.next();
+    if (not line) {
+      return std::nullopt;
+    }
+    return skip_space(line->text).empty();
+  }
+
   /// True when `next()` would return nullopt.
   [[nodiscard]] bool at_end() const noexcept {
     return position_ >= text_.size();

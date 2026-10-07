@@ -22,3 +22,5 @@ target_sources(
     mov_io
     PRIVATE model_number.cpp table_error.cpp adcirc_station_file.cpp adcirc_ascii.cpp hwm_file.cpp
 )
+# IMEDS and CSV (WP7).
+target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_names.cpp)

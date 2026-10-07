@@ -86,3 +86,11 @@ mov_add_fuzz_test(
     CORPUS io/parse_adcirc_station_file
 )
 mov_add_fuzz_test(fuzz_parse_hwm_csv SOURCES fuzz_parse_hwm_csv.cpp LIBRARIES mov::io CORPUS io/parse_hwm_csv)
+
+# IMEDS and CSV (WP7).
+mov_add_test(
+    mov_io_text_formats_tests
+    SOURCES test_imeds.cpp test_imeds_format.cpp test_csv_export.cpp test_text_helpers.cpp test_civil_time.cpp
+    LIBRARIES mov::io
+)
+mov_add_fuzz_test(fuzz_parse_imeds SOURCES fuzz_parse_imeds.cpp LIBRARIES mov::io CORPUS io/imeds)

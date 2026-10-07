@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace mov::io {
 
@@ -42,6 +44,12 @@ enum class WarningCode : std::uint8_t {
   unknown_provider,
   unknown_quantity,
   legacy_dialect,
+  // line-oriented text formats (IMEDS)
+  row_shape_changed,       // a station's rows switched between 6 and 7 words
+  empty_station,           // a station block without rows
+  value_reads_as_missing,  // written text that a reader masks as a sentinel
+  station_id_not_written,  // the format has no id: only the name was written
+  rows_omitted,            // Missing and Dry samples the format cannot hold
 };
 
 /// A stable lower-case identifier, the same as the enumerator's name
@@ -56,5 +64,13 @@ struct Warning {
   std::size_t count{1};
   friend bool operator==(const Warning&, const Warning&) = default;
 };
+
+/// Appends `w` when it counts something (`w.count > 0`): a reader tallies and
+/// reports once, without an `if` per code.
+inline void append_if_counted(std::vector<Warning>& warnings, Warning w) {
+  if (w.count > 0) {
+    warnings.push_back(std::move(w));
+  }
+}
 
 }  // namespace mov::io

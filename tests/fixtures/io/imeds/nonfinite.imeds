@@ -1,0 +1,11 @@
+% IMEDS generic format
+% year month day hour min sec value
+MetOceanViewer    UTC    none    unknown
+N1    30.0    -90.0
+2020 01 01 00 00 00 NaN
+2020 01 01 00 06 00 Inf
+2020 01 01 00 12 00 -inf
+2020 01 01 00 18 00 +NAN
+2020 01 01 00 24 00 ****
+2020 01 01 00 30 00 1.5
+2020 01 01 00 36 00 Infinity
