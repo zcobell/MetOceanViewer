@@ -36,6 +36,7 @@ using mov::io::nc::File;
 using mov::io::nc::global;
 using mov::io::nc::Masking;
 using mov::io::nc::NcNameRef;
+using mov::io::nc::NewFile;
 using mov::io::nc::Slab;
 using mov::io::nc::VarOptions;
 using mov::io::nc::write_netcdf_atomic;
@@ -44,7 +45,6 @@ using mov::test::nc::error_of;
 using mov::test::nc::LibraryStatus;
 using mov::test::nc::NcStatus;
 using mov::test::nc::open;
-using mov::test::nc::ReadContext;
 using mov::test::nc::ReadLimits;
 using mov::test::nc::status_of;
 using mov::test::nc::value_of;
@@ -70,23 +70,40 @@ std::vector<T> values(std::initializer_list<int> list) {
 }
 
 template <class T>
-std::expected<void, mov::io::NcError> put(File& f, NcNameRef var,
+std::expected<void, mov::io::NcError> put(NewFile& f, NcNameRef var,
                                           std::initializer_list<int> list) {
   const std::vector<T> data = values<T>(list);
   return f.put<T>(var, data, all4);
 }
 
 template <class T>
-std::expected<void, mov::io::NcError> att(File& f, mov::io::nc::AttTarget on,
+std::expected<void, mov::io::NcError> att(NewFile& f, mov::io::nc::AttTarget on,
                                           NcNameRef name,
                                           std::initializer_list<int> list) {
   const std::vector<T> data = values<T>(list);
   return f.put_att<T>(on, name, data);
 }
 
+// One value of another type that no T equals: 0.5 for an integer, 0.1
+// (a double) for float, 2^53 + 1 (an int64) for double.
+template <class T>
+std::expected<void, mov::io::NcError> inexact(NewFile& f, NcNameRef var,
+                                              NcNameRef name) {
+  if constexpr (std::same_as<T, double>) {
+    const std::array<std::int64_t, 1> v{(std::int64_t{1} << 53) + 1};
+    return f.put_att(var, name, v);
+  } else if constexpr (std::same_as<T, float>) {
+    const std::array<double, 1> v{0.1};
+    return f.put_att(var, name, v);
+  } else {
+    const std::array<double, 1> v{0.5};
+    return f.put_att(var, name, v);
+  }
+}
+
 // The checks of the typed write calls, made inside the body.
 template <class T>
-void check_write_errors(File& f, const std::array<DimInfo, 1>& n,
+void check_write_errors(NewFile& f, const std::array<DimInfo, 1>& n,
                         const std::array<DimInfo, 2>& grid) {
   const std::vector<T> four = values<T>({1, 2, 3, 4});
   const std::vector<T> two = values<T>({1, 2});
@@ -119,15 +136,17 @@ void check_write_errors(File& f, const std::array<DimInfo, 1>& n,
 //   v        fill -99, deflate 1, chunks {2}: {1, 2, -99, 4}, valid_min 0,
 //            valid_max 50, scale_factor 2.0, add_offset 1.0
 //   range    no fill attribute: {0, 2, 4, 3}, valid_range {0, 3}
-//   badrange valid_range {0}      badmin valid_min of another type
-//   badmax   valid_max of another type
-//   badmissing missing_value of another type
-//   badscale scale_factor int     badoffset add_offset int
+//   badrange valid_range {0}
+//   badmin, badmax, badmissing   valid_min, valid_max, missing_value of a
+//            value no T equals (inexact<T>)
+//   okmin    valid_min 0, valid_max 3, missing_value -99 of another type:
+//            exact, so accepted
+//   badscale scale_factor as text  badoffset add_offset int64 2^53 + 1
 //   unsigned _Unsigned "true"     other  of another type
 //   grid(r, n)
 // globals g = {1, 2} and empty = {} of T.
 template <class T>
-std::expected<void, Error> typed_file(File& f) {
+std::expected<void, Error> typed_file(NewFile& f) {
   const DimInfo n = value_of(f.define_dim("n", 4));
   const DimInfo r = value_of(f.define_dim("r", 2));
   const std::array<DimInfo, 1> dims{n};
@@ -139,28 +158,29 @@ std::expected<void, Error> typed_file(File& f) {
               .has_value());
   for (const NcNameRef name :
        {NcNameRef{"range"}, NcNameRef{"badrange"}, NcNameRef{"badmin"},
-        NcNameRef{"badmax"}, NcNameRef{"badmissing"}, NcNameRef{"badscale"},
-        NcNameRef{"badoffset"}, NcNameRef{"unsigned"}}) {
+        NcNameRef{"badmax"}, NcNameRef{"badmissing"}, NcNameRef{"okmin"},
+        NcNameRef{"badscale"}, NcNameRef{"badoffset"}, NcNameRef{"unsigned"}}) {
     REQUIRE(f.define_var<T>(name, dims, VarOptions<T>{}).has_value());
   }
   REQUIRE(f.define_var<Other<T>>("other", dims, {}).has_value());
   REQUIRE(f.define_var<T>("grid", grid, {}).has_value());
   const std::array<double, 1> two{2.0};
   const std::array<double, 1> one{1.0};
-  const std::array<std::int32_t, 1> int_one{1};
+  const std::array<std::int64_t, 1> beyond_double{(std::int64_t{1} << 53) + 1};
   REQUIRE(att<T>(f, "v", "valid_min", {0}).has_value());
   REQUIRE(att<T>(f, "v", "valid_max", {50}).has_value());
   REQUIRE(f.put_att<double>("v", "scale_factor", two).has_value());
   REQUIRE(f.put_att<double>("v", "add_offset", one).has_value());
   REQUIRE(att<T>(f, "range", "valid_range", {0, 3}).has_value());
   REQUIRE(att<T>(f, "badrange", "valid_range", {0}).has_value());
-  REQUIRE(att<Other<T>>(f, "badmin", "valid_min", {0}).has_value());
-  REQUIRE(att<Other<T>>(f, "badmax", "valid_max", {0}).has_value());
-  REQUIRE(att<Other<T>>(f, "badmissing", "missing_value", {0}).has_value());
-  REQUIRE(
-      f.put_att<std::int32_t>("badscale", "scale_factor", int_one).has_value());
-  REQUIRE(
-      f.put_att<std::int32_t>("badoffset", "add_offset", int_one).has_value());
+  REQUIRE(inexact<T>(f, "badmin", "valid_min").has_value());
+  REQUIRE(inexact<T>(f, "badmax", "valid_max").has_value());
+  REQUIRE(inexact<T>(f, "badmissing", "missing_value").has_value());
+  REQUIRE(att<Other<T>>(f, "okmin", "valid_min", {0}).has_value());
+  REQUIRE(att<Other<T>>(f, "okmin", "valid_max", {3}).has_value());
+  REQUIRE(att<Other<T>>(f, "okmin", "missing_value", {-99}).has_value());
+  REQUIRE(f.put_att("badscale", "scale_factor", "2"sv).has_value());
+  REQUIRE(f.put_att("badoffset", "add_offset", beyond_double).has_value());
   REQUIRE(f.put_att("unsigned", "_Unsigned", "true"sv).has_value());
   REQUIRE(att<T>(f, global, "g", {1, 2}).has_value());
   REQUIRE(att<T>(f, global, "empty", {}).has_value());
@@ -174,7 +194,7 @@ std::expected<void, Error> typed_file(File& f) {
 template <class T>
 std::filesystem::path written(const ScratchDir& dir) {
   const auto path = dir / "typed.nc";
-  REQUIRE(write_netcdf_atomic(path, typed_file<T>).has_value());
+  REQUIRE(write_netcdf_atomic(path, ReadLimits{}, typed_file<T>).has_value());
   return path;
 }
 
@@ -187,9 +207,8 @@ TEMPLATE_TEST_CASE("typed reads and attributes round-trip", "[io][netcdf]",
   const ScratchDir dir;
   const auto path = written<T>(dir);
   const File file = open(path);
-  CHECK(value_of(file.read<T>("v", all4, ReadContext{})) ==
-        values<T>({1, 2, -99, 4}));
-  CHECK(status_of(error_of(file.read<T>("nope", all4, ReadContext{}))) ==
+  CHECK(value_of(file.read<T>("v", all4)) == values<T>({1, 2, -99, 4}));
+  CHECK(status_of(error_of(file.read<T>("nope", all4))) ==
         NcStatus{LibraryStatus{nc_enotvar}});
   CHECK(file.numeric_att<T>(global, "g").value() == values<T>({1, 2}));
   CHECK(file.numeric_att<T>(global, "empty").value() == std::vector<T>{});
@@ -230,8 +249,14 @@ TEMPLATE_TEST_CASE("typed masking", "[io][netcdf]", double, float, std::int8_t,
   CHECK(status("unsigned") == NcStatus{WrapperFault::unsupported_unsigned});
   CHECK(status("other") == NcStatus{WrapperFault::type_mismatch});
   CHECK(status("nope") == NcStatus{LibraryStatus{nc_enotvar}});
+  // Attributes of another type whose values T holds exactly.
+  CHECK(file.masking<T>("okmin").value() ==
+        Masking<T>{.fill = range.fill,
+                   .missing_values = values<T>({-99}),
+                   .valid_min = T{0},
+                   .valid_max = T{3}});
 
-  const auto samples = file.read_samples("v", all4, ReadContext{});
+  const auto samples = file.read_samples("v", all4);
   if constexpr (std::same_as<T, std::int64_t>) {
     CHECK(status_of(error_of(samples)) ==
           NcStatus{WrapperFault::type_mismatch});
@@ -241,8 +266,7 @@ TEMPLATE_TEST_CASE("typed masking", "[io][netcdf]", double, float, std::int8_t,
           std::vector<Sample>{mov::core::finite_or_missing(3),
                               mov::core::finite_or_missing(5), Missing{},
                               mov::core::finite_or_missing(9)});
-    CHECK(status_of(
-              error_of(file.read_samples("badrange", all4, ReadContext{}))) ==
+    CHECK(status_of(error_of(file.read_samples("badrange", all4))) ==
           NcStatus{WrapperFault::count_mismatch});
   }
 }

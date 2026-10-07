@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// File: defining and writing a new file, and write_netcdf_atomic (C16).
+// NewFile: defining and writing a new file, and write_netcdf_atomic (C16).
 
 #include <netcdf.h>
 
@@ -17,6 +17,8 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -85,8 +87,8 @@ std::vector<int> ids_of(std::span<const DimInfo> dims) {
 
 }  // namespace
 
-std::expected<File, NcError> File::create(const std::filesystem::path& temp,
-                                          const std::filesystem::path& target) {
+std::expected<int, NcError> NewFile::create(
+    const std::filesystem::path& temp, const std::filesystem::path& target) {
   const auto error = [&target](NcStatus status) {
     return std::unexpected{NcError{
         .status = status, .op = NcOp::create, .object = {}, .file = target}};
@@ -102,11 +104,45 @@ std::expected<File, NcError> File::create(const std::filesystem::path& temp,
       status != NC_NOERR) {
     return error(LibraryStatus{status});
   }
-  return File{ncid, true, target, ReadLimits{}};
+  return ncid;
 }
 
-std::expected<DimInfo, NcError> File::define_dim(NcNameRef name,
-                                                 std::size_t length) {
+NewFile::~NewFile() { abandon(); }
+
+void NewFile::abandon() noexcept {
+  if (not ncid_) {
+    return;
+  }
+  const int ncid = *ncid_;
+  forget();
+  // Out of define mode first (netCDF-C clears the flag before anything that
+  // can fail), so nc_abort deletes nothing: in define mode NC4_abort would
+  // remove() its own copy of the path, cut at NC_MAX_NAME bytes.
+  static_cast<void>(detail::nc_status([ncid] { return nc_enddef(ncid); }));
+  static_cast<void>(detail::nc_status([ncid] { return nc_abort(ncid); }));
+}
+
+std::expected<void, NcError> NewFile::finish() {
+  const auto ncid = id(NcOp::close, {});
+  if (not ncid) {
+    return std::unexpected{ncid.error()};
+  }
+  // A failed sync has released nothing: the file can still be aborted.
+  if (auto synced = detail::nc_call(NcOp::sync, {}, path_,
+                                    [&] { return nc_sync(*ncid); });
+      not synced) {
+    abandon();
+    return synced;
+  }
+  // A failed close is never followed by nc_abort (see File): the id is
+  // given up and its entry stays in netCDF-C.
+  forget();
+  return detail::nc_call(NcOp::close, {}, path_,
+                         [&] { return nc_close(*ncid); });
+}
+
+std::expected<DimInfo, NcError> NewFile::define_dim(NcNameRef name,
+                                                    std::size_t length) {
   if (length == 0) {
     return std::unexpected{
         fail(WrapperFault::zero_length_dim, NcOp::def_dim, name.view())};
@@ -122,7 +158,7 @@ std::expected<DimInfo, NcError> File::define_dim(NcNameRef name,
   });
 }
 
-std::expected<VarInfo, NcError> File::define_char_var(
+std::expected<VarInfo, NcError> NewFile::define_char_var(
     NcNameRef name, std::span<const DimInfo> dims) {
   return id(NcOp::def_var, name.view()).and_then([&](int ncid) {
     const std::vector<int> dimids = ids_of(dims);
@@ -142,7 +178,7 @@ std::expected<VarInfo, NcError> File::define_char_var(
   });
 }
 
-std::expected<VarInfo, NcError> File::define_numeric_var(
+std::expected<VarInfo, NcError> NewFile::define_numeric_var(
     NcNameRef name, std::span<const DimInfo> dims, Type type,
     const std::optional<int>& deflate_level,
     const std::optional<std::vector<std::size_t>>& chunks,
@@ -155,51 +191,49 @@ std::expected<VarInfo, NcError> File::define_numeric_var(
     return std::unexpected{
         fail(WrapperFault::rank_mismatch, NcOp::def_var, name.view())};
   }
-  const std::vector<int> dimids = ids_of(dims);
-  int varid = 0;
   const auto call = [&](const auto& fn) {
     return detail::nc_call(NcOp::def_var, name.view(), path_, fn);
   };
-  // Each optional step succeeds when it has nothing to do.
-  const auto when = [](bool wanted, const auto& step) {
-    return [wanted, &step]() -> std::expected<void, NcError> {
-      return wanted ? step() : std::expected<void, NcError>{};
-    };
-  };
-  return call([&] {
-           return nc_def_var(*ncid, name.c_str(), detail::to_nc_type(type),
-                             static_cast<int>(dimids.size()), dimids.data(),
-                             &varid);
-         })
-      .and_then(when(chunks.has_value(),
-                     [&] {
-                       return call([&] {
-                         return nc_def_var_chunking(*ncid, varid, NC_CHUNKED,
-                                                    chunks->data());
-                       });
-                     }))
-      .and_then(when(deflate_level.has_value(),
-                     [&] {
-                       return call([&] {
-                         return nc_def_var_deflate(*ncid, varid, 1, 1,
-                                                   *deflate_level);
-                       });
-                     }))
-      .and_then(
-          when(static_cast<bool>(set_fill),
-               [&] { return call([&] { return set_fill(*ncid, varid); }); }))
-      .transform([&] {
-        return VarInfo{.id = varid,
-                       .name = NcName{name},
-                       .type = type,
-                       .dims = {dims.begin(), dims.end()}};
+  const std::vector<int> dimids = ids_of(dims);
+  int varid = 0;
+  if (auto defined = call([&] {
+        return nc_def_var(*ncid, name.c_str(), detail::to_nc_type(type),
+                          static_cast<int>(dimids.size()), dimids.data(),
+                          &varid);
       });
+      not defined) {
+    return std::unexpected{defined.error()};
+  }
+  if (chunks) {
+    if (auto done = call([&] {
+          return nc_def_var_chunking(*ncid, varid, NC_CHUNKED, chunks->data());
+        });
+        not done) {
+      return std::unexpected{done.error()};
+    }
+  }
+  if (deflate_level) {
+    if (auto done = call([&] {
+          return nc_def_var_deflate(*ncid, varid, 1, 1, *deflate_level);
+        });
+        not done) {
+      return std::unexpected{done.error()};
+    }
+  }
+  if (set_fill) {
+    if (auto done = call([&] { return set_fill(*ncid, varid); }); not done) {
+      return std::unexpected{done.error()};
+    }
+  }
+  return VarInfo{.id = varid,
+                 .name = NcName{name},
+                 .type = type,
+                 .dims = {dims.begin(), dims.end()}};
 }
 
 template <Numeric T>
-std::expected<VarInfo, NcError> File::define_var(NcNameRef name,
-                                                 std::span<const DimInfo> dims,
-                                                 const VarOptions<T>& opt) {
+std::expected<VarInfo, NcError> NewFile::define_var(
+    NcNameRef name, std::span<const DimInfo> dims, const VarOptions<T>& opt) {
   std::function<int(int, int)> set_fill;
   if (opt.fill) {
     set_fill = [fill = *opt.fill](int ncid, int varid) {
@@ -210,9 +244,8 @@ std::expected<VarInfo, NcError> File::define_var(NcNameRef name,
                             opt.chunks, set_fill);
 }
 
-std::expected<File::PutPlan, NcError> File::plan_put(NcNameRef name, Type type,
-                                                     std::size_t size,
-                                                     const Slab& slab) const {
+std::expected<NewFile::PutPlan, NcError> NewFile::plan_put(
+    NcNameRef name, Type type, std::size_t size, const Slab& slab) const {
   const auto info = var(name, NcOp::put_var);
   if (not info) {
     return std::unexpected{info.error()};
@@ -226,13 +259,9 @@ std::expected<File::PutPlan, NcError> File::plan_put(NcNameRef name, Type type,
   if (slab.size() != info->dims.size()) {
     return refuse(WrapperFault::rank_mismatch);
   }
-  PutPlan plan{.varid = info->id, .start = {}, .count = {}};
-  for (const DimRange& range : slab) {
-    plan.start.push_back(range.start);
-    plan.count.push_back(range.count);
-  }
+  PutPlan plan{.varid = info->id, .slab = detail::unzip(slab)};
   const std::optional<std::size_t> total =
-      io::detail::checked_product(plan.count);
+      io::detail::checked_product(plan.slab.count);
   if (not total) {
     return refuse(WrapperFault::overflow);
   }
@@ -243,18 +272,20 @@ std::expected<File::PutPlan, NcError> File::plan_put(NcNameRef name, Type type,
 }
 
 template <Numeric T>
-std::expected<void, NcError> File::put(NcNameRef name, std::span<const T> data,
-                                       const Slab& slab) {
+std::expected<void, NcError> NewFile::put(NcNameRef name,
+                                          std::span<const T> data,
+                                          const Slab& slab) {
   return plan_put(name, type_of<T>, data.size(), slab)
       .and_then([&](const PutPlan& plan) {
         return detail::nc_call(NcOp::put_var, name.view(), path_, [&] {
-          return put_vara<T>(*ncid_, plan.varid, plan.start, plan.count, data);
+          return put_vara<T>(*ncid_, plan.varid, plan.slab.start,
+                             plan.slab.count, data);
         });
       });
 }
 
-std::expected<void, NcError> File::put_char_rows(
-    NcNameRef name, std::span<const std::string> rows) {
+std::expected<void, NcError> NewFile::put_char_rows_impl(
+    NcNameRef name, std::span<const std::string_view> rows) {
   const auto info = var(name, NcOp::put_var);
   if (not info) {
     return std::unexpected{info.error()};
@@ -272,7 +303,7 @@ std::expected<void, NcError> File::put_char_rows(
     return refuse(WrapperFault::count_mismatch);
   }
   const std::size_t stride = info->dims[1].length;
-  if (std::ranges::any_of(rows, [stride](const std::string& row) {
+  if (std::ranges::any_of(rows, [stride](std::string_view row) {
         return row.size() > stride;
       })) {
     return refuse(WrapperFault::name_too_long);
@@ -282,15 +313,15 @@ std::expected<void, NcError> File::put_char_rows(
   if (not total) {
     return refuse(WrapperFault::overflow);
   }
+  if (*total == 0) {
+    return {};
+  }
   // Each row is copied with its byte length and NUL-padded to the stride
   // (B15: v4 wrote a fixed count over shorter strings).
   std::string bytes(*total, '\0');
   for (std::size_t row = 0; row < rows.size(); ++row) {
     std::ranges::copy(
         rows[row], bytes.begin() + static_cast<std::ptrdiff_t>(row * stride));
-  }
-  if (bytes.empty()) {
-    return {};
   }
   const std::array<std::size_t, 2> start{0, 0};
   return detail::nc_call(NcOp::put_var, name.view(), path_, [&] {
@@ -299,7 +330,7 @@ std::expected<void, NcError> File::put_char_rows(
   });
 }
 
-std::expected<void, NcError> File::end_define() {
+std::expected<void, NcError> NewFile::end_define() {
   return id(NcOp::enddef, {}).and_then([&](int ncid) {
     return detail::nc_call(NcOp::enddef, {}, path_,
                            [ncid] { return nc_enddef(ncid); });
@@ -309,8 +340,8 @@ std::expected<void, NcError> File::end_define() {
 namespace detail {
 
 std::expected<void, Error> write_netcdf_atomic_impl(
-    const std::filesystem::path& target, const AtomicNcBody& body,
-    const io::detail::FaultInjector& fault) {
+    const std::filesystem::path& target, const ReadLimits& limits,
+    const NcBodyFunction& body, const io::detail::FaultInjector& fault) {
   using io::detail::AtomicStage;
   const auto file_error = [&target](FileOp op, std::error_code ec) {
     return std::unexpected{
@@ -325,25 +356,25 @@ std::expected<void, Error> write_netcdf_atomic_impl(
   if (fault.fails(AtomicStage::create)) {
     return file_error(FileOp::create, fault.code);
   }
-  auto created = File::create(temp, target);
-  if (not created) {
+  const auto ncid = NewFile::create(temp, target);
+  if (not ncid) {
     // NC_NOCLOBBER: an existing file at `temp` is someone else's; keep it.
-    return std::unexpected{Error{created.error()}};
+    return std::unexpected{Error{ncid.error()}};
   }
-  // Declared before `file`, so the file is aborted or closed before it is
+  // Declared before `file`, so the file is abandoned or closed before it is
   // removed.
   io::detail::TempFileGuard guard{temp};
-  File file = *std::move(created);
+  NewFile file{*ncid, target, limits};
   if (auto written = body(file); not written) {
-    file.abort();
+    file.abandon();
     return written;
   }
   if (fault.fails(AtomicStage::body)) {
-    file.abort();
+    file.abandon();
     return file_error(FileOp::write, fault.code);
   }
-  if (auto closed = std::move(file).close(); not closed) {
-    return std::unexpected{Error{closed.error()}};
+  if (auto finished = file.finish(); not finished) {
+    return std::unexpected{Error{finished.error()}};
   }
   if (fault.fails(AtomicStage::close)) {
     return file_error(FileOp::close, fault.code);
@@ -358,32 +389,29 @@ std::expected<void, Error> write_netcdf_atomic_impl(
 
 }  // namespace detail
 
-template std::expected<VarInfo, NcError> File::define_var<double>(
+template std::expected<VarInfo, NcError> NewFile::define_var<double>(
     NcNameRef, std::span<const DimInfo>, const VarOptions<double>&);
-template std::expected<VarInfo, NcError> File::define_var<float>(
+template std::expected<void, NcError> NewFile::put<double>(
+    NcNameRef, std::span<const double>, const Slab&);
+template std::expected<VarInfo, NcError> NewFile::define_var<float>(
     NcNameRef, std::span<const DimInfo>, const VarOptions<float>&);
-template std::expected<VarInfo, NcError> File::define_var<std::int8_t>(
+template std::expected<void, NcError> NewFile::put<float>(
+    NcNameRef, std::span<const float>, const Slab&);
+template std::expected<VarInfo, NcError> NewFile::define_var<std::int8_t>(
     NcNameRef, std::span<const DimInfo>, const VarOptions<std::int8_t>&);
-template std::expected<VarInfo, NcError> File::define_var<std::int16_t>(
-    NcNameRef, std::span<const DimInfo>, const VarOptions<std::int16_t>&);
-template std::expected<VarInfo, NcError> File::define_var<std::int32_t>(
-    NcNameRef, std::span<const DimInfo>, const VarOptions<std::int32_t>&);
-template std::expected<VarInfo, NcError> File::define_var<std::int64_t>(
-    NcNameRef, std::span<const DimInfo>, const VarOptions<std::int64_t>&);
-
-template std::expected<void, NcError> File::put<double>(NcNameRef,
-                                                        std::span<const double>,
-                                                        const Slab&);
-template std::expected<void, NcError> File::put<float>(NcNameRef,
-                                                       std::span<const float>,
-                                                       const Slab&);
-template std::expected<void, NcError> File::put<std::int8_t>(
+template std::expected<void, NcError> NewFile::put<std::int8_t>(
     NcNameRef, std::span<const std::int8_t>, const Slab&);
-template std::expected<void, NcError> File::put<std::int16_t>(
+template std::expected<VarInfo, NcError> NewFile::define_var<std::int16_t>(
+    NcNameRef, std::span<const DimInfo>, const VarOptions<std::int16_t>&);
+template std::expected<void, NcError> NewFile::put<std::int16_t>(
     NcNameRef, std::span<const std::int16_t>, const Slab&);
-template std::expected<void, NcError> File::put<std::int32_t>(
+template std::expected<VarInfo, NcError> NewFile::define_var<std::int32_t>(
+    NcNameRef, std::span<const DimInfo>, const VarOptions<std::int32_t>&);
+template std::expected<void, NcError> NewFile::put<std::int32_t>(
     NcNameRef, std::span<const std::int32_t>, const Slab&);
-template std::expected<void, NcError> File::put<std::int64_t>(
+template std::expected<VarInfo, NcError> NewFile::define_var<std::int64_t>(
+    NcNameRef, std::span<const DimInfo>, const VarOptions<std::int64_t>&);
+template std::expected<void, NcError> NewFile::put<std::int64_t>(
     NcNameRef, std::span<const std::int64_t>, const Slab&);
 
 }  // namespace mov::io::nc

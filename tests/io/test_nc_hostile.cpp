@@ -28,7 +28,6 @@ using mov::test::nc::NcError;
 using mov::test::nc::NcOp;
 using mov::test::nc::NcStatus;
 using mov::test::nc::open;
-using mov::test::nc::ReadContext;
 using mov::test::nc::ReadLimits;
 using mov::test::nc::status_of;
 using mov::test::nc::value_of;
@@ -44,19 +43,19 @@ TEST_CASE("hostile: a 2^40 dimension is too large to read", "[io][netcdf]") {
   const File file = open(fx.hostile(Hostile::huge_dim));
   CHECK(must(file.find_dim("big").value()).length == two_to_40);
   const Slab all{{.start = 0, .count = two_to_40}};
-  CHECK(status_of(error_of(file.read<double>("empty", all, ReadContext{}))) ==
+  CHECK(status_of(error_of(file.read<double>("empty", all))) ==
         NcStatus{WrapperFault::too_large});
-  CHECK(status_of(error_of(file.read_samples("empty", all, ReadContext{}))) ==
+  CHECK(status_of(error_of(file.read_samples("empty", all))) ==
         NcStatus{WrapperFault::too_large});
   // 2^110 elements do not even fit in size_t.
   const Slab cube{{.start = 0, .count = two_to_40},
                   {.start = 0, .count = two_to_40},
                   {.start = 0, .count = std::size_t{1} << 30U}};
-  CHECK(status_of(error_of(file.read<double>("square", cube, ReadContext{}))) ==
+  CHECK(status_of(error_of(file.read<double>("square", cube))) ==
         NcStatus{WrapperFault::overflow});
   // A part of it is fine: unwritten chunks read as the fill value.
   const Slab head{{.start = two_to_40 - 2, .count = 2}};
-  CHECK(value_of(file.read_samples("empty", head, ReadContext{})) ==
+  CHECK(value_of(file.read_samples("empty", head)) ==
         std::vector<Sample>{Missing{}, Missing{}});
 }
 
@@ -78,7 +77,7 @@ TEST_CASE("hostile: an attribute over 1 MiB", "[io][netcdf]") {
 TEST_CASE("hostile: a NULL NC_STRING element reads as empty", "[io][netcdf]") {
   Fixtures fx;
   const File file = open(fx.hostile(Hostile::string_null));
-  CHECK(value_of(file.read_strings("ids", ReadContext{})) ==
+  CHECK(value_of(file.read_strings("ids")) ==
         std::vector<std::string>{"a", "", "ccc"});
 }
 
@@ -94,11 +93,10 @@ TEST_CASE("hostile: a _FillValue of the wrong type or length", "[io][netcdf]") {
                 .object = "v:_FillValue",
                 .file = wrong_type});
   const Slab two{{.start = 0, .count = 2}};
-  CHECK(status_of(error_of(typed.read_samples("v", two, ReadContext{}))) ==
+  CHECK(status_of(error_of(typed.read_samples("v", two))) ==
         NcStatus{WrapperFault::type_mismatch});
   // The data themselves still read.
-  CHECK(value_of(typed.read<double>("v", two, ReadContext{})) ==
-        std::vector<double>{1, -1});
+  CHECK(value_of(typed.read<double>("v", two)) == std::vector<double>{1, -1});
   const File pair = open(fx.hostile(Hostile::fill_two_values));
   CHECK(error_of(pair.masking<double>("v")).status ==
         NcStatus{WrapperFault::count_mismatch});
@@ -108,18 +106,17 @@ TEST_CASE("hostile: an unlimited name length of 0", "[io][netcdf]") {
   Fixtures fx;
   const File file = open(fx.hostile(Hostile::zero_length_name_len));
   CHECK(must(file.find_dim("name_len").value()).length == 0);
-  CHECK(value_of(file.read_char_rows("station_name", ReadContext{})) ==
+  CHECK(value_of(file.read_char_rows("station_name")) ==
         std::vector<std::string>{"", ""});
-  CHECK(status_of(error_of(file.read_char_rows(
-            "station_name", ReadContext{.limits = {.max_elements = 1}}))) ==
+  CHECK(status_of(error_of(open(file.path(), {.max_elements = 1})
+                               .read_char_rows("station_name"))) ==
         NcStatus{WrapperFault::too_large});
 }
 
 TEST_CASE("hostile: a time variable that is all fill", "[io][netcdf]") {
   Fixtures fx;
   const File file = open(fx.hostile(Hostile::fill_valued_time));
-  CHECK(value_of(file.read_samples("time", {{.start = 0, .count = 3}},
-                                   ReadContext{})) ==
+  CHECK(value_of(file.read_samples("time", {{.start = 0, .count = 3}})) ==
         std::vector<Sample>(3, Sample{Missing{}}));
 }
 

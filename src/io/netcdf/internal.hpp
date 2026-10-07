@@ -9,10 +9,7 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
-#include <functional>
-#include <span>
 #include <string>
-#include <vector>
 
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/name.hpp"
@@ -27,7 +24,8 @@ namespace mov::io::nc::detail {
 /// The netCDF-C type id of `type` (Type::other has none: NC_NAT).
 [[nodiscard]] int to_nc_type(Type type) noexcept;
 
-/// `var:att`, or `:att` for a global attribute (ncdump's notation).
+/// `var:att`, or `:att` for a global attribute (ncdump's notation): the one
+/// formatter of attribute names in errors.
 [[nodiscard]] std::string att_object(const AttTarget& on, NcNameRef att);
 
 /// The path as netCDF-C's nc_open and nc_create expect it: the native bytes
@@ -39,28 +37,20 @@ namespace mov::io::nc::detail {
 
 /// The element count of `slab` of `var` after checking it: the rank
 /// (`rank_mismatch`), each range inside its dimension (NC_EINVALCOORDS,
-/// NC_EEDGE), the product (`overflow`) and limits.max_elements
-/// (`too_large`).
+/// NC_EEDGE), the product (`overflow`), limits.max_elements and, for
+/// results of `element_bytes` each, limits.max_result_bytes (`too_large`).
 [[nodiscard]] std::expected<std::size_t, NcStatus> check_slab(
-    const VarInfo& var, const Slab& slab, const ReadLimits& limits);
+    const VarInfo& var, const Slab& slab, const ReadLimits& limits,
+    std::size_t element_bytes);
 
-/// One block of a slab: its corner, its shape, and where its first element
-/// goes in the row-major result.
-struct Block {
-  std::span<const std::size_t> start;
-  std::span<const std::size_t> count;
-  std::size_t offset;
-  std::size_t size;
-};
-
-/// Calls `visit(Block)` for consecutive row-major blocks that cover `slab`
-/// once, each of at most max(1, max_block) elements and contiguous in the
-/// result, and polls `stop` before each (Cancelled). A slab with a zero count
-/// has no blocks. Precondition: the slab's element count fits in size_t
-/// (check_slab).
-using BlockVisitor = std::function<std::expected<void, Error>(const Block&)>;
-[[nodiscard]] std::expected<void, Error> for_each_block(
-    const Slab& slab, std::size_t max_block, const StopToken& stop,
-    const BlockVisitor& visit);
+/// Whether `count` elements of `element_bytes` each, plus `extra_bytes`,
+/// fit in `limit` bytes (no overflow).
+[[nodiscard]] constexpr bool fits_bytes(std::size_t count,
+                                        std::size_t element_bytes,
+                                        std::size_t extra_bytes,
+                                        std::size_t limit) noexcept {
+  return extra_bytes <= limit and
+         (element_bytes == 0 or count <= (limit - extra_bytes) / element_bytes);
+}
 
 }  // namespace mov::io::nc::detail

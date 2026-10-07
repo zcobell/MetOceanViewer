@@ -3,6 +3,7 @@
 
 #include "nc_fixtures.hpp"
 
+#include <hdf5.h>
 #include <netcdf.h>
 
 #include <array>
@@ -251,6 +252,22 @@ void define_missing_cases(const Raw& f, int n) {
   put_all(f, d_range, valid);
 }
 
+// Missing-data attributes of another type whose values are exact.
+void define_converted_cases(const Raw& f, int n) {
+  const int f_missing_d = f.var("f_missing_d", NC_FLOAT, {n});
+  att(f, f_missing_d, "missing_value", NC_DOUBLE, std::vector<double>{-999});
+  put_all(f, f_missing_d, std::vector<float>{1, -999, 2, 3, 4, 5});
+  const int i_missing_64 = f.var("i_missing_64", NC_INT, {n});
+  const std::array<long long, 1> minus999{-999};
+  check(nc_put_att_longlong(f.id(), i_missing_64, "missing_value", NC_INT64, 1,
+                            minus999.data()),
+        "i_missing_64");
+  put_all(f, i_missing_64, std::vector<int>{-999, 1, 2, 3, 4, 5});
+  const int d_intscale = f.var("d_intscale", NC_DOUBLE, {n});
+  att(f, d_intscale, "scale_factor", NC_INT, std::vector<int>{2});
+  put_all(f, d_intscale, std::vector<double>{1, 2, 3, 4, 5, 6});
+}
+
 void define_refused_cases(const Raw& f, int n) {
   const int b_unsigned = f.var("b_unsigned", NC_BYTE, {n});
   f.text(b_unsigned, "_Unsigned", "true");
@@ -258,11 +275,16 @@ void define_refused_cases(const Raw& f, int n) {
   put_all(f, f.var("i_int64", NC_INT64, {n}),
           std::vector<long long>{1, 2, 3, 4, 5, 6});
   const int d_badscale = f.var("d_badscale", NC_DOUBLE, {n});
-  att(f, d_badscale, "scale_factor", NC_INT, std::vector<int>{2});
+  f.text(d_badscale, "scale_factor", "2");
   const int d_badrange = f.var("d_badrange", NC_DOUBLE, {n});
   att(f, d_badrange, "valid_range", NC_DOUBLE, std::vector<double>{0});
-  const int d_badmissing = f.var("d_badmissing", NC_DOUBLE, {n});
-  att(f, d_badmissing, "missing_value", NC_FLOAT, std::vector<float>{-1});
+  const int d_badmissing = f.var("d_badmissing", NC_FLOAT, {n});
+  att(f, d_badmissing, "missing_value", NC_DOUBLE, std::vector<double>{0.1});
+  const int i_badmax = f.var("i_badmax", NC_INT, {n});
+  const std::array<long long, 1> huge{1LL << 40};
+  check(nc_put_att_longlong(f.id(), i_badmax, "valid_max", NC_INT64, 1,
+                            huge.data()),
+        "i_badmax");
 }
 
 // ---- a classic (CDF-1) file written byte by byte ---------------------------
@@ -356,6 +378,7 @@ void make_masking(const std::filesystem::path& path) {
   define_fill_cases(f, n);
   define_missing_cases(f, n);
   define_refused_cases(f, n);
+  define_converted_cases(f, n);
   f.close();
 }
 
@@ -401,6 +424,18 @@ void make_attributes(const std::filesystem::path& path, std::size_t bytes) {
   f.text(x, "units", "degrees_east");
   const int y = f.var("y", NC_DOUBLE, {n});
   f.text(y, "HorizontalProjectionEPSG", "4326");
+  f.close();
+}
+
+void make_char_shapes(const std::filesystem::path& path) {
+  Raw f{path};
+  const int one = f.var("one", NC_CHAR, {f.dim("n", 5)});
+  const int three =
+      f.var("three", NC_CHAR, {f.dim("a", 2), f.dim("b", 3), f.dim("c", 2)});
+  const int scalar = f.var("scalar", NC_CHAR, {});
+  check(nc_put_var_text(f.id(), one, "hello"), "one");
+  check(nc_put_var_text(f.id(), three, "abcdefghijkl"), "three");
+  check(nc_put_var_text(f.id(), scalar, "x"), "scalar");
   f.close();
 }
 
@@ -509,6 +544,25 @@ void make_hostile(const std::filesystem::path& path, Hostile kind) {
       return f.close();
     }
   }
+}
+
+bool sabotage_hdf5_dataset(std::string_view name) {
+  const ssize_t count = H5Fget_obj_count(H5F_OBJ_ALL, H5F_OBJ_DATASET);
+  if (count <= 0) {
+    return false;
+  }
+  std::vector<hid_t> ids(static_cast<std::size_t>(count));
+  static_cast<void>(
+      H5Fget_obj_ids(H5F_OBJ_ALL, H5F_OBJ_DATASET, ids.size(), ids.data()));
+  H5Eset_auto2(H5E_DEFAULT, nullptr, nullptr);
+  for (const hid_t id : ids) {
+    std::array<char, 256> found{};
+    if (H5Iget_name(id, found.data(), found.size()) > 0 and
+        std::string_view{found.data()} == name) {
+      return H5Dclose(id) >= 0;
+    }
+  }
+  return false;
 }
 
 void make_not_netcdf(const std::filesystem::path& path) {

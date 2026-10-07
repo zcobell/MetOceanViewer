@@ -22,13 +22,13 @@ namespace {
 using mov::io::Error;
 using mov::io::nc::DimInfo;
 using mov::io::nc::File;
+using mov::io::nc::NewFile;
 using mov::io::nc::write_netcdf_atomic;
 using mov::test::ScratchDir;
-using mov::test::nc::ReadContext;
 using mov::test::nc::ReadLimits;
 using mov::test::nc::value_of;
 
-std::expected<void, Error> one_variable(File& f) {
+std::expected<void, Error> one_variable(NewFile& f) {
   return f.define_dim("n", 2)
       .and_then([&](const DimInfo& n) {
         const std::vector<DimInfo> dims{n};
@@ -43,7 +43,7 @@ std::expected<void, Error> one_variable(File& f) {
 
 // Writes, reads back and checks a file at `path` (its directory must exist).
 void round_trip(const std::filesystem::path& path) {
-  const auto written = write_netcdf_atomic(path, one_variable);
+  const auto written = write_netcdf_atomic(path, ReadLimits{}, one_variable);
 #if defined(_WIN32)
   // netCDF-C reads paths in the active code page; a path it cannot express
   // must be refused cleanly (docs/wp-notes/WP6.md: not verified on Windows).
@@ -57,8 +57,7 @@ void round_trip(const std::filesystem::path& path) {
   REQUIRE(written.has_value());
   REQUIRE(std::filesystem::exists(path));
   const File file = value_of(File::open(path, ReadLimits{}));
-  CHECK(value_of(file.read<double>("v", {{.start = 0, .count = 2}},
-                                   ReadContext{})) ==
+  CHECK(value_of(file.read<double>("v", {{.start = 0, .count = 2}})) ==
         std::vector<double>{1, 2});
 }
 

@@ -128,6 +128,7 @@ enum class NcOp : std::uint8_t {
   create,
   close,
   abort,
+  sync,  // the flush (and end of define mode) before a write handle closes
   inquire,
   get_var,
   put_var,

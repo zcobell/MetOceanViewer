@@ -23,7 +23,6 @@ using mov::io::nc::global;
 using mov::io::nc::Slab;
 using mov::test::nc::Fixtures;
 using mov::test::nc::open;
-using mov::test::nc::ReadContext;
 using mov::test::nc::ReadLimits;
 using mov::test::nc::value_of;
 namespace counts = mov::test::nc_counts;
@@ -58,16 +57,16 @@ TEST_CASE("every open is closed on every error path (B5)",
     // v4 returned early from each of these without nc_close.
     switch (i % 5) {
       case 0:
-        CHECK(not file.read<double>("nope", four, ReadContext{}));
+        CHECK(not file.read<double>("nope", four));
         break;
       case 1:
-        CHECK(not file.read<float>("v_double", four, ReadContext{}));
+        CHECK(not file.read<float>("v_double", four));
         break;
       case 2:
         CHECK(not file.text_att("nope", "units"));
         break;
       case 3:
-        CHECK(not file.read_samples("v_int64", four, ReadContext{}));
+        CHECK(not file.read_samples("v_int64", four));
         break;
       default:
         CHECK(not open(path, ReadLimits{.max_att_bytes = 1})
@@ -97,7 +96,7 @@ TEST_CASE("char rows use the file's name length (B7, B11)",
     ncgen::make_char_rows(path, name_len, rows);
     const File file = open(path);
     const std::vector<std::string> read =
-        value_of(file.read_char_rows("station_name", ReadContext{}));
+        value_of(file.read_char_rows("station_name"));
     CHECK(read == rows);
     for (const std::string& row : read) {
       CHECK(row.size() == name_len);

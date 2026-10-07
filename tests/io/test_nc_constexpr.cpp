@@ -47,7 +47,7 @@ constexpr std::optional<std::size_t> product(
 
 constexpr Sample value(double v) { return mov::core::finite_or_missing(v); }
 
-// A File cannot be created from outside write_netcdf_atomic.
+// A NewFile cannot be created from outside write_netcdf_atomic.
 template <class F>
 concept CanCreate =
     requires(const std::filesystem::path& p) { F::create(p, p); };
@@ -207,5 +207,55 @@ TEST_CASE("value types of the wrapper", "[io][netcdf][constexpr]") {
   STATIC_REQUIRE(not std::copyable<File>);
   STATIC_REQUIRE((std::is_nothrow_move_constructible_v<File> and
                   std::is_nothrow_move_assignable_v<File>));
-  STATIC_REQUIRE(not CanCreate<File>);
+  using mov::io::nc::NewFile;
+  STATIC_REQUIRE(not CanCreate<NewFile>);
+  STATIC_REQUIRE(
+      not std::constructible_from<NewFile, int, std::filesystem::path,
+                                  mov::io::ReadLimits>);
+}
+
+TEST_CASE("exact_from converts only values the target holds exactly",
+          "[io][netcdf][constexpr]") {
+  using mov::io::nc::detail::exact_from;
+  constexpr std::int64_t two53 = std::int64_t{1} << 53;
+  // From int64.
+  STATIC_REQUIRE(exact_from<std::int8_t>(std::int64_t{-128}) == -128);
+  STATIC_REQUIRE(exact_from<std::int8_t>(std::int64_t{128}) == std::nullopt);
+  STATIC_REQUIRE(exact_from<std::int16_t>(std::int64_t{-999}) == -999);
+  STATIC_REQUIRE(exact_from<std::int32_t>(std::int64_t{1} << 40) ==
+                 std::nullopt);
+  STATIC_REQUIRE(exact_from<std::int64_t>(two53 + 1) == two53 + 1);
+  STATIC_REQUIRE(exact_from<double>(two53) == 9007199254740992.0);
+  STATIC_REQUIRE(exact_from<double>(two53 + 1) == std::nullopt);
+  STATIC_REQUIRE(exact_from<float>(std::int64_t{16777216}) == 16777216.0F);
+  STATIC_REQUIRE(exact_from<float>(std::int64_t{16777217}) == std::nullopt);
+  STATIC_REQUIRE(exact_from<float>(std::numeric_limits<std::int64_t>::max()) ==
+                 std::nullopt);  // rounds to 2^63, beyond int64
+  STATIC_REQUIRE(exact_from<double>(std::numeric_limits<std::int64_t>::min()) ==
+                 -9223372036854775808.0);
+  // From double.
+  STATIC_REQUIRE(exact_from<double>(0.1) == 0.1);
+  STATIC_REQUIRE(exact_from<float>(-999.0) == -999.0F);
+  STATIC_REQUIRE(exact_from<float>(0.1) == std::nullopt);
+  STATIC_REQUIRE(exact_from<float>(1e300) == std::nullopt);
+  STATIC_REQUIRE(exact_from<float>(std::numeric_limits<double>::infinity()) ==
+                 std::numeric_limits<float>::infinity());
+  STATIC_REQUIRE(exact_from<std::int32_t>(-999.0) == -999);
+  STATIC_REQUIRE(exact_from<std::int32_t>(0.5) == std::nullopt);
+  STATIC_REQUIRE(exact_from<std::int8_t>(-128.0) == -128);
+  STATIC_REQUIRE(exact_from<std::int8_t>(128.0) == std::nullopt);
+  STATIC_REQUIRE(exact_from<std::int64_t>(9223372036854775808.0) ==
+                 std::nullopt);
+  STATIC_REQUIRE(exact_from<std::int64_t>(-9223372036854775808.0) ==
+                 std::numeric_limits<std::int64_t>::min());
+  STATIC_REQUIRE(exact_from<std::int16_t>(
+                     std::numeric_limits<double>::infinity()) == std::nullopt);
+  // NaN is exact in float, and in no integer.
+  STATIC_REQUIRE([] {
+    const std::optional<float> f =
+        exact_from<float>(std::numeric_limits<double>::quiet_NaN());
+    return f.has_value() and *f != *f;
+  }());
+  STATIC_REQUIRE(exact_from<std::int32_t>(
+                     std::numeric_limits<double>::quiet_NaN()) == std::nullopt);
 }

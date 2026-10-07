@@ -37,11 +37,13 @@ inline constexpr int nc_noerr = 0;
 /// Set while a netCDF-C call is in progress.
 inline std::atomic_flag nc_busy{};
 
-/// Sets nc_busy for its lifetime; asserts it was clear.
+/// Sets nc_busy for its lifetime; asserts it was clear. A detector, not a
+/// lock: it orders nothing (relaxed), it only notices a second entry and
+/// aborts. Serializing the calls is the caller's job.
 class EntryCheck {
  public:
   EntryCheck() noexcept {
-    const bool busy = nc_busy.test_and_set(std::memory_order_acquire);
+    const bool busy = nc_busy.test_and_set(std::memory_order_relaxed);
     assert(not busy and
            "netCDF-C entered concurrently or re-entrantly: callers must "
            "serialize all mov::io netCDF calls (C11)");
@@ -50,7 +52,7 @@ class EntryCheck {
   EntryCheck& operator=(const EntryCheck&) = delete;
   EntryCheck(EntryCheck&&) = delete;
   EntryCheck& operator=(EntryCheck&&) = delete;
-  ~EntryCheck() { nc_busy.clear(std::memory_order_release); }
+  ~EntryCheck() { nc_busy.clear(std::memory_order_relaxed); }
 };
 
 #endif

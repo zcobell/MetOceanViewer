@@ -55,8 +55,9 @@ mov_add_fuzz_test(
 # mov_nc_fixtures writes the test files with netCDF-C itself, independent of
 # mov::io. mov_io_netcdf_tests may include the wrapper's private headers
 # (src/io/netcdf/). On Linux it is linked with --wrap so that every
-# nc_open/nc_create/nc_close/nc_abort is counted, and a listener fails any
-# test case that ends with a netCDF id open (B5). Other linkers have no
+# nc_open/nc_create/nc_close/nc_abort is counted (and nc_sync, nc_close and
+# remove can be observed or made to fail), and a listener fails any test
+# case that ends with a netCDF id open (B5). Other linkers have no
 # --wrap; there the counting tests skip.
 find_package(netCDF CONFIG REQUIRED)
 
@@ -89,6 +90,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(mov_io_netcdf_tests PRIVATE MOV_TEST_NC_WRAP=1)
     target_link_options(
         mov_io_netcdf_tests
-        PRIVATE "LINKER:--wrap=nc_open,--wrap=nc_create,--wrap=nc_close,--wrap=nc_abort"
+        PRIVATE "LINKER:--wrap=nc_open,--wrap=nc_create,--wrap=nc_close,--wrap=nc_abort,--wrap=nc_sync,--wrap=remove"
     )
 endif()

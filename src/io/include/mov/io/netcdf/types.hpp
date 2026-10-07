@@ -3,10 +3,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -172,13 +174,50 @@ using Slab = std::vector<DimRange>;
 
 /// The whole of every dimension of `var`.
 [[nodiscard]] inline Slab whole(const VarInfo& var) {
-  Slab slab;
-  slab.reserve(var.dims.size());
-  for (const DimInfo& dim : var.dims) {
-    slab.push_back(DimRange{.start = 0, .count = dim.length});
-  }
+  Slab slab(var.dims.size());
+  std::ranges::transform(var.dims, slab.begin(), [](const DimInfo& dim) {
+    return DimRange{.start = 0, .count = dim.length};
+  });
   return slab;
 }
+
+/// The outer indices (of the first dimension) each block of a bulk read
+/// covers: as many as fit in `slab_elements` elements, at least one. Every
+/// block holds whole rows of the inner dimensions, so a block is larger than
+/// `slab_elements` only when one outer index alone is. A scalar is one
+/// block. File::read_blocks cuts slabs this way; callers that size their
+/// own work use it rather than re-deriving the partition.
+[[nodiscard]] constexpr std::size_t rows_per_block(
+    const Slab& slab, std::size_t slab_elements) noexcept {
+  if (slab.empty()) {
+    return 1;
+  }
+  std::size_t inner = 1;
+  for (std::size_t i = 1; i < slab.size(); ++i) {
+    inner = slab[i].count == 0 or inner <= slab_elements / slab[i].count
+                ? inner * slab[i].count
+                : std::numeric_limits<std::size_t>::max();  // over a block
+  }
+  return std::max<std::size_t>(1, inner == 0 ? 1 : slab_elements / inner);
+}
+
+namespace detail {
+
+/// A Slab as the two arrays netCDF-C takes.
+struct Hyperslab {
+  std::vector<std::size_t> start;
+  std::vector<std::size_t> count;
+};
+
+[[nodiscard]] inline Hyperslab unzip(const Slab& slab) {
+  Hyperslab h{.start = std::vector<std::size_t>(slab.size()),
+              .count = std::vector<std::size_t>(slab.size())};
+  std::ranges::transform(slab, h.start.begin(), &DimRange::start);
+  std::ranges::transform(slab, h.count.begin(), &DimRange::count);
+  return h;
+}
+
+}  // namespace detail
 
 /// The attribute owner that is the file itself.
 struct Global {
@@ -203,6 +242,9 @@ class AttTarget {
   [[nodiscard]] constexpr std::optional<NcNameRef> variable() const noexcept {
     return variable_;
   }
+
+  friend constexpr bool operator==(const AttTarget&,
+                                   const AttTarget&) = default;
 
  private:
   std::optional<NcNameRef> variable_{};

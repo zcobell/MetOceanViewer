@@ -50,9 +50,14 @@ void make_typed(const std::filesystem::path& path);
 ///   f_fill5   float, _FillValue -5f: {-5, -999, 1, 2, 3, 4}
 ///   b_unsigned byte, _Unsigned "true"
 ///   i_int64   int64 {1, 2, 3, 4, 5, 6}
-///   d_badscale double, scale_factor of type int
+///   d_badscale double, scale_factor of type char ("2")
 ///   d_badrange double, valid_range of one value
-///   d_badmissing double, missing_value of type float
+///   d_badmissing float, missing_value double 0.1 (no float equals it)
+///   f_missing_d float, missing_value double -999 (netCDF4-python style):
+///             {1, -999, 2, 3, 4, 5}
+///   i_missing_64 int, missing_value int64 -999: {-999, 1, 2, 3, 4, 5}
+///   i_badmax  int, valid_max int64 2^40 (no int equals it)
+///   d_intscale double, scale_factor int 2: {1, 2, 3, 4, 5, 6}
 void make_masking(const std::filesystem::path& path);
 
 /// Dimensions station = rows.size(), name_len = `name_len`; char
@@ -73,6 +78,10 @@ void make_char_rows(const std::filesystem::path& path, std::size_t name_len,
 ///   flags = {1, 2} (ubyte)                         (global)
 /// and variable `y`(n) with HorizontalProjectionEPSG = "4326" (char, B10).
 void make_attributes(const std::filesystem::path& path, std::size_t bytes);
+
+/// char one(n = 5) "hello"; three(a = 2, b = 3, c = 2) "abcdefghijkl";
+/// scalar (rank 0) 'x'.
+void make_char_shapes(const std::filesystem::path& path);
 
 /// A 2-D double variable `data`(rows, cols) holding row * cols + col.
 void make_matrix(const std::filesystem::path& path, std::size_t rows,
@@ -99,6 +108,11 @@ void make_hostile(const std::filesystem::path& path, Hostile kind);
 
 /// A file whose bytes are not netCDF.
 void make_not_netcdf(const std::filesystem::path& path);
+
+/// Closes the HDF5 dataset `name` ("/v") that netCDF-C holds open, behind
+/// its back, so its next nc_close fails while it releases the file. False
+/// when no such dataset is open.
+[[nodiscard]] bool sabotage_hdf5_dataset(std::string_view name);
 
 // ---- raw queries, for checking what the wrapper wrote ---------------------
 

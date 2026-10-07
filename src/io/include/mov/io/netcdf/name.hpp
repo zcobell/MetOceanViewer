@@ -81,6 +81,8 @@ class NcNameRef {
 /// An owning, validated netCDF name (C12): non-empty, at most nc_max_name
 /// bytes, without an embedded NUL. netCDF-C's own syntax rules (no '/', NFC
 /// UTF-8) are left to the library, which reports them when a name is defined.
+/// A moved-from NcName is empty, so not a valid name: assign to it or
+/// destroy it.
 class NcName {
  public:
   [[nodiscard]] static std::expected<NcName, NcNameError> make(
@@ -98,6 +100,10 @@ class NcName {
   std::string_view view() const&& = delete;
 
   friend bool operator==(const NcName&, const NcName&) = default;
+  /// Compares the bytes: `name == "time"`.
+  friend bool operator==(const NcName& a, std::string_view b) noexcept {
+    return a.s_ == b;
+  }
 
  private:
   explicit NcName(std::string s) : s_{std::move(s)} {}

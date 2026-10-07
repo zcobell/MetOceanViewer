@@ -30,7 +30,6 @@ using mov::test::nc::NcError;
 using mov::test::nc::NcOp;
 using mov::test::nc::NcStatus;
 using mov::test::nc::open;
-using mov::test::nc::ReadContext;
 using mov::test::nc::status_of;
 using mov::test::nc::value_of;
 using mov::test::nc::WrapperFault;
@@ -41,7 +40,7 @@ const Sample missing{Missing{}};
 Sample v(double x) { return mov::core::finite_or_missing(x); }
 
 std::vector<Sample> samples(const File& file, NcNameRef var) {
-  return value_of(file.read_samples(var, all6, ReadContext{}));
+  return value_of(file.read_samples(var, all6));
 }
 
 }  // namespace
@@ -121,13 +120,11 @@ TEST_CASE("masking refuses what it cannot apply exactly", "[io][netcdf]") {
                 .op = NcOp::get_att,
                 .object = "b_unsigned",
                 .file = path});
-  CHECK(status_of(
-            error_of(file.read_samples("b_unsigned", all6, ReadContext{}))) ==
+  CHECK(status_of(error_of(file.read_samples("b_unsigned", all6))) ==
         NcStatus{WrapperFault::unsupported_unsigned});
   // 64-bit integers do not fit a double exactly.
-  CHECK(
-      status_of(error_of(file.read_samples("i_int64", all6, ReadContext{}))) ==
-      NcStatus{WrapperFault::type_mismatch});
+  CHECK(status_of(error_of(file.read_samples("i_int64", all6))) ==
+        NcStatus{WrapperFault::type_mismatch});
   CHECK(error_of(file.masking<float>("d_fill")).status ==
         NcStatus{WrapperFault::type_mismatch});
   CHECK(error_of(file.masking<double>("d_badscale")) ==
@@ -140,26 +137,49 @@ TEST_CASE("masking refuses what it cannot apply exactly", "[io][netcdf]") {
                 .op = NcOp::get_att,
                 .object = "d_badrange:valid_range",
                 .file = path});
-  CHECK(error_of(file.masking<double>("d_badmissing")).status ==
+  // 0.1 (a double) is no float, and 2^40 no int.
+  CHECK(error_of(file.masking<float>("d_badmissing")) ==
+        NcError{.status = WrapperFault::type_mismatch,
+                .op = NcOp::get_att,
+                .object = "d_badmissing:missing_value",
+                .file = path});
+  CHECK(error_of(file.masking<std::int32_t>("i_badmax")).status ==
         NcStatus{WrapperFault::type_mismatch});
+}
+
+TEST_CASE("missing-data attributes of another type, when exact",
+          "[io][netcdf]") {
+  Fixtures fx;
+  const File file = open(fx.masking());
+  // netCDF4-python writes a double missing_value on a float variable.
+  CHECK(file.masking<float>("f_missing_d").value().missing_values ==
+        std::vector<float>{-999.0F});
+  CHECK(samples(file, "f_missing_d") ==
+        std::vector<Sample>{v(1), missing, v(2), v(3), v(4), v(5)});
+  CHECK(file.masking<std::int32_t>("i_missing_64").value().missing_values ==
+        std::vector<std::int32_t>{-999});
+  CHECK(samples(file, "i_missing_64") ==
+        std::vector<Sample>{missing, v(1), v(2), v(3), v(4), v(5)});
+  // An int scale_factor is exact as a double.
+  CHECK(file.masking<double>("d_intscale").value().scale == 2.0);
+  CHECK(samples(file, "d_intscale") ==
+        std::vector<Sample>{v(2), v(4), v(6), v(8), v(10), v(12)});
 }
 
 TEST_CASE("read_samples of text and string variables", "[io][netcdf]") {
   Fixtures fx;
   const File file = open(fx.typed());
   const Slab all4{{.start = 0, .count = 4}};
-  CHECK(
-      status_of(error_of(file.read_samples("v_string", all4, ReadContext{}))) ==
-      NcStatus{WrapperFault::type_mismatch});
-  CHECK(
-      status_of(error_of(file.read_samples("v_ubyte", all4, ReadContext{}))) ==
-      NcStatus{WrapperFault::type_mismatch});
-  CHECK(value_of(file.read_samples("v_float", all4, ReadContext{})) ==
+  CHECK(status_of(error_of(file.read_samples("v_string", all4))) ==
+        NcStatus{WrapperFault::type_mismatch});
+  CHECK(status_of(error_of(file.read_samples("v_ubyte", all4))) ==
+        NcStatus{WrapperFault::type_mismatch});
+  CHECK(value_of(file.read_samples("v_float", all4)) ==
         std::vector<Sample>{v(1.5), v(-2.25), v(3), v(4)});
-  CHECK(value_of(file.read_samples("v_byte", all4, ReadContext{})) ==
+  CHECK(value_of(file.read_samples("v_byte", all4)) ==
         std::vector<Sample>{v(1), v(-2), v(3), v(4)});
-  CHECK(value_of(file.read_samples("v_short", all4, ReadContext{})) ==
+  CHECK(value_of(file.read_samples("v_short", all4)) ==
         std::vector<Sample>{v(1), v(-2), v(300), v(4)});
-  CHECK(value_of(file.read_samples("v_int", all4, ReadContext{})) ==
+  CHECK(value_of(file.read_samples("v_int", all4)) ==
         std::vector<Sample>{v(1), v(-2), v(70000), v(4)});
 }

@@ -25,7 +25,6 @@ using io::LibraryStatus;
 using io::NcError;
 using io::NcOp;
 using io::NcStatus;
-using io::ReadContext;
 using io::ReadLimits;
 using io::WrapperFault;
 

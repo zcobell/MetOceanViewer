@@ -24,11 +24,15 @@ int __real_nc_open(const char* path, int mode, int* ncidp);
 int __real_nc_create(const char* path, int cmode, int* ncidp);
 int __real_nc_close(int ncid);
 int __real_nc_abort(int ncid);
+int __real_nc_sync(int ncid);
+int __real_remove(const char* path);
 
 int __wrap_nc_open(const char* path, int mode, int* ncidp);
 int __wrap_nc_create(const char* path, int cmode, int* ncidp);
 int __wrap_nc_close(int ncid);
 int __wrap_nc_abort(int ncid);
+int __wrap_nc_sync(int ncid);
+int __wrap_remove(const char* path);
 
 int __wrap_nc_open(const char* path, int mode, int* ncidp) {
   const int status = __real_nc_open(path, mode, ncidp);
@@ -49,13 +53,15 @@ int __wrap_nc_create(const char* path, int cmode, int* ncidp) {
 int __wrap_nc_close(int ncid) {
   auto& c = mov::test::nc_counts::counts();
   ++c.close_calls;
-  if (c.fail_next_closes > 0) {
-    --c.fail_next_closes;
-    return NC_EHDFERR;  // as if the final flush had failed; the id stays open
-  }
   const int status = __real_nc_close(ncid);
   if (status == NC_NOERR) {
     ++c.closed;
+  }
+  if (c.fail_next_closes > 0) {
+    // The file is closed, but the caller is told the close failed, as after
+    // a flush error: the wrapper must not touch the id again.
+    --c.fail_next_closes;
+    return NC_EHDFERR;
   }
   return status;
 }
@@ -68,6 +74,23 @@ int __wrap_nc_abort(int ncid) {
     ++c.closed;  // nc_abort releases a valid id whatever it returns
   }
   return status;
+}
+
+int __wrap_nc_sync(int ncid) {
+  auto& c = mov::test::nc_counts::counts();
+  if (c.fail_next_syncs > 0) {
+    --c.fail_next_syncs;
+    return NC_EHDFERR;  // nothing synced, nothing released
+  }
+  return __real_nc_sync(ncid);
+}
+
+// netCDF-C's own remove() calls (NC4_abort deletes a file it created in
+// define mode). The tests' files are removed through std::filesystem, whose
+// calls live in the shared C++ library and are not wrapped.
+int __wrap_remove(const char* path) {
+  ++mov::test::nc_counts::counts().remove_calls;
+  return __real_remove(path);
 }
 
 }  // extern "C"

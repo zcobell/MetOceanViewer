@@ -12,6 +12,19 @@ namespace mov::io {
 
 /// Upper bounds a reader enforces before it allocates (C12). Exceeding one
 /// is an error (`too_large`), never a truncation.
+///
+/// The netCDF reads (nc::File) check, before allocating, both the element
+/// count against `max_elements` and the bytes of the result against
+/// `max_result_bytes`. Their peak memory, for n elements of the request:
+///   read<T>          n * sizeof(T)
+///   read_blocks<T>   one block: rows_per_block(slab, slab_elements) outer
+///                    indices of the slab, of sizeof(T) each element
+///   read_samples     n * sizeof(Sample) (16) + one block of the raw type
+///   read_char_rows   rows * sizeof(std::string) + 2 * n (the bytes are read
+///                    once, then copied into the rows)
+///   read_strings     n * sizeof(std::string) + the strings' bytes, plus one
+///                    block of the library's own strings while it is copied
+/// (the result bytes counted are the first two terms of each line).
 struct ReadLimits {
   /// Elements per call and per reader result (about 1 GiB of doubles).
   std::size_t max_elements = std::size_t{1} << 27;
@@ -21,6 +34,8 @@ struct ReadLimits {
   std::uintmax_t max_text_bytes = std::uintmax_t{1} << 30;
   /// Elements per bulk netCDF read: the cancellation granularity.
   std::size_t slab_elements = std::size_t{1} << 20;
+  /// Bytes of one netCDF read's result (see above).
+  std::size_t max_result_bytes = std::size_t{1} << 30;
 };
 
 /// A cancellation request a reader polls between slabs and records. It wraps
