@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-#include "mov/io/netcdf_library.hpp"
-
 #include <netcdf.h>
+
+#include "mov/io/netcdf_library.hpp"
 
 namespace mov::io {
 

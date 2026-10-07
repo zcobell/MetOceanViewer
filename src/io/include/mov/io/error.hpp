@@ -121,7 +121,7 @@ class ParseError {
   std::string context_;
 };
 
-// ---- netCDF (the wrapper arrives with WP6; the error type is shared) -------
+// ---- netCDF (the wrapper: mov/io/netcdf/file.hpp) ------------------------
 
 enum class NcOp : std::uint8_t {
   open,
@@ -150,6 +150,8 @@ enum class WrapperFault : std::uint8_t {
   name_too_long,
   unsupported_unsigned,
   closed,
+  unrepresentable_path,  // Windows: not expressible in the code page
+                         // netCDF-C reads paths in (netcdf/path.cpp)
 };
 
 /// A nonzero netCDF-C status code.
