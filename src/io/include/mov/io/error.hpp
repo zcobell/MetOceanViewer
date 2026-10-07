@@ -215,7 +215,7 @@ struct FormatError {
   friend bool operator==(const FormatError&, const FormatError&) = default;
 };
 
-/// The caller asked to stop (a `std::stop_token`).
+/// The caller asked to stop (`ReadContext::stop`).
 struct Cancelled {
   friend constexpr bool operator==(Cancelled, Cancelled) = default;
 };

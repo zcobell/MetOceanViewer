@@ -5,7 +5,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <stop_token>
+#include <functional>
+#include <utility>
 
 namespace mov::io {
 
@@ -22,11 +23,29 @@ struct ReadLimits {
   std::size_t slab_elements = std::size_t{1} << 20;
 };
 
+/// A cancellation request a reader polls between slabs and records. It wraps
+/// a predicate rather than `std::stop_token`, which Apple libc++ (Xcode 16)
+/// does not ship, and so the provider/app layer can pass `QPromise::isCanceled`
+/// directly. A default token never requests a stop.
+class StopToken {
+ public:
+  StopToken() = default;
+  explicit StopToken(std::function<bool()> requested)
+      : requested_{std::move(requested)} {}
+
+  [[nodiscard]] bool stop_requested() const {
+    return requested_ and requested_();
+  }
+
+ private:
+  std::function<bool()> requested_;
+};
+
 /// What every reader takes besides its input: the limits and a cancellation
 /// request, checked between slabs and between records.
 struct ReadContext {
   ReadLimits limits{};
-  std::stop_token stop{};
+  StopToken stop{};
 };
 
 }  // namespace mov::io

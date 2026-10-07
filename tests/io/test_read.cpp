@@ -12,6 +12,7 @@
 
 #include "mov/io/error.hpp"
 #include "mov/io/read.hpp"
+#include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
 
 namespace {
@@ -310,4 +311,15 @@ TEST_CASE("and_then_read: an error anywhere short-circuits and drops warnings",
   CHECK(zero_left == Fallible{std::unexpected{"first"}});
   const Fallible zero_right = mov::io::and_then_read(fallible_start(), fails);
   CHECK(zero_right == Fallible{std::unexpected{"stop"}});
+}
+
+TEST_CASE("StopToken polls its predicate; a default token never stops",
+          "[io][read]") {
+  CHECK_FALSE(mov::io::StopToken{}.stop_requested());
+  bool stop = false;
+  const mov::io::StopToken token{[&stop] { return stop; }};
+  CHECK_FALSE(token.stop_requested());
+  stop = true;
+  CHECK(token.stop_requested());
+  CHECK_FALSE(mov::io::ReadContext{}.stop.stop_requested());
 }
