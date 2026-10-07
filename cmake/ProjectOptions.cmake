@@ -31,7 +31,7 @@ macro(mov_declare_options)
         "Tests that need a comma-decimal locale (de_DE.UTF-8) fail instead of skipping when it is missing"
         OFF
     )
-    option(MOV_ENABLE_CACHE"Use ccache/sccache as the compiler launcher when found" ON)
+    option(MOV_ENABLE_CACHE "Use ccache/sccache as the compiler launcher when found" ON)
 endmacro()
 
 # Interface targets every first-party target links PRIVATE:

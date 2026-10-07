@@ -20,6 +20,10 @@ namespace mov::core::detail {
   return (c >= 'A' and c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
 }
 
+[[nodiscard]] constexpr char to_upper(char c) noexcept {
+  return (c >= 'a' and c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
+}
+
 /// `text` without leading and trailing whitespace.
 [[nodiscard]] constexpr std::string_view trim(std::string_view text) noexcept {
   while (not text.empty() and is_space(text.front())) {
