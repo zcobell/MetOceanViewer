@@ -447,8 +447,9 @@ std::expected<Read<ImedsFile>, ParseError> ImedsParser::finish() && {
         ParseError::make(ParseErrc::empty_input, {.line = 1}, "")};
   }
   if (not header_) {
-    return std::unexpected{ParseError::make(ParseErrc::missing_header,
-                                            {.line = header_lines}, "")};
+    // The first header line the file does not have.
+    return std::unexpected{
+        ParseError::make(ParseErrc::missing_header, {.line = lines_ + 1}, "")};
   }
   std::vector<std::string> names;
   names.reserve(stations_.size());

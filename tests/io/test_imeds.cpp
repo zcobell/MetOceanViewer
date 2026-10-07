@@ -257,6 +257,10 @@ TEST_CASE("an empty input or too few header lines is an error",
               std::nullopt);
   check_error(parse_error("header_blank_source.imeds"),
               ParseErrc::missing_header, 3, std::nullopt);
+  // The error names the first line that is missing.
+  const auto one_line = io::parse_imeds("only one line\n");
+  REQUIRE(not one_line.has_value());
+  check_error(one_line.error(), ParseErrc::missing_header, 2, std::nullopt);
   const auto bom_only = io::parse_imeds("\xEF\xBB\xBF");
   REQUIRE(not bom_only.has_value());
   CHECK(bom_only.error().code() == ParseErrc::empty_input);
