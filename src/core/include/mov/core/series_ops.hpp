@@ -187,8 +187,7 @@ class Bucket {
     return Bucket{
         Fields{.missing = a.fields_.missing + b.fields_.missing,
                .dry = a.fields_.dry + b.fields_.dry,
-               .values = detail::join_optional(
-                   a.fields_.values, b.fields_.values, ValueSummary::joined)}};
+               .values = join_values(a.fields_.values, b.fields_.values)}};
   }
 
   /// The number of values.
@@ -214,6 +213,14 @@ class Bucket {
 
  private:
   explicit constexpr Bucket(const Fields& f) noexcept : fields_{f} {}
+
+  // A member, not inline in operator+: MSVC does not extend Bucket's
+  // friendship with ValueSummary to Bucket's hidden friends.
+  [[nodiscard]] static constexpr std::optional<ValueSummary> join_values(
+      const std::optional<ValueSummary>& a,
+      const std::optional<ValueSummary>& b) noexcept {
+    return detail::join_optional(a, b, ValueSummary::joined);
+  }
 
   Fields fields_;
 };
