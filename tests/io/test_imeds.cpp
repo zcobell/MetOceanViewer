@@ -46,15 +46,13 @@ std::string slurp(std::string_view name) {
 }
 
 io::Read<io::ImedsFile> parse_fixture(std::string_view name) {
-  auto parsed = io::parse_imeds(slurp(name));
+  auto parsed = test::parse_text(slurp(name));
   REQUIRE(parsed.has_value());
   return *std::move(parsed);
 }
 
 io::ParseError parse_error(std::string_view name) {
-  const auto parsed = io::parse_imeds(slurp(name));
-  REQUIRE(not parsed.has_value());
-  return parsed.error();
+  return test::parse_error_of(slurp(name));
 }
 
 std::string id_of(const core::StationTable& t, std::size_t i) {
@@ -308,12 +306,14 @@ TEST_CASE("an empty input or too few header lines is an error",
   check_error(parse_error("header_blank_source.imeds"),
               ParseErrc::missing_header, 3, std::nullopt);
   // The error names the first line that is missing.
-  const auto one_line = io::parse_imeds("only one line\n");
+  const auto one_line = test::parse_text("only one line\n");
   REQUIRE(not one_line.has_value());
-  check_error(one_line.error(), ParseErrc::missing_header, 2, std::nullopt);
-  const auto bom_only = io::parse_imeds("\xEF\xBB\xBF");
+  check_error(test::as_parse_error(one_line.error()), ParseErrc::missing_header,
+              2, std::nullopt);
+  const auto bom_only = test::parse_text("\xEF\xBB\xBF");
   REQUIRE(not bom_only.has_value());
-  CHECK(bom_only.error().code() == ParseErrc::empty_input);
+  CHECK(test::as_parse_error(bom_only.error()).code() ==
+        ParseErrc::empty_input);
 }
 
 TEST_CASE("a file with a header and no station is an empty table",
@@ -340,11 +340,51 @@ TEST_CASE("a 6-word row has no seconds: the last word is the value (N3)",
   CHECK(times[2] == test::utc(2015, 7, 1, 0, 12, 0));
 }
 
-TEST_CASE("6- and 7-word rows may be mixed", "[io][imeds][regression][N3]") {
+TEST_CASE("6- and 7-word rows may be mixed, with a warning",
+          "[io][imeds][regression][N3]") {
   const auto read = parse_fixture("mixed_fields.imeds");
   const core::StationTable& t = read.value.table;
   CHECK(nums(t, 0) == std::vector<std::optional<double>>{2.605, 3.5, 4.5});
   CHECK(t.times(core::StationIndex{0})[1] == test::utc(2015, 7, 1, 0, 6, 30));
+  // 6 -> 7 -> 6 words: two switches in station M1.
+  CHECK(read.warnings ==
+        std::vector{Warning{.code = WarningCode::row_shape_changed,
+                            .subject = "M1",
+                            .count = 2}});
+}
+
+TEST_CASE("the row shape is a per-station fact", "[io][imeds]") {
+  const auto read = parse_fixture("shape_per_station.imeds");
+  CHECK(read.warnings.empty());  // P is all 6 words, Q all 7
+  CHECK(read.value.table.size() == 2);
+}
+
+TEST_CASE("a 3-integer line after a row is a row cut short, not a station",
+          "[io][imeds]") {
+  // Mid-file and at the end of the file; the same rule.
+  check_error(parse_error("truncated_row_mid.imeds"),
+              ParseErrc::wrong_field_count, 6, 0);
+  check_error(parse_error("truncated_row_eof.imeds"),
+              ParseErrc::wrong_field_count, 6, 0);
+  // Integer coordinates are fine where a station can start: after a station,
+  // or at the first block.
+  const auto read = parse_fixture("int_coordinates.imeds");
+  REQUIRE(read.value.table.size() == 2);
+  CHECK(id_of(read.value.table, 0) == "A");
+  CHECK(read.value.table.station(core::StationIndex{1}).location ==
+        test::location(3.0, 4.0));
+}
+
+TEST_CASE("a station without rows warns, mid-file and at the end",
+          "[io][imeds]") {
+  const auto mid = parse_fixture("empty_station.imeds");  // E1, E3 empty
+  CHECK(mid.warnings ==
+        std::vector{
+            Warning{.code = WarningCode::empty_station, .subject = "E1"},
+            Warning{.code = WarningCode::empty_station, .subject = "E3"}});
+  const auto eof = parse_fixture("empty_station_eof.imeds");
+  CHECK(eof.warnings == std::vector{Warning{.code = WarningCode::empty_station,
+                                            .subject = "E2"}});
 }
 
 TEST_CASE("fractional seconds and trailing text are errors, not a value (N3)",
@@ -390,14 +430,13 @@ TEST_CASE("white space: tabs, CRLF, a byte order mark", "[io][imeds]") {
   CHECK(nums(bom.value.table, 0) == std::vector<std::optional<double>>{1.5});
 }
 
-TEST_CASE("times are UTC whatever the TZ environment says (N5 family)",
-          "[io][imeds][regression][N5]") {
+TEST_CASE("times are UTC whatever the TZ environment says", "[io][imeds][tz]") {
   const std::string text = slurp("header_tz_cst.imeds");  // zone token CST
   for (const char* zone :
        {"UTC", "America/Chicago", "Asia/Kolkata", "Pacific/Auckland"}) {
     const ScopedTimeZone scoped{zone};
     INFO("TZ=" << zone);
-    const auto read = io::parse_imeds(text);
+    const auto read = test::parse_text(text);
     REQUIRE(read.has_value());
     CHECK(read->value.table.times(core::StationIndex{0}).front() ==
           test::utc(2020, 1, 1));
@@ -417,14 +456,17 @@ TEST_CASE("blank lines after the header are skipped (N13)",
   CHECK(nums(t, 1) == std::vector<std::optional<double>>{3.0});
 }
 
-TEST_CASE("a station without rows is allowed (N17)",
+// N17: v4 marked every station but CRMS "null" (isNull defaulted to true), so
+// the data bounds skipped them. Emptiness is derived from the samples here.
+TEST_CASE("whether a station has data is a fact of its samples (N17)",
           "[io][imeds][regression][N17]") {
   const auto read = parse_fixture("empty_station.imeds");
   const core::StationTable& t = read.value.table;
   REQUIRE(t.size() == 3);
   CHECK(t.times(core::StationIndex{0}).empty());
-  CHECK(nums(t, 1) == std::vector<std::optional<double>>{1.0});
+  CHECK(not t.times(core::StationIndex{1}).empty());
   CHECK(t.times(core::StationIndex{2}).empty());
+  CHECK(t.total_samples() == 1);
 }
 
 // ---- dates and coordinates
@@ -442,9 +484,7 @@ TEST_CASE("minutes, seconds and numbers of a row are checked one by one",
   const auto row_error = [](std::string_view row) {
     const std::string text =
         "a\nb\nNOAA UTC MSL\nS 1.0 2.0\n" + std::string{row} + "\n";
-    const auto parsed = io::parse_imeds(text);
-    REQUIRE(not parsed.has_value());
-    return parsed.error();
+    return test::parse_error_of(text);
   };
   check_error(row_error("2020 01 01 00 60 00 1.0"), ParseErrc::bad_date, 5, 14);
   check_error(row_error("2020 01 01 00 00 60 1.0"), ParseErrc::bad_date, 5, 17);
@@ -464,9 +504,7 @@ TEST_CASE("a latitude or longitude that is not a number is an error",
   const auto station_error = [](std::string_view station) {
     const std::string text =
         "a\nb\nNOAA UTC MSL\n" + std::string{station} + "\n";
-    const auto parsed = io::parse_imeds(text);
-    REQUIRE(not parsed.has_value());
-    return parsed.error();
+    return test::parse_error_of(text);
   };
   check_error(station_error("S north 2.0"), ParseErrc::bad_number, 4, 2);
   check_error(station_error("S 1.0 west"), ParseErrc::bad_number, 4, 6);
@@ -477,7 +515,7 @@ TEST_CASE("a latitude or longitude that is not a number is an error",
 TEST_CASE("February 29 exists in a leap year", "[io][imeds]") {
   const std::string text =
       "a\nb\nNOAA UTC MSL\nS 1.0 2.0\n2024 02 29 23 59 59 1.0\n";
-  const auto read = io::parse_imeds(text);
+  const auto read = test::parse_text(text);
   REQUIRE(read.has_value());
   CHECK(read->value.table.times(core::StationIndex{0}).front() ==
         test::utc(2024, 2, 29, 23, 59, 59));
@@ -495,9 +533,30 @@ TEST_CASE("coordinates are latitude then longitude, checked by Location",
 
 TEST_CASE("a value that is not a number or does not fit is an error",
           "[io][imeds]") {
-  check_error(parse_error("nan_value.imeds"), ParseErrc::bad_number, 5, 20);
   check_error(parse_error("value_overflow.imeds"), ParseErrc::out_of_range, 5,
               20);
+  check_error(parse_error("bad_number.imeds"), ParseErrc::bad_number, 5, 20);
+}
+
+TEST_CASE("NaN, Inf and Fortran stars are Missing with a count",
+          "[io][imeds]") {
+  for (const std::string_view name : {"nan_value.imeds", "nonfinite.imeds"}) {
+    CAPTURE(name);
+    const auto read = parse_fixture(name);
+    const auto values = nums(read.value.table, 0);
+    const std::size_t missing = name == "nan_value.imeds" ? 1 : 6;
+    CHECK(static_cast<std::size_t>(
+              std::ranges::count(values, std::optional<double>{})) == missing);
+    CHECK(read.warnings ==
+          std::vector{Warning{.code = WarningCode::nonfinite_masked,
+                              .subject = "",
+                              .count = missing}});
+    CHECK(
+        read.value.table.column(core::StationIndex{0}, core::ColumnIndex{0})[0]
+            .is_missing());
+  }
+  // The one value of nonfinite.imeds survives.
+  CHECK(nums(parse_fixture("nonfinite.imeds").value.table, 0)[5] == 1.5);
 }
 
 // ---- sentinels (C9)
@@ -600,7 +659,7 @@ TEST_CASE("read_imeds reads a file like parse_imeds", "[io][imeds]") {
   const auto path = test::fixture("io/imeds/mllw_small.imeds");
   const auto file = io::read_imeds(path, io::ReadContext{});
   REQUIRE(file.has_value());
-  const auto text = io::parse_imeds(slurp("mllw_small.imeds"));
+  const auto text = test::parse_text(slurp("mllw_small.imeds"));
   REQUIRE(text.has_value());
   CHECK(file->value == text->value);
   CHECK(file->warnings == text->warnings);
@@ -647,29 +706,135 @@ TEST_CASE("read_imeds reports a parse error as io::Error", "[io][imeds]") {
   const auto read = io::read_imeds(test::fixture("io/imeds/bad_date.imeds"),
                                    io::ReadContext{});
   REQUIRE(not read.has_value());
-  const auto* parse = std::get_if<io::ParseError>(&read.error());
-  REQUIRE(parse != nullptr);
-  CHECK(parse->code() == ParseErrc::bad_date);
+  CHECK(test::as_parse_error(read.error()).code() == ParseErrc::bad_date);
 }
 
-TEST_CASE("read_imeds honours the limits", "[io][imeds]") {
-  const auto path = test::fixture("io/imeds/mllw_small.imeds");
-  io::ReadContext few_samples;
-  few_samples.limits.max_elements = 3;
-  const auto samples = io::read_imeds(path, few_samples);
-  REQUIRE(not samples.has_value());
-  const auto* too_many = std::get_if<io::FileError>(&samples.error());
-  REQUIRE(too_many != nullptr);
-  CHECK(too_many->op == io::FileOp::size);
-  CHECK(too_many->ec == std::errc::file_too_large);
+TEST_CASE("the limits are enforced by the parser: too_large", "[io][imeds]") {
+  const std::string text = slurp("mllw_small.imeds");  // 2 stations, 16 rows
+  // Elements are samples plus 16 per station: 8 rows and a station is 24, the
+  // second station 40, its first row 41.
+  io::ReadContext few_elements;
+  few_elements.limits.max_elements = 40;
+  const io::ParseError rows = test::parse_error_of(text, few_elements);
+  check_error(rows, ParseErrc::too_large, 14, std::nullopt);
+  CHECK(rows.context() == "41 elements, limit 40");
+  few_elements.limits.max_elements = 39;  // the second station itself
+  check_error(test::parse_error_of(text, few_elements), ParseErrc::too_large,
+              13, std::nullopt);
+  few_elements.limits.max_elements = 48;  // exactly what the file holds
+  CHECK(test::parse_text(text, few_elements).has_value());
 
+  io::ReadContext few_bytes;
+  few_bytes.limits.max_text_bytes = 100;
+  const io::ParseError bytes = test::parse_error_of(text, few_bytes);
+  check_error(bytes, ParseErrc::too_large, 1, std::nullopt);
+  CHECK(bytes.context() == "865 bytes, limit 100");
+}
+
+TEST_CASE("stations are charged against the element limit", "[io][imeds]") {
+  // 200 stations and no rows: a file of nothing but station lines.
+  std::string text = "a\nb\nNOAA UTC MSL\n";
+  for (int i = 0; i < 200; ++i) {
+    text += std::format("S{} 1.0 2.0\n", i);
+  }
+  io::ReadContext limited;
+  limited.limits.max_elements = 100 * 16;
+  const io::ParseError e = test::parse_error_of(text, limited);
+  check_error(e, ParseErrc::too_large, 3 + 101, std::nullopt);
+  limited.limits.max_elements = 200 * 16;
+  CHECK(test::parse_text(text, limited).has_value());
+}
+
+TEST_CASE(
+    "read_imeds: the byte limit is the file's, the element limit the "
+    "parser's",
+    "[io][imeds]") {
+  const auto path = test::fixture("io/imeds/mllw_small.imeds");
   io::ReadContext few_bytes;
   few_bytes.limits.max_text_bytes = 100;
   const auto bytes = io::read_imeds(path, few_bytes);
   REQUIRE(not bytes.has_value());
   const auto* too_big = std::get_if<io::FileError>(&bytes.error());
   REQUIRE(too_big != nullptr);
+  CHECK(too_big->op == io::FileOp::size);
   CHECK(too_big->ec == std::errc::file_too_large);
+
+  io::ReadContext few_samples;
+  few_samples.limits.max_elements = 3;
+  const auto samples = io::read_imeds(path, few_samples);
+  REQUIRE(not samples.has_value());
+  CHECK(test::as_parse_error(samples.error()).code() == ParseErrc::too_large);
+}
+
+TEST_CASE("a v4 header may give the unit where the datum goes",
+          "[io][imeds][header]") {
+  const auto read = parse_fixture("header_unit_no_datum.imeds");  // NOAA UTC ft
+  CHECK(read.warnings.empty());
+  CHECK(read.value.header.datum == std::nullopt);
+  CHECK(read.value.header.unit ==
+        std::optional<core::Unit>{core::LengthUnit::foot});
+  // A third word that is neither a datum nor a unit of a family is a datum
+  // we do not know.
+  const auto lwi = test::parse_text("a\nb\nNOAA UTC LWI\nS 1 2\n");
+  REQUIRE(lwi.has_value());
+  CHECK(lwi->value.header.unit == std::nullopt);
+  CHECK(
+      lwi->warnings ==
+      std::vector{Warning{.code = WarningCode::datum_unknown, .subject = "LWI"},
+                  Warning{.code = WarningCode::empty_station, .subject = "S"}});
+  // With a fourth word the third is the datum, known or not.
+  const auto both = test::parse_text("a\nb\nNOAA UTC ft m\nS 1 2\n");
+  REQUIRE(both.has_value());
+  CHECK(both->warnings.front() ==
+        Warning{.code = WarningCode::datum_unknown, .subject = "ft"});
+  CHECK(both->value.header.unit ==
+        std::optional<core::Unit>{core::LengthUnit::meter});
+}
+
+TEST_CASE("warning subjects are as short as an error's context",
+          "[io][imeds]") {
+  const std::string name(500, 'n');
+  const std::string text = "a\nb\nNOAA UTC MSL\n" + name + " 1 2\n" +
+                           "2020 01 01 00 06 00 1.0\n" +
+                           "2020 01 01 00 00 00 2.0\n" + name + " 3 4\n";
+  const auto read = test::parse_text(text);
+  REQUIRE(read.has_value());
+  REQUIRE(read->warnings.size() == 3);  // reordered, renamed, empty station
+  for (const Warning& w : read->warnings) {
+    CHECK(w.subject.size() <= io::ParseError::max_context_bytes);
+  }
+  CHECK(id_of(read->value.table, 1) == name + "#2");  // the id is whole
+}
+
+TEST_CASE("stopping is also polled while the table is assembled",
+          "[io][imeds]") {
+  std::string text = "a\nb\nNOAA UTC MSL\n";
+  for (int i = 0; i < 3000; ++i) {  // fewer lines than the line poll interval
+    text += std::format("S{} 1.0 2.0\n", i);
+  }
+  int asked = 0;
+  const io::ReadContext later{
+      .limits = {}, .stop = io::StopToken{[&asked] { return ++asked > 1; }}};
+  const auto read = test::parse_text(text, later);
+  REQUIRE(not read.has_value());
+  CHECK(std::holds_alternative<io::Cancelled>(read.error()));
+  CHECK(asked == 2);  // before parsing, then at the first station of assembly
+}
+
+TEST_CASE("a header line is bounded", "[io][imeds]") {
+  const std::string long_line(5000, 'x');
+  const std::string text = "a\nb\n" + long_line + " UTC MSL\nS 1 2\n";
+  const io::ParseError e = test::parse_error_of(text);
+  check_error(e, ParseErrc::too_large, 3, std::nullopt);
+  // Just under the bound is a header whose warning subjects stay short.
+  const std::string zone(2000, 'z');
+  const auto ok = test::parse_text("a\nb\nNOAA " + zone + " " + zone + "\n");
+  REQUIRE(ok.has_value());
+  CHECK(ok->value.header.time_zone == zone);  // kept whole, within the bound
+  REQUIRE(ok->warnings.size() == 2);          // zone and datum
+  for (const io::Warning& w : ok->warnings) {
+    CHECK(w.subject.size() <= io::ParseError::max_context_bytes);
+  }
 }
 
 TEST_CASE("read_imeds stops when asked", "[io][imeds]") {

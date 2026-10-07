@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
+#include <algorithm>
+#include <array>
+#include <bit>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <ostream>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -20,6 +26,7 @@
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/units.hpp"
+#include "mov/io/detail/civil_time.hpp"
 #include "mov/io/imeds.hpp"
 #include "mov/io/text_file.hpp"
 
@@ -29,63 +36,76 @@ namespace {
 
 namespace chrono = std::chrono;
 
-constexpr int max_year = 9999;
+constexpr std::size_t chunk_bytes = std::size_t{1} << 16;
+// A row is 14 + 20 characters of date and value, and a line end.
+constexpr std::size_t typical_row_bytes = 40;
 
 bool separates(char c) { return core::detail::is_space(c) or c == ','; }
 
 // Each run of white space or commas becomes one '_'.
 std::string underscored(std::string_view text) {
-  std::string out;
-  out.reserve(text.size());
-  bool in_run = false;
-  for (const char c : text) {
-    if (separates(c)) {
-      if (not in_run) {
-        out += '_';
-      }
-      in_run = true;
-    } else {
-      out += c;
-      in_run = false;
-    }
-  }
+  std::string out{text};
+  const auto tail = std::ranges::unique(
+      out, [](char a, char b) { return separates(a) and separates(b); });
+  out.erase(tail.begin(), tail.end());
+  std::ranges::replace_if(out, separates, '_');
   return out;
 }
 
+// What the writer changed or left out, for the warnings.
 struct Counts {
-  std::size_t floored{0};   // rows whose milliseconds were cut
+  std::size_t ids_not_written{0};
+  std::size_t omitted{0};   // Missing and Dry rows
+  std::size_t floored{0};   // written rows whose milliseconds were cut
   std::size_t collided{0};  // rows dropped: same second as the one before
+  std::size_t reads_as_missing{0};  // written values a reader masks
 };
 
-// One printed time: whole seconds, as the pieces of the row.
-struct Stamp {
-  chrono::sys_seconds seconds{};
-  bool floored{false};
-};
-
-Stamp stamp_of(core::Time t) {
-  const auto whole = chrono::floor<chrono::seconds>(t);
-  return {.seconds = whole, .floored = whole != t};
+// The rows of station `i` that are written, in order: a value, in a second
+// not yet written. `row(time, value)` gets the time floored to the second and
+// returns false to stop. The counts are of what this call saw.
+template <class Row>
+void visit_rows(const core::StationTable& table, core::StationIndex i,
+                Counts& counts, Row row) {
+  const std::span<const core::Time> times = table.times(i);
+  const std::span<const core::Sample> samples =
+      table.column(i, core::ColumnIndex{0});
+  std::optional<core::Time> previous;
+  for (const std::size_t j : std::views::iota(std::size_t{0}, times.size())) {
+    const std::optional<double> value = samples[j].value();
+    if (not value) {
+      ++counts.omitted;
+      continue;
+    }
+    const core::Time whole = chrono::floor<chrono::seconds>(times[j]);
+    if (previous == whole) {
+      ++counts.collided;
+      continue;
+    }
+    previous = whole;
+    counts.floored += whole != times[j] ? 1U : 0U;
+    if (not row(whole, *value)) {
+      return;
+    }
+  }
 }
 
-bool year_fits(chrono::sys_seconds t) {
-  const int year = static_cast<int>(
-      chrono::year_month_day{chrono::floor<chrono::days>(t)}.year());
-  return year >= 0 and year <= max_year;
+void append_row(std::string& out, core::Time whole, double value) {
+  const detail::CivilTime c = detail::civil_fields(whole);
+  std::format_to(std::back_inserter(out),
+                 "{:04} {:02} {:02} {:02} {:02} {:02} {:14.6f}\n", c.year,
+                 c.month, c.day, c.hour, c.minute, c.second, value);
 }
 
-void append_row(std::string& out, chrono::sys_seconds t, double value) {
-  const auto day = chrono::floor<chrono::days>(t);
-  const chrono::year_month_day date{day};
-  const chrono::hh_mm_ss<chrono::seconds> clock{t - day};
-  std::format_to(
-      std::back_inserter(out), "{:04} {:02} {:02} {:02} {:02} {:02} {:14.6f}\n",
-      static_cast<int>(date.year()), static_cast<unsigned>(date.month()),
-      static_cast<unsigned>(date.day()),
-      static_cast<int>(clock.hours().count()),
-      static_cast<int>(clock.minutes().count()),
-      static_cast<int>(clock.seconds().count()), value);
+void append_station(std::string& out, const core::FileStation& station,
+                    std::size_t index) {
+  std::format_to(std::back_inserter(out), "{}    {:.6f}    {:.6f}\n",
+                 detail::imeds_name(station.name.view(), index),
+                 station.location.lat(), station.location.lon());
 }
+
+// ---- the checks that can fail, before anything is written
+// ---------------------
 
 FormatError time_error(const core::FileStation& station, std::size_t i,
                        std::size_t j) {
@@ -95,37 +115,68 @@ FormatError time_error(const core::FileStation& station, std::size_t i,
           .index = j};
 }
 
-// The rows of station i, appended to `out`.
-std::expected<void, FormatError> append_station(std::string& out,
-                                                const core::StationTable& table,
-                                                core::StationIndex i,
-                                                Counts& counts) {
-  const core::FileStation& station = table.station(i);
-  out += std::format("{}    {:.6f}    {:.6f}\n",
-                     detail::imeds_name(station.name.view(), i.value()),
-                     station.location.lat(), station.location.lon());
+// The first and last value rows bound all the others: times increase.
+std::expected<void, FormatError> check_range(const core::StationTable& table,
+                                             core::StationIndex i) {
   const std::span<const core::Time> times = table.times(i);
   const std::span<const core::Sample> samples =
       table.column(i, core::ColumnIndex{0});
-  std::optional<chrono::sys_seconds> previous;
-  for (const std::size_t j : std::views::iota(std::size_t{0}, times.size())) {
-    const std::optional<double> value = samples[j].value();
-    if (not value) {
-      continue;  // Missing and Dry have no IMEDS spelling (N18)
+  const auto is_value = [](const core::Sample& s) { return s.is_value(); };
+  const auto first = std::ranges::find_if(samples, is_value);
+  if (first == samples.end()) {
+    return {};
+  }
+  const auto last =
+      std::ranges::find_if(samples | std::views::reverse, is_value);
+  const auto first_index = static_cast<std::size_t>(first - samples.begin());
+  const auto last_index =
+      static_cast<std::size_t>(last.base() - samples.begin()) - 1;
+  for (const std::size_t j : {first_index, last_index}) {
+    if (not detail::in_imeds_range(times[j])) {
+      return std::unexpected{time_error(table.station(i), i.value(), j)};
     }
-    const Stamp stamp = stamp_of(times[j]);
-    if (not year_fits(stamp.seconds)) {
-      return std::unexpected{time_error(station, i.value(), j)};
-    }
-    counts.floored += stamp.floored ? 1U : 0U;
-    if (previous == stamp.seconds) {
-      ++counts.collided;
-      continue;
-    }
-    previous = stamp.seconds;
-    append_row(out, stamp.seconds, *value);
   }
   return {};
+}
+
+// A unit named "unknown" would read back as no unit.
+std::expected<void, FormatError> check_unit(const core::SeriesMeta& meta) {
+  const std::optional<core::Unit>& unit = meta.unit();
+  if (unit and
+      core::detail::equal_ignore_case(core::symbol(*unit), "unknown")) {
+    return std::unexpected{FormatError{.code = FormatErrc::noncanonical_unit,
+                                       .subject = "unknown"}};
+  }
+  return {};
+}
+
+// Validates the table and counts what the writer will do to it. After this
+// succeeds emit_imeds cannot fail.
+std::expected<Counts, FormatError> scan_imeds(const core::StationTable& table) {
+  if (table.schema().size() != 1) {
+    return std::unexpected{
+        FormatError{.code = FormatErrc::wrong_column_count,
+                    .subject = std::to_string(table.schema().size())}};
+  }
+  if (auto unit = check_unit(table.schema().front()); not unit) {
+    return std::unexpected{unit.error()};
+  }
+  Counts counts;
+  for (const core::StationIndex i : table.stations()) {
+    if (auto range = check_range(table, i); not range) {
+      return std::unexpected{range.error()};
+    }
+    const core::FileStation& station = table.station(i);
+    counts.ids_not_written +=
+        station.id.view() != detail::imeds_name(station.name.view(), i.value())
+            ? 1U
+            : 0U;
+    visit_rows(table, i, counts, [&counts](core::Time, double value) {
+      counts.reads_as_missing += detail::reads_as_missing(value) ? 1U : 0U;
+      return true;
+    });
+  }
+  return counts;
 }
 
 std::string header_text(const core::SeriesMeta& meta, std::string_view source) {
@@ -143,6 +194,43 @@ std::string header_text(const core::SeriesMeta& meta, std::string_view source) {
       unit_text);
 }
 
+// The IMEDS text of a table scan_imeds accepted, built in a buffer that is
+// handed to `flush` when it holds `chunk` bytes, and at the end. flush takes
+// the text out (clearing it) and returns false to stop, as a failed stream
+// does.
+template <class Flush>
+void emit_imeds(const core::StationTable& table, std::string_view source,
+                std::size_t chunk, Flush flush) {
+  std::string buffer = header_text(table.schema().front(), source);
+  Counts ignored;  // scan_imeds counted already
+  for (const core::StationIndex i : table.stations()) {
+    append_station(buffer, table.station(i), i.value());
+    bool going = true;
+    visit_rows(table, i, ignored, [&](core::Time whole, double value) {
+      append_row(buffer, whole, value);
+      going = buffer.size() < chunk or flush(buffer);
+      return going;
+    });
+    if (not going) {
+      return;
+    }
+  }
+  flush(buffer);
+}
+
+std::vector<Warning> warnings_of(const Counts& counts) {
+  std::vector<Warning> warnings;
+  const auto add = [&warnings](WarningCode code, std::size_t count) {
+    append_if_counted(warnings, {.code = code, .subject = {}, .count = count});
+  };
+  add(WarningCode::station_id_not_written, counts.ids_not_written);
+  add(WarningCode::rows_omitted, counts.omitted);
+  add(WarningCode::time_precision_dropped, counts.floored);
+  add(WarningCode::duplicate_times_dropped, counts.collided);
+  add(WarningCode::value_reads_as_missing, counts.reads_as_missing);
+  return warnings;
+}
+
 }  // namespace
 
 namespace detail {
@@ -152,54 +240,63 @@ std::string imeds_name(std::string_view name, std::size_t index) {
   return cleaned.empty() ? std::format("station_{}", index) : cleaned;
 }
 
+bool reads_as_missing(double value) {
+  if (std::bit_cast<std::uint64_t>(value) ==
+      std::bit_cast<std::uint64_t>(-std::numeric_limits<double>::max())) {
+    return true;
+  }
+  // The text of the legacy fills is short; anything longer cannot be one.
+  std::array<char, 16> text{};
+  const auto printed =
+      std::format_to_n(text.data(), text.size(), "{:.6f}", value);
+  if (std::cmp_greater(printed.size, text.size())) {
+    return false;  // did not fit
+  }
+  const std::string_view view{text.data(),
+                              static_cast<std::size_t>(printed.size)};
+  return view == "-9999.000000" or view == "-99999.000000";
+}
+
 }  // namespace detail
 
 std::expected<Read<std::string>, FormatError> format_imeds(
     const core::StationTable& table, std::string_view source) {
-  if (table.schema().size() != 1) {
-    return std::unexpected{
-        FormatError{.code = FormatErrc::wrong_column_count,
-                    .subject = std::to_string(table.schema().size())}};
+  const auto counts = scan_imeds(table);
+  if (not counts) {
+    return std::unexpected{counts.error()};
   }
-  std::string out = header_text(table.schema().front(), source);
-  Counts counts;
-  for (const core::StationIndex i : table.stations()) {
-    if (auto done = append_station(out, table, i, counts); not done) {
-      return std::unexpected{std::move(done).error()};
-    }
-  }
-  std::vector<Warning> warnings;
-  if (counts.floored > 0) {
-    warnings.push_back({.code = WarningCode::time_precision_dropped,
-                        .subject = {},
-                        .count = counts.floored});
-  }
-  if (counts.collided > 0) {
-    warnings.push_back({.code = WarningCode::duplicate_times_dropped,
-                        .subject = {},
-                        .count = counts.collided});
-  }
+  std::string out;
+  out.reserve(table.total_samples() * typical_row_bytes);
+  emit_imeds(table, source, std::numeric_limits<std::size_t>::max(),
+             [&out](std::string& buffer) {
+               out = std::move(buffer);
+               return true;
+             });
   return Read<std::string>{.value = std::move(out),
-                           .warnings = std::move(warnings)};
+                           .warnings = warnings_of(*counts)};
 }
 
 std::expected<std::vector<Warning>, Error> write_imeds(
     const std::filesystem::path& path, const core::StationTable& table,
     std::string_view source) {
-  auto text = format_imeds(table, source);
-  if (not text) {
-    return std::unexpected{Error{std::move(text).error()}};
+  const auto counts = scan_imeds(table);
+  if (not counts) {
+    return std::unexpected{Error{counts.error()}};
   }
-  const std::string& bytes = text->value;
   const auto written = write_file_atomic(
-      path, [&bytes](std::ostream& out) -> std::expected<void, FileError> {
-        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+      path,
+      [&table, source](std::ostream& out) -> std::expected<void, FileError> {
+        emit_imeds(table, source, chunk_bytes, [&out](std::string& buffer) {
+          out.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+          buffer.clear();
+          return static_cast<bool>(out);  // a full disk stops the export
+        });
         return {};
       });
   if (not written) {
     return std::unexpected{written.error()};
   }
-  return std::move(text->warnings);
+  return warnings_of(*counts);
 }
 
 }  // namespace mov::io

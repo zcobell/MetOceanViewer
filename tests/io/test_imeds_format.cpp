@@ -4,9 +4,11 @@
 // format_imeds / write_imeds (docs/core-design.md section 5.2, D15; N18).
 
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <format>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -38,6 +40,12 @@ core::SeriesMeta meta_with(std::optional<core::Unit> unit,
     meta = *with;
   }
   return meta;
+}
+
+std::vector<Warning> formatted_warnings(const core::StationTable& t) {
+  const auto text = io::format_imeds(t);
+  REQUIRE(text.has_value());
+  return text->warnings;
 }
 
 std::string formatted(const core::StationTable& t,
@@ -80,11 +88,18 @@ TEST_CASE("format_imeds writes the pinned layout (D15)",
         "station_1    40.466900    -74.009400\n"
         "1969 12 31 23 59 59       1.000000\n"
         "2000 02 29 12 34 56    1234.567800\n");
-  // One time was cut to whole seconds.
-  CHECK(text->warnings ==
-        std::vector{Warning{.code = WarningCode::time_precision_dropped,
-                            .subject = "",
-                            .count = 1}});
+  // Both ids differ from the written names; the Missing row was left out; one
+  // time was cut to whole seconds.
+  CHECK(
+      text->warnings ==
+      std::vector{
+          Warning{.code = WarningCode::station_id_not_written,
+                  .subject = "",
+                  .count = 2},
+          Warning{.code = WarningCode::rows_omitted, .subject = "", .count = 1},
+          Warning{.code = WarningCode::time_precision_dropped,
+                  .subject = "",
+                  .count = 1}});
 }
 
 TEST_CASE("the datum and unit are 'none' and 'unknown' when unset",
@@ -115,7 +130,7 @@ TEST_CASE("a unit that is not in a family is written by its symbol",
                                               .samples = {}}});
   CHECK(formatted(table).contains("    UTC    none    S m-1\n"));
   // And it reads back as the same unit (the unit is the rest of the line).
-  const auto back = io::parse_imeds(formatted(table));
+  const auto back = test::parse_text(formatted(table));
   REQUIRE(back.has_value());
   CHECK(back->value.header.unit == unit);
 }
@@ -193,10 +208,12 @@ TEST_CASE("two rows in one second keep the first, with warnings",
   CHECK(
       text->value.ends_with("2020 01 01 00 00 00       1.000000\n"
                             "2020 01 01 00 00 01       3.000000\n"));
+  // The two counts are a partition: the first row was cut (1), the second was
+  // dropped for the second it shares (1) and is not also a cut row.
   CHECK(text->warnings ==
         std::vector{Warning{.code = WarningCode::time_precision_dropped,
                             .subject = "",
-                            .count = 2},
+                            .count = 1},
                     Warning{.code = WarningCode::duplicate_times_dropped,
                             .subject = "",
                             .count = 1}});
@@ -215,10 +232,13 @@ TEST_CASE("a non-value in the same second is not a collision",
   const auto text = io::format_imeds(table);
   REQUIRE(text.has_value());
   CHECK(text->value.ends_with("2020 01 01 00 00 00       2.000000\n"));
-  CHECK(text->warnings ==
-        std::vector{Warning{.code = WarningCode::time_precision_dropped,
-                            .subject = "",
-                            .count = 1}});
+  CHECK(
+      text->warnings ==
+      std::vector{
+          Warning{.code = WarningCode::rows_omitted, .subject = "", .count = 1},
+          Warning{.code = WarningCode::time_precision_dropped,
+                  .subject = "",
+                  .count = 1}});
 }
 
 TEST_CASE("a time outside the years 0000-9999 cannot be written",
@@ -335,15 +355,21 @@ namespace {
 void check_round_trip(std::string_view fixture_name) {
   const auto text =
       test::read_bytes(test::fixture(std::format("io/imeds/{}", fixture_name)));
-  const auto first = io::parse_imeds(text);
+  const auto first = test::parse_text(text);
   REQUIRE(first.has_value());
   const auto written = io::format_imeds(first->value.table);
   REQUIRE(written.has_value());
-  const auto second = io::parse_imeds(written->value);
+  const auto second = test::parse_text(written->value);
   REQUIRE(second.has_value());
   // The names are still equal in the file, so the ids are renamed again.
-  const bool renames = fixture_name == "duplicate_stations.imeds";
-  CHECK(second->warnings.empty() != renames);
+  // Only what the file still says: equal names, stations without rows.
+  const bool expects = fixture_name == "duplicate_stations.imeds" or
+                       fixture_name == "empty_station.imeds";
+  CHECK(second->warnings.empty() != expects);
+  for (const Warning& w : second->warnings) {
+    CHECK((w.code == WarningCode::duplicate_station_id_renamed or
+           w.code == WarningCode::empty_station));
+  }
   CHECK(second->value.table == first->value.table);
   CHECK(second->value.header.datum == first->value.header.datum);
   CHECK(second->value.header.unit == first->value.header.unit);
@@ -368,12 +394,12 @@ TEST_CASE("read -> write -> read is the identity on the fixtures",
 
 TEST_CASE("masked sentinels are not written, and the rest round-trips",
           "[io][imeds][format][roundtrip]") {
-  const auto first = io::parse_imeds(
+  const auto first = test::parse_text(
       test::read_bytes(test::fixture("io/imeds/sentinels.imeds")));
   REQUIRE(first.has_value());
   const auto written = io::format_imeds(first->value.table);
   REQUIRE(written.has_value());
-  const auto second = io::parse_imeds(written->value);
+  const auto second = test::parse_text(written->value);
   REQUIRE(second.has_value());
   CHECK(second->warnings.empty());  // no sentinel left to mask
   const std::vector<std::optional<double>> kept{-99998.9, -999.0, -9999.5,
@@ -392,7 +418,7 @@ TEST_CASE("values survive to the fixed precision, large ones exactly",
                   test::utc(2020, 1, 1, 2)},
         .samples = {test::value(1.0e300), test::value(0.1234564),
                     test::value(-1.0e-7)}}});
-  const auto back = io::parse_imeds(formatted(table));
+  const auto back = test::parse_text(formatted(table));
   REQUIRE(back.has_value());
   const auto values = test::numbers(back->value.table, 0);
   REQUIRE(values.size() == 3);
@@ -425,10 +451,7 @@ TEST_CASE("write_imeds writes format_imeds's bytes and replaces a file",
   const auto written = io::write_imeds(path, table);
   REQUIRE(written.has_value());
   CHECK(test::read_bytes(path) == formatted(table));
-  CHECK(*written ==
-        std::vector{Warning{.code = WarningCode::time_precision_dropped,
-                            .subject = "",
-                            .count = 1}});
+  CHECK(*written == formatted_warnings(table));
   CHECK(test::entry_names(dir.path()) == std::vector<std::string>{"out.imeds"});
 
   // A source other than the default.
@@ -472,4 +495,164 @@ TEST_CASE("write_imeds -> read_imeds round-trips through a file",
   const auto second = io::read_imeds(path, io::ReadContext{});
   REQUIRE(second.has_value());
   CHECK(second->value == first->value);  // header and table
+}
+
+// ---- what the writer reports
+// ------------------------------------------------------
+
+TEST_CASE("a value whose text a reader masks is written and counted",
+          "[io][imeds][format][regression]") {
+  const auto first = test::parse_text(
+      test::read_bytes(test::fixture("io/imeds/sentinel_collision.imeds")));
+  REQUIRE(first.has_value());
+  // -9999.0000004 and -99999.0000003 are values, not the sentinels.
+  CHECK(test::numbers(first->value.table, 0) ==
+        std::vector<std::optional<double>>{-9999.0000004, -99999.0000003, 2.5,
+                                           -9999.5});
+  CHECK(first->warnings.empty());
+  const auto text = io::format_imeds(first->value.table);
+  REQUIRE(text.has_value());
+  CHECK(text->value.contains("00 00 00   -9999.000000\n"));
+  CHECK(text->value.contains("00 06 00  -99999.000000\n"));
+  CHECK(text->warnings ==
+        std::vector{Warning{.code = WarningCode::value_reads_as_missing,
+                            .subject = "",
+                            .count = 2}});
+  // ... and that is what happens to them when the file is read again.
+  const auto back = test::parse_text(text->value);
+  REQUIRE(back.has_value());
+  CHECK(test::numbers(back->value.table, 0) ==
+        std::vector<std::optional<double>>{std::nullopt, std::nullopt, 2.5,
+                                           -9999.5});
+  CHECK(back->warnings ==
+        std::vector{Warning{.code = WarningCode::legacy_sentinel_masked,
+                            .subject = "",
+                            .count = 2}});
+}
+
+TEST_CASE("reads_as_missing: the text of the fills, and -DBL_MAX exactly",
+          "[io][imeds][format]") {
+  using io::detail::reads_as_missing;
+  CHECK(reads_as_missing(-9999.0));
+  CHECK(reads_as_missing(-99999.0));
+  CHECK(reads_as_missing(-9999.0000004));
+  CHECK(reads_as_missing(-9998.9999996));
+  CHECK(reads_as_missing(-99999.0000003));
+  CHECK(not reads_as_missing(-9999.0000006));  // prints -9999.000001
+  CHECK(not reads_as_missing(-9999.5));
+  CHECK(not reads_as_missing(-99998.9));
+  CHECK(not reads_as_missing(-999.0));
+  CHECK(not reads_as_missing(9999.0));
+  CHECK(not reads_as_missing(0.0));
+  CHECK(not reads_as_missing(-1.0e300));
+  CHECK(reads_as_missing(-std::numeric_limits<double>::max()));
+  CHECK(not reads_as_missing(
+      std::nextafter(-std::numeric_limits<double>::max(), 0.0)));
+}
+
+TEST_CASE("the most negative double is written as a number and counted",
+          "[io][imeds][format][regression][N18]") {
+  const auto table = test::one_column_table(
+      meta_with(std::nullopt, std::nullopt),
+      {{.id = "S",
+        .name = "S",
+        .where = test::location(1.0, 2.0),
+        .times = {test::utc(2020, 1, 1)},
+        .samples = {test::value(-std::numeric_limits<double>::max())}}});
+  const auto text = io::format_imeds(table);
+  REQUIRE(text.has_value());
+  CHECK(text->warnings ==
+        std::vector{Warning{.code = WarningCode::value_reads_as_missing,
+                            .subject = "",
+                            .count = 1}});
+}
+
+TEST_CASE("an id that is not the written name is reported once per station",
+          "[io][imeds][format]") {
+  const auto table =
+      test::one_column_table(meta_with(std::nullopt, std::nullopt),
+                             {{.id = "8413320",
+                               .name = "Bar Harbor",
+                               .where = test::location(1.0, 2.0),
+                               .times = {},
+                               .samples = {}},
+                              {.id = "Pier",
+                               .name = "Pier",
+                               .where = test::location(1.0, 2.0),
+                               .times = {},
+                               .samples = {}},
+                              {.id = "X",
+                               .name = "",
+                               .where = test::location(1.0, 2.0),
+                               .times = {},
+                               .samples = {}}});
+  CHECK(formatted_warnings(table) ==
+        std::vector{Warning{.code = WarningCode::station_id_not_written,
+                            .subject = "",
+                            .count = 2}});
+}
+
+TEST_CASE("a unit named 'unknown' cannot be told from no unit",
+          "[io][imeds][format]") {
+  const auto unit = core::parse_unit("Unknown");
+  REQUIRE(unit.has_value());
+  const auto table = test::one_column_table(meta_with(unit, std::nullopt), {});
+  const auto text = io::format_imeds(table);
+  REQUIRE(not text.has_value());
+  CHECK(text.error().code == io::FormatErrc::noncanonical_unit);
+}
+
+TEST_CASE("only value rows need to be in the years 0000-9999",
+          "[io][imeds][format]") {
+  const core::Time far{
+      std::chrono::milliseconds{core::max_abs_time_ms}};  // year 287396
+  const auto table = test::one_column_table(
+      meta_with(std::nullopt, std::nullopt),
+      {{.id = "S",
+        .name = "S",
+        .where = test::location(1.0, 2.0),
+        .times = {test::utc(2020, 1, 1), far},
+        .samples = {test::value(1.0), core::Missing{}}}});
+  CHECK(io::format_imeds(table).has_value());  // the far row is omitted
+  const auto bad = test::one_column_table(
+      meta_with(std::nullopt, std::nullopt),
+      {{.id = "S",
+        .name = "S",
+        .where = test::location(1.0, 2.0),
+        .times = {test::utc(2020, 1, 1), far},
+        .samples = {test::value(1.0), test::value(2.0)}}});
+  const auto text = io::format_imeds(bad);
+  REQUIRE(not text.has_value());
+  CHECK(text.error().code == io::FormatErrc::time_out_of_range);
+  CHECK(text.error().index == 1);
+  const core::Time early{std::chrono::milliseconds{-core::max_abs_time_ms}};
+  const auto bad_first = test::one_column_table(
+      meta_with(std::nullopt, std::nullopt),
+      {{.id = "S",
+        .name = "S",
+        .where = test::location(1.0, 2.0),
+        .times = {early, test::utc(2020, 1, 1)},
+        .samples = {test::value(1.0), test::value(2.0)}}});
+  const auto first = io::format_imeds(bad_first);
+  REQUIRE(not first.has_value());
+  CHECK(first.error().index == 0);
+}
+
+TEST_CASE("the value column is a minimum width: a long number widens the row",
+          "[io][imeds][format]") {
+  const auto table = test::one_column_table(
+      meta_with(std::nullopt, std::nullopt),
+      {{.id = "S",
+        .name = "S",
+        .where = test::location(1.0, 2.0),
+        .times = {test::utc(2020, 1, 1), test::utc(2020, 1, 2)},
+        .samples = {test::value(12345678901234567.0), test::value(1.0e300)}}});
+  const std::string text = formatted(table);
+  // 17 digits, a point and 6 decimals: wider than 14, one space before it.
+  CHECK(text.contains("2020 01 01 00 00 00 12345678901234568.000000\n"));
+  CHECK(text.size() > 400);  // the 1e300 row has 301 digits
+  const auto back = test::parse_text(text);
+  REQUIRE(back.has_value());
+  CHECK(test::numbers(back->value.table, 0) ==
+        std::vector<std::optional<double>>{12345678901234568.0, 1.0e300});
 }

@@ -9,9 +9,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstddef>
+#include <expected>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/core/geo.hpp"
@@ -20,6 +23,9 @@
 #include "mov/core/station.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
+#include "mov/io/error.hpp"
+#include "mov/io/imeds.hpp"
+#include "mov/io/read_limits.hpp"
 
 namespace mov::test {
 
@@ -86,6 +92,27 @@ struct StationSpec {
                                         std::move(rows));
   REQUIRE(table.has_value());
   return *std::move(table);
+}
+
+/// parse_imeds with default limits unless given.
+[[nodiscard]] inline std::expected<io::Read<io::ImedsFile>, io::Error>
+parse_text(std::string_view text, const io::ReadContext& ctx = {}) {
+  return io::parse_imeds(text, ctx);
+}
+
+/// The ParseError inside an io::Error (the test fails if it is another kind).
+[[nodiscard]] inline io::ParseError as_parse_error(const io::Error& e) {
+  const auto* parse = std::get_if<io::ParseError>(&e);
+  REQUIRE(parse != nullptr);
+  return *parse;
+}
+
+/// The error parse_imeds gives for `text`, which must be a ParseError.
+[[nodiscard]] inline io::ParseError parse_error_of(
+    std::string_view text, const io::ReadContext& ctx = {}) {
+  const auto parsed = io::parse_imeds(text, ctx);
+  REQUIRE(not parsed.has_value());
+  return as_parse_error(parsed.error());
 }
 
 /// The samples of column `k` of station `i`, as numbers (nullopt for a

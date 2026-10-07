@@ -1,0 +1,9 @@
+% IMEDS generic format
+% year month day hour min sec value
+MetOceanViewer    UTC    none    unknown
+P    30.0    -90.0
+2020 01 01 00 00 1.0
+2020 01 01 00 06 2.0
+Q    31.0    -91.0
+2020 01 01 00 00 00 3.0
+2020 01 01 00 06 00 4.0
