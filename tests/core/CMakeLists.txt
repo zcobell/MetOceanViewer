@@ -11,6 +11,7 @@ mov_add_test(
         test_quantity.cpp
         test_toolchain_probe.cpp
         test_meta.cpp
+        test_timeseries.cpp
         test_station.cpp
     CONSTEXPR_SOURCES
         test_version_constexpr.cpp
@@ -22,6 +23,7 @@ mov_add_test(
         test_datum_constexpr.cpp
         test_quantity_constexpr.cpp
         test_toolchain_probe_constexpr.cpp
+        test_timeseries_constexpr.cpp
         test_station_constexpr.cpp
     LIBRARIES mov::core
 )
@@ -47,3 +49,4 @@ mov_add_fuzz_test(
     CORPUS core/parse_quantity_token
 )
 mov_add_fuzz_test(fuzz_checked_time SOURCES fuzz_checked_time.cpp LIBRARIES mov::core CORPUS core/checked_time)
+mov_add_fuzz_test(fuzz_normalize SOURCES fuzz_normalize.cpp LIBRARIES mov::core CORPUS core/normalize)
