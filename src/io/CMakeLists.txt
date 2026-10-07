@@ -16,3 +16,6 @@ mov_add_module(
     PUBLIC_LINK mov::core
     PRIVATE_LINK netCDF::netcdf PROJ::proj
 )
+
+# ADCIRC ASCII output and the HWM file (WP8).
+target_sources(mov_io PRIVATE model_number.cpp)

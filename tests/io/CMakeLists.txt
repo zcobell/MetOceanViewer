@@ -49,3 +49,6 @@ mov_add_fuzz_test(
     LIBRARIES mov::io
     CORPUS io/parse_cf_time_units
 )
+
+# ADCIRC ASCII output and the HWM file (WP8).
+mov_add_test(mov_io_model_text_tests SOURCES test_model_number.cpp LIBRARIES mov::io)
