@@ -209,3 +209,6 @@ Studio developer prompt).
 - The Qt version in prose: CLAUDE.md (the `dev-qt` line) and
   `docs/rearchitecture-plan.md` §3; on a minor bump also
   `MOV_QT_MINIMUM_VERSION` in `CMakeLists.txt`.
+- The aqtinstall git pin in `requirements.txt` equals `aqtsource` in
+  `.github/actions/setup-qt/action.yml`. Return both to a released version once
+  aqtinstall > 3.3.0 ships Qt 6.11 Windows support (PR #1000).

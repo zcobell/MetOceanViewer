@@ -3,7 +3,10 @@
 #
 # Python tooling baked into the dev image (tools/dev/Dockerfile). The
 # pre-commit hooks pin their own tool versions in .pre-commit-config.yaml.
-aqtinstall==3.3.0
+# aqtinstall 3.3.0 (latest release, 2025-06) cannot read the Qt 6.11 Windows
+# repository layout; the fix (aqtinstall PR #1000) is merged but unreleased.
+# Keep in step with AQT_SOURCE in .github/actions/setup-qt/action.yml.
+aqtinstall @ git+https://github.com/miurahr/aqtinstall@076e1659807d0b362a3ed684d54c2e9c775eb9c7
 gcovr==8.6
 lizard==1.24.1
 pre-commit==4.6.2
