@@ -12,3 +12,6 @@ configure_file(
     @ONLY
 )
 target_include_directories(mov_core PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+# HWM statistics (WP4).
+target_sources(mov_core PRIVATE hwm_stats.cpp)
