@@ -92,7 +92,10 @@ jobs:
           max-size: 500M
 
       # Its own key: the Qt-free jobs save caches without MapLibre. Saved
-      # below right after the configure, which is where vcpkg builds.
+      # below right after the configure, which is where vcpkg builds. On a
+      # cold cache, this job (linux-gcc) and clang-tidy build MapLibre in
+      # parallel with the same key; whichever saves first wins, and the
+      # other's save is a harmless "cache already exists" warning.
       - uses: ./.github/actions/setup-vcpkg
         id: vcpkg
         with:
@@ -116,8 +119,10 @@ jobs:
             cmake --preset "${{ matrix.preset }}"
           fi
 
+      # Also after a failed configure: vcpkg archives only the ports it built
+      # successfully, so a partial cache still spares those rebuilds.
       - name: Save vcpkg binary cache
-        if: steps.configure.outcome == 'success' && steps.vcpkg.outputs.cache-hit != 'true'
+        if: always() && steps.configure.outcome != 'skipped' && steps.vcpkg.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ${{ steps.vcpkg.outputs.cache-path }}
@@ -130,9 +135,10 @@ jobs:
         if: env.BUILD_QT == 'true'
         run: cmake --build --preset ${{ matrix.preset }} --target all_qmllint
 
-      # The GUI test (label gui) needs OpenGL: on Linux it runs under xvfb-run
-      # with Mesa (tests/CMakeLists.txt sets the launcher). The macOS and
-      # Windows jobs build it but do not run it yet.
+      # Label qt (offscreen, no GL: the maplibre plugin loads, app identity)
+      # runs everywhere. Label gui needs OpenGL: on Linux it runs under
+      # xvfb-run with Mesa (tests/CMakeLists.txt sets the launcher); the
+      # macOS and Windows jobs build it but do not run it yet.
       - name: Test
         run: |
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
@@ -266,7 +272,7 @@ jobs:
       # generated at configure time), not a build.
       - id: configure
         run: cmake --preset tidy
-      - if: steps.configure.outcome == 'success' && steps.vcpkg.outputs.cache-hit != 'true'
+      - if: always() && steps.configure.outcome != 'skipped' && steps.vcpkg.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ${{ steps.vcpkg.outputs.cache-path }}

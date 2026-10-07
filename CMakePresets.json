@@ -9,7 +9,7 @@
     {
       "name": "base",
       "hidden": true,
-      "description": "Ninja, vcpkg manifest mode (VCPKG_ROOT must be set), strict warnings, standard-library hardening and tests. One build tree per preset under build/. The presets, not CC/CXX, choose the compiler.",
+      "description": "Ninja, vcpkg manifest mode (VCPKG_ROOT must be set), strict warnings, standard-library hardening and tests. One build tree per preset under build/. The presets, not CC/CXX, choose the compiler. VCPKG_KEEP_ENV_VARS passes QT_ROOT_DIR to vcpkg's port builds (the maplibre-native-qt port), which Windows otherwise runs in a sanitized environment.",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -19,7 +19,7 @@
         "MOV_ENABLE_HARDENING": "ON"
       },
       "environment": {
-        "VCPKG_KEEP_ENV_VARS": "QT_ROOT_DIR"
+        "VCPKG_KEEP_ENV_VARS": "$penv{VCPKG_KEEP_ENV_VARS};QT_ROOT_DIR"
       }
     },
     {
@@ -171,7 +171,7 @@
       "name": "ci-macos",
       "inherits": "base",
       "displayName": "CI: macOS arm64 Apple Clang",
-      "description": "macOS build-and-test job. The deployment target (macOS 14, plan §6.24) is passed to vcpkg's port builds through the environment.",
+      "description": "macOS build-and-test job. The deployment target (macOS 14, plan §6.24) is passed to vcpkg's port builds through the environment. A preset's environment key replaces the inherited one, so VCPKG_KEEP_ENV_VARS repeats base's QT_ROOT_DIR.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_CXX_COMPILER": "clang++",
@@ -181,7 +181,7 @@
       },
       "environment": {
         "MACOSX_DEPLOYMENT_TARGET": "14.0",
-        "VCPKG_KEEP_ENV_VARS": "MACOSX_DEPLOYMENT_TARGET;QT_ROOT_DIR"
+        "VCPKG_KEEP_ENV_VARS": "$penv{VCPKG_KEEP_ENV_VARS};QT_ROOT_DIR;MACOSX_DEPLOYMENT_TARGET"
       },
       "condition": {
         "type": "equals",
