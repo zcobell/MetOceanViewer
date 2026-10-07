@@ -361,6 +361,10 @@ A screenshot of a web app (`screenshot.png` at repo root) is the reference for
   - `windeployqt`.
   - **Inno Setup** installer (CPack has an `INNOSETUP` generator), plus a portable zip.
   - Embed VERSIONINFO.
+  - Ship an application manifest with `activeCodePage=UTF-8` and
+    `longPathAware=true`: netCDF-C 4.9.3 treats Windows paths as text in the
+    active code page, so non-ASCII and long paths need both (see
+    `docs/wp-notes/WP6.md`).
   - Code signing: **Azure Trusted Signing** (decision pending, see §6).
   - The installer registers the session file association.
 - **Linux:** a single **AppImage** built with `linuxdeploy` and its Qt plugin, if Linux
