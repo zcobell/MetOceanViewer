@@ -17,11 +17,12 @@ FROM ${UBUNTU_IMAGE}
 
 ARG GCC_VERSION
 ARG LLVM_VERSION
+ARG LIBCXX_VERSION
 ARG CMAKE_VERSION
 ARG CMAKE_SHA256
 ARG VCPKG_COMMIT
 
-RUN for arg in GCC_VERSION LLVM_VERSION CMAKE_VERSION CMAKE_SHA256 VCPKG_COMMIT; do \
+RUN for arg in GCC_VERSION LLVM_VERSION LIBCXX_VERSION CMAKE_VERSION CMAKE_SHA256 VCPKG_COMMIT; do \
       eval "test -n \"\${${arg}}\"" || { echo "build arg ${arg} is not set (use tools/dev/run.sh)" >&2; exit 1; }; \
     done
 
@@ -37,6 +38,7 @@ RUN apt-get update \
         bison \
         ca-certificates \
         ccache \
+        clang-${LIBCXX_VERSION} \
         clang-${LLVM_VERSION} \
         clang-format-${LLVM_VERSION} \
         clang-tidy-${LLVM_VERSION} \
@@ -46,7 +48,10 @@ RUN apt-get update \
         gcc-${GCC_VERSION} \
         git \
         lcov \
+        libc++-${LIBCXX_VERSION}-dev \
+        libc++abi-${LIBCXX_VERSION}-dev \
         libclang-rt-${LLVM_VERSION}-dev \
+        libunwind-${LIBCXX_VERSION}-dev \
         libtool \
         lld-${LLVM_VERSION} \
         llvm-${LLVM_VERSION} \
@@ -103,7 +108,10 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_VERSION} 1
          target="/usr/lib/llvm-${LLVM_VERSION}/bin/${tool}"; \
          test -x "${target}" || { echo "missing ${target}" >&2; exit 1; }; \
          ln -sf "${target}" "/usr/local/bin/${tool}"; \
-       done
+       done \
+    # Clang + libc++ at LIBCXX_VERSION, for the dev-libcxx preset (macOS-like).
+    && test -x "/usr/lib/llvm-${LIBCXX_VERSION}/bin/clang++" \
+    && ln -sf "/usr/lib/llvm-${LIBCXX_VERSION}/bin/clang++" /usr/local/bin/clang++-libcxx
 
 # Ubuntu 24.04 ships CMake 3.28; use the pinned upstream release, verified.
 RUN curl -fsSL -o /tmp/cmake.tar.gz \

@@ -61,6 +61,7 @@ if ! docker image inspect "${image}" >/dev/null 2>&1; then
     --build-arg "UBUNTU_IMAGE=$(version_of UBUNTU_IMAGE)" \
     --build-arg "GCC_VERSION=$(version_of GCC_VERSION)" \
     --build-arg "LLVM_VERSION=$(version_of LLVM_VERSION)" \
+    --build-arg "LIBCXX_VERSION=$(version_of LIBCXX_VERSION)" \
     --build-arg "CMAKE_VERSION=$(version_of CMAKE_VERSION)" \
     --build-arg "CMAKE_SHA256=$(version_of CMAKE_SHA256)" \
     --build-arg "VCPKG_COMMIT=${vcpkg_commit}" \

@@ -92,6 +92,25 @@
       }
     },
     {
+      "name": "dev-libcxx",
+      "inherits": [
+        "base"
+      ],
+      "displayName": "Developer: Clang + libc++ debug",
+      "description": "Clang with libc++ (LIBCXX_VERSION in tools/versions.env) as the closest Linux stand-in for Apple Clang; catches libc++ gaps (constexpr variant/std::string, stop_token, ranges) before the macOS job. C++ vcpkg ports use the x64-linux-libcxx overlay triplet.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++-libcxx",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-libcxx"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
       "name": "asan",
       "inherits": [
         "base",
@@ -172,7 +191,7 @@
       "name": "ci-macos",
       "inherits": "base",
       "displayName": "CI: macOS arm64 Apple Clang",
-      "description": "macOS build-and-test job. The deployment target (macOS 14, plan §6.24) is passed to vcpkg's port builds through the environment. A preset's environment key replaces the inherited one, so VCPKG_KEEP_ENV_VARS repeats base's QT_ROOT_DIR.",
+      "description": "macOS build-and-test job. The deployment target (macOS 14, plan \u00a76.24) is passed to vcpkg's port builds through the environment. A preset's environment key replaces the inherited one, so VCPKG_KEEP_ENV_VARS repeats base's QT_ROOT_DIR.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_CXX_COMPILER": "clang++",
@@ -226,6 +245,10 @@
     {
       "name": "dev-clang",
       "configurePreset": "dev-clang"
+    },
+    {
+      "name": "dev-libcxx",
+      "configurePreset": "dev-libcxx"
     },
     {
       "name": "asan",
@@ -291,6 +314,11 @@
       "name": "dev-clang",
       "inherits": "test-base",
       "configurePreset": "dev-clang"
+    },
+    {
+      "name": "dev-libcxx",
+      "inherits": "test-base",
+      "configurePreset": "dev-libcxx"
     },
     {
       "name": "asan",
@@ -378,6 +406,23 @@
         {
           "type": "test",
           "name": "dev-clang"
+        }
+      ]
+    },
+    {
+      "name": "dev-libcxx",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev-libcxx"
+        },
+        {
+          "type": "build",
+          "name": "dev-libcxx"
+        },
+        {
+          "type": "test",
+          "name": "dev-libcxx"
         }
       ]
     },
