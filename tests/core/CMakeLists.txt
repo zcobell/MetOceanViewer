@@ -17,3 +17,23 @@ mov_add_test(
 )
 
 mov_add_fuzz_test(fuzz_parse_version SOURCES fuzz_parse_version.cpp LIBRARIES mov::core CORPUS core/parse_version)
+mov_add_fuzz_test(fuzz_parse_unit SOURCES fuzz_parse_unit.cpp LIBRARIES mov::core CORPUS core/parse_unit)
+mov_add_fuzz_test(
+    fuzz_parse_utc_datetime
+    SOURCES fuzz_parse_utc_datetime.cpp
+    LIBRARIES mov::core
+    CORPUS core/parse_utc_datetime
+)
+mov_add_fuzz_test(
+    fuzz_parse_vertical_datum
+    SOURCES fuzz_parse_vertical_datum.cpp
+    LIBRARIES mov::core
+    CORPUS core/parse_vertical_datum
+)
+mov_add_fuzz_test(
+    fuzz_parse_quantity_token
+    SOURCES fuzz_parse_quantity_token.cpp
+    LIBRARIES mov::core
+    CORPUS core/parse_quantity_token
+)
+mov_add_fuzz_test(fuzz_checked_time SOURCES fuzz_checked_time.cpp LIBRARIES mov::core CORPUS core/checked_time)
