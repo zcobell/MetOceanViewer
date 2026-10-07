@@ -3,7 +3,14 @@
 
 mov_add_test(
     mov_core_tests
-    SOURCES test_version.cpp test_time.cpp test_units.cpp test_datum.cpp test_quantity.cpp test_toolchain_probe.cpp
+    SOURCES
+        test_version.cpp
+        test_time.cpp
+        test_units.cpp
+        test_datum.cpp
+        test_quantity.cpp
+        test_toolchain_probe.cpp
+        test_meta.cpp
     CONSTEXPR_SOURCES
         test_version_constexpr.cpp
         test_numeric_constexpr.cpp
