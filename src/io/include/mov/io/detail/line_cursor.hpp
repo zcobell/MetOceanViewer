@@ -40,12 +40,10 @@ class LineCursor {
     const std::string_view rest = text_.substr(position_);
     const std::size_t newline = rest.find('\n');
     const bool terminated = newline != std::string_view::npos;
-    std::string_view line = rest.substr(0, terminated ? newline : rest.size());
+    const std::string_view line =
+        rest.substr(0, terminated ? newline : rest.size());
     position_ += line.size() + (terminated ? 1U : 0U);
-    if (line.ends_with('\r')) {
-      line.remove_suffix(1);
-    }
-    return Line{.number = ++number_, .text = line};
+    return Line{.number = ++number_, .text = without_cr(line)};
   }
 
   /// True when `next()` would return nullopt.
@@ -58,6 +56,12 @@ class LineCursor {
 
  private:
   static constexpr std::string_view utf8_bom{"\xEF\xBB\xBF"};
+
+  // One CR before the terminator is part of a CRLF, not of the line.
+  [[nodiscard]] static std::string_view without_cr(
+      std::string_view line) noexcept {
+    return line.ends_with('\r') ? line.substr(0, line.size() - 1) : line;
+  }
 
   [[nodiscard]] static std::string_view skip_bom(
       std::string_view text) noexcept {

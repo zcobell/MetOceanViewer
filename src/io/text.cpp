@@ -18,24 +18,18 @@
 #include "mov/core/detail/ascii.hpp"
 #include "mov/core/detail/numeric.hpp"
 
+#if defined(__APPLE__)
+#include <xlocale.h>  // strtod_l, newlocale, freelocale
+#endif
+
 namespace mov::io::detail {
 
 // ---- splitting and strings -----------------------------------------------
 
 std::vector<std::string_view> split_ws(std::string_view text) {
   std::vector<std::string_view> tokens;
-  std::size_t i = 0;
-  while (i < text.size()) {
-    while (i < text.size() and core::detail::is_space(text[i])) {
-      ++i;
-    }
-    const std::size_t start = i;
-    while (i < text.size() and not core::detail::is_space(text[i])) {
-      ++i;
-    }
-    if (i > start) {
-      tokens.push_back(text.substr(start, i - start));
-    }
+  while (const auto word = next_word(text)) {
+    tokens.push_back(*word);
   }
   return tokens;
 }
@@ -72,9 +66,7 @@ std::string to_lower_ascii(std::string_view text) {
 
 std::string to_upper_ascii(std::string_view text) {
   std::string out{text};
-  std::ranges::transform(out, out.begin(), [](char c) noexcept {
-    return (c >= 'a' and c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
-  });
+  std::ranges::transform(out, out.begin(), core::detail::to_upper);
   return out;
 }
 
@@ -117,30 +109,34 @@ bool consume_exponent(std::string_view& rest) noexcept {
   return digits > 0;
 }
 
+bool has_nonzero_digit(std::string_view digits) noexcept {
+  return std::ranges::any_of(
+      digits, [](char c) noexcept { return c >= '1' and c <= '9'; });
+}
+
 std::expected<Decimal, NumberError> scan_decimal(std::string_view token) {
   if (token.empty()) {
     return std::unexpected{NumberError::empty};
   }
   std::string_view rest = token;
-  if (rest.front() == '+' or rest.front() == '-') {
-    rest.remove_prefix(1);
-  }
-  const std::string_view mantissa_start = rest;
-  rest.remove_prefix(digit_run(rest));
+  const Sign sign = strip_sign(rest);
+  const std::size_t integer_digits = digit_run(rest);
+  const std::string_view integer_part = rest.substr(0, integer_digits);
+  rest.remove_prefix(integer_digits);
+  std::string_view fraction_part;
   if (not rest.empty() and rest.front() == '.') {
     rest.remove_prefix(1);
-    rest.remove_prefix(digit_run(rest));
+    const std::size_t fraction_digits = digit_run(rest);
+    fraction_part = rest.substr(0, fraction_digits);
+    rest.remove_prefix(fraction_digits);
   }
-  const std::string_view mantissa =
-      mantissa_start.substr(0, mantissa_start.size() - rest.size());
-  const bool has_digit = std::ranges::any_of(mantissa, is_digit);
-  if (not has_digit or not consume_exponent(rest) or not rest.empty()) {
+  if ((integer_part.empty() and fraction_part.empty()) or
+      not consume_exponent(rest) or not rest.empty()) {
     return std::unexpected{NumberError::bad_syntax};
   }
-  const bool nonzero = std::ranges::any_of(
-      mantissa, [](char c) noexcept { return c >= '1' and c <= '9'; });
-  return Decimal{.text = token.front() == '+' ? token.substr(1) : token,
-                 .nonzero = nonzero};
+  return Decimal{.text = sign == Sign::plus ? token.substr(1) : token,
+                 .nonzero = has_nonzero_digit(integer_part) or
+                            has_nonzero_digit(fraction_part)};
 }
 
 // The shared verdict on a converted value: a nonzero decimal that became zero

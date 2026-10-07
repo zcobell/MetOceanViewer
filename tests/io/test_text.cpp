@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "mov/io/detail/line_cursor.hpp"
+#include "mov/io/detail/parse_at.hpp"
 #include "mov/io/detail/text.hpp"
 
 namespace {
@@ -638,4 +639,128 @@ TEST_CASE("parse_double ignores the global C locale",
     CHECK(parse("1.5e3") == 1500.0);
   }
   CHECK(detail::parse_int<int>("1234") == 1234);
+}
+
+// ---- next_word, bounded splits, signs, parse_at
+// ------------------------------
+
+TEST_CASE("next_word walks the words of a line", "[io][detail][text]") {
+  std::string_view rest = "  alpha \t beta\r\n gamma  ";
+  CHECK(detail::next_word(rest) == "alpha");
+  CHECK(detail::next_word(rest) == "beta");
+  CHECK(detail::next_word(rest) == "gamma");
+  CHECK(detail::next_word(rest) == std::nullopt);
+  CHECK(detail::next_word(rest) == std::nullopt);
+  std::string_view empty;
+  CHECK(detail::next_word(empty) == std::nullopt);
+  STATIC_REQUIRE(detail::skip_space("  \tx y") == "x y");
+  STATIC_REQUIRE(detail::skip_space("   ").empty());
+  STATIC_REQUIRE(detail::skip_space("").empty());
+}
+
+TEST_CASE("split_ws_into counts no further than one past the room",
+          "[io][detail][text]") {
+  std::array<std::string_view, 3> out{};
+  CHECK(detail::split_ws_into("", out) == 0);
+  CHECK(detail::split_ws_into("a b", out) == 2);
+  CHECK(out[0] == "a");
+  CHECK(out[1] == "b");
+  CHECK(detail::split_ws_into(" a b c ", out) == 3);
+  CHECK(out[2] == "c");
+  // A fourth word is counted (the caller learns the line is too long) and a
+  // fifth is not looked for.
+  CHECK(detail::split_ws_into("a b c d e f", out) == 4);
+  CHECK(out[2] == "c");
+  CHECK(detail::split_ws_into("a", std::span<std::string_view>{}) == 1);
+  CHECK(detail::split_ws_into("a b", std::span<std::string_view>{}) == 1);
+}
+
+TEST_CASE("split_ws<N> wants exactly N words", "[io][detail][text]") {
+  using Three = std::array<std::string_view, 3>;
+  CHECK(detail::split_ws<3>("29.98  -90.01\t12") ==
+        std::optional<Three>{Three{"29.98", "-90.01", "12"}});
+  CHECK(not detail::split_ws<3>("1 2").has_value());
+  CHECK(not detail::split_ws<3>("1 2 3 4").has_value());
+  CHECK(not detail::split_ws<3>("").has_value());
+  CHECK(detail::split_ws<0>("  ").has_value());
+  CHECK(not detail::split_ws<0>("x").has_value());
+
+  const std::string line = "a b";
+  const auto two =
+      detail::split_ws<2>(line).value_or(std::array<std::string_view, 2>{});
+  CHECK(two[1].data() == line.data() + 2);  // a view of the line
+}
+
+namespace {
+template <class S>
+concept CanSplitThree =
+    requires(S&& s) { detail::split_ws<3>(std::forward<S>(s)); };
+}  // namespace
+
+TEST_CASE("split_ws<N> refuses a temporary std::string", "[io][detail][text]") {
+  STATIC_REQUIRE_FALSE(CanSplitThree<std::string>);
+  STATIC_REQUIRE(CanSplitThree<std::string&>);
+  STATIC_REQUIRE(CanSplitThree<std::string_view>);
+  STATIC_REQUIRE(CanSplitThree<decltype("a b c")>);
+}
+
+TEST_CASE("strip_sign removes one sign and says which",
+          "[io][detail][number]") {
+  std::string_view text = "+12";
+  CHECK(detail::strip_sign(text) == detail::Sign::plus);
+  CHECK(text == "12");
+  text = "-12";
+  CHECK(detail::strip_sign(text) == detail::Sign::minus);
+  CHECK(text == "12");
+  text = "12";
+  CHECK(detail::strip_sign(text) == detail::Sign::none);
+  CHECK(text == "12");
+  text = "+-1";
+  CHECK(detail::strip_sign(text) == detail::Sign::plus);
+  CHECK(text == "-1");
+  text = "";
+  CHECK(detail::strip_sign(text) == detail::Sign::none);
+}
+
+TEST_CASE("at, double_at and int_at report the line, column and context",
+          "[io][detail][lines]") {
+  const std::string text = "header\n12 3.5x -7 99999999999 1e400\n";
+  detail::LineCursor cursor{text};
+  static_cast<void>(cursor.next());
+  const detail::LineCursor::Line line = next_or_none(cursor);
+  REQUIRE(line.number == 2);
+  const auto words = detail::split_ws(line.text);
+  REQUIRE(words.size() == 5);
+
+  CHECK(detail::double_at(line, words[0]) == 12.0);
+  const auto bad = detail::double_at(line, words[1]);
+  REQUIRE(not bad.has_value());
+  CHECK(bad.error().code() == mov::io::ParseErrc::bad_number);
+  CHECK(bad.error().line() == 2);
+  CHECK(bad.error().column() == std::optional<std::size_t>{3});
+  CHECK(bad.error().context() == line.text);
+
+  const auto big = detail::double_at(line, words[4]);
+  REQUIRE(not big.has_value());
+  CHECK(big.error().code() == mov::io::ParseErrc::out_of_range);
+  CHECK(big.error().column() == std::optional<std::size_t>{23});
+
+  CHECK(detail::int_at<int>(line, words[2]) == -7);
+  const auto not_int = detail::int_at<int>(line, words[1]);
+  REQUIRE(not not_int.has_value());
+  CHECK(not_int.error().code() == mov::io::ParseErrc::bad_integer);
+  const auto overflow = detail::int_at<int>(line, words[3]);
+  REQUIRE(not overflow.has_value());
+  CHECK(overflow.error().code() == mov::io::ParseErrc::out_of_range);
+  CHECK(overflow.error().column() == std::optional<std::size_t>{11});
+
+  // A token that is not a view of the line has no column.
+  const auto elsewhere =
+      detail::at(line, "stray", mov::io::ParseErrc::corrupt_record);
+  CHECK(not elsewhere.column().has_value());
+  CHECK(elsewhere.line() == 2);
+  CHECK(not detail::at(line, std::string_view{},
+                       mov::io::ParseErrc::corrupt_record)
+                .column()
+                .has_value());
 }

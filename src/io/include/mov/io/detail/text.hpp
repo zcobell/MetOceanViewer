@@ -8,16 +8,21 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <type_traits>
 #include <vector>
+
+#include "mov/core/detail/ascii.hpp"
 
 // The result of a function so marked holds views of the argument, so the
 // argument must outlive it. Clang and MSVC diagnose a temporary passed here;
@@ -45,12 +50,69 @@ concept TemporaryString = std::same_as<std::remove_cvref_t<S>, std::string> and
 
 // ---- splitting -----------------------------------------------------------
 
-/// The maximal runs of non-whitespace in `text`, as views of it. Whitespace
-/// is ASCII space, tab, CR, LF, VT and FF. No empty tokens.
+/// `text` without its leading whitespace (ASCII space, tab, CR, LF, VT, FF).
+[[nodiscard]] constexpr std::string_view skip_space(
+    std::string_view text) noexcept {
+  const auto first = std::ranges::find_if_not(text, core::detail::is_space);
+  return text.substr(static_cast<std::size_t>(first - text.begin()));
+}
+
+/// The primitive behind every whitespace-separated reader: skips the
+/// whitespace at the start of `rest`, returns the run of non-whitespace after
+/// it as a view, and moves `rest` past that run. nullopt when only whitespace
+/// remains.
+[[nodiscard]] constexpr std::optional<std::string_view> next_word(
+    std::string_view& rest) noexcept {
+  rest = skip_space(rest);
+  if (rest.empty()) {
+    return std::nullopt;
+  }
+  const auto last = std::ranges::find_if(rest, core::detail::is_space);
+  const auto length = static_cast<std::size_t>(last - rest.begin());
+  const std::string_view word = rest.substr(0, length);
+  rest.remove_prefix(length);
+  return word;
+}
+
+/// The maximal runs of non-whitespace in `text`, as views of it. No empty
+/// tokens.
 [[nodiscard]] std::vector<std::string_view> split_ws(
     std::string_view text MOV_LIFETIMEBOUND);
 template <TemporaryString S>
 std::vector<std::string_view> split_ws(S&&) = delete;
+
+/// The non-allocating form for a reader's hot path: puts the first
+/// `out.size()` words of `line` in `out` and returns how many words there are,
+/// counting no further than `out.size() + 1`. A result above `out.size()`
+/// means the line has more words than the caller has room for.
+[[nodiscard]] constexpr std::size_t split_ws_into(
+    std::string_view line, std::span<std::string_view> out) noexcept {
+  std::size_t count = 0;
+  while (count <= out.size()) {
+    const auto word = next_word(line);
+    if (not word) {
+      break;
+    }
+    if (count < out.size()) {
+      out[count] = *word;
+    }
+    ++count;
+  }
+  return count;
+}
+
+/// Exactly `N` words, or nullopt for fewer or more: a fixed-column row.
+template <std::size_t N>
+[[nodiscard]] constexpr std::optional<std::array<std::string_view, N>> split_ws(
+    std::string_view line MOV_LIFETIMEBOUND) noexcept {
+  std::array<std::string_view, N> words{};
+  if (split_ws_into(line, words) != N) {
+    return std::nullopt;
+  }
+  return words;
+}
+template <std::size_t N, TemporaryString S>
+std::optional<std::array<std::string_view, N>> split_ws(S&&) = delete;
 
 /// The fields of `text` between `delimiter`s, as views of it: one more field
 /// than there are delimiters, so empty fields stay ("a,,b" has three, and ""
@@ -120,6 +182,18 @@ inline constexpr bool has_floating_from_chars = true;
 inline constexpr bool has_floating_from_chars = false;
 #endif
 
+enum class Sign : std::uint8_t { none, plus, minus };
+
+/// Removes one leading '+' or '-' from `text` and says which it was.
+[[nodiscard]] constexpr Sign strip_sign(std::string_view& text) noexcept {
+  if (text.empty() or (text.front() != '+' and text.front() != '-')) {
+    return Sign::none;
+  }
+  const Sign sign = text.front() == '+' ? Sign::plus : Sign::minus;
+  text.remove_prefix(1);
+  return sign;
+}
+
 /// A whole token as an integer: `[+-]? digits`, nothing else (no whitespace,
 /// no `0x`). A value that does not fit `I`, and a minus sign on an unsigned
 /// type, give `out_of_range`.
@@ -130,22 +204,18 @@ template <std::integral I>
   if (token.empty()) {
     return std::unexpected{NumberError::empty};
   }
-  std::string_view digits = token;
-  if (digits.front() == '+') {
-    digits.remove_prefix(1);
-  }
-  const std::string_view body =
-      (not digits.empty() and digits.front() == '-' and token.front() != '+')
-          ? digits.substr(1)
-          : digits;
+  std::string_view body = token;
+  const Sign sign = strip_sign(body);
   if (body.empty() or not std::ranges::all_of(body, [](char c) noexcept {
         return c >= '0' and c <= '9';
       })) {
     return std::unexpected{NumberError::bad_syntax};
   }
+  // std::from_chars takes a '-' but not a '+'.
+  const std::string_view parsed_text = sign == Sign::minus ? token : body;
   I value{};
-  const auto parsed =
-      std::from_chars(digits.data(), digits.data() + digits.size(), value);
+  const auto parsed = std::from_chars(
+      parsed_text.data(), parsed_text.data() + parsed_text.size(), value);
   if (parsed.ec != std::errc{}) {
     return std::unexpected{NumberError::out_of_range};
   }
