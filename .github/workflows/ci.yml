@@ -128,6 +128,10 @@ jobs:
           path: ${{ steps.vcpkg.outputs.cache-path }}
           key: ${{ steps.vcpkg.outputs.cache-key }}
 
+      # Surfaces compiler diagnostics as annotations, readable without log access.
+      - name: Register compiler problem matchers
+        run: echo "::add-matcher::.github/problem-matchers/compilers.json"
+
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }}
 
