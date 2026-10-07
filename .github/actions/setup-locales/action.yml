@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+
+name: Generate locales
+description: >
+  Generate de_DE.UTF-8 on an ubuntu runner, as tools/dev/Dockerfile does. The
+  locale-independence tests of mov::io parse "1.5" under a locale whose decimal
+  separator is a comma; they fail, not skip, when it is missing
+  (MOV_REQUIRE_LOCALES in tests/io/CMakeLists.txt).
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends locales
+        sudo locale-gen de_DE.UTF-8
+        locale -a | grep -i '^de_DE\.utf-\?8$'

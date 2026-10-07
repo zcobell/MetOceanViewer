@@ -7,6 +7,10 @@
   "dependencies": [
     "catch2",
     {
+      "name": "proj",
+      "default-features": false
+    },
+    {
       "name": "netcdf-c",
       "default-features": false,
       "features": [

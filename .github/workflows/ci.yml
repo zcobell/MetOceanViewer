@@ -68,6 +68,10 @@ jobs:
         if: runner.os == 'Linux'
         uses: ./.github/actions/setup-gcc
 
+      - name: Generate de_DE.UTF-8 (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-locales
+
       # Apple Clang must provide <expected> and <format>: Xcode 16 (Apple
       # Clang 16) does; the macos-14 default Xcode 15.4 is not relied on.
       - name: Select Xcode 16 (macOS)
@@ -128,6 +132,7 @@ jobs:
         with:
           cmakeVersion: ${{ env.CMAKE_VERSION }}
       - uses: ./.github/actions/setup-gcc
+      - uses: ./.github/actions/setup-locales
       - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           key: asan
@@ -149,6 +154,7 @@ jobs:
           cmakeVersion: ${{ env.CMAKE_VERSION }}
       - uses: ./.github/actions/setup-gcc # vcpkg builds ports with c++, as in the dev image
       - uses: ./.github/actions/setup-llvm
+      - uses: ./.github/actions/setup-locales
       - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           key: fuzz
@@ -180,6 +186,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -r tools/dev/requirements.txt
       - uses: ./.github/actions/setup-gcc
+      - uses: ./.github/actions/setup-locales
       - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           key: coverage
