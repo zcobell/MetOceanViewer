@@ -28,8 +28,8 @@ using mov::core::FileStation;
 using mov::core::Location;
 using mov::io::FileError;
 using mov::io::FormatErrc;
-using mov::io::parse_adcirc_station_file;
 using mov::io::ParseErrc;
+using mov::io::ReadContext;
 using mov::io::WarningCode;
 using mov::test::epsg;
 using mov::test::find_warning;
@@ -50,6 +50,11 @@ Location where(double lat, double lon) {
   const auto made = Location::make({.lat = lat, .lon = lon});
   REQUIRE(made.has_value());
   return *made;
+}
+
+// The station file with no limits of its own.
+auto parse_adcirc_station_file(std::string_view text, Epsg crs) {
+  return mov::io::parse_adcirc_station_file(text, crs, ReadContext{});
 }
 
 std::vector<FileStation> parse_ok(std::string_view text,
@@ -217,11 +222,62 @@ TEST_CASE("the count must be a non-negative integer",
             .code() == ParseErrc::out_of_range);
 }
 
-TEST_CASE("a huge count with no stations does not allocate for it",
+TEST_CASE("a count over max_elements is too_large, before any station",
           "[io][adcirc][stations]") {
   const auto parsed =
       parse_adcirc_station_file("4000000000000\n-90.0,29.0\n", Epsg::wgs84());
+  const auto& error = parse_error_of(parsed);
+  CHECK(error.code() == ParseErrc::too_large);
+  CHECK(error.line() == 1);
+  CHECK(error.column() == std::optional<std::size_t>{0});
+
+  ReadContext small;
+  small.limits.max_elements = 2;
+  CHECK(mov::io::parse_adcirc_station_file("2\n-90,29\n-91,28\n", Epsg::wgs84(),
+                                           small)
+            .has_value());
+  CHECK(parse_error_of(mov::io::parse_adcirc_station_file(
+                           "3\n-90,29\n-91,28\n-92,27\n", Epsg::wgs84(), small))
+            .code() == ParseErrc::too_large);
+}
+
+TEST_CASE("a count within the limit but past the text is count_mismatch",
+          "[io][adcirc][stations]") {
+  const auto parsed =
+      parse_adcirc_station_file("100000\n-90.0,29.0\n", Epsg::wgs84());
   CHECK(parse_error_of(parsed).code() == ParseErrc::count_mismatch);
+}
+
+TEST_CASE("the count line splits like the others", "[io][adcirc][stations]") {
+  // Commas separate here too: "2,stations" is a count of two.
+  CHECK(parse_ok("2,stations\n-90,29\n-91,28\n").size() == 2);
+  CHECK(parse_ok("  2 \n-90,29\n-91,28\n").size() == 2);
+  CHECK(parse_error_of(parse_adcirc_station_file(",,,\n", Epsg::wgs84()))
+            .code() == ParseErrc::bad_integer);
+}
+
+TEST_CASE("a stop request is honoured while stations are read",
+          "[io][adcirc][stations]") {
+  ReadContext stopped;
+  stopped.stop = mov::io::StopToken{[] { return true; }};
+  const auto result = mov::io::parse_adcirc_station_file(
+      "2\n-90,29\n-91,28\n", Epsg::wgs84(), stopped);
+  REQUIRE(not(result.has_value()));
+  CHECK(std::holds_alternative<mov::io::Cancelled>(result.error()));
+
+  std::string many = "3000\n";
+  for (int i = 0; i < 3000; ++i) {
+    many += "-90.0,29.0\n";
+  }
+  std::size_t polls = 0;
+  ReadContext later;
+  later.stop = mov::io::StopToken{[&polls] { return ++polls >= 2; }};
+  const auto partway =
+      mov::io::parse_adcirc_station_file(many, Epsg::wgs84(), later);
+  REQUIRE(not(partway.has_value()));
+  CHECK(std::holds_alternative<mov::io::Cancelled>(partway.error()));
+  // One poll per 1024 stations: the second is at station 1024.
+  CHECK(polls == 2);
 }
 
 TEST_CASE("empty text is empty_input", "[io][adcirc][stations]") {
@@ -339,10 +395,29 @@ TEST_CASE("a CRS that is not geographic or projected is unsupported_crs",
   CHECK(error.subject == "EPSG:5703");
 }
 
-TEST_CASE("a point the projection cannot convert is out_of_range",
+TEST_CASE("a point PROJ cannot transform is bad_coordinates of its station",
           "[io][adcirc][stations][projection]") {
-  const auto parsed = parse_adcirc_station_file("1\n1e15,0.0\n", epsg(32615));
-  CHECK(parse_error_of(parsed).code() == ParseErrc::out_of_range);
+  const auto parsed = parse_adcirc_station_file(
+      "2\n788502.0,3320332.0\n1e15,0.0\n", epsg(32615));
+  const auto& error = format_error_of(parsed);
+  CHECK(error.code == FormatErrc::bad_coordinates);
+  CHECK(error.subject == "EPSG:32615");
+  CHECK(error.station == std::optional<std::size_t>{1});
+}
+
+TEST_CASE("a projection database that cannot be opened is its own error",
+          "[io][adcirc][stations][projection]") {
+  // A proj.db that is not a database, named by the override variable.
+  const mov::test::ScratchDir broken;
+  mov::test::write_bytes(broken / "proj.db", "this is not a database");
+  const mov::test::ScopedEnv env{"MOV_PROJ_DATA", broken.path().string()};
+  const auto parsed =
+      parse_adcirc_station_file("1\n788502.0,3320332.0\n", epsg(32615));
+  const auto& error = format_error_of(parsed);
+  CHECK(error.code == FormatErrc::projection_unavailable);
+  CHECK(error.subject == "EPSG:32615");
+  // WGS84 needs no database.
+  CHECK(parse_adcirc_station_file("1\n-90,29\n", Epsg::wgs84()).has_value());
 }
 
 // ---- files ----

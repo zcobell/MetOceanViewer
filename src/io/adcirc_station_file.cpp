@@ -19,6 +19,7 @@
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/projection.hpp"
@@ -81,15 +82,9 @@ std::string with_valid_utf8(std::string_view text) {
   return out;
 }
 
-std::string crs_subject(core::Epsg crs) {
-  return "EPSG:" + std::to_string(crs.code());
-}
-
-FormatError unsupported_crs(core::Epsg crs) {
-  return FormatError{.code = FormatErrc::unsupported_crs,
-                     .subject = crs_subject(crs),
-                     .station = std::nullopt,
-                     .index = std::nullopt};
+template <class E>
+auto fail(E&& e) {
+  return std::unexpected{lift<Error>(std::forward<E>(e))};
 }
 
 // One line of the station file: lon, lat, then the name's words.
@@ -137,32 +132,42 @@ ParseError position_error(const Line& line, const StationLine& fields,
 
 class StationFileReader {
  public:
-  StationFileReader(std::string_view text, Projector projector)
-      : text_{text}, cursor_{text}, projector_{std::move(projector)} {}
+  StationFileReader(std::string_view text, Projector projector,
+                    const ReadContext& ctx)
+      : text_{text},
+        cursor_{text},
+        projector_{std::move(projector)},
+        ctx_{ctx} {}
 
-  std::expected<Read<std::vector<core::FileStation>>, Error> read() {
+  std::expected<Read<std::vector<core::FileStation>>, Error> read() && {
     const auto count = read_count();
     if (not count) {
-      return std::unexpected{Error{count.error()}};
+      return fail(count.error());
     }
-    stations_.reserve(std::min(*count, text_.size() / min_line_bytes));
+    detail::reserve_capped(stations_, *count, text_.size() / min_line_bytes);
     while (stations_.size() < *count) {
+      if (stations_.size() % stations_per_stop_poll == 0 and
+          ctx_.stop.stop_requested()) {
+        return std::unexpected{Error{Cancelled{}}};
+      }
       const auto line = next_nonblank(cursor_);
       if (not line) {
-        return std::unexpected{Error{too_few()}};
+        return fail(too_few());
       }
       if (auto added = add_station(*line); not added) {
         return std::unexpected{std::move(added.error())};
       }
     }
     if (const auto extra = next_nonblank(cursor_)) {
-      return std::unexpected{
-          Error{detail::at(*extra, extra->text, ParseErrc::count_mismatch)}};
+      return fail(detail::at(*extra, extra->text, ParseErrc::count_mismatch));
     }
-    return finish();
+    return std::move(*this).finish();
   }
 
  private:
+  static constexpr std::size_t stations_per_stop_poll = 1024;
+
+  // The first field of the first non-blank line.
   std::expected<std::size_t, ParseError> read_count() {
     const auto line = next_nonblank(cursor_);
     if (not line) {
@@ -170,10 +175,13 @@ class StationFileReader {
           ParseError::make(ParseErrc::empty_input, {.line = 1}, "")};
     }
     std::string_view rest = line->text;
-    // A non-blank line has a first word.
-    const std::string_view token =
-        detail::next_word(rest).value_or(std::string_view{});
-    return detail::int_at<std::size_t>(*line, token);
+    // A non-blank line has a first field (a line of commas has none).
+    const std::string_view token = next_field(rest).value_or(rest);
+    const auto count = detail::int_at<std::size_t>(*line, token);
+    if (count and *count > ctx_.limits.max_elements) {
+      return std::unexpected{detail::at(*line, token, ParseErrc::too_large)};
+    }
+    return count;
   }
 
   [[nodiscard]] ParseError too_few() const {
@@ -184,46 +192,57 @@ class StationFileReader {
   std::expected<void, Error> add_station(const Line& line) {
     const auto fields = split_station_line(line);
     if (not fields) {
-      return std::unexpected{Error{fields.error()}};
+      return fail(fields.error());
     }
     const auto x = detail::double_at(line, fields->x);
     const auto y = detail::double_at(line, fields->y);
     if (not x) {
-      return std::unexpected{Error{x.error()}};
+      return fail(x.error());
     }
     if (not y) {
-      return std::unexpected{Error{y.error()}};
+      return fail(y.error());
     }
     const auto where = projector_.to_location(core::Xy{.x = *x, .y = *y});
     if (not where) {
-      return std::unexpected{
-          Error{position_error(line, *fields, where.error())}};
+      return fail_position(line, *fields, where.error());
     }
     return append(*where, core::Xy{.x = *x, .y = *y}, fields->name_words);
   }
 
+  // A transformation PROJ could not make is a FormatError of that station; a
+  // position that is not a Location is a ParseError at its field.
+  [[nodiscard]] std::expected<void, Error> fail_position(
+      const Line& line, const StationLine& fields,
+      const ToLocationError& why) const {
+    if (const auto* projection = std::get_if<ProjectionError>(&why)) {
+      return fail(detail::to_format_error(*projection, stations_.size()));
+    }
+    return fail(position_error(line, fields, why));
+  }
+
   std::expected<void, Error> append(const core::Location& where, core::Xy xy,
                                     std::string_view name_words) {
+    const std::size_t index = stations_.size();
     std::string name = joined_words(name_words);
     if (not core::detail::is_valid_utf8(name)) {
       name = with_valid_utf8(name);
       ++names_repaired_;
     }
-    const std::string id = std::to_string(stations_.size());
+    const std::string id = std::to_string(index);
     if (name.empty()) {
       name = "Station " + id;
     }
     auto key = core::StationKey::make(id);
+    if (not key) {
+      return fail(detail::to_format_error(key.error(), index));
+    }
     auto text = core::StationText::make(std::move(name));
-    if (not key or not text) {
-      // Neither can happen: the id is digits, the name is NUL-free UTF-8.
-      return std::unexpected{Error{FormatError{.code = FormatErrc::bad_encoding,
-                                               .subject = id,
-                                               .station = stations_.size(),
-                                               .index = std::nullopt}}};
+    if (not text) {
+      return fail(detail::to_format_error(text.error(), index));
     }
     std::optional<core::NativePoint> native;
     if (projector_.crs() != core::Epsg::wgs84()) {
+      // Finite by construction: double_at accepts no NaN or infinity.
       if (auto point = core::NativePoint::make(xy, projector_.crs())) {
         native = *point;
       }
@@ -236,7 +255,7 @@ class StationFileReader {
     return {};
   }
 
-  Read<std::vector<core::FileStation>> finish() {
+  Read<std::vector<core::FileStation>> finish() && {
     std::vector<Warning> warnings;
     if (names_repaired_ > 0) {
       warnings.push_back({.code = WarningCode::invalid_utf8_replaced,
@@ -252,6 +271,7 @@ class StationFileReader {
   std::string_view text_;
   detail::LineCursor cursor_;
   Projector projector_;
+  const ReadContext& ctx_;
   std::vector<core::FileStation> stations_;
   std::size_t names_repaired_{0};
 };
@@ -259,12 +279,13 @@ class StationFileReader {
 }  // namespace
 
 std::expected<Read<std::vector<core::FileStation>>, Error>
-parse_adcirc_station_file(std::string_view text, core::Epsg crs) {
+parse_adcirc_station_file(std::string_view text, core::Epsg crs,
+                          const ReadContext& ctx) {
   auto projector = Projector::make(crs);
   if (not projector) {
-    return std::unexpected{Error{unsupported_crs(crs)}};
+    return fail(detail::to_format_error(projector.error(), std::nullopt));
   }
-  return StationFileReader{text, *std::move(projector)}.read();
+  return StationFileReader{text, *std::move(projector), ctx}.read();
 }
 
 std::expected<Read<std::vector<core::FileStation>>, Error>
@@ -272,8 +293,8 @@ read_adcirc_station_file(const std::filesystem::path& path, core::Epsg crs,
                          const ReadContext& ctx) {
   return read_text_file(path, ctx.limits)
       .transform_error(lift<Error>)
-      .and_then([crs](const std::string& text) {
-        return parse_adcirc_station_file(text, crs);
+      .and_then([crs, &ctx](const std::string& text) {
+        return parse_adcirc_station_file(text, crs, ctx);
       });
 }
 

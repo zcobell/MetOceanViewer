@@ -147,7 +147,8 @@ TEST_CASE("a header line of words is skipped with a warning", "[io][hwm]") {
 
 TEST_CASE("a header after blank lines, and a header with other words",
           "[io][hwm]") {
-  const auto parsed = parse("\n\n# lon lat\n-90.1,29.9,0.5,1.0,1.5\n");
+  const auto parsed =
+      parse("\n\n# lon,lat,ground,observed,modeled\n-90.1,29.9,0.5,1.0,1.5\n");
   REQUIRE(parsed.has_value());
   CHECK(parsed->value.size() == 1);
   CHECK(parsed->warnings.size() == 1);
@@ -156,6 +157,22 @@ TEST_CASE("a header after blank lines, and a header with other words",
       "-90.1,29.9,0.5,1.0,1.5\n");
   REQUIRE(spaced.has_value());
   CHECK(spaced->value.size() == 1);
+}
+
+TEST_CASE("a header has the shape of a row: five or six fields", "[io][hwm]") {
+  // Words with another number of fields are not a header; they are a bad row.
+  for (const std::string_view first :
+       {"# lon lat", "lon,lat,ground,observed", "a,b,c,d,e,f,g", "x"}) {
+    INFO(first);
+    const auto result =
+        parse(std::string{first} + "\n-90.1,29.9,0.5,1.0,1.5\n");
+    const auto& error = parse_error_of(result);
+    CHECK(error.code() == ParseErrc::wrong_field_count);
+    CHECK(error.line() == 1);
+  }
+  // Five or six fields of words: a header, with six the usual.
+  CHECK(parse("a,b,c,d,e\n-90.1,29.9,0.5,1.0,1.5\n").has_value());
+  CHECK(parse("a,b,c,d,e,f\n-90.1,29.9,0.5,1.0,1.5\n").has_value());
 }
 
 TEST_CASE("a first line with a bad number is an error, not a header",
@@ -344,17 +361,21 @@ TEST_CASE("the core fixtures all parse", "[io][hwm]") {
 
 // ---- limits, cancellation, files ----
 
-TEST_CASE("more marks than max_elements is out_of_range", "[io][hwm]") {
+TEST_CASE("more marks than max_elements allows is too_large", "[io][hwm]") {
+  // The limit counts numbers: a mark is five.
   ReadContext ctx;
-  ctx.limits.max_elements = 2;
+  ctx.limits.max_elements = 10;
   const std::string text =
       "-90.1,29.9,0.5,1.0,1.5\n-90.2,29.9,0.5,1.0,1.5\n-90.3,29.9,0.5,1.0,1."
       "5\n";
   const auto result = parse_hwm_csv(text, LengthUnit::meter, ctx);
   const auto& error = parse_error_of(result);
-  CHECK(error.code() == ParseErrc::out_of_range);
+  CHECK(error.code() == ParseErrc::too_large);
   CHECK(error.line() == 3);
-  ctx.limits.max_elements = 3;
+  ctx.limits.max_elements = 14;  // two marks and some
+  CHECK(parse_error_of(parse_hwm_csv(text, LengthUnit::meter, ctx)).code() ==
+        ParseErrc::too_large);
+  ctx.limits.max_elements = 15;
   CHECK(parse_hwm_csv(text, LengthUnit::meter, ctx).has_value());
 }
 
@@ -383,8 +404,8 @@ TEST_CASE("a hostile line cannot put more than the context limit in an error",
           "[io][hwm]") {
   const std::string text = std::string(1'000'000, 'z') + "\n";
   const auto result = parse(text);
-  // One field, no number in it: a header, then no marks.
-  CHECK(parse_error_of(result).code() == ParseErrc::empty_input);
+  // One field: not a row, so not a header either.
+  CHECK(parse_error_of(result).code() == ParseErrc::wrong_field_count);
   const std::string numeric = "1," + std::string(1'000'000, 'z') + "\n";
   const auto too_long = parse(numeric);
   const auto& error = parse_error_of(too_long);

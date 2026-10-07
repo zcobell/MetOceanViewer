@@ -68,15 +68,20 @@ parse_adcirc_ascii_header(std::string_view text);
 /// "Station <id>" when there are none. `source` is `adcirc`.
 ///
 /// Errors: `empty_input`; `bad_integer` / `out_of_range` for the count;
+/// `too_large` when the count is over `ctx.limits.max_elements`;
 /// `wrong_field_count`, `bad_number` or `out_of_range` for a line, the last
 /// also when the position is not a valid Location; `count_mismatch` when the
 /// number of lines is not the count (the line is the first one that does not
-/// fit, or the last line of the file when there are too few); a FormatError
-/// `unsupported_crs` when `crs` is not a usable geographic or projected CRS.
+/// fit, or the last line of the file when there are too few); FormatErrors:
+/// `unsupported_crs` when `crs` is not a geographic or projected CRS,
+/// `projection_unavailable` when the projection database cannot be opened,
+/// `bad_coordinates` (with the station's index) when PROJ cannot transform a
+/// point; Cancelled (`ctx.stop`, polled every 1024 stations).
 /// Warnings: `invalid_utf8_replaced`, and `crs_approximate` when the
 /// projection was not exact.
 [[nodiscard]] std::expected<Read<std::vector<core::FileStation>>, Error>
-parse_adcirc_station_file(std::string_view text, core::Epsg crs);
+parse_adcirc_station_file(std::string_view text, core::Epsg crs,
+                          const ReadContext& ctx);
 
 /// parse_adcirc_station_file on a file.
 [[nodiscard]] std::expected<Read<std::vector<core::FileStation>>, Error>
@@ -90,8 +95,12 @@ struct AdcircAsciiRequest {
   AdcircKind kind;
   /// The start of the model clock: the record times are seconds after it. A
   /// run's start is not in the file; parse it with core::parse_utc_datetime.
+  /// Every record time, cold_start + seconds, must be within +-2^53 ms of the
+  /// epoch (core::max_abs_time_ms), the bound a file time keeps (SN 7).
   core::Time cold_start;
   core::StationSelection stations;
+  friend bool operator==(const AdcircAsciiRequest&,
+                         const AdcircAsciiRequest&) = default;
 };
 
 /// An output file as a table with one shared time axis and the selected
@@ -109,17 +118,23 @@ struct AdcircAsciiRequest {
 ///  - NaN, Inf and Fortran's `****` (and a number no double holds) are
 ///    `Missing` with a `nonfinite_masked` warning counting the tokens.
 ///
-/// An incomplete run is read as far as it goes:
+/// The header's NSnaps is a hint, not a bound: records are read to the end of
+/// the text (a restart appends records past it).
 ///  - the complete records are kept;
-///  - a record cut off at the end of the text (its header or station lines
-///    missing, or a last line without a newline that would be cut off) is
-///    dropped with `partial_record_dropped`;
-///  - fewer complete records than NSnaps gives `fewer_snapshots_than_header`
-///    (count: the missing ones);
-///  - a malformed line with more text after it is `ParseError::corrupt_record`
-///    (the record header must be a number and an integer, a station line the
-///    index and exactly `column_count(kind)` values), and non-blank text after
-///    NSnaps records is `trailing_text`.
+///  - a record cut off at the end of the text is dropped with
+///    `partial_record_dropped`: its header or station lines are missing, or
+///    its last line has no newline (a finished ADCIRC file always ends with
+///    one, and a file cut by a crash or a copy ends mid-line, where a
+///    truncated number still parses);
+///  - fewer complete records than NSnaps give `fewer_snapshots_than_header`
+///    and more give `more_snapshots_than_header` (count: the difference);
+///  - a malformed line with more text after it is `ParseError::corrupt_record`:
+///    a record header must be a number and an integer, a station line its
+///    1-based index in order (on the stations selected) and exactly
+///    `column_count(kind)` values, and no line of a station may be blank. The
+///    other lines of unselected stations are not read, so damage in them goes
+///    unseen. Garbage after the last record is such a line, and a cut-off
+///    record when nothing follows it; there is no separate trailing-text error.
 /// Record times that do not increase (a hot start overlaps the run it
 /// restarts) are sorted, and of equal times the first record is kept, with
 /// `times_reordered`, `duplicate_times_dropped` and
@@ -128,9 +143,10 @@ struct AdcircAsciiRequest {
 /// Other errors: FormatError `wrong_column_count` (NCOLS is not
 /// `column_count(kind)`), `station_count_mismatch` (the station list or the
 /// selection is for another count); `time_out_of_range` (a record time
-/// beyond +-2^53 ms from `cold_start`); `out_of_range` (more than
+/// beyond +-2^53 ms from the epoch); ParseError `too_large` (more than
 /// `ctx.limits.max_elements` samples); Cancelled (`ctx.stop`, polled once per
-/// record).
+/// record). Nothing is reserved from the header: the buffers grow with the
+/// records that are there, after a first estimate from the size of the first.
 [[nodiscard]] std::expected<Read<core::StationTable>, Error> parse_adcirc_ascii(
     std::string_view text, std::span<const core::FileStation> stations,
     const AdcircAsciiRequest& request, const ReadContext& ctx);

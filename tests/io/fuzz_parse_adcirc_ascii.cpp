@@ -210,28 +210,43 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     all[i] = i;
   }
   check_table(everything->value, kind, all);
-  // A garbage line of an unselected station ends the whole's last record (a
-  // dropped partial record) but not the subset's, which never reads it.
-  const bool whole_dropped_a_record =
-      std::ranges::any_of(everything->warnings, [](const io::Warning& w) {
-        return w.code == io::WarningCode::partial_record_dropped;
-      });
-  if (whole_dropped_a_record) {
-    return 0;
-  }
   if (not subset) {
     fail();  // the whole parsed, so any part must
+  }
+  // A damaged line of an unselected station can end the whole's last record
+  // (a dropped partial record) where the subset, which never reads that line,
+  // keeps one more. The records they share are the same.
+  const auto warned = [](const io::Read<core::StationTable>& r,
+                         io::WarningCode code) {
+    return std::ranges::any_of(
+        r.warnings, [code](const io::Warning& w) { return w.code == code; });
+  };
+  const bool whole_dropped_a_record =
+      warned(*everything, io::WarningCode::partial_record_dropped);
+  const bool reordered =
+      warned(*everything, io::WarningCode::times_reordered) or
+      warned(*everything, io::WarningCode::duplicate_times_dropped) or
+      warned(*subset, io::WarningCode::times_reordered) or
+      warned(*subset, io::WarningCode::duplicate_times_dropped);
+  if (whole_dropped_a_record and reordered) {
+    return 0;  // the extra record may land anywhere in the sorted axis
   }
   for (std::size_t p = 0; p < picked.size(); ++p) {
     const core::StationIndex mine{p};
     const core::StationIndex theirs{picked[p]};
-    if (not std::ranges::equal(subset->value.times(mine),
-                               everything->value.times(theirs))) {
+    const auto whole_times = everything->value.times(theirs);
+    const auto part_times = subset->value.times(mine);
+    const std::size_t extra = whole_dropped_a_record ? 1U : 0U;
+    if (part_times.size() < whole_times.size() or
+        part_times.size() > whole_times.size() + extra or
+        not std::ranges::equal(part_times.first(whole_times.size()),
+                               whole_times)) {
       fail();
     }
     for (std::size_t k = 0; k < subset->value.schema().size(); ++k) {
+      const auto part = subset->value.column(mine, core::ColumnIndex{k});
       if (not std::ranges::equal(
-              subset->value.column(mine, core::ColumnIndex{k}),
+              part.first(whole_times.size()),
               everything->value.column(theirs, core::ColumnIndex{k}))) {
         fail();
       }

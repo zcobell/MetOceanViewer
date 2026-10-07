@@ -9,7 +9,9 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -25,6 +27,41 @@
 #include "mov/test/scratch_dir.hpp"
 
 namespace mov::test {
+
+/// Sets (or, with nullopt, removes) an environment variable for the lifetime
+/// of the object, then restores the old value.
+class ScopedEnv {
+ public:
+  ScopedEnv(const char* name, const std::optional<std::string>& value)
+      : name_{name} {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (const char* old = std::getenv(name)) {
+      previous_ = old;
+    }
+    set(value);
+  }
+  ScopedEnv(const ScopedEnv&) = delete;
+  ScopedEnv& operator=(const ScopedEnv&) = delete;
+  ScopedEnv(ScopedEnv&&) = delete;
+  ScopedEnv& operator=(ScopedEnv&&) = delete;
+  ~ScopedEnv() { set(previous_); }
+
+ private:
+  void set(const std::optional<std::string>& value) const {
+#ifdef _WIN32
+    _putenv_s(name_, value ? value->c_str() : "");
+#else
+    if (value) {
+      ::setenv(name_, value->c_str(), 1);
+    } else {
+      ::unsetenv(name_);
+    }
+#endif
+  }
+
+  const char* name_;
+  std::optional<std::string> previous_;
+};
 
 /// A committed fixture's bytes.
 [[nodiscard]] inline std::string fixture_text(std::string_view relative) {

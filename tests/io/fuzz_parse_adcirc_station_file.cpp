@@ -34,15 +34,23 @@ namespace io = mov::io;
 
 [[noreturn]] void fail() { std::abort(); }
 
-// The count the first non-blank line starts with.
+// The count: the first field of the first non-blank line, where a comma or
+// white space ends a field and runs of them are one.
 std::optional<std::size_t> expected_count(std::string_view text) {
   io::detail::LineCursor cursor{text};
   while (const auto line = cursor.next()) {
-    std::string_view rest = line->text;
-    if (const auto word = io::detail::next_word(rest)) {
-      const auto count = io::detail::parse_int<std::size_t>(*word);
-      return count ? std::optional<std::size_t>{*count} : std::nullopt;
+    if (io::detail::skip_space(line->text).empty()) {
+      continue;
     }
+    std::string_view rest = line->text;
+    const std::size_t first = rest.find_first_not_of(", \t\r\n\v\f");
+    if (first == std::string_view::npos) {
+      return std::nullopt;  // a line of commas has no first field
+    }
+    rest.remove_prefix(first);
+    const auto count = io::detail::parse_int<std::size_t>(
+        rest.substr(0, rest.find_first_of(", \t\r\n\v\f")));
+    return count ? std::optional<std::size_t>{*count} : std::nullopt;
   }
   return std::nullopt;
 }
@@ -53,8 +61,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {
   const std::string storage(data, data + size);
   const std::string_view text{storage};
+  const io::ReadContext ctx{};
   const auto parsed =
-      io::parse_adcirc_station_file(text, mov::core::Epsg::wgs84());
+      io::parse_adcirc_station_file(text, mov::core::Epsg::wgs84(), ctx);
   if (not parsed) {
     if (const auto* error = std::get_if<io::ParseError>(&parsed.error())) {
       if (error->context().size() > io::ParseError::max_context_bytes) {

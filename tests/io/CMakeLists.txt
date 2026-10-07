@@ -60,6 +60,7 @@ mov_add_test(
         test_adcirc_ascii.cpp
         test_hwm_file.cpp
         test_hwm_golden.cpp
+        test_throughput.cpp
     LIBRARIES mov::io
 )
 if(MOV_PROJ_DB)
@@ -68,6 +69,9 @@ if(MOV_PROJ_DB)
         PROPERTIES COMPILE_DEFINITIONS "MOV_TEST_PROJ_DATA_DIR=\"${MOV_TEST_PROJ_DATA_DIR}\""
     )
 endif()
+
+# Replaces the global operator new to count allocations: its own executable.
+mov_add_test(mov_io_alloc_tests SOURCES test_adcirc_allocation.cpp LIBRARIES mov::io)
 
 mov_add_fuzz_test(
     fuzz_parse_adcirc_ascii

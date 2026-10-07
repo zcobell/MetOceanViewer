@@ -25,9 +25,10 @@ namespace mov::io {
 ///
 ///  - Blank lines are skipped (v4 made a zero mark of each, N20).
 ///  - The first non-blank line is a header, skipped with a
-///    `header_line_skipped` warning, when it has a field and none of its
-///    fields looks like a number. A first line with any numeric-looking field
-///    is data, and a bad one is a ParseError, not a header.
+///    `header_line_skipped` warning, when it has five or six fields, something
+///    in them, and none that looks like a number. A first line with any
+///    numeric-looking field, or with another number of fields, is data, and a
+///    bad one is a ParseError, not a header.
 ///  - A row has five fields, or six: the sixth, the difference, is ignored
 ///    (it is recomputed from the others). Fields are trimmed.
 ///  - The position goes through `Location::make`. The ground and observed
@@ -39,10 +40,10 @@ namespace mov::io {
 ///
 /// Errors: `wrong_field_count` (not five or six fields), `bad_number`,
 /// `out_of_range` (a number that does not fit a double, a position that is
-/// not a Location, an elevation beyond +-1e4 m, or more marks than
-/// `ctx.limits.max_elements`), `empty_input` (no mark at all, a header alone
-/// included), Cancelled (`ctx.stop`, polled every 1024 rows). The line and the
-/// byte column of the field are in the ParseError.
+/// not a Location, or an elevation beyond +-1e4 m), `too_large` (more than
+/// `ctx.limits.max_elements` numbers: five per mark), `empty_input` (no mark
+/// at all, a header alone included), Cancelled (`ctx.stop`, polled every 1024
+/// rows). The line and the byte column of the field are in the ParseError.
 [[nodiscard]] std::expected<Read<std::vector<core::HighWaterMark>>, Error>
 parse_hwm_csv(std::string_view text, core::LengthUnit unit,
               const ReadContext& ctx);

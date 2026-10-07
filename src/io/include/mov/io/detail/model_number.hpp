@@ -33,8 +33,9 @@ using ModelNumber = std::variant<double, NonFinite>;
 ///  - a non-finite token (is_nonfinite_token), and a number that overflows or
 ///    underflows a double, are `NonFinite`: the caller decides what that means
 ///    (the model readers make it Missing and count it);
-///  - a three-digit exponent printed without its letter (`1.5-100`) and the
-///    `D` exponent letter of double precision (`1.5D+02`).
+///  - a three-digit exponent printed without its letter (`1.5-100`: a sign and
+///    exactly three digits end the token) and the `D` exponent letter of
+///    double precision (`1.5D+02`).
 /// Any other token is the NumberError parse_double gives for it.
 [[nodiscard]] std::expected<ModelNumber, NumberError> parse_model_number(
     std::string_view token);

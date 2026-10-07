@@ -13,6 +13,7 @@
 #include <expected>
 #include <filesystem>
 #include <format>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <span>
@@ -68,7 +69,8 @@ using namespace std::string_literals;
 // The three stations of the legacy station file.
 std::vector<FileStation> three_stations() {
   auto read = mov::io::parse_adcirc_station_file(
-      fixture_text("io/adcirc/legacy/stations.csv"), Epsg::wgs84());
+      fixture_text("io/adcirc/legacy/stations.csv"), Epsg::wgs84(),
+      ReadContext{});
   REQUIRE(read.has_value());
   return std::move(read->value);
 }
@@ -234,12 +236,14 @@ TEST_CASE("legacy fort.62: B1, the vector magnitude is a square root",
   const auto magnitude = vector->magnitude();
   REQUIRE(magnitude.samples()[0].is_value());
   const double first = magnitude.samples()[0].value().value_or(-1.0);
-  // v4 computed (u^2 + v^2)^2, which is 0.0025798...
   CHECK_THAT(first, Catch::Matchers::WithinAbs(0.0507918, 1e-7));
-  CHECK(std::abs(first - 0.0025798) > 0.04);
-  const double expected = std::sqrt(4.9298094833e-2 * 4.9298094833e-2 +
-                                    1.2227184139e-2 * 1.2227184139e-2);
-  CHECK(std::abs(first - expected) < 1e-15);
+  const double u0 = 4.9298094833e-2;
+  const double v0 = 1.2227184139e-2;
+  CHECK(std::abs(first - std::sqrt((u0 * u0) + (v0 * v0))) < 1e-15);
+  // v4 computed pow(pow(u, 2) + pow(v, 2), 2) = (u^2 + v^2)^2, 6.7e-6 here.
+  const double legacy = std::pow(std::pow(u0, 2) + std::pow(v0, 2), 2);
+  CHECK(std::abs(legacy - 6.6552e-6) < 1e-9);
+  CHECK(std::abs(first - legacy) > 0.05);
 }
 
 TEST_CASE("legacy fort.71: pressure in metres of water",
@@ -368,6 +372,8 @@ TEST_CASE("NaN, Inf and **** are Missing and counted; Fortran exponents work",
   REQUIRE(result->warnings.size() == 1);
   CHECK(result->warnings[0].code == WarningCode::nonfinite_masked);
   CHECK(result->warnings[0].count == 4);
+  // The first masked token is on line 4 (the first station of record 1).
+  CHECK(result->warnings[0].subject == "first at line 4");
 }
 
 TEST_CASE("a number that is not a number at all is corrupt, not Missing",
@@ -455,7 +461,7 @@ TEST_CASE("the station list and the selection must be for the file's count",
       parse(text, AdcircKind::elevation, StationSelection::all(4));
   const auto& selection_error = format_error_of(other_selection);
   CHECK(selection_error.code == FormatErrc::station_count_mismatch);
-  CHECK(selection_error.subject == "selection");
+  CHECK(selection_error.subject == "NStations is 3, the selection is for 4");
 
   // A station list of two stations.
   auto two = three_stations();
@@ -465,7 +471,7 @@ TEST_CASE("the station list and the selection must be for the file's count",
       ReadContext{});
   const auto& list_error = format_error_of(short_list);
   CHECK(list_error.code == FormatErrc::station_count_mismatch);
-  CHECK(list_error.subject == "NStations");
+  CHECK(list_error.subject == "NStations is 3, the station list has 2");
 }
 
 TEST_CASE("the cold start is added to the record times", "[io][adcirc][time]") {
@@ -553,24 +559,13 @@ TEST_CASE("a last line cut in the middle of a number is not a value",
   }
 }
 
-TEST_CASE("a finished file without its last newline is complete",
+TEST_CASE("a last line without its newline is cut off, even when complete",
           "[io][adcirc][partial]") {
+  // A finished ADCIRC file ends with a newline. One that does not was cut by
+  // a crash or a copy, and its last number may be a truncated one that still
+  // parses, so the record it ends is dropped.
   std::string text = fixture_text("io/adcirc/elevation_small.txt");
   REQUIRE(text.ends_with('\n'));
-  text.pop_back();
-  const auto result = parse_all(text, AdcircKind::elevation);
-  REQUIRE(result.has_value());
-  CHECK(result->warnings.empty());
-  CHECK(result->value.times(StationIndex{0}).size() == 5);
-  CHECK(column_of(result->value, 2).back() == sample(2.0));
-}
-
-TEST_CASE("the same without a newline but for one record short is cut off",
-          "[io][adcirc][partial]") {
-  // Header says 6 records; the text holds 5, the last line unterminated.
-  std::string text = fixture_text("io/adcirc/elevation_small.txt");
-  const std::string_view five = "         5          3";
-  text.replace(text.find(five), five.size(), "         6          3");
   text.pop_back();
   const auto result = parse_all(text, AdcircKind::elevation);
   REQUIRE(result.has_value());
@@ -578,7 +573,34 @@ TEST_CASE("the same without a newline but for one record short is cut off",
   CHECK(warning_count(result->warnings, WarningCode::partial_record_dropped) ==
         1);
   CHECK(warning_count(result->warnings,
-                      WarningCode::fewer_snapshots_than_header) == 2);
+                      WarningCode::fewer_snapshots_than_header) == 1);
+  CHECK(column_of(result->value, 2).back() == Sample{Dry{}});
+}
+
+TEST_CASE("a record header with no newline is cut off too",
+          "[io][adcirc][partial]") {
+  const std::string text =
+      "run\n 0 3 0.6E+03 1 1\n 6.0E+02 1"s;  // no stations, no newline
+  const auto result = parse_all(text, AdcircKind::elevation);
+  REQUIRE(result.has_value());
+  CHECK(result->value.times(StationIndex{0}).empty());
+  CHECK(warning_count(result->warnings, WarningCode::partial_record_dropped) ==
+        1);
+}
+
+TEST_CASE("what a dropped record held is not counted or reported",
+          "[io][adcirc][partial]") {
+  // The second record is cut off after a NaN: only the first record's NaN
+  // is in the count, and the first masked line is the first record's.
+  const std::string text =
+      "run\n 2 3 0.6E+03 1 1\n 6.0E+02 1\n 1 NaN\n 2 0.5\n 3 0.75\n"
+      " 1.2E+03 2\n 1 NaN\n 2 NaN\n"s;
+  const auto result = parse_all(text, AdcircKind::elevation);
+  REQUIRE(result.has_value());
+  CHECK(result->value.times(StationIndex{0}).size() == 1);
+  CHECK(result->warnings.front().code == WarningCode::nonfinite_masked);
+  CHECK(result->warnings.front().count == 1);
+  CHECK(result->warnings.front().subject == "first at line 4");
 }
 
 TEST_CASE("mid-file corruption is an error, not a partial record",
@@ -632,14 +654,92 @@ TEST_CASE("a bad record header is corrupt_record unless it ends the file",
   }
 }
 
-TEST_CASE("text after the last record is trailing_text",
+TEST_CASE("records past NSnaps are read, with a warning",
           "[io][adcirc][partial]") {
   const std::string text = fixture_text("io/adcirc/elevation_small.txt") +
                            " 3.6E+03 6\n 1 0.5\n 2 0.5\n 3 0.5\n"s;
   const auto result = parse_all(text, AdcircKind::elevation);
-  const auto& error = parse_error_of(result);
-  CHECK(error.code() == ParseErrc::trailing_text);
-  CHECK(error.line() == 23);
+  REQUIRE(result.has_value());
+  CHECK(result->value.times(StationIndex{0}).size() == 6);
+  REQUIRE(result->warnings.size() == 1);
+  CHECK(result->warnings[0].code == WarningCode::more_snapshots_than_header);
+  CHECK(result->warnings[0].count == 1);
+  CHECK(result->warnings[0].subject == "NSnaps 5, read 6");
+}
+
+TEST_CASE("a restart that writes past NSnaps and overlaps the run is merged",
+          "[io][adcirc][time]") {
+  // 144 records planned, 100 written, restarted from record 90: the file
+  // holds 100 + 55 records, 11 of them for times already written, and the
+  // restart disagrees with the first run at record 100.
+  const auto result =
+      parse_all(fixture_text("io/adcirc/elevation_restart_past_header.txt"),
+                AdcircKind::elevation);
+  REQUIRE(result.has_value());
+  const StationTable& table = result->value;
+  const auto times = table.times(StationIndex{0});
+  REQUIRE(times.size() == 144);
+  CHECK(times.front() == at_seconds(600));
+  CHECK(times.back() == at_seconds(86400));
+  CHECK(std::ranges::adjacent_find(times, std::greater_equal<>{}) ==
+        times.end());
+  // The first run's record 100 is kept (1.0), not the restart's (2.0).
+  CHECK(column_of(table, 0)[99] == sample(1.0));
+  CHECK(column_of(table, 0)[100] == sample(1.01));
+  CHECK(column_of(table, 1)[143] == sample(1.54));
+  REQUIRE(result->warnings.size() == 4);
+  CHECK(warning_count(result->warnings,
+                      WarningCode::more_snapshots_than_header) == 11);
+  CHECK(warning_count(result->warnings, WarningCode::times_reordered) == 1);
+  CHECK(warning_count(result->warnings, WarningCode::duplicate_times_dropped) ==
+        11);
+  CHECK(warning_count(result->warnings,
+                      WarningCode::conflicting_duplicate_times) == 1);
+}
+
+TEST_CASE("garbage after the last record is corrupt or a cut-off record",
+          "[io][adcirc][partial]") {
+  const std::string text = fixture_text("io/adcirc/elevation_small.txt");
+  const auto last = parse_all(text + "garbage\n", AdcircKind::elevation);
+  REQUIRE(last.has_value());
+  CHECK(warning_count(last->warnings, WarningCode::partial_record_dropped) ==
+        1);
+  CHECK(last->value.times(StationIndex{0}).size() == 5);
+  const auto more = parse_all(text + "garbage\n 1 2\n", AdcircKind::elevation);
+  CHECK(parse_error_of(more).code() == ParseErrc::corrupt_record);
+}
+
+TEST_CASE("a blank line is never a station, selected or not",
+          "[io][adcirc][selection]") {
+  // Station 2's line is blank in the first of two records; only station 1 is
+  // selected, and the file is damaged all the same.
+  const std::string text =
+      "run\n 2 3 0.6E+03 1 1\n 6.0E+02 1\n 1 0.5\n\n 3 0.75\n"
+      " 1.2E+03 2\n 1 0.25\n 2 0.5\n 3 1.0\n"s;
+  CHECK(
+      parse_error_of(parse(text, AdcircKind::elevation, select({0}))).code() ==
+      ParseErrc::corrupt_record);
+}
+
+TEST_CASE("a station line must carry its own number", "[io][adcirc]") {
+  // Station 3's line says 4: a line was lost or doubled.
+  const std::string text =
+      "run\n 1 3 0.6E+03 1 1\n 6.0E+02 1\n 1 0.5\n 2 0.5\n 4 0.75\n"s;
+  const auto result = parse_all(text, AdcircKind::elevation);
+  // Last line of the text: a cut-off record.
+  REQUIRE(result.has_value());
+  CHECK(warning_count(result->warnings, WarningCode::partial_record_dropped) ==
+        1);
+  const auto more = parse_all(text + " 1.2E+03 2\n 1 0.5\n 2 0.5\n 3 0.5\n",
+                              AdcircKind::elevation);
+  const auto& error = parse_error_of(more);
+  CHECK(error.code() == ParseErrc::corrupt_record);
+  CHECK(error.line() == 6);
+  CHECK(error.column() == std::optional<std::size_t>{1});
+  // Unselected stations' numbers are not read.
+  CHECK(parse(text + " 1.2E+03 2\n 1 0.5\n 2 0.5\n 3 0.5\n",
+              AdcircKind::elevation, select({0, 1}))
+            .has_value());
 }
 
 TEST_CASE("blank lines after the last record are fine, inside are not",
@@ -791,14 +891,14 @@ TEST_CASE("D exponents and wide numbers are read", "[io][adcirc][text]") {
 
 // ---- limits and cancellation ----
 
-TEST_CASE("more samples than max_elements is out_of_range",
+TEST_CASE("more samples than max_elements is too_large",
           "[io][adcirc][limits]") {
   ReadContext ctx;
   ctx.limits.max_elements = 8;  // 3 stations x 5 records = 15
   const auto result =
       parse(fixture_text("io/adcirc/elevation_small.txt"),
             AdcircKind::elevation, StationSelection::all(3), ctx);
-  CHECK(parse_error_of(result).code() == ParseErrc::out_of_range);
+  CHECK(parse_error_of(result).code() == ParseErrc::too_large);
 
   // Only the selected stations count.
   ctx.limits.max_elements = 5;

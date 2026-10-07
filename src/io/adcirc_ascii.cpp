@@ -10,10 +10,7 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
-#include <functional>
-#include <iterator>
 #include <optional>
-#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -29,6 +26,7 @@
 #include "mov/core/station.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
+#include "mov/core/timeseries.hpp"
 #include "mov/core/units.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/model_number.hpp"
@@ -46,13 +44,12 @@ namespace {
 
 using Line = detail::LineCursor::Line;
 
-constexpr std::size_t no_slot = static_cast<std::size_t>(-1);
+template <class E>
+auto fail(E&& e) {
+  return std::unexpected{lift<Error>(std::forward<E>(e))};
+}
 
-// The shortest record header ("0 0\n") and station line ("1 0\n"): a text can
-// hold at most this many records, whatever its header claims.
-constexpr std::size_t min_line_bytes = 4;
-
-bool is_blank(std::string_view text) noexcept {
+bool blank_text(std::string_view text) noexcept {
   return detail::skip_space(text).empty();
 }
 
@@ -60,23 +57,26 @@ bool is_blank(std::string_view text) noexcept {
 // remain. Takes the cursor by value: the caller's position is unchanged.
 std::optional<Line> first_nonblank(detail::LineCursor cursor) noexcept {
   while (const auto line = cursor.next()) {
-    if (not is_blank(line->text)) {
+    if (not blank_text(line->text)) {
       return line;
     }
   }
   return std::nullopt;
 }
 
-// ---- header ----------------------------------------------------------------
-
 ParseError whole_line(ParseErrc code, const Line& line) {
   return ParseError::make(code, {.line = line.number}, line.text);
 }
 
-}  // namespace
+// ---- header ----------------------------------------------------------------
 
-std::expected<AdcircAsciiHeader, ParseError> parse_adcirc_ascii_header(
-    std::string_view text) {
+// The header, and the text after it.
+struct HeaderAndRest {
+  AdcircAsciiHeader header;
+  detail::LineCursor rest;
+};
+
+std::expected<HeaderAndRest, ParseError> read_header(std::string_view text) {
   detail::LineCursor cursor{text};
   if (not cursor.next()) {  // the run description, which is not read
     return std::unexpected{
@@ -103,37 +103,48 @@ std::expected<AdcircAsciiHeader, ParseError> parse_adcirc_ascii_header(
   if (not columns) {
     return std::unexpected{columns.error()};
   }
-  return AdcircAsciiHeader{
-      .snapshots = *snapshots, .stations = *stations, .columns = *columns};
+  return HeaderAndRest{.header = {.snapshots = *snapshots,
+                                  .stations = *stations,
+                                  .columns = *columns},
+                       .rest = cursor};
 }
 
-namespace {
+// ---- values
+// ------------------------------------------------------------------
 
-// ---- values ----
+// The model's "no data" test on a finite number: the same threshold as the
+// dry rule, which only elevation turns into Dry (design C9).
+bool is_fill(double raw) noexcept { return core::is_dry(raw); }
 
-// One station line's numbers as samples (design C9). Elevation: at or below
-// the dry threshold is Dry. Every other output: it is fill, so Missing, and a
-// fill in either component of a vector makes both Missing (N7). A number
-// that is not finite is Missing and counted.
-void classify(AdcircKind kind, std::span<const detail::ModelNumber> numbers,
-              std::span<core::Sample> out, std::size_t& nonfinite) {
+struct Classified {
+  std::array<core::Sample, 2> samples;
+  std::size_t nonfinite;  // tokens that were NaN, Inf or ****
+};
+
+// One station line's numbers as samples. Elevation: a fill is Dry. Every
+// other output: it is Missing, and a fill in either component of a vector
+// makes both Missing (N7). A number that is not finite is Missing and counted.
+Classified classify(AdcircKind kind,
+                    std::span<const detail::ModelNumber> numbers) {
+  Classified out{.samples = {}, .nonfinite = 0};
   bool fill = false;
   for (std::size_t j = 0; j < numbers.size(); ++j) {
     const double* raw = std::get_if<double>(&numbers[j]);
     if (raw == nullptr) {
-      ++nonfinite;
-      out[j] = core::Missing{};
-    } else if (core::is_dry(*raw)) {
+      ++out.nonfinite;
+    } else if (is_fill(*raw)) {
       fill = true;
-      out[j] = kind == AdcircKind::elevation ? core::Sample{core::Dry{}}
-                                             : core::Sample{core::Missing{}};
+      out.samples[j] = kind == AdcircKind::elevation
+                           ? core::Sample{core::Dry{}}
+                           : core::Sample{core::Missing{}};
     } else {
-      out[j] = core::finite_or_missing(*raw);
+      out.samples[j] = core::finite_or_missing(*raw);
     }
   }
   if (fill and kind != AdcircKind::elevation) {
-    std::ranges::fill(out.first(numbers.size()), core::Sample{core::Missing{}});
+    out.samples.fill(core::Sample{core::Missing{}});
   }
+  return out;
 }
 
 core::SeriesMeta meta_of(core::Quantity q, core::Unit unit) {
@@ -162,193 +173,121 @@ std::vector<core::SeriesMeta> schema_of(AdcircKind kind) {
   return {};
 }
 
-// ---- time axis ----
+// ---- the records
+// -----------------------------------------------------------------
 
-struct AxisReport {
-  std::size_t descents{};
-  std::size_t duplicates_dropped{};
-  std::size_t conflicting{};
+// What reading one record found. A Malformed record is only an error if more
+// text follows it.
+struct Complete {
+  core::Time time;
 };
-
-// Whether snapshots a and b differ in any column.
-bool snapshots_differ(const std::vector<core::Column>& columns, std::size_t a,
-                      std::size_t b) {
-  return std::ranges::any_of(
-      columns, [a, b](const core::Column& c) { return c[a] != c[b]; });
-}
-
-// Makes the record times strictly increasing, as a restart that overlaps its
-// predecessor needs: sorts the records by time (stably), keeps the first of
-// each run of equal times, and moves the columns along. Records already in
-// order are left alone.
-AxisReport make_increasing(std::vector<core::Time>& times,
-                           std::vector<core::Column>& columns) {
-  const auto in_order = [](core::Time a, core::Time b) { return a < b; };
-  if (std::ranges::adjacent_find(times, std::not_fn(in_order)) == times.end()) {
-    return {};
-  }
-  AxisReport report;
-  for (std::size_t i = 1; i < times.size(); ++i) {
-    report.descents += times[i] < times[i - 1] ? 1U : 0U;
-  }
-  std::vector<std::size_t> order(times.size());
-  std::ranges::copy(std::views::iota(std::size_t{0}, times.size()),
-                    order.begin());
-  std::ranges::stable_sort(order, {},
-                           [&times](std::size_t i) { return times[i]; });
-  std::vector<std::size_t> kept;
-  kept.reserve(order.size());
-  for (const std::size_t i : order) {
-    if (not kept.empty() and times[kept.back()] == times[i]) {
-      ++report.duplicates_dropped;
-      report.conflicting += snapshots_differ(columns, kept.back(), i) ? 1U : 0U;
-    } else {
-      kept.push_back(i);
-    }
-  }
-  const auto gather = [&kept](const auto& from) {
-    std::remove_cvref_t<decltype(from)> to;
-    to.reserve(kept.size());
-    std::ranges::transform(kept, std::back_inserter(to),
-                           [&from](std::size_t i) { return from[i]; });
-    return to;
-  };
-  times = gather(times);
-  for (core::Column& column : columns) {
-    column = gather(column);
-  }
-  return report;
-}
-
-// ---- the records ----
-
-enum class Outcome : std::uint8_t {
-  complete,   // a whole record is in the scratch row
-  clean_end,  // the text ended between records
-  cut_off,    // the text ended inside a record
-  malformed,  // a line is not what the record needs (see malformed_)
+struct CleanEnd {};  // the text ended between records
+struct CutOff {};    // the text ended inside a record
+struct Malformed {
+  ParseError error;
 };
+using RecordOutcome = std::variant<Complete, CleanEnd, CutOff, Malformed>;
+
+enum class Ending : std::uint8_t { clean, cut_off };
+
+// The scratch row and the columns are [variable][selected position], like
+// core::Variable::per_station.
+using Row = std::vector<std::vector<core::Sample>>;
+using Columns = std::vector<std::vector<core::Column>>;
+
+// Station index -> position in the selection, for the stations selected.
+std::vector<std::optional<std::size_t>> slots_of(
+    const core::StationSelection& picked, std::size_t stations) {
+  std::vector<std::optional<std::size_t>> slots(stations);
+  const auto indices = picked.indices();
+  for (std::size_t p = 0; p < indices.size(); ++p) {
+    slots[indices[p]] = p;
+  }
+  return slots;
+}
 
 class AsciiReader {
  public:
-  AsciiReader(std::string_view text,
+  AsciiReader(std::string_view text, HeaderAndRest parsed,
               std::span<const core::FileStation> stations,
-              const AdcircAsciiRequest& request, const ReadContext& ctx,
-              const AdcircAsciiHeader& header)
-      : text_{text},
-        cursor_{text},
+              const AdcircAsciiRequest& request, const ReadContext& ctx)
+      : cursor_{parsed.rest},
+        header_{parsed.header},
         stations_{stations},
         request_{request},
         ctx_{ctx},
-        header_{header},
         value_columns_{column_count(request.kind)},
         selected_{request.stations.indices().size()},
-        ends_with_newline_{text.ends_with('\n')} {}
+        ends_with_newline_{text.ends_with('\n')},
+        slot_{slots_of(request.stations, header_.stations)},
+        row_(value_columns_, std::vector<core::Sample>(selected_)),
+        columns_(value_columns_, std::vector<core::Column>(selected_)) {}
 
-  std::expected<Read<core::StationTable>, Error> read() {
-    skip_description_and_header();
-    prepare();
-    if (auto stopped = read_records(); not stopped) {
-      return std::unexpected{std::move(stopped.error())};
+  std::expected<Read<core::StationTable>, Error> read() && {
+    const auto ended = read_records();
+    if (not ended) {
+      return std::unexpected{ended.error()};
     }
-    return assemble();
+    return std::move(*this).assemble(*ended);
   }
 
  private:
-  void skip_description_and_header() {
-    // parse_adcirc_ascii_header has read both lines already.
-    static_cast<void>(cursor_.next());
-    static_cast<void>(cursor_.next());
-  }
-
-  void prepare() {
-    slot_.assign(header_.stations, no_slot);
-    const auto picked = request_.stations.indices();
-    for (std::size_t p = 0; p < picked.size(); ++p) {
-      slot_[picked[p]] = p;
-    }
-    columns_.resize(value_columns_ * selected_);
-    row_.resize(value_columns_ * selected_);
-    // A header can claim any number of records; the text can hold only so many.
-    const std::size_t room =
-        text_.size() / (min_line_bytes * (1 + header_.stations));
-    const std::size_t expected = std::min(header_.snapshots, room);
-    times_.reserve(expected);
-    for (core::Column& column : columns_) {
-      column.reserve(expected);
-    }
-  }
-
-  std::expected<void, Error> read_records() {
-    for (std::size_t record = 0; record < header_.snapshots; ++record) {
+  std::expected<Ending, Error> read_records() {
+    for (;;) {
       if (ctx_.stop.stop_requested()) {
         return std::unexpected{Error{Cancelled{}}};
       }
-      const auto outcome = read_record(record);
+      const auto outcome = read_record();
       if (not outcome) {
-        return std::unexpected{outcome.error()};
+        return fail(outcome.error());
       }
-      switch (*outcome) {
-        case Outcome::complete:
-          if (auto fits = commit(); not fits) {
-            return fits;
-          }
-          continue;
-        case Outcome::clean_end:
-          return {};
-        case Outcome::cut_off:
-          partial_ = true;
-          return {};
-        case Outcome::malformed:
-          // The last thing in the text is a cut-off record; anything after a
-          // malformed line means the file is damaged.
-          if (malformed_ and first_nonblank(cursor_)) {
-            return std::unexpected{Error{*malformed_}};
-          }
-          partial_ = true;
-          return {};
+      if (const auto* done = std::get_if<Complete>(&*outcome)) {
+        if (auto fits = commit(done->time); not fits) {
+          return std::unexpected{std::move(fits.error())};
+        }
+      } else if (std::holds_alternative<CleanEnd>(*outcome)) {
+        return Ending::clean;
+      } else if (std::holds_alternative<CutOff>(*outcome)) {
+        return Ending::cut_off;
+      } else {
+        // The last thing in the text is a cut-off record; anything after a
+        // malformed line means the file is damaged.
+        if (first_nonblank(cursor_)) {
+          return fail(std::get<Malformed>(*outcome).error);
+        }
+        return Ending::cut_off;
       }
     }
-    if (const auto extra = first_nonblank(cursor_)) {
-      return std::unexpected{
-          Error{whole_line(ParseErrc::trailing_text, *extra)}};
-    }
-    return {};
   }
 
-  // True when the text ends in the middle of this line: it has no newline and
-  // does not finish the run (a run that was cut off by a copy or a crash ends
-  // mid-line far more often than a finished one lacks its last newline).
-  [[nodiscard]] bool cut_in_line(bool finishes_run) const noexcept {
-    return cursor_.at_end() and not ends_with_newline_ and not finishes_run;
+  // True when the line just read is the last of a text with no final
+  // newline. A finished ADCIRC file always ends with one, and a file cut by a
+  // crash or a copy ends mid-line, where a truncated number still parses.
+  [[nodiscard]] bool cut_in_line() const noexcept {
+    return cursor_.at_end() and not ends_with_newline_;
   }
 
-  Outcome malformed_line(const Line& line) {
-    malformed_ = whole_line(ParseErrc::corrupt_record, line);
-    return Outcome::malformed;
-  }
-
-  Outcome malformed_at(const Line& line, std::string_view token) {
-    malformed_ = detail::at(line, token, ParseErrc::corrupt_record);
-    return Outcome::malformed;
-  }
-
-  std::expected<Outcome, Error> read_record(std::size_t record) {
+  // ParseError: a record time that is a number but not a time.
+  std::expected<RecordOutcome, ParseError> read_record() {
+    record_start_ = cursor_.remaining_bytes();
+    pending_nonfinite_ = 0;
+    pending_first_masked_ = 0;
     const auto head = cursor_.next();
     if (not head) {
-      return Outcome::clean_end;
+      return RecordOutcome{CleanEnd{}};
     }
-    if (is_blank(head->text)) {
-      return first_nonblank(cursor_) ? malformed_line(*head)
-                                     : Outcome::clean_end;
+    if (is_blank(*head)) {
+      return first_nonblank(cursor_) ? RecordOutcome{Malformed{whole_line(
+                                           ParseErrc::corrupt_record, *head)}}
+                                     : RecordOutcome{CleanEnd{}};
     }
-    const bool last_record = record + 1 == header_.snapshots;
-    if (cut_in_line(last_record and header_.stations == 0)) {
-      return Outcome::cut_off;
+    if (cut_in_line()) {
+      return RecordOutcome{CutOff{}};
     }
     std::array<std::string_view, 2> words{};
     if (detail::split_ws_into(head->text, words) != words.size()) {
-      return malformed_line(*head);
+      return RecordOutcome{
+          Malformed{whole_line(ParseErrc::corrupt_record, *head)}};
     }
     const auto seconds = detail::parse_model_number(words[0]);
     const double* const record_seconds =
@@ -363,73 +302,148 @@ class AsciiReader {
         *record_seconds, std::chrono::milliseconds{1000}, request_.cold_start);
     if (not time) {
       return std::unexpected{
-          Error{detail::at(*head, words[0], ParseErrc::time_out_of_range)}};
+          detail::at(*head, words[0], ParseErrc::time_out_of_range)};
     }
-    pending_time_ = *time;
-    return read_stations(last_record);
+    return read_stations(*time);
   }
 
-  Outcome read_stations(bool last_record) {
+  static bool is_blank(const Line& line) noexcept {
+    return blank_text(line.text);
+  }
+
+  static RecordOutcome malformed_at(const Line& line, std::string_view token) {
+    return Malformed{detail::at(line, token, ParseErrc::corrupt_record)};
+  }
+
+  RecordOutcome read_stations(core::Time time) {
     for (std::size_t i = 0; i < header_.stations; ++i) {
       const auto line = cursor_.next();
-      if (not line) {
-        return Outcome::cut_off;
+      if (not line or cut_in_line()) {
+        return CutOff{};
       }
-      if (cut_in_line(last_record and i + 1 == header_.stations)) {
-        return Outcome::cut_off;
+      // A blank line is never a station, selected or not; the other lines of
+      // stations nobody selected are skipped, not read.
+      if (is_blank(*line)) {
+        return Malformed{whole_line(ParseErrc::corrupt_record, *line)};
       }
-      // The lines of stations nobody selected are skipped, not read.
-      if (slot_[i] == no_slot) {
+      const std::optional<std::size_t>& slot = slot_[i];
+      if (not slot) {
         continue;
       }
-      if (const auto bad = read_values(*line, slot_[i])) {
-        return *bad;
+      if (const auto read = read_values(*line, i, *slot); not read) {
+        return Malformed{read.error()};
       }
     }
-    return Outcome::complete;
+    return Complete{time};
   }
 
-  // Fills this station's cells of the scratch row; nullopt, or what is wrong.
-  std::optional<Outcome> read_values(const Line& line, std::size_t slot) {
+  // Fills this station's cells of the scratch row.
+  std::expected<void, ParseError> read_values(const Line& line,
+                                              std::size_t station,
+                                              std::size_t position) {
     std::array<std::string_view, 3> words{};
     const std::span<std::string_view> room =
         std::span{words}.first(value_columns_ + 1);
     if (detail::split_ws_into(line.text, room) != room.size()) {
-      return malformed_line(line);
+      return std::unexpected{whole_line(ParseErrc::corrupt_record, line)};
+    }
+    // Stations are numbered 1..N in order: a line out of step is a record
+    // whose lines are missing or doubled.
+    const auto index = detail::parse_int<std::size_t>(words[0]);
+    if (not index or *index != station + 1) {
+      return std::unexpected{
+          detail::at(line, words[0], ParseErrc::corrupt_record)};
     }
     std::array<detail::ModelNumber, 2> numbers;
     for (std::size_t j = 0; j < value_columns_; ++j) {
       const auto number = detail::parse_model_number(words[1 + j]);
       if (not number) {
-        return malformed_at(line, words[1 + j]);
+        return std::unexpected{
+            detail::at(line, words[1 + j], ParseErrc::corrupt_record)};
       }
       numbers[j] = *number;
     }
-    std::array<core::Sample, 2> samples;
-    classify(request_.kind, std::span{numbers}.first(value_columns_), samples,
-             nonfinite_);
+    const Classified classified =
+        classify(request_.kind, std::span{numbers}.first(value_columns_));
+    if (classified.nonfinite > 0 and pending_nonfinite_ == 0) {
+      pending_first_masked_ = line.number;
+    }
+    pending_nonfinite_ += classified.nonfinite;
     for (std::size_t j = 0; j < value_columns_; ++j) {
-      row_[j * selected_ + slot] = samples[j];
-    }
-    return std::nullopt;
-  }
-
-  std::expected<void, Error> commit() {
-    times_.push_back(pending_time_);
-    for (std::size_t k = 0; k < columns_.size(); ++k) {
-      columns_[k].push_back(row_[k]);
-    }
-    if (not row_.empty() and
-        times_.size() > ctx_.limits.max_elements / row_.size()) {
-      return std::unexpected{Error{ParseError::make(
-          ParseErrc::out_of_range, {.line = cursor_.lines_read()},
-          "more samples than ReadLimits::max_elements")}};
+      row_[j][position] = classified.samples[j];
     }
     return {};
   }
 
+  std::expected<void, Error> commit(core::Time time) {
+    times_.push_back(time);
+    for (std::size_t j = 0; j < value_columns_; ++j) {
+      for (std::size_t p = 0; p < selected_; ++p) {
+        columns_[j][p].push_back(row_[j][p]);
+      }
+    }
+    if (pending_nonfinite_ > 0 and nonfinite_ == 0) {
+      first_masked_line_ = pending_first_masked_;
+    }
+    nonfinite_ += pending_nonfinite_;
+    const std::size_t cells = value_columns_ * selected_;
+    if (cells > 0 and times_.size() > ctx_.limits.max_elements / cells) {
+      return fail(
+          ParseError::make(ParseErrc::too_large, {.line = cursor_.lines_read()},
+                           "more samples than ReadLimits::max_elements"));
+    }
+    if (times_.size() == 1) {
+      reserve_for_the_rest(cells);
+    }
+    return {};
+  }
+
+  // The first record is the only evidence of how big a record is: the rest of
+  // the text can hold about remaining / size more. The header's NSnaps is a
+  // hint, never a promise, and the limit still applies.
+  void reserve_for_the_rest(std::size_t cells) {
+    const std::size_t first_bytes =
+        std::max<std::size_t>(record_start_ - cursor_.remaining_bytes(), 1);
+    const std::size_t by_text = cursor_.remaining_bytes() / first_bytes + 1;
+    const std::size_t by_limit =
+        cells > 0 ? ctx_.limits.max_elements / cells : by_text;
+    const std::size_t cap = std::min(by_text, by_limit);
+    detail::reserve_capped(times_, header_.snapshots, cap);
+    for (auto& variable : columns_) {
+      for (core::Column& column : variable) {
+        detail::reserve_capped(column, header_.snapshots, cap);
+      }
+    }
+  }
+
+  [[nodiscard]] bool rows_differ(std::size_t a, std::size_t b) const {
+    return std::ranges::any_of(columns_, [a, b](const auto& variable) {
+      return std::ranges::any_of(
+          variable, [a, b](const core::Column& c) { return c[a] != c[b]; });
+    });
+  }
+
+  // Keeps the records `kept` lists, in that order.
+  void keep_records(std::span<const std::size_t> kept) {
+    const auto gather = [kept](auto& values) {
+      std::remove_cvref_t<decltype(values)> out;
+      out.reserve(kept.size());
+      for (const std::size_t i : kept) {
+        out.push_back(values[i]);
+      }
+      values = std::move(out);
+    };
+    gather(times_);
+    for (auto& variable : columns_) {
+      for (core::Column& column : variable) {
+        gather(column);
+      }
+    }
+  }
+
   [[nodiscard]] std::vector<Warning> warnings(
-      const AxisReport& axis, std::size_t complete_records) const {
+      Ending ended, std::size_t complete_records,
+      const core::NormalizeReport& axis) const {
     std::vector<Warning> out;
     const auto add = [&out](WarningCode code, std::string subject,
                             std::size_t count) {
@@ -438,37 +452,47 @@ class AsciiReader {
             .code = code, .subject = std::move(subject), .count = count});
       }
     };
-    add(WarningCode::nonfinite_masked, {}, nonfinite_);
-    if (partial_) {
+    add(WarningCode::nonfinite_masked,
+        "first at line " + std::to_string(first_masked_line_), nonfinite_);
+    if (ended == Ending::cut_off) {
       add(WarningCode::partial_record_dropped,
           "record " + std::to_string(complete_records + 1), 1);
     }
+    const std::string counts = "NSnaps " + std::to_string(header_.snapshots) +
+                               ", read " + std::to_string(complete_records);
     if (complete_records < header_.snapshots) {
-      add(WarningCode::fewer_snapshots_than_header,
-          "NSnaps " + std::to_string(header_.snapshots) + ", read " +
-              std::to_string(complete_records),
+      add(WarningCode::fewer_snapshots_than_header, counts,
           header_.snapshots - complete_records);
+    }
+    if (complete_records > header_.snapshots) {
+      add(WarningCode::more_snapshots_than_header, counts,
+          complete_records - header_.snapshots);
     }
     add(WarningCode::times_reordered, {}, axis.descents);
     add(WarningCode::duplicate_times_dropped, {}, axis.duplicates_dropped);
-    add(WarningCode::conflicting_duplicate_times, {}, axis.conflicting);
+    add(WarningCode::conflicting_duplicate_times, {},
+        axis.conflicting_duplicates);
     return out;
   }
 
-  std::expected<Read<core::StationTable>, Error> assemble() {
+  std::expected<Read<core::StationTable>, Error> assemble(Ending ended) && {
     const std::size_t complete_records = times_.size();
-    const AxisReport axis = make_increasing(times_, columns_);
-    std::vector<Warning> notes = warnings(axis, complete_records);
+    const core::NormalizingOrder order = core::normalizing_order(
+        times_, [this](std::size_t kept, std::size_t dropped) {
+          return rows_differ(kept, dropped);
+        });
+    if (not order.report.clean()) {
+      keep_records(order.kept);
+    }
+    std::vector<Warning> notes =
+        warnings(ended, complete_records, order.report);
 
     std::vector<core::Variable> variables;
     std::vector<core::SeriesMeta> schema = schema_of(request_.kind);
+    variables.reserve(value_columns_);
     for (std::size_t j = 0; j < value_columns_; ++j) {
-      core::Variable variable{.meta = std::move(schema[j]), .per_station = {}};
-      variable.per_station.reserve(selected_);
-      for (std::size_t p = 0; p < selected_; ++p) {
-        variable.per_station.push_back(std::move(columns_[j * selected_ + p]));
-      }
-      variables.push_back(std::move(variable));
+      variables.push_back({.meta = std::move(schema[j]),
+                           .per_station = std::move(columns_[j])});
     }
     std::vector<core::StationRow> rows;
     rows.reserve(selected_);
@@ -480,30 +504,30 @@ class AsciiReader {
     auto table = core::StationTable::make(std::move(variables), std::move(axes),
                                           std::move(rows));
     if (not table) {
-      return std::unexpected{Error{detail::to_format_error(table.error())}};
+      return fail(detail::to_format_error(table.error()));
     }
     return Read<core::StationTable>{.value = *std::move(table),
                                     .warnings = std::move(notes)};
   }
 
-  std::string_view text_;
   detail::LineCursor cursor_;
+  AdcircAsciiHeader header_;
   std::span<const core::FileStation> stations_;
   const AdcircAsciiRequest& request_;
   const ReadContext& ctx_;
-  AdcircAsciiHeader header_;
   std::size_t value_columns_;
   std::size_t selected_;
   bool ends_with_newline_;
+  std::vector<std::optional<std::size_t>> slot_;
+  Row row_;                        // the record being read
+  Columns columns_;                // the complete records
+  std::vector<core::Time> times_;  // one per complete record
 
-  std::vector<std::size_t> slot_;      // station index -> selected position
-  std::vector<core::Time> times_;      // one per complete record
-  std::vector<core::Column> columns_;  // [value column * selected + position]
-  std::vector<core::Sample> row_;      // the record being read, same layout
-  core::Time pending_time_{};
-  std::optional<ParseError> malformed_;
-  bool partial_{false};
+  std::size_t record_start_{0};  // bytes left when the record began
+  std::size_t pending_nonfinite_{0};
+  std::size_t pending_first_masked_{0};
   std::size_t nonfinite_{0};
+  std::size_t first_masked_line_{0};
 };
 
 FormatError format_error(FormatErrc code, std::string subject) {
@@ -515,26 +539,40 @@ FormatError format_error(FormatErrc code, std::string subject) {
 
 }  // namespace
 
+std::expected<AdcircAsciiHeader, ParseError> parse_adcirc_ascii_header(
+    std::string_view text) {
+  return read_header(text).transform(
+      [](const HeaderAndRest& parsed) { return parsed.header; });
+}
+
 std::expected<Read<core::StationTable>, Error> parse_adcirc_ascii(
     std::string_view text, std::span<const core::FileStation> stations,
     const AdcircAsciiRequest& request, const ReadContext& ctx) {
-  const auto header = parse_adcirc_ascii_header(text);
-  if (not header) {
-    return std::unexpected{Error{header.error()}};
+  auto parsed = read_header(text);
+  if (not parsed) {
+    return fail(parsed.error());
   }
-  if (header->columns != column_count(request.kind)) {
-    return std::unexpected{
-        Error{format_error(FormatErrc::wrong_column_count, "NCOLS")}};
+  const AdcircAsciiHeader& header = parsed->header;
+  if (header.columns != column_count(request.kind)) {
+    return fail(format_error(FormatErrc::wrong_column_count,
+                             "NCOLS is " + std::to_string(header.columns) +
+                                 ", this output has " +
+                                 std::to_string(column_count(request.kind))));
   }
-  if (stations.size() != header->stations) {
-    return std::unexpected{
-        Error{format_error(FormatErrc::station_count_mismatch, "NStations")}};
+  if (stations.size() != header.stations) {
+    return fail(format_error(FormatErrc::station_count_mismatch,
+                             "NStations is " + std::to_string(header.stations) +
+                                 ", the station list has " +
+                                 std::to_string(stations.size())));
   }
-  if (not request.stations.applies_to(header->stations)) {
-    return std::unexpected{
-        Error{format_error(FormatErrc::station_count_mismatch, "selection")}};
+  if (not request.stations.applies_to(header.stations)) {
+    return fail(
+        format_error(FormatErrc::station_count_mismatch,
+                     "NStations is " + std::to_string(header.stations) +
+                         ", the selection is for " +
+                         std::to_string(request.stations.station_count())));
   }
-  return AsciiReader{text, stations, request, ctx, *header}.read();
+  return AsciiReader{text, *std::move(parsed), stations, request, ctx}.read();
 }
 
 std::expected<Read<core::StationTable>, Error> read_adcirc_ascii(
@@ -546,7 +584,7 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_ascii(
                            -> std::expected<Read<core::StationTable>, Error> {
                          const auto text = read_text_file(output, ctx.limits);
                          if (not text) {
-                           return std::unexpected{Error{text.error()}};
+                           return fail(text.error());
                          }
                          return parse_adcirc_ascii(*text, stations, request,
                                                    ctx);

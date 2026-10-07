@@ -8,6 +8,7 @@
 #include "mov/core/timeseries.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/projection.hpp"
 
 namespace {
 
@@ -55,4 +56,47 @@ TEST_CASE("a StationTable error maps to the FormatError of the same meaning",
         expected(FormatErrc::dimension_mismatch, 7, std::nullopt));
   CHECK(to_format_error(station(8, mov::core::SchemaMismatch{})) ==
         expected(FormatErrc::dimension_mismatch, 8, std::nullopt));
+}
+
+TEST_CASE("a station id or name core refused maps to its encoding error",
+          "[io][detail][table_error]") {
+  using mov::core::StationKeyError;
+  using mov::core::StationTextError;
+  CHECK(to_format_error(StationKeyError::empty, 2) ==
+        expected(FormatErrc::no_station_id, 2, std::nullopt));
+  CHECK(to_format_error(StationKeyError::embedded_nul, 3) ==
+        expected(FormatErrc::bad_encoding, 3, std::nullopt));
+  CHECK(to_format_error(StationKeyError::invalid_utf8, 4) ==
+        expected(FormatErrc::bad_encoding, 4, std::nullopt));
+  CHECK(to_format_error(StationTextError::embedded_nul, 5) ==
+        expected(FormatErrc::bad_encoding, 5, std::nullopt));
+  CHECK(to_format_error(StationTextError::invalid_utf8, 6) ==
+        expected(FormatErrc::bad_encoding, 6, std::nullopt));
+}
+
+TEST_CASE("a projection failure keeps the CRS and says which kind it was",
+          "[io][detail][table_error]") {
+  using mov::io::ProjectionErrc;
+  using mov::io::ProjectionError;
+  const auto crs = mov::core::Epsg::make(32615);
+  REQUIRE(crs.has_value());
+  const auto map = [&crs](ProjectionErrc code) {
+    return to_format_error(ProjectionError{.code = code, .crs = *crs}, 4);
+  };
+  const auto with_subject = [](FormatErrc code) {
+    FormatError e = expected(code, 4, std::nullopt);
+    e.subject = "EPSG:32615";
+    return e;
+  };
+  CHECK(map(ProjectionErrc::unknown_crs) ==
+        with_subject(FormatErrc::unsupported_crs));
+  CHECK(map(ProjectionErrc::database_unavailable) ==
+        with_subject(FormatErrc::projection_unavailable));
+  CHECK(map(ProjectionErrc::transform_failed) ==
+        with_subject(FormatErrc::bad_coordinates));
+  // No station: the CRS itself.
+  CHECK(to_format_error(
+            ProjectionError{.code = ProjectionErrc::unknown_crs, .crs = *crs},
+            std::nullopt)
+            .station == std::nullopt);
 }

@@ -94,11 +94,26 @@ TEST_CASE("parse_model_number reads a Fortran three-digit exponent",
   CHECK(finite("-1.2500000000-100") == -1.25e-100);
   CHECK(finite("1.25+100") == 1.25e100);
   CHECK(finite("+1.25+100") == 1.25e100);
-  CHECK(finite("1-5") == 1e-5);
   CHECK(finite("-1.0-308") == -1.0e-308);
   // Too small for a double: NonFinite, like any other underflow.
   CHECK(non_finite("1.0-999"));
   CHECK(non_finite("1.0+999"));
+}
+
+TEST_CASE("the letterless exponent is a sign and exactly three digits",
+          "[io][detail][model_number]") {
+  // Fortran drops the letter only when a three-digit exponent leaves no room
+  // for it; anything else is not a number.
+  for (const std::string_view token : {"1-5", "1.5-10", "1.5-1000", "1.5-10a",
+                                       "1-2-3", "1.-1", "1.5+", "1.5-"}) {
+    INFO(token);
+    CHECK(error_of(token) == NumberError::bad_syntax);
+  }
+  // A leading sign is not the exponent's; a bare signed integer is a number.
+  CHECK(finite("-100") == -100.0);
+  CHECK(finite("+100") == 100.0);
+  CHECK(finite("-1.5-100") == -1.5e-100);
+  CHECK(finite("-.5+100") == -0.5e100);
 }
 
 TEST_CASE("parse_model_number reads D exponents",
