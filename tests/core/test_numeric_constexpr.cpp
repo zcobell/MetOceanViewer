@@ -12,6 +12,7 @@
 #include "test_helpers.hpp"
 
 using mov::core::detail::is_finite;
+using mov::core::detail::is_nan;
 using mov::core::detail::magnitude;
 using mov::core::detail::round_half_away;
 using mov::test::infinity;
@@ -42,6 +43,14 @@ TEST_CASE("is_finite is false exactly for NaN and the infinities",
   STATIC_REQUIRE_FALSE(is_finite(infinity));
   STATIC_REQUIRE_FALSE(is_finite(-infinity));
   STATIC_REQUIRE_FALSE(is_finite(quiet_nan));
+  STATIC_REQUIRE(is_nan(quiet_nan));
+  STATIC_REQUIRE(is_nan(negative_nan));
+  STATIC_REQUIRE(is_nan(std::numeric_limits<double>::signaling_NaN()));
+  STATIC_REQUIRE_FALSE(is_nan(std::numeric_limits<double>::infinity()));
+  STATIC_REQUIRE_FALSE(is_nan(-std::numeric_limits<double>::infinity()));
+  STATIC_REQUIRE_FALSE(is_nan(0.0));
+  STATIC_REQUIRE_FALSE(is_nan(-0.0));
+  STATIC_REQUIRE_FALSE(is_nan(std::numeric_limits<double>::denorm_min()));
   STATIC_REQUIRE_FALSE(is_finite(negative_nan));
   STATIC_REQUIRE_FALSE(is_finite(std::numeric_limits<double>::signaling_NaN()));
 }

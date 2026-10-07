@@ -28,6 +28,15 @@ inline constexpr std::uint64_t double_exponent_mask = 0x7FF0'0000'0000'0000;
          double_exponent_mask;
 }
 
+/// True for any NaN (all-ones exponent, nonzero mantissa). Bit-level, so it
+/// is exact in constant expressions on every compiler: MSVC mis-evaluates
+/// ordered comparisons with NaN during constant evaluation.
+[[nodiscard]] constexpr bool is_nan(double v) noexcept {
+  const auto bits = std::bit_cast<std::uint64_t>(v);
+  return (bits & double_exponent_mask) == double_exponent_mask and
+         (bits & ~(double_exponent_mask | double_sign_bit)) != 0;
+}
+
 /// |v| with the sign bit cleared, so -0.0 becomes +0.0. A NaN stays a NaN.
 [[nodiscard]] constexpr double magnitude(double v) noexcept {
   return std::bit_cast<double>(std::bit_cast<std::uint64_t>(v) &

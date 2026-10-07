@@ -43,15 +43,28 @@ namespace {
 // Detected, not required: an ill-formed constant expression in a template
 // argument is a substitution failure, so these are false rather than errors.
 
-template <double V>
-inline constexpr bool llround_is_constexpr =
-    requires { typename std::integral_constant<long long, std::llround(V)>; };
-template <double V>
-inline constexpr bool fabs_is_constexpr =
-    requires { typename std::integral_constant<bool, (std::fabs(V) > 1.0)>; };
-template <double V>
-inline constexpr bool isfinite_is_constexpr =
-    requires { typename std::integral_constant<bool, std::isfinite(V)>; };
+// The argument travels in a tag type, not a `template <double>` parameter:
+// Apple Clang 16 does not support floating-point non-type template arguments.
+template <double (*F)()>
+struct Arg {
+  static constexpr double value = F();
+};
+constexpr double one() { return 1.0; }
+constexpr double two_and_a_half() { return 2.5; }
+constexpr double minus_two_and_a_half() { return -2.5; }
+
+template <class V>
+inline constexpr bool llround_is_constexpr = requires {
+  typename std::integral_constant<long long, std::llround(V::value)>;
+};
+template <class V>
+inline constexpr bool fabs_is_constexpr = requires {
+  typename std::integral_constant<bool, (std::fabs(V::value) > 1.0)>;
+};
+template <class V>
+inline constexpr bool isfinite_is_constexpr = requires {
+  typename std::integral_constant<bool, std::isfinite(V::value)>;
+};
 
 // Dependent on Available, so a library whose std::isfinite is not constexpr
 // (MSVC STL) never compiles the call. True when there is nothing to check.
@@ -142,7 +155,7 @@ constexpr int expected_chain() {
 }  // namespace
 
 TEST_CASE("probe: constexpr std::isfinite", "[core][probe][constexpr]") {
-  constexpr bool available = isfinite_is_constexpr<1.0>;
+  constexpr bool available = isfinite_is_constexpr<Arg<one>>;
   STATIC_REQUIRE(isfinite_behaves<available, double>());  // vacuous if absent
   if constexpr (not available) {
     SKIP("std::isfinite is not constexpr: the core uses detail::is_finite");
@@ -153,8 +166,8 @@ TEST_CASE("probe: constexpr std::isfinite", "[core][probe][constexpr]") {
 // test only records whether the compiler could have used them.
 TEST_CASE("probe: constexpr std::fabs and std::llround availability",
           "[core][probe]") {
-  constexpr bool has_llround = llround_is_constexpr<2.5>;
-  constexpr bool has_fabs = fabs_is_constexpr<-2.5>;
+  constexpr bool has_llround = llround_is_constexpr<Arg<two_and_a_half>>;
+  constexpr bool has_fabs = fabs_is_constexpr<Arg<minus_two_and_a_half>>;
   if (not has_llround) {
     WARN(
         "constexpr std::llround is not available: the core uses "

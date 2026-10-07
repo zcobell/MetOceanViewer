@@ -34,7 +34,7 @@ inline constexpr double dry_threshold = -999.0;
 /// True for a raw model value that means dry. NaN is neither dry nor
 /// meaningful; model_value rejects it.
 [[nodiscard]] constexpr bool is_dry(double raw) noexcept {
-  return raw <= dry_threshold;
+  return not detail::is_nan(raw) and raw <= dry_threshold;
 }
 
 /// The largest elevation a mark may have, in metres, above or below the
