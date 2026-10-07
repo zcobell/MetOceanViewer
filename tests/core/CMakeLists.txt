@@ -4,7 +4,11 @@
 mov_add_test(
     mov_core_tests
     SOURCES test_version.cpp test_time.cpp
-    CONSTEXPR_SOURCES test_version_constexpr.cpp test_time_constexpr.cpp
+    CONSTEXPR_SOURCES
+        test_version_constexpr.cpp
+        test_time_constexpr.cpp
+        test_sample_constexpr.cpp
+        test_geo_constexpr.cpp
     LIBRARIES mov::core
 )
 
