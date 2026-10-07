@@ -509,7 +509,10 @@ open. Do not guess; ask before proceeding past the phase that needs them.
 23. **Station lists:** a normalized asset built by a `tools/` script from the provider
     APIs is committed as a snapshot. The app can refresh it at runtime in the background.
 24. **Minimum platforms:** macOS 14 (arm64), Windows 10 22H2 / 11 (x64), and an AppImage
-    built on Ubuntu 22.04 (glibc 2.35).
+    built on Ubuntu 22.04 (glibc 2.35). **Amended 2026-10-07:** C++23 (GCC 14 /
+    libstdc++) takes priority over the glibc floor; the AppImage may be built on a
+    newer Ubuntu (e.g. 24.04, glibc 2.39) if 22.04 cannot carry the toolchain
+    robustly. The resulting floor is recorded in `docs/packaging.md`.
 25. **R² of a through-origin HWM fit:** uncentred (`1 − SSres/Σy²`), as R and statsmodels
     report for no-intercept models. It differs from v4's centred value.
 26. **D-Flow FM:** no real `_his.nc` is available. Tests use synthetic fixtures built from
