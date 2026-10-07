@@ -41,14 +41,17 @@ mov_create_option_targets()
 include(cmake/Layering.cmake)
 
 # Qt and the map, for src/ui and tests/ui; the layering check keeps them out
-# of core and io.
+# of core and io. The exact Qt is QT_VERSION in tools/versions.env; this is
+# the oldest the build accepts.
+set(MOV_QT_MINIMUM_VERSION 6.11)
 if(MOV_ENABLE_QT)
     find_package(
         Qt6
-        6.11
+        ${MOV_QT_MINIMUM_VERSION}
         REQUIRED
-        COMPONENTS Gui Qml Quick QuickControls2 Location Test
+        COMPONENTS Gui Network Sql Qml Quick QuickControls2 Location Positioning Test
     )
+    qt_standard_project_setup(REQUIRES ${MOV_QT_MINIMUM_VERSION})
     include(cmake/MapLibre.cmake)
 endif()
 

@@ -5,16 +5,22 @@
 #   mov_ui          startup code shared by the app and the GUI tests
 #   mov_ui_qml      QML module "MetOceanViewer" (qml/)
 #   metoceanviewer  the application
-
-qt_standard_project_setup(REQUIRES 6.11)
+# qt_standard_project_setup() runs in the top-level CMakeLists.txt, next to
+# find_package(Qt6).
 
 add_subdirectory(qml)
 
+# mov_ui_qmlplugin, not just mov_ui_qml: the module is a static QML plugin, and
+# linking the plugin target pulls in Qt's generated initializer, which
+# registers the module so that loadFromModule() finds it without a
+# Q_IMPORT_QML_PLUGIN in main(). QMapLibre::Core is for
+# QMapLibre::supportedRendererType(); the map itself is the geoservices plugin,
+# loaded at run time (mov_stage_maplibre_runtime).
 mov_add_module(
     ui
     SOURCES startup.cpp
     PUBLIC_LINK Qt6::Gui Qt6::Qml
-    PRIVATE_LINK mov::core Qt6::Quick QMapLibre::Location mov_ui_qmlplugin
+    PRIVATE_LINK mov::core Qt6::Quick QMapLibre::Core mov_ui_qmlplugin
 )
 
 qt_add_executable(metoceanviewer WIN32 MACOSX_BUNDLE main.cpp)

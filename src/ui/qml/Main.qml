@@ -10,6 +10,13 @@ import QtPositioning
 ApplicationWindow {
     id: window
 
+    // MapLibre style URL. The default is OpenFreeMap "liberty": keyless
+    // OpenStreetMap vector tiles (plan §6.3), loaded asynchronously; offline
+    // the map stays empty. The attribution label below belongs to this
+    // basemap and must change with it. Settings will offer others; the GUI
+    // test sets a local style.
+    property string basemapStyle: "https://tiles.openfreemap.org/styles/liberty"
+
     width: 1280
     height: 800
     visible: true
@@ -35,11 +42,9 @@ ApplicationWindow {
         map.plugin: Plugin {
             name: "maplibre"
 
-            // OpenFreeMap "liberty": keyless OpenStreetMap vector tiles
-            // (plan §6.3). Loaded asynchronously; offline, the map stays empty.
             PluginParameter {
                 name: "maplibre.map.styles"
-                value: "https://tiles.openfreemap.org/styles/liberty"
+                value: window.basemapStyle
             }
         }
         // The US Gulf and Atlantic coasts.
@@ -56,7 +61,7 @@ ApplicationWindow {
         onAboutRequested: aboutDialog.open()
     }
 
-    // The basemap's data licenses require this attribution.
+    // Required by the data licenses of the default basemap (basemapStyle).
     Label {
         anchors.right: parent.right
         anchors.bottom: parent.bottom

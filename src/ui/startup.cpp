@@ -45,9 +45,13 @@ void set_application_metadata() {
   QGuiApplication::setApplicationDisplayName(QStringLiteral("MetOceanViewer"));
   QGuiApplication::setApplicationVersion(QString::fromUtf8(core::version()));
   // Reverse-DNS identity of plan §6.19: io.github.zcobell.metoceanviewer.
+  QGuiApplication::setOrganizationName(QStringLiteral("MetOceanViewer"));
   QGuiApplication::setOrganizationDomain(QStringLiteral("zcobell.github.io"));
   QGuiApplication::setDesktopFileName(
       QStringLiteral("io.github.zcobell.metoceanviewer"));
+  // qt_add_qml_module puts RESOURCES under /qt/qml/<URI path>/ (the default
+  // resource prefix of qt_standard_project_setup(REQUIRES 6.5+)), keeping
+  // their path relative to src/ui/qml.
   QGuiApplication::setWindowIcon(
       QIcon(QStringLiteral(":/qt/qml/MetOceanViewer/images/app-icon.svg")));
 }
