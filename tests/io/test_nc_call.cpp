@@ -91,3 +91,115 @@ TEST_CASE("the open and close counts see the wrapper", "[io][netcdf][linux]") {
   }
   CHECK(counts::counts().closed == before.closed + 1);
 }
+
+// ---- one handle per file (File::open) ---------------------------------------
+
+#if !defined(NDEBUG) and !defined(_WIN32)
+namespace {
+
+// Runs `body` in a child process and reports how it ended. The child's abort
+// must be the default action (Catch2's handler would report it as a failure
+// of the child) and leave no core file.
+enum class Ending { exited, aborted };
+
+template <class Body>
+Ending run_in_child(const Body& body) {
+  const pid_t child = ::fork();
+  REQUIRE(child >= 0);
+  if (child == 0) {
+    static_cast<void>(std::signal(SIGABRT, SIG_DFL));
+    const rlimit no_core{.rlim_cur = 0, .rlim_max = 0};
+    static_cast<void>(::setrlimit(RLIMIT_CORE, &no_core));
+    body();
+    std::_Exit(EXIT_SUCCESS);
+  }
+  int status = 0;
+  REQUIRE(::waitpid(child, &status, 0) == child);
+  if (WIFSIGNALED(status) and WTERMSIG(status) == SIGABRT) {
+    return Ending::aborted;
+  }
+  REQUIRE(WIFEXITED(status));
+  REQUIRE(WEXITSTATUS(status) == EXIT_SUCCESS);
+  return Ending::exited;
+}
+
+}  // namespace
+#endif
+
+TEST_CASE("a second handle on an open file asserts in debug builds",
+          "[io][netcdf][linux]") {
+#if defined(NDEBUG) or defined(_WIN32)
+  SKIP("needs assert() (a debug build) and fork()");
+#else
+  using mov::io::nc::File;
+  mov::test::nc::Fixtures fx;
+  const auto path = fx.typed();
+
+  SECTION("the same path") {
+    CHECK(run_in_child([&] {
+            const auto first = File::open(path, {});
+            const auto second = File::open(path, {});
+          }) == Ending::aborted);
+  }
+  SECTION("another spelling of the path") {
+    const auto alias = fx.dir() / "." / "typed.nc";
+    CHECK(run_in_child([&] {
+            const auto first = File::open(path, {});
+            const auto second = File::open(alias, {});
+          }) == Ending::aborted);
+  }
+  SECTION("a symbolic link and a hard link") {
+    const auto symlink = fx.dir() / "symlink.nc";
+    const auto hardlink = fx.dir() / "hardlink.nc";
+    std::filesystem::create_symlink(path, symlink);
+    std::filesystem::create_hard_link(path, hardlink);
+    CHECK(run_in_child([&] {
+            const auto first = File::open(path, {});
+            const auto second = File::open(symlink, {});
+          }) == Ending::aborted);
+    CHECK(run_in_child([&] {
+            const auto first = File::open(path, {});
+            const auto second = File::open(hardlink, {});
+          }) == Ending::aborted);
+  }
+  SECTION("a moved handle still counts as open") {
+    CHECK(run_in_child([&] {
+            auto first = File::open(path, {});
+            const auto moved = std::move(first);
+            const auto second = File::open(path, {});
+          }) == Ending::aborted);
+  }
+  SECTION("a closed or destroyed handle is gone") {
+    CHECK(run_in_child([&] {
+            auto first = File::open(path, {});
+            static_cast<void>(std::move(*first).close());
+            const auto second = File::open(path, {});
+            if (not second) {
+              std::_Exit(EXIT_FAILURE);
+            }
+          }) == Ending::exited);
+    CHECK(run_in_child([&] {
+            {
+              const auto first = File::open(path, {});
+            }
+            const auto second = File::open(path, {});
+            if (not second) {
+              std::_Exit(EXIT_FAILURE);
+            }
+          }) == Ending::exited);
+  }
+  SECTION("different files, and a failed open, are fine") {
+    const auto other = fx.masking();
+    const auto missing = fx.path("missing.nc");
+    CHECK(run_in_child([&] {
+            const auto first = File::open(path, {});
+            const auto second = File::open(other, {});
+            const auto absent = File::open(missing, {});
+            const auto again = File::open(missing, {});
+            if (not second or absent or again) {
+              std::_Exit(EXIT_FAILURE);
+            }
+          }) == Ending::exited);
+  }
+#endif
+}

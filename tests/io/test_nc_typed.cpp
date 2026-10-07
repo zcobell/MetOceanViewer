@@ -206,7 +206,10 @@ TEMPLATE_TEST_CASE("typed reads and attributes round-trip", "[io][netcdf]",
   using T = TestType;
   const ScratchDir dir;
   const auto path = written<T>(dir);
-  const File file = open(path);
+  CHECK(error_of(open(path, ReadLimits{.max_att_bytes = sizeof(T)})
+                     .template numeric_att<T>(global, "g"))
+            .status == NcStatus{WrapperFault::too_large});
+  const File file = open(path);  // one handle per file: the one above is gone
   CHECK(value_of(file.read<T>("v", all4)) == values<T>({1, 2, -99, 4}));
   CHECK(status_of(error_of(file.read<T>("nope", all4))) ==
         NcStatus{LibraryStatus{nc_enotvar}});
@@ -215,9 +218,6 @@ TEMPLATE_TEST_CASE("typed reads and attributes round-trip", "[io][netcdf]",
   CHECK(file.numeric_att<T>(global, "absent").value() == std::nullopt);
   CHECK(error_of(file.numeric_att<T>("badmin", "valid_min")).status ==
         NcStatus{WrapperFault::type_mismatch});
-  CHECK(error_of(open(path, ReadLimits{.max_att_bytes = sizeof(T)})
-                     .template numeric_att<T>(global, "g"))
-            .status == NcStatus{WrapperFault::too_large});
   CHECK(error_of(file.numeric_att<T>("nope", "a")).status ==
         NcStatus{LibraryStatus{nc_enotvar}});
 }

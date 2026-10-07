@@ -9,7 +9,9 @@
 #include <netcdf.h>
 #include <netcdf_meta.h>
 
+#include <algorithm>
 #include <array>
+#include <cassert>
 #include <cerrno>
 #include <cstddef>
 #include <expected>
@@ -258,6 +260,58 @@ std::expected<std::optional<Dataset::AttShape>, NcError> Dataset::att_shape(
 
 namespace {
 
+#if !defined(NDEBUG)
+
+// ONE HANDLE PER FILE (see File::open): netCDF-C 4.9.3 with HDF5 2.1.1 can
+// crash when a file is opened through a second handle while the first is
+// open. In debug builds the files this process has open through File are
+// listed here, and opening one that is already open asserts. Like nc_busy it
+// is a detector, not a lock: the list is touched only inside the choke point
+// (nc_status), so the debug entry check also catches a second thread using it.
+// Release builds keep no list and check nothing.
+struct OpenFile {
+  int ncid;
+  std::filesystem::path path;
+};
+
+std::vector<OpenFile>& open_files() {
+  static std::vector<OpenFile> files;
+  return files;
+}
+
+// True when `path` is the same file as one a File holds open (equivalent():
+// symbolic and hard links included).
+bool already_open(const std::filesystem::path& path) {
+  return detail::nc_status([&] {
+           std::error_code ec;
+           return std::ranges::any_of(open_files(),
+                                      [&](const OpenFile& open) {
+                                        return std::filesystem::equivalent(
+                                                   open.path, path, ec) and
+                                               not ec;
+                                      })
+                      ? 1
+                      : 0;
+         }) == 1;
+}
+
+void note_open(int ncid, const std::filesystem::path& path) {
+  static_cast<void>(detail::nc_status([&] {
+    open_files().push_back({.ncid = ncid, .path = path});
+    return 0;
+  }));
+}
+
+void note_closed(int ncid) {
+  static_cast<void>(detail::nc_status([&] {
+    std::erase_if(open_files(),
+                  [ncid](const OpenFile& open) { return open.ncid == ncid; });
+    return 0;
+  }));
+}
+
+#endif
+
 // netCDF-C reports system errors as positive errno values; an open of
 // anything but a regular file is refused before netCDF-C sees it (a FIFO
 // would block in open()).
@@ -288,12 +342,20 @@ std::expected<File, NcError> File::open(const std::filesystem::path& path,
   if (not native) {
     return error(native.error());
   }
+#if !defined(NDEBUG)
+  assert(not already_open(owned) and
+         "this file is already open through another nc::File: hold one handle "
+         "per file (netCDF-C 4.9.3 with HDF5 2.1.1 can crash otherwise)");
+#endif
   int ncid = 0;
   if (const int status = detail::nc_status(
           [&] { return nc_open(native->c_str(), NC_NOWRITE, &ncid); });
       status != NC_NOERR) {
     return error(LibraryStatus{status});
   }
+#if !defined(NDEBUG)
+  note_open(ncid, owned);
+#endif
   return File{ncid, std::move(owned), limits};
 }
 
@@ -313,6 +375,9 @@ void File::drop() noexcept {
   }
   const int ncid = *ncid_;
   forget();  // whatever nc_close returns: see close()
+#if !defined(NDEBUG)
+  note_closed(ncid);
+#endif
   static_cast<void>(detail::nc_status([ncid] { return nc_close(ncid); }));
 }
 
@@ -324,6 +389,9 @@ std::expected<void, NcError> File::close() && {
   // Given up whatever nc_close returns: after a failed close netCDF-C may
   // have freed part of the file's state, and nc_abort would free it again.
   forget();
+#if !defined(NDEBUG)
+  note_closed(*ncid);
+#endif
   return detail::nc_call(NcOp::close, {}, path_,
                          [ncid = *ncid] { return nc_close(ncid); });
 }
@@ -361,6 +429,31 @@ std::expected<std::optional<VarInfo>, NcError> File::find_var(
           fail(LibraryStatus{status}, NcOp::inquire, name.view())};
     }
     return var_info(varid, NcOp::inquire);
+  });
+}
+
+std::expected<std::optional<std::vector<std::size_t>>, NcError>
+File::chunk_shape(NcNameRef name) const {
+  using Result =
+      std::expected<std::optional<std::vector<std::size_t>>, NcError>;
+  return var(name, NcOp::inquire).and_then([&](const VarInfo& info) -> Result {
+    return id(NcOp::inquire, name.view()).and_then([&](int ncid) -> Result {
+      int storage = NC_CONTIGUOUS;
+      std::vector<std::size_t> chunks(info.dims.size());
+      if (auto done = detail::nc_call(NcOp::inquire, name.view(), path_,
+                                      [&] {
+                                        return nc_inq_var_chunking(
+                                            ncid, info.id, &storage,
+                                            chunks.data());
+                                      });
+          not done) {
+        return std::unexpected{done.error()};
+      }
+      if (storage != NC_CHUNKED) {
+        return std::nullopt;
+      }
+      return chunks;
+    });
   });
 }
 

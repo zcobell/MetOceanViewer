@@ -135,6 +135,17 @@ class File : private detail::Dataset {
   /// EISDIR, anything else EINVAL, both as LibraryStatus) so a FIFO cannot
   /// block. `limits` bounds every read of this File (the one source of
   /// truth: the reads take only a StopToken).
+  ///
+  /// ONE HANDLE PER FILE: do not open a file that another File of this
+  /// process still has open (not even through a symbolic or hard link).
+  /// netCDF-C 4.9.3 with HDF5 2.1.1 can segfault in HDF5 (the vlen fill value
+  /// of an NC_STRING variable is converted with a null file pointer) when a
+  /// file is open through two handles, one is closed after reading strings and
+  /// the file is then opened again. A reader opens its file once and closes it
+  /// before it returns; code that needs two views of a file passes the one
+  /// handle around. Debug builds keep a list of the open files and assert on
+  /// a second open of the same file (like the entry check of nc_call, a
+  /// detector, not a lock); release builds check nothing.
   [[nodiscard]] static std::expected<File, NcError> open(
       const std::filesystem::path& path, const ReadLimits& limits);
 
@@ -166,6 +177,12 @@ class File : private detail::Dataset {
       NcNameRef name) const;
   /// Every variable of the root group, in id order.
   [[nodiscard]] std::expected<std::vector<VarInfo>, NcError> variables() const;
+  /// The chunk sizes of variable `name`, one per dimension (as stored: a
+  /// chunk is read and decompressed whole, so a reader that wants few chunks
+  /// wants to know them), or nullopt when the variable is not chunked:
+  /// contiguous or compact storage, which is all a classic file has.
+  [[nodiscard]] std::expected<std::optional<std::vector<std::size_t>>, NcError>
+  chunk_shape(NcNameRef name) const;
 
   // ---- attributes ----------------------------------------------------------
   // An absent attribute is nullopt; an absent variable is an error.

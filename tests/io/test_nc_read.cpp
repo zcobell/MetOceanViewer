@@ -108,7 +108,7 @@ TEST_CASE("read<T> converts only where no value changes (section 4.3, B4)",
 
 TEST_CASE("read of a scalar, a hyperslab and a 3-D variable", "[io][netcdf]") {
   Fixtures fx;
-  const File file = open(fx.typed());
+  File file = open(fx.typed());
   CHECK(value_of(file.read<double>("s_double", {})) ==
         std::vector<double>{7.5});
   const Slab corner{{.start = 1, .count = 2}, {.start = 1, .count = 3}};
@@ -121,6 +121,8 @@ TEST_CASE("read of a scalar, a hyperslab and a 3-D variable", "[io][netcdf]") {
       value_of(file.read<std::int32_t>("cube", whole));
   REQUIRE(expected.size() == 24);
   CHECK(expected[23] == 123);
+  // One handle per file: the next ones are opened after this one is closed.
+  REQUIRE(std::move(file).close().has_value());
   // The same values whatever the block size.
   for (const std::size_t block : {1UZ, 2UZ, 3UZ, 5UZ, 7UZ, 12UZ, 13UZ}) {
     CAPTURE(block);
@@ -176,7 +178,7 @@ TEST_CASE("read checks the slab before allocating", "[io][netcdf]") {
 TEST_CASE("read polls the stop request between blocks", "[io][netcdf]") {
   const Fixtures fx;
   mov::test::ncgen::make_matrix(fx.path("m.nc"), 100, 10);
-  const File file = open(fx.path("m.nc"), {.slab_elements = 50});
+  File file = open(fx.path("m.nc"), {.slab_elements = 50});
   const Slab whole{{.start = 0, .count = 100}, {.start = 0, .count = 10}};
   int polls = 0;
   const StopToken stop_after_3{[&] { return ++polls > 3; }};
@@ -191,6 +193,7 @@ TEST_CASE("read polls the stop request between blocks", "[io][netcdf]") {
       error_of(file.read_samples("data", whole, stopped))));
   CHECK(std::holds_alternative<Cancelled>(error_of(file.read<double>(
       "data", {{.start = 0, .count = 1}, {.start = 0, .count = 1}}, stopped))));
+  REQUIRE(std::move(file).close().has_value());  // one handle per file
   const auto full = value_of(
       open(fx.path("m.nc"), {.slab_elements = 7}).read<double>("data", whole));
   CHECK(full.front() == 0);
@@ -253,16 +256,18 @@ TEST_CASE("read_blocks hands over whole rows of the outer dimension",
 TEST_CASE("read_char_rows returns raw rows of the file's stride",
           "[io][netcdf]") {
   Fixtures fx;
-  const File file = open(fx.typed());
   const std::vector<std::string> rows{"abc", "de\0"s, "fgh", "\0\0\0"s};
-  CHECK(value_of(file.read_char_rows("v_char")) == rows);
+  {
+    const File file = open(fx.typed());
+    CHECK(value_of(file.read_char_rows("v_char")) == rows);
+    CHECK(status_of(error_of(file.read_char_rows("v_double"))) ==
+          NcStatus{WrapperFault::type_mismatch});
+    CHECK(status_of(error_of(file.read_char_rows("s_double"))) ==
+          NcStatus{WrapperFault::type_mismatch});
+  }  // one handle per file
   CHECK(value_of(
             open(fx.typed(), {.slab_elements = 1}).read_char_rows("v_char")) ==
         rows);
-  CHECK(status_of(error_of(file.read_char_rows("v_double"))) ==
-        NcStatus{WrapperFault::type_mismatch});
-  CHECK(status_of(error_of(file.read_char_rows("s_double"))) ==
-        NcStatus{WrapperFault::type_mismatch});
   CHECK(status_of(error_of(
             open(fx.typed(), {.max_elements = 11}).read_char_rows("v_char"))) ==
         NcStatus{WrapperFault::too_large});
