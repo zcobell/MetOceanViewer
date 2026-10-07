@@ -38,16 +38,15 @@ Breaks metre_breaks() {
           metres(0.5),  metres(1.0),  metres(1.5)};
 }
 
-constexpr std::array bins{HwmCategory::bin0, HwmCategory::bin1,
-                          HwmCategory::bin2, HwmCategory::bin3,
-                          HwmCategory::bin4, HwmCategory::bin5,
-                          HwmCategory::bin6, HwmCategory::bin7};
+constexpr std::array bins{
+    HwmCategory::bin0, HwmCategory::bin1, HwmCategory::bin2, HwmCategory::bin3,
+    HwmCategory::bin4, HwmCategory::bin5, HwmCategory::bin6, HwmCategory::bin7};
 
 }  // namespace
 
 TEST_CASE("ErrorClasses::make rejects a non-finite break at every position",
           "[core][hwm]") {
-  const double negative_nan =
+  const auto negative_nan =
       std::bit_cast<double>(std::uint64_t{0xFFF8'0000'0000'0000});
   for (const double bad : {quiet_nan, negative_nan, infinity, -infinity}) {
     for (std::size_t i = 0; i < 7; ++i) {
@@ -131,11 +130,12 @@ TEST_CASE("classify at a foot break is exact only up to rounding of the unit",
 
 TEST_CASE("modeled_error in feet is reported in the SI-backed Length",
           "[core][hwm]") {
-  const auto e = modeled_error(mark_ft(10.0, 12.0));
-  REQUIRE(e.has_value());
-  CHECK(mov::test::near(e->as(mov::core::LengthUnit::foot), 2.0, 1e-12));
-  CHECK(mov::test::near(e->as(mov::core::LengthUnit::meter), 0.6096, 1e-12));
-  CHECK(*e == feet(12.0) - feet(10.0));
+  const auto maybe_error = modeled_error(mark_ft(10.0, 12.0));
+  CHECK(maybe_error.has_value());
+  const Length e = maybe_error.value_or(Length{});
+  CHECK(mov::test::near(e.as(mov::core::LengthUnit::foot), 2.0, 1e-12));
+  CHECK(mov::test::near(e.as(mov::core::LengthUnit::meter), 0.6096, 1e-12));
+  CHECK(e == feet(12.0) - feet(10.0));
 }
 
 TEST_CASE("a mark compares by every field", "[core][hwm]") {

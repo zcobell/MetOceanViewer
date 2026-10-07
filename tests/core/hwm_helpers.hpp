@@ -37,8 +37,8 @@ namespace mov::test {
       .location = gulf_coast(),
       .ground = metres(1.0),
       .observed = metres(observed),
-      .modeled = mov::core::model_value(modeled_raw,
-                                        mov::core::LengthUnit::meter)};
+      .modeled =
+          mov::core::model_value(modeled_raw, mov::core::LengthUnit::meter)};
 }
 
 /// The same, with every value in feet.
@@ -48,8 +48,8 @@ namespace mov::test {
       .location = gulf_coast(),
       .ground = feet(1.0),
       .observed = feet(observed),
-      .modeled = mov::core::model_value(modeled_raw,
-                                        mov::core::LengthUnit::foot)};
+      .modeled =
+          mov::core::model_value(modeled_raw, mov::core::LengthUnit::foot)};
 }
 
 }  // namespace mov::test

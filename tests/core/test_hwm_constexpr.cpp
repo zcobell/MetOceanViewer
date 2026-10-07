@@ -7,8 +7,8 @@
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>
-#include <expected>
 #include <cstddef>
+#include <expected>
 #include <limits>
 #include <optional>
 #include <type_traits>
@@ -44,20 +44,18 @@ using mov::test::quiet_nan;
 
 namespace {
 
-constexpr std::array<Length, 7> metre_breaks{metres(-1.5), metres(-1.0),
-                                             metres(-0.5), metres(0.0),
-                                             metres(0.5),  metres(1.0),
-                                             metres(1.5)};
+constexpr std::array<Length, 7> metre_breaks{
+    metres(-1.5), metres(-1.0), metres(-0.5), metres(0.0),
+    metres(0.5),  metres(1.0),  metres(1.5)};
 constexpr std::array<Length, 7> foot_breaks{feet(-5.0), feet(-3.5), feet(-1.5),
                                             feet(0.0),  feet(1.5),  feet(3.5),
                                             feet(5.0)};
 
 // The categories in order, so index i is "the class below break i" and
 // index i + 1 is "the class from break i up".
-constexpr std::array bins{HwmCategory::bin0, HwmCategory::bin1,
-                          HwmCategory::bin2, HwmCategory::bin3,
-                          HwmCategory::bin4, HwmCategory::bin5,
-                          HwmCategory::bin6, HwmCategory::bin7};
+constexpr std::array bins{
+    HwmCategory::bin0, HwmCategory::bin1, HwmCategory::bin2, HwmCategory::bin3,
+    HwmCategory::bin4, HwmCategory::bin5, HwmCategory::bin6, HwmCategory::bin7};
 
 // Observed 10 m and modeled 10 + offset: every metre-default break and the
 // quarter-metre offsets used below are dyadic, so the error is exact.
@@ -89,7 +87,8 @@ constexpr bool classes_equal_for_foot_defaults() {
 
 // Break i + 1 equal to break i, or the two swapped, at every position.
 constexpr bool rejects_every_non_rising_pair() {
-  const auto rejected = std::unexpected{ClassBreaksError::not_strictly_increasing};
+  const auto rejected =
+      std::unexpected{ClassBreaksError::not_strictly_increasing};
   for (std::size_t i = 0; i + 1 < 7; ++i) {
     auto equal_pair = metre_breaks;
     equal_pair[i + 1] = equal_pair[i];
@@ -172,9 +171,9 @@ TEST_CASE("ErrorClasses::make accepts strictly increasing breaks",
   STATIC_REQUIRE(ErrorClasses::meters_default() !=
                  ErrorClasses::feet_default());
   // A tiny but strict step is still increasing.
-  constexpr std::array<Length, 7> tight{metres(0.0),  metres(1e-9), metres(2e-9),
-                                        metres(3e-9), metres(4e-9), metres(5e-9),
-                                        metres(6e-9)};
+  constexpr std::array<Length, 7> tight{
+      metres(0.0),  metres(1e-9), metres(2e-9), metres(3e-9),
+      metres(4e-9), metres(5e-9), metres(6e-9)};
   STATIC_REQUIRE(ErrorClasses::make(tight).has_value());
 }
 
@@ -190,29 +189,27 @@ TEST_CASE("the default classes are the v4 defaults", "[core][hwm][constexpr]") {
 TEST_CASE("ErrorClasses::make rejects a break that does not rise",
           "[core][hwm][constexpr]") {
   STATIC_REQUIRE(rejects_every_non_rising_pair());
-  constexpr std::array<Length, 7> all_equal{metres(1.0), metres(1.0),
-                                            metres(1.0), metres(1.0),
-                                            metres(1.0), metres(1.0),
-                                            metres(1.0)};
+  constexpr std::array<Length, 7> all_equal{
+      metres(1.0), metres(1.0), metres(1.0), metres(1.0),
+      metres(1.0), metres(1.0), metres(1.0)};
   STATIC_REQUIRE(ErrorClasses::make(all_equal) ==
                  std::unexpected{ClassBreaksError::not_strictly_increasing});
-  constexpr std::array<Length, 7> descending{metres(1.5),  metres(1.0),
-                                             metres(0.5),  metres(0.0),
-                                             metres(-0.5), metres(-1.0),
-                                             metres(-1.5)};
+  constexpr std::array<Length, 7> descending{
+      metres(1.5),  metres(1.0),  metres(0.5), metres(0.0),
+      metres(-0.5), metres(-1.0), metres(-1.5)};
   STATIC_REQUIRE(ErrorClasses::make(descending) ==
                  std::unexpected{ClassBreaksError::not_strictly_increasing});
 }
 
 TEST_CASE("classify: a dry mark is dry whatever the classes",
           "[core][hwm][constexpr]") {
-  STATIC_REQUIRE(classify(mark_m(1.0, -99999.0), ErrorClasses::meters_default()) ==
-                 HwmCategory::dry);
+  STATIC_REQUIRE(classify(mark_m(1.0, -99999.0),
+                          ErrorClasses::meters_default()) == HwmCategory::dry);
   STATIC_REQUIRE(classify(mark_m(1.0, -999.0), ErrorClasses::feet_default()) ==
                  HwmCategory::dry);
   // Just above the threshold is a wet mark with a huge negative error.
-  STATIC_REQUIRE(classify(mark_m(1.0, -998.0), ErrorClasses::meters_default()) ==
-                 HwmCategory::bin0);
+  STATIC_REQUIRE(classify(mark_m(1.0, -998.0),
+                          ErrorClasses::meters_default()) == HwmCategory::bin0);
 }
 
 TEST_CASE("classify: an error on a break goes to the upper class",
@@ -220,8 +217,7 @@ TEST_CASE("classify: an error on a break goes to the upper class",
   STATIC_REQUIRE(every_break_goes_up());
 }
 
-TEST_CASE("classify: the ends and the middle",
-          "[core][hwm][constexpr]") {
+TEST_CASE("classify: the ends and the middle", "[core][hwm][constexpr]") {
   constexpr auto m = ErrorClasses::meters_default();
   STATIC_REQUIRE(category_of_error(-100.0, m) == HwmCategory::bin0);
   STATIC_REQUIRE(category_of_error(-1.75, m) == HwmCategory::bin0);

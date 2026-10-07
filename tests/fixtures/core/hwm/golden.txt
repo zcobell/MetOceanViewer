@@ -1,0 +1,38 @@
+hwm_basic.csv total 8
+hwm_basic.csv wet 6
+hwm_basic.csv categories 6 4 0 6 3 0 5 8
+hwm_basic.csv mean_error 0.4166666666666667
+hwm_basic.csv error_stddev 0.944281031614353
+hwm_basic.csv free.status ok
+hwm_basic.csv free.slope 1.2142857142857142
+hwm_basic.csv free.intercept -0.3333333333333333
+hwm_basic.csv free.r2 0.8759345322287331
+hwm_basic.csv origin.status ok
+hwm_basic.csv origin.slope 1.1373626373626373
+hwm_basic.csv origin.r2 0.9688644688644689
+hwm_ft.csv total 7
+hwm_ft.csv wet 6
+hwm_ft.csv categories 1 2 4 0 5 6 7
+hwm_ft.csv mean_error -0.20828
+hwm_ft.csv error_stddev 1.210238968534727
+hwm_ft.csv free.status ok
+hwm_ft.csv free.slope 2.052857142857143
+hwm_ft.csv free.intercept -5.021942857142857
+hwm_ft.csv free.r2 0.9958384740214072
+hwm_ft.csv origin.status ok
+hwm_ft.csv origin.slope 1.0085915492957747
+hwm_ft.csv origin.r2 0.9465769459980528
+hwm_allDry.csv total 3
+hwm_allDry.csv wet 0
+hwm_allDry.csv categories 0 0 0
+hwm_allDry.csv free.status no_wet_marks
+hwm_allDry.csv origin.status no_wet_marks
+hwm_one_wet.csv total 3
+hwm_one_wet.csv wet 1
+hwm_one_wet.csv categories 0 6 0
+hwm_one_wet.csv mean_error 0.5
+hwm_one_wet.csv error_stddev none
+hwm_one_wet.csv free.status too_few_for_free_fit
+hwm_one_wet.csv origin.status ok
+hwm_one_wet.csv origin.slope 1.1666666666666667
+hwm_one_wet.csv origin.r2 1.0

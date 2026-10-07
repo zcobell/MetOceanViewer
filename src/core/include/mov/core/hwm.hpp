@@ -108,13 +108,13 @@ class ErrorClasses {
 
   /// -5, -3.5, -1.5, 0, 1.5, 3.5, 5 ft.
   [[nodiscard]] static constexpr ErrorClasses feet_default() noexcept {
-    return ErrorClasses{in(LengthUnit::foot, {-5.0, -3.5, -1.5, 0.0, 1.5, 3.5,
-                                              5.0})};
+    return ErrorClasses{
+        in(LengthUnit::foot, {-5.0, -3.5, -1.5, 0.0, 1.5, 3.5, 5.0})};
   }
   /// -1.5, -1, -0.5, 0, 0.5, 1, 1.5 m.
   [[nodiscard]] static constexpr ErrorClasses meters_default() noexcept {
-    return ErrorClasses{in(LengthUnit::meter, {-1.5, -1.0, -0.5, 0.0, 0.5, 1.0,
-                                               1.5})};
+    return ErrorClasses{
+        in(LengthUnit::meter, {-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5})};
   }
 
   /// The breaks, lowest first. The view points into this object, so a
@@ -137,9 +137,8 @@ class ErrorClasses {
   [[nodiscard]] static constexpr Breaks in(
       LengthUnit unit, const std::array<double, 7>& values) noexcept {
     Breaks out{};
-    std::ranges::transform(values, out.begin(), [unit](double v) {
-      return Length::in(v, unit);
-    });
+    std::ranges::transform(values, out.begin(),
+                           [unit](double v) { return Length::in(v, unit); });
     return out;
   }
 
