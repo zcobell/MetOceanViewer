@@ -9,105 +9,79 @@
 #include <functional>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "mov/core/detail/utf8.hpp"
+#include "core_access.hpp"
 
 namespace mov::core {
 
 namespace {
 
-using Axis = std::vector<Time>;
-
-TableError station_error(TableErrc code, std::size_t station,
-                         std::optional<std::size_t> index = std::nullopt) {
-  return {.code = code, .station = station, .index = index};
-}
-
-std::optional<TableError> check_schema(std::span<const SeriesMeta> schema) {
+std::optional<TableError> check_variables(std::span<const Variable> variables,
+                                          std::size_t station_count) {
   std::unordered_set<std::string_view> tokens;
-  for (std::size_t k = 0; k < schema.size(); ++k) {
-    if (not tokens.insert(token(schema[k].quantity())).second) {
-      return TableError{.code = TableErrc::duplicate_quantity,
-                        .station = std::nullopt,
-                        .index = k};
+  for (std::size_t k = 0; k < variables.size(); ++k) {
+    const Variable& v = variables[k];
+    if (not tokens.insert(token(v.meta.quantity())).second) {
+      return SchemaError{.code = SchemaErrc::duplicate_quantity,
+                         .column = ColumnIndex{k}};
+    }
+    if (v.per_station.size() != station_count) {
+      return SchemaError{.code = SchemaErrc::station_count_mismatch,
+                         .column = ColumnIndex{k}};
     }
   }
   return std::nullopt;
 }
 
-bool has_nul(std::string_view s) noexcept {
-  return s.find('\0') != std::string_view::npos;
-}
-
-std::optional<TableErrc> check_text(const FileStation& s) noexcept {
-  if (s.id.empty()) {
-    return TableErrc::empty_station_id;
-  }
-  if (has_nul(s.id) or has_nul(s.name)) {
-    return TableErrc::embedded_nul;
-  }
-  if (not detail::is_valid_utf8(s.id) or not detail::is_valid_utf8(s.name)) {
-    return TableErrc::invalid_utf8;
-  }
-  return std::nullopt;
-}
-
-bool in_range(Time t) noexcept {
+bool in_file_range(Time t) noexcept {
   const auto ms = t.time_since_epoch().count();
   return ms >= -max_abs_time_ms and ms <= max_abs_time_ms;
 }
 
-// The first bad element of an axis and what is wrong with it.
-std::optional<std::pair<TableErrc, std::size_t>> check_axis(const Axis& axis) {
-  for (std::size_t j = 0; j < axis.size(); ++j) {
-    if (not in_range(axis[j])) {
-      return std::pair{TableErrc::time_out_of_range, j};
-    }
-    if (j > 0 and not(axis[j - 1] < axis[j])) {
-      return std::pair{TableErrc::time_not_increasing, j};
-    }
+// The first bad element of an axis: out of the file range, or not above its
+// predecessor (whichever comes first).
+std::optional<StationFault> check_axis(std::span<const Time> axis) {
+  const auto out = std::ranges::find_if_not(axis, in_file_range);
+  const auto out_index = static_cast<std::size_t>(out - axis.begin());
+  const auto disorder = detail::first_not_increasing(axis.first(out_index));
+  if (disorder) {
+    return TimeNotIncreasing{.index = *disorder};
+  }
+  if (out != axis.end()) {
+    return TimeOutOfRange{.index = out_index};
   }
   return std::nullopt;
 }
 
-// Checks rows one by one against the schema size and the axis pool. Each
+// Checks stations one by one against the variables and the axis pool. Each
 // axis is checked once, on first use.
-class RowChecker {
+class StationChecker {
  public:
-  RowChecker(std::size_t schema_size, const std::vector<Axis>& axes)
-      : schema_size_{schema_size}, axes_{axes}, axis_checked_(axes.size()) {}
+  StationChecker(std::span<const Variable> variables,
+                 std::span<const TimeAxis> axes)
+      : variables_{variables}, axes_{axes}, axis_checked_(axes.size()) {}
 
-  std::optional<TableError> check(const StationRow& row, std::size_t i) {
-    if (const auto code = check_station(row.station)) {
-      return station_error(*code, i);
+  std::optional<StationFault> check(const StationRow& row, std::size_t i) {
+    if (not ids_.insert(row.station.id.view()).second) {
+      return DuplicateStationId{};
     }
     if (row.axis >= axes_.size()) {
-      return station_error(TableErrc::axis_out_of_range, i);
+      return AxisOutOfRange{};
     }
-    if (const auto bad = check_axis_once(row.axis)) {
-      return station_error(bad->first, i, bad->second);
+    if (auto fault = check_axis_once(row.axis)) {
+      return fault;
     }
-    return check_columns(row, i);
+    return check_columns(axes_[row.axis].size(), i);
   }
 
  private:
-  std::optional<TableErrc> check_station(const FileStation& s) {
-    if (const auto code = check_text(s)) {
-      return code;
-    }
-    if (not ids_.insert(s.id).second) {
-      return TableErrc::duplicate_station_id;
-    }
-    return std::nullopt;
-  }
-
-  std::optional<std::pair<TableErrc, std::size_t>> check_axis_once(
-      std::size_t a) {
+  std::optional<StationFault> check_axis_once(std::size_t a) {
     if (axis_checked_[a]) {
       return std::nullopt;
     }
@@ -115,32 +89,31 @@ class RowChecker {
     return check_axis(axes_[a]);
   }
 
-  std::optional<TableError> check_columns(const StationRow& row,
-                                          std::size_t i) const {
-    if (row.columns.size() != schema_size_) {
-      return station_error(TableErrc::column_count_mismatch, i);
-    }
-    const std::size_t length = axes_[row.axis].size();
-    const auto bad = std::ranges::find_if(
-        row.columns, [length](const Column& c) { return c.size() != length; });
-    if (bad != row.columns.end()) {
-      return station_error(TableErrc::column_length_mismatch, i,
-                           static_cast<std::size_t>(bad - row.columns.begin()));
+  std::optional<StationFault> check_columns(std::size_t length,
+                                            std::size_t i) const {
+    const auto bad =
+        std::ranges::find_if(variables_, [length, i](const Variable& v) {
+          return v.per_station[i].size() != length;
+        });
+    if (bad != variables_.end()) {
+      return ColumnLengthMismatch{
+          .column =
+              ColumnIndex{static_cast<std::size_t>(bad - variables_.begin())}};
     }
     return std::nullopt;
   }
 
-  std::size_t schema_size_;
-  const std::vector<Axis>& axes_;
+  std::span<const Variable> variables_;
+  std::span<const TimeAxis> axes_;
   std::vector<bool> axis_checked_;
   std::unordered_set<std::string_view> ids_;
 };
 
 // Keeps only the axes some row uses, numbered in order of first use.
-std::vector<Axis> compact_axes(std::vector<Axis> axes,
-                               std::vector<StationRow>& rows) {
+std::vector<TimeAxis> compact_axes(std::vector<TimeAxis> axes,
+                                   std::vector<StationRow>& rows) {
   std::vector<std::optional<std::size_t>> renumbered(axes.size());
-  std::vector<Axis> used;
+  std::vector<TimeAxis> used;
   for (StationRow& row : rows) {
     std::optional<std::size_t>& slot = renumbered[row.axis];
     if (not slot) {
@@ -166,72 +139,98 @@ std::expected<StationSelection, SelectionError> StationSelection::make(
   if (std::ranges::adjacent_find(sorted) != sorted.end()) {
     return std::unexpected{SelectionError::duplicate_index};
   }
-  return StationSelection{std::move(indices)};
+  return StationSelection{std::move(indices), station_count};
 }
 
 StationSelection StationSelection::all(std::size_t station_count) {
   std::vector<std::size_t> indices(station_count);
-  for (std::size_t i = 0; i < station_count; ++i) {
-    indices[i] = i;
-  }
-  return StationSelection{std::move(indices)};
+  std::ranges::copy(std::views::iota(std::size_t{0}, station_count),
+                    indices.begin());
+  return StationSelection{std::move(indices), station_count};
 }
 
 std::expected<StationTable, TableError> StationTable::make(
-    std::vector<SeriesMeta> schema, std::vector<std::vector<Time>> axes,
-    std::vector<StationRow> rows) {
-  if (const auto e = check_schema(schema)) {
-    return std::unexpected{*e};
+    std::vector<Variable> variables, std::vector<TimeAxis> axes,
+    std::vector<StationRow> stations) {
+  if (auto e = check_variables(variables, stations.size())) {
+    return std::unexpected{*std::move(e)};
   }
-  RowChecker checker{schema.size(), axes};
-  for (std::size_t i = 0; i < rows.size(); ++i) {
-    if (const auto e = checker.check(rows[i], i)) {
-      return std::unexpected{*e};
+  StationChecker checker{variables, axes};
+  for (std::size_t i = 0; i < stations.size(); ++i) {
+    if (auto fault = checker.check(stations[i], i)) {
+      return std::unexpected{TableError{StationError{
+          .station = StationIndex{i}, .fault = *std::move(fault)}}};
     }
   }
-  std::vector<Axis> used = compact_axes(std::move(axes), rows);
-  return StationTable{std::move(schema), std::move(used), std::move(rows)};
+  std::vector<SeriesMeta> schema;
+  std::vector<std::vector<Column>> columns;
+  schema.reserve(variables.size());
+  columns.reserve(variables.size());
+  for (Variable& v : variables) {
+    schema.push_back(std::move(v.meta));
+    columns.push_back(std::move(v.per_station));
+  }
+  std::vector<TimeAxis> used = compact_axes(std::move(axes), stations);
+  return StationTable{std::move(schema), std::move(columns), std::move(used),
+                      std::move(stations)};
 }
 
 std::expected<StationTable, TableError> StationTable::from_series(
-    std::vector<AtStation<FileStation, TimeSeries>> series) {
-  if (series.empty()) {
-    return StationTable{};
+    SeriesMeta schema, std::vector<AtStation<FileStation, TimeSeries>> series) {
+  const auto differs = std::ranges::find_if(
+      series, [&schema](const AtStation<FileStation, TimeSeries>& s) {
+        return s.data.meta() != schema;
+      });
+  if (differs != series.end()) {
+    return std::unexpected{TableError{StationError{
+        .station =
+            StationIndex{static_cast<std::size_t>(differs - series.begin())},
+        .fault = SchemaMismatch{}}}};
   }
-  const SeriesMeta& meta = series.front().data.meta();
-  std::vector<Axis> axes;
+  Variable variable{.meta = std::move(schema), .per_station = {}};
+  std::vector<TimeAxis> axes;
   std::vector<StationRow> rows;
+  variable.per_station.reserve(series.size());
   axes.reserve(series.size());
   rows.reserve(series.size());
-  for (std::size_t i = 0; i < series.size(); ++i) {
-    auto& [station, data] = series[i];
-    if (data.meta() != meta) {
-      return std::unexpected{station_error(TableErrc::schema_mismatch, i)};
-    }
-    axes.emplace_back(data.times().begin(), data.times().end());
-    rows.push_back(
-        {.station = std::move(station),
-         .axis = i,
-         .columns = {Column(data.samples().begin(), data.samples().end())}});
+  for (auto& [station, data] : series) {
+    TimeSeriesParts parts = std::move(data).into_parts();
+    rows.push_back({.station = std::move(station), .axis = axes.size()});
+    axes.push_back(std::move(parts.times));
+    variable.per_station.push_back(std::move(parts.samples));
   }
-  return make({meta}, std::move(axes), std::move(rows));
+  std::vector<Variable> variables;
+  variables.push_back(std::move(variable));
+  return make(std::move(variables), std::move(axes), std::move(rows));
 }
 
-TimeSeries StationTable::series(std::size_t i, std::size_t k) const {
+std::optional<ColumnIndex> StationTable::column_of(
+    const QuantityId& q) const noexcept {
+  const auto it =
+      std::ranges::find_if(schema_, [wanted = token(q)](const SeriesMeta& m) {
+        return token(m.quantity()) == wanted;
+      });
+  if (it == schema_.end()) {
+    return std::nullopt;
+  }
+  return ColumnIndex{static_cast<std::size_t>(it - schema_.begin())};
+}
+
+TimeSeries StationTable::series(StationIndex i, ColumnIndex k) const {
   const std::span<const Time> t = times(i);
   const std::span<const Sample> c = column(i, k);
-  return detail::trusted_series(std::vector<Time>(t.begin(), t.end()),
-                                std::vector<Sample>(c.begin(), c.end()),
-                                schema_[k]);
+  return TimeSeries{detail::CoreAccess::key(), TimeAxis(t.begin(), t.end()),
+                    std::vector<Sample>(c.begin(), c.end()),
+                    schema_[k.value()]};
 }
 
 bool StationTable::single_axis() const noexcept {
-  if (rows_.empty() or times(0).empty()) {
+  if (rows_.empty() or axes_[rows_.front().axis].empty()) {
     return false;
   }
-  return std::ranges::all_of(rows_, [this](const StationRow& row) {
-    return row.axis == rows_.front().axis or
-           std::ranges::equal(axes_[row.axis], times(0));
+  const TimeAxis& first = axes_[rows_.front().axis];
+  return std::ranges::all_of(rows_, [this, &first](const StationRow& row) {
+    return std::ranges::equal(axes_[row.axis], first);
   });
 }
 
@@ -243,18 +242,13 @@ std::size_t StationTable::total_samples() const noexcept {
 }
 
 bool operator==(const StationTable& a, const StationTable& b) {
-  if (a.schema_ != b.schema_ or a.size() != b.size()) {
-    return false;
-  }
-  for (std::size_t i = 0; i < a.size(); ++i) {
-    const StationRow& x = a.rows_[i];
-    const StationRow& y = b.rows_[i];
-    if (x.station != y.station or x.columns != y.columns or
-        not std::ranges::equal(a.times(i), b.times(i))) {
-      return false;
-    }
-  }
-  return true;
+  const auto same_station = [&a, &b](StationIndex i) {
+    return a.station(i) == b.station(i) and
+           std::ranges::equal(a.times(i), b.times(i));
+  };
+  return a.schema_ == b.schema_ and a.columns_ == b.columns_ and
+         a.size() == b.size() and
+         std::ranges::all_of(a.stations(), same_station);
 }
 
 }  // namespace mov::core

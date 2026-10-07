@@ -14,10 +14,13 @@
 #include "mov/core/detail/utf8.hpp"
 #include "mov/core/station_table.hpp"
 
+using mov::core::ColumnIndex;
+using mov::core::StationIndex;
 using mov::core::StationRow;
 using mov::core::StationSelection;
 using mov::core::StationTable;
 using mov::core::TableError;
+using mov::core::Variable;
 using mov::core::detail::is_valid_utf8;
 
 namespace {
@@ -25,10 +28,14 @@ namespace {
 template <class T>
 concept TableViews = requires(T&& t) {
   std::forward<T>(t).schema();
-  std::forward<T>(t).station(0);
-  std::forward<T>(t).times(0);
-  std::forward<T>(t).column(0, 0);
+  std::forward<T>(t).station(StationIndex{});
+  std::forward<T>(t).times(StationIndex{});
+  std::forward<T>(t).column(StationIndex{}, ColumnIndex{});
 };
+
+template <class I>
+concept SeriesIndexedBy =
+    requires(const StationTable& t, I i) { t.series(i, ColumnIndex{}); };
 
 template <class T>
 concept SelectionView = requires(T&& t) { std::forward<T>(t).indices(); };
@@ -42,6 +49,9 @@ TEST_CASE("table types are values", "[core][station_table][constexpr]") {
   STATIC_REQUIRE(std::copyable<StationRow>);
   STATIC_REQUIRE(std::equality_comparable<StationRow>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<StationRow>);
+  STATIC_REQUIRE(std::copyable<Variable>);
+  STATIC_REQUIRE(std::equality_comparable<Variable>);
+  STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Variable>);
   STATIC_REQUIRE(std::regular<TableError>);
   STATIC_REQUIRE(std::is_trivially_copyable_v<TableError>);
   // A selection is always stated: no default, built only by make or all.
@@ -58,9 +68,26 @@ TEST_CASE("views into a table need an lvalue",
   STATIC_REQUIRE_FALSE(TableViews<StationTable>);
   STATIC_REQUIRE_FALSE(TableViews<const StationTable>);
   // series() copies, so a temporary table may hand it out.
-  STATIC_REQUIRE(requires { StationTable{}.series(0, 0); });
+  STATIC_REQUIRE(
+      requires { StationTable{}.series(StationIndex{}, ColumnIndex{}); });
+  // Plain numbers are not indices.
+  STATIC_REQUIRE(SeriesIndexedBy<StationIndex>);
+  STATIC_REQUIRE_FALSE(SeriesIndexedBy<std::size_t>);
   STATIC_REQUIRE(SelectionView<const StationSelection&>);
   STATIC_REQUIRE_FALSE(SelectionView<StationSelection>);
+}
+
+TEST_CASE("indices are explicit strong types",
+          "[core][station_table][constexpr]") {
+  STATIC_REQUIRE(std::regular<StationIndex>);
+  STATIC_REQUIRE(std::totally_ordered<ColumnIndex>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<StationIndex>);
+  STATIC_REQUIRE_FALSE(std::is_convertible_v<std::size_t, StationIndex>);
+  STATIC_REQUIRE_FALSE(std::is_convertible_v<std::size_t, ColumnIndex>);
+  STATIC_REQUIRE_FALSE(std::is_constructible_v<StationIndex, ColumnIndex>);
+  STATIC_REQUIRE(StationIndex{3}.value() == 3);
+  STATIC_REQUIRE(ColumnIndex{} == ColumnIndex{0});
+  STATIC_REQUIRE(StationIndex{1} < StationIndex{2});
 }
 
 TEST_CASE("UTF-8 well-formedness", "[core][station_table][constexpr]") {
