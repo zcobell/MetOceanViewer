@@ -1,149 +1,198 @@
 # WP2 notes (Vocabulary II)
 
 Fold into `docs/core-design.md`, then delete this file. Everything here is a
-choice the design left open or got wrong. The declarations otherwise match
-§2.6-2.9. Headers: `meta.hpp`, `timeseries.hpp`, `station.hpp`,
-`station_table.hpp`, `vector_series.hpp`, `detail/utf8.hpp` (+), and
-`detail/ascii.hpp` gained `to_upper`.
+choice the design left open or got wrong, including the changes from the
+post-WP2 review (ben-deane, sean-parent) and the maintainer's answers to it
+(Q1-Q6). Headers: `meta.hpp`, `timeseries.hpp`, `station.hpp`,
+`station_table.hpp`, `vector_series.hpp`, `detail/core_key.hpp`,
+`detail/utf8.hpp`; private `src/core/core_access.hpp`. `detail/ascii.hpp`
+gained `to_upper`; `units.hpp` gained `degree()` and
+`detail::unit_of_nonblank`.
 
-## All WP2 types
+## Cross-cutting
 
-- Views into owned storage delete the **`const&&`** overload, not `&&`. With only
-  `&& = delete`, a `const` rvalue still binds to the `const&` overload and dangles
-  (`std::move(const_series).times()`). `const&& = delete` catches both rvalue kinds;
-  `tests/core/test_*_constexpr.cpp` pin it (`SeriesViews<const TimeSeries>` is false).
-  The WP1 types (`GenericQuantity::token`, `OtherUnit::symbol`) still use `&&`;
-  aligning them is a one-line change each.
-- A `requires { ... }` expression outside a template is ill-formed, not false, when
-  it names a deleted function (GCC rejects the program). The tests wrap such checks
-  in small concepts (`TableViews<T>`, `HasValue<T>`).
-- Value-type checks per §7: `std::regular` + nothrow move where a default exists;
-  `copyable` + `equality_comparable` for `StationId`, `GaugeStation`, `FileStation`,
-  `StationRow`, `StationSelection`, `VectorSeries` (no default, because `Location`
-  has none or because an empty value would be invalid). `Point`, `NormalizeReport`,
-  `ConstructionError`, `TableError` are also trivially copyable.
+- **`detail::` is the fence.** Names in `mov::core::detail` are not API, even
+  when a public header must declare them.
+- **One passkey:** `detail::CoreKey` (`detail/core_key.hpp`). Only
+  `detail::CoreAccess` can make one, and `CoreAccess` is defined in
+  `src/core/core_access.hpp`, which is not on any other layer's include path. Every
+  bypass of a class's own checks takes a `const CoreKey&`:
+  - `TimeSeries(CoreKey, times, samples, meta)`: parts whose invariant the caller
+    established, asserted in debug builds. `StationTable::series` and the vector
+    series use it; WP3's `slice`/`shift_time` should too.
+  - `TimeSeries::transform_samples(CoreKey, f)` (Q6): the public sample-changing
+    operations arrive in WP3 as `convert`/`scale_offset`, which keep the metadata
+    coherent with the values.
+  - `SeriesMeta::rewrite_unit(CoreKey, Unit)` and
+    `rewrite_datum(CoreKey, VerticalDatum) -> optional<SeriesMeta>` (nullopt if
+    no datum is engaged) for WP3's `convert`/`shift`.
+
+  The keyed members are inline and **not tested in WP2**; tests cannot include the
+  private header. The keyed constructor is covered through `series()` and the
+  vector series. WP3 adds `#include "core_access.hpp"` in its `.cpp` files.
+- **Rvalue views:** views into owned storage delete the `const&&` overload, not
+  `&&`. With only `&& = delete`, a const rvalue still binds to `const&` and
+  dangles. WP1's `GenericQuantity::token`/`standard_name` and `OtherUnit::symbol`
+  were aligned (Q14).
+- A `requires { ... }` expression outside a template is ill-formed, not false,
+  when it names a deleted function. The tests wrap such checks in concepts.
+- **Portability (macOS/Windows CI):** WP2 uses no `views::zip`, `chunk_by`,
+  `pairwise`, `enumerate`, `fold_left`, `ranges::to` or `ranges::iota`.
+  - `points()` is `views::iota | views::transform(detail::PointAt)` yielding
+    `Point`s.
+  - Descents are a `transform_reduce` over the shifted range.
+  - Runs of equal times are found with `find_if` (a hand-rolled `chunk_by`).
+  - `StationSelection::all` uses `ranges::copy(views::iota(...))`.
+  - Pairwise and `chunk_by` can replace these once the probe confirms them on
+    libc++ and MSVC.
+- **Narrow errors:** each function has its own error type:
+  - `AssumeUnitError {already_set}`, `AssumeDatumError {already_set, not_applicable}`;
+  - `ConstructionError = variant<LengthMismatch{times, samples}, TimeNotIncreasing{index}>`;
+  - `TableError` (below);
+  - `VectorErrc`, `VerticalErrc`;
+  - `SelectionError`;
+  - `StationTextError`, `StationKeyError`, `StationIdError`.
+
+  The design's `MetaError` and `AlignmentErrc` are gone. `residual` (WP3)
+  defines its own.
+- **No unwraps:** WP2 sources contain no `value_or` fallbacks. `canonical_unit`
+  (quantity.cpp) is total: it uses `detail::unit_of_nonblank`, and a
+  `static_assert` proves every registry spelling non-blank. The degree unit is the
+  one named function `degree()`, pinned by a test against `parse_unit` and its
+  aliases. It is a function, not a constant: an `OtherUnit` holds a
+  `std::string`.
 
 ## meta
 
-- `SeriesMeta::Fields` members all have default member initializers, so any subset
-  can be given by designator; `Fields` has `==` (+). The validating constructor is
-  private; `SeriesMeta{}` is the only other way in.
+- **`SeriesMeta::make` is total.** `Fields` is `{quantity, label, unit}` and has no
+  datum. A datum enters only through `assume_datum`, so the C3 invariant
+  (`datum_applicable`) is checked in one place.
 - `assume_unit` returns `already_set` whenever a unit is engaged, even if it is the
-  same unit (an engaged unit changes only through `convert`). `assume_datum` checks
-  `already_set` first; the order cannot matter, since an engaged datum implies
-  `datum_applicable`.
-- `with_label` has `const&` and `&&` overloads.
-- The C3 passkey is `detail::MetaRewrite`, constructible only by
-  `detail::SeriesOpsAccess` and `detail::DatumShiftAccess`, which are declared here
-  and **defined by WP3** in `series_ops.cpp` / `datum_shift.cpp`. The members it
-  unlocks are `rewrite_unit(key, Unit) -> SeriesMeta` and
-  `rewrite_datum(key, VerticalDatum) -> expected<SeriesMeta, MetaError>`
-  (`datum_not_applicable` keeps the invariant even for a caller holding the key).
-  They are inline and **untested in WP2** (no test can build the key); WP3 tests them.
+  same unit. `assume_datum` checks `already_set` first, then `not_applicable`.
 
 ## timeseries
 
-- `ConstructionError::index`: for `length_mismatch` the shorter length; for
-  `time_not_increasing` the first `i` with `not (t[i-1] < t[i])`. The length is
-  checked first. `make` does not bound times to ±2^53 ms; `StationTable::make` does
-  (`time_out_of_range`), because only the file formats need the bound.
-- `assume_unit`, `assume_datum` and `transform_samples` have `&&` overloads (+) as
-  well as `const&`, so a reader's temporary is not copied. `transform_samples`
-  requires `std::invoke_result_t<F&, Sample>` to be exactly `Sample`.
-- `points()` returns the named type `TimeSeries::PointsView` (a `zip_view` of two
-  `ref_view`s), so its rvalue overload can be deleted (a deleted function with a
-  deduced return type is not usable).
-- `detail::trusted_series(times, samples, meta)` (+) is the one core-internal way to
-  build a `TimeSeries` without rechecking: `normalize`, `StationTable::series` and
-  the derived vector series use it, and WP3's `slice`/`shift_time` can. It asserts
-  the invariant in debug builds. It is declared in the public header (it must be
-  named as a friend) but is `detail`.
-- `NormalizeReport` keeps the design's field names: `descents` (adjacent input pairs
-  with `t[i+1] < t[i]`), `duplicates_dropped`, `conflicting_duplicates`. The WP2
-  brief called the first one "out_of_order"; the design name was kept. `clean()` is
-  `descents == 0 and duplicates_dropped == 0`.
-- `normalize`: fast path = `adjacent_find(not (a.time < b.time)) == end`, which
-  takes the rows as they are. Otherwise descents are counted, the rows are
-  `stable_sort`ed only if there is a descent (non-decreasing input with repeats is
-  not sorted), and of each run of equal times the first in input order is kept.
-  `Normalized` gets `==` (+).
-- Fuzz target `fuzz_normalize` (seeds `tests/fixtures/core/normalize/`): 3 bytes per
-  row (signed time byte, tag byte → Missing/Dry/value, signed value byte). Oracle:
-  output passes `TimeSeries::make`; it equals the map "time → first sample"; the
-  three counts equal independently computed ones; `clean()` iff nothing changed, and
-  then output == input; normalizing the output again is clean and identical.
+- `using TimeAxis = std::vector<Time>;`.
+- `detail::first_not_increasing(span<const Time>)` (constexpr) is behind every
+  strictly-increasing check: `make`, the `StationTable` axis check and the debug
+  assert.
+- `make` does not bound times to ±2^53 ms; `StationTable` does (Q5, below).
+- `with_samples(samples, meta) const&/&& -> expected<TimeSeries, LengthMismatch>`:
+  same axis, O(1) length check, for derived series outside the core.
+- `into_parts() && -> TimeSeriesParts{times, samples, meta}`.
+- `assume_*` have `const&` and `&&` overloads; `const&` copies only on success.
+- `normalize` is a friend (private constructor). Behaviour:
+  - Fast path: `adjacent_find(not (a.time < b.time)) == end` takes the rows as they
+    are.
+  - Otherwise it counts descents, `stable_sort`s only if there is a descent, and
+    sums `DedupCounts{dropped, conflicting}` (a monoid under `+`) over the runs of
+    equal times. `ranges::unique` then keeps the first of each run, and the result
+    is unzipped into the two vectors.
+  - The report keeps the design's names: `descents`, `duplicates_dropped`,
+    `conflicting_duplicates`.
+- `fuzz_normalize` (seeds `tests/fixtures/core/normalize/`): 3 bytes per row.
+  Oracle:
+  - the output passes `make` and equals "first sample per time";
+  - all three counts are exact;
+  - `clean()` iff nothing changed, and then output == input;
+  - re-normalizing the output is clean and identical.
 
 ## station
 
-- `Provider` also requires `P::upper_case_ids` (bool): `make` upper-cases before
-  validation iff it is set (only `Ndbc`). The design said "NDBC upper-case" without
-  a mechanism; a trait keeps the concept open instead of special-casing `Ndbc`.
-- `StationIdError { empty, invalid }`: `empty` when nothing is left after trimming
-  ASCII whitespace, `invalid` when the provider grammar fails. `make` is
-  `constexpr` (tested with `STATIC_REQUIRE`).
-- Grammars as §2.8. USGS ids are not case-folded. XTide: non-empty, at most 255
-  bytes, no byte below 0x20 and no 0x7F; any other byte (UTF-8 included) passes,
-  without a UTF-8 check.
-- `parse_data_source` is exact and case-sensitive, like `parse_quantity_token`.
-- `GaugeStation` and `FileStation` get `==`; neither is default-constructible.
+- **Station text types (Q1).**
+  - `StationText`: well-formed UTF-8 without NUL, may be empty; error
+    `StationTextError {embedded_nul, invalid_utf8}`.
+  - `StationKey`: non-empty `StationText`; error
+    `StationKeyError {empty, embedded_nul, invalid_utf8}`.
+  - Both are constexpr, ordered, and built only by `make`.
+  - `FileStation{StationKey id; StationText name; ...}` and
+    `GaugeStation::name` use them.
+  - The error enumerators name the violated property. The field is known to the
+    caller: a reader that builds a key from the id column reports the id.
+  - Lenient sources clean bytes before `make` (C14).
+  - Both `make`s use explicit branches, because GCC 14 cannot constant-evaluate
+    `expected::transform` on a small `std::string`.
+- **`StationId<P>` holds a `StationKey`** (`key()`). `make` trims, canonicalizes,
+  validates the provider grammar, then builds the key. A grammar that admits a
+  non-key would give `invalid`; that branch is unreachable for the four providers.
+- **`Provider` concept:** requires `source`, `canonical(string_view) -> string` and
+  `valid_id`. `canonical` replaces the earlier `upper_case_ids` flag:
+  - NDBC upper-cases everything.
+  - **USGS upper-cases the agency prefix only** (Q4): `usgs-07374000` →
+    `USGS-07374000`, and the grammar now needs `[A-Z0-9]+` before the dash.
+  - XTide additionally requires valid UTF-8.
+- **DataSource tokens** are `{source, token}` rows. A `static_assert` checks
+  enumerator order, and a test pins all seven tokens.
 
 ## station_table
 
-- `StationSelection` lives in `station_table.hpp`. An empty selection is valid
-  (it reads no station; the SN writer then reports `empty_collection`).
-  `out_of_range` is checked over all indices before `duplicate_index`; the error
-  enum carries no index (design).
-- `TableError` payloads: `duplicate_quantity` has `index` = the later schema entry;
-  station-level codes have `station` = the row (`duplicate_station_id`: the later
-  row); axis codes have `station` = the **first row using that axis** and `index` =
-  the element; `column_length_mismatch` has `index` = the column. Check order is in
-  the header (schema; then per row: id/name text, duplicate id, axis index, axis
-  contents, column count, column lengths).
-- Schema uniqueness keys on `token(quantity)` (WP1 decision): two
-  `GenericQuantity`s with one token and different standard names collide; so do
-  two entries that differ only by label or unit.
-- Station text: `id` must be non-empty; `id` and `name` must not contain NUL and
-  must be well-formed UTF-8 (`detail::is_valid_utf8`, constexpr, Unicode table 3-7:
-  no overlongs, surrogates or code points above U+10FFFF). An empty `name` is
-  allowed (the SN writer substitutes "Station <id>"). Ids compare bytewise.
-- Axes no station references are **dropped without being checked**, and the pool is
-  renumbered in order of first use. There is no error code for an unused axis, and
-  keeping it would only waste memory.
-- **Equality is by value, not defaulted**: schema, then per station the
-  `FileStation`, its times and its columns. A table whose stations share one axis
-  equals one that stores the same times twice. A defaulted `==` would make pooling
-  observable (e.g. `from_series` vs an L1 reader).
-- `total_samples()` = Σ over stations of `axis length × schema size` (the number of
-  `Sample` cells).
-- `from_series`: an empty input gives the empty table. `schema_mismatch` compares
-  the whole `SeriesMeta` (labels included) against the first series. Each series
-  gets its own axis; times and samples are copied, since `TimeSeries` has no way to
-  release its vectors. Then `make` runs its checks.
+- **Strong indices.** `StationIndex` and `ColumnIndex` are explicit, have
+  `.value()`, are ordered and default to 0. They index `station`, `times`,
+  `column`, `series` and `vector_series`.
+  - `column_of(const QuantityId&) -> optional<ColumnIndex>` (keyed on token).
+  - `stations()` is an iota range of `StationIndex`.
+- **Variable-major input (Q2).** `make(vector<Variable>, vector<TimeAxis>,
+  vector<StationRow>)`, where `Variable{SeriesMeta meta; vector<Column>
+  per_station}` and `StationRow{FileStation station; size_t axis}`. Storage is
+  `[column][station]`.
+- **`TableError = variant<SchemaError, StationError>`.**
+  - `SchemaError{SchemaErrc code, ColumnIndex column}`: `duplicate_quantity` (keyed
+    on token: two `GenericQuantity`s with one token collide; so do entries that
+    differ only by label or unit) or `station_count_mismatch`
+    (`per_station.size() != stations`).
+  - `StationError{StationIndex station, StationFault fault}`, where `StationFault`
+    is one of `DuplicateStationId`, `AxisOutOfRange`, `TimeOutOfRange{index}`,
+    `TimeNotIncreasing{index}`, `ColumnLengthMismatch{ColumnIndex}` or
+    `SchemaMismatch` (from_series).
+  - The text errors (`empty_station_id`, `embedded_nul`, `invalid_utf8`) are gone:
+    the types rule them out.
+- **Check order:**
+  - Each variable in order: duplicate token, then station count.
+  - Then each station in order: duplicate id, axis index, axis contents, column
+    lengths.
+  - Axis contents: the first element that is out of range or not above its
+    predecessor. The error names the first station using the axis; axes no
+    station uses are dropped unchecked and the pool is renumbered.
+- **Equality is by value**, independent of how the axes are pooled.
+- **`from_series(SeriesMeta schema, vector<AtStation<FileStation, TimeSeries>>)`.**
+  - Moves the series in via `into_parts`.
+  - A series whose meta differs from the declared schema is
+    `StationError{i, SchemaMismatch}`.
+  - No series gives the schema with no stations.
+  - The conversion is partial (Q5): a `TimeSeries` may hold times beyond the file
+    bound ±2^53 ms (SN §7), which is `TimeOutOfRange`.
+- **`StationSelection`** stores `station_count()`, which is part of `==`.
+  - `applies_to(n)` returns `selection_mismatch` in O(1) when the selection was
+    made for another count.
+  - An empty selection is valid.
+  - `out_of_range` is reported before `duplicate_index`.
+- `total_samples()` = Σ over stations of `axis length × schema size`.
+- `detail::is_valid_utf8` is strict per Unicode table 3-7: no overlongs,
+  surrogates or code points above U+10FFFF.
 
 ## vector_series
 
-- Pairs: `(current_u, current_v)`, `(wind_u, wind_v)` and `(generic, generic)`, as in
-  §2.9. Swapped components and mixed pairs are `not_a_vector_pair`. The WP2 brief
-  says "restricted to registered component pairs"; the generic pair is the only
-  non-registry one and is kept because foreign and IMEDS components are generic.
-- Check order: pair, times, units (`unit_unknown` if either is unset, then
-  `units_differ`), datums. The design gave no datum rule for vectors: both unset or
-  both set and equal pass; exactly one set is `datum_unknown`; both set and
-  different is `datums_differ`. Only generic components can carry a datum.
-- `temperature_difference` is declared but unused here (it is `residual`'s, WP3).
-- Derived-meta "stem": `"wind"` for the wind pair, `"current"` for the current pair;
-  for a generic pair the trimmed `u` label without a trailing separator
-  (` `, `_`, `-`) + component letter (`u`, `U`, `x`, `X`), so `"velocity u"` →
-  `"velocity"`, `"flow_X"` → `"flow"`, `"menu"` stays; an empty result (or the
-  label `"u"`) becomes `"vector"`. Direction unit: `parse_unit("degree")`.
-- `cartesian_direction`: `atan2(v, u)`; a result of exactly `-π` is replaced by `π`
-  before converting to degrees, so `(-1, -0.0)` and `(-1, -1e-300)` give the same
-  value as `(-1, 0)`. A zero vector (both components ±0) is `Missing`; Missing and
-  Dry follow `combine` (N7).
-- `magnitude3(x, y, z)`: `(x, y)` must be a current or generic pair (a wind pair is
-  `not_a_vector_pair`, since the label is "3D current speed") and `z` generic (no
-  registry quantity for vertical velocity); then the alignment checks for `(x, y)`
-  and `(x, z)`. Computed as `hypot(hypot(x, y), z)` through `combine`.
-- `vector_series(table, i, ku, kv)`: out-of-range indices are a precondition, like
-  the table accessors.
-- `VectorSeries` gets `==` (+) and has no default constructor.
+- **`make` accepts the registered pairs only:** `(current_u, current_v)` and
+  `(wind_u, wind_v)`, in that order. **`assume_components(u, v)`** is the visibly
+  named way to pair two generic series, and refuses registry quantities. Both
+  check the pair, then the times, then the unit (`unit_unknown`, then
+  `units_differ`). **Datums are not compared** (Q3).
+- **`VectorSeries` stores what make proved:** `kind()` (`VectorKind {current,
+  wind, generic}`) and `unit()`.
+- **Labels.** The derived-meta table of §2.9 holds. The "stem" is:
+  - `wind` or `current` for the registered pairs;
+  - for generic pairs, the trimmed `u` label without a trailing separator
+    (` `, `_`, `-`) + `u`/`U`/`x`/`X`;
+  - `"vector"` when that leaves nothing.
+- **`cartesian_direction`:** `atan2(v, u)`, and an exact `-π` becomes `π` before
+  conversion to degrees. A zero vector is `Missing`. Missing and Dry follow
+  `combine` (N7). The unit is `degree()`.
+- **`magnitude3(const VectorSeries& horizontal, const TimeSeries& w)`.**
+  - Errors are `VerticalErrc {not_generic, times_differ, unit_unknown,
+    units_differ}`.
+  - The value is `std::hypot(u, v, w)` (three arguments; pinned with 2, 3, 6 → 7)
+    under the combine rule.
+  - The label is `"3D <stem> speed"` (`"3D current speed"`, `"3D wind speed"`,
+    `"3D flow speed"`), so a generic pair is not called a current.
+- `vector_series(table, StationIndex, ColumnIndex, ColumnIndex)` goes through
+  `make`. Indices out of range are a precondition, as for the table accessors.
