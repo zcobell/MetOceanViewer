@@ -7,18 +7,38 @@ description: >
   VCPKG_ROOT and VCPKG_BINARY_SOURCES, and restore/save the binary cache. The
   cache key includes the version string of the compiler vcpkg builds ports
   with (c++ on Linux/macOS, cl on Windows), so a runner image update with a
-  new compiler starts a new cache instead of carrying stale archives. Run it
+  new compiler starts a new cache instead of carrying stale archives; it also
+  hashes the overlay ports, so a changed port's new archive gets saved. Run it
   after the compiler is selected (setup-gcc, Xcode, msvc-dev-cmd).
 inputs:
   cache-key:
     description: Job-specific prefix for the binary cache key.
     required: true
+  restore-only:
+    description: >
+      'true': only restore; the job saves with actions/cache/save and the
+      outputs below. actions/cache saves only when the whole job succeeds,
+      which would discard a long MapLibre build whenever a later step fails.
+    default: 'false'
+outputs:
+  cache-path:
+    description: Directory of the binary cache.
+    value: ${{ steps.vcpkg.outputs.cache }}
+  cache-key:
+    description: Exact key of the binary cache.
+    value: ${{ steps.vcpkg.outputs.key }}
+  cache-hit:
+    description: "'true' when the exact key was restored (restore-only mode)."
+    value: ${{ steps.restore.outputs.cache-hit }}
 runs:
   using: composite
   steps:
     - name: Clone and bootstrap vcpkg
       id: vcpkg
       shell: bash
+      env:
+        KEY_PREFIX: vcpkg-${{ inputs.cache-key }}
+        KEY_FILES: ${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'cmake/vcpkg-ports/**') }}
       run: |
         commit="$(jq -r '."default-registry".baseline' vcpkg-configuration.json)"
         root="${RUNNER_TEMP}/vcpkg"
@@ -39,10 +59,24 @@ runs:
           echo "VCPKG_ROOT=${root}"
           echo "VCPKG_BINARY_SOURCES=clear;files,${cache},readwrite"
         } >> "${GITHUB_ENV}"
-        echo "toolchain=$(printf '%s' "${toolchain}" | sha256sum | cut -c1-12)" >> "${GITHUB_OUTPUT}"
+        prefix="${KEY_PREFIX}-$(printf '%s' "${toolchain}" | sha256sum | cut -c1-12)-"
+        {
+          echo "cache=${cache}"
+          echo "prefix=${prefix}"
+          echo "key=${prefix}${KEY_FILES}"
+        } >> "${GITHUB_OUTPUT}"
     - name: vcpkg binary cache
+      if: inputs.restore-only != 'true'
       uses: actions/cache@v6
       with:
-        path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-${{ inputs.cache-key }}-${{ steps.vcpkg.outputs.toolchain }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
-        restore-keys: vcpkg-${{ inputs.cache-key }}-${{ steps.vcpkg.outputs.toolchain }}-
+        path: ${{ steps.vcpkg.outputs.cache }}
+        key: ${{ steps.vcpkg.outputs.key }}
+        restore-keys: ${{ steps.vcpkg.outputs.prefix }}
+    - name: Restore vcpkg binary cache
+      id: restore
+      if: inputs.restore-only == 'true'
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.vcpkg.outputs.cache }}
+        key: ${{ steps.vcpkg.outputs.key }}
+        restore-keys: ${{ steps.vcpkg.outputs.prefix }}

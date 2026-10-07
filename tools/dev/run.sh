@@ -15,8 +15,9 @@
 # tools/versions.env, the vcpkg baseline) and rebuilt when any of them change.
 #
 # Qt is installed with aqtinstall into ~/Qt on demand: when MOV_DEV_QT=1, or
-# when an argument names a Qt preset (one whose name ends in "-qt"). A stamp
-# file records version, arch and modules; a mismatch reinstalls.
+# when an argument names a Qt preset (one whose name ends in "-qt", or "tidy",
+# whose gate covers the Qt layers). A stamp file records version, arch and
+# modules; a mismatch reinstalls.
 #
 # Persistent state lives on the host:
 #   ~/Qt                         Qt
@@ -103,7 +104,7 @@ fi
 
 needs_qt="${MOV_DEV_QT:-0}"
 for arg in "$@"; do
-  if [[ "${arg}" == *-qt || "${arg}" == --preset=*-qt ]]; then
+  if [[ "${arg}" == *-qt || "${arg}" == --preset=*-qt || "${arg}" == tidy || "${arg}" == --preset=tidy ]]; then
     needs_qt=1
   fi
 done
