@@ -17,10 +17,13 @@
 #include "mov/test/fixture.hpp"
 #include "mov/test/scratch_dir.hpp"
 
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
+
 namespace {
 
 using namespace std::string_literals;
-using mov::io::FileError;
 using mov::io::FileOp;
 using mov::io::read_text_file;
 using mov::io::ReadLimits;
@@ -28,8 +31,6 @@ using mov::test::fixture;
 
 constexpr std::string_view bom_crlf_content =
     "\xEF\xBB\xBFline one\r\nline two\r\n\r\nlast line without newline";
-
-std::error_code code(std::errc e) { return std::make_error_code(e); }
 
 // True if this process can open `path` for writing despite the permissions
 // (root, or a file system that ignores them).
@@ -81,10 +82,9 @@ TEST_CASE("read_text_file reports a missing file", "[io][text_file]") {
   const std::filesystem::path missing = dir / "missing.txt";
   const auto result = read_text_file(missing, {});
   REQUIRE(not result.has_value());
-  CHECK(result.error() ==
-        FileError{.op = FileOp::open,
-                  .path = missing,
-                  .ec = code(std::errc::no_such_file_or_directory)});
+  CHECK(result.error().op == FileOp::open);
+  CHECK(result.error().path == missing);
+  CHECK(result.error().ec == std::errc::no_such_file_or_directory);
   // Neither an empty string nor a created file.
   CHECK(not std::filesystem::exists(missing));
 }
@@ -93,16 +93,16 @@ TEST_CASE("read_text_file reports an empty path", "[io][text_file]") {
   const auto result = read_text_file(std::filesystem::path{}, {});
   REQUIRE(not result.has_value());
   CHECK(result.error().op == FileOp::open);
-  CHECK(static_cast<bool>(result.error().ec));
+  CHECK(result.error().ec == std::errc::no_such_file_or_directory);
 }
 
 TEST_CASE("read_text_file refuses a directory", "[io][text_file]") {
   const mov::test::ScratchDir dir;
   const auto result = read_text_file(dir.path(), {});
   REQUIRE(not result.has_value());
-  CHECK(result.error() == FileError{.op = FileOp::open,
-                                    .path = dir.path(),
-                                    .ec = code(std::errc::is_a_directory)});
+  CHECK(result.error().op == FileOp::open);
+  CHECK(result.error().path == dir.path());
+  CHECK(result.error().ec == std::errc::is_a_directory);
 }
 
 #ifndef _WIN32
@@ -110,9 +110,9 @@ TEST_CASE("read_text_file refuses a file that is not a regular file",
           "[io][text_file][posix]") {
   const auto result = read_text_file("/dev/null", {});
   REQUIRE(not result.has_value());
-  CHECK(result.error() == FileError{.op = FileOp::open,
-                                    .path = "/dev/null",
-                                    .ec = code(std::errc::invalid_argument)});
+  CHECK(result.error().op == FileOp::open);
+  CHECK(result.error().path == "/dev/null");
+  CHECK(result.error().ec == std::errc::invalid_argument);
 }
 #endif
 
@@ -128,13 +128,13 @@ TEST_CASE("read_text_file checks the size limit before reading",
 
   const auto over = read_text_file(file, ReadLimits{.max_text_bytes = 19});
   REQUIRE(not over.has_value());
-  CHECK(over.error() == FileError{.op = FileOp::size,
-                                  .path = file,
-                                  .ec = code(std::errc::file_too_large)});
+  CHECK(over.error().op == FileOp::size);
+  CHECK(over.error().path == file);
+  CHECK(over.error().ec == std::errc::file_too_large);
 
   const auto zero = read_text_file(file, ReadLimits{.max_text_bytes = 0});
   REQUIRE(not zero.has_value());
-  CHECK(zero.error().ec == code(std::errc::file_too_large));
+  CHECK(zero.error().ec == std::errc::file_too_large);
 
   // An empty file fits a zero limit.
   mov::test::write_bytes(dir / "empty.txt", "");
@@ -179,5 +179,20 @@ TEST_CASE("read_text_file reports a file it may not read",
   REQUIRE(not result.has_value());
   CHECK(result.error().op == FileOp::open);
   CHECK(result.error().path == file);
-  CHECK(static_cast<bool>(result.error().ec));
+  CHECK(result.error().ec == std::errc::permission_denied);
 }
+
+#ifndef _WIN32
+// A FIFO has no writer; reading it as text must neither hang nor succeed.
+TEST_CASE("read_text_file does not block on a FIFO", "[io][text_file][posix]") {
+  const mov::test::ScratchDir dir;
+  const std::filesystem::path fifo = dir / "pipe";
+  if (::mkfifo(fifo.c_str(), 0600) != 0) {
+    SKIP("cannot create a FIFO here");
+  }
+  const auto result = read_text_file(fifo, {});
+  REQUIRE(not result.has_value());
+  CHECK(result.error().op == FileOp::open);
+  CHECK(result.error().ec == std::errc::invalid_argument);
+}
+#endif

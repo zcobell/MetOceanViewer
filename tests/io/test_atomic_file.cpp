@@ -4,6 +4,7 @@
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -15,6 +16,7 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/io/detail/atomic_file.hpp"
@@ -25,10 +27,14 @@
 namespace {
 
 using namespace std::string_literals;
+using mov::io::Error;
 using mov::io::FileError;
 using mov::io::FileOp;
+using mov::io::FormatErrc;
+using mov::io::FormatError;
 using mov::io::detail::AtomicStage;
 using mov::io::detail::FaultInjector;
+using mov::io::detail::TextBodyResult;
 using mov::test::entry_names;
 using mov::test::read_bytes;
 using mov::test::ScratchDir;
@@ -36,8 +42,21 @@ using mov::test::write_bytes;
 
 const std::error_code io_error = std::make_error_code(std::errc::io_error);
 
+// A body that writes `text` and succeeds.
 auto writing(std::string_view text) {
-  return [text](std::ostream& out) { out << text; };
+  return [text](std::ostream& out) -> TextBodyResult {
+    out << text;
+    return {};
+  };
+}
+
+// The FileError inside an io::Error, or one with op `remove` and no path when
+// it holds something else (so a wrong alternative fails the comparison).
+FileError file_error_of(const Error& error) {
+  const auto* file = std::get_if<FileError>(&error);
+  return file != nullptr
+             ? *file
+             : FileError{.op = FileOp::remove, .path = {}, .ec = {}};
 }
 
 bool can_open_for_write(const std::filesystem::path& path) {
@@ -65,6 +84,10 @@ class ScopedCurrentDirectory {
   std::filesystem::path previous_;
 };
 
+// Whether write_file_atomic accepts a body of type B.
+template <class B>
+concept AcceptedBody = mov::io::AtomicTextBody<B>;
+
 }  // namespace
 
 TEST_CASE("write_file_atomic creates a file", "[io][atomic]") {
@@ -90,17 +113,41 @@ TEST_CASE("write_file_atomic writes bytes, not translated text",
   const ScratchDir dir;
   const auto target = dir / "out.bin";
   const std::string bytes = "a\r\nb\0c\n\xEF\xBB\xBF"s;
-  REQUIRE(mov::io::write_file_atomic(target, [&bytes](std::ostream& out) {
-            out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-          }).has_value());
+  REQUIRE(mov::io::write_file_atomic(
+              target,
+              [&bytes](std::ostream& out) -> TextBodyResult {
+                out.write(bytes.data(),
+                          static_cast<std::streamsize>(bytes.size()));
+                return {};
+              })
+              .has_value());
   CHECK(read_bytes(target) == bytes);
+}
+
+TEST_CASE("write_file_atomic writes a large body", "[io][atomic]") {
+  const ScratchDir dir;
+  const auto target = dir / "big.txt";
+  const std::string chunk(1000, 'x');
+  REQUIRE(
+      mov::io::write_file_atomic(target,
+                                 [&chunk](std::ostream& out) -> TextBodyResult {
+                                   for (int i = 0; i < 2000; ++i) {
+                                     out << chunk;
+                                   }
+                                   return {};
+                                 })
+          .has_value());
+  CHECK(read_bytes(target).size() == 2'000'000);
 }
 
 TEST_CASE("write_file_atomic can write an empty file", "[io][atomic]") {
   const ScratchDir dir;
   const auto target = dir / "empty.txt";
   write_bytes(target, "something");
-  REQUIRE(mov::io::write_file_atomic(target, [](std::ostream&) {}).has_value());
+  REQUIRE(
+      mov::io::write_file_atomic(target, [](std::ostream&) -> TextBodyResult {
+        return {};
+      }).has_value());
   CHECK(read_bytes(target).empty());
   CHECK(std::filesystem::exists(target));
 }
@@ -108,7 +155,10 @@ TEST_CASE("write_file_atomic can write an empty file", "[io][atomic]") {
 TEST_CASE("write_file_atomic accepts any callable with a stream",
           "[io][atomic]") {
   struct Writer {
-    void operator()(std::ostream& out) const { out << "functor"; }
+    std::expected<void, FileError> operator()(std::ostream& out) const {
+      out << "functor";
+      return {};
+    }
   };
   const ScratchDir dir;
   const auto target = dir / "out.txt";
@@ -116,9 +166,10 @@ TEST_CASE("write_file_atomic accepts any callable with a stream",
   REQUIRE(mov::io::write_file_atomic(target, writer).has_value());
   CHECK(read_bytes(target) == "functor");
   REQUIRE(mov::io::write_file_atomic(target, Writer{}).has_value());
-  REQUIRE(mov::io::write_file_atomic(
-              target, std::function<void(std::ostream&)>{writing("fn")})
-              .has_value());
+  REQUIRE(
+      mov::io::write_file_atomic(
+          target, std::function<TextBodyResult(std::ostream&)>{writing("fn")})
+          .has_value());
   CHECK(read_bytes(target) == "fn");
 }
 
@@ -130,18 +181,105 @@ TEST_CASE("write_file_atomic works for a bare file name", "[io][atomic]") {
   CHECK(entry_names(dir.path()) == std::vector<std::string>{"bare.txt"});
 }
 
+TEST_CASE("a long target name does not make the temporary name too long",
+          "[io][atomic]") {
+  const ScratchDir dir;
+  const auto target = dir / (std::string(240, 'n') + ".txt");
+  REQUIRE(mov::io::write_file_atomic(target, writing("x")).has_value());
+  CHECK(read_bytes(target) == "x");
+}
+
+// B1: a body must be able to say that it failed.
+TEST_CASE(
+    "a failing body leaves the target byte-identical and its error is returned",
+    "[io][atomic][regression][B1]") {
+  const ScratchDir dir;
+  const auto target = dir / "out.txt";
+  write_bytes(target, "precious\r\n\0bytes"s);
+  const std::string before = read_bytes(target);
+
+  const FormatError format{.code = FormatErrc::time_missing, .subject = "time"};
+  const auto format_failure = mov::io::write_file_atomic(
+      target, [&format](std::ostream& out) -> std::expected<void, FormatError> {
+        out << "partial";
+        return std::unexpected{format};
+      });
+  REQUIRE(not format_failure.has_value());
+  CHECK(format_failure.error() == Error{format});
+  CHECK(read_bytes(target) == before);
+  CHECK(entry_names(dir.path()) == std::vector<std::string>{"out.txt"});
+
+  const FileError file{.op = FileOp::read, .path = "elsewhere", .ec = io_error};
+  const auto io_failure = mov::io::write_file_atomic(
+      target, [&file](std::ostream&) -> std::expected<void, Error> {
+        return std::unexpected{Error{file}};
+      });
+  REQUIRE(not io_failure.has_value());
+  CHECK(io_failure.error() == Error{file});
+  CHECK(read_bytes(target) == before);
+
+  // The same body creates nothing when there was no target.
+  const auto absent = dir / "absent.txt";
+  CHECK(not mov::io::write_file_atomic(
+                absent,
+                [&format](std::ostream&) -> std::expected<void, FormatError> {
+                  return std::unexpected{format};
+                })
+                .has_value());
+  CHECK(not std::filesystem::exists(absent));
+  CHECK(entry_names(dir.path()) == std::vector<std::string>{"out.txt"});
+}
+
+TEST_CASE("only a body that can report an error is accepted",
+          "[io][atomic][regression][B1]") {
+  using Ostream = std::ostream&;
+  auto returns_void = [](Ostream) {};
+  auto returns_bool = [](Ostream) { return true; };
+  auto returns_int = [](Ostream) { return 0; };
+  auto returns_expected_int = [](Ostream) -> std::expected<void, int> {
+    return {};
+  };
+  auto returns_expected_value = [](Ostream) -> std::expected<int, FileError> {
+    return 0;
+  };
+  auto returns_file = [](Ostream) -> std::expected<void, FileError> {
+    return {};
+  };
+  auto returns_format = [](Ostream) -> std::expected<void, FormatError> {
+    return {};
+  };
+  auto returns_error = [](Ostream) -> std::expected<void, Error> { return {}; };
+  auto takes_nothing = [] {};
+
+  STATIC_REQUIRE_FALSE(AcceptedBody<decltype(returns_void)>);
+  STATIC_REQUIRE_FALSE(AcceptedBody<decltype(returns_bool)>);
+  STATIC_REQUIRE_FALSE(AcceptedBody<decltype(returns_int)>);
+  STATIC_REQUIRE_FALSE(AcceptedBody<decltype(returns_expected_int)>);
+  STATIC_REQUIRE_FALSE(AcceptedBody<decltype(returns_expected_value)>);
+  STATIC_REQUIRE_FALSE(AcceptedBody<decltype(takes_nothing)>);
+  STATIC_REQUIRE(AcceptedBody<decltype(returns_file)>);
+  STATIC_REQUIRE(AcceptedBody<decltype(returns_format)>);
+  STATIC_REQUIRE(AcceptedBody<decltype(returns_error)>);
+  STATIC_REQUIRE(AcceptedBody<decltype(returns_file)&>);
+}
+
 TEST_CASE("a stream that fails during the body fails the write",
           "[io][atomic]") {
   const ScratchDir dir;
   const auto target = dir / "out.txt";
   write_bytes(target, "precious");
-  const auto result = mov::io::write_file_atomic(target, [](std::ostream& out) {
-    out << "partial";
-    out.setstate(std::ios::failbit);
-  });
+  const auto result = mov::io::write_file_atomic(
+      target, [](std::ostream& out) -> TextBodyResult {
+        out << "partial";
+        out.setstate(std::ios::failbit);
+        return {};
+      });
   REQUIRE(not result.has_value());
-  CHECK(result.error().op == FileOp::write);
-  CHECK(result.error().path == target);
+  const FileError error = file_error_of(result.error());
+  CHECK(error.op == FileOp::write);
+  CHECK(error.path == target);
+  // Never a zero error code, even when the C library recorded no cause.
+  CHECK(static_cast<bool>(error.ec));
   CHECK(read_bytes(target) == "precious");
   CHECK(entry_names(dir.path()) == std::vector<std::string>{"out.txt"});
 }
@@ -151,7 +289,7 @@ TEST_CASE("a body that throws leaves the target and the directory untouched",
   const ScratchDir dir;
   const auto target = dir / "out.txt";
   write_bytes(target, "precious");
-  const auto throwing = [](std::ostream& out) {
+  const auto throwing = [](std::ostream& out) -> TextBodyResult {
     out << "partial";
     throw std::runtime_error{"body failed"};
   };
@@ -172,7 +310,7 @@ TEST_CASE("fault injection at every stage", "[io][atomic][regression][B19]") {
     FileOp op;
     bool replaced;  // the target holds the new content afterwards
   };
-  constexpr std::array cases{
+  const std::array cases{
       Case{.stage = AtomicStage::create,
            .op = FileOp::create,
            .replaced = false},
@@ -185,7 +323,7 @@ TEST_CASE("fault injection at every stage", "[io][atomic][regression][B19]") {
            .op = FileOp::rename,
            .replaced = false},
       Case{.stage = AtomicStage::fsync_dir,
-           .op = FileOp::fsync,
+           .op = FileOp::fsync_dir,
            .replaced = true},
   };
   for (const Case& c : cases) {
@@ -197,11 +335,62 @@ TEST_CASE("fault injection at every stage", "[io][atomic][regression][B19]") {
           target, writing("new"), FaultInjector{.fail_at = c.stage});
       REQUIRE(not result.has_value());
       CHECK(result.error() ==
-            FileError{.op = c.op, .path = target, .ec = io_error});
+            Error{FileError{.op = c.op, .path = target, .ec = io_error}});
       CHECK(read_bytes(target) == (c.replaced ? "new" : "old"));
       CHECK(entry_names(dir.path()) == std::vector<std::string>{"out.txt"});
     }
   }
+}
+
+TEST_CASE("an injected fault carries the code it was given", "[io][atomic]") {
+  const ScratchDir dir;
+  const auto target = dir / "out.txt";
+  const auto no_space = std::make_error_code(std::errc::no_space_on_device);
+  const auto result = mov::io::detail::write_text_atomic(
+      target, writing("x"),
+      FaultInjector{.fail_at = AtomicStage::close, .code = no_space});
+  REQUIRE(not result.has_value());
+  CHECK(file_error_of(result.error()).ec == std::errc::no_space_on_device);
+}
+
+// A file system that has no directory fsync (EINVAL, ENOTSUP, EOPNOTSUPP) has
+// nothing more to give; that is not a failed write.
+TEST_CASE("an unsupported directory fsync is not an error", "[io][atomic]") {
+  for (const std::errc unsupported :
+       {std::errc::invalid_argument, std::errc::not_supported,
+        std::errc::operation_not_supported}) {
+    const ScratchDir dir;
+    const auto target = dir / "out.txt";
+    const auto result = mov::io::detail::write_text_atomic(
+        target, writing("new"),
+        FaultInjector{.fail_at = AtomicStage::fsync_dir,
+                      .code = std::make_error_code(unsupported)});
+    CHECK(result.has_value());
+    CHECK(read_bytes(target) == "new");
+    CHECK(entry_names(dir.path()) == std::vector<std::string>{"out.txt"});
+  }
+  // Any other failure of that stage is reported.
+  const ScratchDir dir;
+  const auto target = dir / "out.txt";
+  const auto failed = mov::io::detail::write_text_atomic(
+      target, writing("new"),
+      FaultInjector{.fail_at = AtomicStage::fsync_dir,
+                    .code = std::make_error_code(std::errc::io_error)});
+  REQUIRE(not failed.has_value());
+  CHECK(file_error_of(failed.error()).op == FileOp::fsync_dir);
+}
+
+// The same code at another stage is an error: only the directory fsync has
+// this exemption.
+TEST_CASE("EINVAL at the file fsync is an error", "[io][atomic]") {
+  const ScratchDir dir;
+  const auto target = dir / "out.txt";
+  const auto result = mov::io::detail::write_text_atomic(
+      target, writing("new"),
+      FaultInjector{.fail_at = AtomicStage::fsync_file,
+                    .code = std::make_error_code(std::errc::invalid_argument)});
+  REQUIRE(not result.has_value());
+  CHECK(file_error_of(result.error()).op == FileOp::fsync);
 }
 
 TEST_CASE("a failed write does not create a target that was absent",
@@ -240,16 +429,17 @@ TEST_CASE("the temporary file is created exclusively",
   const auto result =
       mov::io::detail::write_text_atomic(target, writing("new"), fault);
   REQUIRE(not result.has_value());
-  CHECK(result.error().op == FileOp::create);
-  CHECK(result.error().path == target);
-  CHECK(result.error().ec == std::make_error_code(std::errc::file_exists));
+  const FileError error = file_error_of(result.error());
+  CHECK(error.op == FileOp::create);
+  CHECK(error.path == target);
+  CHECK(error.ec == std::errc::file_exists);
   // Neither the target nor the file that was in the way was touched or
   // removed.
   CHECK(read_bytes(target) == "old");
   CHECK(read_bytes(temp) == "someone else's file");
 }
 
-TEST_CASE("temporary file names are unique and next to the target",
+TEST_CASE("temporary file names are unique, hidden and next to the target",
           "[io][atomic]") {
   const std::filesystem::path target =
       std::filesystem::path{"some"} / "dir" / "out.txt";
@@ -259,13 +449,15 @@ TEST_CASE("temporary file names are unique and next to the target",
   for (const auto& temp : {first, second}) {
     CHECK(temp.parent_path() == target.parent_path());
     const std::string name = temp.filename().string();
-    CHECK(name.starts_with("out.txt."));
+    CHECK(name.starts_with(".mov-"));
     CHECK(name.ends_with(".tmp"));
-    // "out.txt." + 16 hex digits + ".tmp"
-    CHECK(name.size() == std::string_view{"out.txt."}.size() + 16 + 4);
+    // ".mov-" + 16 hex digits + ".tmp", whatever the target is called.
+    CHECK(name.size() == 5 + 16 + 4);
   }
   CHECK(mov::io::detail::temp_path_for(target, 0x1F) ==
-        target.string() + ".000000000000001f.tmp");
+        std::filesystem::path{"some"} / "dir" / ".mov-000000000000001f.tmp");
+  CHECK(mov::io::detail::temp_path_for("bare.txt", 0x1F) ==
+        std::filesystem::path{".mov-000000000000001f.tmp"});
 }
 
 TEST_CASE("a target that is a directory fails the rename and leaves no temp",
@@ -277,9 +469,10 @@ TEST_CASE("a target that is a directory fails the rename and leaves no temp",
 
   const auto result = mov::io::write_file_atomic(target, writing("new"));
   REQUIRE(not result.has_value());
-  CHECK(result.error().op == FileOp::rename);
-  CHECK(result.error().path == target);
-  CHECK(static_cast<bool>(result.error().ec));
+  const FileError error = file_error_of(result.error());
+  CHECK(error.op == FileOp::rename);
+  CHECK(error.path == target);
+  CHECK(static_cast<bool>(error.ec));
   CHECK(std::filesystem::is_directory(target));
   CHECK(read_bytes(target / "inside.txt") == "keep");
   CHECK(entry_names(dir.path()) == std::vector<std::string>{"occupied"});
@@ -290,10 +483,10 @@ TEST_CASE("a missing directory fails the create", "[io][atomic]") {
   const auto target = dir / "no_such_dir" / "out.txt";
   const auto result = mov::io::write_file_atomic(target, writing("x"));
   REQUIRE(not result.has_value());
-  CHECK(result.error().op == FileOp::create);
-  CHECK(result.error().path == target);
-  CHECK(result.error().ec ==
-        std::make_error_code(std::errc::no_such_file_or_directory));
+  const FileError error = file_error_of(result.error());
+  CHECK(error.op == FileOp::create);
+  CHECK(error.path == target);
+  CHECK(error.ec == std::errc::no_such_file_or_directory);
   CHECK(entry_names(dir.path()).empty());
 }
 
@@ -312,8 +505,46 @@ TEST_CASE("a directory that cannot be written fails the create",
   const auto result =
       mov::io::write_file_atomic(locked / "out.txt", writing("x"));
   REQUIRE(not result.has_value());
-  CHECK(result.error().op == FileOp::create);
-  CHECK(static_cast<bool>(result.error().ec));
+  const FileError error = file_error_of(result.error());
+  CHECK(error.op == FileOp::create);
+  CHECK(error.ec == std::errc::permission_denied);
+}
+
+TEST_CASE("a read-only target is not silently replaced",
+          "[io][atomic][posix]") {
+  const ScratchDir dir;
+  const auto target = dir / "readonly.txt";
+  write_bytes(target, "protected");
+  std::filesystem::permissions(target,
+                               std::filesystem::perms::owner_read |
+                                   std::filesystem::perms::group_read |
+                                   std::filesystem::perms::others_read,
+                               std::filesystem::perm_options::replace);
+  const auto result = mov::io::write_file_atomic(target, writing("new"));
+  REQUIRE(not result.has_value());
+  const FileError error = file_error_of(result.error());
+  CHECK(error.op == FileOp::open);
+  CHECK(error.path == target);
+  CHECK(error.ec == std::errc::permission_denied);
+  CHECK(read_bytes(target) == "protected");
+  CHECK(entry_names(dir.path()) == std::vector<std::string>{"readonly.txt"});
+}
+
+TEST_CASE("the new file keeps the permission bits of the one it replaces",
+          "[io][atomic][posix]") {
+  namespace fs = std::filesystem;
+  const ScratchDir dir;
+  const auto target = dir / "shared.txt";
+  write_bytes(target, "old");
+  const fs::perms wanted = fs::perms::owner_read | fs::perms::owner_write |
+                           fs::perms::group_read | fs::perms::group_write;
+  fs::permissions(target, wanted, fs::perm_options::replace);
+
+  REQUIRE(mov::io::write_file_atomic(target, writing("new")).has_value());
+  CHECK(read_bytes(target) == "new");
+  CHECK((fs::status(target).permissions() &
+         (fs::perms::owner_all | fs::perms::group_all |
+          fs::perms::others_all)) == wanted);
 }
 
 TEST_CASE("TempFileGuard removes the file unless released", "[io][atomic]") {
@@ -357,4 +588,31 @@ TEST_CASE("commit_temp fails for a temporary file that is not there",
   REQUIRE(not result.has_value());
   CHECK(result.error().op == FileOp::fsync);
   CHECK(static_cast<bool>(result.error().ec));
+}
+
+TEST_CASE("check_target_replaceable passes what a rename can replace",
+          "[io][atomic]") {
+  const ScratchDir dir;
+  CHECK(mov::io::detail::check_target_replaceable(dir / "absent").has_value());
+  CHECK(mov::io::detail::check_target_replaceable(dir.path()).has_value());
+  write_bytes(dir / "file", "x");
+  CHECK(mov::io::detail::check_target_replaceable(dir / "file").has_value());
+}
+
+TEST_CASE(
+    "write_file_atomic carries single characters, flushes and seeks nothing",
+    "[io][atomic]") {
+  const ScratchDir dir;
+  const auto target = dir / "chars.txt";
+  REQUIRE(mov::io::write_file_atomic(target,
+                                     [](std::ostream& out) -> TextBodyResult {
+                                       out.put('a');
+                                       out << 'b' << 'c' << std::flush;
+                                       out.put('\n');
+                                       out << 42 << ' ' << 1.5 << '\n'
+                                           << std::flush;
+                                       return {};
+                                     })
+              .has_value());
+  CHECK(read_bytes(target) == "abc\n42 1.5\n");
 }
