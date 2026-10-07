@@ -3,6 +3,7 @@
 
 // STATIC_REQUIRE checks for mov/core/time.hpp.
 
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <concepts>
@@ -36,7 +37,8 @@ using std::chrono::year;
 
 constexpr std::int64_t int64_max = std::numeric_limits<std::int64_t>::max();
 constexpr std::int64_t int64_min = std::numeric_limits<std::int64_t>::min();
-constexpr std::int64_t unit_second = 1000;
+constexpr std::chrono::seconds unit_second{1};
+using millis = std::chrono::milliseconds;
 
 constexpr Time utc(int y, unsigned m, unsigned d, int hh = 0, int mm = 0,
                    int ss = 0, int ms = 0) {
@@ -57,6 +59,8 @@ constexpr std::optional<std::size_t> bad_column(std::string_view text) {
 
 TEST_CASE("time types are value types", "[core][time][constexpr]") {
   STATIC_REQUIRE(std::copyable<TimeRange>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<TimeRange>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<ValidRange>);
   STATIC_REQUIRE(std::equality_comparable<TimeRange>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<TimeRange>);
   STATIC_REQUIRE_FALSE(std::is_default_constructible_v<TimeRange>);
@@ -90,22 +94,28 @@ TEST_CASE("ValidRange make", "[core][time][constexpr]") {
   constexpr sys_days a{year{2000} / 1 / 1};
   constexpr sys_days b{year{2010} / 6 / 15};
 
-  constexpr auto unknown_ongoing = ValidRange::make(std::nullopt, std::nullopt);
+  constexpr auto unknown_ongoing =
+      ValidRange::make({.first = std::nullopt, .last = std::nullopt});
   STATIC_REQUIRE(unknown_ongoing.has_value());
   STATIC_REQUIRE_FALSE(unknown_ongoing->first().has_value());
   STATIC_REQUIRE_FALSE(unknown_ongoing->last().has_value());
   STATIC_REQUIRE(*unknown_ongoing == ValidRange{});
 
-  constexpr auto closed = ValidRange::make(a, b);
+  constexpr auto closed = ValidRange::make({.first = a, .last = b});
   STATIC_REQUIRE(closed.has_value());
   STATIC_REQUIRE(closed->first() == a);
   STATIC_REQUIRE(closed->last() == b);
 
-  STATIC_REQUIRE(ValidRange::make(a, std::nullopt).has_value());
-  STATIC_REQUIRE(ValidRange::make(std::nullopt, b).has_value());
-  STATIC_REQUIRE(ValidRange::make(a, a).has_value());  // one valid day
-  STATIC_REQUIRE(ValidRange::make(b, a).error() == ValidRangeError::inverted);
-  STATIC_REQUIRE_FALSE(*ValidRange::make(a, b) == *ValidRange::make(a, a));
+  STATIC_REQUIRE(
+      ValidRange::make({.first = a, .last = std::nullopt}).has_value());
+  STATIC_REQUIRE(
+      ValidRange::make({.first = std::nullopt, .last = b}).has_value());
+  STATIC_REQUIRE(
+      ValidRange::make({.first = a, .last = a}).has_value());  // one valid day
+  STATIC_REQUIRE(ValidRange::make({.first = b, .last = a}).error() ==
+                 ValidRangeError::inverted);
+  STATIC_REQUIRE_FALSE(*ValidRange::make({.first = a, .last = b}) ==
+                       *ValidRange::make({.first = a, .last = a}));
 }
 
 TEST_CASE("checked_time double overload", "[core][time][constexpr]") {
@@ -115,38 +125,42 @@ TEST_CASE("checked_time double overload", "[core][time][constexpr]") {
   // Negative values.
   STATIC_REQUIRE(checked_time(-1.5, unit_second, epoch) == at_ms(-500));
   // Rounds half away from zero, like llround.
-  STATIC_REQUIRE(checked_time(0.4, 1, at_ms(0)) == at_ms(0));
-  STATIC_REQUIRE(checked_time(0.5, 1, at_ms(0)) == at_ms(1));
-  STATIC_REQUIRE(checked_time(2.5, 1, at_ms(0)) == at_ms(3));
-  STATIC_REQUIRE(checked_time(-0.5, 1, at_ms(0)) == at_ms(-1));
-  STATIC_REQUIRE(checked_time(-2.4, 1, at_ms(0)) == at_ms(-2));
+  STATIC_REQUIRE(checked_time(0.4, millis{1}, at_ms(0)) == at_ms(0));
+  STATIC_REQUIRE(checked_time(0.5, millis{1}, at_ms(0)) == at_ms(1));
+  STATIC_REQUIRE(checked_time(2.5, millis{1}, at_ms(0)) == at_ms(3));
+  STATIC_REQUIRE(checked_time(-0.5, millis{1}, at_ms(0)) == at_ms(-1));
+  STATIC_REQUIRE(checked_time(-2.4, millis{1}, at_ms(0)) == at_ms(-2));
   // A day fraction that is not exact in binary still lands on the millisecond.
-  STATIC_REQUIRE(checked_time(0.1, 86'400'000, at_ms(0)) == at_ms(8'640'000));
+  STATIC_REQUIRE(checked_time(0.1, millis{86'400'000}, at_ms(0)) ==
+                 at_ms(8'640'000));
 }
 
 TEST_CASE("checked_time rejects non-finite values", "[core][time][constexpr]") {
-  STATIC_REQUIRE_FALSE(checked_time(quiet_nan, 1, at_ms(0)).has_value());
-  STATIC_REQUIRE_FALSE(checked_time(infinity, 1, at_ms(0)).has_value());
-  STATIC_REQUIRE_FALSE(checked_time(-infinity, 1, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(quiet_nan, millis{1}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(checked_time(infinity, millis{1}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(-infinity, millis{1}, at_ms(0)).has_value());
   // The product overflows to infinity.
-  STATIC_REQUIRE_FALSE(checked_time(1e308, 1000, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(checked_time(1e308, millis{1000}, at_ms(0)).has_value());
 }
 
 TEST_CASE("checked_time 2^53 edge", "[core][time][constexpr]") {
   STATIC_REQUIRE(max_abs_time_ms == 9'007'199'254'740'991);
   // 2^53 - 1 is exact in a double and accepted, in either sign.
-  STATIC_REQUIRE(checked_time(9'007'199'254'740'991.0, 1, at_ms(0)) ==
+  STATIC_REQUIRE(checked_time(9'007'199'254'740'991.0, millis{1}, at_ms(0)) ==
                  at_ms(max_abs_time_ms));
-  STATIC_REQUIRE(checked_time(-9'007'199'254'740'991.0, 1, at_ms(0)) ==
+  STATIC_REQUIRE(checked_time(-9'007'199'254'740'991.0, millis{1}, at_ms(0)) ==
                  at_ms(-max_abs_time_ms));
   // 2^53 and 2^53 + 1 (which a double rounds to 2^53) are rejected.
   STATIC_REQUIRE_FALSE(
-      checked_time(9'007'199'254'740'992.0, 1, at_ms(0)).has_value());
+      checked_time(9'007'199'254'740'992.0, millis{1}, at_ms(0)).has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(9'007'199'254'740'993.0, 1, at_ms(0)).has_value());
+      checked_time(9'007'199'254'740'993.0, millis{1}, at_ms(0)).has_value());
   // The offset itself is bounded, whatever the unit.
-  STATIC_REQUIRE_FALSE(checked_time(1.0e13, 1000, at_ms(0)).has_value());
-  STATIC_REQUIRE(checked_time(9.0e12, 1000, at_ms(0)) ==
+  STATIC_REQUIRE_FALSE(
+      checked_time(1.0e13, millis{1000}, at_ms(0)).has_value());
+  STATIC_REQUIRE(checked_time(9.0e12, millis{1000}, at_ms(0)) ==
                  at_ms(9'000'000'000'000'000));
 }
 
@@ -154,18 +168,21 @@ TEST_CASE("checked_time rejects epoch plus offset overflow",
           "[core][time][constexpr]") {
   // Result beyond +-2^53 - 1.
   STATIC_REQUIRE_FALSE(
-      checked_time(1.0, 1, at_ms(max_abs_time_ms)).has_value());
+      checked_time(1.0, millis{1}, at_ms(max_abs_time_ms)).has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(-1.0, 1, at_ms(-max_abs_time_ms)).has_value());
-  STATIC_REQUIRE(checked_time(-1.0, 1, at_ms(max_abs_time_ms)) ==
+      checked_time(-1.0, millis{1}, at_ms(-max_abs_time_ms)).has_value());
+  STATIC_REQUIRE(checked_time(-1.0, millis{1}, at_ms(max_abs_time_ms)) ==
                  at_ms(max_abs_time_ms - 1));
   // Epoch at the int64 limits: the sum overflows int64 before any range check.
-  STATIC_REQUIRE_FALSE(checked_time(1.0, 1, at_ms(int64_max)).has_value());
-  STATIC_REQUIRE_FALSE(checked_time(-1.0, 1, at_ms(int64_min)).has_value());
-  // An epoch outside the bound stays outside it.
-  STATIC_REQUIRE_FALSE(checked_time(-1.0, 1, at_ms(int64_max)).has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(std::int64_t{1}, 1, at_ms(int64_max)).has_value());
+      checked_time(1.0, millis{1}, at_ms(int64_max)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(-1.0, millis{1}, at_ms(int64_min)).has_value());
+  // An epoch outside the bound stays outside it.
+  STATIC_REQUIRE_FALSE(
+      checked_time(-1.0, millis{1}, at_ms(int64_max)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(std::int64_t{1}, millis{1}, at_ms(int64_max)).has_value());
 }
 
 TEST_CASE("checked_time int64 overload", "[core][time][constexpr]") {
@@ -176,40 +193,175 @@ TEST_CASE("checked_time int64 overload", "[core][time][constexpr]") {
                  at_ms(-2'000));
   STATIC_REQUIRE(checked_time(std::int64_t{0}, unit_second, epoch) == epoch);
   // Exact 2^53 bounds.
-  STATIC_REQUIRE(checked_time(max_abs_time_ms, 1, at_ms(0)) ==
+  STATIC_REQUIRE(checked_time(max_abs_time_ms, millis{1}, at_ms(0)) ==
                  at_ms(max_abs_time_ms));
-  STATIC_REQUIRE(checked_time(-max_abs_time_ms, 1, at_ms(0)) ==
+  STATIC_REQUIRE(checked_time(-max_abs_time_ms, millis{1}, at_ms(0)) ==
                  at_ms(-max_abs_time_ms));
   STATIC_REQUIRE_FALSE(
-      checked_time(max_abs_time_ms + 1, 1, at_ms(0)).has_value());
+      checked_time(max_abs_time_ms + 1, millis{1}, at_ms(0)).has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(-max_abs_time_ms - 1, 1, at_ms(0)).has_value());
-  // The multiply overflows int64.
-  STATIC_REQUIRE_FALSE(checked_time(int64_max, 2, at_ms(0)).has_value());
-  STATIC_REQUIRE_FALSE(checked_time(int64_min, 2, at_ms(0)).has_value());
+      checked_time(-max_abs_time_ms - 1, millis{1}, at_ms(0)).has_value());
+  // |value| * unit would overflow int64: the bound check rejects it before any
+  // multiply happens.
   STATIC_REQUIRE_FALSE(
-      checked_time(int64_max, 86'400'000, at_ms(0)).has_value());
+      checked_time(int64_max, millis{2}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(int64_min, millis{2}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(int64_max, millis{86'400'000}, at_ms(0)).has_value());
   // The product fits int64 but not the 2^53 bound.
   STATIC_REQUIRE_FALSE(
-      checked_time(std::int64_t{1} << 50, 86'400'000, at_ms(0)).has_value());
-  STATIC_REQUIRE(checked_time(std::int64_t{100'000}, 86'400'000, at_ms(0)) ==
-                 at_ms(8'640'000'000'000));
+      checked_time(std::int64_t{1} << 50, millis{86'400'000}, at_ms(0))
+          .has_value());
+  STATIC_REQUIRE(checked_time(std::int64_t{100'000}, millis{86'400'000},
+                              at_ms(0)) == at_ms(8'640'000'000'000));
   // Epoch overflow.
   STATIC_REQUIRE_FALSE(
-      checked_time(std::int64_t{1}, 1, at_ms(max_abs_time_ms)).has_value());
+      checked_time(std::int64_t{1}, millis{1}, at_ms(max_abs_time_ms))
+          .has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(std::int64_t{1}, 1, at_ms(int64_max)).has_value());
+      checked_time(std::int64_t{1}, millis{1}, at_ms(int64_max)).has_value());
 }
 
 TEST_CASE("checked_time rejects a non-positive unit",
           "[core][time][constexpr]") {
-  STATIC_REQUIRE_FALSE(checked_time(1.0, 0, at_ms(0)).has_value());
-  STATIC_REQUIRE_FALSE(checked_time(1.0, -1000, at_ms(0)).has_value());
-  STATIC_REQUIRE_FALSE(checked_time(std::int64_t{1}, 0, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(checked_time(1.0, millis{0}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(checked_time(1.0, millis{-1000}, at_ms(0)).has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(std::int64_t{1}, -1000, at_ms(0)).has_value());
+      checked_time(std::int64_t{1}, millis{0}, at_ms(0)).has_value());
   STATIC_REQUIRE_FALSE(
-      checked_time(std::int64_t{1}, int64_min, at_ms(0)).has_value());
+      checked_time(std::int64_t{1}, millis{-1000}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(std::int64_t{1}, millis{int64_min}, at_ms(0)).has_value());
+}
+
+// ---- the value type is any floating-point or integer type ------------------
+
+template <class T>
+concept CheckedTimeCallable = requires(T v) {
+  { checked_time(v, millis{1}, Time{}) } -> std::same_as<std::optional<Time>>;
+};
+
+TEST_CASE("checked_time accepts every arithmetic value type but bool",
+          "[core][time][constexpr]") {
+  STATIC_REQUIRE(CheckedTimeCallable<double>);
+  STATIC_REQUIRE(CheckedTimeCallable<float>);
+  STATIC_REQUIRE(CheckedTimeCallable<long double>);
+  STATIC_REQUIRE(CheckedTimeCallable<int>);
+  STATIC_REQUIRE(CheckedTimeCallable<long long>);
+  STATIC_REQUIRE(CheckedTimeCallable<std::int32_t>);
+  STATIC_REQUIRE(CheckedTimeCallable<std::uint32_t>);
+  STATIC_REQUIRE(CheckedTimeCallable<std::int64_t>);
+  STATIC_REQUIRE(CheckedTimeCallable<std::uint64_t>);
+  STATIC_REQUIRE(CheckedTimeCallable<std::size_t>);
+  STATIC_REQUIRE_FALSE(CheckedTimeCallable<bool>);
+  STATIC_REQUIRE_FALSE(CheckedTimeCallable<const char*>);
+}
+
+TEST_CASE("checked_time gives the same answer whatever the integer type",
+          "[core][time][constexpr]") {
+  constexpr Time epoch = at_ms(500);
+  constexpr auto expected = std::optional<Time>{at_ms(3'500)};
+  STATIC_REQUIRE(checked_time(3, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3U, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3L, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3LL, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3UL, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3ULL, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(std::int32_t{3}, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(std::uint32_t{3}, unit_second, epoch) ==
+                 expected);
+  STATIC_REQUIRE(checked_time(std::size_t{3}, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(std::int8_t{3}, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3.0F, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(3.0L, unit_second, epoch) == expected);
+  STATIC_REQUIRE(checked_time(-3, unit_second, epoch) ==
+                 std::optional<Time>{at_ms(-2'500)});
+}
+
+TEST_CASE("checked_time rejects an unsigned value above INT64_MAX",
+          "[core][time][constexpr]") {
+  constexpr std::uint64_t huge = std::uint64_t{1} << 63;  // INT64_MAX + 1
+  STATIC_REQUIRE_FALSE(checked_time(huge, millis{1}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(checked_time(std::numeric_limits<std::uint64_t>::max(),
+                                    millis{1}, at_ms(0))
+                           .has_value());
+  // It must not wrap to a negative number that passes the bound.
+  STATIC_REQUIRE_FALSE(checked_time(huge + 5, millis{1}, at_ms(0)).has_value());
+  // Unsigned values inside the bound are fine.
+  STATIC_REQUIRE(checked_time(std::uint64_t{max_abs_time_ms}, millis{1},
+                              at_ms(0)) == at_ms(max_abs_time_ms));
+  STATIC_REQUIRE_FALSE(
+      checked_time(std::uint64_t{max_abs_time_ms} + 1, millis{1}, at_ms(0))
+          .has_value());
+}
+
+TEST_CASE("checked_time bounds float and long double by their own range",
+          "[core][time][constexpr]") {
+  STATIC_REQUIRE(checked_time(1.5F, unit_second, at_ms(0)) == at_ms(1'500));
+  STATIC_REQUIRE(checked_time(1.5L, unit_second, at_ms(0)) == at_ms(1'500));
+  STATIC_REQUIRE_FALSE(checked_time(1.0e30F, millis{1}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(checked_time(1.0e30L, millis{1}, at_ms(0)).has_value());
+  STATIC_REQUIRE_FALSE(
+      checked_time(std::numeric_limits<long double>::max(), millis{1}, at_ms(0))
+          .has_value());
+  // 2^53 is not a valid offset even though a float rounds the limit up to it.
+  STATIC_REQUIRE_FALSE(
+      checked_time(9007199254740992.0F, millis{1}, at_ms(0)).has_value());
+}
+
+// ---- the two paths agree ---------------------------------------------------
+
+namespace {
+
+constexpr bool paths_agree() {
+  constexpr std::array<std::int64_t, 21> values{
+      0,
+      1,
+      -1,
+      2,
+      59,
+      -86'399,
+      1'000'000,
+      -1'000'000'007,
+      max_abs_time_ms / 86'400'000,
+      max_abs_time_ms / 86'400'000 + 1,
+      -(max_abs_time_ms / 86'400'000),
+      -(max_abs_time_ms / 86'400'000) - 1,
+      max_abs_time_ms / 1000,
+      max_abs_time_ms / 1000 + 1,
+      max_abs_time_ms - 1,
+      max_abs_time_ms,  // the last exact double below 2^53
+      -max_abs_time_ms,
+      -max_abs_time_ms + 1,
+      4'503'599'627'370'496,
+      -4'503'599'627'370'497,
+      123'456'789'012'345};
+  constexpr std::array<std::int64_t, 4> units{1, 1000, 3'600'000, 86'400'000};
+  constexpr std::array<std::int64_t, 4> epochs{
+      0, 1'700'000'000'000, -max_abs_time_ms / 2, max_abs_time_ms};
+  for (const std::int64_t v : values) {
+    for (const std::int64_t u : units) {
+      for (const std::int64_t e : epochs) {
+        const auto from_integer = checked_time(v, millis{u}, at_ms(e));
+        const auto from_double =
+            checked_time(static_cast<double>(v), millis{u}, at_ms(e));
+        if (from_integer != from_double) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+}  // namespace
+
+// For an integral double with |v| < 2^53 both overloads give the same answer:
+// the same value, or both reject.
+TEST_CASE("checked_time: the double and integer paths agree on integral values",
+          "[core][time][constexpr]") {
+  STATIC_REQUIRE(paths_agree());
 }
 
 TEST_CASE("parse_utc_datetime accepts the documented forms",

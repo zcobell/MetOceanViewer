@@ -76,3 +76,17 @@ add_test(
         ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/qt_include/run.cmake"
 )
 set_tests_properties(layering_guard_rejects_violations qt_include_scanner_rejects_qt_headers PROPERTIES TIMEOUT 300)
+
+# Negative-compile checks of the core's strong types (GCC/Clang flag syntax;
+# MSVC's warning flags differ and are not covered yet).
+if(NOT MSVC)
+    add_test(
+        NAME core_compile_fail_checks
+        COMMAND
+            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            "-DINCLUDE_DIR=${PROJECT_SOURCE_DIR}/src/core/include"
+            "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail" -P
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail/run.cmake"
+    )
+    set_tests_properties(core_compile_fail_checks PROPERTIES TIMEOUT 300)
+endif()

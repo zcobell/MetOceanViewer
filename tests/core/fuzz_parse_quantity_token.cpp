@@ -25,7 +25,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {
   const std::string text(data, data + size);
   const auto registry = mov::core::parse_quantity_token(text);
-  const auto generic = mov::core::GenericQuantity::parse(text, text);
+  const auto generic =
+      mov::core::GenericQuantity::parse({.token = text, .standard_name = text});
   if (registry and generic) {
     fail();  // a registry token is never generic
   }

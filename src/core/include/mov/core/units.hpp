@@ -90,6 +90,10 @@ concept MeasureUnit = requires(U u) {
   { detail::si_factor(u) } -> std::same_as<double>;
 };
 
+/// Every unit enum: the linear ones plus TemperatureUnit.
+template <class U>
+concept UnitEnum = MeasureUnit<U> or std::same_as<U, TemperatureUnit>;
+
 /// A physical quantity stored in SI. There is no raw-number constructor, so a
 /// value always names its unit, and different families do not mix.
 template <MeasureUnit U>
@@ -165,13 +169,16 @@ struct UnitFactory;
 /// it has normalized, so equal spellings are equal units.
 class OtherUnit {
  public:
-  OtherUnit(const detail::UnitKey&, std::string canonical)
+  constexpr OtherUnit(const detail::UnitKey&, std::string canonical)
       : symbol_{std::move(canonical)} {}
 
-  [[nodiscard]] std::string_view symbol() const& noexcept { return symbol_; }
+  [[nodiscard]] constexpr std::string_view symbol() const& noexcept {
+    return symbol_;
+  }
   std::string_view symbol() && = delete;
 
-  friend bool operator==(const OtherUnit&, const OtherUnit&) = default;
+  friend constexpr bool operator==(const OtherUnit&,
+                                   const OtherUnit&) = default;
 
  private:
   std::string symbol_;
@@ -197,25 +204,146 @@ class UnitKey {
 /// from the table in docs/core-design.md section 2.2 (plus udunits and
 /// symbol() output) gives the family enumerator; anything else becomes an
 /// OtherUnit with surrounding whitespace removed, inner runs collapsed and the
-/// aliases `%`, `deg`, `degT`, `sec` canonicalized.
+/// aliases `%`, `deg`, `degT`, `degrees`, `degrees_true`, `sec`
+/// canonicalized. Whether an OtherUnit is one the registry itself uses is
+/// is_canonical_other (quantity.hpp).
 [[nodiscard]] std::optional<Unit> parse_unit(std::string_view text);
 
-/// Whether an OtherUnit is one of the registry's own non-family units
-/// (percent, degree, s, S m-1). Readers warn `unrecognized_unit` otherwise.
-[[nodiscard]] bool is_canonical_other(const OtherUnit& unit) noexcept;
+namespace detail {
 
-/// Display text, "m/s". The views point into static storage or into `u`.
-[[nodiscard]] std::string_view symbol(const Unit& u) noexcept;
+template <std::size_t N>
+using Names = std::array<std::string_view, N>;
+
+// One name per enumerator of each family, in enumerator order.
+struct NameTable {
+  Names<6> length;
+  Names<5> speed;
+  Names<4> pressure;
+  Names<2> discharge;
+  Names<2> temperature;
+};
+
+// Each table has one entry per enumerator: a new enumerator breaks the build
+// here, not at run time.
+static_assert(std::tuple_size_v<decltype(NameTable::length)> ==
+              static_cast<std::size_t>(LengthUnit::nautical_mile) + 1);
+static_assert(std::tuple_size_v<decltype(NameTable::speed)> ==
+              static_cast<std::size_t>(SpeedUnit::kilometer_per_hour) + 1);
+static_assert(std::tuple_size_v<decltype(NameTable::pressure)> ==
+              static_cast<std::size_t>(PressureUnit::meter_of_water) + 1);
+static_assert(std::tuple_size_v<decltype(NameTable::discharge)> ==
+              static_cast<std::size_t>(DischargeUnit::cubic_foot_per_second) +
+                  1);
+static_assert(std::tuple_size_v<decltype(NameTable::temperature)> ==
+              static_cast<std::size_t>(TemperatureUnit::fahrenheit) + 1);
+
+// The degree sign is spelled as its UTF-8 bytes: the source encoding is not
+// assumed. The literals are split so the hex escape ends before the letter.
+inline constexpr NameTable symbol_names{
+    .length = {"m", "ft", "in", "km", "mi", "nmi"},
+    .speed = {"m/s", "ft/s", "kt", "mph", "km/h"},
+    .pressure = {"Pa", "hPa", "mb", "mH2O"},
+    .discharge = {"m3/s", "ft3/s"},
+    .temperature = {"\xC2\xB0"
+                    "C",
+                    "\xC2\xB0"
+                    "F"}};
+
+inline constexpr NameTable udunits_names{
+    .length = {"m", "ft", "in", "km", "mile", "nautical_mile"},
+    .speed = {"m s-1", "ft s-1", "knot", "mile hour-1", "km hour-1"},
+    .pressure = {"Pa", "hPa", "millibar", "m H2O"},
+    .discharge = {"m3 s-1", "ft3 s-1"},
+    .temperature = {"degC", "degF"}};
+
+[[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
+                                                 LengthUnit u) noexcept {
+  return t.length[static_cast<std::size_t>(u)];
+}
+[[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
+                                                 SpeedUnit u) noexcept {
+  return t.speed[static_cast<std::size_t>(u)];
+}
+[[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
+                                                 PressureUnit u) noexcept {
+  return t.pressure[static_cast<std::size_t>(u)];
+}
+[[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
+                                                 DischargeUnit u) noexcept {
+  return t.discharge[static_cast<std::size_t>(u)];
+}
+[[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
+                                                 TemperatureUnit u) noexcept {
+  return t.temperature[static_cast<std::size_t>(u)];
+}
+
+// The name of a runtime Unit. get_if cannot throw, which the noexcept callers
+// need (std::visit can, on a valueless variant).
+static_assert(std::variant_size_v<Unit> == 6,
+              "name_in must handle every alternative of Unit");
+
+template <UnitEnum E>
+[[nodiscard]] constexpr std::optional<std::string_view> family_name(
+    const NameTable& t, const Unit& u) noexcept {
+  const E* unit = std::get_if<E>(&u);
+  if (unit == nullptr) {
+    return std::nullopt;
+  }
+  return name_of(t, *unit);
+}
+
+[[nodiscard]] constexpr std::string_view name_in(const NameTable& t,
+                                                 const Unit& u) noexcept {
+  if (const auto name = family_name<LengthUnit>(t, u)) {
+    return *name;
+  }
+  if (const auto name = family_name<SpeedUnit>(t, u)) {
+    return *name;
+  }
+  if (const auto name = family_name<PressureUnit>(t, u)) {
+    return *name;
+  }
+  if (const auto name = family_name<DischargeUnit>(t, u)) {
+    return *name;
+  }
+  if (const auto name = family_name<TemperatureUnit>(t, u)) {
+    return *name;
+  }
+  const OtherUnit* other = std::get_if<OtherUnit>(&u);
+  return other != nullptr ? other->symbol() : std::string_view{};
+}
+
+}  // namespace detail
+
+/// Display text, "m/s": for an enumerator, or for a Unit held in a variable.
+/// The view of an OtherUnit points into the Unit, so a temporary Unit is
+/// rejected.
+template <UnitEnum E>
+[[nodiscard]] constexpr std::string_view symbol(E u) noexcept {
+  return detail::name_of(detail::symbol_names, u);
+}
+[[nodiscard]] constexpr std::string_view symbol(const Unit& u) noexcept {
+  return detail::name_in(detail::symbol_names, u);
+}
 std::string_view symbol(Unit&&) = delete;
+
 /// netCDF `units` text, "m s-1".
-[[nodiscard]] std::string_view udunits(const Unit& u) noexcept;
+template <UnitEnum E>
+[[nodiscard]] constexpr std::string_view udunits(E u) noexcept {
+  return detail::name_of(detail::udunits_names, u);
+}
+[[nodiscard]] constexpr std::string_view udunits(const Unit& u) noexcept {
+  return detail::name_in(detail::udunits_names, u);
+}
 std::string_view udunits(Unit&&) = delete;
 
 [[nodiscard]] constexpr bool is_temperature(const Unit& u) noexcept {
   return std::holds_alternative<TemperatureUnit>(u);
 }
 
-/// y = scale * x + offset: how a value converts between units.
+/// y = scale * x + offset: how a value converts between units. Evaluated as a
+/// multiply and an add that each round (the build disables FMA contraction),
+/// so a result is the same bit for bit at compile time and at run time.
 struct Affine {
   double scale{1.0};
   double offset{0.0};
@@ -254,8 +382,7 @@ namespace detail {
 
 /// Conversion within one family; identity for equal units. Temperatures are
 /// affine, everything else is a pure scale.
-template <class U>
-  requires(MeasureUnit<U> or std::same_as<U, TemperatureUnit>)
+template <UnitEnum U>
 [[nodiscard]] constexpr Affine conversion(U from, U to) noexcept {
   if constexpr (std::same_as<U, TemperatureUnit>) {
     return detail::temperature_conversion(from, to);
@@ -266,6 +393,12 @@ template <class U>
     return Affine{.scale = detail::si_factor(from) / detail::si_factor(to)};
   }
 }
+
+/// Two enumerators of different families (a length and a speed) never
+/// convert: a compile error, not a runtime IncompatibleUnits.
+template <UnitEnum A, UnitEnum B>
+  requires(not std::same_as<A, B>)
+Affine conversion(A, B) = delete;
 
 /// Conversion between runtime units: the same family converts, an OtherUnit
 /// converts only to an equal one (identity), anything else is incompatible.

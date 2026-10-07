@@ -6,6 +6,7 @@ mov_add_test(
     SOURCES test_version.cpp test_time.cpp test_units.cpp test_datum.cpp test_quantity.cpp test_toolchain_probe.cpp
     CONSTEXPR_SOURCES
         test_version_constexpr.cpp
+        test_numeric_constexpr.cpp
         test_time_constexpr.cpp
         test_sample_constexpr.cpp
         test_geo_constexpr.cpp

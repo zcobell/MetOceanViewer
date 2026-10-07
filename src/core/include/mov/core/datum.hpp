@@ -37,11 +37,30 @@ enum class VerticalDatum : std::uint8_t {
 
 namespace detail {
 
-inline constexpr std::array<std::string_view, 10> datum_tokens{
+inline constexpr std::array<VerticalDatum, 10> all_datums{
+    VerticalDatum::mhhw,   VerticalDatum::mhw,    VerticalDatum::mtl,
+    VerticalDatum::msl,    VerticalDatum::mlw,    VerticalDatum::mllw,
+    VerticalDatum::navd88, VerticalDatum::ngvd29, VerticalDatum::igld85,
+    VerticalDatum::stnd};
+static_assert(all_datums.size() ==
+              static_cast<std::size_t>(VerticalDatum::stnd) + 1);
+
+// Indexed by the enumerator.
+inline constexpr std::array<std::string_view, all_datums.size()> datum_tokens{
     "MHHW", "MHW",    "MTL",    "MSL",    "MLW",
     "MLLW", "NAVD88", "NGVD29", "IGLD85", "STND"};
-static_assert(datum_tokens.size() ==
-              static_cast<std::size_t>(VerticalDatum::stnd) + 1);
+
+struct DatumAlias {
+  std::string_view text;
+  VerticalDatum datum;
+};
+
+// The NOAA names without the year.
+inline constexpr std::array datum_aliases{
+    DatumAlias{.text = "NAVD", .datum = VerticalDatum::navd88},
+    DatumAlias{.text = "NGVD", .datum = VerticalDatum::ngvd29},
+    DatumAlias{.text = "IGLD", .datum = VerticalDatum::igld85},
+};
 
 }  // namespace detail
 
@@ -50,33 +69,42 @@ static_assert(datum_tokens.size() ==
   return detail::datum_tokens[static_cast<std::size_t>(d)];
 }
 
+/// Text that is neither a datum nor "no datum". `text` is the trimmed input
+/// and views the argument of parse_vertical_datum, so it lives only as long
+/// as that does.
+struct UnknownDatum {
+  std::string_view text;
+  friend constexpr bool operator==(const UnknownDatum&,
+                                   const UnknownDatum&) = default;
+};
+
 /// Case-insensitive, whitespace-trimmed. Besides the tokens it accepts the
 /// aliases NAVD, NGVD and IGLD (the NOAA names without the year). "" and
-/// "none" mean no datum, and unknown text is not guessed: all give nullopt.
-/// MHW is a token (v4 could not parse it, N8).
-[[nodiscard]] constexpr std::optional<VerticalDatum> parse_vertical_datum(
-    std::string_view s) noexcept {
-  struct Alias {
-    std::string_view text;
-    VerticalDatum datum;
-  };
-  constexpr std::array aliases{
-      Alias{.text = "NAVD", .datum = VerticalDatum::navd88},
-      Alias{.text = "NGVD", .datum = VerticalDatum::ngvd29},
-      Alias{.text = "IGLD", .datum = VerticalDatum::igld85},
-  };
+/// "none" mean there is no datum: an engaged expected holding nullopt.
+/// Anything else is not guessed and is an UnknownDatum. MHW is a token (v4
+/// could not parse it, N8).
+[[nodiscard]] constexpr std::expected<std::optional<VerticalDatum>,
+                                      UnknownDatum>
+parse_vertical_datum(std::string_view s) noexcept {
   s = detail::trim(s);
-  for (std::size_t i = 0; i < detail::datum_tokens.size(); ++i) {
-    if (detail::equal_ignore_case(s, detail::datum_tokens[i])) {
-      return static_cast<VerticalDatum>(i);
-    }
+  if (s.empty() or detail::equal_ignore_case(s, "none")) {
+    return std::optional<VerticalDatum>{};
   }
-  for (const Alias& alias : aliases) {
-    if (detail::equal_ignore_case(s, alias.text)) {
-      return alias.datum;
-    }
+  const auto token =
+      std::ranges::find_if(detail::all_datums, [s](VerticalDatum d) {
+        return detail::equal_ignore_case(s, to_string(d));
+      });
+  if (token != detail::all_datums.end()) {
+    return std::optional<VerticalDatum>{*token};
   }
-  return std::nullopt;
+  const auto alias = std::ranges::find_if(
+      detail::datum_aliases, [s](const detail::DatumAlias& a) {
+        return detail::equal_ignore_case(s, a.text);
+      });
+  if (alias != detail::datum_aliases.end()) {
+    return std::optional<VerticalDatum>{alias->datum};
+  }
+  return std::unexpected{UnknownDatum{.text = s}};
 }
 
 /// The height of one datum above some reference datum.
@@ -109,7 +137,7 @@ struct MissingOffset {
 
 namespace detail {
 
-constexpr std::size_t datum_count = datum_tokens.size();
+constexpr std::size_t datum_count = all_datums.size();
 
 /// Heights above the reference datum, collected row by row.
 class DatumSheet {
@@ -222,8 +250,7 @@ class DatumTable {
       return std::unexpected{DatumTableError{MissingMsl{}}};
     }
     DatumTable table;
-    for (std::size_t i = 0; i < detail::datum_count; ++i) {
-      const auto d = static_cast<VerticalDatum>(i);
+    for (const VerticalDatum d : detail::all_datums) {
       const auto above_reference = sheet.height(d);
       if (not above_reference or d == VerticalDatum::msl) {
         continue;

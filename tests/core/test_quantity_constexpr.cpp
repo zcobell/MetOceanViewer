@@ -22,6 +22,7 @@ using mov::core::parse_quantity_token;
 using mov::core::Quantity;
 using mov::core::QuantityId;
 using mov::core::QuantityInfo;
+using mov::core::token;
 
 namespace {
 
@@ -124,15 +125,14 @@ TEST_CASE("quantity types are value types", "[core][quantity][constexpr]") {
   STATIC_REQUIRE(std::regular<Quantity>);
   STATIC_REQUIRE(std::regular<QuantityId>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<QuantityId>);
-  STATIC_REQUIRE(std::copyable<GenericQuantity>);
-  STATIC_REQUIRE(std::equality_comparable<GenericQuantity>);
+  STATIC_REQUIRE(std::regular<GenericQuantity>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<GenericQuantity>);
   STATIC_REQUIRE(std::regular<QuantityInfo>);
 }
 
-TEST_CASE("GenericQuantity can only be built by parsing",
+TEST_CASE("GenericQuantity is the default or comes from parsing",
           "[core][quantity][constexpr]") {
-  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<GenericQuantity>);
+  STATIC_REQUIRE(std::is_default_constructible_v<GenericQuantity>);
   STATIC_REQUIRE_FALSE(
       std::is_constructible_v<GenericQuantity, std::string_view,
                               std::string_view>);
@@ -181,4 +181,24 @@ TEST_CASE("token() of a QuantityId rejects temporaries",
   STATIC_REQUIRE(TokenCallable<const QuantityId&>);
   STATIC_REQUIRE(TokenCallable<QuantityId&>);
   STATIC_REQUIRE_FALSE(TokenCallable<QuantityId>);
+}
+
+TEST_CASE("QuantityId starts with the generic alternative",
+          "[core][quantity][constexpr]") {
+  STATIC_REQUIRE(
+      std::same_as<std::variant_alternative_t<0, QuantityId>, GenericQuantity>);
+  STATIC_REQUIRE(
+      std::same_as<std::variant_alternative_t<1, QuantityId>, Quantity>);
+  STATIC_REQUIRE(std::variant_size_v<QuantityId> == 2);
+}
+
+TEST_CASE("token() of a registry quantity is constexpr",
+          "[core][quantity][constexpr]") {
+  STATIC_REQUIRE(token(Quantity::wind_u) == "wind_u");
+  STATIC_REQUIRE(token(Quantity::discharge) == "discharge");
+  // A Quantity and a QuantityId in a variable agree.
+  constexpr QuantityId id{Quantity::wind_v};
+  STATIC_REQUIRE(token(id) == "wind_v");
+  STATIC_REQUIRE(token(id) == token(Quantity::wind_v));
+  STATIC_REQUIRE(TokenCallable<Quantity>);
 }

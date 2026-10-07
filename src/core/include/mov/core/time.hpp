@@ -4,12 +4,14 @@
 #pragma once
 
 #include <chrono>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <limits>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 #include "mov/core/detail/numeric.hpp"
 
@@ -61,13 +63,19 @@ enum class ValidRangeError : std::uint8_t { inverted };
 /// allowed; the default is unknown and ongoing.
 class ValidRange {
  public:
+  /// Designated fields, so first and last cannot be swapped by position:
+  /// ValidRange::make({.first = start, .last = std::nullopt}).
+  struct Bounds {
+    std::optional<std::chrono::sys_days> first;
+    std::optional<std::chrono::sys_days> last;
+  };
+
   [[nodiscard]] static constexpr std::expected<ValidRange, ValidRangeError>
-  make(std::optional<std::chrono::sys_days> first,
-       std::optional<std::chrono::sys_days> last) noexcept {
-    if (first and last and *last < *first) {
+  make(Bounds b) noexcept {
+    if (b.first and b.last and *b.last < *b.first) {
       return std::unexpected{ValidRangeError::inverted};
     }
-    return ValidRange{first, last};
+    return ValidRange{b.first, b.last};
   }
 
   constexpr ValidRange() noexcept = default;
@@ -115,40 +123,57 @@ namespace detail {
 
 }  // namespace detail
 
-/// epoch + value * unit_ms. Returns nullopt if value is non-finite,
-/// unit_ms < 1, |value * unit_ms| > max_abs_time_ms or |result| >
-/// max_abs_time_ms. The double path rounds half away from zero to a whole
-/// millisecond.
-[[nodiscard]] constexpr std::optional<Time> checked_time(double value,
-                                                         std::int64_t unit_ms,
-                                                         Time epoch) noexcept {
+namespace detail {
+
+/// The double path after the value is known to be within +-max_abs_time_ms.
+[[nodiscard]] constexpr std::optional<Time> checked_time_double(
+    double value, std::int64_t unit_ms, Time epoch) noexcept {
   constexpr auto limit = static_cast<double>(max_abs_time_ms);
-  // Bound the value before multiplying: unit_ms >= 1, so a larger value is out
-  // of range anyway, and the product of the rest cannot overflow a double.
-  // The comparison also rejects NaN.
-  if (unit_ms < 1 or not(detail::magnitude(value) <= limit)) {
-    return std::nullopt;
-  }
   const double offset = value * static_cast<double>(unit_ms);
-  if (not(detail::magnitude(offset) <= limit)) {
+  if (not(magnitude(offset) <= limit)) {
     return std::nullopt;
   }
-  return detail::offset_time(epoch, detail::round_half_away(offset));
+  return offset_time(epoch, round_half_away(offset));
 }
 
-/// The integer path: exact, with a bound check instead of an overflowing
-/// multiply.
-[[nodiscard]] constexpr std::optional<Time> checked_time(std::int64_t value,
-                                                         std::int64_t unit_ms,
-                                                         Time epoch) noexcept {
-  if (unit_ms < 1) {
+}  // namespace detail
+
+/// epoch + value * unit, for a floating-point value in units of `unit`.
+/// nullopt if value is NaN or infinite, unit < 1 ms, |value * unit| >
+/// max_abs_time_ms or |result| > max_abs_time_ms. Rounds half away from zero
+/// to a whole millisecond. A `float` or `long double` is judged by its own
+/// range first, so nothing is narrowed out of range.
+template <std::floating_point F>
+[[nodiscard]] constexpr std::optional<Time> checked_time(
+    F value, std::chrono::milliseconds unit, Time epoch) noexcept {
+  constexpr auto limit = static_cast<F>(max_abs_time_ms);
+  // Bound the value before multiplying: unit >= 1 ms, so a larger value is
+  // out of range anyway and the rest cannot overflow. NaN fails both
+  // comparisons.
+  if (unit.count() < 1 or not(value >= -limit and value <= limit)) {
     return std::nullopt;
   }
-  const std::int64_t max_value = max_abs_time_ms / unit_ms;
-  if (value > max_value or value < -max_value) {
+  return detail::checked_time_double(static_cast<double>(value), unit.count(),
+                                     epoch);
+}
+
+/// The integer path, for any integer type (not bool): exact, with a bound
+/// check instead of an overflowing multiply. An unsigned value above INT64_MAX
+/// is out of range, not wrapped. For an integral double |v| < 2^53 both paths
+/// give the same answer.
+template <std::integral I>
+  requires(not std::same_as<I, bool>)
+[[nodiscard]] constexpr std::optional<Time> checked_time(
+    I value, std::chrono::milliseconds unit, Time epoch) noexcept {
+  if (unit.count() < 1) {
     return std::nullopt;
   }
-  return detail::offset_time(epoch, value * unit_ms);
+  const std::int64_t max_value = max_abs_time_ms / unit.count();
+  if (std::cmp_greater(value, max_value) or std::cmp_less(value, -max_value)) {
+    return std::nullopt;
+  }
+  return detail::offset_time(epoch,
+                             static_cast<std::int64_t>(value) * unit.count());
 }
 
 /// Where parse_utc_datetime stopped: the 0-based offset of the first
@@ -189,7 +214,7 @@ class DateTimeCursor {
   }
 
   /// Consumes `c` if it is next.
-  constexpr bool accept(char c) noexcept {
+  [[nodiscard]] constexpr bool accept(char c) noexcept {
     const bool found = next_is(c);
     pos_ += found ? 1U : 0U;
     return found;
@@ -314,6 +339,19 @@ parse_date(DateTimeCursor& cursor) noexcept {
 
 }  // namespace detail
 
+namespace detail {
+
+/// The optional "( |T)hh:mm[:ss[.f]]" after the date: midnight when absent.
+[[nodiscard]] constexpr std::expected<std::chrono::milliseconds, DateTimeError>
+parse_optional_clock(DateTimeCursor& cursor) noexcept {
+  if (cursor.accept(' ') or cursor.accept('T')) {
+    return parse_clock(cursor);
+  }
+  return std::chrono::milliseconds{};
+}
+
+}  // namespace detail
+
 /// Parses "yyyy-mm-dd[( |T)hh:mm[:ss[.f[f[f]]]]][Z]", always as UTC, whatever
 /// the machine's time zone (v4 used local time, N5). Strict: four-digit
 /// year, two-digit fields, no surrounding whitespace, no UTC offsets, no
@@ -325,19 +363,16 @@ parse_date(DateTimeCursor& cursor) noexcept {
   if (not date) {
     return std::unexpected{date.error()};
   }
-  std::chrono::milliseconds clock{};
-  if (cursor.accept(' ') or cursor.accept('T')) {
-    const auto parsed = detail::parse_clock(cursor);
-    if (not parsed) {
-      return std::unexpected{parsed.error()};
-    }
-    clock = *parsed;
+  const auto clock = detail::parse_optional_clock(cursor);
+  if (not clock) {
+    return std::unexpected{clock.error()};
   }
-  cursor.accept('Z');
+  static_cast<void>(cursor.accept('Z'));  // UTC marker; the zone is always UTC
   if (not cursor.at_end()) {
     return std::unexpected{cursor.error_here()};
   }
-  return std::chrono::time_point_cast<std::chrono::milliseconds>(*date) + clock;
+  return std::chrono::time_point_cast<std::chrono::milliseconds>(*date) +
+         *clock;
 }
 
 }  // namespace mov::core

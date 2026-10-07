@@ -29,24 +29,16 @@ constexpr bool is_cf_name(std::string_view text) noexcept {
 
 }  // namespace
 
-GenericQuantity GenericQuantity::value() {
-  return GenericQuantity{"value", ""};
-}
-
-std::optional<GenericQuantity> GenericQuantity::parse(
-    std::string_view token, std::string_view standard_name) {
-  if (not is_cf_name(token) or parse_quantity_token(token)) {
+std::optional<GenericQuantity> GenericQuantity::parse(Spec spec) {
+  if (not is_cf_name(spec.token) or parse_quantity_token(spec.token)) {
     return std::nullopt;
   }
-  return GenericQuantity{std::string{token}, std::string{standard_name}};
+  return GenericQuantity{std::string{spec.token},
+                         std::string{spec.standard_name}};
 }
 
-std::string_view token(const QuantityId& q) noexcept {
-  if (const Quantity* registry = std::get_if<Quantity>(&q)) {
-    return info(*registry).token;
-  }
-  const GenericQuantity* generic = std::get_if<GenericQuantity>(&q);
-  return generic != nullptr ? generic->token() : std::string_view{};
+Unit canonical_unit(Quantity q) {
+  return parse_unit(info(q).canonical_unit).value_or(Unit{});
 }
 
 }  // namespace mov::core

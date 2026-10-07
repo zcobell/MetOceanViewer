@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -11,6 +12,8 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+
+#include "mov/core/units.hpp"
 
 namespace mov::core {
 
@@ -42,22 +45,38 @@ enum class Quantity : std::uint8_t {
 };
 
 /// A quantity outside the registry: SN's `value` (unknown quantity) and the
-/// tokens of foreign or future files. Identity is the token (and standard
-/// name). Only `value()` and `parse` build one.
+/// tokens of foreign or future files. Default-constructed it is `value()`.
+/// Otherwise only `parse` builds one.
+///
+/// operator== compares the token and the standard name, so the type is
+/// regular. Two quantities with the same token but different standard names
+/// are different values yet name the same variable; anything that must be
+/// unique per variable (a StationTable schema, WP2) keys on token(), not on
+/// ==.
 class GenericQuantity {
  public:
-  /// Token "value", no standard name.
-  [[nodiscard]] static GenericQuantity value();
+  /// The designated input of parse: the two strings cannot be swapped by
+  /// position.
+  struct Spec {
+    std::string_view token;
+    std::string_view standard_name;
+  };
 
-  /// `token` must match [A-Za-z][A-Za-z0-9_]* and must not be a registry
+  GenericQuantity() : GenericQuantity{"value", ""} {}
+
+  /// Token "value", no standard name; the same as a default GenericQuantity.
+  [[nodiscard]] static GenericQuantity value() { return GenericQuantity{}; }
+
+  /// spec.token must match [A-Za-z][A-Za-z0-9_]* and must not be a registry
   /// token (nullopt otherwise; the caller then uses the registry entry).
-  /// `standard_name` is kept as given and may be empty.
-  [[nodiscard]] static std::optional<GenericQuantity> parse(
-      std::string_view token, std::string_view standard_name);
+  /// spec.standard_name is kept as given and may be empty.
+  [[nodiscard]] static std::optional<GenericQuantity> parse(Spec spec);
 
-  [[nodiscard]] std::string_view token() const& noexcept { return token_; }
+  [[nodiscard]] constexpr std::string_view token() const& noexcept {
+    return token_;
+  }
   std::string_view token() && = delete;
-  [[nodiscard]] std::string_view standard_name() const& noexcept {
+  [[nodiscard]] constexpr std::string_view standard_name() const& noexcept {
     return standard_name_;
   }
   std::string_view standard_name() && = delete;
@@ -73,9 +92,9 @@ class GenericQuantity {
   std::string standard_name_;
 };
 
-/// Default-constructed it is Quantity::water_level; build a generic one
-/// explicitly.
-using QuantityId = std::variant<Quantity, GenericQuantity>;
+/// Either kind of quantity. Default-constructed it is the generic `value`
+/// quantity (the unknown one), never a registry entry.
+using QuantityId = std::variant<GenericQuantity, Quantity>;
 
 /// The registry row of a quantity.
 struct QuantityInfo {
@@ -191,16 +210,32 @@ static_assert(quantity_registry.size() ==
 /// The quantity with exactly this token (case-sensitive), or nullopt.
 [[nodiscard]] constexpr std::optional<Quantity> parse_quantity_token(
     std::string_view token) noexcept {
-  for (std::size_t i = 0; i < detail::quantity_registry.size(); ++i) {
-    if (detail::quantity_registry[i].token == token) {
-      return static_cast<Quantity>(i);
-    }
+  const auto it = std::ranges::find_if(
+      detail::quantity_registry,
+      [token](const QuantityInfo& row) { return row.token == token; });
+  if (it == detail::quantity_registry.end()) {
+    return std::nullopt;
   }
-  return std::nullopt;
+  return static_cast<Quantity>(it - detail::quantity_registry.begin());
 }
 
-/// The token of either alternative.
-[[nodiscard]] std::string_view token(const QuantityId& q) noexcept;
+/// The token of a registry quantity.
+[[nodiscard]] constexpr std::string_view token(Quantity q) noexcept {
+  return info(q).token;
+}
+
+static_assert(std::variant_size_v<QuantityId> == 2,
+              "token and datum_applicable must handle every alternative");
+
+/// The token of either alternative. A GenericQuantity's token is a view into
+/// it, so a temporary QuantityId is rejected.
+[[nodiscard]] constexpr std::string_view token(const QuantityId& q) noexcept {
+  if (const Quantity* registry = std::get_if<Quantity>(&q)) {
+    return token(*registry);
+  }
+  const GenericQuantity* generic = std::get_if<GenericQuantity>(&q);
+  return generic != nullptr ? generic->token() : std::string_view{};
+}
 std::string_view token(QuantityId&&) = delete;
 
 /// THE datum predicate (C3): only water_level, water_level_prediction and
@@ -210,6 +245,22 @@ std::string_view token(QuantityId&&) = delete;
   const Quantity* registry = std::get_if<Quantity>(&q);
   return registry == nullptr or *registry == Quantity::water_level or
          *registry == Quantity::water_level_prediction;
+}
+
+/// The unit the writers store for a registry quantity: parse_unit of
+/// info(q).canonical_unit.
+[[nodiscard]] Unit canonical_unit(Quantity q);
+
+/// Whether an OtherUnit is one of the registry's own units (percent, degree,
+/// s, S m-1): the canonical units of the registry that are not in a unit
+/// family. Readers warn `unrecognized_unit` for any other OtherUnit. The set
+/// is derived from the registry, so it cannot drift from it.
+[[nodiscard]] constexpr bool is_canonical_other(
+    const OtherUnit& unit) noexcept {
+  return std::ranges::any_of(detail::quantity_registry,
+                             [&unit](const QuantityInfo& row) {
+                               return row.canonical_unit == unit.symbol();
+                             });
 }
 
 }  // namespace mov::core

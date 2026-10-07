@@ -54,6 +54,7 @@ TEST_CASE("sample types are regular and cheap to move",
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Sample>);
   STATIC_REQUIRE(std::is_nothrow_move_assignable_v<Sample>);
   STATIC_REQUIRE(sizeof(Sample) == 16);  // C1
+  STATIC_REQUIRE(std::is_trivially_copyable_v<Sample>);
   // A raw double is not a Sample: the finite check cannot be skipped.
   STATIC_REQUIRE_FALSE(std::is_convertible_v<double, Sample>);
   STATIC_REQUIRE_FALSE(std::is_constructible_v<Sample, double>);
@@ -139,4 +140,23 @@ TEST_CASE("combine turns a non-finite result into Missing",
 TEST_CASE("combine calls the operation only for two values",
           "[core][sample][constexpr]") {
   STATIC_REQUIRE(operation_calls() == 1);
+}
+
+template <class Op>
+concept Combinable = requires(Op op) { combine(Sample{}, Sample{}, op); };
+
+TEST_CASE("combine requires an operation that returns exactly double",
+          "[core][sample][constexpr]") {
+  constexpr auto returns_double = [](double a, double b) { return a + b; };
+  constexpr auto returns_float = [](double a, double b) {
+    return static_cast<float>(a + b);
+  };
+  constexpr auto returns_int = [](double, double) { return 0; };
+  constexpr auto returns_bool = [](double, double) { return true; };
+  constexpr auto returns_void = [](double, double) {};
+  STATIC_REQUIRE(Combinable<decltype(returns_double)>);
+  STATIC_REQUIRE_FALSE(Combinable<decltype(returns_float)>);
+  STATIC_REQUIRE_FALSE(Combinable<decltype(returns_int)>);
+  STATIC_REQUIRE_FALSE(Combinable<decltype(returns_bool)>);
+  STATIC_REQUIRE_FALSE(Combinable<decltype(returns_void)>);
 }

@@ -66,7 +66,7 @@ std::vector<std::string> split_commas(const std::string& line) {
 VerticalDatum datum_of(const std::string& token) {
   const auto datum = parse_vertical_datum(token);
   REQUIRE(datum.has_value());
-  return datum.value_or(VerticalDatum::msl);
+  return datum ? datum->value_or(VerticalDatum::msl) : VerticalDatum::msl;
 }
 
 std::map<std::string, Station> read_offsets_fixture() {
@@ -226,5 +226,51 @@ TEST_CASE("datum tokens are distinct and upper case", "[core][datum]") {
       CHECK(token != other);
     }
     seen.push_back(token);
+  }
+}
+
+namespace {
+
+std::string upper(std::string text) {
+  for (char& c : text) {
+    if (c >= 'a' and c <= 'z') {
+      c = static_cast<char>(c - 'a' + 'A');
+    }
+  }
+  return text;
+}
+
+std::string lower(std::string text) {
+  for (char& c : text) {
+    if (c >= 'A' and c <= 'Z') {
+      c = static_cast<char>(c - 'A' + 'a');
+    }
+  }
+  return text;
+}
+
+}  // namespace
+
+// The datum or the no-datum answer must not depend on the case or on the
+// whitespace around the text; an unknown text stays unknown.
+TEST_CASE("datum parsing ignores case and surrounding whitespace",
+          "[core][datum]") {
+  std::vector<std::string> texts{"navd", "ngvd", "igld",  "none",
+                                 "",     "LWI",  "mllwx", "Odd Case"};
+  for (const VerticalDatum d : all_datums) {
+    texts.emplace_back(to_string(d));
+  }
+  for (const std::string& text : texts) {
+    const auto base = parse_vertical_datum(text);
+    for (const std::string& variant :
+         {upper(text), lower(text), " " + text + "\t",
+          "\n" + upper(text) + " "}) {
+      INFO("text '" << text << "', variant '" << variant << "'");
+      const auto other = parse_vertical_datum(variant);
+      REQUIRE(base.has_value() == other.has_value());
+      if (base) {
+        CHECK(*base == *other);
+      }
+    }
   }
 }

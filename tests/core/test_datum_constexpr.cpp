@@ -27,6 +27,7 @@ using mov::core::MissingOffset;
 using mov::core::NonFiniteHeight;
 using mov::core::parse_vertical_datum;
 using mov::core::to_string;
+using mov::core::UnknownDatum;
 using mov::core::VerticalDatum;
 using mov::test::infinity;
 
@@ -65,6 +66,15 @@ constexpr std::array from_mllw{
     height(VerticalDatum::mlw, 0.25),     height(VerticalDatum::ngvd29, 0.5),
     height(VerticalDatum::navd88, 0.875),
 };
+
+constexpr bool is_no_datum(std::string_view text) {
+  const auto parsed = parse_vertical_datum(text);
+  return parsed.has_value() and not parsed->has_value();
+}
+
+constexpr bool is_unknown(std::string_view text) {
+  return not parse_vertical_datum(text).has_value();
+}
 
 constexpr bool tokens_round_trip() {
   return std::ranges::all_of(all_datums, [](VerticalDatum d) {
@@ -107,6 +117,8 @@ TEST_CASE("datum types are value types", "[core][datum][constexpr]") {
   STATIC_REQUIRE(std::regular<VerticalDatum>);
   STATIC_REQUIRE(std::regular<DatumTable>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<DatumTable>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<DatumTable>);
+  STATIC_REQUIRE(std::regular<UnknownDatum>);
   STATIC_REQUIRE(std::regular<DatumHeight>);
   STATIC_REQUIRE(std::regular<MissingMsl>);
   STATIC_REQUIRE(std::regular<ConflictingHeight>);
@@ -159,19 +171,37 @@ TEST_CASE("datum parsing is case-insensitive and knows the aliases",
   STATIC_REQUIRE(parse_vertical_datum("  MSL\t") == VerticalDatum::msl);
 }
 
-TEST_CASE("no datum parses to nullopt", "[core][datum][constexpr]") {
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("  ").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("none").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("None").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("NONE").has_value());
-  // Unknown text is not guessed.
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("MLLWX").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("ML LW").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("NAVD8").has_value());
-  STATIC_REQUIRE_FALSE(parse_vertical_datum("LWI").has_value());
-  STATIC_REQUIRE_FALSE(
-      parse_vertical_datum(std::string_view{"MSL\0", 4}).has_value());
+TEST_CASE("no datum is an engaged nullopt, not an error",
+          "[core][datum][constexpr]") {
+  STATIC_REQUIRE(is_no_datum(""));
+  STATIC_REQUIRE(is_no_datum("  "));
+  STATIC_REQUIRE(is_no_datum("\t\n"));
+  STATIC_REQUIRE(is_no_datum("none"));
+  STATIC_REQUIRE(is_no_datum("None"));
+  STATIC_REQUIRE(is_no_datum("NONE"));
+  STATIC_REQUIRE(is_no_datum("  none "));
+}
+
+TEST_CASE("unknown text is an UnknownDatum carrying the trimmed text",
+          "[core][datum][constexpr]") {
+  // Not guessed, and not confused with "no datum".
+  STATIC_REQUIRE(is_unknown("MLLWX"));
+  STATIC_REQUIRE(is_unknown("ML LW"));
+  STATIC_REQUIRE(is_unknown("NAVD8"));
+  STATIC_REQUIRE(is_unknown("LWI"));
+  STATIC_REQUIRE(is_unknown("nonesuch"));
+  STATIC_REQUIRE(is_unknown(std::string_view{"MSL\0", 4}));
+  STATIC_REQUIRE_FALSE(is_no_datum("MLLWX"));
+  STATIC_REQUIRE_FALSE(is_unknown("MLLW"));
+  STATIC_REQUIRE_FALSE(is_unknown(""));
+  STATIC_REQUIRE_FALSE(is_unknown("none"));
+  STATIC_REQUIRE(parse_vertical_datum("  MLLWX \t").error() ==
+                 UnknownDatum{.text = "MLLWX"});
+  STATIC_REQUIRE(parse_vertical_datum("LWI").error().text == "LWI");
+  // The text is a view of the argument, trimmed but not otherwise changed.
+  constexpr std::string_view input = "  Odd Case  ";
+  STATIC_REQUIRE(parse_vertical_datum(input).error().text.data() ==
+                 input.data() + 2);
 }
 
 TEST_CASE("from_heights relative to MSL stores heights as given",

@@ -103,6 +103,23 @@ constexpr bool conversions_invert(const std::array<U, N>& units) {
   return true;
 }
 
+template <class U, std::size_t N>
+constexpr bool all_names_distinct(const std::array<U, N>& units) {
+  for (std::size_t i = 0; i < N; ++i) {
+    if (mov::core::symbol(units[i]).empty() or
+        mov::core::udunits(units[i]).empty()) {
+      return false;
+    }
+    for (std::size_t j = i + 1; j < N; ++j) {
+      if (mov::core::symbol(units[i]) == mov::core::symbol(units[j]) or
+          mov::core::udunits(units[i]) == mov::core::udunits(units[j])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // Concepts, so that a deleted overload is a substitution failure.
 template <class T>
 concept SymbolCallable =
@@ -110,6 +127,29 @@ concept SymbolCallable =
 template <class T>
 concept UdunitsCallable =
     requires(T&& u) { mov::core::udunits(std::forward<T>(u)); };
+
+template <class A, class B>
+concept ConversionCallable = requires(A a, B b) { conversion(a, b); };
+
+// conversion(a, b) followed by conversion(b, c) is conversion(a, c).
+template <class U, std::size_t N>
+constexpr bool conversions_compose(const std::array<U, N>& units) {
+  for (const U a : units) {
+    for (const U b : units) {
+      for (const U c : units) {
+        for (const double x : conversion_values) {
+          const double via_b = conversion(b, c)(conversion(a, b)(x));
+          const double direct = conversion(a, c)(x);
+          if (not(x == 0.0 ? near_abs(via_b, direct, 1e-9)
+                           : near(via_b, direct, 1e-12))) {
+            return false;
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
 
 }  // namespace
 
@@ -120,6 +160,7 @@ TEST_CASE("unit types are value types", "[core][units][constexpr]") {
   STATIC_REQUIRE(std::regular<Discharge>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Length>);
   STATIC_REQUIRE(std::is_trivially_copyable_v<Length>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<Affine>);
   STATIC_REQUIRE(sizeof(Length) == sizeof(double));
   STATIC_REQUIRE(std::regular<Affine>);
   STATIC_REQUIRE(std::regular<Unit>);
@@ -282,4 +323,54 @@ TEST_CASE("OtherUnit cannot be built outside parse_unit",
   // The variant has no stray string alternative either.
   STATIC_REQUIRE_FALSE(std::is_constructible_v<Unit, std::string>);
   STATIC_REQUIRE_FALSE(std::is_constructible_v<Unit, const char*>);
+}
+
+TEST_CASE("conversions compose", "[core][units][constexpr]") {
+  STATIC_REQUIRE(conversions_compose(all_lengths));
+  STATIC_REQUIRE(conversions_compose(all_speeds));
+  STATIC_REQUIRE(conversions_compose(all_pressures));
+  STATIC_REQUIRE(conversions_compose(all_discharges));
+  STATIC_REQUIRE(conversions_compose(all_temperatures));
+}
+
+TEST_CASE("converting between unit families is a compile error",
+          "[core][units][constexpr]") {
+  STATIC_REQUIRE(ConversionCallable<LengthUnit, LengthUnit>);
+  STATIC_REQUIRE(ConversionCallable<TemperatureUnit, TemperatureUnit>);
+  STATIC_REQUIRE(ConversionCallable<Unit, Unit>);
+  STATIC_REQUIRE(ConversionCallable<LengthUnit, Unit>);  // runtime Unit path
+  STATIC_REQUIRE_FALSE(ConversionCallable<LengthUnit, SpeedUnit>);
+  STATIC_REQUIRE_FALSE(ConversionCallable<SpeedUnit, PressureUnit>);
+  STATIC_REQUIRE_FALSE(ConversionCallable<TemperatureUnit, LengthUnit>);
+  STATIC_REQUIRE_FALSE(ConversionCallable<DischargeUnit, TemperatureUnit>);
+}
+
+TEST_CASE("symbol and udunits of an enumerator are constexpr",
+          "[core][units][constexpr]") {
+  STATIC_REQUIRE(mov::core::symbol(LengthUnit::foot) == "ft");
+  STATIC_REQUIRE(mov::core::symbol(SpeedUnit::meter_per_second) == "m/s");
+  STATIC_REQUIRE(mov::core::symbol(PressureUnit::hectopascal) == "hPa");
+  STATIC_REQUIRE(mov::core::symbol(DischargeUnit::cubic_meter_per_second) ==
+                 "m3/s");
+  STATIC_REQUIRE(mov::core::symbol(TemperatureUnit::fahrenheit) ==
+                 "\xC2\xB0"
+                 "F");
+  STATIC_REQUIRE(mov::core::udunits(SpeedUnit::meter_per_second) == "m s-1");
+  STATIC_REQUIRE(mov::core::udunits(PressureUnit::meter_of_water) == "m H2O");
+  STATIC_REQUIRE(mov::core::udunits(TemperatureUnit::celsius) == "degC");
+  // Every enumerator has a distinct non-empty name.
+  STATIC_REQUIRE(all_names_distinct(all_lengths));
+  STATIC_REQUIRE(all_names_distinct(all_speeds));
+  STATIC_REQUIRE(all_names_distinct(all_pressures));
+  STATIC_REQUIRE(all_names_distinct(all_discharges));
+  STATIC_REQUIRE(all_names_distinct(all_temperatures));
+}
+
+TEST_CASE("symbol and udunits of a Unit variable are constexpr",
+          "[core][units][constexpr]") {
+  constexpr Unit knot{SpeedUnit::knot};
+  STATIC_REQUIRE(mov::core::symbol(knot) == "kt");
+  STATIC_REQUIRE(mov::core::udunits(knot) == "knot");
+  // The enumerator and variant paths agree.
+  STATIC_REQUIRE(mov::core::symbol(knot) == mov::core::symbol(SpeedUnit::knot));
 }

@@ -3,6 +3,8 @@
 
 // STATIC_REQUIRE checks for mov/core/geo.hpp.
 
+#include <algorithm>
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>
 #include <type_traits>
@@ -16,6 +18,8 @@ using mov::core::LatLon;
 using mov::core::Location;
 using mov::core::LocationError;
 using mov::core::NativePoint;
+using mov::core::NativePointError;
+using mov::core::Xy;
 using mov::test::infinity;
 using mov::test::quiet_nan;
 
@@ -23,6 +27,22 @@ namespace {
 
 constexpr auto make_location(double lat, double lon) {
   return Location::make({.lat = lat, .lon = lon});
+}
+
+// Normalizing an already-normalized longitude changes nothing, and the result
+// is always in (-180, 180].
+constexpr bool normalization_is_idempotent() {
+  constexpr std::array lons{-180.0, -179.75, -90.0,  -0.5,  0.0,   0.5,  90.0,
+                            179.75, 180.0,   180.25, 270.0, 359.5, 360.0};
+  return std::ranges::all_of(lons, [](double lon) {
+    const auto once = Location::make({.lat = 10.0, .lon = lon});
+    if (not once) {
+      return false;
+    }
+    const auto twice = Location::make({.lat = 10.0, .lon = once->lon()});
+    return once->lon() > -180.0 and once->lon() <= 180.0 and twice and
+           *twice == *once;
+  });
 }
 
 }  // namespace
@@ -34,6 +54,9 @@ TEST_CASE("geo types are value types", "[core][geo][constexpr]") {
   STATIC_REQUIRE(std::copyable<Epsg>);
   STATIC_REQUIRE(std::equality_comparable<Epsg>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Epsg>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<Location>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<Epsg>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<NativePoint>);
   STATIC_REQUIRE(std::copyable<NativePoint>);
   STATIC_REQUIRE(std::equality_comparable<NativePoint>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<NativePoint>);
@@ -45,6 +68,7 @@ TEST_CASE("Location and Epsg have no default state",
   STATIC_REQUIRE_FALSE(std::is_default_constructible_v<Location>);
   STATIC_REQUIRE_FALSE(std::is_default_constructible_v<Epsg>);
   STATIC_REQUIRE_FALSE(std::is_default_constructible_v<NativePoint>);
+  STATIC_REQUIRE_FALSE(std::is_constructible_v<NativePoint, Xy, Epsg>);
   // Only make() builds them: no public constructor from raw values.
   STATIC_REQUIRE_FALSE(std::is_constructible_v<Location, double, double>);
   STATIC_REQUIRE_FALSE(std::is_constructible_v<Epsg, int>);
@@ -131,13 +155,48 @@ TEST_CASE("Epsg::make accepts positive codes only",
 }
 
 TEST_CASE("NativePoint carries its CRS", "[core][geo][constexpr]") {
-  constexpr NativePoint point{
-      .x = 500000.0, .y = 3300000.0, .crs = *Epsg::make(26915)};
-  STATIC_REQUIRE(point.crs.code() == 26915);
-  STATIC_REQUIRE(point == NativePoint{.x = 500000.0,
-                                      .y = 3300000.0,
-                                      .crs = *Epsg::make(26915)});
-  STATIC_REQUIRE_FALSE(point == NativePoint{.x = 500000.0,
-                                            .y = 3300000.0,
-                                            .crs = Epsg::wgs84()});
+  constexpr auto point =
+      NativePoint::make({.x = 500000.0, .y = 3300000.0}, *Epsg::make(26915));
+  STATIC_REQUIRE(point.has_value());
+  STATIC_REQUIRE(point->x() == 500000.0);
+  STATIC_REQUIRE(point->y() == 3300000.0);
+  STATIC_REQUIRE(point->crs().code() == 26915);
+  STATIC_REQUIRE(*point == *NativePoint::make({.x = 500000.0, .y = 3300000.0},
+                                              *Epsg::make(26915)));
+  STATIC_REQUIRE_FALSE(
+      *point ==
+      *NativePoint::make({.x = 500000.0, .y = 3300000.0}, Epsg::wgs84()));
+  STATIC_REQUIRE_FALSE(
+      *point ==
+      *NativePoint::make({.x = 3300000.0, .y = 500000.0}, *Epsg::make(26915)));
+}
+
+TEST_CASE("NativePoint rejects non-finite coordinates",
+          "[core][geo][constexpr]") {
+  constexpr Epsg crs = Epsg::wgs84();
+  STATIC_REQUIRE(NativePoint::make({.x = quiet_nan, .y = 0.0}, crs).error() ==
+                 NativePointError::not_finite);
+  STATIC_REQUIRE(NativePoint::make({.x = 0.0, .y = quiet_nan}, crs).error() ==
+                 NativePointError::not_finite);
+  STATIC_REQUIRE(NativePoint::make({.x = infinity, .y = 0.0}, crs).error() ==
+                 NativePointError::not_finite);
+  STATIC_REQUIRE(NativePoint::make({.x = 0.0, .y = -infinity}, crs).error() ==
+                 NativePointError::not_finite);
+  // Any finite value is a legal planar coordinate (projections are huge).
+  STATIC_REQUIRE(NativePoint::make({.x = -1.0e7, .y = 1.0e7}, crs).has_value());
+}
+
+TEST_CASE("Location longitude normalization is idempotent",
+          "[core][geo][constexpr]") {
+  STATIC_REQUIRE(normalization_is_idempotent());
+}
+
+// A designated initializer that leaves out lat or lon is a compile error (GCC
+// -Wmissing-field-initializers, Clang -Wmissing-designated-field-initializers,
+// under the project's -Wextra -Werror). That cannot be asserted from inside
+// this file; tests/cmake/compile_fail/reject_latlon_missing_field.cpp does it.
+TEST_CASE("LatLon has no default values", "[core][geo][constexpr]") {
+  STATIC_REQUIRE(std::regular<LatLon>);
+  STATIC_REQUIRE(std::is_aggregate_v<LatLon>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<LatLon>);
 }

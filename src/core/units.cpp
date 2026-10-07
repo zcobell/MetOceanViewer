@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -30,20 +31,26 @@ namespace {
 
 // ---- parse_unit: the spelling tables ---------------------------------------
 
+// exact: the text must match byte for byte (symbols are case-sensitive: Mb is
+// not mb). any_case: the table text is lower case and the input may use any.
+enum class Match : std::uint8_t { exact, any_case };
+
 template <class U>
 struct Spelling {
   std::string_view text{};
   U unit{};
-  bool any_case{false};  // text is lower case and matches in any case
+  Match match{Match::exact};
 };
 
 template <class U>
-constexpr Spelling<U> symbol_spelling(std::string_view text, U unit) {
-  return {.text = text, .unit = unit, .any_case = false};
+[[nodiscard]] constexpr Spelling<U> symbol_spelling(std::string_view text,
+                                                    U unit) {
+  return {.text = text, .unit = unit, .match = Match::exact};
 }
 template <class U>
-constexpr Spelling<U> word_spelling(std::string_view lower_text, U unit) {
-  return {.text = lower_text, .unit = unit, .any_case = true};
+[[nodiscard]] constexpr Spelling<U> word_spelling(std::string_view lower_text,
+                                                  U unit) {
+  return {.text = lower_text, .unit = unit, .match = Match::any_case};
 }
 
 constexpr std::array length_spellings{
@@ -96,6 +103,7 @@ constexpr std::array pressure_spellings{
     word_spelling("millibar", PressureUnit::millibar),
     word_spelling("millibars", PressureUnit::millibar),
     symbol_spelling("mH2O", PressureUnit::meter_of_water),
+    symbol_spelling("m H2O", PressureUnit::meter_of_water),
 };
 
 constexpr std::array discharge_spellings{
@@ -113,6 +121,8 @@ constexpr std::array temperature_spellings{
     symbol_spelling("deg C", TemperatureUnit::celsius),
     symbol_spelling("C", TemperatureUnit::celsius),
     word_spelling("celsius", TemperatureUnit::celsius),
+    symbol_spelling("degree_C", TemperatureUnit::celsius),
+    word_spelling("degree_celsius", TemperatureUnit::celsius),
     symbol_spelling("\xC2\xB0"
                     "C",
                     TemperatureUnit::celsius),
@@ -120,17 +130,19 @@ constexpr std::array temperature_spellings{
     symbol_spelling("deg F", TemperatureUnit::fahrenheit),
     symbol_spelling("F", TemperatureUnit::fahrenheit),
     word_spelling("fahrenheit", TemperatureUnit::fahrenheit),
+    symbol_spelling("degree_F", TemperatureUnit::fahrenheit),
+    word_spelling("degree_fahrenheit", TemperatureUnit::fahrenheit),
     symbol_spelling("\xC2\xB0"
                     "F",
                     TemperatureUnit::fahrenheit),
 };
 
 template <class U, std::size_t N>
-std::optional<Unit> lookup(const std::array<Spelling<U>, N>& table,
-                           std::string_view text) {
+[[nodiscard]] std::optional<Unit> lookup(
+    const std::array<Spelling<U>, N>& table, std::string_view text) {
   const auto it = std::ranges::find_if(table, [text](const Spelling<U>& s) {
-    return s.any_case ? detail::equal_ignore_case(text, s.text)
-                      : text == s.text;
+    return s.match == Match::any_case ? detail::equal_ignore_case(text, s.text)
+                                      : text == s.text;
   });
   if (it == table.end()) {
     return std::nullopt;
@@ -138,7 +150,7 @@ std::optional<Unit> lookup(const std::array<Spelling<U>, N>& table,
   return Unit{it->unit};
 }
 
-std::optional<Unit> find_family_unit(std::string_view text) {
+[[nodiscard]] std::optional<Unit> find_family_unit(std::string_view text) {
   if (auto u = lookup(length_spellings, text)) {
     return u;
   }
@@ -155,7 +167,7 @@ std::optional<Unit> find_family_unit(std::string_view text) {
 }
 
 /// Trims, and collapses each inner run of whitespace to one space.
-std::string normalized(std::string_view text) {
+[[nodiscard]] std::string normalized(std::string_view text) {
   std::string out;
   out.reserve(text.size());
   bool pending_space = false;
@@ -173,110 +185,37 @@ std::string normalized(std::string_view text) {
   return out;
 }
 
-std::string_view canonical_alias(std::string_view text) noexcept {
+// The registry's canonical spelling of an alias, or nullopt if `text` is not
+// one. `degrees` and `degrees_true` are the CF/udunits spellings.
+[[nodiscard]] std::optional<std::string_view> canonical_alias(
+    std::string_view text) noexcept {
   if (text == "%") {
     return "percent";
   }
-  if (text == "deg" or text == "degT") {
+  if (text == "deg" or text == "degT" or text == "degrees" or
+      text == "degrees_true") {
     return "degree";
   }
   if (text == "sec") {
     return "s";
   }
-  return text;
-}
-
-constexpr std::array<std::string_view, 4> canonical_others{"percent", "degree",
-                                                           "s", "S m-1"};
-
-// ---- symbol and udunits ---------------------------------------------------
-
-template <std::size_t N>
-using Names = std::array<std::string_view, N>;
-
-// One name per enumerator of each family, in enumerator order.
-struct NameTable {
-  Names<6> length;
-  Names<5> speed;
-  Names<4> pressure;
-  Names<2> discharge;
-  Names<2> temperature;
-};
-
-// The degree sign is spelled as its UTF-8 bytes: the source encoding is not
-// assumed. The literals are split so that the hex escape ends before the
-// letter.
-constexpr NameTable symbols{.length = {"m", "ft", "in", "km", "mi", "nmi"},
-                            .speed = {"m/s", "ft/s", "kt", "mph", "km/h"},
-                            .pressure = {"Pa", "hPa", "mb", "mH2O"},
-                            .discharge = {"m3/s", "ft3/s"},
-                            .temperature = {"\xC2\xB0"
-                                            "C",
-                                            "\xC2\xB0"
-                                            "F"}};
-
-constexpr NameTable udunits_names{
-    .length = {"m", "ft", "in", "km", "mile", "nautical_mile"},
-    .speed = {"m s-1", "ft s-1", "knot", "mile hour-1", "km hour-1"},
-    .pressure = {"Pa", "hPa", "millibar", "mH2O"},
-    .discharge = {"m3 s-1", "ft3 s-1"},
-    .temperature = {"degC", "degF"}};
-
-// The name `names` gives u if it holds a unit of family E. get_if cannot
-// throw, which a noexcept caller needs (std::visit can, on a valueless
-// variant).
-template <class E, std::size_t N>
-std::optional<std::string_view> family_name(const Unit& u,
-                                            const Names<N>& names) noexcept {
-  const E* unit = std::get_if<E>(&u);
-  if (unit == nullptr) {
-    return std::nullopt;
-  }
-  return names[static_cast<std::size_t>(*unit)];
-}
-
-std::string_view name_in(const NameTable& table, const Unit& u) noexcept {
-  if (const auto name = family_name<LengthUnit>(u, table.length)) {
-    return *name;
-  }
-  if (const auto name = family_name<SpeedUnit>(u, table.speed)) {
-    return *name;
-  }
-  if (const auto name = family_name<PressureUnit>(u, table.pressure)) {
-    return *name;
-  }
-  if (const auto name = family_name<DischargeUnit>(u, table.discharge)) {
-    return *name;
-  }
-  if (const auto name = family_name<TemperatureUnit>(u, table.temperature)) {
-    return *name;
-  }
-  const OtherUnit* other = std::get_if<OtherUnit>(&u);
-  return other != nullptr ? other->symbol() : std::string_view{};
+  return std::nullopt;
 }
 
 }  // namespace
 
 std::optional<Unit> parse_unit(std::string_view text) {
-  const std::string trimmed = normalized(text);
+  std::string trimmed = normalized(text);
   if (trimmed.empty()) {
     return std::nullopt;
   }
   if (auto family = find_family_unit(trimmed)) {
     return family;
   }
-  return Unit{detail::UnitFactory::make(std::string{canonical_alias(trimmed)})};
-}
-
-bool is_canonical_other(const OtherUnit& unit) noexcept {
-  return std::ranges::find(canonical_others, unit.symbol()) !=
-         canonical_others.end();
-}
-
-std::string_view symbol(const Unit& u) noexcept { return name_in(symbols, u); }
-
-std::string_view udunits(const Unit& u) noexcept {
-  return name_in(udunits_names, u);
+  if (const auto alias = canonical_alias(trimmed)) {
+    return Unit{detail::UnitFactory::make(std::string{*alias})};
+  }
+  return Unit{detail::UnitFactory::make(std::move(trimmed))};
 }
 
 std::expected<Affine, IncompatibleUnits> conversion(const Unit& from,

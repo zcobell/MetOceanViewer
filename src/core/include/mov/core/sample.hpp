@@ -79,8 +79,11 @@ class Sample {
 }
 
 /// Missing if either operand is Missing; else Dry if either is Dry; else
-/// finite_or_missing(op(a, b)). op is not called unless both are values.
-template <std::invocable<double, double> Op>
+/// finite_or_missing(op(a, b)). op must return exactly double (a float or int
+/// result is rejected, not silently converted) and is not called unless both
+/// are values.
+template <class Op>
+  requires std::same_as<std::invoke_result_t<Op&, double, double>, double>
 [[nodiscard]] constexpr Sample combine(Sample a, Sample b, Op op) noexcept(
     std::is_nothrow_invocable_v<Op&, double, double>) {
   const std::optional<double> x = a.value();

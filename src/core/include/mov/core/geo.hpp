@@ -13,9 +13,11 @@ namespace mov::core {
 /// Raw coordinates in degrees, as read from a source. Build a Location from
 /// it with designated initializers: Location::make({.lat = 29.98, .lon =
 /// -90.01}).
+// No default member initializers on purpose: with -Wextra -Werror a designated
+// initializer that leaves a field out is a compile error, not a silent 0.
 struct LatLon {
-  double lat{};
-  double lon{};
+  double lat;
+  double lon;
   friend constexpr bool operator==(const LatLon&, const LatLon&) = default;
 };
 
@@ -89,14 +91,39 @@ class Epsg {
   int code_;
 };
 
-/// A position in a file's own CRS, kept as metadata next to the WGS84
-/// Location.
-struct NativePoint {
+/// Planar coordinates in a file's own CRS, before projection.
+struct Xy {
   double x;
   double y;
-  Epsg crs;
+  friend constexpr bool operator==(const Xy&, const Xy&) = default;
+};
+
+enum class NativePointError : std::uint8_t { not_finite };
+
+/// A position in a file's own CRS, kept as metadata next to the WGS84
+/// Location. The coordinates are finite; there is no default NativePoint.
+class NativePoint {
+ public:
+  [[nodiscard]] static constexpr std::expected<NativePoint, NativePointError>
+  make(Xy p, Epsg crs) noexcept {
+    if (not detail::is_finite(p.x) or not detail::is_finite(p.y)) {
+      return std::unexpected{NativePointError::not_finite};
+    }
+    return NativePoint{p, crs};
+  }
+
+  [[nodiscard]] constexpr double x() const noexcept { return xy_.x; }
+  [[nodiscard]] constexpr double y() const noexcept { return xy_.y; }
+  [[nodiscard]] constexpr Epsg crs() const noexcept { return crs_; }
+
   friend constexpr bool operator==(const NativePoint&,
                                    const NativePoint&) = default;
+
+ private:
+  constexpr NativePoint(Xy xy, Epsg crs) noexcept : xy_{xy}, crs_{crs} {}
+
+  Xy xy_;
+  Epsg crs_;
 };
 
 }  // namespace mov::core

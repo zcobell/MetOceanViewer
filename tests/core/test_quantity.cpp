@@ -11,6 +11,7 @@
 #include "mov/core/quantity.hpp"
 #include "mov/core/units.hpp"
 
+using mov::core::canonical_unit;
 using mov::core::datum_applicable;
 using mov::core::DischargeUnit;
 using mov::core::GenericQuantity;
@@ -25,6 +26,7 @@ using mov::core::QuantityId;
 using mov::core::SpeedUnit;
 using mov::core::TemperatureUnit;
 using mov::core::token;
+using mov::core::Unit;
 
 namespace {
 
@@ -51,12 +53,26 @@ constexpr std::array all_quantities{Quantity::water_level,
                                     Quantity::discharge};
 
 GenericQuantity generic(std::string_view tok, std::string_view standard = "") {
-  const auto parsed = GenericQuantity::parse(tok, standard);
+  const auto parsed =
+      GenericQuantity::parse({.token = tok, .standard_name = standard});
   REQUIRE(parsed.has_value());
   return parsed.value_or(GenericQuantity::value());
 }
 
 }  // namespace
+
+TEST_CASE("a default GenericQuantity and QuantityId are the unknown quantity",
+          "[core][quantity]") {
+  CHECK(GenericQuantity{} == GenericQuantity::value());
+  const GenericQuantity unknown;
+  CHECK(unknown.token() == "value");
+  // A default QuantityId is the generic `value`, never a registry entry.
+  const QuantityId id{};
+  CHECK(id == QuantityId{GenericQuantity::value()});
+  CHECK(id.index() == 0);
+  CHECK(token(id) == "value");
+  CHECK(datum_applicable(id));
+}
 
 TEST_CASE("GenericQuantity::value is the quantity of unknown series",
           "[core][quantity]") {
@@ -65,18 +81,21 @@ TEST_CASE("GenericQuantity::value is the quantity of unknown series",
   CHECK(value.standard_name().empty());
   CHECK(value == GenericQuantity::value());
   // Parsing the same token and no standard name gives the same quantity.
-  CHECK(GenericQuantity::parse("value", "") == value);
+  CHECK(GenericQuantity::parse({.token = "value", .standard_name = ""}) ==
+        value);
 }
 
 TEST_CASE("GenericQuantity::parse keeps the token and standard name",
           "[core][quantity]") {
-  const auto ph =
-      GenericQuantity::parse("ph", "sea_water_ph_reported_on_total_scale");
+  const auto ph = GenericQuantity::parse(
+      {.token = "ph", .standard_name = "sea_water_ph_reported_on_total_scale"});
   REQUIRE(ph.has_value());
   CHECK((ph and ph->token() == "ph"));
   CHECK((ph and ph->standard_name() == "sea_water_ph_reported_on_total_scale"));
-  CHECK(GenericQuantity::parse("Chl_a2", "").has_value());
-  CHECK(GenericQuantity::parse("x", "").has_value());
+  CHECK(GenericQuantity::parse({.token = "Chl_a2", .standard_name = ""})
+            .has_value());
+  CHECK(
+      GenericQuantity::parse({.token = "x", .standard_name = ""}).has_value());
   // Identity is the token and the standard name together.
   CHECK(generic("ph", "a") == generic("ph", "a"));
   CHECK(not(generic("ph", "a") == generic("ph", "b")));
@@ -88,8 +107,12 @@ TEST_CASE("GenericQuantity::parse rejects registry tokens",
   // The caller uses the registry entry instead.
   for (const Quantity q : all_quantities) {
     INFO("token: " << info(q).token);
-    CHECK(not(GenericQuantity::parse(info(q).token, "").has_value()));
-    CHECK(not(GenericQuantity::parse(info(q).token, "anything").has_value()));
+    CHECK(not(
+        GenericQuantity::parse({.token = info(q).token, .standard_name = ""})
+            .has_value()));
+    CHECK(not(GenericQuantity::parse(
+                  {.token = info(q).token, .standard_name = "anything"})
+                  .has_value()));
   }
 }
 
@@ -98,12 +121,15 @@ TEST_CASE("GenericQuantity::parse rejects bad names", "[core][quantity]") {
        {"", "1abc", "_x", "a-b", "a b", "a.b", "a/b", "a:b", " a", "a ",
         "ph\xC3\xA9", "\xC3\xA9_"}) {
     INFO("token: " << bad);
-    CHECK(not(GenericQuantity::parse(bad, "").has_value()));
+    CHECK(not(GenericQuantity::parse({.token = bad, .standard_name = ""})
+                  .has_value()));
   }
-  CHECK(
-      not GenericQuantity::parse(std::string_view{"a\0b", 3}, "").has_value());
+  CHECK(not GenericQuantity::parse(
+                {.token = std::string_view{"a\0b", 3}, .standard_name = ""})
+                .has_value());
   // Case-sensitive: a registry token in another case is a different name.
-  CHECK(GenericQuantity::parse("Water_Level", "").has_value());
+  CHECK(GenericQuantity::parse({.token = "Water_Level", .standard_name = ""})
+            .has_value());
 }
 
 TEST_CASE("QuantityId holds either a registry entry or a generic quantity",
@@ -179,6 +205,64 @@ TEST_CASE("registry tokens and standard names are well formed",
     // Every token is itself a legal NetCDF-style name: lower case and "_".
     for (const char c : i.token) {
       CHECK(((c >= 'a' and c <= 'z') or c == '_'));
+    }
+  }
+}
+
+TEST_CASE("generic quantities with one token are different values",
+          "[core][quantity]") {
+  // == compares token and standard name; collision checks key on token().
+  const GenericQuantity a =
+      generic("ph", "sea_water_ph_reported_on_total_scale");
+  const GenericQuantity b = generic("ph", "");
+  CHECK_FALSE(a == b);
+  CHECK(a.token() == b.token());
+}
+
+TEST_CASE("token(Quantity) is the registry token", "[core][quantity]") {
+  for (const Quantity q : all_quantities) {
+    CHECK(token(q) == info(q).token);
+    const QuantityId id{q};
+    CHECK(token(id) == token(q));
+  }
+}
+
+TEST_CASE("canonical_unit parses the registry's unit", "[core][quantity]") {
+  for (const Quantity q : all_quantities) {
+    INFO("quantity: " << info(q).token);
+    CHECK(canonical_unit(q) ==
+          parse_unit(info(q).canonical_unit).value_or(Unit{LengthUnit::foot}));
+  }
+  CHECK(canonical_unit(Quantity::water_level) == Unit{LengthUnit::meter});
+  CHECK(canonical_unit(Quantity::air_pressure) ==
+        Unit{PressureUnit::hectopascal});
+  CHECK(canonical_unit(Quantity::air_temperature) ==
+        Unit{TemperatureUnit::celsius});
+}
+
+TEST_CASE("is_canonical_other is derived from the registry",
+          "[core][quantity]") {
+  // The registry's non-family units, and their aliases, are canonical.
+  for (const char* text : {"percent", "%", "degree", "deg", "degT", "degrees",
+                           "degrees_true", "s", "sec", "S m-1"}) {
+    INFO("unit: " << text);
+    const auto unit = parse_unit(text);
+    const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr;
+    REQUIRE(other != nullptr);
+    CHECK(is_canonical_other(*other));
+  }
+  for (const char* text : {"furlong", "Mb", "m s-2", "kelvin"}) {
+    INFO("unit: " << text);
+    const auto unit = parse_unit(text);
+    const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr;
+    REQUIRE(other != nullptr);
+    CHECK(not is_canonical_other(*other));
+  }
+  // Every OtherUnit among the registry's canonical units is canonical.
+  for (const Quantity q : all_quantities) {
+    const Unit unit = canonical_unit(q);
+    if (const auto* other = std::get_if<OtherUnit>(&unit)) {
+      CHECK(is_canonical_other(*other));
     }
   }
 }

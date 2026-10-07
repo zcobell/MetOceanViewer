@@ -60,7 +60,7 @@ TEST_CASE("probe: core numeric helpers agree with <cmath>",
     if (not std::isnan(v)) {
       CHECK(mov::core::detail::magnitude(v) == std::fabs(v));
     }
-    if (std::isfinite(v) and std::fabs(v) < 9.3e18) {
+    if (std::isfinite(v) and std::fabs(v) < 4.6e18) {
       CHECK(mov::core::detail::round_half_away(v) == std::llround(v));
     }
   }

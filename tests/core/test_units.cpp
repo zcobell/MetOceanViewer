@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
+#include <array>
+#include <bit>
 #include <catch2/catch_test_macros.hpp>
 #include <compare>
+#include <cstdint>
 #include <limits>
 #include <optional>
 #include <string>
@@ -11,6 +14,7 @@
 #include <variant>
 #include <vector>
 
+#include "mov/core/quantity.hpp"
 #include "mov/core/units.hpp"
 
 using mov::core::Affine;
@@ -76,6 +80,11 @@ const std::vector<Spelling>& design_table() {
       {"ft3/s", DischargeUnit::cubic_foot_per_second},
       {"ft3 s-1", DischargeUnit::cubic_foot_per_second},
       {"cfs", DischargeUnit::cubic_foot_per_second},
+      {"m H2O", PressureUnit::meter_of_water},
+      {"degree_C", TemperatureUnit::celsius},
+      {"degree_Celsius", TemperatureUnit::celsius},
+      {"degree_F", TemperatureUnit::fahrenheit},
+      {"degree_Fahrenheit", TemperatureUnit::fahrenheit},
   };
   return table;
 }
@@ -198,10 +207,14 @@ TEST_CASE("parse_unit canonicalizes OtherUnit aliases",
   CHECK(other_symbol("deg") == "degree");
   CHECK(other_symbol("degT") == "degree");
   CHECK(other_symbol("degree") == "degree");
+  CHECK(other_symbol("degrees") == "degree");
+  CHECK(other_symbol("degrees_true") == "degree");
   CHECK(other_symbol("sec") == "s");
   CHECK(other_symbol("s") == "s");
   // Aliases produce equal units.
   CHECK(parse_unit("deg") == parse_unit("degT"));
+  CHECK(parse_unit("degrees") == parse_unit("degrees_true"));
+  CHECK(parse_unit("degrees") == parse_unit("deg"));
   CHECK(parse_unit("%") == parse_unit("percent"));
 }
 
@@ -245,6 +258,7 @@ TEST_CASE("symbol and udunits name every unit", "[core][units][symbol]") {
   CHECK(ud(Unit{PressureUnit::hectopascal}) == "hPa");
   CHECK(ud(Unit{DischargeUnit::cubic_meter_per_second}) == "m3 s-1");
   CHECK(ud(Unit{TemperatureUnit::celsius}) == "degC");
+  CHECK(ud(Unit{PressureUnit::meter_of_water}) == "m H2O");
 
   const Unit percent = unit_of("%");
   CHECK(sym(percent) == "percent");
@@ -326,5 +340,48 @@ TEST_CASE("conversion over the Unit variant is the identity for equal units",
     const auto same = conversion(unit, unit);
     REQUIRE(same.has_value());
     CHECK(*same == Affine{});
+  }
+}
+
+// ---- floating-point contraction --------------------------------------------
+
+namespace {
+
+constexpr std::array fp_inputs{0.1,  33.3, -273.15, 1234.5678, 1.0e-7,
+                               -0.7, 98.6, 212.0,   3.25,      -40.0};
+
+constexpr std::array fp_conversions{
+    mov::core::conversion(TemperatureUnit::celsius,
+                          TemperatureUnit::fahrenheit),
+    mov::core::conversion(TemperatureUnit::fahrenheit,
+                          TemperatureUnit::celsius),
+    mov::core::conversion(LengthUnit::foot, LengthUnit::meter),
+    mov::core::conversion(SpeedUnit::knot, SpeedUnit::mile_per_hour),
+    mov::core::conversion(PressureUnit::meter_of_water, PressureUnit::millibar),
+};
+
+// scale * x + offset evaluated by the compiler.
+constexpr double at_compile_time(std::size_t conversion, std::size_t input) {
+  return fp_conversions[conversion](fp_inputs[input]);
+}
+
+}  // namespace
+
+// The build passes -ffp-contract=off, so a * x + b rounds twice at run time
+// just as it does in a constant expression, and arm64 (whose compilers contract
+// by default) agrees with x86-64. The inputs go through a volatile, so the
+// run-time path cannot be folded to the compile-time one. A fused multiply-add
+// would differ in the last bit for some of these inputs (only visible on
+// hardware with FMA; the x86-64 baseline has none).
+TEST_CASE("Affine conversion at run time equals the compile-time result",
+          "[core][units][fp]") {
+  for (std::size_t c = 0; c < fp_conversions.size(); ++c) {
+    for (std::size_t i = 0; i < fp_inputs.size(); ++i) {
+      const volatile double input = fp_inputs[i];
+      const double at_run_time = fp_conversions[c](input);
+      INFO("conversion " << c << ", input " << fp_inputs[i]);
+      CHECK(std::bit_cast<std::uint64_t>(at_run_time) ==
+            std::bit_cast<std::uint64_t>(at_compile_time(c, i)));
+    }
   }
 }
