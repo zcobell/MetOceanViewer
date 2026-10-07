@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "metoceanviewer",
+  "description": "Dependencies of the MetOceanViewer v5 core, I/O and tests. Qt is installed separately (aqtinstall).",
+  "homepage": "https://github.com/zcobell/MetOceanViewer",
+  "license": "GPL-3.0-or-later",
+  "dependencies": [
+    "catch2",
+    {
+      "name": "netcdf-c",
+      "default-features": false,
+      "features": [
+        "netcdf-4"
+      ]
+    }
+  ]
+}

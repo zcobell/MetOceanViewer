@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# Keeps the SHA-pinned actions and the Python tool pins current. Toolchain
+# versions in tools/versions.env, the vcpkg baseline and pre-commit hook revs
+# are bumped by hand (tools/dev/README.md lists them).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: [/, /.github/actions/*]
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: /tools/dev
+    schedule:
+      interval: monthly

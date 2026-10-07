@@ -1,0 +1,243 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# Third-party actions are pinned to a commit SHA (version in the trailing
+# comment; Dependabot keeps them current). Toolchain versions come from
+# tools/versions.env through .github/actions/load-versions.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master, v5]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Superseded PR runs are cancelled; every push to a branch is tested.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  VCPKG_DISABLE_METRICS: 1
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+jobs:
+  build-test:
+    name: build-test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-24.04
+            preset: ci-linux
+            compiler-cache: ccache
+            qt-arch: linux_gcc_64
+          - name: macos-arm64-appleclang
+            os: macos-14
+            preset: ci-macos
+            compiler-cache: ccache
+            qt-arch: clang_64
+          - name: windows-msvc
+            os: windows-2022
+            preset: ci-windows
+            compiler-cache: sccache
+            qt-arch: win64_msvc2022_64
+    env:
+      # No Qt target exists yet: with 'true' this job installs Qt and
+      # configures with MOV_ENABLE_QT=ON, which today only runs
+      # find_package(Qt6) in src/app. Flip it when the skeleton app lands.
+      BUILD_QT: 'false'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+
+      - name: Select GCC (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-gcc
+
+      # Apple Clang must provide <expected> and <format>: Xcode 16 (Apple
+      # Clang 16) does; the macos-14 default Xcode 15.4 is not relied on.
+      - name: Select Xcode 16 (macOS)
+        if: runner.os == 'macOS'
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: '16'
+
+      - name: MSVC developer environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
+      - name: Compiler cache
+        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: ${{ matrix.name }}
+          variant: ${{ matrix.compiler-cache }}
+          max-size: 500M
+
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: ${{ matrix.name }}
+
+      - name: Qt
+        if: env.BUILD_QT == 'true'
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: ${{ matrix.qt-arch }}
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Configure
+        run: |
+          # install-qt-action exports QT_ROOT_DIR, which the qt presets use.
+          if [[ "${BUILD_QT}" == true ]]; then
+            cmake --preset "${{ matrix.preset }}" -DMOV_ENABLE_QT=ON "-DCMAKE_PREFIX_PATH=${QT_ROOT_DIR}"
+          else
+            cmake --preset "${{ matrix.preset }}"
+          fi
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
+
+  sanitizers:
+    name: asan-ubsan (linux-gcc)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: ./.github/actions/setup-gcc
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: asan
+          max-size: 500M
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux-gcc
+      - run: cmake --workflow --preset asan
+
+  fuzz:
+    name: fuzz (linux-clang)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: ./.github/actions/setup-gcc # vcpkg builds ports with c++, as in the dev image
+      - uses: ./.github/actions/setup-llvm
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: fuzz
+          max-size: 500M
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux-gcc
+      # Unit tests plus every fuzz target for MOV_FUZZ_SECONDS each.
+      - run: cmake --workflow --preset fuzz
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: fuzz-artifacts
+          path: build/fuzz/**/*.work/
+          if-no-files-found: ignore
+
+  coverage:
+    name: coverage (linux-gcc)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install -r tools/dev/requirements.txt
+      - uses: ./.github/actions/setup-gcc
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: coverage
+          max-size: 500M
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux-gcc
+      # Builds, runs the tests and writes build/coverage/coverage-report/;
+      # fails below the floors in the coverage preset (80% overall, 90% per
+      # Qt-free layer).
+      - run: cmake --workflow --preset coverage
+      - name: Coverage summary
+        if: always()
+        run: cat build/coverage/coverage-report/summary.txt >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-report
+          path: build/coverage/coverage-report/
+          if-no-files-found: ignore
+      # Without the CODECOV_TOKEN secret the upload is attempted tokenless and
+      # a failure does not fail the job.
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: build/coverage/coverage-report/coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: ./.github/actions/setup-gcc # vcpkg builds ports with c++, as in the dev image
+      - uses: ./.github/actions/setup-llvm
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux-gcc
+      # Configure only: the gate needs the compile database (and the headers
+      # generated at configure time), not a build.
+      - run: cmake --preset tidy
+      - run: python3 tools/clang_tidy_gate.py -p build/tidy
+
+  pre-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install -r tools/dev/requirements.txt
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - run: pre-commit run --all-files --show-diff-on-failure --color always

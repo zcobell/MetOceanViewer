@@ -1,0 +1,5 @@
+# Recorded API responses and test fixtures are byte-exact data (some are CRLF
+# CSVs as the services return them): no line-ending conversion, no diffs as text.
+docs/provider-apis/** -text
+tests/fixtures/** -text
+*.nc binary

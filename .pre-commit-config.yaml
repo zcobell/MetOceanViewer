@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# Hooks for the v5 tree. Excluded from every hook: the legacy v4 sources (kept
+# buildable until v5 reaches parity) and legacy root files, including the v4
+# README.md (its v5 section is maintained by hand), vendored thirdparty/ code
+# and .claude/.
+# Byte-exact data (recorded API responses in docs/provider-apis/, test
+# fixtures) is also excluded from the whitespace fixers and codespell, and
+# marked -text in .gitattributes.
+exclude: |
+  (?x)^(
+    (MetOceanViewer|MetOceanData|MetOceanHWMStats|MetOceanInstaller|ProcessCrmsDatabase|libraries|thirdparty|\.claude)/
+    | (global\.pri|MetOcean\.pro|version\.h|FileFormat\.md|README\.md|LICENSE|mov_release_revision\.txt)$
+    | (\.travis\.yml|\.codacy\.yml|\.gitmodules)$
+  )
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  - id: trailing-whitespace
+    exclude: &recorded-data ^(docs/provider-apis|tests/fixtures)/
+  - id: end-of-file-fixer
+    exclude: *recorded-data
+  - id: mixed-line-ending
+    args: [--fix=lf]
+    exclude: *recorded-data
+  - id: check-yaml
+  - id: check-json
+  - id: check-merge-conflict
+  - id: check-executables-have-shebangs
+  - id: check-shebang-scripts-are-executable
+  - id: check-added-large-files
+    # --enforce-all: also catch large files that are already tracked or
+    # staged without `git add` noticing. Fixtures should be the smallest file
+    # that exercises the case.
+    args: [--enforce-all, --maxkb=1000]
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.16.10
+  hooks:
+  - id: ruff-check
+    args: [--fix, --show-fixes]
+    exclude: ^docs/
+  - id: ruff-format
+    exclude: ^docs/
+
+- repo: https://github.com/BlankSpruce/gersemi-pre-commit
+  rev: 0.29.2
+  hooks:
+  - id: gersemi
+    name: CMake formatting (gersemi)
+
+# Same major as LLVM_VERSION in tools/versions.env (the dev image's
+# clang-format), so editors and the hook agree.
+- repo: https://github.com/pre-commit/mirrors-clang-format
+  rev: v20.1.8
+  hooks:
+  - id: clang-format
+    types_or: [c++, c]
+
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.4.3
+  hooks:
+  - id: codespell
+    exclude: *recorded-data
+
+- repo: local
+  hooks:
+  - id: license-header
+    name: GPL-3.0-or-later license header
+    entry: python tools/check_license_header.py
+    language: python
+    files: |
+      (?x)(
+        \.(cpp|hpp|h|cc|cxx|hxx|ipp|inl|tpp|ixx|cppm|cmake|py|sh|yml|yaml|env)
+        | \.(hpp|cmake)\.in
+        | (^|/)(CMakeLists\.txt|Dockerfile|requirements\.txt)
+      )$
+    exclude: ^(docs|tests/fixtures)/
+  # Per-function complexity gate for first-party C++: cyclomatic complexity
+  # (with and/or counted, see tools/lizard_cli.py) at most 15, at most 100
+  # NLOC and 6 parameters. Starting limits for a new codebase; lower them as
+  # the code settles, raise them only deliberately.
+  - id: lizard
+    name: cyclomatic complexity (lizard)
+    entry: python tools/lizard_cli.py
+    language: python
+    additional_dependencies: [lizard==1.24.1]
+    args: [-l, cpp, -C, '15', -L, '100', -a, '6', --warnings_only, src]
+    files: ^src/.*\.(cpp|hpp|h|cc|cxx|hxx|ipp|inl|tpp)$
+    pass_filenames: false
+  - id: lizard-self-test
+    name: lizard counts and/or (self-test)
+    entry: python tools/test_lizard_cli.py
+    language: python
+    additional_dependencies: [lizard==1.24.1]
+    files: ^tools/(lizard_cli|test_lizard_cli)\.py$
+    pass_filenames: false

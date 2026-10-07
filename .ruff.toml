@@ -1,0 +1,40 @@
+# Lint and format settings for the Python tooling under tools/.
+target-version = "py312"
+src = ["tools"]
+extend-exclude = [
+  "MetOceanViewer",
+  "MetOceanData",
+  "MetOceanHWMStats",
+  "MetOceanInstaller",
+  "ProcessCrmsDatabase",
+  "libraries",
+  "thirdparty",
+]
+
+[lint]
+select = [
+  "E", "F", "W", # flake8
+  "B",           # flake8-bugbear
+  "I",           # isort
+  "C4",          # flake8-comprehensions
+  "EM",          # flake8-errmsg
+  "ISC",         # flake8-implicit-str-concat
+  "PGH",         # pygrep-hooks
+  "PIE",         # flake8-pie
+  "PL",          # pylint
+  "RET",         # flake8-return
+  "RUF",         # Ruff-specific
+  "SIM",         # flake8-simplify
+  "UP",          # pyupgrade
+  "EXE",         # flake8-executable
+  "D",           # pydocstyle
+  "ANN",         # flake8-annotations
+]
+ignore = [
+  "PLR2004", # magic number
+  "E501",    # line too long (ruff format owns line length)
+  "D100", "D101", "D102", "D103", "D104", "D105", "D107", # missing docstrings
+  "D203",    # 1 blank line required before class (conflicts with D211)
+  "D212",    # multi-line summary on first line (conflicts with D213)
+  "ISC001",  # conflicts with ruff format
+]

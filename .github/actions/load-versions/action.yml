@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+
+name: Load tool versions
+description: Export every KEY=value line of tools/versions.env to the job environment.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: grep -E '^[A-Z0-9_]+=' tools/versions.env >> "${GITHUB_ENV}"

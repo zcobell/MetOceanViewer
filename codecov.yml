@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# Statuses are informational while the v5 core is young: Codecov reports
+# project and patch coverage on each PR but never fails the check. The hard
+# floor is MOV_COVERAGE_FAIL_UNDER in CMakePresets.json, enforced by the CI
+# coverage job itself.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  require_changes: false
+
+# gcovr already reports only src/; keep Codecov consistent if that changes.
+ignore:
+  - "tests/**"
+  - "thirdparty/**"

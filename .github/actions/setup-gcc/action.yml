@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+
+name: Select GCC
+description: >
+  Make GCC $GCC_VERSION (preinstalled on ubuntu-24.04, whose default is 13) the
+  gcc/g++/gcov the presets and vcpkg's port builds find, as in
+  tools/dev/Dockerfile. Requires the load-versions action first.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc "/usr/bin/gcc-${GCC_VERSION}" 140 \
+          --slave /usr/bin/g++ g++ "/usr/bin/g++-${GCC_VERSION}" \
+          --slave /usr/bin/gcov gcov "/usr/bin/gcov-${GCC_VERSION}"
+        g++ --version | head -1

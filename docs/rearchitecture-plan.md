@@ -312,7 +312,7 @@ A screenshot of a web app (`screenshot.png` at repo root) is the reference for
   release newer than v3.0.0 (2024, Qt ≤ 6.7). Its `main` branch CI targets Qt 6.11.2,
   so build MapLibre Native Qt from source at a pinned commit.
 - **Development environment:** the Docker image in `tools/dev/` (Ubuntu 24.04, GCC 14,
-  clang-19 tooling, vcpkg, Qt via aqtinstall). It mirrors the `ubuntu-24.04` CI job.
+  LLVM 20 tooling, vcpkg, Qt via aqtinstall). It mirrors the `ubuntu-24.04` CI job.
   The host's Debian 12 GCC 12 lacks `<format>`.
 - **Branching:** v5 is developed on the long-lived `v5` branch; `master` stays legacy v4.
 - Build with CMake using `qt_standard_project_setup()` and `qt_add_qml_module`.
@@ -447,11 +447,11 @@ open. Do not guess; ask before proceeding past the phase that needs them.
    pipeline with signing and notarization steps gated on CI secrets (skipped when
    absent). Unsigned artifacts do not block Phase 2.
 2. **Linux. Decided: ship an AppImage** (linuxdeploy + Qt plugin).
-3. **Default basemap.** A free keyless vector style, or Mapbox with a user-supplied
-   token? Needed in Phase 4.
+3. **Default basemap. Decided: OpenFreeMap** (keyless OSM vector styles). Mapbox
+   (user token) and Esri raster remain selectable in Settings.
 4. **v4 hotfixes.** Should bugs 1–3 in §1.2 be patched on the legacy v4 code for
-   current users before v5 lands? **Decided (USGS only): no v4 hotfix for the USGS
-   endpoint shutdown on 2027-02-22.** v4 USGS support may break. Bugs 1–3 are still open.
+   current users before v5 lands? **Decided: no v4 changes at all**, including the
+   USGS endpoint shutdown on 2027-02-22. v4 is frozen.
 
 ### Provider decisions (2026-10-06; see `docs/provider-apis.md`)
 
@@ -471,6 +471,44 @@ open. Do not guess; ask before proceeding past the phase that needs them.
    `harmonics-dwf-20251228-free` constants. Ship only the "free" harmonics file.
 10. **Scope:** v4 feature parity is the baseline for v5.0. Cheap additions the new
     APIs make available may be proposed, but must not delay parity.
+
+### Engineering decisions (2026-10-06)
+
+11. **Process:** work lands as reviewed commits directly on `v5`, which is pushed to
+    `origin` freely (never force-pushed; `master` is never touched). Phase 2 may run in
+    parallel with the rest of Phase 1, because `core`/`io` do not depend on the GUI skeleton.
+12. **Async:** `QFuture::then` + `QPromise` only. No QCoro.
+13. **Units:** small hand-written strong types (`Length`, `Speed`, `Temperature`, ...),
+    constexpr and dependency-free. No mp-units.
+14. **Station-netCDF output:** CF-1.11 Discrete Sampling Geometries, `featureType =
+    timeSeries`, specified in `docs/station-netcdf.md`. Readers still accept the legacy dialects.
+15. **IMEDS write precision:** fixed, column-aligned precision (not shortest round-trip,
+    not v4's format). Exact widths are pinned in the IMEDS writer tests.
+16. **Dry model values:** `value <= -999` is dry. The rule is applied once at the reader
+    boundary and becomes an explicit `WetDry`, never a number.
+17. **HWM standard deviation:** fix math errors rather than preserve them. The error
+    standard deviation is a sample estimate, so use divisor `n - 1`, and document the
+    difference from v4.
+18. **Datum shifts:** any-to-any through an MSL pivot. A missing offset is an error, never zero.
+19. **App identity:** bundle id `io.github.zcobell.metoceanviewer`, display name
+    `MetOceanViewer`. Sessions keep the `.mvs` extension; v5 writes JSON and detects
+    JSON vs. legacy netCDF on open.
+20. **Hardening:** standard-library assertions (`_GLIBCXX_ASSERTIONS`, libc++ hardening,
+    MSVC STL hardening) in all dev, sanitizer, coverage and CI builds. Shipped release
+    builds do not use them for now.
+21. **Extra gates:** libFuzzer fuzzing of every parser, the expanded clang-tidy set and a
+    constexpr (`STATIC_REQUIRE`) test harness. UBSan float checks are not enabled.
+22. **Coverage:** at least 90% line coverage for `core`/`io` and 80% overall.
+23. **Station lists:** a normalized asset built by a `tools/` script from the provider
+    APIs is committed as a snapshot. The app can refresh it at runtime in the background.
+24. **Minimum platforms:** macOS 14 (arm64), Windows 10 22H2 / 11 (x64), and an AppImage
+    built on Ubuntu 22.04 (glibc 2.35).
+25. **R² of a through-origin HWM fit:** uncentred (`1 − SSres/Σy²`), as R and statsmodels
+    report for no-intercept models. It differs from v4's centred value.
+26. **D-Flow FM:** no real `_his.nc` is available. Tests use synthetic fixtures built from
+    the D-Flow FM documentation, to be checked against a real file when one turns up.
+27. **CSV export:** long format, one row per sample (station id/name, ISO-8601 UTC time,
+    quantity, value, units, datum).
 
 ## 7. Engineering rules for v5
 

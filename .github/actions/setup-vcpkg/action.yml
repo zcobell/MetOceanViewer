@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+
+name: Set up vcpkg
+description: >
+  Clone and bootstrap vcpkg at the baseline in vcpkg-configuration.json, export
+  VCPKG_ROOT and VCPKG_BINARY_SOURCES, and restore/save the binary cache. The
+  cache key includes the version string of the compiler vcpkg builds ports
+  with (c++ on Linux/macOS, cl on Windows), so a runner image update with a
+  new compiler starts a new cache instead of carrying stale archives. Run it
+  after the compiler is selected (setup-gcc, Xcode, msvc-dev-cmd).
+inputs:
+  cache-key:
+    description: Job-specific prefix for the binary cache key.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Clone and bootstrap vcpkg
+      id: vcpkg
+      shell: bash
+      run: |
+        commit="$(jq -r '."default-registry".baseline' vcpkg-configuration.json)"
+        root="${RUNNER_TEMP}/vcpkg"
+        git clone --filter=blob:none https://github.com/microsoft/vcpkg.git "${root}"
+        git -C "${root}" checkout --quiet "${commit}"
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          cmd //c "$(cygpath -w "${root}/bootstrap-vcpkg.bat")" -disableMetrics
+          toolchain="$(cl 2>&1 | head -1)"
+        else
+          "${root}/bootstrap-vcpkg.sh" -disableMetrics
+          toolchain="$(c++ --version | head -1)"
+        fi
+        "${root}/vcpkg" version | head -1
+        echo "Toolchain for the cache key: ${toolchain}"
+        cache="${RUNNER_TEMP}/vcpkg-cache"
+        mkdir -p "${cache}"
+        {
+          echo "VCPKG_ROOT=${root}"
+          echo "VCPKG_BINARY_SOURCES=clear;files,${cache},readwrite"
+        } >> "${GITHUB_ENV}"
+        echo "toolchain=$(printf '%s' "${toolchain}" | sha256sum | cut -c1-12)" >> "${GITHUB_OUTPUT}"
+    - name: vcpkg binary cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-${{ inputs.cache-key }}-${{ steps.vcpkg.outputs.toolchain }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: vcpkg-${{ inputs.cache-key }}-${{ steps.vcpkg.outputs.toolchain }}-

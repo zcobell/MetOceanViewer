@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+
+name: Install LLVM
+description: >
+  Install clang, clang-tidy and the sanitizer/libFuzzer runtimes at
+  $LLVM_VERSION from the Ubuntu archive and put them first on PATH under their
+  unversioned names, as in tools/dev/Dockerfile. Requires load-versions first.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          "clang-${LLVM_VERSION}" "clang-tidy-${LLVM_VERSION}" "libclang-rt-${LLVM_VERSION}-dev"
+        echo "/usr/lib/llvm-${LLVM_VERSION}/bin" >> "${GITHUB_PATH}"

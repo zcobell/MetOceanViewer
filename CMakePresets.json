@@ -1,0 +1,446 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 4,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "description": "Ninja, vcpkg manifest mode (VCPKG_ROOT must be set), strict warnings, standard-library hardening and tests. One build tree per preset under build/. The presets, not CC/CXX, choose the compiler.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "MOV_WARNINGS_AS_ERRORS": "ON",
+        "MOV_ENABLE_HARDENING": "ON"
+      }
+    },
+    {
+      "name": "gcc",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "qt",
+      "hidden": true,
+      "description": "Qt from $env{QT_ROOT_DIR} (set by tools/dev/run.sh and by install-qt-action in CI).",
+      "cacheVariables": {
+        "MOV_ENABLE_QT": "ON",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT_DIR}"
+      }
+    },
+    {
+      "name": "dev",
+      "inherits": [
+        "base",
+        "gcc"
+      ],
+      "displayName": "Developer: GCC debug",
+      "description": "Everyday build and unit tests.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "dev-qt",
+      "inherits": [
+        "dev",
+        "qt"
+      ],
+      "displayName": "Developer: GCC debug with Qt",
+      "description": "dev plus the Qt layers (tools/dev/run.sh installs Qt for presets ending in -qt)."
+    },
+    {
+      "name": "release",
+      "inherits": [
+        "base",
+        "gcc"
+      ],
+      "displayName": "GCC release",
+      "description": "Optimized build as shipped: no standard-library hardening.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOV_ENABLE_HARDENING": "OFF"
+      }
+    },
+    {
+      "name": "dev-clang",
+      "inherits": [
+        "base",
+        "clang"
+      ],
+      "displayName": "Developer: Clang debug",
+      "description": "Same as dev, compiled with Clang.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "asan",
+      "inherits": [
+        "base",
+        "gcc"
+      ],
+      "displayName": "GCC debug + ASan/UBSan",
+      "description": "AddressSanitizer and UndefinedBehaviorSanitizer; any UBSan report fails the test.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MOV_ENABLE_SANITIZER_ADDRESS": "ON",
+        "MOV_ENABLE_SANITIZER_UNDEFINED": "ON"
+      }
+    },
+    {
+      "name": "coverage",
+      "inherits": [
+        "base",
+        "gcc"
+      ],
+      "displayName": "GCC debug + coverage",
+      "description": "gcov instrumentation; the coverage-report build preset writes the gcovr report and enforces >= 80% lines over src/ and >= 90% per Qt-free layer (src/core, src/io).",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MOV_ENABLE_COVERAGE": "ON",
+        "MOV_COVERAGE_FAIL_UNDER": "80",
+        "MOV_COVERAGE_LAYER_FAIL_UNDER": "90"
+      }
+    },
+    {
+      "name": "tidy",
+      "inherits": [
+        "base",
+        "clang"
+      ],
+      "displayName": "Clang compile database for clang-tidy",
+      "description": "Configure-only: produces build/tidy/compile_commands.json for tools/clang_tidy_gate.py, fuzz targets included. Debug keeps assert bodies visible to the checks.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "MOV_BUILD_FUZZ_TESTS": "ON"
+      }
+    },
+    {
+      "name": "fuzz",
+      "inherits": [
+        "base",
+        "clang"
+      ],
+      "displayName": "Clang libFuzzer + ASan/UBSan",
+      "description": "Builds the fuzz targets and the unit tests with -fsanitize=fuzzer-no-link,address,undefined; ctest runs each fuzzer for MOV_FUZZ_SECONDS.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "MOV_BUILD_FUZZ_TESTS": "ON",
+        "MOV_ENABLE_SANITIZER_ADDRESS": "ON",
+        "MOV_ENABLE_SANITIZER_UNDEFINED": "ON"
+      }
+    },
+    {
+      "name": "ci-linux",
+      "inherits": [
+        "base",
+        "gcc"
+      ],
+      "displayName": "CI: Linux GCC",
+      "description": "ubuntu-24.04 build-and-test job.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "ci-macos",
+      "inherits": "base",
+      "displayName": "CI: macOS arm64 Apple Clang",
+      "description": "macOS build-and-test job. The deployment target (macOS 14, plan \u00a76.24) is passed to vcpkg's port builds through the environment.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "14.0",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx"
+      },
+      "environment": {
+        "MACOSX_DEPLOYMENT_TARGET": "14.0",
+        "VCPKG_KEEP_ENV_VARS": "MACOSX_DEPLOYMENT_TARGET"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "ci-windows",
+      "inherits": "base",
+      "displayName": "CI: Windows MSVC x64",
+      "description": "windows-2022 build-and-test job. Run from a Visual Studio developer environment (vcvars) so Ninja finds cl. Embedded (/Z7) debug info lets sccache cache objects.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_COMPILER": "cl",
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "Embedded"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "dev-qt",
+      "configurePreset": "dev-qt"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "dev-clang",
+      "configurePreset": "dev-clang"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
+    },
+    {
+      "name": "ci-linux",
+      "configurePreset": "ci-linux"
+    },
+    {
+      "name": "ci-macos",
+      "configurePreset": "ci-macos"
+    },
+    {
+      "name": "ci-windows",
+      "configurePreset": "ci-windows"
+    },
+    {
+      "name": "coverage-report",
+      "configurePreset": "coverage",
+      "targets": [
+        "coverage"
+      ],
+      "description": "Runs the tests and writes build/coverage/coverage-report/ (index.html, coverage.xml, coverage.json, summary.txt); fails below the coverage floors."
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "timeout": 300
+      }
+    },
+    {
+      "name": "dev",
+      "inherits": "test-base",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "dev-qt",
+      "inherits": "test-base",
+      "configurePreset": "dev-qt"
+    },
+    {
+      "name": "release",
+      "inherits": "test-base",
+      "configurePreset": "release"
+    },
+    {
+      "name": "dev-clang",
+      "inherits": "test-base",
+      "configurePreset": "dev-clang"
+    },
+    {
+      "name": "asan",
+      "inherits": "test-base",
+      "configurePreset": "asan",
+      "environment": {
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      }
+    },
+    {
+      "name": "coverage",
+      "inherits": "test-base",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "fuzz",
+      "inherits": "test-base",
+      "configurePreset": "fuzz",
+      "environment": {
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      }
+    },
+    {
+      "name": "ci-linux",
+      "inherits": "test-base",
+      "configurePreset": "ci-linux"
+    },
+    {
+      "name": "ci-macos",
+      "inherits": "test-base",
+      "configurePreset": "ci-macos"
+    },
+    {
+      "name": "ci-windows",
+      "inherits": "test-base",
+      "configurePreset": "ci-windows"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "dev",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev"
+        },
+        {
+          "type": "build",
+          "name": "dev"
+        },
+        {
+          "type": "test",
+          "name": "dev"
+        }
+      ]
+    },
+    {
+      "name": "dev-qt",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev-qt"
+        },
+        {
+          "type": "build",
+          "name": "dev-qt"
+        },
+        {
+          "type": "test",
+          "name": "dev-qt"
+        }
+      ]
+    },
+    {
+      "name": "dev-clang",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev-clang"
+        },
+        {
+          "type": "build",
+          "name": "dev-clang"
+        },
+        {
+          "type": "test",
+          "name": "dev-clang"
+        }
+      ]
+    },
+    {
+      "name": "asan",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "asan"
+        },
+        {
+          "type": "build",
+          "name": "asan"
+        },
+        {
+          "type": "test",
+          "name": "asan"
+        }
+      ]
+    },
+    {
+      "name": "release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "release"
+        },
+        {
+          "type": "build",
+          "name": "release"
+        },
+        {
+          "type": "test",
+          "name": "release"
+        }
+      ]
+    },
+    {
+      "name": "fuzz",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "fuzz"
+        },
+        {
+          "type": "build",
+          "name": "fuzz"
+        },
+        {
+          "type": "test",
+          "name": "fuzz"
+        }
+      ]
+    },
+    {
+      "name": "coverage",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "coverage"
+        },
+        {
+          "type": "build",
+          "name": "coverage"
+        },
+        {
+          "type": "build",
+          "name": "coverage-report"
+        }
+      ]
+    }
+  ]
+}

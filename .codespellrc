@@ -1,0 +1,7 @@
+[codespell]
+# Legacy v4 sources and vendored code are not spell-checked (see
+# .pre-commit-config.yaml). Domain words that look like typos go here:
+# "gage" (USGS stream gage), "pres" (NDBC pressure column), "nd" (netCDF
+# ndims).
+ignore-words-list = thirdparty,gage,pres,nd
+skip = ./build*,./MetOceanViewer,./MetOceanData,./MetOceanHWMStats,./MetOceanInstaller,./ProcessCrmsDatabase,./libraries,./thirdparty,./.git,./.claude,./docs/provider-apis,./tests/fixtures

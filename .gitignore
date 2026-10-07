@@ -56,3 +56,12 @@ compile_commands.json
 
 # QtCreator local machine specific files for imported projects
 *creator.user*
+
+# v5 (CMake presets, vcpkg, tooling)
+/build/
+/build-*/
+CMakeUserPresets.json
+/vcpkg_installed/
+.cache/
+__pycache__/
+*.py[co]

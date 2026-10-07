@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# Python tooling baked into the dev image (tools/dev/Dockerfile). The
+# pre-commit hooks pin their own tool versions in .pre-commit-config.yaml.
+aqtinstall==3.3.0
+gcovr==8.6
+lizard==1.24.1
+pre-commit==4.6.2

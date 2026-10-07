@@ -2,6 +2,23 @@
 [![Build Status](https://travis-ci.com/zcobell/MetOceanViewer.svg?branch=master)](https://travis-ci.com/zcobell/MetOceanViewer)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2d817318594440a0834476c9b06de219)](https://www.codacy.com/app/zachary.cobell/MetOceanViewer?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=zcobell/MetOceanViewer&amp;utm_campaign=Badge_Grade)
 
+## v5 (in progress)
+
+MetOceanViewer v5 is a rewrite on Qt 6, QML and MapLibre Native Qt over a
+Qt-free C++23 core, developed on the `v5` branch. Until it reaches feature
+parity, the v4 code described below stays in the tree unchanged.
+
+- v5: `CMakeLists.txt`, `CMakePresets.json`, `vcpkg.json`, `cmake/`, `src/`,
+  `tests/`, `tools/`, `.github/`.
+- v4 (legacy, frozen): `MetOceanViewer/`, `MetOceanData/`, `MetOceanHWMStats/`,
+  `MetOceanInstaller/`, `ProcessCrmsDatabase/`, `libraries/`, `thirdparty/` and
+  the qmake `*.pro`/`*.pri` files.
+- Plan and decisions: [docs/rearchitecture-plan.md](docs/rearchitecture-plan.md).
+- Building, conventions and contributor rules: [CLAUDE.md](CLAUDE.md) and
+  [tools/dev/README.md](tools/dev/README.md).
+- Recorded API responses in `docs/provider-apis/` are reference material; tests
+  copy the minimal pieces they need into `tests/fixtures/`.
+
 Multipurpose tool for viewing hydrodynamic model data, such as ADCIRC, with a gui interface. The code is written in Qt C++ and is designed to run on Windows, Mac, and Linux systems.
 
 <img src="https://github.com/zcobell/MetOceanViewer/blob/master/MetOceanViewer/img/workswith.png" alt="Works with Windows, Mac, and Linux" width="200">
