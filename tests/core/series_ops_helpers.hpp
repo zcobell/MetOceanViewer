@@ -12,6 +12,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -19,12 +20,34 @@
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
+#include "mov/core/series_ops.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/timeseries.hpp"
 #include "mov/core/units.hpp"
 #include "test_helpers.hpp"
 
 namespace mov::test {
+
+/// A generator with a fixed seed: a failure must reproduce.
+[[nodiscard]] inline std::mt19937 fixed_rng() {
+  std::seed_seq seed{2026, 10, 7};
+  return std::mt19937{seed};
+}
+
+/// The ValueStats of a QuickStats that must have them.
+[[nodiscard]] inline core::ValueStats stats_of(const core::QuickStats& q) {
+  REQUIRE(q.stats.has_value());
+  const core::Extreme none{.value = 0.0, .time = at_ms(0)};
+  return q.stats.value_or(
+      core::ValueStats{.min = none, .max = none, .mean = 0.0});
+}
+
+/// parse_unit of text that must be a unit.
+[[nodiscard]] inline core::Unit unit_of(std::string_view text) {
+  const std::optional<core::Unit> unit = core::parse_unit(text);
+  REQUIRE(unit.has_value());
+  return unit.value_or(core::Unit{});
+}
 
 [[nodiscard]] inline core::Sample val(double v) {
   return core::Sample::of(v).value_or(core::Sample{});
@@ -76,6 +99,7 @@ namespace mov::test {
   std::uniform_int_distribution<int> quarter{-32, 32};
   std::uniform_int_distribution<int> kind{0, 9};
   std::vector<core::Point> rows;
+  rows.reserve(n);
   std::int64_t t = 0;
   for (std::size_t i = 0; i < n; ++i) {
     t += step(rng);

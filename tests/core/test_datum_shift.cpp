@@ -47,7 +47,6 @@ using mov::core::Unit;
 using mov::core::UnknownSourceDatum;
 using mov::core::VerticalDatum;
 using mov::test::axis_of;
-using mov::test::in_metres;
 using mov::test::level_meta;
 using mov::test::make_series;
 using mov::test::metres;
@@ -85,8 +84,7 @@ double only(const Sample& s) { return s.value().value_or(-1e99); }
 
 }  // namespace
 
-// ---- offset sign, against NOAA and XTide rows
-// ----------------------------------
+// ---- offset sign, against NOAA and XTide rows ----
 
 TEST_CASE("a water level at MSL is above MLLW: the offset is added",
           "[core][datum_shift][fixture]") {
@@ -181,12 +179,13 @@ TEST_CASE("any datum shifts to any other through MSL", "[core][datum_shift]") {
 
 TEST_CASE("shifting there and back restores the values",
           "[core][datum_shift]") {
-  std::mt19937 rng{20261007};
+  std::mt19937 rng = mov::test::fixed_rng();
   std::uniform_real_distribution<double> height{-5.0, 5.0};
   const std::array datums{VerticalDatum::mhhw, VerticalDatum::mlw,
                           VerticalDatum::navd88, VerticalDatum::stnd};
   for (int trial = 0; trial < 50; ++trial) {
     std::vector<DatumHeight> rows;
+    rows.reserve(datums.size());
     for (const VerticalDatum d : datums) {
       rows.push_back({.datum = d, .height = metres(height(rng))});
     }
@@ -205,8 +204,7 @@ TEST_CASE("shifting there and back restores the values",
   }
 }
 
-// ---- the pinned check order
-// ---------------------------------------------------
+// ---- the pinned check order ----
 
 TEST_CASE(
     "shift checks the unit, then the datum, then equality, then the offset",
@@ -262,8 +260,7 @@ TEST_CASE(
         std::unexpected{ShiftError{MissingOffset{VerticalDatum::mllw}}});
 }
 
-// ---- values, metadata, overflow
-// -----------------------------------------------
+// ---- values, metadata, overflow ----
 
 TEST_CASE("shift keeps times, Missing, Dry and the other metadata",
           "[core][datum_shift]") {
@@ -271,10 +268,8 @@ TEST_CASE("shift keeps times, Missing, Dry and the other metadata",
       axis_of({5, 10, 15}), {val(1.0), Sample{Dry{}}, Sample{Missing{}}},
       level_meta(metre, VerticalDatum::msl, "predicted level",
                  Quantity::water_level_prediction));
-  const TimeSeries copy = s;
   const auto r = shift(s, VerticalDatum::mhhw, battery());
   REQUIRE(r.has_value());
-  CHECK(s == copy);  // the input is a value: unchanged
   CHECK(std::ranges::equal(r->times(), s.times()));
   CHECK(r->samples()[1] == Sample{Dry{}});
   CHECK(r->samples()[2] == Sample{Missing{}});

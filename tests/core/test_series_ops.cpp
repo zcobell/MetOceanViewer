@@ -78,7 +78,6 @@ using mov::core::Unit;
 using mov::core::UnitError;
 using mov::core::UnknownUnit;
 using mov::core::ValueRange;
-using mov::core::Variable;
 using mov::core::VerticalDatum;
 using mov::test::at_ms;
 using mov::test::axis_of;
@@ -88,11 +87,11 @@ using mov::test::near;
 using mov::test::near_abs;
 using mov::test::random_rows;
 using mov::test::series_of_rows;
+using mov::test::stats_of;
+using mov::test::unit_of;
 using mov::test::val;
 
 namespace {
-
-constexpr std::uint32_t seed_value = 20261007;  // fixed: a failure reproduces
 
 Bucket bucket_of(std::span<const Point> rows) {
   return std::accumulate(rows.begin(), rows.end(), Bucket{},
@@ -111,8 +110,7 @@ std::vector<Time> times_of(const TimeSeries& s) {
 
 }  // namespace
 
-// ---- Bucket
-// -------------------------------------------------------------------
+// ---- Bucket ----
 
 TEST_CASE("Bucket::of classifies one sample", "[core][series_ops][bucket]") {
   const Bucket v = Bucket::of(at_ms(7), val(2.5));
@@ -140,7 +138,7 @@ TEST_CASE("Bucket::of classifies one sample", "[core][series_ops][bucket]") {
 
 TEST_CASE("Bucket: the default is an exact two-sided identity",
           "[core][series_ops][bucket]") {
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   CHECK(Bucket{} == Bucket{});
   CHECK(Bucket{}.values() == 0);
   CHECK(not Bucket{}.min());
@@ -155,7 +153,7 @@ TEST_CASE("Bucket: the default is an exact two-sided identity",
 
 TEST_CASE("Bucket: + is associative, exactly on dyadic data",
           "[core][series_ops][bucket]") {
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   for (int trial = 0; trial < 200; ++trial) {
     const auto rows =
         random_rows(rng, 3 + (static_cast<std::size_t>(trial) % 60));
@@ -178,11 +176,12 @@ TEST_CASE("Bucket: + is associative, exactly on dyadic data",
 
 TEST_CASE("Bucket: + is associative within rounding on arbitrary doubles",
           "[core][series_ops][bucket]") {
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   std::uniform_real_distribution<double> value{-1000.0, 1000.0};
   for (int trial = 0; trial < 200; ++trial) {
-    std::vector<Point> rows;
     const std::size_t n = 3 + (static_cast<std::size_t>(trial) % 60);
+    std::vector<Point> rows;
+    rows.reserve(n);
     for (std::size_t k = 0; k < n; ++k) {
       rows.push_back({.time = at_ms(static_cast<std::int64_t>(k)),
                       .sample = val(value(rng))});
@@ -237,7 +236,7 @@ TEST_CASE("Bucket: counts, extremes and the gap flag of a mixed run",
 TEST_CASE("summarize is the ordered left fold of the points",
           "[core][series_ops][bucket]") {
   CHECK(summarize(TimeSeries{}) == Bucket{});
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   for (int trial = 0; trial < 50; ++trial) {
     const auto rows =
         random_rows(rng, 1 + (static_cast<std::size_t>(trial) % 50));
@@ -245,8 +244,7 @@ TEST_CASE("summarize is the ordered left fold of the points",
   }
 }
 
-// ---- extent
-// ------------------------------------------------------------------------
+// ---- extent ----
 
 TEST_CASE("extent of an empty series is nullopt (B14)",
           "[core][series_ops][extent][regression][B14]") {
@@ -288,7 +286,7 @@ TEST_CASE("extent of several series is the true min and max (B13)",
 
 TEST_CASE("combine of extents is a semilattice with the empty extent as unit",
           "[core][series_ops][extent]") {
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   std::vector<std::optional<Extent>> pool{std::nullopt};
   for (int k = 0; k < 12; ++k) {
     pool.push_back(extent(
@@ -307,8 +305,7 @@ TEST_CASE("combine of extents is a semilattice with the empty extent as unit",
   }
 }
 
-// ---- quick_stats
-// ----------------------------------------------------------------
+// ---- quick_stats ----
 
 TEST_CASE("quick_stats is total", "[core][series_ops][quick_stats]") {
   CHECK(quick_stats(TimeSeries{}) ==
@@ -330,15 +327,16 @@ TEST_CASE("quick_stats counts and summarizes",
   CHECK(q.values == 3);
   CHECK(q.missing == 1);
   CHECK(q.dry == 1);
-  REQUIRE(q.stats.has_value());
-  CHECK(q.stats->min == Extreme{.value = 1.0, .time = at_ms(0)});  // first
-  CHECK(q.stats->max == Extreme{.value = 4.0, .time = at_ms(20)});
-  CHECK(q.stats->mean == 2.0);
+  const mov::core::ValueStats stats = stats_of(q);
+  CHECK(stats.min == Extreme{.value = 1.0, .time = at_ms(0)});  // first
+  CHECK(stats.max == Extreme{.value = 4.0, .time = at_ms(20)});
+  CHECK(stats.mean == 2.0);
+  CHECK(q == quick_stats(s));
 }
 
 TEST_CASE("quick_stats peak is the first maximum, as max_element finds it",
           "[core][series_ops][quick_stats]") {
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   for (int trial = 0; trial < 200; ++trial) {
     const auto rows =
         random_rows(rng, 2 + (static_cast<std::size_t>(trial) % 50));
@@ -355,11 +353,11 @@ TEST_CASE("quick_stats peak is the first maximum, as max_element finds it",
     };
     const auto peak = std::ranges::max_element(values, by_value);
     const auto lowest = std::ranges::min_element(values, by_value);
-    REQUIRE(q.stats.has_value());
-    CHECK(q.stats->max.time == peak->time);
-    CHECK(q.stats->max.value == peak->sample.value());
-    CHECK(q.stats->min.time == lowest->time);
-    CHECK(q.stats->min.value == lowest->sample.value());
+    const mov::core::ValueStats stats = stats_of(q);
+    CHECK(stats.max.time == peak->time);
+    CHECK(stats.max.value == peak->sample.value());
+    CHECK(stats.min.time == lowest->time);
+    CHECK(stats.min.value == lowest->sample.value());
     CHECK(q.values == values.size());
   }
 }
@@ -367,23 +365,21 @@ TEST_CASE("quick_stats peak is the first maximum, as max_element finds it",
 TEST_CASE("quick_stats mean stays finite when the sum overflows",
           "[core][series_ops][quick_stats]") {
   constexpr double huge = 1.7e308;
-  const TimeSeries same =
-      make_series(axis_of({0, 1, 2}), {val(huge), val(huge), val(huge)});
+  const TimeSeries same = make_series(
+      axis_of({0, 1, 2, 3, 4}),
+      {val(huge), Sample{Missing{}}, val(huge), Sample{Dry{}}, val(huge)});
   const QuickStats q = quick_stats(same);
-  REQUIRE(q.stats.has_value());
-  CHECK(near(q.stats->mean, huge));
+  CHECK(near(stats_of(q).mean, huge));
 
   // inf + (-inf) would be NaN.
   const TimeSeries opposite = make_series(
       axis_of({0, 1, 2, 3}), {val(huge), val(huge), val(-huge), val(-huge)});
   const QuickStats r = quick_stats(opposite);
-  REQUIRE(r.stats.has_value());
-  CHECK(near_abs(r.stats->mean, 0.0, 1e300));
-  CHECK(std::isfinite(r.stats->mean));
+  CHECK(near_abs(stats_of(r).mean, 0.0, 1e300));
+  CHECK(std::isfinite(stats_of(r).mean));
 }
 
-// ---- residual
-// -----------------------------------------------------------------------
+// ---- residual ----
 
 namespace {
 
@@ -549,14 +545,14 @@ TEST_CASE("residual of quantities that carry no datum needs none",
 
 TEST_CASE("residual does not modify its inputs",
           "[core][series_ops][residual]") {
-  const ObsVsPred pair = pair_of(obs_meta(), pred_meta());
+  ObsVsPred pair = pair_of(obs_meta(), pred_meta());
   const ObsVsPred copy = pair;
-  static_cast<void>(residual(pair));
+  const auto r = residual(pair);
+  CHECK(r.has_value());
   CHECK(pair == copy);
 }
 
-// ---- slice
-// ------------------------------------------------------------------------
+// ---- slice ----
 
 namespace {
 
@@ -597,7 +593,7 @@ TEST_CASE("slice is half-open", "[core][series_ops][slice]") {
 
 TEST_CASE("slice agrees with filtering by contains, for both overloads",
           "[core][series_ops][slice]") {
-  std::mt19937 rng{seed_value};
+  std::mt19937 rng = mov::test::fixed_rng();
   std::uniform_int_distribution<int> any{-5, 200};
   for (int trial = 0; trial < 200; ++trial) {
     const auto rows = random_rows(rng, static_cast<std::size_t>(trial) % 60);
@@ -620,8 +616,7 @@ TEST_CASE("slice agrees with filtering by contains, for both overloads",
   }
 }
 
-// ---- shift_time
-// -----------------------------------------------------------------
+// ---- shift_time ----
 
 TEST_CASE("shift_time moves every time and nothing else",
           "[core][series_ops][shift_time]") {
@@ -688,8 +683,7 @@ TEST_CASE("shift_time can bring a series that is out of bounds back in",
         std::vector<Time>{at_ms(beyond - 25), at_ms(beyond - 20)});
 }
 
-// ---- scale_offset
-// ----------------------------------------------------------------
+// ---- scale_offset ----
 
 TEST_CASE("scale_offset is y = scale * x + offset on values only",
           "[core][series_ops][scale_offset]") {
@@ -722,8 +716,7 @@ TEST_CASE("scale_offset by the identity changes nothing, not even -0.0",
   CHECK(r == s);
 }
 
-// ---- convert
-// -----------------------------------------------------------------------
+// ---- convert ----
 
 TEST_CASE("convert changes the values and the unit together",
           "[core][series_ops][convert]") {
@@ -772,12 +765,11 @@ TEST_CASE("convert to the same unit changes nothing",
   CHECK(std::signbit(same->samples()[0].value().value_or(1.0)));
 
   // Equal OtherUnits convert as the identity.
-  const std::optional<Unit> percent = mov::core::parse_unit("percent");
-  REQUIRE(percent.has_value());
+  const Unit percent = unit_of("percent");
   const TimeSeries humidity = make_series(
       axis_of({0}), {val(55.0)},
       level_meta(percent, std::nullopt, "rh", Quantity::relative_humidity));
-  CHECK(convert(humidity, *percent) == humidity);
+  CHECK(convert(humidity, percent) == humidity);
 }
 
 TEST_CASE("convert reports why it cannot", "[core][series_ops][convert]") {
@@ -789,11 +781,9 @@ TEST_CASE("convert reports why it cannot", "[core][series_ops][convert]") {
   const Unit knots = SpeedUnit::knot;
   CHECK(convert(length, knots) == std::unexpected{UnitError{IncompatibleUnits{
                                       .from = metre, .to = knots}}});
-  const std::optional<Unit> percent = mov::core::parse_unit("percent");
-  REQUIRE(percent.has_value());
-  CHECK(convert(length, *percent) ==
-        std::unexpected{
-            UnitError{IncompatibleUnits{.from = metre, .to = *percent}}});
+  const Unit percent = unit_of("percent");
+  CHECK(convert(length, percent) == std::unexpected{UnitError{IncompatibleUnits{
+                                        .from = metre, .to = percent}}});
 }
 
 TEST_CASE("convert turns a value that overflows into Missing",
@@ -818,7 +808,8 @@ FileStation station(const char* id) {
 }
 
 SeriesMeta wind_meta(std::optional<Unit> unit) {
-  return SeriesMeta::make({.quantity = Quantity::wind_speed, .unit = unit});
+  return SeriesMeta::make(
+      {.quantity = Quantity::wind_speed, .unit = std::move(unit)});
 }
 
 // Two stations on different axes; column 0 water level (m), column 1 wind

@@ -21,7 +21,6 @@ using mov::core::DatumHeight;
 using mov::core::DatumTable;
 using mov::core::DatumTableError;
 using mov::core::Length;
-using mov::core::LengthUnit;
 using mov::core::MissingMsl;
 using mov::core::NonFiniteHeight;
 using mov::core::parse_vertical_datum;

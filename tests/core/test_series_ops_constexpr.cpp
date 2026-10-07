@@ -117,16 +117,23 @@ TEST_CASE("Bucket small cases", "[core][bucket][constexpr]") {
 TEST_CASE("Bucket ties keep the left operand", "[core][bucket][constexpr]") {
   constexpr Bucket early = Bucket::of(at_ms(1), v(5.0));
   constexpr Bucket late = Bucket::of(at_ms(2), v(5.0));
-  STATIC_REQUIRE((early + late).max()->time == at_ms(1));
-  STATIC_REQUIRE((late + early).max()->time == at_ms(2));
-  STATIC_REQUIRE((early + late).min()->time == at_ms(1));
+  STATIC_REQUIRE((early + late).max() ==
+                 Extreme{.value = 5.0, .time = at_ms(1)});
+  STATIC_REQUIRE((late + early).max() ==
+                 Extreme{.value = 5.0, .time = at_ms(2)});
+  STATIC_REQUIRE((early + late).min() ==
+                 Extreme{.value = 5.0, .time = at_ms(1)});
   STATIC_REQUIRE(early + late != late + early);
   // Strictly better beats the left operand, from either side.
   constexpr Bucket higher = Bucket::of(at_ms(9), v(6.0));
-  STATIC_REQUIRE((early + higher).max()->time == at_ms(9));
-  STATIC_REQUIRE((higher + early).max()->time == at_ms(9));
-  STATIC_REQUIRE((early + higher).min()->time == at_ms(1));
-  STATIC_REQUIRE((higher + early).min()->time == at_ms(1));
+  STATIC_REQUIRE((early + higher).max() ==
+                 Extreme{.value = 6.0, .time = at_ms(9)});
+  STATIC_REQUIRE((higher + early).max() ==
+                 Extreme{.value = 6.0, .time = at_ms(9)});
+  STATIC_REQUIRE((early + higher).min() ==
+                 Extreme{.value = 5.0, .time = at_ms(1)});
+  STATIC_REQUIRE((higher + early).min() ==
+                 Extreme{.value = 5.0, .time = at_ms(1)});
 }
 
 TEST_CASE("Bucket::of classifies a sample", "[core][bucket][constexpr]") {
