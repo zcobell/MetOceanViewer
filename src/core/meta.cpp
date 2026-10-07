@@ -9,13 +9,6 @@
 
 namespace mov::core {
 
-std::expected<SeriesMeta, MetaError> SeriesMeta::make(Fields f) {
-  if (f.datum and not datum_applicable(f.quantity)) {
-    return std::unexpected{MetaError::datum_not_applicable};
-  }
-  return SeriesMeta{std::move(f)};
-}
-
 SeriesMeta SeriesMeta::with_label(std::string label) const& {
   SeriesMeta copy = *this;
   copy.f_.label = std::move(label);
@@ -27,30 +20,26 @@ SeriesMeta SeriesMeta::with_label(std::string label) && {
   return std::move(*this);
 }
 
-std::expected<SeriesMeta, MetaError> SeriesMeta::assume_unit(Unit u) const {
+std::expected<SeriesMeta, AssumeUnitError> SeriesMeta::assume_unit(
+    Unit u) const {
   if (f_.unit) {
-    return std::unexpected{MetaError::already_set};
+    return std::unexpected{AssumeUnitError::already_set};
   }
   SeriesMeta copy = *this;
   copy.f_.unit = std::move(u);
   return copy;
 }
 
-std::expected<SeriesMeta, MetaError> SeriesMeta::assume_datum(
+std::expected<SeriesMeta, AssumeDatumError> SeriesMeta::assume_datum(
     VerticalDatum d) const {
-  if (f_.datum) {
-    return std::unexpected{MetaError::already_set};
+  if (datum_) {
+    return std::unexpected{AssumeDatumError::already_set};
   }
-  return with_datum(d);
-}
-
-std::expected<SeriesMeta, MetaError> SeriesMeta::with_datum(
-    VerticalDatum to) const {
   if (not datum_applicable(f_.quantity)) {
-    return std::unexpected{MetaError::datum_not_applicable};
+    return std::unexpected{AssumeDatumError::not_applicable};
   }
   SeriesMeta copy = *this;
-  copy.f_.datum = to;
+  copy.datum_ = d;
   return copy;
 }
 

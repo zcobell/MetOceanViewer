@@ -3,8 +3,11 @@
 
 // STATIC_REQUIRE checks for mov/core/meta.hpp and mov/core/timeseries.hpp.
 
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>
+#include <cstddef>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -12,6 +15,7 @@
 #include "mov/core/sample.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/timeseries.hpp"
+#include "test_helpers.hpp"
 
 using mov::core::AtStation;
 using mov::core::ConstructionError;
@@ -42,8 +46,14 @@ concept SeriesViews = requires(T&& s) {
 };
 
 template <class F>
-concept SampleTransform =
+concept PublicSampleTransform =
     requires(const TimeSeries& s, F f) { s.transform_samples(f); };
+
+template <class F>
+concept KeyedSampleTransform =
+    requires(const TimeSeries& s, const mov::core::detail::CoreKey& key, F f) {
+      s.transform_samples(key, f);
+    };
 
 }  // namespace
 
@@ -61,6 +71,8 @@ TEST_CASE("series types are regular and cheap to move",
   STATIC_REQUIRE(std::is_trivially_copyable_v<NormalizeReport>);
   STATIC_REQUIRE(std::regular<ConstructionError>);
   STATIC_REQUIRE(std::is_trivially_copyable_v<ConstructionError>);
+  STATIC_REQUIRE(std::regular<mov::core::LengthMismatch>);
+  STATIC_REQUIRE(std::regular<mov::core::TimeNotIncreasing>);
   STATIC_REQUIRE(std::regular<Normalized>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Normalized>);
   STATIC_REQUIRE(std::regular<ObsVsPred>);
@@ -71,10 +83,10 @@ TEST_CASE("series types are regular and cheap to move",
       std::is_nothrow_move_constructible_v<AtStation<FileStation, TimeSeries>>);
 }
 
-TEST_CASE("an engaged unit or datum is replaced only with the passkey",
-          "[core][meta][constexpr]") {
-  STATIC_REQUIRE_FALSE(
-      std::is_default_constructible_v<mov::core::detail::MetaRewrite>);
+TEST_CASE("bypasses need the core passkey", "[core][meta][constexpr]") {
+  using mov::core::detail::CoreKey;
+  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<CoreKey>);
+  STATIC_REQUIRE_FALSE(std::is_aggregate_v<CoreKey>);
   // The validated constructor is private: Fields go through make.
   STATIC_REQUIRE_FALSE(std::is_constructible_v<SeriesMeta, SeriesMeta::Fields>);
 }
@@ -93,12 +105,13 @@ TEST_CASE("views into metadata and series need an lvalue",
   STATIC_REQUIRE(requires { TimeSeries{}.size(); });
 }
 
-TEST_CASE("transform_samples takes Sample -> Sample only",
+TEST_CASE("transform_samples is core-only and takes Sample -> Sample",
           "[core][timeseries][constexpr]") {
-  STATIC_REQUIRE(SampleTransform<Sample (*)(Sample)>);
-  STATIC_REQUIRE_FALSE(SampleTransform<double (*)(Sample)>);
-  STATIC_REQUIRE_FALSE(SampleTransform<Sample (*)(double)>);
-  STATIC_REQUIRE_FALSE(SampleTransform<int>);
+  STATIC_REQUIRE_FALSE(PublicSampleTransform<Sample (*)(Sample)>);
+  STATIC_REQUIRE(KeyedSampleTransform<Sample (*)(Sample)>);
+  STATIC_REQUIRE_FALSE(KeyedSampleTransform<double (*)(Sample)>);
+  STATIC_REQUIRE_FALSE(KeyedSampleTransform<Sample (*)(double)>);
+  STATIC_REQUIRE_FALSE(KeyedSampleTransform<int>);
 }
 
 TEST_CASE("a report is clean only when nothing changed",
@@ -109,4 +122,20 @@ TEST_CASE("a report is clean only when nothing changed",
   STATIC_REQUIRE_FALSE(
       NormalizeReport{.duplicates_dropped = 2, .conflicting_duplicates = 1}
           .clean());
+}
+
+TEST_CASE("first_not_increasing finds the first non-ascent",
+          "[core][timeseries][constexpr]") {
+  using mov::core::Time;
+  using mov::core::detail::first_not_increasing;
+  using mov::test::at_ms;
+  constexpr std::array<Time, 0> none{};
+  constexpr std::array increasing{at_ms(-5), at_ms(0), at_ms(7)};
+  constexpr std::array repeat{at_ms(0), at_ms(1), at_ms(1), at_ms(0)};
+  constexpr std::array descent{at_ms(3), at_ms(2)};
+  STATIC_REQUIRE_FALSE(first_not_increasing(none).has_value());
+  STATIC_REQUIRE_FALSE(first_not_increasing(increasing).has_value());
+  STATIC_REQUIRE(first_not_increasing(repeat) == std::optional<std::size_t>{2});
+  STATIC_REQUIRE(first_not_increasing(descent) ==
+                 std::optional<std::size_t>{1});
 }

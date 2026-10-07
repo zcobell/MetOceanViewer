@@ -20,11 +20,12 @@
 #include "mov/core/units.hpp"
 #include "test_helpers.hpp"
 
-using mov::core::ConstructionErrc;
+using mov::core::AssumeDatumError;
+using mov::core::AssumeUnitError;
 using mov::core::ConstructionError;
 using mov::core::Dry;
+using mov::core::LengthMismatch;
 using mov::core::LengthUnit;
-using mov::core::MetaError;
 using mov::core::Missing;
 using mov::core::normalize;
 using mov::core::Normalized;
@@ -34,6 +35,7 @@ using mov::core::Quantity;
 using mov::core::Sample;
 using mov::core::SeriesMeta;
 using mov::core::Time;
+using mov::core::TimeNotIncreasing;
 using mov::core::TimeSeries;
 using mov::core::Unit;
 using mov::core::VerticalDatum;
@@ -54,8 +56,7 @@ std::vector<Time> times_of(std::initializer_list<std::int64_t> ms) {
 SeriesMeta water_level() {
   return SeriesMeta::make({.quantity = Quantity::water_level,
                            .label = "level",
-                           .unit = LengthUnit::meter})
-      .value_or(SeriesMeta{});
+                           .unit = LengthUnit::meter});
 }
 
 TimeSeries series(std::initializer_list<std::int64_t> ms,
@@ -109,17 +110,17 @@ TEST_CASE("TimeSeries::make keeps times, samples and metadata",
   CHECK(TimeSeries::make({}, {}, water_level()).has_value());
 }
 
-TEST_CASE("TimeSeries::make reports a length mismatch at the shorter length",
+TEST_CASE("TimeSeries::make reports both lengths of a mismatch",
           "[core][timeseries]") {
   CHECK(TimeSeries::make(times_of({0, 1, 2}), {val(1.0)}, SeriesMeta{}) ==
-        std::unexpected{ConstructionError{
-            .code = ConstructionErrc::length_mismatch, .index = 1}});
+        std::unexpected{
+            ConstructionError{LengthMismatch{.times = 3, .samples = 1}}});
   CHECK(TimeSeries::make(times_of({0}), {val(1.0), val(2.0)}, SeriesMeta{}) ==
-        std::unexpected{ConstructionError{
-            .code = ConstructionErrc::length_mismatch, .index = 1}});
+        std::unexpected{
+            ConstructionError{LengthMismatch{.times = 1, .samples = 2}}});
   CHECK(TimeSeries::make({}, {val(1.0)}, SeriesMeta{}) ==
-        std::unexpected{ConstructionError{
-            .code = ConstructionErrc::length_mismatch, .index = 0}});
+        std::unexpected{
+            ConstructionError{LengthMismatch{.times = 0, .samples = 1}}});
 }
 
 TEST_CASE("TimeSeries::make rejects disorder at the first offending index",
@@ -127,18 +128,15 @@ TEST_CASE("TimeSeries::make rejects disorder at the first offending index",
   const std::vector<Sample> four(4, Sample{});
   // Equal times are not strictly increasing (C2).
   CHECK(TimeSeries::make(times_of({0, 1, 1, 2}), four, SeriesMeta{}) ==
-        std::unexpected{ConstructionError{
-            .code = ConstructionErrc::time_not_increasing, .index = 2}});
+        std::unexpected{ConstructionError{TimeNotIncreasing{.index = 2}}});
   CHECK(TimeSeries::make(times_of({5, 1, 2, 3}), four, SeriesMeta{}) ==
-        std::unexpected{ConstructionError{
-            .code = ConstructionErrc::time_not_increasing, .index = 1}});
+        std::unexpected{ConstructionError{TimeNotIncreasing{.index = 1}}});
   CHECK(TimeSeries::make(times_of({0, 1, 2, -7}), four, SeriesMeta{}) ==
-        std::unexpected{ConstructionError{
-            .code = ConstructionErrc::time_not_increasing, .index = 3}});
+        std::unexpected{ConstructionError{TimeNotIncreasing{.index = 3}}});
   // The length is checked first.
-  CHECK(TimeSeries::make(times_of({1, 0}), {Sample{}}, SeriesMeta{})
-            .error_or(ConstructionError{})
-            .code == ConstructionErrc::length_mismatch);
+  CHECK(TimeSeries::make(times_of({1, 0}), {Sample{}}, SeriesMeta{}) ==
+        std::unexpected{
+            ConstructionError{LengthMismatch{.times = 2, .samples = 1}}});
 }
 
 TEST_CASE("points() zips times and samples", "[core][timeseries]") {
@@ -169,9 +167,8 @@ TEST_CASE("with_label changes only the label, from lvalues and rvalues",
 TEST_CASE("assume_unit and assume_datum forward the meta rules",
           "[core][timeseries]") {
   const TimeSeries s = series({1}, {val(3.0)});
-  CHECK(s.assume_unit(LengthUnit::foot)
-            .error_or(MetaError::datum_not_applicable) ==
-        MetaError::already_set);
+  CHECK(s.assume_unit(LengthUnit::foot) ==
+        std::unexpected{AssumeUnitError::already_set});
   const auto with_datum = s.assume_datum(VerticalDatum::navd88);
   REQUIRE(with_datum.has_value());
   CHECK(with_datum->meta().datum() == VerticalDatum::navd88);
@@ -180,19 +177,21 @@ TEST_CASE("assume_unit and assume_datum forward the meta rules",
   const auto unknown =
       TimeSeries::make(times_of({1}), {val(1.0)}, SeriesMeta{});
   REQUIRE(unknown.has_value());
-  const auto feet =
-      unknown.value_or(TimeSeries{}).assume_unit(LengthUnit::foot);
+  const TimeSeries unknown_series = unknown.value_or(TimeSeries{});
+  const auto feet = unknown_series.assume_unit(LengthUnit::foot);
   REQUIRE(feet.has_value());
+  CHECK(samples_vector(*feet) == samples_vector(unknown_series));
+  CHECK(unknown_series.meta().unit() == std::nullopt);  // source unchanged
   CHECK(feet->meta().unit() == std::optional<Unit>{LengthUnit::foot});
 
-  const auto wind = TimeSeries::make(
-      times_of({1}), {val(1.0)},
-      SeriesMeta::make({.quantity = Quantity::wind_u}).value_or(SeriesMeta{}));
+  const auto wind =
+      TimeSeries::make(times_of({1}), {val(1.0)},
+                       SeriesMeta::make({.quantity = Quantity::wind_u}));
   REQUIRE(wind.has_value());
-  CHECK(wind.value_or(TimeSeries{})
-            .assume_datum(VerticalDatum::msl)
-            .error_or(MetaError::already_set) ==
-        MetaError::datum_not_applicable);
+  CHECK(wind->assume_datum(VerticalDatum::msl) ==
+        std::unexpected{AssumeDatumError::not_applicable});
+  CHECK(with_datum->assume_datum(VerticalDatum::msl) ==
+        std::unexpected{AssumeDatumError::already_set});
 
   // The rvalue overloads give the same results.
   TimeSeries source = s;
@@ -205,21 +204,38 @@ TEST_CASE("assume_unit and assume_datum forward the meta rules",
   CHECK(unit_from_rvalue == feet);
 }
 
-TEST_CASE("transform_samples keeps times and metadata", "[core][timeseries]") {
+TEST_CASE("with_samples keeps the times and checks only the length",
+          "[core][timeseries]") {
   const TimeSeries s = series({1, 2, 3}, {val(1.0), Sample{Dry{}}, Sample{}});
-  const auto doubled = [](Sample x) {
-    const std::optional<double> v = x.value();
-    return v ? val(*v * 2.0) : x;
-  };
-  const TimeSeries t = s.transform_samples(doubled);
-  CHECK(times_vector(t) == times_vector(s));
-  CHECK(t.meta() == s.meta());
-  CHECK(samples_vector(t) ==
-        std::vector<Sample>{val(2.0), Sample{Dry{}}, Sample{}});
+  const SeriesMeta speed =
+      SeriesMeta::make({.label = "derived", .unit = LengthUnit::foot});
+  const auto t = s.with_samples({val(2.0), val(3.0), Sample{}}, speed);
+  REQUIRE(t.has_value());
+  CHECK(times_vector(*t) == times_vector(s));
+  CHECK(t->meta() == speed);
+  CHECK(samples_vector(*t) ==
+        std::vector<Sample>{val(2.0), val(3.0), Sample{}});
+  CHECK(s.with_samples({val(1.0)}, speed) ==
+        std::unexpected{LengthMismatch{.times = 3, .samples = 1}});
 
   TimeSeries source = s;
-  const TimeSeries from_rvalue = std::move(source).transform_samples(doubled);
+  const auto from_rvalue =
+      std::move(source).with_samples({val(2.0), val(3.0), Sample{}}, speed);
   CHECK(from_rvalue == t);
+  TimeSeries short_source = s;
+  const auto too_short = std::move(short_source).with_samples({}, speed);
+  CHECK(too_short == std::unexpected{LengthMismatch{.times = 3, .samples = 0}});
+}
+
+TEST_CASE("into_parts gives the vectors back", "[core][timeseries]") {
+  const TimeSeries s = series({1, 2}, {val(1.0), Sample{Dry{}}});
+  TimeSeries source = s;
+  mov::core::TimeSeriesParts parts = std::move(source).into_parts();
+  CHECK(parts.times == times_of({1, 2}));
+  CHECK(parts.samples == std::vector<Sample>{val(1.0), Sample{Dry{}}});
+  CHECK(parts.meta == water_level());
+  CHECK(TimeSeries::make(std::move(parts.times), std::move(parts.samples),
+                         std::move(parts.meta)) == s);
 }
 
 TEST_CASE("TimeSeries equality compares times, samples and meta",

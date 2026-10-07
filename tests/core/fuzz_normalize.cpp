@@ -15,7 +15,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <map>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -105,10 +104,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   require(n.report.clean() ==
           (n.report.descents == 0 and n.report.duplicates_dropped == 0));
   if (n.report.clean()) {
-    require(
-        std::ranges::equal(rows, s.points(), [](const Point& p, const auto& q) {
-          return p.time == std::get<0>(q) and p.sample == std::get<1>(q);
-        }));
+    require(std::ranges::equal(rows, s.points()));
   }
 
   std::vector<Point> again;

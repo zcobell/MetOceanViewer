@@ -4,18 +4,21 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <expected>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/core/datum.hpp"
+#include "mov/core/detail/core_key.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/time.hpp"
@@ -23,30 +26,69 @@
 
 namespace mov::core {
 
-enum class ConstructionErrc : std::uint8_t {
-  length_mismatch,      // index: the shorter length
-  time_not_increasing,  // index: the first i with not (t[i-1] < t[i])
+/// The times of a series or of a file station, strictly increasing wherever
+/// a type guarantees it.
+using TimeAxis = std::vector<Time>;
+
+/// One row of an unordered source (a text file), and one element of
+/// TimeSeries::points().
+struct Point {
+  Time time;
+  Sample sample;
+  friend constexpr bool operator==(const Point&, const Point&) = default;
 };
 
-struct ConstructionError {
-  ConstructionErrc code;
+/// The time and sample vectors have different lengths.
+struct LengthMismatch {
+  std::size_t times;
+  std::size_t samples;
+  friend constexpr bool operator==(LengthMismatch, LengthMismatch) = default;
+};
+
+/// t[index - 1] < t[index] does not hold (index >= 1).
+struct TimeNotIncreasing {
   std::size_t index;
-  friend constexpr bool operator==(ConstructionError,
-                                   ConstructionError) = default;
+  friend constexpr bool operator==(TimeNotIncreasing,
+                                   TimeNotIncreasing) = default;
 };
 
-class TimeSeries;
+using ConstructionError = std::variant<LengthMismatch, TimeNotIncreasing>;
 
 namespace detail {
 
-/// Core-internal: a TimeSeries from parts whose invariant the caller has
-/// established (equal lengths, strictly increasing times), without checking
-/// it again. The invariant is asserted in debug builds.
-[[nodiscard]] TimeSeries trusted_series(std::vector<Time> times,
-                                        std::vector<Sample> samples,
-                                        SeriesMeta meta);
+/// The first index i >= 1 with not (t[i-1] < t[i]); nullopt if t is strictly
+/// increasing. Every strictly-increasing check of the core goes through here.
+[[nodiscard]] constexpr std::optional<std::size_t> first_not_increasing(
+    std::span<const Time> t) noexcept {
+  const auto it = std::ranges::adjacent_find(
+      t, [](Time a, Time b) noexcept { return not(a < b); });
+  if (it == t.end()) {
+    return std::nullopt;
+  }
+  return static_cast<std::size_t>(it - t.begin()) + 1;
+}
+
+/// Element i of TimeSeries::points(). (A transform over iota rather than
+/// views::zip, which Apple libc++ does not have everywhere.)
+struct PointAt {
+  std::span<const Time> times;
+  std::span<const Sample> samples;
+  [[nodiscard]] constexpr Point operator()(std::size_t i) const noexcept {
+    return {.time = times[i], .sample = samples[i]};
+  }
+};
 
 }  // namespace detail
+
+class TimeSeries;
+struct Normalized;
+
+/// What TimeSeries::into_parts hands back.
+struct TimeSeriesParts {
+  TimeAxis times;
+  std::vector<Sample> samples;
+  SeriesMeta meta;
+};
 
 /// A series of samples at strictly increasing UTC times (C2), with its
 /// metadata. A plain value: copies are deep, moves are cheap, and a
@@ -54,16 +96,24 @@ namespace detail {
 /// builder: build the vectors and call make, or normalize unordered rows.
 class TimeSeries {
  public:
-  using PointsView =
-      decltype(std::views::zip(std::declval<const std::vector<Time>&>(),
-                               std::declval<const std::vector<Sample>&>()));
+  using PointsView = decltype(std::views::iota(std::size_t{0}, std::size_t{0}) |
+                              std::views::transform(detail::PointAt{}));
 
   /// Empty, with default metadata.
   TimeSeries() = default;
 
-  /// length_mismatch if the sizes differ, then time_not_increasing.
+  /// LengthMismatch if the sizes differ, then the first TimeNotIncreasing.
   [[nodiscard]] static std::expected<TimeSeries, ConstructionError> make(
-      std::vector<Time> times, std::vector<Sample> samples, SeriesMeta meta);
+      TimeAxis times, std::vector<Sample> samples, SeriesMeta meta);
+
+  /// Core only (detail/core_key.hpp): parts whose invariant the caller has
+  /// established. Asserted in debug builds, not checked otherwise.
+  TimeSeries(const detail::CoreKey& /*key*/, TimeAxis times,
+             std::vector<Sample> samples, SeriesMeta meta)
+      : TimeSeries{std::move(times), std::move(samples), std::move(meta)} {
+    assert(times_.size() == samples_.size());
+    assert(not detail::first_not_increasing(times_));
+  }
 
   [[nodiscard]] std::span<const Time> times() const& noexcept { return times_; }
   std::span<const Time> times() const&& = delete;
@@ -73,9 +123,11 @@ class TimeSeries {
   std::span<const Sample> samples() const&& = delete;
   [[nodiscard]] const SeriesMeta& meta() const& noexcept { return meta_; }
   const SeriesMeta& meta() const&& = delete;
-  /// (time, sample) pairs; the elements are views into this series.
+  /// (time, sample) Points, computed from views into this series.
   [[nodiscard]] PointsView points() const& {
-    return std::views::zip(times_, samples_);
+    return std::views::iota(std::size_t{0}, size()) |
+           std::views::transform(
+               detail::PointAt{.times = times_, .samples = samples_});
   }
   PointsView points() const&& = delete;
 
@@ -85,52 +137,62 @@ class TimeSeries {
   [[nodiscard]] TimeSeries with_label(std::string label) const&;
   [[nodiscard]] TimeSeries with_label(std::string label) &&;
 
-  /// SeriesMeta::assume_unit / assume_datum on the metadata.
-  [[nodiscard]] std::expected<TimeSeries, MetaError> assume_unit(Unit u) const&;
-  [[nodiscard]] std::expected<TimeSeries, MetaError> assume_unit(Unit u) &&;
-  [[nodiscard]] std::expected<TimeSeries, MetaError> assume_datum(
+  /// SeriesMeta::assume_unit / assume_datum on the metadata. The const&
+  /// overloads copy the series only on success.
+  [[nodiscard]] std::expected<TimeSeries, AssumeUnitError> assume_unit(
+      Unit u) const&;
+  [[nodiscard]] std::expected<TimeSeries, AssumeUnitError> assume_unit(
+      Unit u) &&;
+  [[nodiscard]] std::expected<TimeSeries, AssumeDatumError> assume_datum(
       VerticalDatum d) const&;
-  [[nodiscard]] std::expected<TimeSeries, MetaError> assume_datum(
+  [[nodiscard]] std::expected<TimeSeries, AssumeDatumError> assume_datum(
       VerticalDatum d) &&;
 
-  /// f applied to every sample; times and metadata unchanged. Sample keeps
-  /// the values finite.
+  /// A series on the same times with other samples and metadata (a derived
+  /// series). The only check is the O(1) length comparison.
+  [[nodiscard]] std::expected<TimeSeries, LengthMismatch> with_samples(
+      std::vector<Sample> samples, SeriesMeta meta) const&;
+  [[nodiscard]] std::expected<TimeSeries, LengthMismatch> with_samples(
+      std::vector<Sample> samples, SeriesMeta meta) &&;
+
+  /// Core only: f applied to every sample, times and metadata unchanged. The
+  /// public sample-changing operations (convert, scale_offset; WP3) keep the
+  /// metadata coherent with the values.
   template <std::invocable<Sample> F>
     requires std::same_as<std::invoke_result_t<F&, Sample>, Sample>
-  [[nodiscard]] TimeSeries transform_samples(F f) const& {
+  [[nodiscard]] TimeSeries transform_samples(const detail::CoreKey& key,
+                                             F f) const& {
     TimeSeries copy = *this;
-    return std::move(copy).transform_samples(std::move(f));
+    return std::move(copy).transform_samples(key, std::move(f));
   }
   template <std::invocable<Sample> F>
     requires std::same_as<std::invoke_result_t<F&, Sample>, Sample>
-  [[nodiscard]] TimeSeries transform_samples(F f) && {
+  [[nodiscard]] TimeSeries transform_samples(const detail::CoreKey& /*key*/,
+                                             F f) && {
     std::ranges::transform(samples_, samples_.begin(), f);
     return std::move(*this);
+  }
+
+  /// Gives up the vectors (e.g. to move them into a StationTable).
+  [[nodiscard]] TimeSeriesParts into_parts() && {
+    return {.times = std::move(times_),
+            .samples = std::move(samples_),
+            .meta = std::move(meta_)};
   }
 
   friend bool operator==(const TimeSeries&, const TimeSeries&) = default;
 
  private:
-  friend TimeSeries detail::trusted_series(std::vector<Time> times,
-                                           std::vector<Sample> samples,
-                                           SeriesMeta meta);
+  friend Normalized normalize(std::vector<Point> rows, SeriesMeta meta);
 
-  TimeSeries(std::vector<Time> times, std::vector<Sample> samples,
-             SeriesMeta meta)
+  TimeSeries(TimeAxis times, std::vector<Sample> samples, SeriesMeta meta)
       : times_{std::move(times)},
         samples_{std::move(samples)},
         meta_{std::move(meta)} {}
 
-  std::vector<Time> times_;
+  TimeAxis times_;
   std::vector<Sample> samples_;
   SeriesMeta meta_;
-};
-
-/// One row of an unordered source (a text file).
-struct Point {
-  Time time;
-  Sample sample;
-  friend constexpr bool operator==(const Point&, const Point&) = default;
 };
 
 /// What normalize changed. Readers turn non-zero counts into warnings

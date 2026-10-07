@@ -12,9 +12,10 @@
 #include "mov/core/quantity.hpp"
 #include "mov/core/units.hpp"
 
+using mov::core::AssumeDatumError;
+using mov::core::AssumeUnitError;
 using mov::core::GenericQuantity;
 using mov::core::LengthUnit;
-using mov::core::MetaError;
 using mov::core::parse_unit;
 using mov::core::Quantity;
 using mov::core::QuantityId;
@@ -25,10 +26,9 @@ using mov::core::VerticalDatum;
 
 namespace {
 
-SeriesMeta meta_or_default(const std::expected<SeriesMeta, MetaError>& m) {
-  REQUIRE(m.has_value());
-  return m.value_or(SeriesMeta{});
-}
+const SeriesMeta level = SeriesMeta::make({.quantity = Quantity::water_level,
+                                           .label = "old",
+                                           .unit = LengthUnit::meter});
 
 }  // namespace
 
@@ -42,50 +42,49 @@ TEST_CASE("a default SeriesMeta is the unknown generic series",
   CHECK(SeriesMeta::make({}) == SeriesMeta{});
 }
 
-TEST_CASE("SeriesMeta::make keeps every field", "[core][meta]") {
-  const auto meta = SeriesMeta::make({.quantity = Quantity::water_level,
-                                      .label = "Water level at Pilots",
-                                      .unit = LengthUnit::foot,
-                                      .datum = VerticalDatum::navd88});
-  REQUIRE(meta.has_value());
-  CHECK(meta->quantity() == QuantityId{Quantity::water_level});
-  CHECK(meta->label() == "Water level at Pilots");
-  CHECK(meta->unit() == std::optional<Unit>{LengthUnit::foot});
-  CHECK(meta->datum() == VerticalDatum::navd88);
+TEST_CASE("SeriesMeta::make is total and keeps every field", "[core][meta]") {
+  const SeriesMeta meta = SeriesMeta::make({.quantity = Quantity::wind_speed,
+                                            .label = "Wind at Pilots",
+                                            .unit = SpeedUnit::knot});
+  CHECK(meta.quantity() == QuantityId{Quantity::wind_speed});
+  CHECK(meta.label() == "Wind at Pilots");
+  CHECK(meta.unit() == std::optional<Unit>{SpeedUnit::knot});
+  // make cannot set a datum (C3): assume_datum is the only way.
+  CHECK(not meta.datum().has_value());
 }
 
-TEST_CASE("a datum on a quantity that cannot carry one is rejected (C3)",
+TEST_CASE("a datum is accepted exactly where datum_applicable holds (C3)",
           "[core][meta]") {
-  CHECK(SeriesMeta::make({.quantity = Quantity::wind_speed,
-                          .unit = SpeedUnit::knot,
-                          .datum = VerticalDatum::msl}) ==
-        std::unexpected{MetaError::datum_not_applicable});
-  CHECK(SeriesMeta::make(
-            {.quantity = Quantity::current_u, .datum = VerticalDatum::mllw})
-            .error_or(MetaError::already_set) ==
-        MetaError::datum_not_applicable);
-  // The same quantity without a datum is fine.
-  CHECK(SeriesMeta::make({.quantity = Quantity::wind_speed}).has_value());
-}
-
-TEST_CASE("a datum is accepted exactly where datum_applicable holds",
-          "[core][meta]") {
-  CHECK(SeriesMeta::make(
-            {.quantity = Quantity::water_level, .datum = VerticalDatum::mllw})
-            .has_value());
-  CHECK(SeriesMeta::make({.quantity = Quantity::water_level_prediction,
-                          .datum = VerticalDatum::mhhw})
+  const auto mllw = level.assume_datum(VerticalDatum::mllw);
+  REQUIRE(mllw.has_value());
+  CHECK(mllw->datum() == VerticalDatum::mllw);
+  CHECK(SeriesMeta::make({.quantity = Quantity::water_level_prediction})
+            .assume_datum(VerticalDatum::mhhw)
             .has_value());
   // Legacy files put a datum on the generic `value` quantity (SN section 11).
-  CHECK(SeriesMeta::make({.datum = VerticalDatum::stnd}).has_value());
+  CHECK(SeriesMeta{}.assume_datum(VerticalDatum::stnd).has_value());
+
+  CHECK(SeriesMeta::make({.quantity = Quantity::wind_speed})
+            .assume_datum(VerticalDatum::msl) ==
+        std::unexpected{AssumeDatumError::not_applicable});
+  CHECK(SeriesMeta::make({.quantity = Quantity::current_u})
+            .assume_datum(VerticalDatum::mllw) ==
+        std::unexpected{AssumeDatumError::not_applicable});
+}
+
+TEST_CASE("assume_datum refuses to replace a datum", "[core][meta]") {
+  const auto mllw = level.assume_datum(VerticalDatum::mllw);
+  REQUIRE(mllw.has_value());
+  CHECK(mllw->assume_datum(VerticalDatum::mllw) ==
+        std::unexpected{AssumeDatumError::already_set});
+  CHECK(mllw->assume_datum(VerticalDatum::navd88) ==
+        std::unexpected{AssumeDatumError::already_set});
 }
 
 TEST_CASE("with_label is total and changes only the label", "[core][meta]") {
-  const SeriesMeta meta =
-      meta_or_default(SeriesMeta::make({.quantity = Quantity::water_level,
-                                        .label = "old",
-                                        .unit = LengthUnit::meter,
-                                        .datum = VerticalDatum::msl}));
+  const auto with_datum = level.assume_datum(VerticalDatum::msl);
+  REQUIRE(with_datum.has_value());
+  const SeriesMeta& meta = *with_datum;
   const SeriesMeta relabelled = meta.with_label("new");
   CHECK(relabelled.label() == "new");
   CHECK(relabelled.quantity() == meta.quantity());
@@ -108,9 +107,9 @@ TEST_CASE("assume_unit fills an unset unit and refuses to replace one",
 
   // An engaged unit changes only through convert (WP3), even to itself.
   CHECK(feet->assume_unit(LengthUnit::meter) ==
-        std::unexpected{MetaError::already_set});
+        std::unexpected{AssumeUnitError::already_set});
   CHECK(feet->assume_unit(LengthUnit::foot) ==
-        std::unexpected{MetaError::already_set});
+        std::unexpected{AssumeUnitError::already_set});
 
   const auto percent = parse_unit("%");
   REQUIRE(percent.has_value());
@@ -119,36 +118,15 @@ TEST_CASE("assume_unit fills an unset unit and refuses to replace one",
   CHECK(with_percent->unit() == percent);
 }
 
-TEST_CASE("assume_datum fills an unset datum where it applies",
-          "[core][meta]") {
-  const SeriesMeta level =
-      meta_or_default(SeriesMeta::make({.quantity = Quantity::water_level}));
-  const auto mllw = level.assume_datum(VerticalDatum::mllw);
-  REQUIRE(mllw.has_value());
-  CHECK(mllw->datum() == VerticalDatum::mllw);
-  CHECK(mllw->assume_datum(VerticalDatum::mllw) ==
-        std::unexpected{MetaError::already_set});
-  CHECK(mllw->assume_datum(VerticalDatum::navd88) ==
-        std::unexpected{MetaError::already_set});
-
-  const SeriesMeta wind =
-      meta_or_default(SeriesMeta::make({.quantity = Quantity::wind_u}));
-  CHECK(wind.assume_datum(VerticalDatum::msl) ==
-        std::unexpected{MetaError::datum_not_applicable});
-}
-
 TEST_CASE("SeriesMeta equality compares every field", "[core][meta]") {
-  const SeriesMeta a =
-      meta_or_default(SeriesMeta::make({.quantity = Quantity::water_level,
-                                        .label = "a",
-                                        .unit = LengthUnit::meter}));
-  CHECK(a == a.with_label("a"));
-  CHECK(a != a.with_label("b"));
-  CHECK(a != meta_or_default(
-                 SeriesMeta::make({.quantity = Quantity::water_level_prediction,
-                                   .label = "a",
-                                   .unit = LengthUnit::meter})));
-  CHECK(a != meta_or_default(SeriesMeta::make(
-                 {.quantity = Quantity::water_level, .label = "a"})));
-  CHECK(a != meta_or_default(a.assume_datum(VerticalDatum::msl)));
+  CHECK(level == level.with_label("old"));
+  CHECK(level != level.with_label("b"));
+  CHECK(level != SeriesMeta::make({.quantity = Quantity::water_level_prediction,
+                                   .label = "old",
+                                   .unit = LengthUnit::meter}));
+  CHECK(level !=
+        SeriesMeta::make({.quantity = Quantity::water_level, .label = "old"}));
+  const auto with_datum = level.assume_datum(VerticalDatum::msl);
+  REQUIRE(with_datum.has_value());
+  CHECK(level != *with_datum);
 }

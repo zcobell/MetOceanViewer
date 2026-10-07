@@ -4,12 +4,12 @@
 #include "mov/core/timeseries.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <expected>
 #include <functional>
 #include <iterator>
 #include <numeric>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,17 +18,10 @@ namespace mov::core {
 
 namespace {
 
-constexpr auto not_increasing = [](Time a, Time b) noexcept {
-  return not(a < b);
-};
-
-constexpr auto point_not_increasing = [](const Point& a,
-                                         const Point& b) noexcept {
-  return not(a.time < b.time);
-};
-
-std::size_t count_descents(const std::vector<Point>& rows) {
-  if (rows.size() < 2) {
+// Adjacent input pairs with t[i+1] < t[i]. (A transform_reduce over the
+// shifted range: views::pairwise is not on every target standard library.)
+std::size_t count_descents(std::span<const Point> rows) {
+  if (rows.empty()) {
     return 0;
   }
   return std::transform_reduce(
@@ -38,59 +31,81 @@ std::size_t count_descents(const std::vector<Point>& rows) {
       });
 }
 
-// Of each run of equal times, keeps the first and counts the others.
-std::vector<Point> keep_first_of_equal_times(std::vector<Point> sorted,
-                                             NormalizeReport& report) {
-  auto kept = sorted.begin();
-  for (auto it = sorted.begin(); it != sorted.end(); ++it) {
-    if (it != sorted.begin() and it->time == std::prev(kept)->time) {
-      ++report.duplicates_dropped;
-      if (it->sample != std::prev(kept)->sample) {
-        ++report.conflicting_duplicates;
-      }
-      continue;
-    }
-    *kept++ = *it;
+// What dropping all but the first row of each run of equal times costs: a
+// commutative monoid under +, with {} as identity.
+struct DedupCounts {
+  std::size_t dropped{};
+  std::size_t conflicting{};
+  friend constexpr DedupCounts operator+(DedupCounts a,
+                                         DedupCounts b) noexcept {
+    return {.dropped = a.dropped + b.dropped,
+            .conflicting = a.conflicting + b.conflicting};
   }
-  sorted.erase(kept, sorted.end());
-  return sorted;
+};
+
+// One run of equal times: everything after the first row is dropped.
+DedupCounts run_counts(std::span<const Point> run) {
+  const Sample& kept = run.front().sample;
+  const auto differs = [&kept](const Point& p) { return p.sample != kept; };
+  return {.dropped = run.size() - 1,
+          .conflicting = static_cast<std::size_t>(
+              std::ranges::count_if(run.subspan(1), differs))};
 }
 
-TimeSeries series_from_rows(const std::vector<Point>& rows, SeriesMeta meta) {
-  std::vector<Time> times;
-  std::vector<Sample> samples;
-  times.reserve(rows.size());
-  samples.reserve(rows.size());
-  for (const Point& p : rows) {
-    times.push_back(p.time);
-    samples.push_back(p.sample);
+// The sum of run_counts over the runs of equal times of a sorted range.
+// (The runs are found by hand: views::chunk_by is not on every target
+// standard library.)
+DedupCounts dedup_counts(std::span<const Point> sorted) {
+  DedupCounts total;
+  auto first = sorted.begin();
+  while (first != sorted.end()) {
+    const auto last = std::ranges::find_if(
+        first, sorted.end(),
+        [t = first->time](const Point& p) { return p.time != t; });
+    total = total + run_counts({first, last});
+    first = last;
   }
-  return detail::trusted_series(std::move(times), std::move(samples),
-                                std::move(meta));
+  return total;
+}
+
+// Sorts and deduplicates rows that are not strictly increasing.
+NormalizeReport sort_and_deduplicate(std::vector<Point>& rows) {
+  const std::size_t descents = count_descents(rows);
+  if (descents > 0) {
+    std::ranges::stable_sort(rows, std::less{}, &Point::time);
+  }
+  const DedupCounts counts = dedup_counts(rows);
+  const auto duplicates = std::ranges::unique(rows, {}, &Point::time);
+  rows.erase(duplicates.begin(), duplicates.end());
+  return {.descents = descents,
+          .duplicates_dropped = counts.dropped,
+          .conflicting_duplicates = counts.conflicting};
+}
+
+std::pair<TimeAxis, std::vector<Sample>> unzip(std::span<const Point> rows) {
+  TimeAxis times(rows.size());
+  std::vector<Sample> samples(rows.size());
+  std::ranges::transform(rows, times.begin(), &Point::time);
+  std::ranges::transform(rows, samples.begin(), &Point::sample);
+  return {std::move(times), std::move(samples)};
+}
+
+bool strictly_increasing(std::span<const Point> rows) {
+  return std::ranges::adjacent_find(rows, [](const Point& a, const Point& b) {
+           return not(a.time < b.time);
+         }) == rows.end();
 }
 
 }  // namespace
 
-TimeSeries detail::trusted_series(std::vector<Time> times,
-                                  std::vector<Sample> samples,
-                                  SeriesMeta meta) {
-  assert(times.size() == samples.size());
-  assert(std::ranges::adjacent_find(times, not_increasing) == times.end());
-  return TimeSeries{std::move(times), std::move(samples), std::move(meta)};
-}
-
 std::expected<TimeSeries, ConstructionError> TimeSeries::make(
-    std::vector<Time> times, std::vector<Sample> samples, SeriesMeta meta) {
+    TimeAxis times, std::vector<Sample> samples, SeriesMeta meta) {
   if (times.size() != samples.size()) {
-    return std::unexpected{
-        ConstructionError{.code = ConstructionErrc::length_mismatch,
-                          .index = std::min(times.size(), samples.size())}};
-  }
-  const auto bad = std::ranges::adjacent_find(times, not_increasing);
-  if (bad != times.end()) {
     return std::unexpected{ConstructionError{
-        .code = ConstructionErrc::time_not_increasing,
-        .index = static_cast<std::size_t>(bad - times.begin()) + 1}};
+        LengthMismatch{.times = times.size(), .samples = samples.size()}}};
+  }
+  if (const auto bad = detail::first_not_increasing(times)) {
+    return std::unexpected{ConstructionError{TimeNotIncreasing{.index = *bad}}};
   }
   return TimeSeries{std::move(times), std::move(samples), std::move(meta)};
 }
@@ -105,25 +120,28 @@ TimeSeries TimeSeries::with_label(std::string label) && {
   return std::move(*this);
 }
 
-std::expected<TimeSeries, MetaError> TimeSeries::assume_unit(Unit u) const& {
-  TimeSeries copy = *this;
-  return std::move(copy).assume_unit(std::move(u));
+std::expected<TimeSeries, AssumeUnitError> TimeSeries::assume_unit(
+    Unit u) const& {
+  return meta_.assume_unit(std::move(u)).transform([this](SeriesMeta m) {
+    return TimeSeries{times_, samples_, std::move(m)};
+  });
 }
 
-std::expected<TimeSeries, MetaError> TimeSeries::assume_unit(Unit u) && {
+std::expected<TimeSeries, AssumeUnitError> TimeSeries::assume_unit(Unit u) && {
   return meta_.assume_unit(std::move(u)).transform([this](SeriesMeta m) {
     meta_ = std::move(m);
     return std::move(*this);
   });
 }
 
-std::expected<TimeSeries, MetaError> TimeSeries::assume_datum(
+std::expected<TimeSeries, AssumeDatumError> TimeSeries::assume_datum(
     VerticalDatum d) const& {
-  TimeSeries copy = *this;
-  return std::move(copy).assume_datum(d);
+  return meta_.assume_datum(d).transform([this](SeriesMeta m) {
+    return TimeSeries{times_, samples_, std::move(m)};
+  });
 }
 
-std::expected<TimeSeries, MetaError> TimeSeries::assume_datum(
+std::expected<TimeSeries, AssumeDatumError> TimeSeries::assume_datum(
     VerticalDatum d) && {
   return meta_.assume_datum(d).transform([this](SeriesMeta m) {
     meta_ = std::move(m);
@@ -131,16 +149,32 @@ std::expected<TimeSeries, MetaError> TimeSeries::assume_datum(
   });
 }
 
+std::expected<TimeSeries, LengthMismatch> TimeSeries::with_samples(
+    std::vector<Sample> samples, SeriesMeta meta) const& {
+  if (samples.size() != size()) {
+    return std::unexpected{
+        LengthMismatch{.times = size(), .samples = samples.size()}};
+  }
+  return TimeSeries{times_, std::move(samples), std::move(meta)};
+}
+
+std::expected<TimeSeries, LengthMismatch> TimeSeries::with_samples(
+    std::vector<Sample> samples, SeriesMeta meta) && {
+  if (samples.size() != size()) {
+    return std::unexpected{
+        LengthMismatch{.times = size(), .samples = samples.size()}};
+  }
+  return TimeSeries{std::move(times_), std::move(samples), std::move(meta)};
+}
+
 Normalized normalize(std::vector<Point> rows, SeriesMeta meta) {
-  if (std::ranges::adjacent_find(rows, point_not_increasing) == rows.end()) {
-    return {.series = series_from_rows(rows, std::move(meta)), .report = {}};
-  }
-  NormalizeReport report{.descents = count_descents(rows)};
-  if (report.descents > 0) {
-    std::ranges::stable_sort(rows, std::less{}, &Point::time);
-  }
-  rows = keep_first_of_equal_times(std::move(rows), report);
-  return {.series = series_from_rows(rows, std::move(meta)), .report = report};
+  const NormalizeReport report = strictly_increasing(rows)
+                                     ? NormalizeReport{}
+                                     : sort_and_deduplicate(rows);
+  auto [times, samples] = unzip(rows);
+  return {.series =
+              TimeSeries{std::move(times), std::move(samples), std::move(meta)},
+          .report = report};
 }
 
 }  // namespace mov::core
