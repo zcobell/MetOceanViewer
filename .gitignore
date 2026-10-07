@@ -65,3 +65,6 @@ CMakeUserPresets.json
 .cache/
 __pycache__/
 *.py[co]
+
+# Agent worktrees
+.claude/worktrees/
