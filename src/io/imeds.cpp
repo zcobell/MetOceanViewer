@@ -330,10 +330,8 @@ std::expected<core::Location, ParseError> parse_location(
   }
   const auto location = core::Location::make({.lat = *lat, .lon = *lon});
   if (not location) {
-    const bool bad_longitude =
-        location.error() == core::LocationError::longitude_out_of_range;
-    return std::unexpected{detail::at(
-        line, bad_longitude ? lon_token : lat_token, ParseErrc::out_of_range)};
+    return std::unexpected{
+        detail::position_at(line, lon_token, lat_token, location.error())};
   }
   return *location;
 }

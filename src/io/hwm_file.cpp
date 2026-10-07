@@ -61,18 +61,9 @@ struct RowText {
 // out.size() + 1.
 std::size_t split_fields(std::string_view line,
                          std::span<std::string_view> out) noexcept {
-  std::size_t count = 0;
-  while (count <= out.size()) {
-    const std::size_t comma = line.find(',');
-    const std::string_view field = core::detail::trim(line.substr(0, comma));
-    if (count < out.size()) {
-      out[count] = field;
-    }
-    ++count;
-    if (comma == std::string_view::npos) {
-      break;
-    }
-    line.remove_prefix(comma + 1);
+  const std::size_t count = detail::split_on_into(line, ',', out);
+  for (std::string_view& field : out.first(std::min(count, out.size()))) {
+    field = core::detail::trim(field);
   }
   return count;
 }
@@ -167,10 +158,8 @@ class RowParser {
     }
     const auto where = core::Location::make({.lat = *lat, .lon = *lon});
     if (not where) {
-      const bool latitude =
-          where.error() == core::LocationError::latitude_out_of_range;
-      return std::unexpected{detail::at(line_, latitude ? row.lat : row.lon,
-                                        ParseErrc::out_of_range)};
+      return std::unexpected{
+          detail::position_at(line_, row.lon, row.lat, where.error())};
     }
     return *where;
   }
@@ -212,16 +201,16 @@ class HwmReader {
       : cursor_{text}, unit_{unit}, ctx_{ctx} {}
 
   std::expected<Read<std::vector<Mark>>, Error> read() && {
-    auto line = next_row_line();
+    auto line = cursor_.next_nonblank();
     if (line and is_header(line->text)) {
       warnings_.push_back(
           {.code = WarningCode::header_line_skipped,
            .subject = std::string{detail::truncate_utf8(
                core::detail::trim(line->text), header_subject_bytes)},
            .count = 1});
-      line = next_row_line();
+      line = cursor_.next_nonblank();
     }
-    for (; line; line = next_row_line()) {
+    for (; line; line = cursor_.next_nonblank()) {
       if (auto added = add(*line); not added) {
         return std::unexpected{std::move(added.error())};
       }
@@ -236,16 +225,6 @@ class HwmReader {
   }
 
  private:
-  // The next line with something on it.
-  std::optional<Line> next_row_line() {
-    while (const auto line = cursor_.next()) {
-      if (not detail::skip_space(line->text).empty()) {
-        return line;
-      }
-    }
-    return std::nullopt;
-  }
-
   std::expected<void, Error> add(const Line& line) {
     if (marks_.size() % rows_per_stop_poll == 0 and
         ctx_.stop.stop_requested()) {

@@ -152,11 +152,29 @@ HWM file
   and a **letterless exponent only as a sign and exactly three digits at the end of the
   token** (`1.5-100`; `1-5` and `1.5-10` are not numbers). The rewrite is in a 64-byte
   buffer, only for tokens with no `E`; `parse_double` still judges the result.
-- **Deferred to a pass after WP7 merges** (overlap with IMEDS): `replace_invalid_utf8`,
-  `uniquify_ids`, `split_on_into`, the blank-line peek/next helpers and the `next_word`
-  predicate. The local copies in `adcirc_station_file.cpp` (`with_valid_utf8`,
-  `next_nonblank`, `next_field`) and `adcirc_ascii.cpp` (`first_nonblank`, `blank_text`) are
-  the ones to replace.
+- **Shared helpers (adopted after WP7).** The readers use WP7's `detail::next_word(rest,
+  is_separator)` (the station file's comma-or-white-space separator), `split_on_into` (HWM
+  fields, then trimmed), `LineCursor::next_nonblank()`, `replace_invalid_utf8` (station
+  names), `append_if_counted` (every count-gated warning in the three readers), and these
+  additions, which the IMEDS reader shares: `detail::is_blank(text)` (`text.hpp`),
+  `LineCursor::peek_nonblank()` (the next non-blank line without consuming it: "does any
+  text follow this line?") and `detail::position_at(line, x_token, latitude_token, why)`
+  (`parse_at.hpp`: a position that is not a `Location` blames the latitude when that is out
+  of range, the first coordinate otherwise; the station file, the HWM file and IMEDS call it).
+  The local copies (`with_valid_utf8`, `next_field`, `next_nonblank`, `first_nonblank`,
+  `blank_text`, the HWM `split_fields` loop, `position_error` and the HWM latitude test) are
+  gone.
+  - **Order matters in the station file:** the name is cut at the first NUL (C14) by
+    `joined_words` before `replace_invalid_utf8` runs, because that function turns a NUL into
+    U+FFFD. The HWM `split_fields` is `split_on_into` plus a trim of each field.
+  - **Behaviour differences:** none observable. `position_at` blames the first coordinate for
+    `not_finite` (IMEDS used to blame the latitude); `double_at` accepts no NaN or infinity, so
+    that case cannot happen.
+- **`parse_*` signatures.** Every text reader follows `parse_*(text, ..., ReadContext) ->
+  expected<Read<T>, Error>`. The one exception is `parse_adcirc_ascii_header(text)`
+  (`expected<AdcircAsciiHeader, ParseError>`): a two-line probe with no limits to enforce, no
+  cancellation and no warnings, so a context and `Read` would carry nothing. Its header comment
+  says so.
 
 ## Fixtures and tests
 

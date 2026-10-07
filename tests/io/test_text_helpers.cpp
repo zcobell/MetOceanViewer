@@ -118,6 +118,26 @@ TEST_CASE("LineCursor skips blank lines and peeks at the next one",
   CHECK(only_blank.at_end());
   const detail::LineCursor empty{""};
   CHECK(empty.peek_blank() == std::nullopt);
+  CHECK(empty.peek_nonblank() == std::nullopt);
+}
+
+TEST_CASE("is_blank and peek_nonblank", "[io][text]") {
+  CHECK(detail::is_blank(""));
+  CHECK(detail::is_blank(" \t\r\n\v\f"));
+  CHECK(not detail::is_blank(" a "));
+  CHECK(not detail::is_blank("\xC2\xA0"));  // a no-break space is a letter
+
+  detail::LineCursor cursor{"\n \nfirst\nsecond\n\n"};
+  const auto ahead = cursor.peek_nonblank();
+  CHECK((ahead.has_value() and ahead->text == "first"));
+  CHECK((ahead.has_value() and ahead->number == 3));
+  // Nothing was consumed.
+  CHECK(cursor.lines_read() == 0);
+  CHECK(cursor.next_nonblank() == ahead);
+  const auto second = cursor.next_nonblank();
+  CHECK((second.has_value() and second->text == "second"));
+  CHECK(cursor.peek_nonblank() == std::nullopt);  // only the blank tail left
+  CHECK(not cursor.at_end());
 }
 
 TEST_CASE("replace_invalid_utf8 returns station text", "[io][text]") {

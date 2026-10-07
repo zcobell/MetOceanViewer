@@ -52,6 +52,10 @@ struct AdcircAsciiHeader {
 };
 
 /// Line 1 is a free-text run description and is not read (it may be blank).
+/// A probe, not a reader (WP7's convention that a `parse_*` takes a
+/// `ReadContext` and returns `expected<Read<T>, Error>` is for the readers
+/// below): it looks at two lines, so it needs no limits, cannot be cancelled
+/// and has no warnings.
 /// Errors: `empty_input` (no text), `missing_header` (no second line),
 /// `wrong_field_count` (fewer than five fields), `bad_integer` and
 /// `out_of_range` (a count that is not a non-negative integer).

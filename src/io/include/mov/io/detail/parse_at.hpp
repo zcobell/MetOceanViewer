@@ -13,6 +13,7 @@
 #include <optional>
 #include <string_view>
 
+#include "mov/core/geo.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -35,6 +36,18 @@ namespace mov::io::detail {
              : std::nullopt;
   return ParseError::make(code, {.line = line.number, .column = column},
                           line.text);
+}
+
+/// A position that is not a Location, as an `out_of_range` ParseError at the
+/// field to blame: `latitude_token` when the latitude is what is out of
+/// range, `x_token` (the first coordinate: a longitude, or an easting) for
+/// anything else. Both tokens are views into `line.text`.
+[[nodiscard]] inline ParseError position_at(const LineCursor::Line& line,
+                                            std::string_view x_token,
+                                            std::string_view latitude_token,
+                                            core::LocationError why) {
+  const bool latitude = why == core::LocationError::latitude_out_of_range;
+  return at(line, latitude ? latitude_token : x_token, ParseErrc::out_of_range);
 }
 
 /// `token` as a double (parse_double): a malformed token is `bad_number`, one
