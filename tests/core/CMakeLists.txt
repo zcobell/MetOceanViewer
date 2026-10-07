@@ -38,3 +38,12 @@ mov_add_fuzz_test(
     CORPUS core/parse_quantity_token
 )
 mov_add_fuzz_test(fuzz_checked_time SOURCES fuzz_checked_time.cpp LIBRARIES mov::core CORPUS core/checked_time)
+
+# HWM (WP4). A separate executable keeps this package's edit to the file a pure
+# append; it can be folded into mov_core_tests above.
+mov_add_test(
+    mov_core_hwm_tests
+    SOURCES test_hwm.cpp
+    CONSTEXPR_SOURCES test_hwm_constexpr.cpp
+    LIBRARIES mov::core
+)
