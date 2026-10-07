@@ -249,12 +249,14 @@ TEST_CASE("threads convert independently", "[io][projection]") {
     std::vector<std::thread> threads;
     threads.reserve(ok.size());
     for (int& slot : ok) {
-      threads.emplace_back([&slot, &point] {
+      // A non-const copy: MSVC will not capture `c` implicitly, while Clang
+      // calls an explicit capture of a constant unnecessary.
+      threads.emplace_back([&slot, &point, expected = UtmCase{c}] {
         bool all = true;
         for (int n = 0; n < 20; ++n) {
           const auto location = to_location(point);
           all = all and location.has_value() and
-                near_location(*location, c.lat, c.lon);
+                near_location(*location, expected.lat, expected.lon);
         }
         slot = all ? 1 : 0;
       });
