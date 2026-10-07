@@ -3,209 +3,345 @@
 
 #include "mov/io/cf_time.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
 #include <expected>
 #include <optional>
+#include <span>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "mov/core/detail/ascii.hpp"
 #include "mov/core/time.hpp"
+#include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/read.hpp"
+#include "mov/io/warning.hpp"
 
 namespace mov::io {
 
 namespace {
 
 using core::detail::equal_ignore_case;
-using core::detail::is_space;
 
-constexpr std::array<std::pair<std::string_view, CfTimeUnit>, 10> unit_words{{
-    {"millisecond", CfTimeUnit::millisecond},
-    {"milliseconds", CfTimeUnit::millisecond},
-    {"second", CfTimeUnit::second},
-    {"seconds", CfTimeUnit::second},
-    {"minute", CfTimeUnit::minute},
-    {"minutes", CfTimeUnit::minute},
-    {"hour", CfTimeUnit::hour},
-    {"hours", CfTimeUnit::hour},
-    {"day", CfTimeUnit::day},
-    {"days", CfTimeUnit::day},
+// ---- units -----------------------------------------------------------------
+
+struct UnitName {
+  std::string_view name;
+  CfTimeUnit unit;
+};
+
+// A plural adds an "s" to any of these.
+constexpr std::array<UnitName, 5> unit_words{{
+    {.name = "millisecond", .unit = CfTimeUnit::millisecond},
+    {.name = "second", .unit = CfTimeUnit::second},
+    {.name = "minute", .unit = CfTimeUnit::minute},
+    {.name = "hour", .unit = CfTimeUnit::hour},
+    {.name = "day", .unit = CfTimeUnit::day},
 }};
 
-constexpr std::optional<CfTimeUnit> parse_unit_word(std::string_view word) {
-  for (const auto& [name, unit] : unit_words) {
-    if (equal_ignore_case(word, name)) {
-      return unit;
-    }
-  }
-  return std::nullopt;
+// The UDUNITS abbreviations CF files use. "hr", "min" and "sec" take a plural
+// "s" too; the one-letter ones do not ("ds" is not days).
+constexpr std::array<UnitName, 6> unit_abbreviations{{
+    {.name = "d", .unit = CfTimeUnit::day},
+    {.name = "h", .unit = CfTimeUnit::hour},
+    {.name = "hr", .unit = CfTimeUnit::hour},
+    {.name = "min", .unit = CfTimeUnit::minute},
+    {.name = "s", .unit = CfTimeUnit::second},
+    {.name = "sec", .unit = CfTimeUnit::second},
+}};
+
+constexpr std::optional<CfTimeUnit> find_unit(std::span<const UnitName> table,
+                                              std::string_view word) {
+  const auto found = std::ranges::find_if(table, [word](const UnitName& entry) {
+    return equal_ignore_case(word, entry.name);
+  });
+  return found == table.end() ? std::nullopt
+                              : std::optional<CfTimeUnit>{found->unit};
 }
+
+constexpr std::optional<CfTimeUnit> parse_unit_word(std::string_view word) {
+  if (const auto exact = find_unit(unit_words, word)) {
+    return exact;
+  }
+  if (const auto abbreviation = find_unit(unit_abbreviations, word)) {
+    return abbreviation;
+  }
+  // The plural: one more "s" on a word or on a multi-letter abbreviation.
+  constexpr std::size_t shortest_pluralizable = 2;
+  if (word.size() <= shortest_pluralizable or
+      not equal_ignore_case(word.substr(word.size() - 1), "s")) {
+    return std::nullopt;
+  }
+  const std::string_view stem = word.substr(0, word.size() - 1);
+  if (const auto plural = find_unit(unit_words, stem)) {
+    return plural;
+  }
+  return find_unit(unit_abbreviations, stem);
+}
+
+// ---- numbers ---------------------------------------------------------------
 
 constexpr bool is_digit(char c) noexcept { return c >= '0' and c <= '9'; }
 
-// Zone offsets are accepted up to +-23:59; the real range is narrower, and a
-// reader has no business second-guessing a file's zone.
-constexpr int max_offset_hours = 23;
-constexpr int max_offset_minutes = 59;
+// The value of a run of decimal digits; the one place a digit run becomes a
+// number.
+constexpr int decode_decimal(std::string_view digits) noexcept {
+  int value = 0;
+  for (const char c : digits) {
+    value = (value * 10) + (c - '0');
+  }
+  return value;
+}
+
+constexpr std::size_t digit_run(std::string_view text) noexcept {
+  return static_cast<std::size_t>(std::ranges::find_if_not(text, is_digit) -
+                                  text.begin());
+}
+
+// The fraction of a second as milliseconds, rounded half up, and whether a
+// nonzero digit beyond the millisecond was dropped (0.0004 is dropped,
+// 0.000000 loses nothing). `digits` is the run after the decimal point.
+struct Milliseconds {
+  int value;
+  bool dropped;
+};
+
+constexpr Milliseconds fraction_to_milliseconds(
+    std::string_view digits) noexcept {
+  constexpr std::size_t ms_digits = 3;
+  const std::string_view kept = digits.substr(0, ms_digits);
+  int value = decode_decimal(kept);
+  for (std::size_t missing = kept.size(); missing < ms_digits; ++missing) {
+    value *= 10;
+  }
+  const std::string_view beyond =
+      digits.size() > ms_digits ? digits.substr(ms_digits) : std::string_view{};
+  if (not beyond.empty() and beyond.front() >= '5') {
+    ++value;
+  }
+  const bool dropped =
+      std::ranges::any_of(beyond, [](char c) noexcept { return c != '0'; });
+  return Milliseconds{.value = value, .dropped = dropped};
+}
+
+// ---- scanning --------------------------------------------------------------
 
 // A position in the text being parsed; every error is built from here.
 class Scanner {
  public:
-  explicit Scanner(std::string_view text) noexcept : text_{text} {}
+  explicit Scanner(std::string_view text) noexcept : text_{text}, rest_{text} {}
 
-  [[nodiscard]] std::size_t pos() const noexcept { return pos_; }
-  [[nodiscard]] bool at_end() const noexcept { return pos_ >= text_.size(); }
-  [[nodiscard]] char peek() const noexcept { return text_[pos_]; }
+  [[nodiscard]] std::size_t pos() const noexcept {
+    return text_.size() - rest_.size();
+  }
+  [[nodiscard]] bool at_end() const noexcept { return rest_.empty(); }
+  [[nodiscard]] std::string_view rest() const noexcept { return rest_; }
   [[nodiscard]] bool peek_is(char c) const noexcept {
-    return not at_end() and text_[pos_] == c;
+    return not rest_.empty() and rest_.front() == c;
   }
-  void advance(std::size_t n = 1) noexcept { pos_ += n; }
+  void advance(std::size_t n = 1) noexcept { rest_.remove_prefix(n); }
+  void skip_space() noexcept { rest_ = detail::skip_space(rest_); }
 
-  void skip_space() noexcept {
-    while (not at_end() and is_space(text_[pos_])) {
-      ++pos_;
-    }
-  }
-
-  /// The maximal run of non-space characters; moves past it.
-  std::string_view take_word() noexcept {
-    const std::size_t start = pos_;
-    while (not at_end() and not is_space(text_[pos_])) {
-      ++pos_;
-    }
-    return text_.substr(start, pos_ - start);
-  }
-
-  /// The next `count` characters if they are all digits; moves past them.
-  std::optional<int> take_digits(std::size_t count) noexcept {
-    if (pos_ + count > text_.size()) {
-      return std::nullopt;
-    }
-    int value = 0;
-    for (std::size_t i = 0; i < count; ++i) {
-      if (not is_digit(text_[pos_ + i])) {
-        return std::nullopt;
-      }
-      value = (value * 10) + (text_[pos_ + i] - '0');
-    }
-    pos_ += count;
-    return value;
-  }
-
-  /// The next character if it is `c`; moves past it.
-  bool accept(char c) noexcept {
+  [[nodiscard]] bool accept(char c) noexcept {
     const bool found = peek_is(c);
-    pos_ += found ? 1U : 0U;
+    if (found) {
+      advance();
+    }
     return found;
   }
 
-  [[nodiscard]] std::string_view text() const noexcept { return text_; }
-  [[nodiscard]] std::string_view rest() const noexcept {
-    return text_.substr(pos_);
+  /// The next word (empty at the end of the text) and where it starts.
+  struct Word {
+    std::string_view text;
+    std::size_t column;
+  };
+  [[nodiscard]] Word word() noexcept {
+    skip_space();
+    const std::size_t column = pos();
+    return Word{.text = detail::next_word(rest_).value_or(std::string_view{}),
+                .column = column};
   }
-  [[nodiscard]] std::string_view slice(std::size_t from,
-                                       std::size_t to) const noexcept {
-    return text_.substr(from, to - from);
+
+  /// `min_digits` to `max_digits` digits with a value in [lo, hi]. Too few
+  /// digits is an error at the character that is not one; a value out of
+  /// range at the start of the field.
+  [[nodiscard]] std::expected<int, ParseError> number(std::size_t min_digits,
+                                                      std::size_t max_digits,
+                                                      int lo, int hi) {
+    const std::size_t start = pos();
+    const std::size_t length = std::min(digit_run(rest_), max_digits);
+    if (length < min_digits) {
+      return std::unexpected{error(ParseErrc::bad_date, start + length)};
+    }
+    const int value = decode_decimal(rest_.substr(0, length));
+    if (value < lo or value > hi) {
+      return std::unexpected{error(ParseErrc::bad_date, start)};
+    }
+    advance(length);
+    return value;
+  }
+
+  [[nodiscard]] std::expected<void, ParseError> expect(char c, ParseErrc code) {
+    if (not accept(c)) {
+      return std::unexpected{error_here(code)};
+    }
+    return {};
   }
 
   [[nodiscard]] ParseError error(ParseErrc code, std::size_t column) const {
     return ParseError::make(code, {.line = 1, .column = column}, text_);
   }
   [[nodiscard]] ParseError error_here(ParseErrc code) const {
-    return error(code, pos_);
+    return error(code, pos());
   }
 
  private:
   std::string_view text_;
-  std::size_t pos_{0};
+  std::string_view rest_;
 };
 
 // "<unit> since": the unit, leaving the scanner at the reference time.
 std::expected<CfTimeUnit, ParseError> scan_unit_and_since(Scanner& in) {
-  in.skip_space();
-  const std::size_t unit_start = in.pos();
-  const auto unit = parse_unit_word(in.take_word());
+  const Scanner::Word unit_word = in.word();
+  const auto unit = parse_unit_word(unit_word.text);
   if (not unit) {
-    return std::unexpected{in.error(ParseErrc::bad_time_units, unit_start)};
+    return std::unexpected{
+        in.error(ParseErrc::bad_time_units, unit_word.column)};
   }
-  in.skip_space();
-  const std::size_t since_start = in.pos();
-  if (not equal_ignore_case(in.take_word(), "since")) {
-    return std::unexpected{in.error(ParseErrc::bad_time_units, since_start)};
+  const Scanner::Word since = in.word();
+  if (not equal_ignore_case(since.text, "since")) {
+    return std::unexpected{in.error(ParseErrc::bad_time_units, since.column)};
   }
   in.skip_space();
   return *unit;
 }
 
-// The end of the run of characters at `from` that satisfy `accept`, looking at
-// no more than `limit` of them.
-template <class Predicate>
-std::size_t run_end(std::string_view text, std::size_t from,
-                    const Predicate& accept, std::size_t limit) {
-  std::size_t i = from;
-  while (i < text.size() and i - from < limit and accept(text[i])) {
-    ++i;
+// "yyyy-m-d" (month and day one or two digits).
+std::expected<std::chrono::sys_days, ParseError> scan_date(Scanner& in) {
+  using namespace std::chrono;
+  const auto y = in.number(4, 4, 0, 9999);
+  if (not y) {
+    return std::unexpected{y.error()};
   }
-  return i;
-}
-
-// The end of "yyyy-mm-dd[( |T)hh:mm[:ss[.f]]]" starting at `start`: the date
-// is cut at ten characters so that "2000-01-01-06:00" ends at the zone, and
-// the clock is the run of digits, ':' and '.' after the separator. Only the
-// shape is found here; core::parse_utc_datetime judges it.
-std::size_t datetime_end(std::string_view text, std::size_t start) {
-  constexpr std::size_t date_chars = 10;
-  const std::size_t date_end = run_end(
-      text, start, [](char c) { return is_digit(c) or c == '-'; }, date_chars);
-  const bool has_clock =
-      date_end < text.size() and
-      (text[date_end] == 'T' or
-       (text[date_end] == ' ' and date_end + 1 < text.size() and
-        is_digit(text[date_end + 1])));
-  if (not has_clock) {
-    return date_end;
+  if (const auto dash = in.expect('-', ParseErrc::bad_date); not dash) {
+    return std::unexpected{dash.error()};
   }
-  return run_end(
-      text, date_end + 1,
-      [](char c) { return is_digit(c) or c == ':' or c == '.'; },
-      std::string_view::npos);
-}
-
-// The reference date and time, leaving the scanner after it.
-std::expected<core::Time, ParseError> scan_datetime(Scanner& in) {
-  const std::size_t start = in.pos();
-  const std::size_t end = datetime_end(in.text(), start);
-  const auto time = core::parse_utc_datetime(in.slice(start, end));
-  if (not time) {
+  const auto m = in.number(1, 2, 1, 12);
+  if (not m) {
+    return std::unexpected{m.error()};
+  }
+  if (const auto dash = in.expect('-', ParseErrc::bad_date); not dash) {
+    return std::unexpected{dash.error()};
+  }
+  const std::size_t day_column = in.pos();
+  const auto d = in.number(1, 2, 1, 31);
+  if (not d) {
+    return std::unexpected{d.error()};
+  }
+  const year_month_day ymd{year{*y}, month{static_cast<unsigned>(*m)},
+                           day{static_cast<unsigned>(*d)}};
+  if (not ymd.ok()) {
     return std::unexpected{
-        in.error(ParseErrc::bad_date, start + time.error().column)};
+        in.error(ParseErrc::bad_date, day_column)};  // Feb 30
   }
-  in.advance(end - start);
-  return *time;
+  return sys_days{ymd};
 }
 
-// "+hh", "+hh:mm" or "+hhmm" (or "-"): the scanner is on the sign.
-std::expected<std::chrono::minutes, ParseError> scan_offset(Scanner& in) {
-  const std::size_t start = in.pos();
-  const int sign = in.peek() == '-' ? -1 : 1;
+struct Clock {
+  std::chrono::milliseconds time;
+  bool dropped;  // sub-millisecond digits were rounded away
+};
+
+// The seconds after "h:m:", with an optional fraction.
+std::expected<Clock, ParseError> scan_seconds(Scanner& in) {
+  const auto s = in.number(1, 2, 0, 59);
+  if (not s) {
+    return std::unexpected{s.error()};
+  }
+  Clock clock{.time = std::chrono::seconds{*s}, .dropped = false};
+  if (not in.accept('.')) {
+    return clock;
+  }
+  const std::size_t digits = digit_run(in.rest());
+  if (digits == 0) {
+    return std::unexpected{in.error_here(ParseErrc::bad_date)};
+  }
+  const Milliseconds fraction =
+      fraction_to_milliseconds(in.rest().substr(0, digits));
+  in.advance(digits);
+  clock.time += std::chrono::milliseconds{fraction.value};
+  clock.dropped = fraction.dropped;
+  return clock;
+}
+
+// "h:m[:s[.f...]]" (hour, minute and second one or two digits).
+std::expected<Clock, ParseError> scan_clock(Scanner& in) {
+  using namespace std::chrono;
+  const auto h = in.number(1, 2, 0, 23);
+  if (not h) {
+    return std::unexpected{h.error()};
+  }
+  if (const auto colon = in.expect(':', ParseErrc::bad_date); not colon) {
+    return std::unexpected{colon.error()};
+  }
+  const auto m = in.number(1, 2, 0, 59);
+  if (not m) {
+    return std::unexpected{m.error()};
+  }
+  Clock clock{.time = hours{*h} + minutes{*m}, .dropped = false};
+  if (not in.accept(':')) {
+    return clock;
+  }
+  const auto seconds_part = scan_seconds(in);
+  if (not seconds_part) {
+    return std::unexpected{seconds_part.error()};
+  }
+  clock.time += seconds_part->time;
+  clock.dropped = seconds_part->dropped;
+  return clock;
+}
+
+// The date, and the clock after a 'T' or a single space before a digit.
+std::expected<Clock, ParseError> scan_date_and_clock(
+    Scanner& in, std::chrono::sys_days& date) {
+  const auto parsed_date = scan_date(in);
+  if (not parsed_date) {
+    return std::unexpected{parsed_date.error()};
+  }
+  date = *parsed_date;
+  const std::string_view after = in.rest();
+  const bool has_clock =
+      in.peek_is('T') or
+      (in.peek_is(' ') and after.size() > 1 and is_digit(after[1]));
+  if (not has_clock) {
+    return Clock{.time = std::chrono::milliseconds{0}, .dropped = false};
+  }
   in.advance();
-  const auto hours = in.take_digits(2);
-  if (not hours or *hours > max_offset_hours) {
-    return std::unexpected{in.error(ParseErrc::bad_time_units, start)};
+  return scan_clock(in);
+}
+
+// "+hh", "+hh:mm" or "+hhmm" (or "-"); the scanner is on the sign. Errors are
+// reported at the sign. The digits are read with core's DateTimeCursor.
+std::expected<std::chrono::minutes, ParseError> scan_offset(Scanner& in) {
+  const Scanner::Word offset = in.word();
+  const int sign = offset.text.starts_with('-') ? -1 : 1;
+  std::string_view digits = offset.text;  // after the sign
+  digits.remove_prefix(std::min<std::size_t>(1, digits.size()));
+  core::detail::DateTimeCursor cursor{digits};
+  const auto hours = cursor.field(2, 0, 23);
+  const bool has_minutes =
+      hours and (cursor.accept(':') or not cursor.at_end());
+  const auto minutes = has_minutes ? cursor.field(2, 0, 59)
+                                   : std::expected<int, core::DateTimeError>{0};
+  if (not hours or not minutes or not cursor.at_end()) {
+    return std::unexpected{in.error(ParseErrc::bad_time_units, offset.column)};
   }
-  int minutes = 0;
-  const bool colon = in.accept(':');
-  if (colon or (not in.at_end() and is_digit(in.peek()))) {
-    const auto digits = in.take_digits(2);
-    if (not digits or *digits > max_offset_minutes) {
-      return std::unexpected{in.error(ParseErrc::bad_time_units, start)};
-    }
-    minutes = *digits;
-  }
-  return std::chrono::minutes{sign * ((*hours * 60) + minutes)};
+  return std::chrono::minutes{sign * ((*hours * 60) + *minutes)};
 }
 
 // The optional zone after the reference time; UTC (zero) when there is none.
@@ -214,11 +350,10 @@ std::expected<std::chrono::minutes, ParseError> scan_zone(Scanner& in) {
   if (in.at_end()) {
     return std::chrono::minutes{0};
   }
-  if (in.peek() == '+' or in.peek() == '-') {
+  if (in.peek_is('+') or in.peek_is('-')) {
     return scan_offset(in);
   }
-  if (in.peek() == 'Z' or in.peek() == 'z') {
-    in.advance();
+  if (in.accept('Z') or in.accept('z')) {
     return std::chrono::minutes{0};
   }
   if (equal_ignore_case(in.rest().substr(0, 3), "UTC")) {
@@ -230,16 +365,17 @@ std::expected<std::chrono::minutes, ParseError> scan_zone(Scanner& in) {
 
 }  // namespace
 
-std::expected<CfTimeUnits, ParseError> parse_cf_time_units(
+std::expected<Read<CfTimeUnits>, ParseError> parse_cf_time_units(
     std::string_view text) {
   Scanner in{text};
   const auto unit = scan_unit_and_since(in);
   if (not unit) {
     return std::unexpected{unit.error()};
   }
-  const auto reference = scan_datetime(in);
-  if (not reference) {
-    return std::unexpected{reference.error()};
+  std::chrono::sys_days date{};
+  const auto clock = scan_date_and_clock(in, date);
+  if (not clock) {
+    return std::unexpected{clock.error()};
   }
   const auto zone = scan_zone(in);
   if (not zone) {
@@ -249,7 +385,18 @@ std::expected<CfTimeUnits, ParseError> parse_cf_time_units(
   if (not in.at_end()) {
     return std::unexpected{in.error_here(ParseErrc::trailing_text)};
   }
-  return CfTimeUnits{.unit = *unit, .epoch = *reference - *zone};
+  const core::Time epoch =
+      std::chrono::time_point_cast<std::chrono::milliseconds>(date) +
+      clock->time - *zone;
+  std::vector<Warning> warnings;
+  if (clock->dropped) {
+    warnings.push_back(
+        Warning{.code = WarningCode::time_precision_dropped,
+                .subject = std::string{detail::truncate_utf8(
+                    core::detail::trim(text), ParseError::max_context_bytes)}});
+  }
+  return Read<CfTimeUnits>{.value = CfTimeUnits{.unit = *unit, .epoch = epoch},
+                           .warnings = std::move(warnings)};
 }
 
 }  // namespace mov::io

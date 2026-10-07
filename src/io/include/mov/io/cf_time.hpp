@@ -13,6 +13,7 @@
 #include "mov/core/detail/ascii.hpp"
 #include "mov/core/time.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/read.hpp"
 
 namespace mov::io {
 
@@ -47,22 +48,32 @@ struct CfTimeUnits {
                                    const CfTimeUnits&) = default;
 };
 
-/// Parses a CF `units` attribute of a time variable:
+/// Parses a CF `units` attribute of a time variable (CF section 4.4, as
+/// foreign files write it):
 ///
-///   <unit> since <yyyy-mm-dd>[( |T)hh:mm[:ss[.f[f[f]]]]] [zone]
+///   <unit> since <Y-M-D>[( |T)h:m[:s[.f...]]] [zone]
 ///
-/// `unit` is millisecond, second, minute, hour or day (singular or plural,
-/// any ASCII case), `since` any case, and the date and time are those of
-/// core::parse_utc_datetime (four-digit year, two-digit fields). The zone is
-/// `Z`, `UTC`, or an offset `+hh`, `+hh:mm` or `+hhmm` (also `-`), with
-/// optional white space before it; the offset is applied, so the epoch is in
-/// UTC. No zone means UTC. Surrounding white space is ignored.
+/// - `unit`: millisecond, second, minute, hour or day (singular or plural), or
+///   an abbreviation `d`, `h`, `hr`, `min`, `sec`, `s` (also with a plural
+///   `s`: `hrs`, `mins`, `secs`), in any ASCII case. `since` in any case.
+/// - The year has four digits; month, day, hour, minute and second one or two
+///   (`1800-1-1 0:0:0.0`). The fraction of a second has any number of digits
+///   and is rounded to the nearest millisecond (halves up); when a nonzero
+///   digit beyond the millisecond was dropped the result carries a
+///   `time_precision_dropped` warning.
+/// - The date and the clock are separated by exactly one space or a `T`.
+///   (core::parse_utc_datetime, for ADCIRC's own text, stays strict.)
+/// - The zone is none (UTC), `Z`, `UTC`, or an offset `+hh`, `+hh:mm`,
+///   `+hhmm` (also `-`), with optional white space before it; the offset is
+///   applied, so the epoch is in UTC.
+/// - Surrounding white space is ignored, and so is any amount between words.
 ///
 /// Errors: `bad_time_units` for a missing or unknown unit, a missing `since`
-/// or a bad zone; `bad_date` for the reference date and time, with the column
-/// of the first bad character; `trailing_text` after the zone. Columns are
-/// byte offsets in `text`; the line is 1.
-[[nodiscard]] std::expected<CfTimeUnits, ParseError> parse_cf_time_units(
+/// or a bad zone (the column of the sign for an offset); `bad_date` for the
+/// reference time (the column of the character that does not fit, or of the
+/// field whose value is out of range); `trailing_text` after the zone. The
+/// line is 1; columns are byte offsets in `text`, which is also the context.
+[[nodiscard]] std::expected<Read<CfTimeUnits>, ParseError> parse_cf_time_units(
     std::string_view text);
 
 /// The calendars a reader accepts. `standard` is CF's mixed Julian/Gregorian
@@ -97,26 +108,59 @@ inline constexpr core::Time gregorian_reform =
         std::chrono::sys_days{std::chrono::year{1582} / std::chrono::October /
                               std::chrono::day{15}});
 
-/// The instant `value` units after the epoch: core::checked_time with the
-/// unit's factor, so a non-finite value, one beyond max_abs_time_ms, or a
-/// sum that leaves it is nullopt. Under the `standard` calendar an epoch or a
-/// result before 1582-10-15 is nullopt too: a mixed-calendar date is not
-/// reproduced.
-template <class V>
-  requires(std::floating_point<V> or
-           (std::integral<V> and not std::same_as<V, bool>))
-[[nodiscard]] constexpr std::optional<core::Time> to_time(
-    const CfTimeUnits& units, CfCalendar calendar, V value) noexcept {
-  const bool mixed = calendar == CfCalendar::standard;
-  if (mixed and units.epoch < gregorian_reform) {
-    return std::nullopt;
+/// Why a (units, calendar) pair cannot be turned into times at all. A reader
+/// reports it once per variable as `FormatErrc::unsupported_calendar`; it is a
+/// property of the file, not of any value.
+enum class CfClockError : std::uint8_t {
+  /// The `standard` calendar with an epoch before 1582-10-15: every time
+  /// counted from it is a date in the mixed Julian/Gregorian calendar, which is
+  /// not reproduced.
+  epoch_before_gregorian_reform,
+};
+
+/// The times of one CF time variable: its units and calendar, checked once.
+/// Making a CfClock is the reproducibility check; `at` is then only the range
+/// check of one value.
+class CfClock {
+ public:
+  [[nodiscard]] static constexpr std::expected<CfClock, CfClockError> make(
+      const CfTimeUnits& units, CfCalendar calendar) noexcept {
+    if (calendar == CfCalendar::standard and units.epoch < gregorian_reform) {
+      return std::unexpected{CfClockError::epoch_before_gregorian_reform};
+    }
+    return CfClock{units, calendar};
   }
-  const auto time = core::checked_time(
-      value, std::chrono::milliseconds{unit_ms(units.unit)}, units.epoch);
-  if (mixed and time and *time < gregorian_reform) {
-    return std::nullopt;
+
+  /// The instant `value` units after the epoch: core::checked_time with the
+  /// unit's factor, so a non-finite value, one beyond max_abs_time_ms, or a sum
+  /// that leaves it is nullopt. Under the `standard` calendar a result before
+  /// 1582-10-15 is nullopt too (an epoch after it and a negative value).
+  template <class V>
+    requires(std::floating_point<V> or
+             (std::integral<V> and not std::same_as<V, bool>))
+  [[nodiscard]] constexpr std::optional<core::Time> at(V value) const noexcept {
+    const auto time = core::checked_time(
+        value, std::chrono::milliseconds{unit_ms(units_.unit)}, units_.epoch);
+    if (calendar_ == CfCalendar::standard and time and
+        *time < gregorian_reform) {
+      return std::nullopt;
+    }
+    return time;
   }
-  return time;
-}
+
+  [[nodiscard]] constexpr const CfTimeUnits& units() const noexcept {
+    return units_;
+  }
+  [[nodiscard]] constexpr CfCalendar calendar() const noexcept {
+    return calendar_;
+  }
+
+ private:
+  constexpr CfClock(const CfTimeUnits& units, CfCalendar calendar) noexcept
+      : units_{units}, calendar_{calendar} {}
+
+  CfTimeUnits units_;
+  CfCalendar calendar_;
+};
 
 }  // namespace mov::io

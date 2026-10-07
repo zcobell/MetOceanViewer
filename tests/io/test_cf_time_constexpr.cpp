@@ -26,12 +26,24 @@ namespace {
 using namespace std::chrono;
 using mov::core::Time;
 using mov::io::CfCalendar;
+using mov::io::CfClock;
+using mov::io::CfClockError;
 using mov::io::CfTimeUnit;
 using mov::io::CfTimeUnits;
 using mov::io::gregorian_reform;
 using mov::io::parse_cf_calendar;
-using mov::io::to_time;
 using mov::io::unit_ms;
+
+// The time of `value` units after the epoch under `calendar`, or nullopt
+// when the pair cannot be a clock or the value is out of range.
+template <class V>
+  requires(std::floating_point<V> or
+           (std::integral<V> and not std::same_as<V, bool>))
+constexpr std::optional<Time> to_time(const CfTimeUnits& units,
+                                      CfCalendar calendar, V value) {
+  const auto clock = CfClock::make(units, calendar);
+  return clock ? clock->at(value) : std::nullopt;
+}
 
 constexpr double quiet_nan = std::numeric_limits<double>::quiet_NaN();
 constexpr double infinity = std::numeric_limits<double>::infinity();
@@ -91,7 +103,8 @@ TEST_CASE("gregorian_reform is 1582-10-15", "[io][cf_time][constexpr]") {
   STATIC_REQUIRE(gregorian_reform == utc(1582, 10, 15));
 }
 
-TEST_CASE("to_time adds value units to the epoch", "[io][cf_time][constexpr]") {
+TEST_CASE("CfClock::at adds value units to the epoch",
+          "[io][cf_time][constexpr]") {
   constexpr auto std_cal = CfCalendar::standard;
   STATIC_REQUIRE(to_time(since_1970(CfTimeUnit::second), std_cal, 1.5) ==
                  at_ms(1500));
@@ -116,7 +129,7 @@ TEST_CASE("to_time adds value units to the epoch", "[io][cf_time][constexpr]") {
                  at_ms(0));
 }
 
-TEST_CASE("to_time takes integers, floats and every width",
+TEST_CASE("CfClock::at takes integers, floats and every width",
           "[io][cf_time][constexpr]") {
   constexpr auto cal = CfCalendar::proleptic_gregorian;
   constexpr auto sec = since_1970(CfTimeUnit::second);
@@ -132,7 +145,7 @@ TEST_CASE("to_time takes integers, floats and every width",
   STATIC_REQUIRE(CanConvert<int>);
 }
 
-TEST_CASE("to_time rejects what checked_time rejects",
+TEST_CASE("CfClock::at rejects what checked_time rejects",
           "[io][cf_time][constexpr]") {
   constexpr auto cal = CfCalendar::proleptic_gregorian;
   constexpr auto sec = since_1970(CfTimeUnit::second);
@@ -180,6 +193,22 @@ TEST_CASE("the standard calendar rejects dates before 1582-10-15",
   STATIC_REQUIRE(to_time(old_epoch, proleptic, 200'000.0).has_value());
 }
 
+TEST_CASE("CfClock::make is the reproducibility check",
+          "[io][cf_time][constexpr]") {
+  constexpr CfTimeUnits old_epoch{.unit = CfTimeUnit::day,
+                                  .epoch = utc(1500, 1, 1)};
+  STATIC_REQUIRE(CfClock::make(old_epoch, CfCalendar::standard).error() ==
+                 CfClockError::epoch_before_gregorian_reform);
+  STATIC_REQUIRE(
+      CfClock::make(old_epoch, CfCalendar::proleptic_gregorian).has_value());
+  constexpr CfTimeUnits at_reform{.unit = CfTimeUnit::day,
+                                  .epoch = gregorian_reform};
+  STATIC_REQUIRE(CfClock::make(at_reform, CfCalendar::standard).has_value());
+  constexpr auto clock = CfClock::make(at_reform, CfCalendar::standard);
+  STATIC_REQUIRE(clock->units() == at_reform);
+  STATIC_REQUIRE(clock->calendar() == CfCalendar::standard);
+}
+
 TEST_CASE("io value types are regular and nothrow-movable",
           "[io][types][constexpr]") {
   using namespace mov::io;
@@ -196,6 +225,7 @@ TEST_CASE("io value types are regular and nothrow-movable",
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Error>);
   STATIC_REQUIRE(std::regular<LibraryStatus>);
   STATIC_REQUIRE(std::regular<CfTimeUnits>);
+  STATIC_REQUIRE(std::copyable<CfClock>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<CfTimeUnits>);
   STATIC_REQUIRE(std::regular<Read<int>>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Read<int>>);
