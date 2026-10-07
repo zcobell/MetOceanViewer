@@ -21,7 +21,9 @@ using mov::test::quiet_nan;
 
 namespace {
 
-constexpr Sample finite(double v) { return Sample::of(v).value_or(Sample{}); }
+constexpr Sample sample_of(double v) {
+  return Sample::of(v).value_or(Sample{});
+}
 
 constexpr int tag_of(const Sample& s) {
   return s.visit([](Missing) { return 0; }, [](Dry) { return 1; },
@@ -34,7 +36,7 @@ constexpr int operation_calls() {
     ++calls;
     return a + b;
   };
-  const Sample one = finite(1.0);
+  const Sample one = sample_of(1.0);
   (void)combine(one, Sample{Dry{}}, count);
   (void)combine(Sample{}, one, count);
   (void)combine(Sample{Dry{}}, Sample{}, count);
@@ -80,21 +82,21 @@ TEST_CASE("Sample::of is nullopt exactly for non-finite values",
 }
 
 TEST_CASE("Sample::value and the predicates", "[core][sample][constexpr]") {
-  constexpr Sample v = finite(2.5);
+  constexpr Sample v = sample_of(2.5);
   STATIC_REQUIRE(v.is_value());
   STATIC_REQUIRE_FALSE(v.is_dry());
   STATIC_REQUIRE_FALSE(v.is_missing());
   STATIC_REQUIRE(v.value() == 2.5);
   STATIC_REQUIRE_FALSE(Sample{Dry{}}.value().has_value());
   STATIC_REQUIRE_FALSE(Sample{}.value().has_value());
-  STATIC_REQUIRE(finite(0.0) == finite(-0.0));
-  STATIC_REQUIRE_FALSE(finite(1.0) == finite(2.0));
-  STATIC_REQUIRE_FALSE(finite(0.0) == Sample{Dry{}});
+  STATIC_REQUIRE(sample_of(0.0) == sample_of(-0.0));
+  STATIC_REQUIRE_FALSE(sample_of(1.0) == sample_of(2.0));
+  STATIC_REQUIRE_FALSE(sample_of(0.0) == Sample{Dry{}});
 }
 
 TEST_CASE("finite_or_missing is the one lossy factory",
           "[core][sample][constexpr]") {
-  STATIC_REQUIRE(finite_or_missing(3.0) == finite(3.0));
+  STATIC_REQUIRE(finite_or_missing(3.0) == sample_of(3.0));
   STATIC_REQUIRE(finite_or_missing(quiet_nan).is_missing());
   STATIC_REQUIRE(finite_or_missing(infinity).is_missing());
   STATIC_REQUIRE(finite_or_missing(-infinity).is_missing());
@@ -104,20 +106,20 @@ TEST_CASE("Sample::visit dispatches on the alternative",
           "[core][sample][constexpr]") {
   STATIC_REQUIRE(tag_of(Sample{}) == 0);
   STATIC_REQUIRE(tag_of(Sample{Dry{}}) == 1);
-  STATIC_REQUIRE(tag_of(finite(1.0)) == 2);
-  STATIC_REQUIRE(finite(4.0).visit([](Missing) { return 0.0; },
-                                   [](Dry) { return 0.0; },
-                                   [](double x) { return x * 2.0; }) == 8.0);
+  STATIC_REQUIRE(tag_of(sample_of(1.0)) == 2);
+  STATIC_REQUIRE(sample_of(4.0).visit([](Missing) { return 0.0; },
+                                      [](Dry) { return 0.0; },
+                                      [](double x) { return x * 2.0; }) == 8.0);
 }
 
 TEST_CASE("combine: Missing beats Dry beats value",
           "[core][sample][constexpr]") {
-  constexpr Sample one = finite(1.0);
-  constexpr Sample two = finite(2.0);
+  constexpr Sample one = sample_of(1.0);
+  constexpr Sample two = sample_of(2.0);
   constexpr Sample dry{Dry{}};
   constexpr Sample missing{};
 
-  STATIC_REQUIRE(combine(one, two, add) == finite(3.0));
+  STATIC_REQUIRE(combine(one, two, add) == sample_of(3.0));
   STATIC_REQUIRE(combine(missing, one, add).is_missing());
   STATIC_REQUIRE(combine(one, missing, add).is_missing());
   STATIC_REQUIRE(combine(missing, missing, add).is_missing());
@@ -130,7 +132,7 @@ TEST_CASE("combine: Missing beats Dry beats value",
 
 TEST_CASE("combine turns a non-finite result into Missing",
           "[core][sample][constexpr]") {
-  constexpr Sample one = finite(1.0);
+  constexpr Sample one = sample_of(1.0);
   STATIC_REQUIRE(
       combine(one, one, [](double, double) { return quiet_nan; }).is_missing());
   STATIC_REQUIRE(

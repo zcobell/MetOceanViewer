@@ -14,6 +14,7 @@
 #include <variant>
 
 #include "mov/core/units.hpp"
+#include "mov/test/toolchain.hpp"
 #include "test_helpers.hpp"
 
 using mov::core::Affine;
@@ -291,12 +292,12 @@ TEST_CASE("temperature conversion is affine", "[core][units][constexpr]") {
 
 TEST_CASE("is_temperature classifies the Unit variant",
           "[core][units][constexpr]") {
-  STATIC_REQUIRE(is_temperature(Unit{TemperatureUnit::celsius}));
-  STATIC_REQUIRE(is_temperature(Unit{TemperatureUnit::fahrenheit}));
-  STATIC_REQUIRE_FALSE(is_temperature(Unit{LengthUnit::foot}));
-  STATIC_REQUIRE_FALSE(is_temperature(Unit{SpeedUnit::knot}));
-  STATIC_REQUIRE_FALSE(is_temperature(Unit{PressureUnit::pascal}));
-  STATIC_REQUIRE_FALSE(
+  MOV_STATIC_REQUIRE_VARIANT(is_temperature(Unit{TemperatureUnit::celsius}));
+  MOV_STATIC_REQUIRE_VARIANT(is_temperature(Unit{TemperatureUnit::fahrenheit}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(is_temperature(Unit{LengthUnit::foot}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(is_temperature(Unit{SpeedUnit::knot}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(is_temperature(Unit{PressureUnit::pascal}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(
       is_temperature(Unit{DischargeUnit::cubic_meter_per_second}));
 }
 
@@ -368,9 +369,10 @@ TEST_CASE("symbol and udunits of an enumerator are constexpr",
 
 TEST_CASE("symbol and udunits of a Unit variable are constexpr",
           "[core][units][constexpr]") {
-  constexpr Unit knot{SpeedUnit::knot};
-  STATIC_REQUIRE(mov::core::symbol(knot) == "kt");
-  STATIC_REQUIRE(mov::core::udunits(knot) == "knot");
+  MOV_CONSTEXPR_VARIANT Unit knot{SpeedUnit::knot};
+  MOV_STATIC_REQUIRE_VARIANT(mov::core::symbol(knot) == "kt");
+  MOV_STATIC_REQUIRE_VARIANT(mov::core::udunits(knot) == "knot");
   // The enumerator and variant paths agree.
-  STATIC_REQUIRE(mov::core::symbol(knot) == mov::core::symbol(SpeedUnit::knot));
+  MOV_STATIC_REQUIRE_VARIANT(mov::core::symbol(knot) ==
+                             mov::core::symbol(SpeedUnit::knot));
 }

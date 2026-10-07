@@ -8,6 +8,7 @@ mirrors the `ubuntu-24.04` CI jobs.
 |---|---|
 | GCC (default `cc`/`c++`) | `GCC_VERSION` in `tools/versions.env` |
 | clang, clang-tidy, clang-format, llvm-cov, libFuzzer/sanitizer runtimes | `LLVM_VERSION` |
+| clang + libc++ (`clang++-libcxx`, the `dev-libcxx` preset) | `LIBCXX_VERSION` |
 | CMake (upstream release, SHA-256 verified) | `CMAKE_VERSION` |
 | vcpkg | the `baseline` in `vcpkg-configuration.json` |
 | Ninja, ccache, lcov; gcovr, pre-commit, aqtinstall, lizard (`requirements.txt`) | |
@@ -53,6 +54,18 @@ Persistent state stays on the host:
 
 Overrides: `MOV_QT_ROOT`, `MOV_DEV_CACHE`, and `MOV_DOCKER_ARGS` for extra
 `docker run` arguments.
+
+## libc++ build (macOS stand-in)
+
+`cmake --workflow --preset dev-libcxx` builds and tests with Clang and libc++
+(`LIBCXX_VERSION`, 18) instead of libstdc++: the nearest thing on Linux to
+Apple Clang. It reproduces the standard-library gaps of the macOS job
+(`variant<..., std::string>` is not constexpr, no `std::stop_token` without
+`-fexperimental-library`, no floating `from_chars`, no `ranges::fold_left`),
+and CI runs it as the `libcxx` job. C++ vcpkg ports are built with libc++ too
+(overlay triplet `x64-linux-libcxx`), because libstdc++ and libc++ `std::string`
+are different types. Findings and the per-version feature table are in
+`docs/wp-notes/portability.md`.
 
 ## Qt and GUI tests
 
@@ -172,7 +185,8 @@ Planned, not done:
 Any machine with a C++23 toolchain works the same way the CI jobs do:
 
 1. A compiler with `<format>` and `<expected>`: GCC 14+, Clang 19+ with
-   libstdc++ 14 or libc++ 18+, Xcode 16+, or Visual Studio 2022 17.10+.
+   libstdc++ 14 or libc++ 18+, Xcode 16+, or Visual Studio 2022 17.10+. Nothing may
+   rely on more than libc++ 18 provides (`docs/wp-notes/portability.md`).
 2. CMake `CMAKE_VERSION` or newer and Ninja (e.g. `pip install cmake ninja`).
 3. vcpkg checked out at the baseline commit and bootstrapped, with `VCPKG_ROOT`
    pointing at it:

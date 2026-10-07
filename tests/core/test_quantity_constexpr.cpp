@@ -14,6 +14,7 @@
 #include <variant>
 
 #include "mov/core/quantity.hpp"
+#include "mov/test/toolchain.hpp"
 
 using mov::core::datum_applicable;
 using mov::core::GenericQuantity;
@@ -167,13 +168,17 @@ TEST_CASE("parse_quantity_token rejects anything but a registry token",
 }
 
 TEST_CASE("datum_applicable truth table", "[core][quantity][constexpr]") {
-  STATIC_REQUIRE(only_water_levels_take_a_datum());
-  STATIC_REQUIRE(datum_applicable(QuantityId{Quantity::water_level}));
-  STATIC_REQUIRE(
+  MOV_STATIC_REQUIRE_VARIANT(only_water_levels_take_a_datum());
+  MOV_STATIC_REQUIRE_VARIANT(
+      datum_applicable(QuantityId{Quantity::water_level}));
+  MOV_STATIC_REQUIRE_VARIANT(
       datum_applicable(QuantityId{Quantity::water_level_prediction}));
-  STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::wind_speed}));
-  STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::air_pressure}));
-  STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::visibility}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(
+      datum_applicable(QuantityId{Quantity::wind_speed}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(
+      datum_applicable(QuantityId{Quantity::air_pressure}));
+  MOV_STATIC_REQUIRE_FALSE_VARIANT(
+      datum_applicable(QuantityId{Quantity::visibility}));
 }
 
 TEST_CASE("token() of a QuantityId rejects temporaries",
@@ -197,8 +202,8 @@ TEST_CASE("token() of a registry quantity is constexpr",
   STATIC_REQUIRE(token(Quantity::wind_u) == "wind_u");
   STATIC_REQUIRE(token(Quantity::discharge) == "discharge");
   // A Quantity and a QuantityId in a variable agree.
-  constexpr QuantityId id{Quantity::wind_v};
-  STATIC_REQUIRE(token(id) == "wind_v");
-  STATIC_REQUIRE(token(id) == token(Quantity::wind_v));
+  MOV_CONSTEXPR_VARIANT QuantityId id{Quantity::wind_v};
+  MOV_STATIC_REQUIRE_VARIANT(token(id) == "wind_v");
+  MOV_STATIC_REQUIRE_VARIANT(token(id) == token(Quantity::wind_v));
   STATIC_REQUIRE(TokenCallable<Quantity>);
 }

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 #
-# cmake -DCXX_COMPILER=... -DINCLUDE_DIR=... -DSOURCE_DIR=... -P run.cmake
+# cmake -DCXX_COMPILER=... [-DCXX_FLAGS=...] -DINCLUDE_DIR=... -DSOURCE_DIR=... -P run.cmake
 #
 # Negative-compile checks: code that the type system is meant to reject must
 # fail to compile under the project's own warning level (-Wall -Wextra
@@ -9,7 +9,11 @@
 # cannot be blamed on the environment. Each `reject_*.cpp` must fail and each
 # `accept_*.cpp` must pass.
 
+# CXX_FLAGS: the build's own flags that select the standard library and SDK.
+separate_arguments(extra_flags UNIX_COMMAND "${CXX_FLAGS}")
+
 set(flags
+    ${extra_flags}
     -std=c++23
     -fsyntax-only
     -Wall
