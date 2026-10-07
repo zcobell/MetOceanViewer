@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
+#include <algorithm>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 #include "mov/core/quantity.hpp"
 #include "mov/core/units.hpp"
@@ -50,7 +53,16 @@ constexpr std::array all_quantities{Quantity::water_level,
                                     Quantity::wave_period_dominant,
                                     Quantity::wave_period_average,
                                     Quantity::wave_direction,
-                                    Quantity::discharge};
+                                    Quantity::discharge,
+                                    Quantity::difference};
+
+// The registry quantities that have a fixed unit (all but `difference`).
+std::vector<Quantity> fixed_unit_quantities() {
+  std::vector<Quantity> out;
+  std::ranges::copy_if(all_quantities, std::back_inserter(out),
+                       [](Quantity q) { return q != Quantity::difference; });
+  return out;
+}
 
 GenericQuantity generic(std::string_view tok, std::string_view standard = "") {
   const auto parsed =
@@ -155,11 +167,26 @@ TEST_CASE("datum_applicable: water levels and anything generic",
   CHECK(datum_applicable(QuantityId{generic("ph")}));
   CHECK(datum_applicable(QuantityId{Quantity::water_level}));
   CHECK(not(datum_applicable(QuantityId{Quantity::wave_height})));
+  // A difference is not a water level, whatever it was computed from.
+  CHECK(not(datum_applicable(QuantityId{Quantity::difference})));
+}
+
+TEST_CASE("difference is a registry quantity with no standard name or unit",
+          "[core][quantity]") {
+  CHECK(mov::core::parse_quantity_token("difference") == Quantity::difference);
+  CHECK(token(Quantity::difference) == "difference");
+  CHECK(info(Quantity::difference).standard_name.empty());
+  CHECK(not info(Quantity::difference).long_name.empty());
+  CHECK(info(Quantity::difference).canonical_unit.empty());
+  CHECK(canonical_unit(Quantity::difference) == std::nullopt);
+  // Not an OtherUnit with an empty symbol either.
+  CHECK(not GenericQuantity::parse({.token = "difference", .standard_name = ""})
+                .has_value());
 }
 
 TEST_CASE("every registry quantity has a parseable canonical unit",
           "[core][quantity]") {
-  for (const Quantity q : all_quantities) {
+  for (const Quantity q : fixed_unit_quantities()) {
     INFO("quantity: " << info(q).token << ", unit: " << info(q).canonical_unit);
     const auto unit = parse_unit(info(q).canonical_unit);
     REQUIRE(unit.has_value());
@@ -167,8 +194,8 @@ TEST_CASE("every registry quantity has a parseable canonical unit",
     if (const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr) {
       CHECK(is_canonical_other(*other));
     }
-    // canonical_unit is total and agrees with parse_unit.
-    CHECK(std::optional<mov::core::Unit>{canonical_unit(q)} == unit);
+    // canonical_unit agrees with parse_unit.
+    CHECK(canonical_unit(q) == unit);
   }
 }
 
@@ -202,7 +229,7 @@ TEST_CASE("registry tokens and standard names are well formed",
     const auto i = info(q);
     INFO("token: " << i.token);
     CHECK(not(i.token.empty()));
-    CHECK(not(i.standard_name.empty()));
+    CHECK((i.standard_name.empty() == (q == Quantity::difference)));
     CHECK(not(i.long_name.empty()));
     // Every token is itself a legal NetCDF-style name: lower case and "_".
     for (const char c : i.token) {
@@ -230,16 +257,16 @@ TEST_CASE("token(Quantity) is the registry token", "[core][quantity]") {
 }
 
 TEST_CASE("canonical_unit parses the registry's unit", "[core][quantity]") {
-  for (const Quantity q : all_quantities) {
+  for (const Quantity q : fixed_unit_quantities()) {
     INFO("quantity: " << info(q).token);
-    CHECK(canonical_unit(q) ==
-          parse_unit(info(q).canonical_unit).value_or(Unit{LengthUnit::foot}));
+    CHECK(canonical_unit(q) == parse_unit(info(q).canonical_unit));
   }
-  CHECK(canonical_unit(Quantity::water_level) == Unit{LengthUnit::meter});
+  CHECK(canonical_unit(Quantity::water_level) ==
+        std::optional<Unit>{LengthUnit::meter});
   CHECK(canonical_unit(Quantity::air_pressure) ==
-        Unit{PressureUnit::hectopascal});
+        std::optional<Unit>{PressureUnit::hectopascal});
   CHECK(canonical_unit(Quantity::air_temperature) ==
-        Unit{TemperatureUnit::celsius});
+        std::optional<Unit>{TemperatureUnit::celsius});
 }
 
 TEST_CASE("is_canonical_other is derived from the registry",
@@ -261,9 +288,9 @@ TEST_CASE("is_canonical_other is derived from the registry",
     CHECK(not is_canonical_other(*other));
   }
   // Every OtherUnit among the registry's canonical units is canonical.
-  for (const Quantity q : all_quantities) {
-    const Unit unit = canonical_unit(q);
-    if (const auto* other = std::get_if<OtherUnit>(&unit)) {
+  for (const Quantity q : fixed_unit_quantities()) {
+    const std::optional<Unit> unit = canonical_unit(q);
+    if (const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr) {
       CHECK(is_canonical_other(*other));
     }
   }

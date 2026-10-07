@@ -43,6 +43,10 @@ enum class Quantity : std::uint8_t {
   wave_period_average,
   wave_direction,
   discharge,
+  /// Derived: observed minus predicted (residual). It has no CF standard name,
+  /// no fixed unit (it takes the unit of its operands) and never carries a
+  /// datum, so it cannot be shifted.
+  difference,
 };
 
 /// A quantity outside the registry: SN's `value` (unknown quantity) and the
@@ -100,9 +104,11 @@ using QuantityId = std::variant<GenericQuantity, Quantity>;
 /// The registry row of a quantity.
 struct QuantityInfo {
   std::string_view token;
+  /// Empty for `difference`: it has no CF standard name.
   std::string_view standard_name;
   std::string_view long_name;
   /// Units the writers store, as netCDF text; parse_unit turns it into a Unit.
+  /// Empty for `difference`, which keeps the unit of its operands.
   std::string_view canonical_unit;
   friend constexpr bool operator==(const QuantityInfo&,
                                    const QuantityInfo&) = default;
@@ -110,7 +116,7 @@ struct QuantityInfo {
 
 namespace detail {
 
-inline constexpr std::array<QuantityInfo, 21> quantity_registry{{
+inline constexpr std::array<QuantityInfo, 22> quantity_registry{{
     {.token = "water_level",
      .standard_name = "water_surface_height_above_reference_datum",
      .long_name = "Water level",
@@ -196,9 +202,13 @@ inline constexpr std::array<QuantityInfo, 21> quantity_registry{{
      .standard_name = "water_volume_transport_in_river_channel",
      .long_name = "River discharge",
      .canonical_unit = "m3 s-1"},
+    {.token = "difference",
+     .standard_name = "",
+     .long_name = "Difference",
+     .canonical_unit = ""},
 }};
 static_assert(quantity_registry.size() ==
-                  static_cast<std::size_t>(Quantity::discharge) + 1,
+                  static_cast<std::size_t>(Quantity::difference) + 1,
               "one registry row per Quantity, in enumerator order");
 
 }  // namespace detail
@@ -251,13 +261,14 @@ std::string_view token(QuantityId&&) = delete;
 static_assert(
     std::ranges::none_of(detail::quantity_registry,
                          [](const QuantityInfo& row) {
-                           return detail::trim(row.canonical_unit).empty();
+                           return row.token != "difference" and
+                                  detail::trim(row.canonical_unit).empty();
                          }),
-    "canonical_unit relies on non-blank registry units");
+    "canonical_unit relies on non-blank registry units, except `difference`");
 
 /// The unit the writers store for a registry quantity: parse_unit of
-/// info(q).canonical_unit.
-[[nodiscard]] Unit canonical_unit(Quantity q);
+/// info(q).canonical_unit. nullopt for `difference`, which has no fixed unit.
+[[nodiscard]] std::optional<Unit> canonical_unit(Quantity q);
 
 /// Whether an OtherUnit is one of the registry's own units (percent, degree,
 /// s, S m-1): the canonical units of the registry that are not in a unit
@@ -267,7 +278,8 @@ static_assert(
     const OtherUnit& unit) noexcept {
   return std::ranges::any_of(detail::quantity_registry,
                              [&unit](const QuantityInfo& row) {
-                               return row.canonical_unit == unit.symbol();
+                               return not row.canonical_unit.empty() and
+                                      row.canonical_unit == unit.symbol();
                              });
 }
 

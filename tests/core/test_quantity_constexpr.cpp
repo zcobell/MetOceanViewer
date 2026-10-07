@@ -78,9 +78,8 @@ constexpr std::array sn_registry{
     row(Quantity::wave_direction, "wave_direction",
         "sea_surface_wave_from_direction", "degree"),
     row(Quantity::discharge, "discharge",
-        "water_volume_transport_in_river_channel", "m3 s-1"
-
-        )};
+        "water_volume_transport_in_river_channel", "m3 s-1"),
+    row(Quantity::difference, "difference", "", "")};
 
 constexpr bool info_matches_the_sn_table() {
   return std::ranges::all_of(sn_registry, [](const Row& r) {
@@ -100,7 +99,7 @@ constexpr bool tokens_round_trip() {
 // the enumerator.
 constexpr bool registry_is_in_enumerator_order() {
   return sn_registry.size() ==
-             static_cast<std::size_t>(Quantity::discharge) + 1 and
+             static_cast<std::size_t>(Quantity::difference) + 1 and
          std::ranges::all_of(sn_registry, [](const Row& r) {
            return &r - sn_registry.data() ==
                   static_cast<std::ptrdiff_t>(r.quantity);
@@ -151,6 +150,7 @@ TEST_CASE("quantity tokens round-trip", "[core][quantity][constexpr]") {
   STATIC_REQUIRE(parse_quantity_token("wave_period_dominant") ==
                  Quantity::wave_period_dominant);
   STATIC_REQUIRE(parse_quantity_token("discharge") == Quantity::discharge);
+  STATIC_REQUIRE(parse_quantity_token("difference") == Quantity::difference);
 }
 
 TEST_CASE("parse_quantity_token rejects anything but a registry token",
@@ -174,6 +174,7 @@ TEST_CASE("datum_applicable truth table", "[core][quantity][constexpr]") {
   STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::wind_speed}));
   STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::air_pressure}));
   STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::visibility}));
+  STATIC_REQUIRE_FALSE(datum_applicable(QuantityId{Quantity::difference}));
 }
 
 TEST_CASE("token() of a QuantityId rejects temporaries",
