@@ -43,7 +43,21 @@ mov_add_fuzz_test(fuzz_checked_time SOURCES fuzz_checked_time.cpp LIBRARIES mov:
 # append; it can be folded into mov_core_tests above.
 mov_add_test(
     mov_core_hwm_tests
-    SOURCES test_hwm.cpp
-    CONSTEXPR_SOURCES test_hwm_constexpr.cpp
+    SOURCES test_hwm.cpp test_hwm_stats.cpp
+    CONSTEXPR_SOURCES test_hwm_constexpr.cpp test_hwm_stats_constexpr.cpp
     LIBRARIES mov::core
 )
+
+# golden.txt is what golden.py prints; the F8 tests read it. This keeps the two
+# from drifting (the script needs only a Python 3 interpreter).
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME hwm_golden_is_current
+        COMMAND
+            ${Python3_EXECUTABLE} -I "${PROJECT_SOURCE_DIR}/tests/fixtures/core/hwm/golden.py" --check
+            "${PROJECT_SOURCE_DIR}/tests/fixtures/core/hwm/golden.txt"
+    )
+else()
+    message(STATUS "Python 3 not found: hwm_golden_is_current is not registered")
+endif()
