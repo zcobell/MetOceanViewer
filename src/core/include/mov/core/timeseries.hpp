@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstddef>
 #include <expected>
+#include <iterator>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -221,10 +222,59 @@ struct Normalized {
   friend bool operator==(const Normalized&, const Normalized&) = default;
 };
 
+/// The rule of normalize, on indices, for tables whose rows are more than one
+/// sample (a model file's records share one time axis): `kept` lists the
+/// input rows that survive, in time order, and `report` counts what was
+/// moved and dropped. When `report.clean()` the times were already strictly
+/// increasing and `kept` is 0, 1, ..., n-1.
+struct NormalizingOrder {
+  std::vector<std::size_t> kept;
+  NormalizeReport report;
+};
+
+/// Total. Rows are stably sorted by time (only if some time descends) and, of
+/// each run of equal times, the first in input order is kept.
+/// `differs(kept, dropped)` says whether two rows of the same time hold
+/// different data; it is called once per dropped row, with the kept row's
+/// index first, to fill `conflicting_duplicates`.
+template <std::predicate<std::size_t, std::size_t> Differs>
+[[nodiscard]] NormalizingOrder normalizing_order(std::span<const Time> times,
+                                                 Differs differs) {
+  NormalizingOrder out;
+  out.kept.reserve(times.size());
+  std::ranges::copy(std::views::iota(std::size_t{0}, times.size()),
+                    std::back_inserter(out.kept));
+  if (not detail::first_not_increasing(times)) {
+    return out;
+  }
+  // Adjacent input pairs with t[i+1] < t[i]. (A loop over the shifted range:
+  // views::pairwise is not on every target standard library.)
+  for (std::size_t i = 1; i < times.size(); ++i) {
+    out.report.descents += times[i] < times[i - 1] ? 1U : 0U;
+  }
+  std::vector<std::size_t> order = std::move(out.kept);
+  if (out.report.descents > 0) {
+    std::ranges::stable_sort(order, {},
+                             [times](std::size_t i) { return times[i]; });
+  }
+  out.kept.clear();
+  out.kept.reserve(order.size());
+  for (const std::size_t row : order) {
+    if (not out.kept.empty() and times[out.kept.back()] == times[row]) {
+      ++out.report.duplicates_dropped;
+      out.report.conflicting_duplicates +=
+          differs(out.kept.back(), row) ? 1U : 0U;
+    } else {
+      out.kept.push_back(row);
+    }
+  }
+  return out;
+}
+
 /// Total: any rows become a valid series. If the times are already strictly
 /// increasing the rows are taken as they are. Otherwise they are stably
 /// sorted by time and, of each run of equal times, the first in input order
-/// is kept.
+/// is kept (normalizing_order is the same rule).
 [[nodiscard]] Normalized normalize(std::vector<Point> rows, SeriesMeta meta);
 
 /// An observed series and its prediction (v4 kept them as index 0 and 1).

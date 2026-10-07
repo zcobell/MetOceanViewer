@@ -7,6 +7,7 @@
 #include <expected>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -319,4 +320,64 @@ TEST_CASE("normalize is idempotent", "[core][timeseries]") {
   const Normalized twice = normalize(std::move(again), water_level());
   CHECK(twice.report.clean());
   CHECK(twice.series == once.series);
+}
+
+// ---- normalizing_order: the same rule on indices ----------------------------
+
+TEST_CASE("normalizing_order is the identity on increasing times",
+          "[core][timeseries]") {
+  const auto times = times_of({0, 5, 9});
+  const auto order = mov::core::normalizing_order(
+      times, [](std::size_t, std::size_t) { return false; });
+  CHECK(order.report.clean());
+  CHECK(order.kept == std::vector<std::size_t>{0, 1, 2});
+  const auto none = mov::core::normalizing_order(
+      std::span<const Time>{}, [](std::size_t, std::size_t) { return false; });
+  CHECK(none.kept.empty());
+  CHECK(none.report.clean());
+}
+
+TEST_CASE("normalizing_order lists the kept rows in time order",
+          "[core][timeseries]") {
+  // Rows: 0:t2 1:t1 2:t0 3:t1 4:t2 -> descents 2; t1 and t2 repeat.
+  const auto times = times_of({2, 1, 0, 1, 2});
+  std::vector<std::pair<std::size_t, std::size_t>> asked;
+  const auto order = mov::core::normalizing_order(
+      times, [&asked](std::size_t kept, std::size_t dropped) {
+        asked.emplace_back(kept, dropped);
+        return dropped == 3;  // only the second t1 differs
+      });
+  CHECK(order.kept == std::vector<std::size_t>{2, 1, 0});
+  CHECK(order.report == NormalizeReport{.descents = 2,
+                                        .duplicates_dropped = 2,
+                                        .conflicting_duplicates = 1});
+  // The kept row is first, the dropped row second, once per dropped row.
+  CHECK(asked ==
+        std::vector<std::pair<std::size_t, std::size_t>>{{1, 3}, {0, 4}});
+}
+
+TEST_CASE("normalizing_order agrees with normalize", "[core][timeseries]") {
+  const std::vector<std::int64_t> ms{5, 3, 3, 9, 1, 5, 5, 0, 9};
+  std::vector<Point> input;
+  input.reserve(ms.size());
+  double v = 0.0;
+  for (const std::int64_t t : ms) {
+    input.push_back({.time = at_ms(t), .sample = val(v++)});
+  }
+  const Normalized n = normalize(input, SeriesMeta{});
+  std::vector<Time> times;
+  times.reserve(input.size());
+  for (const Point& p : input) {
+    times.push_back(p.time);
+  }
+  const auto order = mov::core::normalizing_order(
+      times, [&input](std::size_t a, std::size_t b) {
+        return input[a].sample != input[b].sample;
+      });
+  CHECK(order.report == n.report);
+  REQUIRE(order.kept.size() == n.series.size());
+  for (std::size_t i = 0; i < order.kept.size(); ++i) {
+    CHECK(input[order.kept[i]].time == n.series.times()[i]);
+    CHECK(input[order.kept[i]].sample == n.series.samples()[i]);
+  }
 }
