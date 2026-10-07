@@ -28,6 +28,7 @@ using mov::core::HwmStatsError;
 using mov::core::Intercept;
 using mov::core::LinearFit;
 using mov::core::Moments;
+using mov::core::NonFiniteMoments;
 using mov::core::NoWetMarks;
 using mov::core::ThroughOrigin;
 using mov::core::TooFewForFreeFit;
@@ -50,12 +51,21 @@ constexpr bool identity_is_exact(const Moments& m) {
   return Moments{} + m == m and m + Moments{} == m;
 }
 
-// Fold left from the identity, one mark at a time, is what wet_moments does.
-constexpr bool fold_is_the_ordered_sum() {
-  const Moments by_hand =
-      ((Moments{} + Moments::of(with_dry[0])) + Moments::of(with_dry[2])) +
-      Moments::of(with_dry[4]);
-  return wet_moments(with_dry) == by_hand;
+// The ordered left fold, written out: what wet_moments must equal bit for bit.
+constexpr Moments explicit_fold(std::span<const HighWaterMark> marks) {
+  Moments so_far{};
+  for (const HighWaterMark& h : marks) {
+    so_far = so_far + Moments::of(h);
+  }
+  return so_far;
+}
+
+// The wet part of two Moments, ignoring how many marks were seen.
+constexpr bool same_wet_part(const Moments& a, const Moments& b) {
+  return a.n() == b.n() and a.mean_x() == b.mean_x() and
+         a.mean_y() == b.mean_y() and a.mean_e() == b.mean_e() and
+         a.m2x() == b.m2x() and a.m2y() == b.m2y() and a.cxy() == b.cxy() and
+         a.m2e() == b.m2e();
 }
 
 template <class... Args>
@@ -74,8 +84,9 @@ TEST_CASE("Moments is a regular, cheap value", "[core][hwm_stats][constexpr]") {
   STATIC_REQUIRE(std::regular<Moments>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Moments>);
   STATIC_REQUIRE(std::is_trivially_copyable_v<Moments>);
-  // Eight numbers, private: the invariants (n == 0 means all zero) hold.
-  STATIC_REQUIRE(sizeof(Moments) == 8 * sizeof(double));
+  // Two counts and seven sums, private: the invariants (n == 0 means every
+  // sum is zero; seen >= n) hold by construction.
+  STATIC_REQUIRE(sizeof(Moments) == 9 * sizeof(double));
   STATIC_REQUIRE(std::regular<HwmStats>);
   STATIC_REQUIRE(std::regular<LinearFit>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<HwmStats>);
@@ -92,6 +103,7 @@ TEST_CASE("Moments has no raw-number constructor",
 TEST_CASE("Moments identity", "[core][hwm_stats][constexpr]") {
   constexpr Moments zero{};
   STATIC_REQUIRE(zero.n() == 0);
+  STATIC_REQUIRE(zero.seen() == 0);
   STATIC_REQUIRE(zero.mean_x() == 0.0);
   STATIC_REQUIRE(zero.mean_y() == 0.0);
   STATIC_REQUIRE(zero.mean_e() == 0.0);
@@ -107,6 +119,7 @@ TEST_CASE("Moments identity", "[core][hwm_stats][constexpr]") {
 TEST_CASE("Moments::of a wet mark is one observation",
           "[core][hwm_stats][constexpr]") {
   constexpr Moments one = Moments::of(mark_m(2.0, 3.5));
+  STATIC_REQUIRE(one.seen() == 1);
   STATIC_REQUIRE(one.n() == 1);
   STATIC_REQUIRE(one.mean_x() == 2.0);
   STATIC_REQUIRE(one.mean_y() == 3.5);
@@ -117,20 +130,31 @@ TEST_CASE("Moments::of a wet mark is one observation",
   STATIC_REQUIRE(one.m2e() == 0.0);
 }
 
-TEST_CASE("Moments::of a dry mark is the identity",
+TEST_CASE("Moments::of a dry mark is seen but not wet",
           "[core][hwm_stats][constexpr]") {
-  STATIC_REQUIRE(Moments::of(mark_m(2.0, -99999.0)) == Moments{});
-  STATIC_REQUIRE(Moments::of(mark_m(2.0, -999.0)) == Moments{});
-  // Dry marks vanish from a sum (the null-object property).
-  STATIC_REQUIRE(Moments::of(mark_m(1.0, 2.0)) +
-                     Moments::of(mark_m(7.0, -999.0)) ==
-                 Moments::of(mark_m(1.0, 2.0)));
+  constexpr Moments dry = Moments::of(mark_m(2.0, -99999.0));
+  STATIC_REQUIRE(dry.seen() == 1);
+  STATIC_REQUIRE(dry.n() == 0);
+  STATIC_REQUIRE(same_wet_part(dry, Moments{}));
+  STATIC_REQUIRE(dry != Moments{});  // it was seen
+  STATIC_REQUIRE(Moments::of(mark_m(2.0, -999.0)) == dry);
+  // Dry marks change `seen` and nothing else, from either side.
+  constexpr Moments wet = Moments::of(mark_m(1.0, 2.0));
+  constexpr Moments both = wet + Moments::of(mark_m(7.0, -999.0));
+  STATIC_REQUIRE(both.seen() == 2);
+  STATIC_REQUIRE(same_wet_part(both, wet));
+  constexpr Moments before = Moments::of(mark_m(7.0, -999.0)) + wet;
+  STATIC_REQUIRE(before.seen() == 2);
+  STATIC_REQUIRE(same_wet_part(before, wet));
+  STATIC_REQUIRE((dry + dry).seen() == 2);
+  STATIC_REQUIRE((dry + dry).n() == 0);
 }
 
 TEST_CASE("Moments combine of two observations (exact case)",
           "[core][hwm_stats][constexpr]") {
   constexpr Moments m = pair();
   STATIC_REQUIRE(m.n() == 2);
+  STATIC_REQUIRE(m.seen() == 2);
   STATIC_REQUIRE(m.mean_x() == 2.0);
   STATIC_REQUIRE(m.mean_y() == 4.0);
   STATIC_REQUIRE(m.mean_e() == 2.0);
@@ -140,11 +164,12 @@ TEST_CASE("Moments combine of two observations (exact case)",
   STATIC_REQUIRE(m.m2e() == 2.0);  // (1-2)^2 + (3-2)^2
 }
 
-TEST_CASE("wet_moments is the ordered left fold over wet marks",
+TEST_CASE("wet_moments is the ordered left fold over the marks",
           "[core][hwm_stats][constexpr]") {
   STATIC_REQUIRE(wet_moments(Marks{}) == Moments{});
   STATIC_REQUIRE(wet_moments(with_dry).n() == 3);
-  STATIC_REQUIRE(fold_is_the_ordered_sum());
+  STATIC_REQUIRE(wet_moments(with_dry).seen() == 5);
+  STATIC_REQUIRE(wet_moments(with_dry) == explicit_fold(with_dry));
   constexpr std::array<HighWaterMark, 2> two{mark_m(1.0, 2.0),
                                              mark_m(3.0, 6.0)};
   STATIC_REQUIRE(wet_moments(two) == pair());
@@ -160,7 +185,7 @@ TEST_CASE("the fit is a variant, never a flag",
   // The origin fit has no intercept member to ignore.
   STATIC_REQUIRE_FALSE(HasIntercept<ThroughOrigin>);
   STATIC_REQUIRE(HasIntercept<Free>);
-  STATIC_REQUIRE(std::variant_size_v<HwmStatsError> == 3);
+  STATIC_REQUIRE(std::variant_size_v<HwmStatsError> == 4);
 }
 
 TEST_CASE("the intercept mode must be named",
@@ -174,9 +199,11 @@ TEST_CASE("the intercept mode must be named",
   STATIC_REQUIRE_FALSE(CallsHwmStats<Marks, const void*>);
   STATIC_REQUIRE_FALSE(std::is_convertible_v<bool, Intercept>);
   STATIC_REQUIRE_FALSE(std::is_convertible_v<int, Intercept>);
-  // Moments take the same explicit mode.
-  STATIC_REQUIRE(CallsHwmStats<Moments, std::size_t, Intercept>);
-  STATIC_REQUIRE_FALSE(CallsHwmStats<Moments, std::size_t>);
+  // Moments take the same explicit mode, and carry their own total.
+  STATIC_REQUIRE(CallsHwmStats<Moments, Intercept>);
+  STATIC_REQUIRE_FALSE(CallsHwmStats<Moments>);
+  STATIC_REQUIRE_FALSE(CallsHwmStats<Moments, bool>);
+  STATIC_REQUIRE_FALSE(CallsHwmStats<Moments, std::size_t, Intercept>);
 }
 
 TEST_CASE("error alternatives carry their counts",
@@ -185,6 +212,7 @@ TEST_CASE("error alternatives carry their counts",
   STATIC_REQUIRE(NoWetMarks{.total = 4} != NoWetMarks{.total = 5});
   STATIC_REQUIRE(TooFewForFreeFit{.wet = 1} == TooFewForFreeFit{.wet = 1});
   STATIC_REQUIRE(DegenerateObserved{} == DegenerateObserved{});
+  STATIC_REQUIRE(NonFiniteMoments{} == NonFiniteMoments{});
   STATIC_REQUIRE(HwmStatsError{NoWetMarks{.total = 3}} !=
                  HwmStatsError{DegenerateObserved{}});
 }

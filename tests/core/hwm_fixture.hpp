@@ -56,11 +56,19 @@ namespace mov::test {
     const auto where = mov::core::Location::make(
         {.lat = parse_number(columns[1]), .lon = parse_number(columns[0])});
     REQUIRE(where.has_value());
-    marks.push_back(mov::core::HighWaterMark{
-        .location = *where,
-        .ground = mov::core::Length::in(parse_number(columns[2]), unit),
-        .observed = mov::core::Length::in(parse_number(columns[3]), unit),
-        .modeled = mov::core::model_value(parse_number(columns[4]), unit)});
+    // The same boundary a real reader uses.
+    const auto ground =
+        mov::core::checked_elevation(parse_number(columns[2]), unit);
+    const auto observed =
+        mov::core::checked_elevation(parse_number(columns[3]), unit);
+    const auto modeled = mov::core::model_value(parse_number(columns[4]), unit);
+    REQUIRE(ground.has_value());
+    REQUIRE(observed.has_value());
+    REQUIRE(modeled.has_value());
+    marks.push_back(mov::core::HighWaterMark{.location = *where,
+                                             .ground = *ground,
+                                             .observed = *observed,
+                                             .modeled = *modeled});
   }
   return marks;
 }

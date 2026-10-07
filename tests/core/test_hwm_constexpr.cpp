@@ -21,16 +21,19 @@
 #include "mov/core/units.hpp"
 #include "test_helpers.hpp"
 
+using mov::core::checked_elevation;
 using mov::core::ClassBreaksError;
 using mov::core::classify;
 using mov::core::Dry;
 using mov::core::dry_threshold;
+using mov::core::ElevationError;
 using mov::core::ErrorClasses;
 using mov::core::HighWaterMark;
 using mov::core::HwmCategory;
 using mov::core::is_dry;
 using mov::core::Length;
 using mov::core::LengthUnit;
+using mov::core::max_elevation_m;
 using mov::core::model_value;
 using mov::core::modeled_error;
 using mov::core::Wet;
@@ -38,9 +41,11 @@ using mov::core::WetDry;
 using mov::test::feet;
 using mov::test::in_metres;
 using mov::test::infinity;
+using mov::test::mark_ft;
 using mov::test::mark_m;
 using mov::test::metres;
 using mov::test::quiet_nan;
+using mov::test::raw_mark;
 
 namespace {
 
@@ -102,6 +107,13 @@ constexpr bool rejects_every_non_rising_pair() {
   return true;
 }
 
+constexpr HwmCategory feet_category(double observed, double modeled) {
+  return classify(mark_ft(observed, modeled), ErrorClasses::feet_default());
+}
+constexpr HwmCategory metre_category(double observed, double modeled) {
+  return classify(mark_m(observed, modeled), ErrorClasses::meters_default());
+}
+
 }  // namespace
 
 TEST_CASE("hwm types are value types", "[core][hwm][constexpr]") {
@@ -134,7 +146,7 @@ TEST_CASE("is_dry: <= -999 and nothing above", "[core][hwm][constexpr]") {
   STATIC_REQUIRE(is_dry(-std::numeric_limits<double>::max()));
   STATIC_REQUIRE(is_dry(-infinity));
   STATIC_REQUIRE_FALSE(is_dry(infinity));
-  STATIC_REQUIRE_FALSE(is_dry(quiet_nan));  // not dry, not wet: unspecified
+  STATIC_REQUIRE_FALSE(is_dry(quiet_nan));  // model_value rejects it
 }
 
 TEST_CASE("model_value applies the one dry rule",
@@ -148,6 +160,45 @@ TEST_CASE("model_value applies the one dry rule",
                  WetDry{Wet{.elevation = feet(2.0)}});
   STATIC_REQUIRE(model_value(-900.0, LengthUnit::foot) ==
                  WetDry{Wet{.elevation = feet(-900.0)}});
+  // The dry rule comes first, so a huge negative fill is dry, not an error.
+  STATIC_REQUIRE(model_value(-infinity, LengthUnit::meter) == WetDry{Dry{}});
+  STATIC_REQUIRE(model_value(-std::numeric_limits<double>::max(),
+                             LengthUnit::meter) == WetDry{Dry{}});
+}
+
+TEST_CASE("model_value rejects what is not an elevation",
+          "[core][hwm][constexpr]") {
+  constexpr auto not_finite = std::unexpected{ElevationError::not_finite};
+  constexpr auto too_big = std::unexpected{ElevationError::out_of_range};
+  STATIC_REQUIRE(model_value(quiet_nan, LengthUnit::meter) == not_finite);
+  STATIC_REQUIRE(model_value(infinity, LengthUnit::foot) == not_finite);
+  STATIC_REQUIRE(model_value(10001.0, LengthUnit::meter) == too_big);
+  STATIC_REQUIRE(model_value(1e300, LengthUnit::meter) == too_big);
+  STATIC_REQUIRE(
+      model_value(std::numeric_limits<double>::max(), LengthUnit::meter) ==
+      too_big);  // no overflow on the way
+  STATIC_REQUIRE(model_value(10000.0, LengthUnit::meter) ==
+                 WetDry{Wet{.elevation = metres(10000.0)}});
+}
+
+TEST_CASE("checked_elevation: finite and within 1e4 m, in any unit",
+          "[core][hwm][constexpr]") {
+  STATIC_REQUIRE(max_elevation_m == 1e4);
+  STATIC_REQUIRE(checked_elevation(3.5, LengthUnit::foot) == feet(3.5));
+  STATIC_REQUIRE(checked_elevation(-10000.0, LengthUnit::meter) ==
+                 metres(-10000.0));
+  STATIC_REQUIRE(checked_elevation(-10001.0, LengthUnit::meter) ==
+                 std::unexpected{ElevationError::out_of_range});
+  // 32808 ft is 9999.9 m; 32809 ft is 10000.2 m.
+  STATIC_REQUIRE(checked_elevation(32808.0, LengthUnit::foot).has_value());
+  STATIC_REQUIRE(checked_elevation(32809.0, LengthUnit::foot) ==
+                 std::unexpected{ElevationError::out_of_range});
+  STATIC_REQUIRE(checked_elevation(6.0, LengthUnit::nautical_mile) ==
+                 std::unexpected{ElevationError::out_of_range});
+  STATIC_REQUIRE(checked_elevation(quiet_nan, LengthUnit::meter) ==
+                 std::unexpected{ElevationError::not_finite});
+  STATIC_REQUIRE(checked_elevation(-infinity, LengthUnit::meter) ==
+                 std::unexpected{ElevationError::not_finite});
 }
 
 TEST_CASE("modeled_error is modeled minus observed, none when dry",
@@ -170,11 +221,18 @@ TEST_CASE("ErrorClasses::make accepts strictly increasing breaks",
   STATIC_REQUIRE(classes_equal_for_foot_defaults());
   STATIC_REQUIRE(ErrorClasses::meters_default() !=
                  ErrorClasses::feet_default());
-  // A tiny but strict step is still increasing.
+  // Breaks one nanometre apart are on different grid points: accepted.
   constexpr std::array<Length, 7> tight{
       metres(0.0),  metres(1e-9), metres(2e-9), metres(3e-9),
       metres(4e-9), metres(5e-9), metres(6e-9)};
   STATIC_REQUIRE(ErrorClasses::make(tight).has_value());
+  // Closer than that, on the same grid point: rejected (the comparison could
+  // not tell them apart).
+  constexpr std::array<Length, 7> too_close{
+      metres(0.0), metres(0.4e-9), metres(1.0), metres(2.0),
+      metres(3.0), metres(4.0),    metres(5.0)};
+  STATIC_REQUIRE(ErrorClasses::make(too_close) ==
+                 std::unexpected{ClassBreaksError::not_strictly_increasing});
 }
 
 TEST_CASE("the default classes are the v4 defaults", "[core][hwm][constexpr]") {
@@ -227,4 +285,31 @@ TEST_CASE("classify: the ends and the middle", "[core][hwm][constexpr]") {
   STATIC_REQUIRE(category_of_error(100.0, m) == HwmCategory::bin7);
   // A perfect model: error 0 is break 3, so it is the upper class bin4.
   STATIC_REQUIRE(category_of_error(0.0, m) == HwmCategory::bin4);
+}
+
+TEST_CASE("classify: a decimal tie goes up, in metres and in feet",
+          "[core][hwm][constexpr][regression]") {
+  // 2.3 - 1.8 is 0.4999999999999998 in doubles; the break is 0.5.
+  STATIC_REQUIRE(metre_category(1.8, 2.3) == HwmCategory::bin5);
+  // 12.5 ft - 11 ft = 1.5 ft, the break; -6.44 - (-9.94) is 3.499999999999999.
+  STATIC_REQUIRE(feet_category(11.0, 12.5) == HwmCategory::bin5);
+  STATIC_REQUIRE(feet_category(-9.94, -6.44) == HwmCategory::bin6);
+}
+
+TEST_CASE("classify: 1e-6 ft either side of a break is told apart",
+          "[core][hwm][constexpr]") {
+  // 1e-6 ft is about 300 nm, far above the 1 nm grid.
+  STATIC_REQUIRE(feet_category(11.0, 12.499999) == HwmCategory::bin4);
+  STATIC_REQUIRE(feet_category(11.0, 12.500001) == HwmCategory::bin5);
+  STATIC_REQUIRE(metre_category(1.8, 2.299999999) == HwmCategory::bin4);
+}
+
+TEST_CASE("classify: huge finite errors saturate to the end classes",
+          "[core][hwm][constexpr]") {
+  constexpr auto m = ErrorClasses::meters_default();
+  STATIC_REQUIRE(classify(raw_mark(0.0, 1e7), m) == HwmCategory::bin7);
+  STATIC_REQUIRE(classify(raw_mark(0.0, -1e7), m) == HwmCategory::bin0);
+  STATIC_REQUIRE(classify(raw_mark(0.0, 1e300), m) == HwmCategory::bin7);
+  STATIC_REQUIRE(classify(raw_mark(0.0, -1e300), m) == HwmCategory::bin0);
+  STATIC_REQUIRE(classify(raw_mark(0.0, 1e6), m) == HwmCategory::bin7);
 }

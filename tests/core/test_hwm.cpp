@@ -16,12 +16,17 @@
 #include "mov/core/units.hpp"
 #include "test_helpers.hpp"
 
+using mov::core::checked_elevation;
 using mov::core::ClassBreaksError;
 using mov::core::classify;
+using mov::core::ElevationError;
 using mov::core::ErrorClasses;
 using mov::core::HwmCategory;
 using mov::core::Length;
+using mov::core::LengthUnit;
+using mov::core::model_value;
 using mov::core::modeled_error;
+using mov::core::WetDry;
 using mov::test::feet;
 using mov::test::infinity;
 using mov::test::mark_ft;
@@ -111,20 +116,106 @@ TEST_CASE("classify with the foot defaults, errors clear of every break",
   CHECK(classify(mark_ft(10.0, 16.0), classes) == HwmCategory::bin7);  // 6
 }
 
-// Length stores SI, so a feet error that is on a break in decimal can differ
-// from the break by an ulp after conversion: 12.5 ft - 10 ft is not exactly
-// 1.5 ft once each is multiplied by 0.3048. v4 compared in file units. The
-// guarantee is therefore exact for metres and for any error that is not within
-// rounding of a break; this test pins both halves (docs/wp-notes/WP4.md).
-TEST_CASE("classify at a foot break is exact only up to rounding of the unit",
+// Observed and modeled are decimals with 2 places (hundredths of a foot), built
+// as integer / 100.0 so each is the double nearest the decimal, like a parsed
+// file value. Their difference is a break exactly in decimal arithmetic, but in
+// doubles (and after the 0.3048 on each side) it is often an ulp off: v4 put
+// those ties below the break; the 1 nm grid puts every one in the upper class.
+TEST_CASE("a decimal tie goes up", "[core][hwm][regression]") {
+  const auto classes = ErrorClasses::feet_default();
+  constexpr std::array<int, 7> break_hundredths{-500, -350, -150, 0,
+                                                150,  350,  500};
+  int ties = 0;
+  for (int observed = -1000; observed <= 2000; observed += 7) {
+    for (std::size_t i = 0; i < 7; ++i) {
+      const double x = observed / 100.0;
+      const double y = (observed + break_hundredths[i]) / 100.0;
+      CHECK(classify(mark_ft(x, y), classes) == bins[i + 1]);
+      ++ties;
+    }
+  }
+  CHECK(ties > 2000);
+}
+
+TEST_CASE("a decimal tie goes up in metres, to the millimetre",
+          "[core][hwm][regression]") {
+  const auto classes = ErrorClasses::meters_default();
+  constexpr std::array<int, 7> break_thousandths{-1500, -1000, -500, 0,
+                                                 500,   1000,  1500};
+  for (int observed = -500; observed <= 3000; observed += 11) {
+    for (std::size_t i = 0; i < 7; ++i) {
+      const double x = observed / 1000.0;
+      const double y = (observed + break_thousandths[i]) / 1000.0;
+      CHECK(classify(mark_m(x, y), classes) == bins[i + 1]);
+    }
+  }
+}
+
+TEST_CASE("a decimal tie goes up on custom decimal breaks",
+          "[core][hwm][regression]") {
+  const Breaks custom{metres(-0.3), metres(-0.2), metres(-0.1), metres(0.1),
+                      metres(0.2),  metres(0.3),  metres(0.4)};
+  const auto made = ErrorClasses::make(custom);
+  REQUIRE(made.has_value());
+  const ErrorClasses& classes = *made;
+  // (observed, modeled) whose decimal difference is break i; 0.8 - 0.7 is
+  // 0.10000000000000009 and 0.9 - 0.6 is 0.30000000000000004 in doubles.
+  constexpr std::array<std::array<double, 2>, 7> ties{{{0.9, 0.6},
+                                                       {0.9, 0.7},
+                                                       {0.9, 0.8},
+                                                       {0.7, 0.8},
+                                                       {0.6, 0.8},
+                                                       {0.5, 0.8},
+                                                       {0.4, 0.8}}};
+  for (std::size_t i = 0; i < 7; ++i) {
+    CHECK(classify(mark_m(ties[i][0], ties[i][1]), classes) == bins[i + 1]);
+  }
+}
+
+TEST_CASE("values 1e-6 ft either side of a break are told apart",
           "[core][hwm]") {
   const auto classes = ErrorClasses::feet_default();
   const auto breaks = classes.breaks();
   for (std::size_t i = 0; i < 7; ++i) {
     const double b = breaks[i].as(mov::core::LengthUnit::foot);
-    // 1e-9 ft either side of the break is far above rounding noise.
-    CHECK(classify(mark_ft(10.0, 10.0 + b + 1e-9), classes) == bins[i + 1]);
-    CHECK(classify(mark_ft(10.0, 10.0 + b - 1e-9), classes) == bins[i]);
+    // 1e-6 ft is about 300 nm: far above the 1 nm grid and the rounding noise.
+    CHECK(classify(mark_ft(10.0, 10.0 + b + 1e-6), classes) == bins[i + 1]);
+    CHECK(classify(mark_ft(10.0, 10.0 + b - 1e-6), classes) == bins[i]);
+  }
+}
+
+TEST_CASE("class breaks must be on distinct grid points and in range",
+          "[core][hwm]") {
+  // Two breaks beyond +-1e6 m saturate to the same grid point.
+  const Breaks far{metres(-3.0), metres(-2.0),  metres(-1.0), metres(0.0),
+                   metres(1.0),  metres(2.0e6), metres(3.0e6)};
+  CHECK(ErrorClasses::make(far) ==
+        std::unexpected{ClassBreaksError::not_strictly_increasing});
+  const Breaks edge{metres(-3.0), metres(-2.0), metres(-1.0),    metres(0.0),
+                    metres(1.0),  metres(2.0),  metres(999999.0)};
+  CHECK(ErrorClasses::make(edge).has_value());
+}
+
+TEST_CASE("model_value and checked_elevation reject what cannot be a level",
+          "[core][hwm]") {
+  const auto negative_nan =
+      std::bit_cast<double>(std::uint64_t{0xFFF8'0000'0000'0000});
+  for (const double bad : {quiet_nan, negative_nan, infinity}) {
+    CHECK(model_value(bad, LengthUnit::meter) ==
+          std::unexpected{ElevationError::not_finite});
+    CHECK(checked_elevation(bad, LengthUnit::foot) ==
+          std::unexpected{ElevationError::not_finite});
+  }
+  CHECK(checked_elevation(-infinity, LengthUnit::meter) ==
+        std::unexpected{ElevationError::not_finite});
+  // -infinity is below the dry threshold, so the model value is dry.
+  CHECK(model_value(-infinity, LengthUnit::meter) == WetDry{mov::core::Dry{}});
+  for (const LengthUnit unit :
+       {LengthUnit::meter, LengthUnit::foot, LengthUnit::nautical_mile}) {
+    CHECK(model_value(1e308, unit) ==
+          std::unexpected{ElevationError::out_of_range});
+    CHECK(checked_elevation(-1e308, unit) ==
+          std::unexpected{ElevationError::out_of_range});
   }
 }
 

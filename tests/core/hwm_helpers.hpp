@@ -31,6 +31,8 @@ namespace mov::test {
 
 /// A mark in metres. `modeled_raw` goes through model_value, so a value at or
 /// below the dry threshold is a Dry mark exactly as a file reader builds it.
+/// The values must be valid elevations: the dereferences below are checked
+/// only by the tests that use them.
 [[nodiscard]] constexpr mov::core::HighWaterMark mark_m(
     double observed, double modeled_raw) noexcept {
   return mov::core::HighWaterMark{
@@ -38,7 +40,7 @@ namespace mov::test {
       .ground = metres(1.0),
       .observed = metres(observed),
       .modeled =
-          mov::core::model_value(modeled_raw, mov::core::LengthUnit::meter)};
+          *mov::core::model_value(modeled_raw, mov::core::LengthUnit::meter)};
 }
 
 /// The same, with every value in feet.
@@ -49,7 +51,18 @@ namespace mov::test {
       .ground = feet(1.0),
       .observed = feet(observed),
       .modeled =
-          mov::core::model_value(modeled_raw, mov::core::LengthUnit::foot)};
+          *mov::core::model_value(modeled_raw, mov::core::LengthUnit::foot)};
+}
+
+/// A wet mark whose lengths did not come through checked_elevation: for the
+/// tests of non-finite and enormous values, which the boundary would reject.
+[[nodiscard]] constexpr mov::core::HighWaterMark raw_mark(
+    double observed_m, double modeled_m) noexcept {
+  return mov::core::HighWaterMark{
+      .location = gulf_coast(),
+      .ground = metres(0.0),
+      .observed = metres(observed_m),
+      .modeled = mov::core::Wet{.elevation = metres(modeled_m)}};
 }
 
 }  // namespace mov::test

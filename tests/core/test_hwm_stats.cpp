@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <utility>
@@ -33,6 +34,7 @@ using mov::core::Intercept;
 using mov::core::Length;
 using mov::core::LengthUnit;
 using mov::core::Moments;
+using mov::core::NonFiniteMoments;
 using mov::core::NoWetMarks;
 using mov::core::ThroughOrigin;
 using mov::core::TooFewForFreeFit;
@@ -44,6 +46,8 @@ using mov::test::mark_ft;
 using mov::test::mark_m;
 using mov::test::metres;
 using mov::test::near;
+using mov::test::near_abs;
+using mov::test::raw_mark;
 
 namespace {
 
@@ -92,6 +96,12 @@ std::vector<HighWaterMark> make_cloud(std::size_t n, const Cloud& cloud,
   return marks;
 }
 
+// Relative 1e-12, or absolute 1e-12 for a value that is exactly 0 in the
+// golden.
+bool agrees(double a, double b) {
+  return near(a, b, 1e-12) or near_abs(a, b, 1e-12);
+}
+
 long double wide(double v) { return static_cast<long double>(v); }
 
 // ---- comparisons ------------------------------------------------------------
@@ -107,7 +117,8 @@ bool moments_near(const Moments& a, const Moments& b, double rel = 1e-12) {
     return std::abs(u - v) <= rel * scale;
   };
   const double cross_scale = std::sqrt(a.m2x() * a.m2y());
-  return a.n() == b.n() and mean_near(a.mean_x(), b.mean_x(), a.m2x()) and
+  return a.n() == b.n() and a.seen() == b.seen() and
+         mean_near(a.mean_x(), b.mean_x(), a.m2x()) and
          mean_near(a.mean_y(), b.mean_y(), a.m2y()) and
          mean_near(a.mean_e(), b.mean_e(), a.m2e()) and
          near(a.m2x(), b.m2x(), rel) and near(a.m2y(), b.m2y(), rel) and
@@ -234,12 +245,12 @@ TEST_CASE("the fold is deterministic for a given order",
 
 TEST_CASE("Moments survives data far from zero", "[core][hwm_stats][moments]") {
   // x = 1e8 + i for i in 0..9 and y = 2x - 1.9e8: the textbook
-  // sum(x^2) - n mean^2 is ~1e17 and loses everything below 10. The M2 sums
-  // are exact here: m2x = n (n^2 - 1) / 12 = 82.5.
+  // sum(x^2) - n mean^2 subtracts two numbers near 1e17, where one ulp is 16.
+  // The M2 sums are exact here: m2x = n (n^2 - 1) / 12 = 82.5.
   std::vector<HighWaterMark> marks;
   for (int i = 0; i < 10; ++i) {
     const double x = 1e8 + i;
-    marks.push_back(mark_m(x, (2.0 * x) - 1.9e8));
+    marks.push_back(raw_mark(x, (2.0 * x) - 1.9e8));
   }
   const Moments m = wet_moments(marks);
   CHECK(m.n() == 10);
@@ -321,31 +332,34 @@ void check_against_golden(const std::string& fixture, LengthUnit unit) {
     if (status != "ok") {
       REQUIRE_FALSE(result.has_value());
       if (status == "no_wet_marks") {
-        CHECK(*std::get_if<NoWetMarks>(&result.error()) ==
-              NoWetMarks{.total = golden.count("total")});
+        CHECK(result.error() ==
+              HwmStatsError{NoWetMarks{.total = golden.count("total")}});
       } else if (status == "too_few_for_free_fit") {
-        CHECK(std::holds_alternative<TooFewForFreeFit>(result.error()));
+        CHECK(result.error() ==
+              HwmStatsError{TooFewForFreeFit{.wet = golden.count("wet")}});
       } else {
-        CHECK(std::holds_alternative<DegenerateObserved>(result.error()));
+        CHECK(result.error() == HwmStatsError{DegenerateObserved{}});
       }
       continue;
     }
     REQUIRE(result.has_value());
     CHECK(result->total == golden.count("total"));
     CHECK(result->wet == golden.count("wet"));
-    CHECK(near(slope_of(*result), golden.number(prefix + ".slope"), 1e-12));
-    REQUIRE(result->r_squared.has_value());
-    CHECK(near(r2_of(*result), golden.number(prefix + ".r2"), 1e-12));
-    CHECK(near(in_metres(result->mean_error), golden.number("mean_error"),
-               1e-12));
+    CHECK(agrees(slope_of(*result), golden.number(prefix + ".slope")));
+    const auto r2 = golden.maybe_number(prefix + ".r2");
+    REQUIRE(result->r_squared.has_value() == r2.has_value());
+    if (r2) {
+      CHECK(agrees(r2_of(*result), *r2));
+    }
+    CHECK(agrees(in_metres(result->mean_error), golden.number("mean_error")));
     const auto sigma = golden.maybe_number("error_stddev");
     REQUIRE(result->error_stddev.has_value() == sigma.has_value());
     if (sigma) {
-      CHECK(near(sigma_of(*result), *sigma, 1e-12));
+      CHECK(agrees(sigma_of(*result), *sigma));
     }
     if (mode == Intercept::free) {
-      CHECK(near(in_metres(std::get<Free>(result->fit).intercept),
-                 golden.number("free.intercept"), 1e-12));
+      CHECK(agrees(in_metres(std::get<Free>(result->fit).intercept),
+                   golden.number("free.intercept")));
     }
   }
 }
@@ -369,6 +383,18 @@ TEST_CASE("golden: hwm_allDry.csv (no statistics)",
 TEST_CASE("golden: hwm_one_wet.csv (origin only)",
           "[core][hwm_stats][golden]") {
   check_against_golden("hwm_one_wet.csv", LengthUnit::meter);
+}
+
+TEST_CASE("golden: hwm_ties.csv (a decimal tie on every metre break)",
+          "[core][hwm_stats][golden]") {
+  check_against_golden("hwm_ties.csv", LengthUnit::meter);
+}
+
+TEST_CASE(
+    "golden: hwm_ties_ft.csv (ties on every foot break, 1e-5 ft either "
+    "side of one)",
+    "[core][hwm_stats][golden]") {
+  check_against_golden("hwm_ties_ft.csv", LengthUnit::foot);
 }
 
 TEST_CASE("hwm_basic hand check", "[core][hwm_stats][golden]") {
@@ -396,8 +422,8 @@ TEST_CASE("the requested intercept mode is the fit that comes back",
   CHECK(std::abs(r2_of(free_fit) - r2_of(origin)) > 0.05);
   // And the same through the moments.
   const Moments m = wet_moments(marks);
-  CHECK(hwm_stats(m, marks.size(), Intercept::free) == free_fit);
-  CHECK(hwm_stats(m, marks.size(), Intercept::through_origin) == origin);
+  CHECK(hwm_stats(m, Intercept::free) == free_fit);
+  CHECK(hwm_stats(m, Intercept::through_origin) == origin);
 }
 
 TEST_CASE("the intercept of a free fit is a Length, in metres",
@@ -520,6 +546,7 @@ TEST_CASE("one wet mark has no standard deviation",
   CHECK(s.total == 2);
   CHECK(near(in_metres(s.mean_error), 1.5, 1e-14));
   CHECK_FALSE(s.error_stddev.has_value());
+  CHECK_FALSE(s.r_squared.has_value());  // one point fits exactly
   CHECK(near(slope_of(s), 1.75, 1e-14));
 }
 
@@ -678,5 +705,162 @@ TEST_CASE("slope and R^2 do not depend on the file's unit",
     CHECK(near(r2_of(a), r2_of(b), 1e-12));
     CHECK(near(in_metres(a.mean_error), in_metres(b.mean_error), 1e-9));
     CHECK(near(sigma_of(a), sigma_of(b), 1e-9));
+  }
+}
+
+// ---- degrees of freedom
+// ------------------------------------------------------
+
+TEST_CASE("R^2 needs a degree of freedom", "[core][hwm_stats][regression]") {
+  const std::array three{mark_m(1.0, 1.5), mark_m(2.0, 1.75),
+                         mark_m(3.0, 3.75)};
+  // Free: a line through two points is exact, so R^2 = 1 says nothing.
+  CHECK_FALSE(stats_of(std::span{three}.first(2), Intercept::free)
+                  .r_squared.has_value());
+  CHECK(stats_of(three, Intercept::free).r_squared.has_value());
+  // Through the origin: one point is exact; two are not.
+  CHECK_FALSE(stats_of(std::span{three}.first(1), Intercept::through_origin)
+                  .r_squared.has_value());
+  CHECK(stats_of(std::span{three}.first(2), Intercept::through_origin)
+            .r_squared.has_value());
+  // The other statistics are still there with two points.
+  const HwmStats two = stats_of(std::span{three}.first(2), Intercept::free);
+  CHECK(near(slope_of(two), 0.25, 1e-14));
+  CHECK(two.error_stddev.has_value());
+}
+
+// ---- the count of marks seen travels with the moments
+// -------------------------
+
+TEST_CASE("total is the number of marks folded, wet or dry",
+          "[core][hwm_stats][moments]") {
+  const std::array marks{mark_m(1.0, 2.0), mark_m(2.0, -99999.0),
+                         mark_m(3.0, 4.5), mark_m(4.0, -999.0),
+                         mark_m(5.0, 6.0)};
+  const Moments m = wet_moments(marks);
+  CHECK(m.seen() == 5);
+  CHECK(m.n() == 3);
+  const HwmStats s = stats_of(marks, Intercept::free);
+  CHECK(s.total == 5);
+  CHECK(s.wet == 3);
+  // The Moments overload reads the same total from the moments.
+  CHECK(hwm_stats(m, Intercept::free) == hwm_stats(marks, Intercept::free));
+  // Dry-only moments keep their count in the error.
+  const Moments dry =
+      Moments::of(mark_m(1.0, -99999.0)) + Moments::of(mark_m(2.0, -999.0));
+  const auto none = hwm_stats(dry, Intercept::through_origin);
+  REQUIRE_FALSE(none.has_value());
+  CHECK(none.error() == HwmStatsError{NoWetMarks{.total = 2}});
+}
+
+// ---- the fold is the explicit left fold, bit for bit
+// -------------------------
+
+TEST_CASE("wet_moments equals the explicit left fold bit for bit",
+          "[core][hwm_stats][moments]") {
+  // Decimal data (hundredths), like a survey file: the values are not special
+  // in binary, so an out-of-order or regrouped sum would show.
+  std::vector<HighWaterMark> marks;
+  Random random{404};
+  for (int i = 0; i < 1000; ++i) {
+    const double x = static_cast<double>(100 + random.below(900)) / 100.0;
+    const double y = static_cast<double>(50 + random.below(1100)) / 100.0;
+    marks.push_back(mark_m(x, i % 9 == 0 ? -99999.0 : y));
+  }
+  Moments by_hand;
+  for (const HighWaterMark& h : marks) {
+    by_hand = by_hand + Moments::of(h);
+  }
+  CHECK(wet_moments(marks) == by_hand);
+  // The result genuinely depends on the order of the joins, which is why the
+  // order is fixed: the reversed fold agrees to 1e-12 but not bit for bit.
+  Moments reversed;
+  for (const HighWaterMark& h : marks | std::views::reverse) {
+    reversed = reversed + Moments::of(h);
+  }
+  CHECK(moments_near(by_hand, reversed));
+  CHECK(by_hand != reversed);
+}
+
+// ---- non-finite and overflowing data ----------------------------------------
+
+namespace {
+
+void check_non_finite(const std::vector<HighWaterMark>& marks) {
+  for (const Intercept mode : {Intercept::free, Intercept::through_origin}) {
+    const auto result = hwm_stats(marks, mode);
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error() == HwmStatsError{NonFiniteMoments{}});
+  }
+}
+
+}  // namespace
+
+TEST_CASE("a NaN observed value is reported, not laundered",
+          "[core][hwm_stats][errors]") {
+  check_non_finite({mark_m(1.0, 2.0), raw_mark(mov::test::quiet_nan, 3.0),
+                    mark_m(3.0, 4.0)});
+}
+
+TEST_CASE("an infinite modeled value is reported",
+          "[core][hwm_stats][errors]") {
+  check_non_finite(
+      {mark_m(1.0, 2.0), raw_mark(2.0, mov::test::infinity), mark_m(3.0, 4.0)});
+  check_non_finite({mark_m(1.0, 2.0), raw_mark(2.0, -mov::test::infinity),
+                    mark_m(3.0, 4.0)});
+}
+
+TEST_CASE("finite values whose squares overflow are reported",
+          "[core][hwm_stats][errors]") {
+  // 1e200 squared is 1e400: every input is finite, the sums are not.
+  check_non_finite(
+      {raw_mark(1e200, 1e200), raw_mark(2e200, 3e200), raw_mark(3e200, 2e200)});
+}
+
+TEST_CASE("one bad mark among many is enough", "[core][hwm_stats][errors]") {
+  auto marks =
+      make_cloud(100, {.offset = 1.0, .spread = 2.0, .dry_fraction = 0.0}, 3);
+  marks[57] = raw_mark(1.0, mov::test::quiet_nan);
+  check_non_finite(marks);
+}
+
+TEST_CASE("non-finite moments are reported before a short or flat fit",
+          "[core][hwm_stats][errors]") {
+  // One wet mark would be TooFewForFreeFit, but its value is NaN.
+  const auto one = hwm_stats(std::array{raw_mark(mov::test::quiet_nan, 1.0)},
+                             Intercept::free);
+  REQUIRE_FALSE(one.has_value());
+  CHECK(one.error() == HwmStatsError{NonFiniteMoments{}});
+  // A dry mark's observed value never reaches the sums: no wet marks wins.
+  const HighWaterMark dry_nan{.location = mov::test::gulf_coast(),
+                              .ground = metres(0.0),
+                              .observed = metres(mov::test::quiet_nan),
+                              .modeled = mov::core::Dry{}};
+  const auto none = hwm_stats(std::array{dry_nan}, Intercept::free);
+  REQUIRE_FALSE(none.has_value());
+  CHECK(none.error() == HwmStatsError{NoWetMarks{.total = 1}});
+}
+
+// ---- a long exact line
+// -------------------------------------------------------
+
+TEST_CASE("100000 marks on an exact line give R^2 = 1 and the slope back",
+          "[core][hwm_stats][regression]") {
+  // Dyadic x (quarters from 1 to about 1024) and y = 1.25 x: every mark is
+  // exactly on the line, so the rounding in the moments is all that is left.
+  // R^2 must stay within a few n ulps of 1 and never above it (hwm_stats
+  // asserts the same bound in debug builds before it clamps).
+  std::vector<HighWaterMark> marks;
+  marks.reserve(100000);
+  for (std::size_t i = 0; i < 100000; ++i) {
+    const double x = 1.0 + (0.25 * static_cast<double>(i % 4093));
+    marks.push_back(mark_m(x, 1.25 * x));
+  }
+  for (const Intercept mode : {Intercept::free, Intercept::through_origin}) {
+    const HwmStats s = stats_of(marks, mode);
+    CHECK(near(slope_of(s), 1.25, 1e-12));
+    CHECK(near(r2_of(s), 1.0, 1e-9));
+    CHECK(r2_of(s) <= 1.0);
+    CHECK(s.wet == 100000);
   }
 }

@@ -36,18 +36,26 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
+if sys.version_info < (3, 11):  # noqa: UP036 - explicit message for direct runs
+    sys.exit(
+        "golden.py needs Python 3.11 (statistics.linear_regression(proportional=))"
+    )
+
 DRY_THRESHOLD = Fraction(-999)
 METRES_PER_FOOT = Fraction(3048, 10000)
-METRE_BREAKS = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5]
-FOOT_BREAKS = [-5, -3.5, -1.5, 0, 1.5, 3.5, 5]
+# Exact decimals, not floats: a tie must be a tie.
+METRE_BREAKS = [Fraction(b) for b in ("-1.5", "-1", "-0.5", "0", "0.5", "1", "1.5")]
+FOOT_BREAKS = [Fraction(b) for b in ("-5", "-3.5", "-1.5", "0", "1.5", "3.5", "5")]
 
 # fixture name -> (scale from the file's unit to metres, default class breaks
 # in the file's unit)
-FIXTURES: dict[str, tuple[Fraction, list[float]]] = {
+FIXTURES: dict[str, tuple[Fraction, list[Fraction]]] = {
     "hwm_basic.csv": (Fraction(1), METRE_BREAKS),
     "hwm_ft.csv": (METRES_PER_FOOT, FOOT_BREAKS),
     "hwm_allDry.csv": (Fraction(1), METRE_BREAKS),
     "hwm_one_wet.csv": (Fraction(1), METRE_BREAKS),
+    "hwm_ties.csv": (Fraction(1), METRE_BREAKS),
+    "hwm_ties_ft.csv": (METRES_PER_FOOT, FOOT_BREAKS),
 }
 
 Exact = list[Fraction]
@@ -59,11 +67,11 @@ def read_rows(path: Path) -> list[tuple[Fraction, Fraction]]:
         return [(Fraction(r[3]), Fraction(r[4])) for r in csv.reader(handle) if r]
 
 
-def category(error: Fraction | None, breaks: list[float]) -> int:
+def category(error: Fraction | None, breaks: list[Fraction]) -> int:
     """Return 0 for dry (error is None), else 1 + the number of breaks <= error."""
     if error is None:
         return 0
-    return 1 + sum(1 for b in breaks if Fraction(b) <= error)
+    return 1 + sum(1 for b in breaks if b <= error)
 
 
 def free_fit(
@@ -80,7 +88,8 @@ def free_fit(
     syy = sum((y - my) ** 2 for y in ys)
     sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True))
     slope = sxy / sxx
-    r2 = None if syy == 0 else sxy**2 / (sxx * syy)
+    # With two points the line passes through both: no degrees of freedom, no R^2.
+    r2 = None if syy == 0 or n <= 2 else sxy**2 / (sxx * syy)
     return "ok", slope, my - slope * mx, r2
 
 
@@ -93,7 +102,9 @@ def origin_fit(xs: Exact, ys: Exact) -> tuple[str, Fraction | None, Fraction | N
     syy = sum(y * y for y in ys)
     # Uncentred R^2: the residual sum is taken directly, not from the sums.
     residual = sum((y - slope * x) ** 2 for x, y in zip(xs, ys, strict=True))
-    return "ok", slope, None if syy == 0 else 1 - residual / syy
+    # One point fits exactly: no degrees of freedom, no R^2.
+    no_r2 = syy == 0 or len(xs) <= 1
+    return "ok", slope, None if no_r2 else 1 - residual / syy
 
 
 def cross_check_origin(xs: Exact, ys: Exact, slope: Fraction) -> None:
@@ -111,6 +122,29 @@ def cross_check_origin(xs: Exact, ys: Exact, slope: Fraction) -> None:
         sys.exit(f"origin slope {float(slope)!r} != statistics {library.slope!r}")
 
 
+def close(a: float, b: float) -> bool:
+    """Return whether two doubles agree to 1e-9 (the library works in floats)."""
+    return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+
+
+def cross_check_free(
+    xs: Exact, ys: Exact, slope: Fraction, r2: Fraction | None
+) -> None:
+    """Exit unless statistics.linear_regression and .correlation agree."""
+    fx, fy = [float(x) for x in xs], [float(y) for y in ys]
+    library = statistics.linear_regression(fx, fy)
+    if not close(library.slope, float(slope)):
+        sys.exit(f"free slope {float(slope)!r} != statistics {library.slope!r}")
+    if r2 is not None and not close(statistics.correlation(fx, fy) ** 2, float(r2)):
+        sys.exit(f"free r2 {float(r2)!r} != statistics correlation squared")
+
+
+def cross_check_stddev(errors: Exact, stddev: float) -> None:
+    """Exit unless statistics.stdev (the n - 1 form) agrees."""
+    if not close(statistics.stdev([float(e) for e in errors]), stddev):
+        sys.exit(f"stddev {stddev!r} != statistics.stdev")
+
+
 def fmt(value: Fraction | float | None) -> str:
     """Format an exact value as its nearest double, or `none`."""
     return "none" if value is None else repr(float(value))
@@ -119,7 +153,7 @@ def fmt(value: Fraction | float | None) -> str:
 def stats_lines(
     name: str,
     scale: Fraction,
-    breaks: list[float],
+    breaks: list[Fraction],
     rows: list[tuple[Fraction, Fraction]],
 ) -> list[str]:
     """Return the golden lines of one fixture."""
@@ -149,11 +183,13 @@ def stats_lines(
         emit("error_stddev", "none")
     else:
         variance = sum((e - mean_error) ** 2 for e in errors) / (len(errors) - 1)
+        cross_check_stddev(errors, math.sqrt(variance))
         emit("error_stddev", fmt(math.sqrt(variance)))
 
     free_status, slope, intercept, r2 = free_fit(xs, ys)
     emit("free.status", free_status)
-    if free_status == "ok":
+    if free_status == "ok" and slope is not None:
+        cross_check_free(xs, ys, slope, r2)
         emit("free.slope", fmt(slope))
         emit("free.intercept", fmt(intercept))
         emit("free.r2", fmt(r2))

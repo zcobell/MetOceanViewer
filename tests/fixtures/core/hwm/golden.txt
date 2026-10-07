@@ -35,4 +35,28 @@ hwm_one_wet.csv error_stddev none
 hwm_one_wet.csv free.status too_few_for_free_fit
 hwm_one_wet.csv origin.status ok
 hwm_one_wet.csv origin.slope 1.1666666666666667
-hwm_one_wet.csv origin.r2 1.0
+hwm_one_wet.csv origin.r2 none
+hwm_ties.csv total 7
+hwm_ties.csv wet 7
+hwm_ties.csv categories 2 3 4 5 6 7 8
+hwm_ties.csv mean_error 0.0
+hwm_ties.csv error_stddev 1.0801234497346435
+hwm_ties.csv free.status ok
+hwm_ties.csv free.slope -0.03389830508474576
+hwm_ties.csv free.intercept 1.964406779661017
+hwm_ties.csv free.r2 0.009685230024213076
+hwm_ties.csv origin.status ok
+hwm_ties.csv origin.slope 0.8042990054539622
+hwm_ties.csv origin.r2 0.7764257245564432
+hwm_ties_ft.csv total 10
+hwm_ties_ft.csv wet 10
+hwm_ties_ft.csv categories 2 3 4 5 6 7 8 7 5 6
+hwm_ties_ft.csv mean_error 0.19812
+hwm_ties_ft.csv error_stddev 0.9719939835215362
+hwm_ties_ft.csv free.status ok
+hwm_ties_ft.csv free.slope 0.8904634917986299
+hwm_ties_ft.csv free.intercept 0.5478793593828699
+hwm_ties_ft.csv free.r2 0.8454094132087936
+hwm_ties_ft.csv origin.status ok
+hwm_ties_ft.csv origin.slope 1.0025201453936443
+hwm_ties_ft.csv origin.r2 0.9463548634558362

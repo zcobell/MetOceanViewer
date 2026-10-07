@@ -155,7 +155,8 @@
       "displayName": "CI: Linux GCC",
       "description": "ubuntu-24.04 build-and-test job.",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "MOV_REQUIRE_GOLDEN_CHECKS": "ON"
       },
       "condition": {
         "type": "equals",
@@ -173,7 +174,8 @@
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_OSX_ARCHITECTURES": "arm64",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "14.0",
-        "VCPKG_TARGET_TRIPLET": "arm64-osx"
+        "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "MOV_REQUIRE_GOLDEN_CHECKS": "ON"
       },
       "environment": {
         "MACOSX_DEPLOYMENT_TARGET": "14.0",
@@ -194,7 +196,8 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_CXX_COMPILER": "cl",
         "VCPKG_TARGET_TRIPLET": "x64-windows",
-        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "Embedded"
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "Embedded",
+        "MOV_REQUIRE_GOLDEN_CHECKS": "ON"
       },
       "condition": {
         "type": "equals",

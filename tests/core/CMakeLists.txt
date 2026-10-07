@@ -49,8 +49,11 @@ mov_add_test(
 )
 
 # golden.txt is what golden.py prints; the F8 tests read it. This keeps the two
-# from drifting (the script needs only a Python 3 interpreter).
-find_package(Python3 COMPONENTS Interpreter QUIET)
+# from drifting. golden.py needs Python 3.11 (statistics.linear_regression with
+# proportional=True). CI presets set MOV_REQUIRE_GOLDEN_CHECKS so a runner
+# without Python cannot skip the check silently.
+option(MOV_REQUIRE_GOLDEN_CHECKS "Fail configuration if Python >= 3.11 is missing (the golden checks need it)" OFF)
+find_package(Python3 3.11 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     add_test(
         NAME hwm_golden_is_current
@@ -58,6 +61,8 @@ if(Python3_Interpreter_FOUND)
             ${Python3_EXECUTABLE} -I "${PROJECT_SOURCE_DIR}/tests/fixtures/core/hwm/golden.py" --check
             "${PROJECT_SOURCE_DIR}/tests/fixtures/core/hwm/golden.txt"
     )
+elseif(MOV_REQUIRE_GOLDEN_CHECKS)
+    message(FATAL_ERROR "Python >= 3.11 not found, and MOV_REQUIRE_GOLDEN_CHECKS is ON")
 else()
-    message(STATUS "Python 3 not found: hwm_golden_is_current is not registered")
+    message(STATUS "Python >= 3.11 not found: hwm_golden_is_current is not registered")
 endif()
