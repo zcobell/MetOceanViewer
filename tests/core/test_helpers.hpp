@@ -33,6 +33,11 @@ inline constexpr double infinity = std::numeric_limits<double>::infinity();
   return diff <= rel * (mag_a < mag_b ? mag_b : mag_a);
 }
 
+/// |a - b| <= eps.
+[[nodiscard]] constexpr bool near_abs(double a, double b, double eps) noexcept {
+  return (a < b ? b - a : a - b) <= eps;
+}
+
 }  // namespace mov::test
 
 // TimeRange has begin() and end(), so Catch2 mistakes it for a range of
