@@ -61,17 +61,49 @@ concept TemporaryString = std::same_as<std::remove_cvref_t<S>, std::string> and
 /// whitespace at the start of `rest`, returns the run of non-whitespace after
 /// it as a view, and moves `rest` past that run. nullopt when only whitespace
 /// remains.
+/// The same for any separator: the words of "a,b;c" with `is_separator` true
+/// for ',' and ';'. Runs of separators count as one, so no empty word comes
+/// back (use split_on_into to keep empty fields).
+template <std::predicate<char> IsSeparator>
 [[nodiscard]] constexpr std::optional<std::string_view> next_word(
-    std::string_view& rest) noexcept {
-  rest = skip_space(rest);
+    std::string_view& rest, IsSeparator is_separator) noexcept {
+  const auto first = std::ranges::find_if_not(rest, is_separator);
+  rest.remove_prefix(static_cast<std::size_t>(first - rest.begin()));
   if (rest.empty()) {
     return std::nullopt;
   }
-  const auto last = std::ranges::find_if(rest, core::detail::is_space);
+  const auto last = std::ranges::find_if(rest, is_separator);
   const auto length = static_cast<std::size_t>(last - rest.begin());
   const std::string_view word = rest.substr(0, length);
   rest.remove_prefix(length);
   return word;
+}
+
+[[nodiscard]] constexpr std::optional<std::string_view> next_word(
+    std::string_view& rest) noexcept {
+  return next_word(rest, core::detail::is_space);
+}
+
+/// The non-allocating comma-style counterpart of split_ws_into: puts the first
+/// `out.size()` fields of `text` (between `delimiter`s, empty fields kept:
+/// "a,,b" has three and "" has one) in `out` and returns how many fields there
+/// are, counting no further than `out.size() + 1`.
+[[nodiscard]] constexpr std::size_t split_on_into(
+    std::string_view text, char delimiter,
+    std::span<std::string_view> out) noexcept {
+  std::size_t count = 0;
+  while (count <= out.size()) {
+    const std::size_t end = text.find(delimiter);
+    if (count < out.size()) {
+      out[count] = text.substr(0, end);
+    }
+    ++count;
+    if (end == std::string_view::npos) {
+      break;
+    }
+    text.remove_prefix(end + 1);
+  }
+  return count;
 }
 
 /// The maximal runs of non-whitespace in `text`, as views of it. No empty

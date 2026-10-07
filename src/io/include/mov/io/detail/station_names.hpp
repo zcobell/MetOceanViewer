@@ -12,13 +12,15 @@
 #include <string_view>
 #include <vector>
 
+#include "mov/core/station.hpp"
+
 namespace mov::io::detail {
 
-/// `text` as well-formed UTF-8 without NUL: every byte that is not part of a
-/// well-formed sequence, and every NUL, becomes U+FFFD. `replaced` says
-/// whether any did.
+/// `text` as station text (well-formed UTF-8 without NUL): every byte that is
+/// not part of a well-formed sequence, and every NUL, becomes U+FFFD.
+/// `replaced` says whether any did.
 struct CleanedText {
-  std::string text;
+  core::StationText text;
   bool replaced;
   friend bool operator==(const CleanedText&, const CleanedText&) = default;
 };

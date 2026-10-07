@@ -23,22 +23,27 @@ constexpr std::string_view replacement_character{"\xEF\xBF\xBD"};
 }  // namespace
 
 CleanedText replace_invalid_utf8(std::string_view text) {
-  CleanedText out{.text = {}, .replaced = false};
-  out.text.reserve(text.size());
+  std::string cleaned;
+  bool replaced = false;
+  cleaned.reserve(text.size());
   while (not text.empty()) {
     // A NUL is well-formed UTF-8, but no station key or name may hold one.
     const std::size_t length =
         text.front() == '\0' ? 0 : core::detail::utf8_sequence_length(text);
     if (length == 0) {
-      out.text += replacement_character;
-      out.replaced = true;
+      cleaned += replacement_character;
+      replaced = true;
       text.remove_prefix(1);
     } else {
-      out.text += text.substr(0, length);
+      cleaned += text.substr(0, length);
       text.remove_prefix(length);
     }
   }
-  return out;
+  // Well-formed by construction, so make cannot fail; the empty fallback is
+  // not reachable.
+  return {.text = core::StationText::make(std::move(cleaned))
+                      .value_or(core::StationText{}),
+          .replaced = replaced};
 }
 
 UniqueIds uniquify_ids(std::span<const std::string> names) {

@@ -61,6 +61,11 @@ enum class ParseErrc : std::uint8_t {
   count_mismatch,
   corrupt_record,
   trailing_text,
+  /// A ReadContext limit was exceeded: `context` says how much the input holds
+  /// and the limit; `line` is where the reader noticed (1-based, or the last
+  /// line read). A file that is too big for `max_text_bytes` is a FileError
+  /// (`file_too_large`) at open instead.
+  too_large,
 };
 
 namespace detail {

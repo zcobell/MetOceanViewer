@@ -325,8 +325,9 @@ std::expected<void, ParseError> ImedsParser::begin_station(
   if (name.replaced) {
     ++renamed_names_;
   }
-  stations_.push_back(
-      {.name = std::move(name.text), .location = *location, .rows = {}});
+  stations_.push_back({.name = std::string{name.text.view()},
+                       .location = *location,
+                       .rows = {}});
   return {};
 }
 
