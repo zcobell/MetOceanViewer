@@ -47,6 +47,14 @@ macro(mov_create_option_targets)
         target_compile_options(mov_options INTERFACE /permissive- /Zc:preprocessor)
     endif()
 
+    # No fused multiply-add: a * x + b must round twice everywhere, so that
+    # results computed at compile time, on x86-64 and on arm64 (where GCC and
+    # Clang contract by default) agree bit for bit. MSVC's default /fp:precise
+    # does not contract across statements, so it needs no flag.
+    if(NOT MSVC)
+        target_compile_options(mov_options INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-ffp-contract=off>)
+    endif()
+
     include(cmake/CompilerWarnings.cmake)
     mov_set_project_warnings(mov_warnings ${MOV_WARNINGS_AS_ERRORS})
 
