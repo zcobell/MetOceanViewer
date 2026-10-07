@@ -25,12 +25,15 @@ enum class WarningCode : std::uint8_t {
   partial_record_dropped,
   fewer_snapshots_than_header,
   epoch_used,  // no cold start given: times are relative to the epoch
+  time_precision_dropped,  // sub-millisecond digits of a time were rounded away
   header_line_skipped,
   duplicate_station_id_renamed,
   invalid_utf8_replaced,
   // station netCDF, SN section 12.7
   foreign_cf,
   crs_assumed,
+  crs_approximate,  // a projection used a ballpark or low-accuracy
+                    // transformation
   datum_unknown,
   tz_assumed_utc,
   skipped_variable,

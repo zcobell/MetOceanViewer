@@ -12,7 +12,7 @@ namespace mov::io {
 namespace {
 
 // Indexed by the enumerator's value; the static_assert keeps it in step.
-constexpr std::array<std::string_view, 21> tokens{
+constexpr std::array<std::string_view, 23> tokens{
     "times_reordered",
     "duplicate_times_dropped",
     "conflicting_duplicate_times",
@@ -22,11 +22,13 @@ constexpr std::array<std::string_view, 21> tokens{
     "partial_record_dropped",
     "fewer_snapshots_than_header",
     "epoch_used",
+    "time_precision_dropped",
     "header_line_skipped",
     "duplicate_station_id_renamed",
     "invalid_utf8_replaced",
     "foreign_cf",
     "crs_assumed",
+    "crs_approximate",
     "datum_unknown",
     "tz_assumed_utc",
     "skipped_variable",

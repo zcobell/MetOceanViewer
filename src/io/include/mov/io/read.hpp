@@ -51,8 +51,13 @@ using continuation_result_t = std::remove_cvref_t<std::invoke_result_t<F, T&&>>;
 }  // namespace detail
 
 /// A value together with what was noticed while producing it: a writer monad
-/// over warnings. Every reader returns `std::expected<Read<T>, E>`; an error
-/// carries no warnings, because a reader that failed has no value to qualify.
+/// over warnings. Every reader returns `std::expected<Read<T>, E>`, which is
+/// `WriterT Warnings (Either E)`: the transformer order is the one where an
+/// error discards the warnings so far, because a reader that failed has no
+/// value to qualify. (`Either E (Writer W a)` is this type; `Writer W (Either
+/// E a)`, which would keep them, is not.) `pure` is the unit, `and_then` and
+/// `and_then_read` the bind, and the monad laws hold: `pure(x).and_then(f) ==
+/// f(x)`, `m.and_then(pure) == m`, and `and_then` is associative (tested).
 ///
 /// Both combinators consume `*this` (`std::move(r).transform(f)`) and keep
 /// the warnings in order: the earlier stage's first.
@@ -85,6 +90,12 @@ struct Read {
 
   friend bool operator==(const Read&, const Read&) = default;
 };
+
+/// A value with no warnings.
+template <class T>
+[[nodiscard]] Read<std::remove_cvref_t<T>> pure(T&& value) {
+  return {.value = std::forward<T>(value), .warnings = {}};
+}
 
 /// Continues a `std::expected<Read<T>, E>` with `f: T&& -> expected<Read<U>,
 /// E2>`, where E2 converts to E. Yields `expected<Read<U>, E>`; the warnings

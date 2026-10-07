@@ -29,8 +29,10 @@ enum class FileOp : std::uint8_t {
   read,
   write,
   close,
-  fsync,
+  fsync,      // the temporary file
+  fsync_dir,  // the directory that holds the target, after the rename
   rename,
+  permissions,  // copying the mode of the replaced file
   remove,
 };
 
@@ -76,6 +78,11 @@ namespace detail {
 /// 0-based byte offset in that line when one applies. `context` is the
 /// offending text, at most `max_context_bytes` long and cut on a UTF-8
 /// boundary, so a hostile megabyte line cannot end up in an error value.
+///
+/// `column` refers to the text as given to the parser, not to any trimmed or
+/// folded copy. `context` is raw input: bytes that are not UTF-8, control
+/// characters and markup included. Whatever shows it (a log, the UI) must
+/// escape it.
 class ParseError {
  public:
   static constexpr std::size_t max_context_bytes = 120;

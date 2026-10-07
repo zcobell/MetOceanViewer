@@ -29,7 +29,7 @@ Warning warning(WarningCode code, std::string subject = {},
 
 TEST_CASE("every WarningCode has its own stable token", "[io][warning]") {
   using mov::io::to_token;
-  const std::array<std::pair<WarningCode, std::string_view>, 21> expected{{
+  const std::array<std::pair<WarningCode, std::string_view>, 23> expected{{
       {WarningCode::times_reordered, "times_reordered"},
       {WarningCode::duplicate_times_dropped, "duplicate_times_dropped"},
       {WarningCode::conflicting_duplicate_times, "conflicting_duplicate_times"},
@@ -39,12 +39,14 @@ TEST_CASE("every WarningCode has its own stable token", "[io][warning]") {
       {WarningCode::partial_record_dropped, "partial_record_dropped"},
       {WarningCode::fewer_snapshots_than_header, "fewer_snapshots_than_header"},
       {WarningCode::epoch_used, "epoch_used"},
+      {WarningCode::time_precision_dropped, "time_precision_dropped"},
       {WarningCode::header_line_skipped, "header_line_skipped"},
       {WarningCode::duplicate_station_id_renamed,
        "duplicate_station_id_renamed"},
       {WarningCode::invalid_utf8_replaced, "invalid_utf8_replaced"},
       {WarningCode::foreign_cf, "foreign_cf"},
       {WarningCode::crs_assumed, "crs_assumed"},
+      {WarningCode::crs_approximate, "crs_approximate"},
       {WarningCode::datum_unknown, "datum_unknown"},
       {WarningCode::tz_assumed_utc, "tz_assumed_utc"},
       {WarningCode::skipped_variable, "skipped_variable"},
@@ -210,4 +212,102 @@ TEST_CASE("and_then_read result types are exact", "[io][read]") {
       continuation);
   REQUIRE(out.has_value());
   CHECK(out->value == "42");
+}
+
+// ---- the monad laws ---------------------------------------------------------
+
+namespace {
+
+Read<int> add_one(int v) {
+  return Read<int>{.value = v + 1,
+                   .warnings = {warning(WarningCode::foreign_cf, "add_one")}};
+}
+
+Read<int> double_it(int v) {
+  return Read<int>{.value = v * 2,
+                   .warnings = {warning(WarningCode::crs_assumed, "double")}};
+}
+
+Read<int> start() {
+  return Read<int>{.value = 5, .warnings = {warning(WarningCode::epoch_used)}};
+}
+
+using Fallible = std::expected<Read<int>, std::string>;
+
+Fallible fallible_add_one(int v) { return add_one(v); }
+
+Fallible fallible_double(int v) { return double_it(v); }
+
+Fallible fails(int) { return std::unexpected{"stop"}; }
+
+Fallible fallible_start() { return start(); }
+
+}  // namespace
+
+TEST_CASE("Read: pure is a left and right identity of and_then",
+          "[io][read][laws]") {
+  // pure(x).and_then(f) == f(x)
+  CHECK(mov::io::pure(5).and_then(add_one) == add_one(5));
+  // m.and_then(pure) == m
+  CHECK(start().and_then([](int v) { return mov::io::pure(v); }) == start());
+  CHECK(mov::io::pure(5) == Read<int>{.value = 5, .warnings = {}});
+}
+
+TEST_CASE("Read: and_then is associative", "[io][read][laws]") {
+  const Read<int> left = start().and_then(add_one).and_then(double_it);
+  const Read<int> right =
+      start().and_then([](int v) { return add_one(v).and_then(double_it); });
+  CHECK(left == right);
+  CHECK(left.value == 12);
+  CHECK(left.warnings.size() == 3);
+}
+
+TEST_CASE("Read: transform is and_then of pure", "[io][read][laws]") {
+  const auto twice = [](int v) { return v * 2; };
+  CHECK(start().transform(twice) ==
+        start().and_then([&twice](int v) { return mov::io::pure(twice(v)); }));
+}
+
+TEST_CASE("and_then_read: pure is a left and right identity",
+          "[io][read][laws]") {
+  const auto lift_pure = [](int v) -> Fallible { return mov::io::pure(v); };
+  CHECK(mov::io::and_then_read(Fallible{mov::io::pure(5)}, fallible_add_one) ==
+        fallible_add_one(5));
+  CHECK(mov::io::and_then_read(fallible_start(), lift_pure) ==
+        fallible_start());
+}
+
+TEST_CASE("and_then_read is associative", "[io][read][laws]") {
+  const Fallible left = mov::io::and_then_read(
+      mov::io::and_then_read(fallible_start(), fallible_add_one),
+      fallible_double);
+  const Fallible right =
+      mov::io::and_then_read(fallible_start(), [](int v) -> Fallible {
+        return mov::io::and_then_read(fallible_add_one(v), fallible_double);
+      });
+  REQUIRE(left.has_value());
+  CHECK(left == right);
+  CHECK(left->value == 12);
+}
+
+TEST_CASE("and_then_read: an error anywhere short-circuits and drops warnings",
+          "[io][read][laws]") {
+  // An error in the middle of a chain: nothing after it runs.
+  bool ran_after = false;
+  const Fallible out =
+      mov::io::and_then_read(mov::io::and_then_read(fallible_start(), fails),
+                             [&ran_after](int v) -> Fallible {
+                               ran_after = true;
+                               return add_one(v);
+                             });
+  REQUIRE(not out.has_value());
+  CHECK(out.error() == "stop");
+  CHECK(not ran_after);
+
+  // The error is a left zero and a right zero.
+  const Fallible zero_left = mov::io::and_then_read(
+      Fallible{std::unexpected{"first"}}, fallible_add_one);
+  CHECK(zero_left == Fallible{std::unexpected{"first"}});
+  const Fallible zero_right = mov::io::and_then_read(fallible_start(), fails);
+  CHECK(zero_right == Fallible{std::unexpected{"stop"}});
 }
