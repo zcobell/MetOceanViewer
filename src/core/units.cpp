@@ -11,6 +11,7 @@
 #include <utility>
 #include <variant>
 
+#include "mov/core/detail/ascii.hpp"
 #include "mov/core/detail/overloaded.hpp"
 
 namespace mov::core {
@@ -44,17 +45,6 @@ constexpr Spelling<U> symbol_spelling(std::string_view text, U unit) {
 template <class U>
 constexpr Spelling<U> word_spelling(std::string_view lower_text, U unit) {
   return {.text = lower_text, .unit = unit, .any_case = true};
-}
-
-constexpr char lower_ascii(char c) noexcept {
-  return (c >= 'A' and c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
-}
-
-constexpr bool equal_any_case(std::string_view text,
-                              std::string_view lower_text) noexcept {
-  return std::ranges::equal(text, lower_text, [](char a, char b) noexcept {
-    return lower_ascii(a) == b;
-  });
 }
 
 constexpr std::array length_spellings{
@@ -140,7 +130,8 @@ template <class U, std::size_t N>
 std::optional<Unit> lookup(const std::array<Spelling<U>, N>& table,
                            std::string_view text) {
   const auto it = std::ranges::find_if(table, [text](const Spelling<U>& s) {
-    return s.any_case ? equal_any_case(text, s.text) : text == s.text;
+    return s.any_case ? detail::equal_ignore_case(text, s.text)
+                      : text == s.text;
   });
   if (it == table.end()) {
     return std::nullopt;
@@ -164,18 +155,13 @@ std::optional<Unit> find_family_unit(std::string_view text) {
   return lookup(temperature_spellings, text);
 }
 
-constexpr bool is_space(char c) noexcept {
-  return c == ' ' or c == '\t' or c == '\n' or c == '\r' or c == '\v' or
-         c == '\f';
-}
-
 /// Trims, and collapses each inner run of whitespace to one space.
 std::string normalized(std::string_view text) {
   std::string out;
   out.reserve(text.size());
   bool pending_space = false;
   for (const char c : text) {
-    if (is_space(c)) {
+    if (detail::is_space(c)) {
       pending_space = not out.empty();
       continue;
     }

@@ -1,0 +1,34 @@
+# F12: hand-written datum rows for the DatumTable tests (docs/core-design.md 7.1).
+#
+# Derived from rows of libraries/libmetocean/data/noaa_stations.csv (8518750,
+# The Battery NY; pivot MSL) and xtide_stations.csv (xTide_0001; pivot MLLW).
+# The legacy columns are offsets: the value to ADD to a series in the pivot
+# datum to express it in the column's datum. A height above the pivot is the
+# negated offset, which is what the rows below carry.
+#
+# row,<station>,<reference>,<datum>,<metres above the reference datum>
+# expect,<station>,<from>,<to>,<offset in metres: add to a `from` series to get `to`>
+#   hand-checked: offset(from, to) = height[from] - height[to]
+# bare,<station>,<reference>   a station with no usable offsets (all -999999)
+row,noaa:8518750,msl,mllw,-0.77527
+row,noaa:8518750,msl,mlw,-0.71245
+row,noaa:8518750,msl,mhw,0.65128
+row,noaa:8518750,msl,mhhw,0.75048
+row,noaa:8518750,msl,ngvd29,-0.27441
+row,noaa:8518750,msl,navd88,0.06368
+expect,noaa:8518750,msl,mllw,0.77527
+expect,noaa:8518750,msl,mhhw,-0.75048
+expect,noaa:8518750,mllw,mhhw,-1.52575
+expect,noaa:8518750,mhhw,navd88,0.68680
+expect,noaa:8518750,ngvd29,navd88,-0.33809
+row,xtide:0001,mllw,mlw,0.88001
+row,xtide:0001,mllw,msl,2.19900
+row,xtide:0001,mllw,mhw,3.51712
+row,xtide:0001,mllw,mhhw,3.78815
+row,xtide:0001,mllw,ngvd29,2.02841
+row,xtide:0001,mllw,navd88,0.97508
+expect,xtide:0001,mllw,msl,-2.19900
+expect,xtide:0001,msl,mllw,2.19900
+expect,xtide:0001,mlw,mhhw,-2.90814
+expect,xtide:0001,navd88,ngvd29,-1.05333
+bare,xtide:0002,mllw
