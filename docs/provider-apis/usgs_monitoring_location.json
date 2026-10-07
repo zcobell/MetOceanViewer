@@ -1,0 +1,95 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "USGS-01646500",
+        "agency_code": "USGS",
+        "agency_name": "U.S. Geological Survey",
+        "monitoring_location_number": "01646500",
+        "monitoring_location_name": "POTOMAC RIVER NEAR WASH, DC LITTLE FALLS PUMP STA",
+        "district_code": "24",
+        "country_code": "US",
+        "country_name": "United States of America",
+        "state_code": "24",
+        "state_name": "Maryland",
+        "county_code": "031",
+        "county_name": "Montgomery County",
+        "minor_civil_division_code": "90612",
+        "site_type_code": "ST",
+        "site_type": "Stream",
+        "hydrologic_unit_code": "020700081005",
+        "basin_code": null,
+        "altitude": 37.04,
+        "altitude_accuracy": 0.17,
+        "altitude_method_code": "X",
+        "altitude_method_name": "GNSS2 - Level 2 Quality Survey Grade Global Navigation Satellite System",
+        "vertical_datum": "NAVD88",
+        "vertical_datum_name": "North American Vertical Datum of 1988",
+        "horizontal_positional_accuracy_code": "S",
+        "horizontal_positional_accuracy": "Accurate to + or - 1 sec.",
+        "horizontal_position_method_code": "G",
+        "horizontal_position_method_name": "Mapping grade GPS unit (handheld accuracy range 12 to 40 ft)",
+        "original_horizontal_datum": "NAD83",
+        "original_horizontal_datum_name": "North American Datum of 1983",
+        "drainage_area": 11560.0,
+        "contributing_drainage_area": null,
+        "time_zone_abbreviation": "EST",
+        "uses_daylight_savings": "Y",
+        "construction_date": null,
+        "aquifer_code": null,
+        "national_aquifer_code": null,
+        "aquifer_type_code": null,
+        "well_constructed_depth": null,
+        "hole_constructed_depth": null,
+        "depth_source_code": null,
+        "revision_note": "&lt;ul&gt;\n    &lt;li&gt;WSP 726: Drainage area.&lt;/li&gt;\n    &lt;li&gt;WDR MD-DE-75-1: 1973-74(M).&lt;/li&gt;\n    &lt;li&gt;https://waterdata.usgs.gov/nwis/dv/?site_no=01646500:&lt;a href=\"https://waterdata.usgs.gov/md/nwis/dv?cb_00060=on&amp;format=html&amp;site_no=01646500&amp;referred_module=sw&amp;period=&amp;begin_date=2018-03-02&amp;end_date=2018-03-02\"&gt; 2018.&lt;/a&gt;&lt;/li&gt;\n    &lt;li&gt;https://waterdata.usgs.gov/nwis/uv/?site_no=01646500:&lt;a href=\"https://nwis.waterdata.usgs.gov/md/nwis/uv/?cb_00060=on&amp;site_no=01646500&amp;referred_module=sw&amp;period=&amp;begin_date=2021-03-02&amp;end_date=2021-06-25\"&gt; 2021.&lt;/a&gt;&lt;/li&gt;\n    &lt;li&gt;Discharge for Measurement 385 made on 06/25/2021 was revised on 09/22/2021 due to an error in computation.&lt;/li&gt;\n&lt;/ul&gt;",
+        "revision_created": "2017-11-13T06:00:00+00:00",
+        "revision_modified": "2021-10-19T19:48:10.807000+00:00"
+      },
+      "id": "USGS-01646500",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.12763888888888,
+          38.949777777777776
+        ]
+      }
+    }
+  ],
+  "numberReturned": 1,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=json&id=USGS-01646500"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=jsonld&id=USGS-01646500"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=html&id=USGS-01646500"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=csv&id=USGS-01646500"
+    },
+    {
+      "type": "application/json",
+      "title": "Monitoring locations",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations"
+    }
+  ],
+  "timeStamp": "2026-10-07T04:26:01.318235Z"
+}

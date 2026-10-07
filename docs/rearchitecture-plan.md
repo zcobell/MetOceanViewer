@@ -170,11 +170,11 @@ CMakeLists.txt  CMakePresets.json  vcpkg.json
 cmake/
 src/core/        # C++23, NO Qt: domain types, units, datums, stats, time series
 src/io/          # NO Qt: RAII netCDF wrapper; IMEDS, ADCIRC (ascii/nc), DFlow, CSV, HWM, generic nc
-src/providers/   # NOAA CO-OPS, USGS, NDBC, CRMS, XTide; Qt Network only at the edge
+src/providers/   # NOAA CO-OPS, USGS, NDBC, XTide; Qt Network only at the edge
 src/app/         # view-models (QObject / QML_ELEMENT), AppState, commands, settings
 src/ui/qml/      # map shell, panels, chart, theme
 src/cli/         # metocean-data CLI (+ hwm-stats subcommand)
-tools/           # crms-to-netcdf (replaces ProcessCrmsDatabase), station-list builder
+tools/           # station-list builder
 tests/           # Catch2; recorded API fixtures; golden files
 packaging/       # macos/, windows/, linux/ — CPack config, icons, DMG background, Info.plist
 docs/
@@ -253,7 +253,7 @@ legacy dialects; the writer emits only the new one.
 
 - Use **Qt Graphs** (`GraphsView`, `LineSeries`, `DateTimeAxis`). Qt Charts is being
   phased out in favor of Qt Graphs.
-- Add C++-side min/max-per-pixel-bucket **decimation**, so multi-year CRMS or USGS
+- Add C++-side min/max-per-pixel-bucket **decimation**, so multi-year USGS or NDBC
   series stay smooth when zooming.
 - Hide the chart behind a thin `ChartModel` boundary. If Qt Graphs is inadequate for
   crosshair, tooltip or performance, a custom `QQuickItem` line renderer
@@ -265,7 +265,7 @@ legacy dialects; the writer emits only the new one.
 A screenshot of a web app (`screenshot.png` at repo root) is the reference for
 *organization*, not pixel-exact look.
 
-- **Full-bleed map.** NOAA, USGS, NDBC, CRMS and XTide become **toggleable layers on
+- **Full-bleed map.** NOAA, USGS, NDBC and XTide become **toggleable layers on
   one map**, each with a distinct icon. This replaces the per-source tabs.
 - **Left floating panel:** time range, product, datum, units and display time zone.
   It adapts to the provider of the selected station. It is collapsible.
@@ -300,7 +300,7 @@ A screenshot of a web app (`screenshot.png` at repo root) is the reference for
 | Vendored netCDF/HDF5/curl/zlib/OpenSSL | vcpkg manifest. Qt 6 uses Schannel on Windows and the native backend on macOS, so OpenSSL does not need to be shipped. |
 | Embedded inconsistent CSVs | One normalized station asset generated at build time by `tools/`, loaded once off-thread, plus an optional "refresh station list from APIs" action |
 | XTide 2.15.1 compiled via a hand-listed `.pro` | Keep vendored, but build it as its own CMake target with warnings isolated. Consider upgrading to the latest XTide/libtcd and the latest `harmonics.tcd`. |
-| `ProcessCrmsDatabase` (Unix-only, shares no code) | `tools/crms-to-netcdf`, built on `src/io`, cross-platform |
+| `ProcessCrmsDatabase` (Unix-only, shares no code) | Deleted with the CRMS feature (§6, decision 7) |
 
 ---
 
@@ -393,12 +393,11 @@ before Phase 3 is done.
      bugs 4 and 9.
    - Every bug in §1.2 that falls in scope gets a regression test.
 3. **Providers and CLI**
-   - Async NOAA CO-OPS, USGS (**new Water Data API**), NDBC, CRMS and XTide.
+   - Async NOAA CO-OPS, USGS (**new Water Data API**), NDBC and XTide.
    - Recorded-response fixture tests, plus a separate opt-in live-API test job
      (nightly, non-blocking).
    - Rebuild `metocean-data` on top of the providers: fully flag-driven with no
      `std::cin` prompts, and an `hwm-stats` subcommand that replaces MetOceanHWMStats.
-   - Build `tools/crms-to-netcdf`.
 4. **Map shell**
    - AppState and view-models.
    - Unified station layers and selection.
@@ -418,7 +417,7 @@ before Phase 3 is done.
 - [ ] USGS station data (instantaneous, daily, historic)
 - [ ] NDBC archive data
 - [ ] XTide predictions
-- [ ] CRMS database
+- ~~CRMS database~~ (removed in v5, §6 decision 7)
 - [ ] ADCIRC fort.61 ASCII (with station file) and netCDF (fort.61/62/71/72)
 - [ ] DFlow-FM his files (incl. 3D variables)
 - [ ] IMEDS read/write
@@ -427,6 +426,15 @@ before Phase 3 is done.
 - [ ] Vertical datum conversion (VDatum offsets)
 - [ ] Session save/load
 - [ ] Image/PDF and data export
+
+### v5.0 extras (approved 2026-10-06; optional, never on the parity path)
+See `docs/v5-extras.md` for costs and the cut order if parity slips.
+- [ ] Quick stats in the Details panel (min, max, mean, count, peak timing)
+- [ ] Station search by name or id, with fly-to
+- [ ] Favorites and recent stations
+- [ ] Observed-minus-predicted residual (surge)
+- [ ] Extra CO-OPS scalar products (conductivity, salinity, visibility, air_gap,
+      one_minute_water_level) and `--format json` in the CLI
 
 ---
 
@@ -442,7 +450,27 @@ open. Do not guess; ask before proceeding past the phase that needs them.
 3. **Default basemap.** A free keyless vector style, or Mapbox with a user-supplied
    token? Needed in Phase 4.
 4. **v4 hotfixes.** Should bugs 1–3 in §1.2 be patched on the legacy v4 code for
-   current users before v5 lands?
+   current users before v5 lands? **Decided (USGS only): no v4 hotfix for the USGS
+   endpoint shutdown on 2027-02-22.** v4 USGS support may break. Bugs 1–3 are still open.
+
+### Provider decisions (2026-10-06; see `docs/provider-apis.md`)
+
+5. **USGS API key:** optional, entered per user in Settings and stored with QtKeychain.
+   The project ships no key.
+6. **NOAA station list:** active stations only, from the CO-OPS metadata API.
+   Retired stations are dropped.
+7. **CRMS: Decided: removed as a feature in v5.** No supported CRMS API exists. The
+   only per-station path is scripting the CIMS ASP.NET download form, which has no
+   published contract (investigation in `docs/provider-apis.md`). There is no CRMS
+   provider, no S3 netCDF, no `crms-to-netcdf` tool and no `ProcessCrmsDatabase`
+   successor. Bugs 16 and 26 are retired with it. If CPRA publishes a real API,
+   revisit; the recorded time-zone finding (CST, UTC-6 year-round) still applies.
+8. **NDBC:** cover the current year using `realtime2` (45 days) plus the monthly files,
+   in addition to the yearly historical files.
+9. **XTide:** upgrade to XTide 2.16, libtcd 2.2.7-r3 and the
+   `harmonics-dwf-20251228-free` constants. Ship only the "free" harmonics file.
+10. **Scope:** v4 feature parity is the baseline for v5.0. Cheap additions the new
+    APIs make available may be proposed, but must not delay parity.
 
 ## 7. Engineering rules for v5
 
