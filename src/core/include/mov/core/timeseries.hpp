@@ -156,8 +156,10 @@ class TimeSeries {
       std::vector<Sample> samples, SeriesMeta meta) &&;
 
   /// Core only: f applied to every sample, times and metadata unchanged. The
-  /// public sample-changing operations (convert, scale_offset; WP3) keep the
-  /// metadata coherent with the values.
+  /// public sample-changing operations keep the metadata coherent with the
+  /// values: convert rewrites the unit and shift the datum. scale_offset
+  /// changes the values under unchanged metadata (a calibration: the
+  /// caller owns what it means).
   template <std::invocable<Sample> F>
     requires std::same_as<std::invoke_result_t<F&, Sample>, Sample>
   [[nodiscard]] TimeSeries transform_samples(const detail::CoreKey& key,

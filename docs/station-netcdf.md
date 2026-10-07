@@ -174,7 +174,9 @@ Global string attributes are written with their byte length (`nc_put_att_text(le
 The data-variable **name is the quantity token** (this fixes the token even when two tokens share a CF standard name,
 e.g. observed and predicted water level). The registry lives in `core` (single source of truth; this table is its 1.0
 content). Writers store the *canonical* units below (core converts exactly beforehand, plan §6 item 13); display units are a GUI concern.
-Derived quantities (speed/direction from components, plan §2.2/legacy-formats.md §4) are never stored.
+Derived quantities (speed/direction from components, plan §2.2/legacy-formats.md §4) are never stored; the one exception is
+`difference`, which has no other source. A `difference` has no `standard_name` (the attribute is omitted) and takes the units of the
+series it was computed from; it is never a water level, so it carries no datum.
 
 | Token | `standard_name` (all verified present in table v95) | `units` | Source (v4 / provider) |
 |---|---|---|---|
@@ -197,6 +199,7 @@ Derived quantities (speed/direction from components, plan §2.2/legacy-formats.m
 | `wave_period_average` | `sea_surface_wave_mean_period` | `s` | NDBC APD |
 | `wave_direction` | `sea_surface_wave_from_direction` | `degree` | NDBC MWD |
 | `discharge` | `water_volume_transport_in_river_channel` | `m3 s-1` | USGS 00060 (ft3/s converted exactly, 0.028316846592) |
+| `difference` | none | the unit of its operands (no fixed canonical unit) | derived: observed minus predicted (residual), written only when a user saves one; `vertical_datum` is never written for it |
 | `value` | none | source text, or omitted if unknown | any series whose quantity is unknown (user IMEDS, legacy dialects A/B) |
 
 Why `water_surface_height_above_reference_datum` for every water level, not `sea_surface_height_above_mean_sea_level`

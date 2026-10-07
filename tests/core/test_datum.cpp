@@ -14,19 +14,23 @@
 #include <variant>
 #include <vector>
 
+#include "datum_fixture.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/test/fixture.hpp"
 
 using mov::core::DatumHeight;
 using mov::core::DatumTable;
 using mov::core::DatumTableError;
 using mov::core::Length;
-using mov::core::LengthUnit;
 using mov::core::MissingMsl;
 using mov::core::NonFiniteHeight;
 using mov::core::parse_vertical_datum;
 using mov::core::to_string;
 using mov::core::VerticalDatum;
+using mov::test::Expectation;
+using mov::test::in_metres;
+using mov::test::metres;
+using mov::test::read_offsets_fixture;
+using mov::test::Station;
 
 namespace {
 
@@ -35,69 +39,6 @@ constexpr std::array all_datums{VerticalDatum::mhhw,   VerticalDatum::mhw,
                                 VerticalDatum::mlw,    VerticalDatum::mllw,
                                 VerticalDatum::navd88, VerticalDatum::ngvd29,
                                 VerticalDatum::igld85, VerticalDatum::stnd};
-
-Length metres(double v) { return Length::in(v, LengthUnit::meter); }
-double in_metres(Length v) { return v.as(LengthUnit::meter); }
-
-// ---- the F12 fixture --------------------------------------------------------
-
-struct Expectation {
-  VerticalDatum from;
-  VerticalDatum to;
-  double offset;
-};
-
-struct Station {
-  VerticalDatum reference{VerticalDatum::msl};
-  std::vector<DatumHeight> heights;
-  std::vector<Expectation> expectations;
-  bool bare{false};  // no usable offsets
-};
-
-std::vector<std::string> split_commas(const std::string& line) {
-  std::vector<std::string> fields;
-  std::stringstream stream{line};
-  for (std::string field; std::getline(stream, field, ',');) {
-    fields.push_back(field);
-  }
-  return fields;
-}
-
-VerticalDatum datum_of(const std::string& token) {
-  const auto datum = parse_vertical_datum(token);
-  REQUIRE(datum.has_value());
-  return datum ? datum->value_or(VerticalDatum::msl) : VerticalDatum::msl;
-}
-
-std::map<std::string, Station> read_offsets_fixture() {
-  std::ifstream file{mov::test::fixture("core/datum/offsets.csv")};
-  REQUIRE(file.is_open());
-  std::map<std::string, Station> stations;
-  for (std::string line; std::getline(file, line);) {
-    if (line.empty() or line.front() == '#') {
-      continue;
-    }
-    const auto f = split_commas(line);
-    REQUIRE(f.size() >= 3);
-    Station& station = stations[f[1]];
-    if (f[0] == "bare") {
-      station.reference = datum_of(f[2]);
-      station.bare = true;
-    } else if (f[0] == "row") {
-      REQUIRE(f.size() == 5);
-      station.reference = datum_of(f[2]);
-      station.heights.push_back(
-          {.datum = datum_of(f[3]), .height = metres(std::stod(f[4]))});
-    } else {
-      REQUIRE(f[0] == "expect");
-      REQUIRE(f.size() == 5);
-      station.expectations.push_back({.from = datum_of(f[2]),
-                                      .to = datum_of(f[3]),
-                                      .offset = std::stod(f[4])});
-    }
-  }
-  return stations;
-}
 
 }  // namespace
 
