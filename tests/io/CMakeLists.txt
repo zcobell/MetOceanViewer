@@ -23,3 +23,12 @@ mov_add_test(
 if(MOV_REQUIRE_LOCALES)
     target_compile_definitions(mov_io_tests PRIVATE MOV_REQUIRE_LOCALES=1)
 endif()
+
+mov_add_fuzz_test(fuzz_parse_double SOURCES fuzz_parse_double.cpp LIBRARIES mov::io CORPUS io/parse_double)
+mov_add_fuzz_test(fuzz_line_cursor SOURCES fuzz_line_cursor.cpp LIBRARIES mov::io CORPUS io/line_cursor)
+mov_add_fuzz_test(
+    fuzz_parse_cf_time_units
+    SOURCES fuzz_parse_cf_time_units.cpp
+    LIBRARIES mov::io
+    CORPUS io/parse_cf_time_units
+)
