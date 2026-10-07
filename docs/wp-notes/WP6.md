@@ -1,227 +1,281 @@
 # WP6 notes (netCDF wrapper)
 
 Fold into `docs/core-design.md` §4, then delete this file. Everything here is a
-choice §4 left open or a change from it. The declarations otherwise match §4.2.
+choice §4 left open or a change from it, including the changes from the post-WP6
+review (neckbeard-nate, sean-parent) and the maintainer's decisions on it.
 
 ## What exists
 
-Public headers in `src/io/include/mov/io/netcdf/`: `name.hpp` (`NcName`,
-`NcNameRef`), `types.hpp` (`Type`, `Numeric`, `type_of`, `readable_as`,
-`dispatch_numeric`, `DimInfo`, `VarInfo`, `DimRange`, `Slab`, `whole`, `Global`,
-`AttTarget`, `VarOptions`), `masking.hpp` (`Masking<T>`), `file.hpp` (`File`,
-`write_netcdf_atomic`); `mov/io/detail/checked_product.hpp`. Sources in
-`src/io/netcdf/`: `file.cpp` (open, close, moves, structure), `attribute.cpp`,
-`read.cpp`, `masking.cpp`, `write.cpp` (define/put, `write_netcdf_atomic_impl`),
-`path.cpp` (`nc_path`), `blocks.cpp` (`for_each_block`), `library.cpp` (moved from `src/io/netcdf_library.cpp`), and
-the private `nc_call.hpp` and `internal.hpp`.
+Public headers in `src/io/include/mov/io/netcdf/`:
+- `name.hpp`: `NcName`, `NcNameRef`.
+- `types.hpp`: `Type`, `Numeric`, `type_of`, `readable_as`, `dispatch_numeric`,
+  `DimInfo`, `VarInfo`, `DimRange`, `Slab`, `whole`, `rows_per_block`, `Global`,
+  `AttTarget`, `VarOptions`, and `detail::Hyperslab`/`unzip`.
+- `masking.hpp`: `Masking<T>`, and `detail::exact_from<T>`.
+- `file.hpp`: `File` (read-only), `NewFile` (the write capability) and
+  `write_netcdf_atomic`.
 
-Tests: `tests/io/test_nc_*.cpp` in their own executable, `mov_io_netcdf_tests`
-(plus the `_constexpr` pair from `test_nc_constexpr.cpp`). The fixture generator is
-`tests/io/support/nc_fixtures.{hpp,cpp}` (library `mov_nc_fixtures`). The `--wrap`
-shims are in `tests/io/support/nc_wrap.cpp`, the counts in `nc_counts.{hpp,cpp}`.
-CTest gates: `netcdf_include_gate`, `netcdf_include_gate_rejects_violations`
-(`cmake/CheckNetcdfInclude.cmake`, `tests/cmake/netcdf_include/`), and
-`io_compile_fail_checks` (`tests/cmake/compile_fail_io/`, run by the core
-harness).
+Plus `mov/io/detail/checked_product.hpp` and `mov/io/detail/traverse.hpp`.
+
+Sources in `src/io/netcdf/`:
+- `file.cpp`: `Dataset` (the inquiries both handles share), and `File`'s open,
+  close, moves and structure queries.
+- `attribute.cpp`, `read.cpp`, `blocks.cpp`, `masking.cpp`.
+- `write.cpp`: `NewFile` and `write_netcdf_atomic_impl`.
+- `path.cpp`: `nc_path`.
+- `library.cpp`, moved from `src/io/netcdf_library.cpp`.
+- The private headers `nc_call.hpp` and `internal.hpp`.
+
+Tests: `tests/io/test_nc_*.cpp` in their own executable, `mov_io_netcdf_tests`,
+plus the `_constexpr` pair built from `test_nc_constexpr.cpp`.
+- Fixture generator: `tests/io/support/nc_fixtures.{hpp,cpp}` (library
+  `mov_nc_fixtures`).
+- `--wrap` shims: `tests/io/support/nc_wrap.cpp`; the counts are in
+  `nc_counts.{hpp,cpp}`.
+- CTest gates: `netcdf_include_gate` and `netcdf_include_gate_rejects_violations`
+  (`cmake/CheckNetcdfInclude.cmake`, `tests/cmake/netcdf_include/`), and
+  `io_compile_fail_checks` (`tests/cmake/compile_fail_io/`, run by the core
+  harness).
 
 ## Declarations that differ from §4.2
 
-- `ReadLimits`, `ReadContext` and `StopToken` come from `mov/io/read_limits.hpp`
-  (WP5); there is no `nc::` copy. Cancellation polls `StopToken`, never
-  `std::stop_token`.
-- **The data reads (`read`, `read_samples`, `read_char_rows`, `read_strings`) return
-  `expected<…, io::Error>`**, not `NcError`, because they can also end in
-  `Cancelled`. The error is an `NcError` or `Cancelled`. Everything else returns
-  `NcError`.
-- **`AttTarget` is a class, not `variant<Global, NcNameRef>`.** A variant's
-  converting constructor cannot forward a literal to the `consteval` constructor of
-  `NcNameRef`. With the class, `file.text_att("zeta", "units")` checks both literals
-  at compile time. A global attribute is `nc::global`. `AttTarget(const NcName&&)` is
-  deleted, like `NcNameRef`'s.
-- `Type` gains **`other`** (compound, enum, opaque, vlen). Without it, `variables()`
-  of a file holding any user-defined type would fail.
-- `dispatch_numeric(Type, on_numeric, on_other)` takes a handler for the
-  non-numeric types, so it is total. `readable_as<T>(Type)` (the §4.3 table as a
-  `constexpr` predicate) and `whole(const VarInfo&) -> Slab` are public.
-- `WrapperFault` gains **`unrepresentable_path`** (Windows only; see Paths).
-- `File` gains `is_open()` and `path()`. The `path()` is the opened file, or the
-  target of an atomic write.
-- `Masking<T>` gains `masks(T)`, the attribute test without unpacking.
-- `NcError::object` names an attribute in ncdump's notation: `var:att`, or `:att`
-  for a global one. A dimension or variable is named by its own name.
+- **Reading and writing are two types.**
+  - `File` (from `File::open`) is read-only and has no define or put members.
+  - **`NewFile`** is the write capability. It can be neither copied nor moved,
+    only `write_netcdf_atomic` constructs it, and the body gets it by reference. It
+    carries `define_dim`, `define_var<T>`, `define_char_var`, `put_att`, `put<T>`,
+    `put_char_rows` and `end_define`, and its destructor carries the abort policy.
+  - The `writable` flag and the `NC_EPERM` path are gone; a compile-time concept
+    test pins that `File` cannot define.
+- **One source of truth for limits.**
+  - `File::open(path, limits)` stores the `ReadLimits`. The data reads take only a
+    `StopToken` (default: never stops), and `File::limits()` returns what open got.
+  - `write_netcdf_atomic(target, limits, body)` hands `limits` to the `NewFile`,
+    which uses them for the attributes it writes.
+  - `ReadContext` stays the text readers' type; a netCDF reader passes
+    `ctx.limits` to `open` and `ctx.stop` to each read.
+- `ReadLimits` gains **`max_result_bytes`** (1 GiB). Its comment lists the real
+  peak of each read.
+- The data reads (`read`, `read_blocks`, `read_samples`, `read_char_rows`,
+  `read_strings`) return `expected<…, io::Error>`, because they can also end in
+  `Cancelled`. Everything else returns `NcError`.
+- **`read_blocks<T>(name, slab, visit, stop)`** is the one partition of a bulk
+  read:
+  - It resolves the variable once, reuses one buffer, and polls `stop`.
+  - It hands `visit(std::span<const T>, DimRange outer)` each block of
+    `rows_per_block(slab, limits.slab_elements)` outer indices, with every inner
+    range whole.
+  - `rows_per_block` is public and `constexpr`, so WP9 can size its own work
+    without re-deriving the partition.
+  - `read` reads each block straight into its place in the result;
+    `read_samples` masks block by block straight into the `Sample` result.
+  - A block is larger than `slab_elements` only when one outer index alone is.
+- **`AttTarget` is a class**, not `variant<Global, NcNameRef>`. A variant cannot
+  forward a literal to `NcNameRef`'s `consteval` constructor.
+  - `nc::global` is the file.
+  - It has `==`.
+  - `AttTarget(const NcName&&)` is deleted.
+- `Type` gains **`other`** (compound, enum, opaque, vlen).
+  `to_type`/`to_nc_type` are one `constexpr` table, `static_assert`ed to be
+  inverse.
+- `dispatch_numeric(Type, on_numeric, on_other)` is total.
+- `WrapperFault` gains **`unrepresentable_path`** (Windows); `NcOp` gains
+  **`sync`**.
+- `NcName == std::string_view` (and literals).
+- `NewFile::put` and `put_att` deduce T from a contiguous container.
+  `put_char_rows` takes any range of things convertible to `std::string_view`.
+- `read_char_rows` accepts rank ≥ 1: the last dimension is the row length, and
+  every other index is a row (a 1-D variable is one row).
+- `NcError::object` names an attribute in ncdump's notation, `var:att` or `:att`.
+  One formatter (`att_object`) builds it, only on an error path
+  (`Dataset::att_status`).
+- A moved-from `File` keeps its path, so its `closed` errors name the file. A
+  moved-from `NcName` is empty: assign to it or destroy it (documented).
 
-## Behaviour §4 left open
+## Behaviour
 
-Open and close
-- `File::open` opens only a regular file. A directory gives `LibraryStatus{EISDIR}`,
-  any other non-regular file `LibraryStatus{EINVAL}`. netCDF-C reports system
-  errors as positive errno values, so these fit its codes. The check exists because
-  a FIFO blocks `open()` inside HDF5. A missing file is left to netCDF-C (`ENOENT`).
-- Close policy: the destructor of a read handle closes and ignores the result. A
-  write handle destroyed open is aborted. `close() &&` reports. Whenever `nc_close`
-  fails, `nc_abort` follows. In netCDF-C 4.9.3, a failed `nc_close` keeps the id in
-  its list (`dfile.c:1300`), and `nc_abort` always frees it (`dfile.c:1247`). So no
-  id leaks on any path. The `--wrap` tests check this with an injected close failure.
-- `nc_call.hpp`: `nc_status(fn) -> int` is the single entry point; `nc_call(op,
-  object, file, fn)` passes its status to the non-template
-  `status_to_expected`, which builds the `NcError`. Debug builds guard each call with an
-  `inline std::atomic_flag`: `test_and_set`, then assert it was clear. That catches
-  concurrent entry and re-entry. It does not check which thread owns the file. There
-  is no lock (C11). Release builds check nothing. No lint enforces that every
-  `nc_*` call goes through it; in the current sources each one is a lambda passed to
-  `nc_status`/`nc_call`, which a reviewer can grep.
+Close policy (review blocker B1)
+- **A failed `nc_close` is never followed by `nc_abort`.**
+  - The NC4 close path frees state in its release phase without nulling it
+    (`libhdf5/hdf5internal.c:583/650/802`). `NC3_close` frees before it returns a
+    sync error (`libsrc/nc3internal.c:1314/1350`).
+  - So `nc_abort` after a failed close frees twice. The reviewer's probe got an
+    assert in a debug HDF5 and a segfault in release, and the test
+    "a close that fails while netCDF-C releases the file does not crash"
+    reproduces it.
+  - We dropped the id: `close()` reports `NcError{close}` and the handle is given up.
+    netCDF-C keeps that file's entry: **one leaked id per failed close**, the
+    accepted cost. The earlier "no id leaks on any path" claim is withdrawn.
+- **Write handles sync first.**
+  - `NewFile::finish` (stage 3) calls `nc_sync` through `nc_call`; in define mode
+    that runs enddef first.
+  - A failed sync has released nothing, so the file is abandoned (enddef, then
+    abort) and `NcError{sync}` is reported.
+  - Then `nc_close`, with the same rule as above.
+- **Abandoning a write (review blocker B2).**
+  - In define mode `NC4_abort` copies the path into `char[NC_MAX_NAME + 1]` with
+    `strncpy` (no terminator for paths of 256 bytes or more) and `remove()`s that
+    copy. A long path can therefore make it delete a different file.
+  - `NewFile::abandon` calls `nc_enddef` first, ignoring its status: netCDF-C clears
+    the define-mode flag before anything that can fail (`nc4_enddef_netcdf4_file`).
+    Only then does it call `nc_abort`, which then deletes nothing. `TempFileGuard`
+    removes the temporary file.
+  - The test wraps `remove` and asserts that netCDF-C calls none under a 240-byte
+    directory. It fails without the enddef.
+- `File::open` opens only a regular file. A directory is `LibraryStatus{EISDIR}`,
+  anything else `LibraryStatus{EINVAL}`; a FIFO would block `open()`. The path is
+  copied before the call.
 
-Sizes and reads
-- `check_slab` runs before any allocation. It checks the rank (`rank_mismatch`),
-  then each range against its dimension, returning netCDF-C's own codes
-  (`NC_EINVALCOORDS` for a start past the end, `NC_EEDGE` for a count past it). Then
-  `checked_product` (`overflow`), then `max_elements` (`too_large`).
-- Blocks (`blocks.cpp`, `for_each_block`, a `std::function` visitor): the split dimension is the outermost
-  one whose inner dimensions hold at most `slab_elements` elements. Each block
-  covers a run of that dimension, with the outer dimensions at one index. So every
-  block is contiguous in the row-major result, and the read goes straight into the
-  output vector. `slab_elements` of 0 is treated as 1. `stop` is polled before every
-  block, the first one included. The tests check, over many shapes and block sizes,
-  that the blocks cover the slab exactly once, in order.
-- `read_char_rows` also refuses more rows than `max_elements`. A name dimension of
-  length 0 has no bytes, so the byte count alone would not bound the
-  `std::string` objects.
-- `read_strings` caps the total string bytes at `max_text_bytes` (`too_large`). It
-  reads in blocks, and each block's strings are freed through `nc_call` by an RAII
-  holder, even when copying throws.
-- `text_att`: an `NC_STRING` attribute must hold one string (`count_mismatch`); a
-  NULL string is `""`. `numeric_att` checks `length * sizeof(T)` against
-  `max_att_bytes`.
-- 64-bit integers: netCDF-C takes `long long`. Where `int64_t` is `long` (LP64
-  Linux), reads and writes go through a `long long` buffer per block, because a
-  `reinterpret_cast` is banned.
+The choke point
+- `nc_status(fn) -> int` is the single entry point. `nc_call` passes the status to
+  the non-template `status_to_expected`.
+- `nc_inq_libvers` also goes through it.
+- In debug builds an `inline std::atomic_flag` (relaxed) detects concurrent and
+  re-entrant entry and asserts: a detector, not a lock.
+- **`const` does not mean concurrently callable**; the comment of `file.hpp` says so
+  beside the serial-queue precondition.
 
-Masking (`masking.cpp`)
-- `_FillValue` is read with its type checked (`numeric_att<T>`), never through
-  `nc_inq_var_fill`. For a mistyped attribute, `nc_inq_var_fill` does an untyped
-  `nc_get_att` into a buffer sized for the variable (`libsrc/var.c:723`), which is B4
-  again. A wrong type is `type_mismatch` and more than one value is `count_mismatch`.
-  The library writes neither; the fixtures for them are hand-made classic files.
-- Without `_FillValue`, the default fill comes from `nc_inq_var_fill` in the exact
-  type. NC_NOFILL means no fill. **Byte variables get no default fill**, so -127
-  stays a value. The NUG says so (netCDF-C `docs/attribute_conventions.md`: "If
+Sizes
+- `check_slab` runs before any allocation. It checks:
+  - the rank (`rank_mismatch`);
+  - each range against its dimension (`NC_EINVALCOORDS`, `NC_EEDGE`);
+  - `checked_product` (`overflow`);
+  - `max_elements`, and the result bytes (`count × sizeof(element)`) against
+    `max_result_bytes` (`too_large`).
+- Charges:
+  - `read_samples` is charged 16 bytes per `Sample`.
+  - `read_char_rows` is charged 2 bytes per char (read, then copied) plus
+    `rows × sizeof(std::string)`. It also checks `rows ≤ max_elements` (a stride of
+    0 has no bytes).
+  - `read_strings` is charged `n × sizeof(std::string)` up front (and reserves
+    `n`), then each string's bytes as it copies them.
+- Not done: the zero-fill of `read<T>`'s result vector. Not measured.
+
+Masking (maintainer decision on attribute types)
+- `plan_masking` (not a template) reads every attribute once:
+  - `missing_value`, `valid_range` (2 values), `valid_min`, `valid_max` (1 each)
+    are read as int64 when the attribute is an integer type and as double when it
+    is a floating type, both exact.
+  - `scale_factor` and `add_offset` (1 each) are converted to double, exactly or
+    `type_mismatch`.
+  - `_Unsigned` is checked.
+- `_FillValue` is **strict**: the variable's own type and one value
+  (`type_mismatch`, `count_mismatch`). It is read with its type checked, never
+  through `nc_inq_var_fill`, which copies an attribute of another type into a buffer
+  sized for the variable's (`libsrc/var.c:723`, B4).
+- `masking<T>` only converts. `missing_value` and `valid_*` of **another numeric
+  type are accepted when every value is exactly a T**
+  (`detail::exact_from<T>`, `constexpr`, with a table of edge-case tests: 2^53 + 1,
+  2^63, NaN, ±∞, 0.1 to float, 0.5 to int); otherwise `type_mismatch`. Tests cover
+  a netCDF4-python double `missing_value` on a float, an int64 one on an int, and an
+  int `scale_factor`.
+- An unsigned or text attribute is `type_mismatch`.
+- `valid_range` wins over `valid_min`/`valid_max`. The NUG's implied valid range
+  is not applied, as in xarray.
+- Byte variables get no default fill (NUG, `docs/attribute_conventions.md`: "If
   the data type is byte and _FillValue is not explicitly defined, then the valid
-  range should include all possible values"), and ncdump and netCDF4-python do the
-  same.
-- `missing_value`, `valid_min`, `valid_max` and `valid_range` must have the
-  variable's type (CF §2.5.1), else `type_mismatch`. The NUG also allows a wider
-  signed type for the `valid_*` attributes of byte data; that is refused here.
-  `valid_range` must hold 2 values and the others 1, else `count_mismatch`. When
-  `valid_range` is present it is used and `valid_min`/`valid_max` are ignored.
-  The NUG's implied valid range (none given: the side of the fill value beyond it
-  is invalid) is not applied, as in xarray.
-- `scale_factor` and `add_offset`: one `float` or `double` (read as `double`, which
-  is exact), else `type_mismatch` or `count_mismatch`. An absent factor or offset is
-  not applied, so -0.0 keeps its sign. A value that overflows on unpacking is
-  `Missing`.
-- `_Unsigned`: after `cut_at_nul`, `simplified` and lower-casing, the value `"true"`
-  gives `unsupported_unsigned`. Any other text is ignored. A non-text `_Unsigned`
-  attribute gives `type_mismatch`.
-- `read_samples` keeps both the raw `vector<T>` and the `vector<Sample>`. Both are
-  bounded by `max_elements`.
+  range should include all possible values"). NC_NOFILL means no fill.
+- int64 → double stays in the §4.3 table for time variables only: exact below 2^53,
+  which `checked_time` enforces. `read`'s comment tells non-time callers to read
+  `int64_t`.
 
 Writing
-- `write_netcdf_atomic(target, body)`: `body` returns `expected<void, E>` with E
-  convertible to `io::Error` (concept `AtomicNcBody`, reusing WP5's
-  `is_expected_void_v`). It must not close or move the `File`. If it does, stage 3
-  reports `closed`, or the moved handle aborts and the write fails. The stages are
-  WP5's: `check_target_replaceable`, `temp_path_for`, `nc_create(NC_NETCDF4 |
-  NC_NOCLOBBER)`, the body, `close() &&`, then `commit_temp`.
-  - The `TempFileGuard` is armed **after** a successful create, so a name collision
-    (`NC_EEXIST`) never deletes someone else's file. The `File` is declared after the
-    guard, so it is aborted or closed before the file is removed.
-  - An injected fault at `body` is `FileError{write}` and at `close` it is
-    `FileError{close}`, matching the text writer. A real close failure is
-    `NcError{close}`. Errors name the target, not the temporary file.
-- `put_char_rows` requires `rows.size()` to equal the first dimension
-  (`count_mismatch`). A longer row is `name_too_long`. Rows are copied by byte length
-  and NUL-padded.
-- `define_var` applies the options in the order chunking, deflate (always with
-  shuffle), fill. A `chunks` rank that differs from the dimensions is
-  `rank_mismatch`.
-- A write call on a read handle reaches netCDF-C, which returns `NC_EPERM`.
+- The stages are WP5's:
+  1. `check_target_replaceable`;
+  2. `temp_path_for`;
+  3. `nc_create(NC_NETCDF4 | NC_NOCLOBBER)`;
+  4. the body;
+  5. `finish` (sync, close);
+  6. `commit_temp`.
+- `TempFileGuard` is armed after a successful create, so a name collision never
+  deletes someone else's file. The `NewFile` is declared after the guard.
+- An injected fault at `body` is `FileError{write}` and at `close`
+  `FileError{close}`. Errors name the target.
+- `define_numeric_var` runs plain steps: define, chunking, deflate (always with
+  shuffle), fill.
 
-## Paths (Windows; §4.1 asked for verification)
+Other changes from the review
+- `projection.cpp`: the `std::mutex` guarding the PROJ data directory is gone (no
+  mutex in io, C11). `set_projection_data_dir` stores the directory once
+  (`std::call_once` plus an atomic pointer that readers load); the first call wins.
+  The header says so.
+- `detail::traverse` (stop at the first error) replaces the hand loops in
+  `var_info` and `variables`. `detail::unzip` turns a `Slab` into netCDF-C's two
+  arrays; `whole` uses `transform`.
 
-The pinned netCDF-C **4.9.3 does not take UTF-8 on Windows**. `nc_open` and
-`nc_create` treat the `char*` as text in the **active code page** (ACP):
-`libdispatch/dpathmgr.c` (`ansi2utf8`, `NCopen3`, `NCfopen`) and
-`libhdf5/hdf5open.c`/`hdf5create.c` (`nc4_H5Fopen`/`nc4_H5Fcreate` call
-`NCpath2utf8`) convert ACP to UTF-8 for HDF5. The one exception is a process whose
-ACP is UTF-8 (an application manifest with `activeCodePage` set to `UTF-8`,
-Windows 10 1903+); then the bytes are taken as UTF-8. Checked by reading the 4.9.3
-source in the vcpkg download cache.
+## Library defect found (not ours; for the maintainer)
 
-`detail::nc_path`: on POSIX it returns the native bytes unchanged; a non-UTF-8 name
-works and is tested. On Windows it converts the wide path to the ACP with
-`WC_NO_BEST_FIT_CHARS`; "é" must not become "e". When the ACP cannot represent the
-path, it falls back to the 8.3 short name, of the file, or of its directory for a
-file not yet created (the temporary name is ASCII). With neither,
-`unrepresentable_path`.
+netCDF-C 4.9.3 with HDF5 2.1.1 (the vcpkg pins) **segfaults inside HDF5** in this
+case:
+1. A file is open through one handle.
+2. The same file is opened through a second handle, its `NC_STRING` data is read,
+   and that handle is closed.
+3. The file is opened again, and `nc_inq_var` of the string variable is called.
 
-**Recommendation for Phase 7 (packaging):** give `metoceanviewer.exe` a manifest
-with `activeCodePage = UTF-8` and `longPathAware = true`. Every path then reaches
-netCDF-C as UTF-8, and the short-name fallback becomes dead code. Without
-`longPathAware` (plus the `LongPathsEnabled` registry value), HDF5's `_wopen` of a
-path over 260 characters probably fails; only a short name below 260 would help.
+The stack ends in `H5F_addr_decode` from `H5T__vlen_disk_isnull`, from
+`H5D_get_create_plist`, from `nc4_get_var_meta`: the vlen fill value is converted
+with a null file pointer. A short program using only netCDF-C reproduces it
+(round 1 of open, read strings, close). It is not in the tests, because it
+crashes. The tests avoid it by never holding two handles on a file whose strings
+are read.
 
-Tests (`test_nc_paths.cpp`): a non-ASCII directory and file name, and a path over
-300 characters, are written atomically and read back. On Linux both must succeed.
-On Windows a failure must be a clean `NcError`, reported with `WARN` rather than
-failing, until the Windows job shows what happens. **None of the Windows code has
-been compiled or run.**
+Readers that open the same file twice at once could hit it. v5 files have no
+`NC_STRING`, but foreign files may (SN §12.5). Options:
+- a process-wide "already open" refusal in `File::open`;
+- or documenting "one handle per file".
 
-Templates
-- Each typed member (`read`, `numeric_att`, `put_att`, `put`, `define_var`,
-  `masking`) is a thin typed call on a non-template private half that does every
-  check: `plan_read`, `plan_numeric_att`, `plan_put_att`, `plan_put`,
-  `define_numeric_var`, `plan_masking`. `nc_call`'s error path and
-  `for_each_block` are not templates either. The typed code is mostly the
-  `nc_get_*`/`nc_put_*` call. Before this split, gcov counted each check once per
-  type, and io line coverage fell to about 70%.
-  `tests/io/test_nc_typed.cpp` runs every typed call, and its errors, for all six
-  types.
+**Decision needed.** Not reported upstream yet.
+
+## Paths (Windows)
+
+- netCDF-C 4.9.3 reads the `char*` path in the **active code page** (ACP):
+  `libdispatch/dpathmgr.c` `ansi2utf8` and `NCopen3`, and `nc4_H5Fopen`/`nc4_H5Fcreate`
+  calling `NCpath2utf8`. The exception is a process running with the UTF-8 code page.
+- `nc_path` returns the native bytes on POSIX (tested with a Latin-1 name). On
+  Windows it converts to the ACP with `WC_NO_BEST_FIT_CHARS`, falls back to the 8.3
+  short name, and otherwise gives `unrepresentable_path`.
+- **Phase 7:** give the application manifest `activeCodePage = UTF-8` and
+  `longPathAware = true`.
+- On Windows the path tests issue a `WARN` instead of failing, until the CI job
+  shows the outcome. **None of the Windows code has been compiled or run.**
+
+## Templates and coverage
+
+The typed members are thin typed calls on non-template private halves:
+`plan_read`, `plan_numeric_att`, `plan_put_att`, `plan_put`, `define_numeric_var`
+and `plan_masking`. `for_each_block` and `status_to_expected` are not templates
+either. `tests/io/test_nc_typed.cpp` runs every typed call, and its errors, for
+all six types.
 
 ## Fixtures and test infrastructure
 
-- **The generator is a library the tests call, not a `FIXTURES_SETUP`
-  executable.** Each test writes the files it needs into its own `ScratchDir`. That
-  keeps ctest's one-process-per-test-case runs independent and parallel-safe. It
-  still uses only raw netCDF-C, never `mov::io`. The two `_FillValue` cases netCDF-C
-  refuses to write (wrong type; two values) are classic CDF-1 files assembled byte
-  by byte (`Cdf1` in `nc_fixtures.cpp`).
-- The hostile set here is the one the WP6 task named: a 2^40 dimension (plus a
-  2^40 × 2^40 × 2^30 variable for `overflow`), an attribute of 1 MiB + 1 byte, a NULL
-  `NC_STRING` element (netCDF-C 4.9.3 writes it; the wrapper reads it as `""`), the
-  wrong-type and two-value `_FillValue`, an unlimited `name_len` of length 0, a time
-  that is all fill, time not at dimension or variable id 0, and an EPSG stored as
-  text. §7.3's reader-level set (station 2^31, `obs_count`, 3-D time, …) stays with
-  WP10b.
-- `--wrap` (Linux only; GNU ld and lld both have it): `mov_io_netcdf_tests` is
-  linked with `-Wl,--wrap=nc_open,--wrap=nc_create,--wrap=nc_close,--wrap=nc_abort`.
-  Static linking means mov_io's calls and the generator's are both counted. A
-  Catch2 listener `_Exit`s with a message when a test case ends with
-  `opened != closed`. An `nc_abort` of a valid id counts as a close. The shim can
-  also make the next `nc_close` fail (`fail_next_closes`), which tests the close
-  policy. B5 opens 1200 files across five error paths and counts.
-- Re-entry death test: `fork()`. The child resets `SIGABRT` to the default (Catch2
-  would report it) and nests two `nc_status` calls; the parent expects `SIGABRT`.
-  It runs only in debug builds on POSIX; release and fuzz builds skip it.
-- `NC_HAS_HDF5 == 1` is `static_assert`ed in `file.cpp` and checked in a test. The
-  version test pins `4.9.3`; update it with the vcpkg baseline.
-- The threading notice ("the caller must serialize …") is in the header comment of
-  `file.hpp` and on the class and `write_netcdf_atomic`, not repeated on each of the
-  25 members.
+- The generator is a library the tests call, each test into its own `ScratchDir`;
+  it uses only netCDF-C.
+  - The wrong-type and two-value `_FillValue` cases are hand-made CDF-1 files.
+  - `sabotage_hdf5_dataset` closes an HDF5 dataset behind netCDF-C's back, which is
+    how B1 is reproduced.
+- `--wrap` (Linux): `nc_open`, `nc_create`, `nc_close`, `nc_abort`, `nc_sync` and
+  `remove`.
+  - A Catch2 listener `_Exit`s when a test case ends with `opened != closed`.
+  - `fail_next_closes` really closes the file but reports `NC_EHDFERR`.
+  - `fail_next_syncs` fails without syncing.
+  - `remove_calls` counts netCDF-C's own deletions. The tests' files are removed
+    through the shared C++ library, which is not wrapped.
+  - The B1 test settles its one accepted leak by hand.
+- Regression tags:
+  - B5: 1200 opens over five error paths.
+  - B6: missing file (no close call at all), unwritable directory.
+  - B19: a fault at every atomic stage.
+  - Others as before.
+- The re-entry death test uses `fork()`. The child sets `SIGABRT` to the default
+  and `RLIMIT_CORE` to 0.
 
 ## Not verified here (Linux x86-64 only)
 
-- Windows: `nc_path` (ACP conversion, short names), long and non-ASCII paths,
-  `MoveFileExW` replacing an HDF5 file just closed, MSVC `/W4` on the new code.
-- macOS: `--wrap` does not exist in ld64, so the count tests and the leak listener
-  are skipped. RAII is still exercised; the counting runs only on Linux CI.
-- The structure fuzzer (§7.5) is WP10b. No fuzz target was added here.
+- **Windows:** `nc_path`, long and non-ASCII paths, `MoveFileExW` over an HDF5 file
+  just closed, MSVC `/W4`.
+- **macOS:** ld64 has no `--wrap`, so the count, close-failure, sync-failure,
+  `remove` and B1 tests skip.
+- **Not tested:** `NC3_close`'s sync-error path (B1's other half). The policy is
+  the same; there is no classic writer to provoke it.
+- The structure fuzzer (§7.5) is WP10b.
