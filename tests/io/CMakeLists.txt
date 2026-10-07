@@ -49,3 +49,10 @@ mov_add_fuzz_test(
     LIBRARIES mov::io
     CORPUS io/parse_cf_time_units
 )
+
+# IMEDS and CSV (WP7).
+mov_add_test(
+    mov_io_text_formats_tests
+    SOURCES test_imeds.cpp test_imeds_format.cpp
+    LIBRARIES mov::io
+)

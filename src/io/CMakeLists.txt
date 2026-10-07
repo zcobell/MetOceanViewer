@@ -16,3 +16,6 @@ mov_add_module(
     PUBLIC_LINK mov::core
     PRIVATE_LINK netCDF::netcdf PROJ::proj
 )
+
+# IMEDS and CSV (WP7).
+target_sources(mov_io PRIVATE imeds.cpp imeds_write.cpp station_names.cpp)
