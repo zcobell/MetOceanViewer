@@ -68,3 +68,17 @@ if(MOV_PROJ_DB)
         PROPERTIES COMPILE_DEFINITIONS "MOV_TEST_PROJ_DATA_DIR=\"${MOV_TEST_PROJ_DATA_DIR}\""
     )
 endif()
+
+mov_add_fuzz_test(
+    fuzz_parse_adcirc_ascii
+    SOURCES fuzz_parse_adcirc_ascii.cpp
+    LIBRARIES mov::io
+    CORPUS io/parse_adcirc_ascii
+)
+mov_add_fuzz_test(
+    fuzz_parse_adcirc_station_file
+    SOURCES fuzz_parse_adcirc_station_file.cpp
+    LIBRARIES mov::io
+    CORPUS io/parse_adcirc_station_file
+)
+mov_add_fuzz_test(fuzz_parse_hwm_csv SOURCES fuzz_parse_hwm_csv.cpp LIBRARIES mov::io CORPUS io/parse_hwm_csv)
