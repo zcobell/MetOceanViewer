@@ -3,6 +3,7 @@
 
 // STATIC_REQUIRE checks for the compile-time half of mov/core/units.hpp.
 
+#include <algorithm>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <compare>
@@ -81,13 +82,9 @@ constexpr bool is_factor(DischargeUnit u, double si) {
   return Discharge::in(1.0, u).as(DischargeUnit::cubic_meter_per_second) == si;
 }
 
-constexpr bool conversion_is_identity(auto units) {
-  for (const auto u : units) {
-    if (not(conversion(u, u) == Affine{})) {
-      return false;
-    }
-  }
-  return true;
+constexpr bool conversion_is_identity(const auto& units) {
+  return std::ranges::all_of(
+      units, [](auto u) { return conversion(u, u) == Affine{}; });
 }
 
 // Converting x from -> to -> from returns x.

@@ -23,6 +23,8 @@ class ScopedTimeZone {
   }
   ScopedTimeZone(const ScopedTimeZone&) = delete;
   ScopedTimeZone& operator=(const ScopedTimeZone&) = delete;
+  ScopedTimeZone(ScopedTimeZone&&) = delete;
+  ScopedTimeZone& operator=(ScopedTimeZone&&) = delete;
   ~ScopedTimeZone() { set(previous_ ? previous_->c_str() : nullptr); }
 
  private:

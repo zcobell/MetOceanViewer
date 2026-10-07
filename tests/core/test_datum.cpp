@@ -17,7 +17,6 @@
 #include "mov/core/datum.hpp"
 #include "mov/test/fixture.hpp"
 
-using mov::core::ConflictingHeight;
 using mov::core::DatumHeight;
 using mov::core::DatumTable;
 using mov::core::DatumTableError;
@@ -67,7 +66,7 @@ std::vector<std::string> split_commas(const std::string& line) {
 VerticalDatum datum_of(const std::string& token) {
   const auto datum = parse_vertical_datum(token);
   REQUIRE(datum.has_value());
-  return *datum;
+  return datum.value_or(VerticalDatum::msl);
 }
 
 std::map<std::string, Station> read_offsets_fixture() {
@@ -189,7 +188,8 @@ TEST_CASE("from_heights rejects a rebasing that overflows", "[core][datum]") {
 
 TEST_CASE("offsets are transitive on arbitrary heights (1e-12)",
           "[core][datum]") {
-  std::mt19937 rng{20261007};
+  std::seed_seq seed{2026, 10, 7};  // fixed: a failure must reproduce
+  std::mt19937 rng{seed};
   std::uniform_real_distribution<double> height_range{-5.0, 5.0};
   for (int trial = 0; trial < 200; ++trial) {
     std::vector<DatumHeight> heights;
@@ -218,7 +218,7 @@ TEST_CASE("datum tokens are distinct and upper case", "[core][datum]") {
   std::vector<std::string> seen;
   for (const VerticalDatum d : all_datums) {
     const std::string token{to_string(d)};
-    CHECK_FALSE(token.empty());
+    CHECK(not token.empty());
     for (const char c : token) {
       CHECK(((c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9')));
     }

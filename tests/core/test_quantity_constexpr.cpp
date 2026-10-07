@@ -3,6 +3,7 @@
 
 // STATIC_REQUIRE checks for mov/core/quantity.hpp.
 
+#include <algorithm>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>
@@ -33,86 +34,84 @@ struct Row {
   std::string_view units;
 };
 
+constexpr Row row(Quantity quantity, std::string_view token,
+                  std::string_view standard_name, std::string_view units) {
+  return {.quantity = quantity,
+          .token = token,
+          .standard_name = standard_name,
+          .units = units};
+}
+
 constexpr std::array sn_registry{
-    Row{Quantity::water_level, "water_level",
-        "water_surface_height_above_reference_datum", "m"},
-    Row{Quantity::water_level_prediction, "water_level_prediction",
-        "water_surface_height_above_reference_datum", "m"},
-    Row{Quantity::air_temperature, "air_temperature", "air_temperature",
-        "degC"},
-    Row{Quantity::water_temperature, "water_temperature",
-        "sea_water_temperature", "degC"},
-    Row{Quantity::dew_point, "dew_point", "dew_point_temperature", "degC"},
-    Row{Quantity::wind_speed, "wind_speed", "wind_speed", "m s-1"},
-    Row{Quantity::wind_direction, "wind_direction", "wind_from_direction",
-        "degree"},
-    Row{Quantity::wind_gust, "wind_gust", "wind_speed_of_gust", "m s-1"},
-    Row{Quantity::wind_u, "wind_u", "eastward_wind", "m s-1"},
-    Row{Quantity::wind_v, "wind_v", "northward_wind", "m s-1"},
-    Row{Quantity::air_pressure, "air_pressure", "air_pressure", "hPa"},
-    Row{Quantity::relative_humidity, "relative_humidity", "relative_humidity",
-        "percent"},
-    Row{Quantity::conductivity, "conductivity",
-        "sea_water_electrical_conductivity", "S m-1"},
-    Row{Quantity::visibility, "visibility", "visibility_in_air", "m"},
-    Row{Quantity::current_u, "current_u", "eastward_sea_water_velocity",
-        "m s-1"},
-    Row{Quantity::current_v, "current_v", "northward_sea_water_velocity",
-        "m s-1"},
-    Row{Quantity::wave_height, "wave_height",
-        "sea_surface_wave_significant_height", "m"},
-    Row{Quantity::wave_period_dominant, "wave_period_dominant",
-        "sea_surface_wave_period_at_variance_spectral_density_maximum", "s"},
-    Row{Quantity::wave_period_average, "wave_period_average",
-        "sea_surface_wave_mean_period", "s"},
-    Row{Quantity::wave_direction, "wave_direction",
-        "sea_surface_wave_from_direction", "degree"},
-    Row{Quantity::discharge, "discharge",
-        "water_volume_transport_in_river_channel", "m3 s-1"},
-};
+    row(Quantity::water_level, "water_level",
+        "water_surface_height_above_reference_datum", "m"),
+    row(Quantity::water_level_prediction, "water_level_prediction",
+        "water_surface_height_above_reference_datum", "m"),
+    row(Quantity::air_temperature, "air_temperature", "air_temperature",
+        "degC"),
+    row(Quantity::water_temperature, "water_temperature",
+        "sea_water_temperature", "degC"),
+    row(Quantity::dew_point, "dew_point", "dew_point_temperature", "degC"),
+    row(Quantity::wind_speed, "wind_speed", "wind_speed", "m s-1"),
+    row(Quantity::wind_direction, "wind_direction", "wind_from_direction",
+        "degree"),
+    row(Quantity::wind_gust, "wind_gust", "wind_speed_of_gust", "m s-1"),
+    row(Quantity::wind_u, "wind_u", "eastward_wind", "m s-1"),
+    row(Quantity::wind_v, "wind_v", "northward_wind", "m s-1"),
+    row(Quantity::air_pressure, "air_pressure", "air_pressure", "hPa"),
+    row(Quantity::relative_humidity, "relative_humidity", "relative_humidity",
+        "percent"),
+    row(Quantity::conductivity, "conductivity",
+        "sea_water_electrical_conductivity", "S m-1"),
+    row(Quantity::visibility, "visibility", "visibility_in_air", "m"),
+    row(Quantity::current_u, "current_u", "eastward_sea_water_velocity",
+        "m s-1"),
+    row(Quantity::current_v, "current_v", "northward_sea_water_velocity",
+        "m s-1"),
+    row(Quantity::wave_height, "wave_height",
+        "sea_surface_wave_significant_height", "m"),
+    row(Quantity::wave_period_dominant, "wave_period_dominant",
+        "sea_surface_wave_period_at_variance_spectral_density_maximum", "s"),
+    row(Quantity::wave_period_average, "wave_period_average",
+        "sea_surface_wave_mean_period", "s"),
+    row(Quantity::wave_direction, "wave_direction",
+        "sea_surface_wave_from_direction", "degree"),
+    row(Quantity::discharge, "discharge",
+        "water_volume_transport_in_river_channel", "m3 s-1"
+
+        )};
 
 constexpr bool info_matches_the_sn_table() {
-  for (const Row& row : sn_registry) {
-    const QuantityInfo i = info(row.quantity);
-    if (i.token != row.token or i.standard_name != row.standard_name or
-        i.canonical_unit != row.units or i.long_name.empty()) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(sn_registry, [](const Row& r) {
+    const QuantityInfo i = info(r.quantity);
+    return i.token == r.token and i.standard_name == r.standard_name and
+           i.canonical_unit == r.units and not i.long_name.empty();
+  });
 }
 
 constexpr bool tokens_round_trip() {
-  for (const Row& row : sn_registry) {
-    if (parse_quantity_token(info(row.quantity).token) != row.quantity) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(sn_registry, [](const Row& r) {
+    return parse_quantity_token(info(r.quantity).token) == r.quantity;
+  });
 }
 
 // Registry order is enumerator order, with no gaps: the table is indexed by
 // the enumerator.
 constexpr bool registry_is_in_enumerator_order() {
-  for (std::size_t i = 0; i < sn_registry.size(); ++i) {
-    if (static_cast<std::size_t>(sn_registry[i].quantity) != i) {
-      return false;
-    }
-  }
   return sn_registry.size() ==
-         static_cast<std::size_t>(Quantity::discharge) + 1;
+             static_cast<std::size_t>(Quantity::discharge) + 1 and
+         std::ranges::all_of(sn_registry, [](const Row& r) {
+           return &r - sn_registry.data() ==
+                  static_cast<std::ptrdiff_t>(r.quantity);
+         });
 }
 
 constexpr bool only_water_levels_take_a_datum() {
-  for (const Row& row : sn_registry) {
-    const bool is_water_level =
-        row.quantity == Quantity::water_level or
-        row.quantity == Quantity::water_level_prediction;
-    if (datum_applicable(QuantityId{row.quantity}) != is_water_level) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(sn_registry, [](const Row& r) {
+    const bool is_water_level = r.quantity == Quantity::water_level or
+                                r.quantity == Quantity::water_level_prediction;
+    return datum_applicable(QuantityId{r.quantity}) == is_water_level;
+  });
 }
 
 template <class T>

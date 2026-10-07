@@ -9,8 +9,6 @@
 #include <utility>
 #include <variant>
 
-#include "mov/core/detail/overloaded.hpp"
-
 namespace mov::core {
 
 namespace {
@@ -44,11 +42,11 @@ std::optional<GenericQuantity> GenericQuantity::parse(
 }
 
 std::string_view token(const QuantityId& q) noexcept {
-  return std::visit(
-      detail::Overloaded{
-          [](Quantity registry) { return info(registry).token; },
-          [](const GenericQuantity& generic) { return generic.token(); }},
-      q);
+  if (const Quantity* registry = std::get_if<Quantity>(&q)) {
+    return info(*registry).token;
+  }
+  const GenericQuantity* generic = std::get_if<GenericQuantity>(&q);
+  return generic != nullptr ? generic->token() : std::string_view{};
 }
 
 }  // namespace mov::core

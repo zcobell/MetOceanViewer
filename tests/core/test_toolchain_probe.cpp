@@ -92,7 +92,7 @@ TEST_CASE("probe: std::format of a millisecond time point", "[core][probe]") {
 }
 
 TEST_CASE("probe: stop_token", "[core][probe]") {
-  std::stop_source source;
+  const std::stop_source source;
   const std::stop_token token = source.get_token();
   CHECK_FALSE(token.stop_requested());
   source.request_stop();

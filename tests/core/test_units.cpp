@@ -31,10 +31,7 @@ using mov::core::Unit;
 
 namespace {
 
-struct Spelling {
-  std::string_view text;
-  Unit expected;
-};
+using Spelling = std::pair<std::string_view, Unit>;
 
 // The spelling table of docs/core-design.md section 2.2, pinned.
 const std::vector<Spelling>& design_table() {
@@ -113,10 +110,30 @@ std::vector<Unit> all_units() {
 std::string sym(const Unit& u) { return std::string{symbol(u)}; }
 std::string ud(const Unit& u) { return std::string{udunits(u)}; }
 
-std::string other_symbol(std::string_view text) {
+Unit unit_of(std::string_view text) {
   const auto unit = parse_unit(text);
   REQUIRE(unit.has_value());
-  const auto* other = std::get_if<OtherUnit>(&*unit);
+  return unit.value_or(Unit{});
+}
+
+// The OtherUnit that parse_unit makes of `text`, or null.
+const OtherUnit* other_unit(const std::optional<Unit>& unit) {
+  return unit ? std::get_if<OtherUnit>(&*unit) : nullptr;
+}
+
+bool is_canonical(const char* text) {
+  const auto unit = parse_unit(text);
+  const OtherUnit* other = other_unit(unit);
+  return other != nullptr and is_canonical_other(*other);
+}
+
+bool is_other(const char* text) {
+  return other_unit(parse_unit(text)) != nullptr;
+}
+
+std::string other_symbol(std::string_view text) {
+  const auto unit = parse_unit(text);
+  const OtherUnit* other = other_unit(unit);
   REQUIRE(other != nullptr);
   return std::string{other->symbol()};
 }
@@ -204,15 +221,12 @@ TEST_CASE("is_canonical_other names the registry's non-family units",
   for (const char* text :
        {"percent", "%", "degree", "deg", "degT", "s", "sec", "S m-1"}) {
     INFO("unit: " << text);
-    const auto unit = parse_unit(text);
-    REQUIRE(unit.has_value());
-    CHECK(is_canonical_other(std::get<OtherUnit>(*unit)));
+    CHECK(is_canonical(text));
   }
   for (const char* text : {"furlong", "Mb", "m s-2"}) {
     INFO("unit: " << text);
-    const auto unit = parse_unit(text);
-    REQUIRE(unit.has_value());
-    CHECK_FALSE(is_canonical_other(std::get<OtherUnit>(*unit)));
+    CHECK(is_other(text));
+    CHECK(not is_canonical(text));
   }
 }
 
@@ -232,7 +246,7 @@ TEST_CASE("symbol and udunits name every unit", "[core][units][symbol]") {
   CHECK(ud(Unit{DischargeUnit::cubic_meter_per_second}) == "m3 s-1");
   CHECK(ud(Unit{TemperatureUnit::celsius}) == "degC");
 
-  const Unit percent = *parse_unit("%");
+  const Unit percent = unit_of("%");
   CHECK(sym(percent) == "percent");
   CHECK(ud(percent) == "percent");
 }
@@ -245,7 +259,7 @@ TEST_CASE("symbol and udunits are parse_unit's inverse",
     CHECK(parse_unit(ud(unit)) == std::optional<Unit>{unit});
   }
   for (const char* text : {"percent", "degree", "s", "S m-1", "furlong"}) {
-    const Unit unit = *parse_unit(text);
+    const Unit unit = unit_of(text);
     CHECK(parse_unit(sym(unit)) == std::optional<Unit>{unit});
   }
 }
@@ -290,9 +304,9 @@ TEST_CASE("conversion between families is an error",
 
 TEST_CASE("conversion of an OtherUnit is the identity iff the units are equal",
           "[core][units][conversion]") {
-  const Unit furlong = *parse_unit("furlong");
-  const Unit rod = *parse_unit("rod");
-  const auto same = conversion(furlong, *parse_unit(" furlong"));
+  const Unit furlong = unit_of("furlong");
+  const Unit rod = unit_of("rod");
+  const auto same = conversion(furlong, unit_of(" furlong"));
   REQUIRE(same.has_value());
   CHECK(*same == Affine{});
 
@@ -303,7 +317,7 @@ TEST_CASE("conversion of an OtherUnit is the identity iff the units are equal",
   CHECK_FALSE(conversion(furlong, Unit{LengthUnit::meter}).has_value());
   CHECK_FALSE(conversion(Unit{LengthUnit::meter}, furlong).has_value());
   // percent and degree do not convert into each other.
-  CHECK_FALSE(conversion(*parse_unit("%"), *parse_unit("deg")).has_value());
+  CHECK_FALSE(conversion(unit_of("%"), unit_of("deg")).has_value());
 }
 
 TEST_CASE("conversion over the Unit variant is the identity for equal units",

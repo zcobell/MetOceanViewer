@@ -3,6 +3,7 @@
 
 // STATIC_REQUIRE checks for mov/core/datum.hpp.
 
+#include <algorithm>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>
@@ -66,22 +67,16 @@ constexpr std::array from_mllw{
 };
 
 constexpr bool tokens_round_trip() {
-  for (const VerticalDatum d : all_datums) {
-    if (parse_vertical_datum(to_string(d)) != d) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(all_datums, [](VerticalDatum d) {
+    return parse_vertical_datum(to_string(d)) == d;
+  });
 }
 
 constexpr bool offset_is_zero_everywhere(const DatumTable& t) {
-  for (const VerticalDatum d : all_datums) {
+  return std::ranges::all_of(all_datums, [&t](VerticalDatum d) {
     const auto o = t.offset(d, d);
-    if (not o or not(*o == Length{})) {
-      return false;
-    }
-  }
-  return true;
+    return o and *o == Length{};
+  });
 }
 
 // offset(a, b) == -offset(b, a), and offset(a, b) + offset(b, c) ==
