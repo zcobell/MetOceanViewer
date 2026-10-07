@@ -202,6 +202,17 @@ template <class U, std::size_t N>
   return std::nullopt;
 }
 
+// The unit of normalized text: a family enumerator, else an OtherUnit.
+[[nodiscard]] Unit classify(std::string text) {
+  if (auto family = find_family_unit(text)) {
+    return *std::move(family);
+  }
+  if (const auto alias = canonical_alias(text)) {
+    return Unit{detail::UnitFactory::make(std::string{*alias})};
+  }
+  return Unit{detail::UnitFactory::make(std::move(text))};
+}
+
 }  // namespace
 
 std::optional<Unit> parse_unit(std::string_view text) {
@@ -209,13 +220,13 @@ std::optional<Unit> parse_unit(std::string_view text) {
   if (trimmed.empty()) {
     return std::nullopt;
   }
-  if (auto family = find_family_unit(trimmed)) {
-    return family;
-  }
-  if (const auto alias = canonical_alias(trimmed)) {
-    return Unit{detail::UnitFactory::make(std::string{*alias})};
-  }
-  return Unit{detail::UnitFactory::make(std::move(trimmed))};
+  return classify(std::move(trimmed));
+}
+
+Unit degree() { return Unit{detail::UnitFactory::make("degree")}; }
+
+Unit detail::unit_of_nonblank(std::string_view text) {
+  return classify(normalized(text));
 }
 
 std::expected<Affine, IncompatibleUnits> conversion(const Unit& from,

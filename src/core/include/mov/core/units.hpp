@@ -175,7 +175,7 @@ class OtherUnit {
   [[nodiscard]] constexpr std::string_view symbol() const& noexcept {
     return symbol_;
   }
-  std::string_view symbol() && = delete;
+  std::string_view symbol() const&& = delete;
 
   friend constexpr bool operator==(const OtherUnit&,
                                    const OtherUnit&) = default;
@@ -208,6 +208,19 @@ class UnitKey {
 /// canonicalized. Whether an OtherUnit is one the registry itself uses is
 /// is_canonical_other (quantity.hpp).
 [[nodiscard]] std::optional<Unit> parse_unit(std::string_view text);
+
+/// The `degree` OtherUnit (plane angle; what parse_unit makes of "degree",
+/// "deg", "degT", "degrees" and "degrees_true").
+[[nodiscard]] Unit degree();
+
+namespace detail {
+
+/// parse_unit for text that is not blank, such as a registry spelling: total,
+/// with no nullopt to unwrap. Blank text gives an OtherUnit with an empty
+/// symbol (callers prove non-blankness instead, e.g. by static_assert).
+[[nodiscard]] Unit unit_of_nonblank(std::string_view text);
+
+}  // namespace detail
 
 namespace detail {
 

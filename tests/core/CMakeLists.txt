@@ -3,7 +3,18 @@
 
 mov_add_test(
     mov_core_tests
-    SOURCES test_version.cpp test_time.cpp test_units.cpp test_datum.cpp test_quantity.cpp test_toolchain_probe.cpp
+    SOURCES
+        test_version.cpp
+        test_time.cpp
+        test_units.cpp
+        test_datum.cpp
+        test_quantity.cpp
+        test_toolchain_probe.cpp
+        test_meta.cpp
+        test_timeseries.cpp
+        test_station.cpp
+        test_station_table.cpp
+        test_vector_series.cpp
     CONSTEXPR_SOURCES
         test_version_constexpr.cpp
         test_numeric_constexpr.cpp
@@ -14,6 +25,9 @@ mov_add_test(
         test_datum_constexpr.cpp
         test_quantity_constexpr.cpp
         test_toolchain_probe_constexpr.cpp
+        test_timeseries_constexpr.cpp
+        test_station_constexpr.cpp
+        test_station_table_constexpr.cpp
     LIBRARIES mov::core
 )
 
@@ -38,6 +52,7 @@ mov_add_fuzz_test(
     CORPUS core/parse_quantity_token
 )
 mov_add_fuzz_test(fuzz_checked_time SOURCES fuzz_checked_time.cpp LIBRARIES mov::core CORPUS core/checked_time)
+mov_add_fuzz_test(fuzz_normalize SOURCES fuzz_normalize.cpp LIBRARIES mov::core CORPUS core/normalize)
 
 # HWM (WP4). A separate executable keeps this package's edit to the file a pure
 # append; it can be folded into mov_core_tests above.

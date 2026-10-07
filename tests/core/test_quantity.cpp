@@ -167,6 +167,8 @@ TEST_CASE("every registry quantity has a parseable canonical unit",
     if (const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr) {
       CHECK(is_canonical_other(*other));
     }
+    // canonical_unit is total and agrees with parse_unit.
+    CHECK(std::optional<mov::core::Unit>{canonical_unit(q)} == unit);
   }
 }
 
