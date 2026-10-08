@@ -122,6 +122,22 @@ constexpr std::array utm15n{
 
 }  // namespace
 
+TEST_CASE("the kind of a CRS: geographic is any geographic 2D or 3D CRS",
+          "[io][projection]") {
+  configure_test_database();
+  using mov::io::CrsKind;
+  const auto kind = [](int code) { return mov::io::crs_kind(epsg(code)); };
+  CHECK(kind(4326) == CrsKind::geographic);
+  CHECK(kind(4269) == CrsKind::geographic);  // NAD83, not EPSG:4326
+  CHECK(kind(4979) == CrsKind::geographic);  // WGS 84, 3D
+  CHECK(kind(26915) == CrsKind::projected);
+  CHECK(kind(32615) == CrsKind::projected);
+  CHECK(kind(3857) == CrsKind::projected);
+  // What is neither is an error, as for a Projector.
+  CHECK(kind(5703).error().code == ProjectionErrc::unknown_crs);  // vertical
+  CHECK(Projector::make(epsg(4269))->kind() == CrsKind::geographic);
+}
+
 TEST_CASE("EPSG:4326 passes through without PROJ", "[io][projection]") {
   const auto location = to_location(native(-90.01, 29.98, 4326));
   REQUIRE(location.has_value());
