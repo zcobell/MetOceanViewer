@@ -332,6 +332,8 @@ A screenshot of a web app (`screenshot.png` at repo root) is the reference for
 
 ## 4. Distribution
 
+Implemented in Phase 1: see `docs/packaging.md` (macOS and Windows not yet run).
+
 - **CI:** GitHub Actions matrix.
 
   | Runner | Toolchain |
@@ -365,10 +367,11 @@ A screenshot of a web app (`screenshot.png` at repo root) is the reference for
     `longPathAware=true`: netCDF-C 4.9.3 treats Windows paths as text in the
     active code page, so non-ASCII and long paths need both (see
     `docs/wp-notes/WP6.md`).
-  - Code signing: **Azure Trusted Signing** (decision pending, see §6).
+  - Code signing: **Azure Artifact Signing** (formerly Trusted Signing), once the account
+    exists (§6.1).
   - The installer registers the session file association.
-- **Linux:** a single **AppImage** built with `linuxdeploy` and its Qt plugin, if Linux
-  is shipped at all (decision pending). No distro packages; Flatpak only if requested later.
+- **Linux:** a single **AppImage** built with `linuxdeploy` and its Qt plugin (§6.2). No
+  distro packages; Flatpak only if requested later.
 - **Delete:**
   - `MetOceanInstaller/` (Qt IFW)
   - `.travis.yml`, `.codacy.yml`

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!-- DMG window background (660 x 400, the window size in dmg-setup.applescript).
+     The app icon sits at (170, 190) and the Applications link at (490, 190);
+     the arrow points from one to the other. No text: the render must not
+     depend on the fonts installed where tools/make_icons.py runs. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f8fd"/>
+      <stop offset="1" stop-color="#dde9f8"/>
+    </linearGradient>
+  </defs>
+  <rect width="660" height="400" fill="url(#sky)"/>
+  <path d="M0 340 q55 -24 110 0 t110 0 t110 0 t110 0 t110 0 t110 0 V400 H0 Z" fill="#c9dcf3"/>
+  <path d="M0 370 q55 -24 110 0 t110 0 t110 0 t110 0 t110 0 t110 0 V400 H0 Z" fill="#b3cdee"/>
+  <path d="M262 190 H382" fill="none" stroke="#0b62d6" stroke-width="10" stroke-linecap="round"/>
+  <path d="M368 166 L398 190 L368 214" fill="none" stroke="#0b62d6" stroke-width="10"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

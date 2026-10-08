@@ -11,8 +11,9 @@ if(MOV_ENABLE_QT)
     list(APPEND VCPKG_MANIFEST_FEATURES gui)
 endif()
 
-# The single source of truth for the version: cmake/version.hpp.in, and later
-# Info.plist, the Windows VERSIONINFO and CPack metadata, are generated from it.
+# The single source of truth for the version: cmake/version.hpp.in, Info.plist,
+# the Windows VERSIONINFO and manifest, and the CPack metadata are generated
+# from it (cmake/Packaging.cmake, packaging/).
 project(
     MetOceanViewer
     VERSION 5.0.0
@@ -45,6 +46,12 @@ include(cmake/Layering.cmake)
 # the oldest the build accepts.
 set(MOV_QT_MINIMUM_VERSION 6.11)
 if(MOV_ENABLE_QT)
+    # Qt Gui's link interface carries OpenGL; on Linux link it as libGL.so.1,
+    # which every system with OpenGL has, not GLVND's libOpenGL.so.0, which
+    # many lack (the MapLibre port does the same; docs/packaging.md).
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(OpenGL_GL_PREFERENCE LEGACY)
+    endif()
     find_package(
         Qt6
         ${MOV_QT_MINIMUM_VERSION}
@@ -53,9 +60,20 @@ if(MOV_ENABLE_QT)
     )
     qt_standard_project_setup(REQUIRES ${MOV_QT_MINIMUM_VERSION})
     include(cmake/MapLibre.cmake)
+    include(cmake/Packaging.cmake)
+    if(WIN32)
+        # The application's VERSIONINFO and icon (packaging/windows/).
+        enable_language(RC)
+    endif()
 endif()
 
 add_subdirectory(src)
+
+# The packages of the application (CPack), after src/ has declared its
+# install rules.
+if(MOV_ENABLE_QT)
+    add_subdirectory(packaging)
+endif()
 
 if(BUILD_TESTING)
     add_subdirectory(tests)

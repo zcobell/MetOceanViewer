@@ -228,6 +228,58 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       }
+    },
+    {
+      "name": "package-linux",
+      "inherits": [
+        "base",
+        "gcc",
+        "qt"
+      ],
+      "displayName": "Package: Linux AppImage",
+      "description": "RelWithDebInfo build of the app (symbols split out, shipped stripped), tested (ctest -LE gui), packaged as an AppImage by cpack (linuxdeploy). Run it in the Ubuntu 22.04 image (MOV_DEV_IMAGE=appimage tools/dev/run.sh) for the glibc 2.35 floor; see docs/packaging.md.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON",
+        "MOV_ENABLE_HARDENING": "OFF",
+        "MOV_SPLIT_DEBUG_INFO": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "package-macos",
+      "inherits": [
+        "ci-macos",
+        "qt"
+      ],
+      "displayName": "Package: macOS DMG",
+      "description": "RelWithDebInfo build of the app (symbols split out, shipped stripped), tested (ctest -LE gui), packaged as a DMG by cpack; signed and notarized when the APPLE_* environment is set (docs/packaging.md).",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON",
+        "MOV_ENABLE_HARDENING": "OFF",
+        "MOV_SPLIT_DEBUG_INFO": "ON"
+      }
+    },
+    {
+      "name": "package-windows",
+      "inherits": [
+        "ci-windows",
+        "qt"
+      ],
+      "displayName": "Package: Windows installer and zip",
+      "description": "RelWithDebInfo build of the app (symbols split out, shipped stripped), tested (ctest -LE gui), packaged by cpack as an Inno Setup installer and a portable zip (docs/packaging.md). Run from a Visual Studio developer environment.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON",
+        "MOV_ENABLE_HARDENING": "OFF",
+        "MOV_SPLIT_DEBUG_INFO": "ON",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "ProgramDatabase"
+      }
     }
   ],
   "buildPresets": [
@@ -282,6 +334,18 @@
         "coverage"
       ],
       "description": "Runs the tests and writes build/coverage/coverage-report/ (index.html, coverage.xml, coverage.json, summary.txt); fails below the coverage floors."
+    },
+    {
+      "name": "package-linux",
+      "configurePreset": "package-linux"
+    },
+    {
+      "name": "package-macos",
+      "configurePreset": "package-macos"
+    },
+    {
+      "name": "package-windows",
+      "configurePreset": "package-windows"
     }
   ],
   "testPresets": [
@@ -356,6 +420,50 @@
       "name": "ci-windows",
       "inherits": "test-base",
       "configurePreset": "ci-windows"
+    },
+    {
+      "name": "package-linux",
+      "inherits": "test-base",
+      "configurePreset": "package-linux",
+      "filter": {
+        "exclude": {
+          "label": "gui"
+        }
+      }
+    },
+    {
+      "name": "package-macos",
+      "inherits": "test-base",
+      "configurePreset": "package-macos",
+      "filter": {
+        "exclude": {
+          "label": "gui"
+        }
+      }
+    },
+    {
+      "name": "package-windows",
+      "inherits": "test-base",
+      "configurePreset": "package-windows",
+      "filter": {
+        "exclude": {
+          "label": "gui"
+        }
+      }
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "package-linux",
+      "configurePreset": "package-linux"
+    },
+    {
+      "name": "package-macos",
+      "configurePreset": "package-macos"
+    },
+    {
+      "name": "package-windows",
+      "configurePreset": "package-windows"
     }
   ],
   "workflowPresets": [
@@ -492,6 +600,69 @@
         {
           "type": "build",
           "name": "coverage-report"
+        }
+      ]
+    },
+    {
+      "name": "package-linux",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "package-linux"
+        },
+        {
+          "type": "build",
+          "name": "package-linux"
+        },
+        {
+          "type": "test",
+          "name": "package-linux"
+        },
+        {
+          "type": "package",
+          "name": "package-linux"
+        }
+      ]
+    },
+    {
+      "name": "package-macos",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "package-macos"
+        },
+        {
+          "type": "build",
+          "name": "package-macos"
+        },
+        {
+          "type": "test",
+          "name": "package-macos"
+        },
+        {
+          "type": "package",
+          "name": "package-macos"
+        }
+      ]
+    },
+    {
+      "name": "package-windows",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "package-windows"
+        },
+        {
+          "type": "build",
+          "name": "package-windows"
+        },
+        {
+          "type": "test",
+          "name": "package-windows"
+        },
+        {
+          "type": "package",
+          "name": "package-windows"
         }
       ]
     }

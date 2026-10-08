@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <utility>
 #include <variant>
@@ -424,6 +425,50 @@ TEST_CASE("a missing database is database_unavailable, not unknown_crs",
   // EPSG:4326 never needs the database.
   CHECK(to_location(native(-90.0, 30.0, 4326)).has_value());
 }
+
+// Behaviour change (packaging): a configured directory means exactly its
+// proj.db. Before, it was only added to PROJ's search path, so PROJ's
+// built-in default (the build tree's database) could still answer and hide a
+// package that ships none.
+TEST_CASE("a configured directory without proj.db is no database at all",
+          "[io][projection][database]") {
+  const mov::test::ScratchDir empty;
+  const ScopedEnv env{"MOV_PROJ_DATA", empty.path().string()};
+  const auto made = Projector::make(epsg(26915));
+  REQUIRE(not made.has_value());
+  CHECK(made.error().code == ProjectionErrc::database_unavailable);
+  CHECK_FALSE(mov::io::projection_database_path().has_value());
+}
+
+TEST_CASE("projection_database_path reports a broken database as none",
+          "[io][projection][database]") {
+  const mov::test::ScratchDir broken;
+  mov::test::write_bytes(broken / "proj.db", "this is not a database");
+  const ScopedEnv env{"MOV_PROJ_DATA", broken.path().string()};
+  CHECK_FALSE(mov::io::projection_database_path().has_value());
+}
+
+#if defined(MOV_TEST_PROJ_DATA_DIR)
+TEST_CASE("the database used is the configured directory's proj.db",
+          "[io][projection][database]") {
+  const std::filesystem::path shipped =
+      std::filesystem::path{MOV_TEST_PROJ_DATA_DIR} / "proj.db";
+  // Whether `used` names the same file as `expected`.
+  const auto same_file = [](const std::optional<std::filesystem::path>& used,
+                            const std::filesystem::path& expected) {
+    std::error_code error;
+    return used.has_value() and
+           std::filesystem::equivalent(*used, expected, error);
+  };
+  CHECK(same_file(mov::io::projection_database_path(), shipped));
+  // A copy elsewhere, named by MOV_PROJ_DATA, is the one opened.
+  const mov::test::ScratchDir copy;
+  std::filesystem::copy_file(shipped, copy / "proj.db");
+  const ScopedEnv env{"MOV_PROJ_DATA", copy.path().string()};
+  CHECK(same_file(mov::io::projection_database_path(), copy / "proj.db"));
+  CHECK(Projector::make(epsg(26915)).has_value());
+}
+#endif
 
 TEST_CASE("MOV_PROJ_DATA overrides the directory the application set",
           "[io][projection][database]") {

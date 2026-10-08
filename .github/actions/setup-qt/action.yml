@@ -12,6 +12,9 @@ inputs:
   arch:
     description: aqtinstall architecture (linux_gcc_64, clang_64, win64_msvc2022_64).
     required: true
+  cache:
+    description: "'false': download Qt instead of restoring it from the Actions cache (release builds)."
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -31,7 +34,7 @@ runs:
         version: ${{ env.QT_VERSION }}
         arch: ${{ inputs.arch }}
         modules: ${{ env.QT_MODULES }}
-        cache: true
+        cache: ${{ inputs.cache == 'true' }}
         # Unreleased aqtinstall with Qt 6.11 Windows support (PR #1000); keep in
         # step with tools/dev/requirements.txt.
         aqtsource: git+https://github.com/miurahr/aqtinstall@076e1659807d0b362a3ed684d54c2e9c775eb9c7

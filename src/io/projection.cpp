@@ -17,6 +17,7 @@
 #include <mutex>  // std::once_flag, std::call_once
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "mov/core/detail/numeric.hpp"
@@ -69,28 +70,54 @@ struct ObjectDeleter {
 using Context = std::unique_ptr<PJ_CONTEXT, ContextDeleter>;
 using Object = std::unique_ptr<PJ, ObjectDeleter>;
 
-// A context that logs nothing (a failure is reported through the result) and
-// looks for proj.db where configured.
-Context make_context() {
+// With a configured directory, PROJ must use exactly <dir>/proj.db: a
+// package must use the database it ships. PROJ does not make that easy. A
+// static PROJ (vcpkg's on Linux and macOS) carries a copy of proj.db built
+// into the library, and falls back to it when it cannot open the file it is
+// given, so has_database compares the path PROJ reports with the one required.
+// The directory is also PROJ's search path for its other resource files.
+struct DataSource {
+  std::string dir;
+  std::string database;
+};
+
+std::optional<DataSource> configured_source() {
+  return configured_data_dir().transform([](std::string dir) {
+    std::string database = dir + "/proj.db";
+    return DataSource{.dir = std::move(dir), .database = std::move(database)};
+  });
+}
+
+// A context that logs nothing (a failure is reported through the result)
+// and opens the configured database, if any.
+Context make_context(const std::optional<DataSource>& source) {
   Context ctx{proj_context_create()};
   if (not ctx) {
     return ctx;
   }
   proj_log_level(ctx.get(), PJ_LOG_NONE);
-  if (const auto dir = configured_data_dir()) {
-    const char* const path = dir->c_str();
+  if (source) {
+    const char* const path = source->dir.c_str();
     proj_context_set_search_paths(ctx.get(), 1, &path);
+    // On failure PROJ keeps another database or none; has_database tells.
+    static_cast<void>(proj_context_set_database_path(
+        ctx.get(), source->database.c_str(), nullptr, nullptr));
   }
   return ctx;
 }
 
-// PROJ found a proj.db and could open it: the path exists, and the database
-// answers a question about itself. (A file that is there but is not a database
-// has a path and no answers.)
-bool has_database(PJ_CONTEXT* ctx) {
+// PROJ opened a proj.db (the configured one, if any): the path exists, and
+// the database answers a question about itself. (A file that is there but is
+// not a database has a path and no answers.)
+bool has_database(PJ_CONTEXT* ctx, const std::optional<DataSource>& source) {
   const char* const path = proj_context_get_database_path(ctx);
-  return path != nullptr and *path != '\0' and
-         proj_context_get_database_metadata(
+  if (path == nullptr or *path == '\0') {
+    return false;
+  }
+  if (source and source->database != path) {
+    return false;
+  }
+  return proj_context_get_database_metadata(
              ctx, "DATABASE.LAYOUT.VERSION.MAJOR") != nullptr;
 }
 
@@ -143,6 +170,16 @@ void set_projection_data_dir(const std::filesystem::path& dir) {
   });
 }
 
+std::optional<std::filesystem::path> projection_database_path() {
+  const std::optional<DataSource> data = configured_source();
+  const Context context = make_context(data);
+  if (not context or not has_database(context.get(), data)) {
+    return std::nullopt;
+  }
+  const std::string_view path = proj_context_get_database_path(context.get());
+  return std::filesystem::path{std::u8string{path.begin(), path.end()}};
+}
+
 std::expected<Projector, ProjectionError> Projector::make(core::Epsg crs) {
   if (crs == core::Epsg::wgs84()) {
     return Projector{crs, CrsKind::geographic, nullptr};
@@ -150,11 +187,12 @@ std::expected<Projector, ProjectionError> Projector::make(core::Epsg crs) {
   const auto fail = [crs](ProjectionErrc code) {
     return std::unexpected{ProjectionError{.code = code, .crs = crs}};
   };
-  Context context = make_context();
+  const std::optional<DataSource> data = configured_source();
+  Context context = make_context(data);
   if (not context) {
     return fail(ProjectionErrc::transform_failed);
   }
-  if (not has_database(context.get())) {
+  if (not has_database(context.get(), data)) {
     return fail(ProjectionErrc::database_unavailable);
   }
   const std::string source = epsg_name(crs);

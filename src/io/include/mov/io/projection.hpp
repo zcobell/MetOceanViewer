@@ -48,11 +48,20 @@ using ToLocationError = std::variant<ProjectionError, core::LocationError>;
 /// any projection, with the directory of the database it ships (the build
 /// tree's copy is no use on a user's machine). The environment variable
 /// `MOV_PROJ_DATA`, when set and not empty, overrides it: that is the
-/// escape hatch of a user or a test. With neither, PROJ looks where it was
-/// built to look (and in its own `PROJ_DATA`). Set once: the first call
-/// wins and later ones are ignored. Safe to call from any thread, but a
-/// Projector reads the setting only when it is made.
+/// escape hatch of a user or a test. With either, PROJ opens exactly
+/// `<dir>/proj.db`; if that is missing or not a database, a projection that
+/// needs it is `database_unavailable`. Neither PROJ's default location nor
+/// the copy of proj.db a static PROJ carries inside the library stands in for
+/// it: that would hide a package that lacks its database. With neither,
+/// PROJ looks where it was built to look (and in its own `PROJ_DATA`). Set
+/// once: the first call wins and later ones are ignored. Safe to call from
+/// any thread, but a Projector reads the setting only when it is made.
 void set_projection_data_dir(const std::filesystem::path& dir);
+
+/// The proj.db a Projector made now would use (after the rules of
+/// set_projection_data_dir), or nullopt when PROJ has no usable database.
+/// For diagnostics such as the application's self-test.
+[[nodiscard]] std::optional<std::filesystem::path> projection_database_path();
 
 /// How good the transformations a Projector has used were. PROJ chooses an
 /// operation per point (by the area of use) and tells which only at a cost

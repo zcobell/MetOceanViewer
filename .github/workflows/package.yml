@@ -1,0 +1,554 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# Release packages (docs/packaging.md): the macOS DMG, the Windows installer
+# and portable zip, and the Linux AppImage, each tested and smoke-tested with
+# the application's --self-test, with build provenance attestations and the
+# split debug symbols as artifacts.
+#
+#   tag v*             release build: cold (no caches), signed when the
+#                      secrets exist (required with the repository variable
+#                      MOV_REQUIRE_SIGNING=true), then a draft GitHub Release
+#   manual run         the same packages as workflow artifacts, no release
+#   pull request       when packaging inputs change; unsigned, no attestation
+#   weekly             catches tool and runner drift; unsigned
+#
+# UNVERIFIED: the macOS and Windows jobs have not run yet; the first manual
+# run is their test (docs/packaging.md, "What the owner must do").
+#
+# Signing secrets live in the GitHub Environment "release", which only tag
+# builds use (the owner restricts it to v* tags):
+#   macOS    APPLE_CERTIFICATE_P12_BASE64, APPLE_CERTIFICATE_PASSWORD,
+#            APPLE_SIGNING_IDENTITY (signing), and APPLE_API_KEY_P8_BASE64,
+#            APPLE_API_KEY_ID, APPLE_API_ISSUER_ID (notarization)
+#   Windows  AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
+#            AZURE_SIGNING_ENDPOINT, AZURE_SIGNING_ACCOUNT,
+#            AZURE_CERTIFICATE_PROFILE (Azure Artifact Signing)
+# Without them the steps that need them are skipped with a notice.
+#
+# Third-party actions, and actions/* here, are pinned to a commit SHA.
+
+name: Package
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/package.yml
+      - .github/actions/**
+      - cmake/Packaging.cmake
+      - cmake/app_identity.hpp.in
+      - cmake/vcpkg-ports/**
+      - packaging/**
+      - src/ui/CMakeLists.txt
+      - tools/dev/appimage/**
+      - tools/dev/run.sh
+      - tools/versions.env
+  schedule:
+    - cron: '17 6 * * 1'
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  VCPKG_DISABLE_METRICS: 1
+  CTEST_OUTPUT_ON_FAILURE: 1
+  # Release builds start from nothing: no vcpkg, compiler or Qt cache.
+  MOV_COLD: ${{ startsWith(github.ref, 'refs/tags/') }}
+  # Tag builds fail instead of skipping signing when this repository
+  # variable is 'true'.
+  MOV_REQUIRE_SIGNING: ${{ startsWith(github.ref, 'refs/tags/') && vars.MOV_REQUIRE_SIGNING == 'true' }}
+
+jobs:
+  linux:
+    name: AppImage (Ubuntu 22.04 build)
+    runs-on: ubuntu-24.04
+    # Every run builds the image, GCC included (8 min on 20 cores here; an
+    # estimated 30-60 on CI's 4, not yet measured), and a
+    # cold vcpkg cache builds MapLibre Native Qt.
+    timeout-minutes: 240
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      # tools/dev/run.sh: the Ubuntu 22.04 image (glibc 2.35, a GCC release
+      # built from source in it). Its caches and Qt live beside the checkout; a release
+      # build starts with empty ones and turns vcpkg's binary cache and
+      # ccache off.
+      MOV_DEV_IMAGE: appimage
+      MOV_DEV_CACHE: ${{ github.workspace }}/../dev-cache
+      MOV_QT_ROOT: ${{ github.workspace }}/../Qt
+      MOV_DOCKER_ARGS: ${{ startsWith(github.ref, 'refs/tags/') && '--env VCPKG_BINARY_SOURCES=clear --env CCACHE_DISABLE=1' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/load-versions
+
+      # vcpkg binary cache, ccache and Qt (run.sh downloads Qt into
+      # MOV_QT_ROOT otherwise). Saved once per key, like setup-vcpkg does.
+      - name: Restore build caches
+        id: cache
+        if: env.MOV_COLD != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ env.MOV_DEV_CACHE }}
+            ${{ env.MOV_QT_ROOT }}
+          key: package-linux-${{ hashFiles('tools/dev/appimage/Dockerfile', 'tools/versions.env', 'vcpkg.json', 'vcpkg-configuration.json', 'cmake/vcpkg-ports/**') }}
+
+      # Configure, build, test (ctest -LE gui) and package.
+      - name: Build and package
+        run: tools/dev/run.sh cmake --workflow --preset package-linux
+
+      - name: Save build caches
+        if: always() && env.MOV_COLD != 'true' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ env.MOV_DEV_CACHE }}
+            ${{ env.MOV_QT_ROOT }}
+          key: package-linux-${{ hashFiles('tools/dev/appimage/Dockerfile', 'tools/versions.env', 'vcpkg.json', 'vcpkg-configuration.json', 'cmake/vcpkg-ports/**') }}
+
+      # On the runner (Ubuntu 24.04): the system's libstdc++ is new enough.
+      # Then again with Ubuntu 22.04's libstdc++ first on LD_LIBRARY_PATH,
+      # where the loader looks first: the AppImage must notice and use its own.
+      - name: Smoke test (Ubuntu 24.04)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1 libegl1 libgl1-mesa-dri \
+            libfontconfig1 libxkbcommon-x11-0
+          appimage="$(ls build/package-linux/packages/*.AppImage)"
+          packaging/smoke-test.sh "${appimage}"
+          old="${RUNNER_TEMP}/old-libstdc++"
+          mkdir -p "${old}"
+          docker run --rm --volume "${old}:/out" "${APPIMAGE_UBUNTU_IMAGE}" \
+            cp -L /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /out/libstdc++.so.6
+          LD_LIBRARY_PATH="${old}" packaging/smoke-test.sh "${appimage}"
+
+      # On a bare Ubuntu 22.04: the glibc floor and the bundled libstdc++.
+      # The packages are a desktop's worth of what linuxdeploy leaves to the
+      # system (GL with Mesa, fontconfig, X11, D-Bus, OpenSSL), plus Xvfb.
+      - name: Smoke test (Ubuntu 22.04)
+        env:
+          MOV_SMOKE_PACKAGES: >-
+            xvfb xauth libgl1 libegl1 libgl1-mesa-dri libfontconfig1 libxkbcommon-x11-0
+            libdbus-1-3 libssl3
+        run: |
+          docker run --rm --env MOV_SMOKE_PACKAGES --volume "${PWD}:/work" --workdir /work \
+            "${APPIMAGE_UBUNTU_IMAGE}" bash -c '
+              set -euo pipefail
+              apt-get update
+              # shellcheck disable=SC2086 # a list of packages
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ${MOV_SMOKE_PACKAGES}
+              packaging/smoke-test.sh build/package-linux/packages/*.AppImage'
+
+      - name: Attest build provenance
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: build/package-linux/packages/*.AppImage
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-linux
+          # The AppImage, and where the sources of the Ubuntu packages it
+          # bundles are (a section of the release's source archive).
+          path: |
+            build/package-linux/packages/*.AppImage
+            build/package-linux/packages/*.ubuntu-sources.md
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: symbols-linux
+          path: build/package-linux/src/ui/metoceanviewer.debug
+          if-no-files-found: error
+
+  macos:
+    name: DMG (macOS arm64)
+    runs-on: macos-15
+    timeout-minutes: 150
+    # Signing secrets: tag builds only (see the header).
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'release' || '' }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      # The toolchain of the build-test job (ci.yml), so its vcpkg cache fits.
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: '16.2'
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        if: env.MOV_COLD != 'true'
+        with:
+          key: package-macos
+          max-size: 500M
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: macos-arm64-appleclang-gui
+          cold: ${{ env.MOV_COLD }}
+      - uses: ./.github/actions/setup-qt
+        with:
+          arch: clang_64
+          cache: ${{ env.MOV_COLD != 'true' }}
+
+      # Everything that runs third-party build code (vcpkg ports, MapLibre,
+      # the tests) runs before any secret is in the environment.
+      - name: Build and test
+        run: |
+          cache="$([[ "${MOV_COLD}" == true ]] && echo OFF || echo ON)"
+          cmake --preset package-macos "-DMOV_ENABLE_CACHE=${cache}"
+          cmake --build --preset package-macos
+          ctest --preset package-macos
+
+      # A temporary keychain with the Developer ID certificate (its key not
+      # extractable, usable by codesign only) and the App Store Connect API
+      # key, from the secrets; sign.sh reads the APPLE_* variables this
+      # exports.
+      - name: Signing setup
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          API_KEY: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          skip() {
+            if [[ "${MOV_REQUIRE_SIGNING}" == true ]]; then
+              echo "::error title=macOS signing required::$1"
+              exit 1
+            fi
+            echo "::notice title=macOS signing skipped::$1"
+          }
+          if [[ -z "${CERTIFICATE}" || -z "${CERTIFICATE_PASSWORD}" || -z "${IDENTITY}" ]]; then
+            skip "APPLE_CERTIFICATE_P12_BASE64, APPLE_CERTIFICATE_PASSWORD or APPLE_SIGNING_IDENTITY is not set: the app is ad-hoc signed, the DMG unsigned, nothing notarized."
+            exit 0
+          fi
+          umask 077
+          keychain="${RUNNER_TEMP}/signing.keychain-db"
+          password="$(openssl rand -hex 16)"
+          security create-keychain -p "${password}" "${keychain}"
+          security set-keychain-settings -lut 21600 "${keychain}"
+          security unlock-keychain -p "${password}" "${keychain}"
+          printf '%s' "${CERTIFICATE}" | base64 --decode >"${RUNNER_TEMP}/certificate.p12"
+          security import "${RUNNER_TEMP}/certificate.p12" -P "${CERTIFICATE_PASSWORD}" \
+            -x -T /usr/bin/codesign -f pkcs12 -k "${keychain}"
+          rm -f "${RUNNER_TEMP}/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "${password}" "${keychain}" >/dev/null
+          # shellcheck disable=SC2046 # the existing list, one word per keychain
+          security list-keychains -d user -s "${keychain}" $(security list-keychains -d user | tr -d '"')
+          {
+            echo "APPLE_SIGNING_IDENTITY=${IDENTITY}"
+            echo "APPLE_KEYCHAIN=${keychain}"
+          } >>"${GITHUB_ENV}"
+          if [[ -z "${API_KEY}" || -z "${API_KEY_ID}" || -z "${API_ISSUER_ID}" ]]; then
+            skip "APPLE_API_KEY_P8_BASE64, APPLE_API_KEY_ID or APPLE_API_ISSUER_ID is not set: signed, not notarized."
+            exit 0
+          fi
+          printf '%s' "${API_KEY}" | base64 --decode >"${RUNNER_TEMP}/AuthKey.p8"
+          {
+            echo "APPLE_API_KEY_PATH=${RUNNER_TEMP}/AuthKey.p8"
+            echo "APPLE_API_KEY_ID=${API_KEY_ID}"
+            echo "APPLE_API_ISSUER_ID=${API_ISSUER_ID}"
+          } >>"${GITHUB_ENV}"
+
+      # CPack checks and signs the app before it makes the DMG, then signs,
+      # notarizes and staples the DMG (packaging/macos/sign.sh).
+      - name: Package
+        run: cpack --preset package-macos
+
+      - name: Remove the signing keychain
+        if: always() && env.APPLE_KEYCHAIN != ''
+        run: |
+          security delete-keychain "${APPLE_KEYCHAIN}" || true
+          rm -f "${RUNNER_TEMP}/AuthKey.p8"
+
+      - name: Smoke test
+        run: packaging/smoke-test.sh build/package-macos/packages/*.dmg
+
+      - name: Gatekeeper assessment
+        if: env.APPLE_API_KEY_PATH != ''
+        run: |
+          dmg="$(ls build/package-macos/packages/*.dmg)"
+          xcrun stapler validate "${dmg}"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "${dmg}"
+
+      - name: Attest build provenance
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: build/package-macos/packages/*.dmg
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-macos
+          path: build/package-macos/packages/*.dmg
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: symbols-macos
+          path: build/package-macos/src/ui/MetOceanViewer.app.dSYM
+          if-no-files-found: error
+
+  windows:
+    name: Installer and zip (Windows x64)
+    runs-on: windows-2022
+    timeout-minutes: 150
+    # Signing secrets: tag builds only (see the header).
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'release' || '' }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+      # No sccache: the package build writes PDBs (/Zi), which it cannot cache.
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: windows-msvc-gui
+          cold: ${{ env.MOV_COLD }}
+      - uses: ./.github/actions/setup-qt
+        with:
+          arch: win64_msvc2022_64
+          cache: ${{ env.MOV_COLD != 'true' }}
+
+      # Everything that runs third-party build code runs before any secret
+      # is in the environment.
+      - name: Build and test
+        run: |
+          cmake --preset package-windows -DMOV_ENABLE_CACHE=OFF
+          cmake --build --preset package-windows
+          ctest --preset package-windows
+
+      - name: Signing configuration
+        id: signing
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_CERTIFICATE_PROFILE: ${{ secrets.AZURE_CERTIFICATE_PROFILE }}
+        run: |
+          for name in AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_SIGNING_ENDPOINT \
+                      AZURE_SIGNING_ACCOUNT AZURE_CERTIFICATE_PROFILE; do
+            if [[ -z "${!name}" ]]; then
+              message="${name} is not set: the executables and the installer are unsigned."
+              if [[ "${MOV_REQUIRE_SIGNING}" == true ]]; then
+                echo "::error title=Windows signing required::${message}"
+                exit 1
+              fi
+              echo "::notice title=Windows signing skipped::${message}"
+              echo "enabled=false" >>"${GITHUB_OUTPUT}"
+              exit 0
+            fi
+          done
+          echo "enabled=true" >>"${GITHUB_OUTPUT}"
+
+      # The binaries the packages take, signed in place before CPack copies
+      # them: the executable and the DLLs beside it (vcpkg's app-local copies,
+      # MapLibre and its plugin), the vcpkg DLLs and plugins, and every Qt
+      # DLL that carries no signature of its own (Microsoft's runtime does).
+      - name: List the binaries to sign
+        id: unsigned
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $roots = @("build/package-windows/src/ui",
+                     "build/package-windows/vcpkg_installed/x64-windows/bin",
+                     "build/package-windows/vcpkg_installed/x64-windows/plugins",
+                     "$env:QT_ROOT_DIR/bin", "$env:QT_ROOT_DIR/plugins", "$env:QT_ROOT_DIR/qml")
+          $files = Get-ChildItem -Recurse -File -Include *.exe, *.dll -Path $roots |
+            Where-Object { (Get-AuthenticodeSignature $_.FullName).Status -ne 'Valid' } |
+            ForEach-Object { $_.FullName }
+          Write-Output "Signing $($files.Count) files"
+          "files<<EOF" | Out-File -Append $env:GITHUB_OUTPUT
+          $files | Out-File -Append $env:GITHUB_OUTPUT
+          "EOF" | Out-File -Append $env:GITHUB_OUTPUT
+
+      - name: Sign the binaries
+        if: steps.signing.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE }}
+          files: ${{ steps.unsigned.outputs.files }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Package
+        run: cpack --preset package-windows
+
+      - name: Sign the installer
+        if: steps.signing.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE }}
+          files-folder: ${{ github.workspace }}\build\package-windows\packages
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Smoke test
+        run: |
+          packaging/smoke-test.sh build/package-windows/packages/*-portable.zip
+          for installer in build/package-windows/packages/*.exe; do
+            packaging/smoke-test.sh "${installer}"
+          done
+
+      # Every .exe and .dll in the portable zip (the installer installs the
+      # same tree) and the installer itself must carry a valid signature of
+      # our publisher (the executable's signer), Microsoft or The Qt Company.
+      - name: Verify signatures
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $ours = (Get-AuthenticodeSignature build/package-windows/src/ui/metoceanviewer.exe).SignerCertificate.Subject
+          $allowed = @($ours, 'O=Microsoft Corporation', 'O=The Qt Company')
+          $tree = Join-Path $env:RUNNER_TEMP 'portable'
+          Expand-Archive -Path (Get-ChildItem build/package-windows/packages/*-portable.zip).FullName -DestinationPath $tree
+          $files = @(Get-ChildItem -Recurse -File -Include *.exe, *.dll -Path $tree)
+          $files += Get-ChildItem build/package-windows/packages/*.exe
+          $bad = 0
+          foreach ($file in $files) {
+            $signature = Get-AuthenticodeSignature $file.FullName
+            $subject = "$($signature.SignerCertificate.Subject)"
+            $trusted = $allowed | Where-Object { $_ -and $subject.Contains($_) }
+            if ($signature.Status -ne 'Valid' -or -not $trusted) {
+              Write-Output "::error::$($file.Name): $($signature.Status) $subject"
+              $bad++
+            }
+          }
+          Write-Output "$($files.Count) files checked, $bad without an allowed signature"
+          if ($bad -gt 0) { exit 1 }
+
+      - name: Attest build provenance
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            build/package-windows/packages/*.exe
+            build/package-windows/packages/*.zip
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-windows
+          path: |
+            build/package-windows/packages/*.exe
+            build/package-windows/packages/*.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: symbols-windows
+          path: build/package-windows/src/ui/metoceanviewer.pdb
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/load-versions
+      # vcpkg at the baseline, for the ports' sources (no binary cache).
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: release-sources
+          cold: 'true'
+      # The tag names the version the packages carry: project(VERSION).
+      - name: Tag and project version agree
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(sed -n 's/^ *VERSION \([0-9][0-9.]*\)$/\1/p' CMakeLists.txt | head -n 1)"
+          if [[ -z "${version}" || "${TAG}" != "v${version}" ]]; then
+            echo "::error::tag ${TAG} does not match project(VERSION ${version:-?}) in CMakeLists.txt"
+            exit 1
+          fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: package-*
+          path: packages
+          merge-multiple: true
+      # GPL-3.0 section 6 (plan §6.29): the corresponding source, as a release
+      # asset: this repository at the tag, the vcpkg ports' sources and
+      # recipes, MapLibre Native Qt with its submodules, the Qt module sources,
+      # and the sources referenced by URL and checksum (docs/packaging.md).
+      - name: Source archive
+        run: |
+          references=()
+          for section in packages/*.ubuntu-sources.md; do
+            references+=(--reference "${section}")
+          done
+          python3 tools/source_archive.py --output-dir packages --work-dir "${RUNNER_TEMP}" "${references[@]}"
+      - name: Checksums
+        working-directory: packages
+        run: sha256sum -- * | tee SHA256SUMS.txt
+      # Only drafts are created or changed; the owner publishes. A published
+      # release is never touched.
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if draft="$(gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [[ "${draft}" != true ]]; then
+              echo "::error::release ${TAG} is already published; refusing to change its files"
+              exit 1
+            fi
+            gh release upload "${TAG}" packages/* --clobber --repo "${GITHUB_REPOSITORY}"
+          else
+            gh release create "${TAG}" packages/* --draft --verify-tag --generate-notes \
+              --title "MetOceanViewer ${TAG#v}" --repo "${GITHUB_REPOSITORY}"
+          fi

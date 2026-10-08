@@ -111,9 +111,12 @@ MOV_DOCKER_ARGS="--network none --env HOME=/tmp/empty" tools/dev/run.sh ctest --
 ## Running the app
 
 The executable is `build/<preset>/src/ui/metoceanviewer`
-(`metoceanviewer.app` on macOS). The build copies the MapLibre geoservices
-plugin next to it (`geoservices/`), so it runs from the build tree without
-environment variables.
+(`MetOceanViewer.app` on macOS). The build copies the MapLibre geoservices
+plugin next to it (`geoservices/`) and `proj.db` to where a package keeps it
+(`../share/metoceanviewer/proj`, `Contents/Resources/proj` in the bundle), so
+it runs from the build tree without environment variables.
+`metoceanviewer --self-test` checks that without a window (ctest:
+`metoceanviewer_self_test`). Packages: `docs/packaging.md`.
 
 - Headless host: the GUI test above is the way to look at it.
   `tools/dev/run.sh xvfb-run -a build/dev-qt/src/ui/metoceanviewer` also runs
@@ -123,7 +126,7 @@ environment variables.
 - macOS 14+ and Windows: build natively (below) with Qt, as CI does:
   `cmake --preset ci-macos -DMOV_ENABLE_QT=ON "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR"`
   then `cmake --build --preset ci-macos` (`ci-windows` likewise, from a Visual
-  Studio developer prompt). Run `open build/ci-macos/src/ui/metoceanviewer.app`,
+  Studio developer prompt). Run `open build/ci-macos/src/ui/MetOceanViewer.app`,
   or `build\ci-windows\src\ui\metoceanviewer.exe` with Qt's `bin` on `PATH`.
   On Windows use a release-type configuration (`ci-windows` is RelWithDebInfo):
   MapLibre is built in release only, and a Debug app would load Qt's debug DLLs
@@ -152,7 +155,9 @@ measured there); the build-test and clang-tidy jobs allow 120 min.
   `cmake/MapLibre.cmake` fails the configure if a cached build was made for a
   different Qt than the one found.
 - Renderer: OpenGL on Linux and Windows; Metal on macOS, which is both Qt
-  Quick's default there and MapLibre's only Apple backend.
+  Quick's default there and MapLibre's only Apple backend. On Linux it links
+  `libGL.so.1` (`OpenGL_GL_PREFERENCE=LEGACY`), not GLVND's `libOpenGL.so.0`,
+  which many systems lack and the AppImage cannot bundle.
   `mov::ui::select_graphics_api` makes Qt Quick use the same API.
 - Release build only, shared libraries, bundled ICU on Linux, upstream
   `-Werror` off. Our warning flags never reach it.
@@ -171,7 +176,8 @@ measured there); the build-test and clang-tidy jobs allow 120 min.
   the packaging step must copy the frameworks into the bundle.
 - Notices: the port's copyright file carries the bindings' licenses, the
   core's `LICENSE.md` and `LICENSES.core.md` (its vendored libraries) and the
-  ICU, nunicode and MapLibre Tile licenses; packaging must ship it.
+  ICU, nunicode and MapLibre Tile licenses; the packages ship it
+  (`share/doc/metoceanviewer/third-party/maplibre-native-qt.txt`).
 - To bump: change `mln_qt_ref`, compare the submodule lists with the new
   `vendor/maplibre-native/.gitmodules`, update `version-date` in the port's
   `vcpkg.json`, and rebuild.
@@ -184,17 +190,30 @@ measured there); the build-test and clang-tidy jobs allow 120 min.
   MapLibre is release-only, and the app would load debug and release Qt side
   by side.
 
+Packaging (`docs/packaging.md`) installs `MOV_MAPLIBRE_RUNTIME_LIBRARIES` and
+the plugin itself (`cmake/Packaging.cmake`) and has the deploy tools scan
+them; on Windows it keeps Qt's `opengl32sw.dll` (never pass `--no-opengl-sw`
+to windeployqt): Mesa's software OpenGL, the fallback where the GPU driver
+lacks OpenGL 2+, which MapLibre needs on Windows.
+
 Planned, not done:
 
-- Packaging (Windows): keep Qt's `opengl32sw.dll` (do not pass
-  `--no-opengl-sw` to windeployqt). It is Mesa's software OpenGL, the fallback
-  where the GPU driver lacks OpenGL 2+, and MapLibre renders through OpenGL on
-  Windows.
 - A source tarball. The port depends on GitHub and about 30 shallow fetches
   staying available. The plan: a GitHub release asset holding the pinned
   maplibre-native-qt tree with its submodules, which the port downloads with
   `vcpkg_download_distfile` and a SHA-512 (so vcpkg's asset cache works too).
   Publishing release assets is an owner action, so this waits for the owner.
+
+## AppImage build image
+
+`MOV_DEV_IMAGE=appimage tools/dev/run.sh <cmd>` runs `<cmd>` in a second
+image, `tools/dev/appimage/Dockerfile`: Ubuntu 22.04 (`APPIMAGE_UBUNTU_IMAGE`)
+with a GCC 14 release built from source in the image (`APPIMAGE_GCC_VERSION`,
+`docs/packaging.md`), the same CMake,
+vcpkg and Qt, so the AppImage keeps the glibc 2.35 floor of plan §6.24. It
+shares the caches and `~/Qt` with the dev image; its vcpkg binaries are its
+own (another compiler). Use it only for `--preset package-linux`
+(`docs/packaging.md`).
 
 ## Native build (without Docker)
 
@@ -228,8 +247,16 @@ Studio developer prompt).
 - The `lukka/get-cmake` action pin in `.github/workflows/ci.yml` (Dependabot
   updates the SHA; the CMake version itself comes from `CMAKE_VERSION`).
 - `CMAKE_SHA256` whenever `CMAKE_VERSION` changes (from Kitware's
-  `cmake-<version>-SHA-256.txt`), and `UBUNTU_IMAGE`'s digest when moving the
-  base image.
+  `cmake-<version>-SHA-256.txt`), `UBUNTU_IMAGE`'s and
+  `APPIMAGE_UBUNTU_IMAGE`'s digests when moving a base image, and each
+  `LINUXDEPLOY_*_SHA256` with its tag.
+- The Qt system packages of `tools/dev/appimage/Dockerfile` (Ubuntu 22.04
+  names) follow the dev image's.
+- The committed icons (`packaging/icons/`): `tools/make_icons.py`
+  after editing their SVG sources (the pre-commit hook `icons` checks), and
+  Qt's license texts (`packaging/licenses/qt/`): `tools/fetch_qt_licenses.py`
+  after a Qt bump.
+- The packaging values listed in `docs/packaging.md`, "Keep in sync".
 - `cmake_minimum_required` in `CMakeLists.txt` and `cmakeMinimumRequired` in
   `CMakePresets.json` follow `CMAKE_VERSION` (the only version CI exercises).
 - `actions/*` versions in the workflow and composite actions (Dependabot).

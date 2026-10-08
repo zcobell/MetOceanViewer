@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+[Desktop Entry]
+Type=Application
+Name=MetOceanViewer
+GenericName=Met-ocean data viewer
+Comment=View hydrodynamic model output and observed met-ocean data
+Exec=metoceanviewer %f
+Icon=io.github.zcobell.metoceanviewer
+Terminal=false
+Categories=Science;Geoscience;
+MimeType=application/x-metoceanviewer-session;
+Keywords=ADCIRC;NOAA;USGS;NDBC;tide;water level;storm surge;

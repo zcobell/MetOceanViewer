@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Zach Cobell
+
+// Windows resources of metoceanviewer.exe: the icon (the first icon resource
+// is the one Explorer shows) and the version information. Configured by
+// mov_set_app_metadata() (cmake/Packaging.cmake) from project(VERSION).
+
+#include <winver.h>
+
+IDI_APP_ICON ICON "metoceanviewer.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0x0L
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        // U.S. English, Unicode
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Zach Cobell"
+            VALUE "FileDescription", "@MOV_APP_NAME@"
+            VALUE "FileVersion", "@PROJECT_VERSION@"
+            VALUE "InternalName", "metoceanviewer"
+            VALUE "LegalCopyright", "Copyright (c) 2026 Zach Cobell. GPL-3.0-or-later."
+            VALUE "OriginalFilename", "metoceanviewer.exe"
+            VALUE "ProductName", "@MOV_APP_NAME@"
+            VALUE "ProductVersion", "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

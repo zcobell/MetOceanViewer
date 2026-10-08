@@ -136,6 +136,12 @@ vcpkg_replace_string("${SOURCE_PATH}/CMakeLists.txt" "add_subdirectory(test)" ""
 if(VCPKG_TARGET_IS_OSX)
     # Qt Quick renders through Metal on macOS; OpenGL is deprecated there.
     set(renderer -DMLN_WITH_METAL=ON)
+elseif(VCPKG_TARGET_IS_LINUX)
+    # Link GL through libGL.so.1, not GLVND's libOpenGL.so.0 (CMake's default):
+    # every Linux system with OpenGL has libGL.so.1, while libOpenGL.so.0
+    # (libopengl0) is missing from many, and the AppImage cannot bundle
+    # either (they belong to the system's driver stack). docs/packaging.md.
+    set(renderer -DMLN_WITH_OPENGL=ON -DOpenGL_GL_PREFERENCE=LEGACY)
 else()
     set(renderer -DMLN_WITH_OPENGL=ON)
 endif()
@@ -159,6 +165,7 @@ vcpkg_cmake_configure(
         -DMLN_WITH_WERROR=OFF
     MAYBE_UNUSED_VARIABLES
         MLN_QT_WITH_INTERNAL_ICU
+        OpenGL_GL_PREFERENCE
         QT_DIR
 )
 
