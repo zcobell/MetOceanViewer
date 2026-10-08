@@ -24,6 +24,13 @@ architecture, the phase order and the open decisions.
 - Verify external API details (especially the USGS Water Data API migration) against
   current official documentation before implementing a provider.
 
+## Scratch space
+
+The host's root filesystem is small. Put temporary files, probes and scratch
+builds under `/home` (the repo's `build/` or `~/.cache/metoceanviewer-dev/tmp`),
+never in `/tmp` on the host. Inside the dev container `/tmp` is fine: it lives
+on the Docker disk. Delete scratch output when done.
+
 ## House rules for reviewers
 
 The reviewer agents in `.claude/agents/` were written for another codebase

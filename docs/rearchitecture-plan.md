@@ -524,6 +524,13 @@ open. Do not guess; ask before proceeding past the phase that needs them.
 27. **CSV export:** long format, one row per sample (station id/name, ISO-8601 UTC time,
     quantity, value, units, datum).
 
+29. **GPL-3.0 §6 corresponding source (decided 2026-10-07):** every GitHub Release
+    carries a source archive: this repository at the tag plus the exact sources of
+    the bundled third-party code (vcpkg ports at the pinned baseline, MapLibre
+    Native Qt and its submodules at the pinned commit, Qt's source for the
+    shipped version or the exact upstream URL and checksum where redistribution
+    of a copy is impractical). Built by the package workflow.
+
 ## 7. Engineering rules for v5
 
 - `core` and `io` never include Qt headers.
