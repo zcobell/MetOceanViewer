@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# CMAKE_CROSSCOMPILING_EMULATOR of the dev-msvc-xwin preset: runs a cross-built
+# Windows executable under Wine.
+#
+# - Arguments that are absolute Unix paths become Z:\ paths: Catch2's
+#   command-line parser reads a leading "/" as an option prefix when built for
+#   Windows (`--out /path/file` fails with "Expected argument following --out").
+# - Wine's ucrtbase and msvcp140_2 are incomplete (Wine 9: feholdexcept, which
+#   HDF5 calls; __std_smf_hypot3, which std::hypot of three arguments calls).
+#   Wine aborts the process with "unimplemented function"; that is Wine's gap,
+#   not the code's, so it is reported as Catch2's "skipped" exit code (4) and
+#   the message stays in the test output.
+set -euo pipefail
+
+exe="$1"
+shift
+args=()
+for arg in "$@"; do
+  if [[ "${arg}" == /* ]]; then
+    arg="Z:${arg//\//\\}"
+  fi
+  args+=("${arg}")
+done
+
+errors="$(mktemp)"
+trap 'rm -f "${errors}"' EXIT
+status=0
+wine64 "${exe}" "${args[@]}" 2>"${errors}" || status=$?
+cat "${errors}" >&2
+if ((status != 0)) && grep -q 'to unimplemented function' "${errors}"; then
+  echo "wine-run: Wine lacks a function this test needs (above); reported as skipped" >&2
+  exit 4
+fi
+exit "${status}"

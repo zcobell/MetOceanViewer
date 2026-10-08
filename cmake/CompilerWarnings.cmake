@@ -33,6 +33,19 @@ function(mov_set_project_warnings target warnings_as_errors)
         /w14062 # enumerator in switch of enum is not handled
     )
 
+    if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # clang-cl (the local Windows cross-check, cmake/toolchains/clang-cl-xwin.cmake):
+        # /W4 selects Clang's -Wall -Wextra, which lacks Clang's counterparts of
+        # cl /W4 warnings that have broken Windows builds before.
+        list(
+            APPEND MSVC_WARNINGS
+            -Wunreachable-code # C4702 unreachable code (not after a fully covered enum switch)
+            -Wshadow # C4456, C4457, C4458, C4459 declaration hides another
+            -Wconversion # C4244, C4267, C4305 narrowing conversions
+            -Wno-sign-conversion # keep -Wconversion to what cl /W4 reports
+        )
+    endif()
+
     set(CLANG_WARNINGS
         -Wall
         -Wextra

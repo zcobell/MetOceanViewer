@@ -95,6 +95,9 @@ tools/dev/run.sh cmake --workflow --preset release    # as shipped (no stdlib ha
 tools/dev/run.sh cmake --workflow --preset coverage   # report in build/coverage/coverage-report/;
                                                       # fails < 80% lines overall or < 90% in src/core, src/io
 tools/dev/run.sh ctest --preset dev -R <regex>        # rerun selected tests
+# Windows/MSVC cross-check without pushing (clang-cl + MSVC STL/CRT from xwin, tests under Wine;
+# not MSVC's front end, see "Windows/MSVC cross-check" in tools/dev/README.md):
+MOV_DEV_IMAGE=msvc tools/dev/run.sh cmake --workflow --preset dev-msvc-xwin
 
 # The app (Qt layers). This host is headless: the GUI test runs it under Xvfb
 # and writes build/dev-qt/tests/ui/screenshots/main-window.png.

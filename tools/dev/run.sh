@@ -7,6 +7,8 @@
 #   tools/dev/run.sh cmake --workflow --preset dev
 #   tools/dev/run.sh                      # interactive shell
 #   MOV_DEV_QT=1 tools/dev/run.sh ...     # make sure Qt is installed first
+#   MOV_DEV_IMAGE=msvc tools/dev/run.sh cmake --workflow --preset dev-msvc-xwin
+#                                         # Windows/MSVC cross-check image
 #
 # The repository is mounted at its host path and the command runs as the host
 # uid/gid, so build trees and compile_commands.json are valid on both sides.
@@ -23,7 +25,7 @@
 #   ~/Qt                         Qt
 #   ~/.cache/metoceanviewer-dev  ccache, vcpkg downloads + binary cache, $HOME
 #
-# Environment overrides: MOV_DEV_QT, MOV_QT_ROOT, MOV_DEV_CACHE,
+# Environment overrides: MOV_DEV_IMAGE, MOV_DEV_QT, MOV_QT_ROOT, MOV_DEV_CACHE,
 # MOV_DOCKER_ARGS (extra `docker run` arguments).
 
 set -euo pipefail
@@ -51,21 +53,40 @@ qt_root="${MOV_QT_ROOT:-${HOME}/Qt}"
 qt_prefix="${qt_root}/${qt_version}/gcc_64"
 cache_root="${MOV_DEV_CACHE:-${HOME}/.cache/metoceanviewer-dev}"
 
-input_hash="$(cat "${script_dir}/Dockerfile" "${script_dir}/requirements.txt" "${versions_file}" \
+# MOV_DEV_IMAGE picks the image: "dev" (default, Ubuntu 24.04, mirrors CI) or
+# "msvc" (clang-cl + the MSVC STL/CRT and Windows SDK from xwin, plus Wine: the
+# Windows cross-check, tools/dev/msvc). Both share the caches below.
+case "${MOV_DEV_IMAGE:-dev}" in
+  dev) dockerfile="${script_dir}/Dockerfile" image_name=metoceanviewer-dev ;;
+  msvc) dockerfile="${script_dir}/msvc/Dockerfile" image_name=metoceanviewer-msvc ;;
+  *)
+    echo "run.sh: MOV_DEV_IMAGE must be dev or msvc, not '${MOV_DEV_IMAGE}'" >&2
+    exit 1
+    ;;
+esac
+
+input_hash="$(cat "${dockerfile}" "${script_dir}/requirements.txt" "${versions_file}" \
   <(echo "${vcpkg_commit}") | sha256sum | cut -c1-12)"
-image="metoceanviewer-dev:${input_hash}"
+image="${image_name}:${input_hash}"
 
 if ! docker image inspect "${image}" >/dev/null 2>&1; then
   echo "run.sh: building ${image}" >&2
+  # Each Dockerfile declares the build args it uses; Docker ignores the rest
+  # (with a warning).
   docker build \
+    --file "${dockerfile}" \
     --build-arg "UBUNTU_IMAGE=$(version_of UBUNTU_IMAGE)" \
     --build-arg "GCC_VERSION=$(version_of GCC_VERSION)" \
     --build-arg "LLVM_VERSION=$(version_of LLVM_VERSION)" \
     --build-arg "LIBCXX_VERSION=$(version_of LIBCXX_VERSION)" \
     --build-arg "CMAKE_VERSION=$(version_of CMAKE_VERSION)" \
     --build-arg "CMAKE_SHA256=$(version_of CMAKE_SHA256)" \
+    --build-arg "XWIN_VERSION=$(version_of XWIN_VERSION)" \
+    --build-arg "XWIN_SHA256=$(version_of XWIN_SHA256)" \
+    --build-arg "XWIN_CRT_VERSION=$(version_of XWIN_CRT_VERSION)" \
+    --build-arg "XWIN_SDK_VERSION=$(version_of XWIN_SDK_VERSION)" \
     --build-arg "VCPKG_COMMIT=${vcpkg_commit}" \
-    --tag "${image}" --tag metoceanviewer-dev:latest \
+    --tag "${image}" --tag "${image_name}:latest" \
     "${script_dir}"
 fi
 

@@ -77,6 +77,91 @@ and CI runs it as the `libcxx` job. C++ vcpkg ports are built with libc++ too
 are different types. Findings and the per-version feature table are in
 `docs/wp-notes/portability.md`.
 
+## Windows/MSVC cross-check (clang-cl + xwin)
+
+A local stand-in for the `windows-2022` job, so MSVC STL, UCRT and `/W4` problems
+show up before a push:
+
+```sh
+MOV_DEV_IMAGE=msvc tools/dev/run.sh cmake --workflow --preset dev-msvc-xwin
+```
+
+`MOV_DEV_IMAGE=msvc` selects `tools/dev/msvc/Dockerfile` (image
+`metoceanviewer-msvc:<hash>`, about 2.3 GB, built on first use in a few minutes:
+it downloads about 85 MiB from Microsoft). It holds `clang-cl`, `lld-link`,
+`llvm-rc` and `llvm-mt` from `LLVM_VERSION`; the MSVC CRT and STL
+(`XWIN_CRT_VERSION`) and the Windows SDK (`XWIN_SDK_VERSION`), x86-64 and release
+CRT only, laid out by [xwin](https://github.com/Jake-Shadle/xwin)
+(`XWIN_VERSION`, SHA-256-checked) under `/opt/xwin`; vcpkg; and Wine to run the
+result. Building the image downloads Microsoft's CRT and SDK with
+`--accept-license`, which the repository owner has accepted. The pinned
+versions are those of the `windows-2022` runner image on 2026-10-07 (VS 2022
+17.14, MSVC toolset 14.44, Windows SDK 10.0.26100 among its SDKs). xwin reads
+Microsoft's live VS 17 channel manifest, so if Microsoft retires 14.44 the image
+build fails until `XWIN_CRT_VERSION` moves.
+
+**Level reached: full build and test.** `dev-msvc-xwin` is Qt-free (`src/core`,
+`src/io`, `tests/`, no `MOV_ENABLE_QT`). Nothing is compile-only:
+
+- `cmake/toolchains/clang-cl-xwin.cmake` selects `clang-cl --target=x86_64-pc-windows-msvc`
+  with the MSVC and SDK headers as system headers (`/imsvc`), `/MD`, `lld-link` and `llvm-rc`.
+  The project's own MSVC branch applies unchanged: `/W4 /WX /permissive- /Zc:preprocessor`,
+  the `/w14xxx` list, `_CRT_SECURE_NO_WARNINGS`, `_MSVC_STL_HARDENING=1`.
+  `-Wno-unused-command-line-argument` keeps `/WX` from failing on switches that clang-cl
+  ignores (`/Zc:preprocessor`).
+- vcpkg builds catch2, netcdf-c, HDF5, PROJ (and zlib, libaec, sqlite3, tinyxml2)
+  for Windows with the same toolchain: overlay triplet `x64-windows-xwin`
+  (static libraries, `/MD`, release only: xwin has no debug CRT, so the preset
+  is RelWithDebInfo like `ci-windows`). PROJ's SQLite tool is built for the host.
+  Two workarounds are in the toolchain: an empty `InstallRequiredSystemLibraries`
+  stand-in (CMake's looks for a Visual Studio and fails on a Linux host, in HDF5),
+  and `CMAKE_TRY_COMPILE_CONFIGURATION=Release` (ports with an old
+  `cmake_minimum_required` would link the debug CRT). The triplet must not set
+  `VCPKG_CMAKE_SYSTEM_NAME`: that is how vcpkg recognises a Windows target.
+- `tools/dev/msvc/wine-run` runs the test executables under Wine 9 (it rewrites
+  absolute Unix paths to `Z:\`, which Catch2 would read as options). CMake's
+  `CMAKE_CROSSCOMPILING_EMULATOR` makes `ctest` and Catch2's test discovery use it.
+
+Cost on a 21-core host: image build about 10 minutes once; a cold configure builds
+the ports in 3 to 8 minutes (then cached by vcpkg); building 139 targets about
+1.5 minutes without ccache; `ctest` (1028 tests, 8 jobs, one Wine process per test
+case) about 50 seconds. With warm vcpkg and ccache caches the whole workflow from an
+empty build tree takes about a minute. The vcpkg binary cache key includes the
+toolchain file, so editing it rebuilds the ports.
+
+**What it catches.** Anything the MSVC STL/UCRT headers do differently from
+libstdc++/libc++: missing or changed headers and overloads, `std::format` and
+`<chrono>` behaviour, the CRT's `C4996` deprecations (`getenv`, `fopen`, ...;
+clang-cl reports them as `-Wdeprecated-declarations`), POSIX-only code (`<unistd.h>`,
+`strcasecmp`, `ssize_t`), Windows-only `#if` branches, link errors against the
+real import libraries, `/W4`-class warnings that Clang's `-Wall -Wextra` also
+raises (`CompilerWarnings.cmake` adds `-Wshadow -Wconversion -Wunreachable-code` for
+clang-cl for the C4456-C4459, C4244/C4267 and C4702 families), and run-time
+differences of the Windows CRT and file system semantics (Wine implements them
+closely but not exactly). It found one test that would fail on Windows:
+`the new file keeps the permission bits of the one it replaces` expects 0660 where
+Windows reports 0777 (now skipped on `_WIN32`).
+
+**What only real MSVC catches.** This is Clang's front end, not `cl.exe`'s.
+- MSVC-only front-end bugs and limits: for example, `AttTarget`'s `consteval`
+  constructor calling `NcNameRef`'s `consteval` constructor (the error fixed in
+  `99518daf`) compiles with clang-cl; checked against the parent's headers.
+- `cl`'s `C47xx` warnings that have no Clang counterpart: C4702 after a fully covered
+  enum `switch`, C4127, most of the `/w14xxx` list (clang-cl ignores them).
+  Clang warnings that `cl` lacks can fail this build instead.
+- MSVC's `constexpr` evaluator (step and nesting limits), template instantiation and
+  `requires` details, ABI of `long double`, and `/analyze`.
+- Qt, MapLibre and the packaging steps (no Qt in this image).
+
+Known Wine 9 gaps (`wine-run` turns them into ctest "skipped", with Wine's message in
+the test output): `ucrtbase.dll.feholdexcept` (HDF5 calls it, so 47 netCDF tests
+cannot run) and `msvcp140_2.dll.__std_smf_hypot3` (`std::hypot` of three arguments,
+2 tests). `layering_guard_rejects_violations` is excluded: it configures nested
+projects with `clang-cl` and no cross toolchain. The full `ctest` run is therefore
+"1028 passed, 65 skipped" here (49 for the Wine gaps, 16 that skip themselves, for
+example on a directory Wine does not protect), not a statement about those tests on
+Windows.
+
 ## Qt and GUI tests
 
 Qt test executables (`mov_add_test(<name> QT|GUI ...)`) have their own
@@ -230,6 +315,10 @@ Studio developer prompt).
 - `CMAKE_SHA256` whenever `CMAKE_VERSION` changes (from Kitware's
   `cmake-<version>-SHA-256.txt`), and `UBUNTU_IMAGE`'s digest when moving the
   base image.
+- `XWIN_SHA256` whenever `XWIN_VERSION` changes (the release's
+  `xwin-<version>-x86_64-unknown-linux-musl.tar.gz`), and `XWIN_CRT_VERSION` /
+  `XWIN_SDK_VERSION` when the `windows-2022` image moves to another Visual Studio or SDK
+  (actions/runner-images `Windows2022-Readme.md`; `xwin list` shows what Microsoft offers).
 - `cmake_minimum_required` in `CMakeLists.txt` and `cmakeMinimumRequired` in
   `CMakePresets.json` follow `CMAKE_VERSION` (the only version CI exercises).
 - `actions/*` versions in the workflow and composite actions (Dependabot).

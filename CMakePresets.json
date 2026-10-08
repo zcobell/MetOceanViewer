@@ -112,6 +112,28 @@
       }
     },
     {
+      "name": "dev-msvc-xwin",
+      "inherits": [
+        "base"
+      ],
+      "displayName": "Developer: Windows MSVC cross-check (clang-cl + xwin)",
+      "description": "Qt-free (core, io, tests). Cross-compiles for x64 Windows with clang-cl against the MSVC STL/CRT and Windows SDK that xwin downloaded (MOV_DEV_IMAGE=msvc tools/dev/run.sh), /W4 /WX /permissive- /Zc:preprocessor as in the windows-2022 job; vcpkg ports through the x64-windows-xwin overlay triplet; tests run under Wine. Not MSVC's front end: see tools/dev/README.md.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-xwin",
+        "VCPKG_HOST_TRIPLET": "x64-linux",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-cl-xwin.cmake",
+        "CMAKE_CROSSCOMPILING_EMULATOR": "${sourceDir}/tools/dev/msvc/wine-run",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "Embedded",
+        "MOV_ENABLE_QT": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
       "name": "asan",
       "inherits": [
         "base",
@@ -252,6 +274,10 @@
       "configurePreset": "dev-libcxx"
     },
     {
+      "name": "dev-msvc-xwin",
+      "configurePreset": "dev-msvc-xwin"
+    },
+    {
       "name": "asan",
       "configurePreset": "asan"
     },
@@ -320,6 +346,20 @@
       "name": "dev-libcxx",
       "inherits": "test-base",
       "configurePreset": "dev-libcxx"
+    },
+    {
+      "name": "dev-msvc-xwin",
+      "inherits": "test-base",
+      "configurePreset": "dev-msvc-xwin",
+      "description": "Tests run under Wine (one process per Catch2 test case, hence the parallel jobs). layering_guard_rejects_violations configures nested projects with clang-cl but without the cross toolchain, so it cannot work here.",
+      "execution": {
+        "jobs": 8
+      },
+      "filter": {
+        "exclude": {
+          "name": "^layering_guard_rejects_violations$"
+        }
+      }
     },
     {
       "name": "asan",
@@ -424,6 +464,23 @@
         {
           "type": "test",
           "name": "dev-libcxx"
+        }
+      ]
+    },
+    {
+      "name": "dev-msvc-xwin",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev-msvc-xwin"
+        },
+        {
+          "type": "build",
+          "name": "dev-msvc-xwin"
+        },
+        {
+          "type": "test",
+          "name": "dev-msvc-xwin"
         }
       ]
     },
