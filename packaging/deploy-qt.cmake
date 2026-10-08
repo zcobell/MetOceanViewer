@@ -6,7 +6,6 @@
 # with qt_generate_deploy_script(), which defines Qt's deploy API and:
 #   MOV_DEPLOY_TARGET      the executable target (its QML imports were recorded
 #                          at configure time)
-#   MOV_DEPLOY_SYSTEM      CMAKE_SYSTEM_NAME (Darwin, Windows)
 #   MOV_DEPLOY_EXECUTABLE  the installed executable (the .app on macOS),
 #                          relative to the install prefix
 #   MOV_DEPLOY_LIBDIR      where the QMapLibre libraries were installed
@@ -66,6 +65,6 @@ endforeach()
 # Windows: MapLibre renders with OpenGL, and opengl32sw.dll (Mesa llvmpipe) is
 # Qt's fallback where the GPU driver has no OpenGL 2. windeployqt copies it
 # unless told not to (never pass --no-opengl-sw); say so if Qt lacks it.
-if(MOV_DEPLOY_SYSTEM STREQUAL "Windows" AND NOT EXISTS "${QT_DEPLOY_PREFIX}/${MOV_DEPLOY_LIBDIR}/opengl32sw.dll")
+if(CMAKE_HOST_WIN32 AND NOT EXISTS "${QT_DEPLOY_PREFIX}/${MOV_DEPLOY_LIBDIR}/opengl32sw.dll")
     message(WARNING "opengl32sw.dll was not deployed: machines without OpenGL 2 drivers cannot draw the map")
 endif()

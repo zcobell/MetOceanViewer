@@ -12,21 +12,32 @@
 #   mov_stage_projection_data(<target>)  copies proj.db to where the
 #                                        application looks for it, so a build
 #                                        tree behaves like an install.
+#   mov_split_debug_info(<target>)       with MOV_SPLIT_DEBUG_INFO (package
+#                                        presets): the debug information
+#                                        beside the binary, for the symbol
+#                                        artifacts; the package ships stripped.
 #   mov_install_app(<target>)            install rules: the application,
 #                                        MapLibre, proj.db, notices, Linux
 #                                        desktop integration, and on macOS and
 #                                        Windows the Qt deployment step.
 #
 # packaging/CMakeLists.txt turns the install tree into packages (CPack).
+# Values other files repeat are listed in docs/packaging.md, "Keep in sync".
 
 set(MOV_APP_ID io.github.zcobell.metoceanviewer) # plan §6.19
 set(MOV_APP_NAME MetOceanViewer)
 set(MOV_PACKAGING_DIR "${PROJECT_SOURCE_DIR}/packaging")
 
+option(
+    MOV_SPLIT_DEBUG_INFO
+    "Keep the application's debug information in a separate file (.debug, .dSYM; MSVC's .pdb is always separate)"
+    OFF
+)
+
 # The installed layout, relative to the install prefix. MOV_APP_PROJ_DATA_DIR
 # is the same PROJ data directory relative to the executable's directory:
-# startup.cpp compiles it in, and mov_stage_projection_data reproduces it in
-# the build tree.
+# app_identity.hpp carries it to startup.cpp, and mov_stage_projection_data
+# reproduces it in the build tree.
 if(APPLE)
     set(MOV_APP_BUNDLE "${MOV_APP_NAME}.app")
     set(MOV_INSTALL_LIBDIR "${MOV_APP_BUNDLE}/Contents/Frameworks")
@@ -48,6 +59,20 @@ else()
     set(MOV_APP_PROJ_DATA_DIR "../share/metoceanviewer/proj") # from bin/
 endif()
 
+# vcpkg ports that are not part of the shipped binaries: build tools and the
+# test framework. Every other installed port is linked into them, so its
+# license ships (_mov_vcpkg_notices).
+set(MOV_NON_RUNTIME_PORTS catch2 vcpkg-cmake vcpkg-cmake-config)
+
+# proj.db of the PROJ install (MOV_PROJ_DB, src/io/CMakeLists.txt). A package
+# without it would fall back to the copy built into a static PROJ, which
+# mov::io refuses once the packaged directory is set (projection.hpp).
+function(_mov_require_proj_db)
+    if(NOT MOV_PROJ_DB)
+        message(FATAL_ERROR "proj.db was not found under PROJ_DIR (${PROJ_DIR}); the application must ship it")
+    endif()
+endfunction()
+
 # mov_set_app_metadata(<target>)
 function(mov_set_app_metadata target)
     set(out "${CMAKE_CURRENT_BINARY_DIR}/app-metadata")
@@ -59,6 +84,12 @@ function(mov_set_app_metadata target)
         configure_file("${MOV_PACKAGING_DIR}/windows/metoceanviewer.manifest.in" "${out}/metoceanviewer.manifest" @ONLY)
         target_sources(${target} PRIVATE "${out}/metoceanviewer.rc" "${out}/metoceanviewer.manifest")
     elseif(APPLE)
+        # LSMinimumSystemVersion is the deployment target the code is built
+        # for (plan §6.24: 14.0, set by the macOS presets).
+        if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+            message(FATAL_ERROR "Set CMAKE_OSX_DEPLOYMENT_TARGET (the ci-macos and package-macos presets do)")
+        endif()
+        set(MOV_MACOS_MINIMUM "${CMAKE_OSX_DEPLOYMENT_TARGET}")
         set(icon "${MOV_PACKAGING_DIR}/icons/metoceanviewer.icns")
         set_source_files_properties("${icon}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
         target_sources(${target} PRIVATE "${icon}")
@@ -78,10 +109,7 @@ endfunction()
 # where mov::ui::configure_projection_data() looks for it, exactly as in an
 # installed package.
 function(mov_stage_projection_data target)
-    if(NOT MOV_PROJ_DB)
-        message(WARNING "proj.db not found (MOV_PROJ_DB): ${target} will not find the PROJ database")
-        return()
-    endif()
+    _mov_require_proj_db()
     set(dir "$<TARGET_FILE_DIR:${target}>/${MOV_APP_PROJ_DATA_DIR}")
     add_custom_command(
         TARGET ${target}
@@ -92,17 +120,45 @@ function(mov_stage_projection_data target)
     )
 endfunction()
 
+# mov_split_debug_info(<target>)
+#
+# With MOV_SPLIT_DEBUG_INFO: Linux, <file>.debug plus a .gnu_debuglink in the
+# binary (install --strip, CPACK_STRIP_FILES, then removes the rest); macOS,
+# <bundle>.dSYM. MSVC writes the .pdb anyway (ProgramDatabase in the
+# package-windows preset). The package workflow uploads them as artifacts.
+function(mov_split_debug_info target)
+    if(NOT MOV_SPLIT_DEBUG_INFO)
+        return()
+    endif()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_custom_command(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND "${CMAKE_OBJCOPY}" --only-keep-debug "$<TARGET_FILE:${target}>" "$<TARGET_FILE:${target}>.debug"
+            COMMAND "${CMAKE_OBJCOPY}" "--add-gnu-debuglink=$<TARGET_FILE:${target}>.debug" "$<TARGET_FILE:${target}>"
+            VERBATIM
+        )
+    elseif(APPLE)
+        find_program(MOV_DSYMUTIL dsymutil REQUIRED)
+        add_custom_command(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND "${MOV_DSYMUTIL}" "$<TARGET_FILE:${target}>" -o "$<TARGET_BUNDLE_DIR:${target}>.dSYM"
+            VERBATIM
+        )
+    endif()
+endfunction()
+
 # The license files vcpkg installed for the ports the application ships
-# (vcpkg_installed/<triplet>/share/<port>/copyright), except build-only ones.
+# (vcpkg_installed/<triplet>/share/<port>/copyright).
 function(_mov_vcpkg_notices out_var)
     set(share "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share")
     if(NOT VCPKG_INSTALLED_DIR OR NOT IS_DIRECTORY "${share}")
-        message(WARNING "No vcpkg install tree: the package will lack the third-party notices")
-        set(${out_var} "" PARENT_SCOPE)
-        return()
+        message(FATAL_ERROR "No vcpkg install tree (${share}): the package needs the ports' notices")
     endif()
     file(GLOB notices "${share}/*/copyright")
-    list(FILTER notices EXCLUDE REGEX "/share/(catch2|vcpkg-[^/]*)/copyright$")
+    list(JOIN MOV_NON_RUNTIME_PORTS "|" excluded)
+    list(FILTER notices EXCLUDE REGEX "/share/(${excluded})/copyright$")
     set(${out_var} "${notices}" PARENT_SCOPE)
 endfunction()
 
@@ -112,7 +168,12 @@ endfunction()
 function(_mov_install_linux_desktop_files)
     install(FILES "${MOV_PACKAGING_DIR}/linux/${MOV_APP_ID}.desktop" DESTINATION share/applications)
     install(FILES "${MOV_PACKAGING_DIR}/linux/${MOV_APP_ID}.xml" DESTINATION share/mime/packages)
-    file(GLOB pngs RELATIVE "${MOV_PACKAGING_DIR}/icons/hicolor" "${MOV_PACKAGING_DIR}/icons/hicolor/*.png")
+    file(
+        GLOB pngs
+        CONFIGURE_DEPENDS
+        RELATIVE "${MOV_PACKAGING_DIR}/icons/hicolor"
+        "${MOV_PACKAGING_DIR}/icons/hicolor/*.png"
+    )
     foreach(png IN LISTS pngs)
         string(REGEX REPLACE "\\.png$" "" size "${png}")
         install(
@@ -129,11 +190,20 @@ function(_mov_install_linux_desktop_files)
 endfunction()
 
 # Windows: the DLLs of the vcpkg ports (netCDF, HDF5, PROJ, SQLite, zlib, ...)
-# and the MSVC runtime. Qt's DLLs are windeployqt's (deploy-qt.cmake).
+# and the MSVC runtime. Qt's DLLs are windeployqt's (deploy-qt.cmake), the
+# QMapLibre ones mov_install_app's.
 function(_mov_install_windows_runtime)
+    # MapLibre is release-only (cmake/MapLibre.cmake): an install of another
+    # configuration would mix debug and release Qt and CRTs.
+    install(
+        CODE
+            "if(CMAKE_INSTALL_CONFIG_NAME MATCHES \"^Debug$\")
+    message(FATAL_ERROR \"Install a release-type configuration (Release, RelWithDebInfo)\")
+endif()"
+    )
     install(
         RUNTIME_DEPENDENCY_SET mov_app_runtime
-        PRE_EXCLUDE_REGEXES "^api-ms-" "^ext-ms-" "^[Qq]t6"
+        PRE_EXCLUDE_REGEXES "^api-ms-" "^ext-ms-" "^[Qq]t6" "^QMapLibre"
         POST_EXCLUDE_REGEXES "^[A-Za-z]:[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\]"
         DIRECTORIES "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin"
         RUNTIME DESTINATION ${MOV_INSTALL_BINDIR}
@@ -147,9 +217,7 @@ endfunction()
 
 # mov_install_app(<target>)
 function(mov_install_app target)
-    if(NOT MOV_PROJ_DB)
-        message(FATAL_ERROR "proj.db was not found under PROJ_DIR (${PROJ_DIR}); the package must ship it")
-    endif()
+    _mov_require_proj_db()
 
     if(APPLE)
         set_target_properties(${target} PROPERTIES INSTALL_RPATH "@executable_path/../Frameworks")
@@ -163,6 +231,8 @@ function(mov_install_app target)
         set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../${MOV_INSTALL_LIBDIR}")
         install(TARGETS ${target} RUNTIME DESTINATION ${MOV_INSTALL_BINDIR})
         _mov_install_linux_desktop_files()
+        # For the AppImage script (packaging/CMakeLists.txt).
+        set_property(GLOBAL PROPERTY MOV_INSTALLED_EXECUTABLE "${MOV_INSTALL_BINDIR}/${target}")
     endif()
 
     # MapLibre: the libraries (frameworks on macOS) and the "maplibre"
@@ -181,8 +251,10 @@ function(mov_install_app target)
 
     install(FILES "${MOV_PROJ_DB}" DESTINATION "${MOV_INSTALL_DATADIR}/proj")
 
-    # Notices: the application's license and every shipped port's (the
-    # maplibre-native-qt port's covers MapLibre's vendored code).
+    # Notices: the application's license, every shipped port's (the
+    # maplibre-native-qt port's covers MapLibre's vendored code) and Qt's
+    # (packaging/licenses/qt, tools/fetch_qt_licenses.py: Qt's binaries carry
+    # none). The AppImage adds the Ubuntu packages' (appimage.cmake).
     install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION ${MOV_INSTALL_DOCDIR})
     _mov_vcpkg_notices(notices)
     foreach(notice IN LISTS notices)
@@ -190,6 +262,7 @@ function(mov_install_app target)
         get_filename_component(port "${port}" NAME)
         install(FILES "${notice}" DESTINATION "${MOV_INSTALL_DOCDIR}/third-party" RENAME "${port}.txt")
     endforeach()
+    install(DIRECTORY "${MOV_PACKAGING_DIR}/licenses/qt/" DESTINATION "${MOV_INSTALL_DOCDIR}/third-party/qt")
 
     # Qt itself: macdeployqt and windeployqt through Qt's deploy API, run at
     # install time after the files above are in place. On Linux, linuxdeploy
@@ -203,7 +276,6 @@ function(mov_install_app target)
             CONTENT
                 "
 set(MOV_DEPLOY_TARGET \"${target}\")
-set(MOV_DEPLOY_SYSTEM \"${CMAKE_SYSTEM_NAME}\")
 set(MOV_DEPLOY_EXECUTABLE \"${installed_executable}\")
 set(MOV_DEPLOY_LIBDIR \"${MOV_INSTALL_LIBDIR}\")
 set(MOV_DEPLOY_PLUGINDIR \"${MOV_INSTALL_PLUGINDIR}\")

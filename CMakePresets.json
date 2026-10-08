@@ -237,11 +237,12 @@
         "qt"
       ],
       "displayName": "Package: Linux AppImage",
-      "description": "Release build of the app, packaged as an AppImage by cpack (linuxdeploy). Run it in the Ubuntu 22.04 image (MOV_DEV_IMAGE=appimage tools/dev/run.sh) for the glibc 2.35 floor; see docs/packaging.md.",
+      "description": "RelWithDebInfo build of the app (symbols split out, shipped stripped), tested (ctest -LE gui), packaged as an AppImage by cpack (linuxdeploy). Run it in the Ubuntu 22.04 image (MOV_DEV_IMAGE=appimage tools/dev/run.sh) for the glibc 2.35 floor; see docs/packaging.md.",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF",
-        "MOV_ENABLE_HARDENING": "OFF"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON",
+        "MOV_ENABLE_HARDENING": "OFF",
+        "MOV_SPLIT_DEBUG_INFO": "ON"
       },
       "condition": {
         "type": "equals",
@@ -256,11 +257,12 @@
         "qt"
       ],
       "displayName": "Package: macOS DMG",
-      "description": "Release build of the app, packaged as a DMG by cpack; signed and notarized when the APPLE_* environment is set (docs/packaging.md).",
+      "description": "RelWithDebInfo build of the app (symbols split out, shipped stripped), tested (ctest -LE gui), packaged as a DMG by cpack; signed and notarized when the APPLE_* environment is set (docs/packaging.md).",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF",
-        "MOV_ENABLE_HARDENING": "OFF"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON",
+        "MOV_ENABLE_HARDENING": "OFF",
+        "MOV_SPLIT_DEBUG_INFO": "ON"
       }
     },
     {
@@ -270,11 +272,13 @@
         "qt"
       ],
       "displayName": "Package: Windows installer and zip",
-      "description": "Release build of the app, packaged by cpack as an Inno Setup installer and a portable zip (docs/packaging.md). Run from a Visual Studio developer environment.",
+      "description": "RelWithDebInfo build of the app (symbols split out, shipped stripped), tested (ctest -LE gui), packaged by cpack as an Inno Setup installer and a portable zip (docs/packaging.md). Run from a Visual Studio developer environment.",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF",
-        "MOV_ENABLE_HARDENING": "OFF"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON",
+        "MOV_ENABLE_HARDENING": "OFF",
+        "MOV_SPLIT_DEBUG_INFO": "ON",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "ProgramDatabase"
       }
     }
   ],
@@ -416,6 +420,36 @@
       "name": "ci-windows",
       "inherits": "test-base",
       "configurePreset": "ci-windows"
+    },
+    {
+      "name": "package-linux",
+      "inherits": "test-base",
+      "configurePreset": "package-linux",
+      "filter": {
+        "exclude": {
+          "label": "gui"
+        }
+      }
+    },
+    {
+      "name": "package-macos",
+      "inherits": "test-base",
+      "configurePreset": "package-macos",
+      "filter": {
+        "exclude": {
+          "label": "gui"
+        }
+      }
+    },
+    {
+      "name": "package-windows",
+      "inherits": "test-base",
+      "configurePreset": "package-windows",
+      "filter": {
+        "exclude": {
+          "label": "gui"
+        }
+      }
     }
   ],
   "packagePresets": [
@@ -581,6 +615,10 @@
           "name": "package-linux"
         },
         {
+          "type": "test",
+          "name": "package-linux"
+        },
+        {
           "type": "package",
           "name": "package-linux"
         }
@@ -598,6 +636,10 @@
           "name": "package-macos"
         },
         {
+          "type": "test",
+          "name": "package-macos"
+        },
+        {
           "type": "package",
           "name": "package-macos"
         }
@@ -612,6 +654,10 @@
         },
         {
           "type": "build",
+          "name": "package-windows"
+        },
+        {
+          "type": "test",
           "name": "package-windows"
         },
         {

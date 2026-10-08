@@ -2,22 +2,27 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 #
-# Code signing and notarization of the macOS package. CPack calls it (see
-# packaging/macos/cpack-sign-app.cmake and cpack-sign-dmg.cmake):
+# Checks, code signing and notarization of the macOS package. CPack calls it
+# (packaging/macos/cpack-sign-app.cmake and cpack-sign-dmg.cmake):
 #
-#   sign.sh app <MetOceanViewer.app> <entitlements.plist>
-#       Signs every Mach-O file in the bundle inside out, then the bundle
-#       with the hardened runtime and the entitlements; notarizes and
-#       staples it when the notary credentials are set.
+#   sign.sh app <MetOceanViewer.app> <entitlements.plist> <minimum macOS>
+#       Checks that no Mach-O file in the bundle needs a newer macOS than
+#       <minimum> or searches an absolute LC_RPATH, then signs every Mach-O
+#       file inside out and the bundle last, with the entitlements.
 #   sign.sh dmg <file.dmg>
-#       Signs, notarizes and staples the disk image.
+#       Signs the disk image, notarizes it (one submission, which covers the
+#       app inside) and staples the ticket to it.
+#
+# UNVERIFIED: written for macOS 14+ and Xcode 16, not yet run (docs/packaging.md).
 #
 # Environment (docs/packaging.md; CI fills it from the APPLE_* secrets):
 #   APPLE_SIGNING_IDENTITY  "Developer ID Application: <name> (<team id>)".
 #                           Unset or empty: the app gets an ad-hoc signature
 #                           (Apple Silicon runs nothing unsigned, and a
 #                           consistent bundle signature lets Gatekeeper offer
-#                           "Open Anyway" instead of "damaged"); the DMG stays
+#                           "Open Anyway" instead of "damaged"), without the
+#                           hardened runtime, whose library validation an
+#                           ad-hoc signature cannot satisfy; the DMG stays
 #                           unsigned; nothing is notarized.
 #   APPLE_KEYCHAIN          keychain holding the identity (optional).
 #   APPLE_API_KEY_PATH, APPLE_API_KEY_ID, APPLE_API_ISSUER_ID
@@ -35,24 +40,56 @@ can_notarize() {
     -n "${APPLE_API_ISSUER_ID:-}" ]]
 }
 
-# codesign's identity options. Bash 3.2 compatible (macOS's /bin/bash): no
-# mapfile, and the array is never empty.
+# codesign's options. Bash 3.2 compatible (macOS's /bin/bash): no mapfile,
+# and the array is never empty.
 if [[ -z "${identity}" ]]; then
   codesign_args=(--force --sign - --timestamp=none)
 else
-  codesign_args=(--force --sign "${identity}" --timestamp)
+  codesign_args=(--force --sign "${identity}" --timestamp --options runtime)
   if [[ -n "${APPLE_KEYCHAIN:-}" ]]; then
     codesign_args+=(--keychain "${APPLE_KEYCHAIN}")
   fi
 fi
 
-# Submits a zip or dmg and waits; fails with Apple's log unless Accepted.
+# The Mach-O files of a bundle, NUL-separated.
+mach_o_files() {
+  local file
+  while IFS= read -r -d '' file; do
+    if file -b "${file}" | grep -q 'Mach-O'; then
+      printf '%s\0' "${file}"
+    fi
+  done < <(find "$1" -type f -print0)
+}
+
+# Fails on a Mach-O file whose minimum macOS (LC_BUILD_VERSION minos) is
+# above $2, or that has an absolute LC_RPATH (a path outside the bundle).
+check_bundle() {
+  local app="$1" minimum="$2" file minos rpath failed=0
+  while IFS= read -r -d '' file; do
+    minos="$(otool -l "${file}" | awk '/LC_BUILD_VERSION/ {b = 1} b && $1 == "minos" {print $2; exit}')"
+    if [[ -n "${minos}" ]] &&
+      [[ "$(printf '%s\n%s\n' "${minos}" "${minimum}" | sort -V | tail -n 1)" != "${minimum}" ]]; then
+      notice "${file#"${app}"/} needs macOS ${minos}, above ${minimum}"
+      failed=1
+    fi
+    while IFS= read -r rpath; do
+      if [[ "${rpath}" == /* ]]; then
+        notice "${file#"${app}"/} searches ${rpath}: a path outside the bundle"
+        failed=1
+      fi
+    done < <(otool -l "${file}" | awk '/cmd LC_RPATH/ {r = 1} r && $1 == "path" {print $2; r = 0}')
+  done < <(mach_o_files "${app}")
+  return "${failed}"
+}
+
+# Submits a dmg and waits; fails with Apple's log unless Accepted.
 notarize() {
   local file="$1" result status id
   result="$(mktemp)"
+  # Well inside the package job's timeout (150 min).
   xcrun notarytool submit "${file}" \
     --key "${APPLE_API_KEY_PATH}" --key-id "${APPLE_API_KEY_ID}" --issuer "${APPLE_API_ISSUER_ID}" \
-    --wait --timeout 2h --output-format json >"${result}" || true
+    --wait --timeout 45m --output-format json >"${result}" || true
   status="$(plutil -extract status raw -o - "${result}" 2>/dev/null || echo unknown)"
   id="$(plutil -extract id raw -o - "${result}" 2>/dev/null || echo)"
   notice "notarization of $(basename "${file}"): ${status} (submission ${id:-none})"
@@ -69,37 +106,25 @@ notarize() {
 }
 
 sign_app() {
-  local app="$1" entitlements="$2" file framework
+  local app="$1" entitlements="$2" minimum="$3" file framework
+  check_bundle "${app}" "${minimum}"
 
   # Inside out: every Mach-O file except the main executable (dylibs, Qt and
   # QML plugins, framework binaries), then each framework bundle, then the
   # app, which is the only one with the entitlements.
   while IFS= read -r -d '' file; do
-    if file -b "${file}" | grep -q 'Mach-O'; then
-      codesign "${codesign_args[@]}" --options runtime "${file}"
+    if [[ "${file}" != "${app}/Contents/MacOS/"* ]]; then
+      codesign "${codesign_args[@]}" "${file}"
     fi
-  done < <(find "${app}/Contents" -type f ! -path "${app}/Contents/MacOS/*" -print0)
+  done < <(mach_o_files "${app}")
   while IFS= read -r -d '' framework; do
-    codesign "${codesign_args[@]}" --options runtime "${framework}"
+    codesign "${codesign_args[@]}" "${framework}"
   done < <(find "${app}/Contents/Frameworks" -maxdepth 1 -name '*.framework' -print0)
-  codesign "${codesign_args[@]}" --options runtime --entitlements "${entitlements}" "${app}"
+  codesign "${codesign_args[@]}" --entitlements "${entitlements}" "${app}"
   codesign --verify --deep --strict --verbose=2 "${app}"
-
   if [[ -z "${identity}" ]]; then
     notice "APPLE_SIGNING_IDENTITY is not set: ad-hoc signature, not notarized"
-    return
   fi
-  if ! can_notarize; then
-    notice "notary credentials (APPLE_API_KEY_*) are not set: signed, not notarized"
-    return
-  fi
-  local zip
-  zip="$(mktemp -d)/$(basename "${app}" .app).zip"
-  ditto -c -k --keepParent "${app}" "${zip}"
-  notarize "${zip}"
-  rm -f "${zip}"
-  xcrun stapler staple "${app}"
-  xcrun stapler validate "${app}"
 }
 
 sign_dmg() {
@@ -108,7 +133,11 @@ sign_dmg() {
     notice "APPLE_SIGNING_IDENTITY is not set: $(basename "${dmg}") is not signed"
     return
   fi
-  codesign "${codesign_args[@]}" "${dmg}"
+  local -a dmg_args=(--force --sign "${identity}" --timestamp)
+  if [[ -n "${APPLE_KEYCHAIN:-}" ]]; then
+    dmg_args+=(--keychain "${APPLE_KEYCHAIN}")
+  fi
+  codesign "${dmg_args[@]}" "${dmg}"
   codesign --verify --verbose=2 "${dmg}"
   if ! can_notarize; then
     notice "notary credentials (APPLE_API_KEY_*) are not set: $(basename "${dmg}") signed, not notarized"
@@ -122,15 +151,15 @@ sign_dmg() {
 
 case "${1:-}" in
   app)
-    [[ $# -eq 3 ]] || { echo "usage: $0 app <bundle.app> <entitlements.plist>" >&2; exit 2; }
-    sign_app "$2" "$3"
+    [[ $# -eq 4 ]] || { echo "usage: $0 app <bundle.app> <entitlements.plist> <minimum macOS>" >&2; exit 2; }
+    sign_app "$2" "$3" "$4"
     ;;
   dmg)
     [[ $# -eq 2 ]] || { echo "usage: $0 dmg <file.dmg>" >&2; exit 2; }
     sign_dmg "$2"
     ;;
   *)
-    echo "usage: $0 app <bundle.app> <entitlements.plist> | dmg <file.dmg>" >&2
+    echo "usage: $0 app <bundle.app> <entitlements.plist> <minimum macOS> | dmg <file.dmg>" >&2
     exit 2
     ;;
 esac

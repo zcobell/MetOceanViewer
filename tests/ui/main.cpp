@@ -14,6 +14,6 @@ int main(int argc, char* argv[]) {
   mov::ui::select_graphics_api();
   const QGuiApplication app(argc, argv);
   mov::ui::set_application_metadata();
-  mov::ui::configure_projection_data();
+  static_cast<void>(mov::ui::configure_projection_data());
   return Catch::Session().run(argc, argv);
 }

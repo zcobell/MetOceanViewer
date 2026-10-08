@@ -14,9 +14,11 @@ Sources and outputs (the outputs are committed; rerun after editing a source):
                                         packaging/icons/hicolor/<n>x<n>.png  (Linux)
     packaging/macos/dmg-background.svg -> packaging/macos/dmg-background.png
 
-rsvg-convert (librsvg, in the dev image) rasterizes; this script assembles the
-ICNS and ICO files itself, so the output depends only on the rsvg-convert
-version, which the dev image pins.
+rsvg-convert (librsvg) rasterizes; this script assembles the ICNS and ICO
+files itself, so the output depends only on librsvg's version. The dev image
+and CI's pre-commit job both take it from Ubuntu 24.04 (2.58), where the
+icons hook of .pre-commit-config.yaml runs this with --check; another version
+may render differently and fail the check.
 """
 
 import argparse

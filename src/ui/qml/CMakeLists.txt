@@ -13,10 +13,10 @@ set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_library(mov_ui_qml STATIC)
 qt_add_qml_module(
     mov_ui_qml
-    URI MetOceanViewer
+    URI ${MOV_QML_MODULE_URI}
     VERSION 1.0
     # The directory must end in the module's URI for qmllint to resolve it.
-    OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/qml/MetOceanViewer"
+    OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/qml/${MOV_QML_MODULE_URI}"
     QML_FILES
         AboutDialog.qml
         Main.qml

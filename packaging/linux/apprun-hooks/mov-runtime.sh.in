@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# AppRun hook of the MetOceanViewer AppImage. linuxdeploy's AppRun sources it
+# (under `set -e`, in bash, with this_dir set to the AppDir) before it starts
+# the application. Configured by packaging/linux/appimage.cmake.
+#
+# 1. libstdc++. The AppImage is built on Ubuntu 22.04 with a newer GCC than
+#    22.04's, so its binaries need these symbol versions of libstdc++:
+#      @MOV_STDCXX_REQUIRED@
+#    It carries a libstdc++ that has them in usr/optional/libstdc++/ and puts
+#    that directory first on LD_LIBRARY_PATH only when the libstdc++ the
+#    loader would pick lacks one of them. Never the other way round: a bundled
+#    copy older than the system's would break system libraries loaded into the
+#    process (Mesa's drivers) that need the newer one. The loader's order is
+#    followed: LD_LIBRARY_PATH, then ldconfig's cache, then the usual
+#    directories. When the hook changes LD_LIBRARY_PATH it exports the
+#    caller's value as MOV_ORIG_LD_LIBRARY_PATH, which a program the
+#    application starts should get back (nothing does yet).
+# 2. Qt platform. The AppImage has the xcb and offscreen platform plugins
+#    only; a QT_QPA_PLATFORM naming none of them (wayland, set globally on
+#    some desktops) would stop Qt, so it becomes xcb, which runs through
+#    XWayland there. The caller's value is kept in MOV_ORIG_QT_QPA_PLATFORM.
+
+# this_dir is AppRun's.
+# shellcheck disable=SC2154
+
+# The file the loader would load for soname $1, or nothing.
+mov_loader_pick() {
+  mov_old_ifs="${IFS}"
+  IFS=:
+  # shellcheck disable=SC2086 # LD_LIBRARY_PATH is a colon-separated list
+  for mov_dir in ${LD_LIBRARY_PATH:-}; do
+    if [ -n "${mov_dir}" ] && [ -e "${mov_dir}/$1" ]; then
+      IFS="${mov_old_ifs}"
+      printf '%s\n' "${mov_dir}/$1"
+      return 0
+    fi
+  done
+  IFS="${mov_old_ifs}"
+  for mov_ldconfig in ldconfig /sbin/ldconfig /usr/sbin/ldconfig; do
+    if command -v "${mov_ldconfig}" >/dev/null 2>&1; then
+      mov_found="$("${mov_ldconfig}" -p 2>/dev/null |
+        sed -n "s/^[[:space:]]*$1 (libc6,x86-64[^)]*) => //p" | head -n 1 || true)"
+      if [ -n "${mov_found}" ]; then
+        printf '%s\n' "${mov_found}"
+        return 0
+      fi
+    fi
+  done
+  for mov_dir in /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /lib64 /usr/lib64 /lib /usr/lib; do
+    if [ -e "${mov_dir}/$1" ]; then
+      printf '%s\n' "${mov_dir}/$1"
+      return 0
+    fi
+  done
+  return 1
+}
+
+mov_lib="$(mov_loader_pick libstdc++.so.6 || true)"
+mov_use_bundled=0
+if [ -z "${mov_lib}" ] || [ ! -r "${mov_lib}" ]; then
+  mov_use_bundled=1
+else
+  for mov_version in @MOV_STDCXX_REQUIRED@; do
+    # -w: GLIBCXX_3.4.3 must not match inside GLIBCXX_3.4.33.
+    if ! grep -qawF "${mov_version}" "${mov_lib}"; then
+      mov_use_bundled=1
+    fi
+  done
+fi
+if [ "${mov_use_bundled}" = 1 ]; then
+  export MOV_ORIG_LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
+  export LD_LIBRARY_PATH="${this_dir}/usr/optional/libstdc++${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+fi
+
+if [ -n "${QT_QPA_PLATFORM:-}" ]; then
+  mov_bundled_platform=0
+  mov_old_ifs="${IFS}"
+  IFS=';'
+  # shellcheck disable=SC2086 # QT_QPA_PLATFORM is a ;-separated list
+  for mov_platform in ${QT_QPA_PLATFORM}; do
+    if [ -e "${this_dir}/usr/plugins/platforms/libq${mov_platform%%:*}.so" ]; then
+      mov_bundled_platform=1
+    fi
+  done
+  IFS="${mov_old_ifs}"
+  if [ "${mov_bundled_platform}" = 0 ]; then
+    export MOV_ORIG_QT_QPA_PLATFORM="${QT_QPA_PLATFORM}"
+    export QT_QPA_PLATFORM=xcb
+  fi
+fi
+
+unset -f mov_loader_pick
+unset mov_old_ifs mov_dir mov_ldconfig mov_found mov_lib mov_use_bundled mov_version \
+  mov_bundled_platform mov_platform

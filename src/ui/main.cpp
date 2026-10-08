@@ -13,11 +13,24 @@ int main(int argc, char* argv[]) {
   mov::ui::select_graphics_api();
   const QGuiApplication app(argc, argv);
   mov::ui::set_application_metadata();
-  mov::ui::configure_projection_data();
+  static_cast<void>(mov::ui::configure_projection_data());
 
-  // The packaging smoke test (docs/packaging.md): no window, exit status.
-  if (mov::ui::self_test_requested(QGuiApplication::arguments())) {
-    return mov::ui::run_self_test(std::cout) ? EXIT_SUCCESS : EXIT_FAILURE;
+  // The packaging smoke test (docs/packaging.md): reports on stdout and
+  // exits with its verdict.
+  if (const auto mode = mov::ui::self_test_mode(QGuiApplication::arguments());
+      mode != mov::ui::SelfTestMode::none) {
+    mov::ui::attach_parent_console();
+    if (not mov::ui::run_self_test(std::cout)) {
+      return EXIT_FAILURE;
+    }
+    if (mode == mov::ui::SelfTestMode::basic) {
+      return EXIT_SUCCESS;
+    }
+    QQmlApplicationEngine engine;
+    if (not mov::ui::start_render_self_test(engine, std::cout)) {
+      return EXIT_FAILURE;
+    }
+    return QGuiApplication::exec();
   }
 
   QQmlApplicationEngine engine;

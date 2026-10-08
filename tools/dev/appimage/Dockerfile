@@ -20,11 +20,15 @@ ARG APPIMAGE_UBUNTU_IMAGE
 FROM ${APPIMAGE_UBUNTU_IMAGE}
 
 ARG GCC_VERSION
+ARG APPIMAGE_TOOLCHAIN_PPA_KEY
+ARG APPIMAGE_GCC_PACKAGE_VERSION
+ARG APPIMAGE_LIBSTDCXX_PACKAGE_VERSION
 ARG CMAKE_VERSION
 ARG CMAKE_SHA256
 ARG VCPKG_COMMIT
 
-RUN for arg in GCC_VERSION CMAKE_VERSION CMAKE_SHA256 VCPKG_COMMIT; do \
+RUN for arg in GCC_VERSION APPIMAGE_TOOLCHAIN_PPA_KEY APPIMAGE_GCC_PACKAGE_VERSION \
+               APPIMAGE_LIBSTDCXX_PACKAGE_VERSION CMAKE_VERSION CMAKE_SHA256 VCPKG_COMMIT; do \
       eval "test -n \"\${${arg}}\"" || { echo "build arg ${arg} is not set (use tools/dev/run.sh)" >&2; exit 1; }; \
     done
 
@@ -32,13 +36,25 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
-# GCC from the toolchain PPA. It also upgrades libstdc++6 to GCC's, which is
-# the copy the AppImage bundles.
+# GCC from the toolchain PPA, at the pinned versions, with the PPA's key
+# checked against its full fingerprint and trusted for that source only. It
+# also brings libstdc++6, which the AppImage bundles. The tools needed only
+# here (gnupg) are purged in the same layer.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates gnupg software-properties-common \
-    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+    && curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${APPIMAGE_TOOLCHAIN_PPA_KEY}" \
+        | gpg --dearmor -o /usr/share/keyrings/ubuntu-toolchain-r.gpg \
+    && gpg --show-keys --with-colons /usr/share/keyrings/ubuntu-toolchain-r.gpg \
+        | grep -qx "fpr:::::::::${APPIMAGE_TOOLCHAIN_PPA_KEY}:" \
+    && echo "deb [signed-by=/usr/share/keyrings/ubuntu-toolchain-r.gpg] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu jammy main" \
+        > /etc/apt/sources.list.d/ubuntu-toolchain-r.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends "gcc-${GCC_VERSION}" "g++-${GCC_VERSION}" \
+    && apt-get install -y --no-install-recommends \
+        "gcc-${GCC_VERSION}=${APPIMAGE_GCC_PACKAGE_VERSION}" \
+        "g++-${GCC_VERSION}=${APPIMAGE_GCC_PACKAGE_VERSION}" \
+        "libstdc++6=${APPIMAGE_LIBSTDCXX_PACKAGE_VERSION}" \
+    && apt-get purge -y --auto-remove gnupg \
+    && dpkg-query --show "gcc-${GCC_VERSION}" "g++-${GCC_VERSION}" libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update \
@@ -53,6 +69,8 @@ RUN apt-get update \
         flex \
         git \
         libtool \
+        # de_DE.UTF-8 for the tests the package presets run (as the dev image).
+        locales \
         make \
         ninja-build \
         pkg-config \
@@ -99,6 +117,9 @@ RUN apt-get update \
         # MapLibre Native (vcpkg port maplibre-native-qt) links the system zlib.
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
+
+RUN locale-gen de_DE.UTF-8 \
+    && locale -a | grep -qi '^de_DE\.utf-\?8$'
 
 RUN update-alternatives --install /usr/bin/gcc gcc "/usr/bin/gcc-${GCC_VERSION}" 100 \
         --slave /usr/bin/g++ g++ "/usr/bin/g++-${GCC_VERSION}" \

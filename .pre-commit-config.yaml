@@ -6,8 +6,8 @@
 # README.md (its v5 section is maintained by hand), vendored thirdparty/ code
 # and .claude/.
 # Byte-exact data (recorded API responses in docs/provider-apis/, test
-# fixtures) is also excluded from the whitespace fixers and codespell, and
-# marked -text in .gitattributes.
+# fixtures, third-party license texts in packaging/licenses/) is also excluded
+# from the whitespace fixers and codespell, and marked -text in .gitattributes.
 exclude: |
   (?x)^(
     (MetOceanViewer|MetOceanData|MetOceanHWMStats|MetOceanInstaller|ProcessCrmsDatabase|libraries|thirdparty|\.claude)/
@@ -20,7 +20,7 @@ repos:
   rev: v6.0.0
   hooks:
   - id: trailing-whitespace
-    exclude: &recorded-data ^(docs/provider-apis|tests/fixtures)/
+    exclude: &recorded-data ^(docs/provider-apis|tests/fixtures|packaging/licenses)/
   - id: end-of-file-fixer
     exclude: *recorded-data
   - id: mixed-line-ending
@@ -90,6 +90,14 @@ repos:
     additional_dependencies: [lizard==1.24.1]
     args: [-l, cpp, -C, '15', -L, '100', -a, '6', --warnings_only, src]
     files: ^src/.*\.(cpp|hpp|h|cc|cxx|hxx|ipp|inl|tpp)$
+    pass_filenames: false
+  # The committed icons and DMG background are what tools/make_icons.py makes
+  # from their SVG sources (needs rsvg-convert: the dev image, CI's job).
+  - id: icons
+    name: packaging images are current (tools/make_icons.py --check)
+    entry: python tools/make_icons.py --check
+    language: python
+    files: ^(src/ui/qml/images/app-icon\.svg|packaging/icons/.*|packaging/macos/dmg-background\.(svg|png)|tools/make_icons\.py)$
     pass_filenames: false
   - id: lizard-self-test
     name: lizard counts and/or (self-test)

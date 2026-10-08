@@ -3,3 +3,4 @@
 docs/provider-apis/** -text
 tests/fixtures/** -text
 *.nc binary
+packaging/licenses/** -text

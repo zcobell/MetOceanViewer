@@ -5,7 +5,8 @@
 <!--
   Info.plist of MetOceanViewer.app, configured by mov_set_app_metadata()
   (cmake/Packaging.cmake): identity of plan §6.19, version from
-  project(VERSION), minimum macOS of §6.24, and the session document type
+  project(VERSION), minimum macOS from CMAKE_OSX_DEPLOYMENT_TARGET (§6.24),
+  and the session document type
   (.mvs; JSON in v5, netCDF in v4, so it conforms to public.data only).
 -->
 <plist version="1.0">
@@ -31,7 +32,7 @@
   <key>CFBundleVersion</key>
   <string>@PROJECT_VERSION@</string>
   <key>LSMinimumSystemVersion</key>
-  <string>14.0</string>
+  <string>@MOV_MACOS_MINIMUM@</string>
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSPrincipalClass</key>

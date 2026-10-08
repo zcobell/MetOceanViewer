@@ -20,6 +20,12 @@ inputs:
       outputs below. actions/cache saves only when the whole job succeeds,
       which would discard a long MapLibre build whenever a later step fails.
     default: 'false'
+  cold:
+    description: >
+      'true': no binary cache at all (VCPKG_BINARY_SOURCES=clear, nothing
+      restored or saved), so every port is built from source. Release builds
+      use it (.github/workflows/package.yml).
+    default: 'false'
 outputs:
   cache-path:
     description: Directory of the binary cache.
@@ -39,6 +45,7 @@ runs:
       env:
         KEY_PREFIX: vcpkg-${{ inputs.cache-key }}
         KEY_FILES: ${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'cmake/vcpkg-ports/**') }}
+        COLD: ${{ inputs.cold }}
       run: |
         commit="$(jq -r '."default-registry".baseline' vcpkg-configuration.json)"
         root="${RUNNER_TEMP}/vcpkg"
@@ -55,9 +62,14 @@ runs:
         echo "Toolchain for the cache key: ${toolchain}"
         cache="${RUNNER_TEMP}/vcpkg-cache"
         mkdir -p "${cache}"
+        if [[ "${COLD}" == true ]]; then
+          sources=clear
+        else
+          sources="clear;files,${cache},readwrite"
+        fi
         {
           echo "VCPKG_ROOT=${root}"
-          echo "VCPKG_BINARY_SOURCES=clear;files,${cache},readwrite"
+          echo "VCPKG_BINARY_SOURCES=${sources}"
         } >> "${GITHUB_ENV}"
         # sha256sum on Linux/Windows (Git Bash), shasum on macOS.
         prefix="${KEY_PREFIX}-$(printf '%s' "${toolchain}" | { command -v sha256sum >/dev/null && sha256sum || shasum -a 256; } | cut -c1-12)-"
@@ -67,7 +79,7 @@ runs:
           echo "key=${prefix}${KEY_FILES}"
         } >> "${GITHUB_OUTPUT}"
     - name: vcpkg binary cache
-      if: inputs.restore-only != 'true'
+      if: inputs.restore-only != 'true' && inputs.cold != 'true'
       uses: actions/cache@v6
       with:
         path: ${{ steps.vcpkg.outputs.cache }}
@@ -75,7 +87,7 @@ runs:
         restore-keys: ${{ steps.vcpkg.outputs.prefix }}
     - name: Restore vcpkg binary cache
       id: restore
-      if: inputs.restore-only == 'true'
+      if: inputs.restore-only == 'true' && inputs.cold != 'true'
       uses: actions/cache/restore@v6
       with:
         path: ${{ steps.vcpkg.outputs.cache }}

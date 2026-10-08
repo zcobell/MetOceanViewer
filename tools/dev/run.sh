@@ -78,6 +78,9 @@ if ! docker image inspect "${image}" >/dev/null 2>&1; then
     --file "${dockerfile}" \
     --build-arg "UBUNTU_IMAGE=$(version_of UBUNTU_IMAGE)" \
     --build-arg "APPIMAGE_UBUNTU_IMAGE=$(version_of APPIMAGE_UBUNTU_IMAGE)" \
+    --build-arg "APPIMAGE_TOOLCHAIN_PPA_KEY=$(version_of APPIMAGE_TOOLCHAIN_PPA_KEY)" \
+    --build-arg "APPIMAGE_GCC_PACKAGE_VERSION=$(version_of APPIMAGE_GCC_PACKAGE_VERSION)" \
+    --build-arg "APPIMAGE_LIBSTDCXX_PACKAGE_VERSION=$(version_of APPIMAGE_LIBSTDCXX_PACKAGE_VERSION)" \
     --build-arg "GCC_VERSION=$(version_of GCC_VERSION)" \
     --build-arg "LLVM_VERSION=$(version_of LLVM_VERSION)" \
     --build-arg "LIBCXX_VERSION=$(version_of LIBCXX_VERSION)" \

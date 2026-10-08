@@ -344,6 +344,9 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r tools/dev/requirements.txt
+      # rsvg-convert for the icons hook (tools/make_icons.py --check); the
+      # same librsvg as the dev image (Ubuntu 24.04).
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends librsvg2-bin
       - uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
