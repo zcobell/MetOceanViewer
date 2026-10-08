@@ -21,7 +21,7 @@ RUN /opt/compliance/setup.sh /opt/compliance \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH=/opt/compliance/venv/bin:$PATH \
     UDUNITS2_XML_PATH=/usr/share/xml/udunits/udunits2.xml \
-    CF_STANDARD_NAME_TABLE=/opt/compliance/cf-standard-name-table.xml
+    CF_TABLES=/opt/compliance
 
 WORKDIR /work
 CMD ["bash"]

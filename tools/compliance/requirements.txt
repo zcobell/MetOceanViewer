@@ -1,40 +1,74 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 #
-# The CF checkers of the format-compliance job (docs/station-netcdf.md 14.2),
-# every package pinned (pip freeze of the resolved set, 2026-10-07), so a new
-# release cannot change the verdict silently. The image
-# (tools/compliance/Dockerfile) and the CI job install exactly this file.
-certifi==2026.7.22
-cf-units==3.3.1
-cfchecker==4.1.0
-cftime==1.6.6
-cfunits==3.3.7
-charset-normalizer==3.5.2
-compliance-checker==6.1.0
-future==1.0.0
-idna==3.20
-isodate==0.7.2
-Jinja2==3.1.6
-lxml==6.1.3
-MarkupSafe==3.0.4
-netCDF4==1.7.4
-numpy==2.5.3
-owslib==0.36.0
-packaging==26.3
-pandas==3.0.6
-pendulum==3.2.0
-pygeoif==1.6.0
-pyproj==3.8.0
-python-dateutil==2.9.0.post0
-PyYAML==6.0.3
-regex==2026.9.29
-requests==2.34.2
-setuptools==84.0.0
-shapely==2.2.0
-six==1.17.0
-typing_extensions==4.16.0
-tzdata==2026.5
-urllib3==2.8.0
-validators==0.35.0
-xarray==2026.9.0
+# The CF checkers of the format-compliance job (docs/station-netcdf.md 14.2):
+# every package pinned (the resolved set, 2026-10-07) and its file pinned by
+# SHA-256 for CPython 3.12 on x86-64 Linux (Ubuntu 24.04, the image and the
+# CI runner), so a new release or a replaced file cannot change the verdict.
+# setup.sh installs it with --require-hashes.
+certifi==2026.7.22 \
+    --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775
+cf-units==3.3.1 \
+    --hash=sha256:e10abcd4e3e8cb628bc315835cf3efec8a19d31b31bfcdfb820ce32daa0adf79
+cfchecker==4.1.0 \
+    --hash=sha256:97d58377acda15f34977e14928329e6311081d6a56e0bcaee06f516724b66873
+cftime==1.6.6 \
+    --hash=sha256:59a2c7821642b62c18e71ea67f84ce13ec2bb51ce7ee348cf0a3c50d55fd91cb
+cfunits==3.3.7 \
+    --hash=sha256:e271ae2c01765cc437e7eefd802846894367179e3208653ab9b520ade48286d6
+charset-normalizer==3.5.2 \
+    --hash=sha256:3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649
+compliance-checker==6.1.0 \
+    --hash=sha256:4f0a292480174e8e0eebc6fc20d05792ea4e7a4ec9bcbe8a355ddf0ff4763e79
+future==1.0.0 \
+    --hash=sha256:929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216
+idna==3.20 \
+    --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c
+isodate==0.7.2 \
+    --hash=sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15
+Jinja2==3.1.6 \
+    --hash=sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67
+lxml==6.1.3 \
+    --hash=sha256:909f4e927bb051f7740d6367285fc60cdcfdaf0258c2dba4ff5ba7eadadc250c
+MarkupSafe==3.0.4 \
+    --hash=sha256:8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581
+netCDF4==1.7.4 \
+    --hash=sha256:a72c9f58767779ec14cb7451c3b56bdd8fdc027a792fac2062b14e090c5617f3
+numpy==2.5.3 \
+    --hash=sha256:b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3
+owslib==0.36.0 \
+    --hash=sha256:ffe9168684fe091b18985e9368ff88b8419634d773c8566f14347c0ff6fc5aff
+packaging==26.3 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+pandas==3.0.6 \
+    --hash=sha256:0704044b676496b8350e023b09f174a26772456c974a2b11c36bebb558c9490d
+pendulum==3.2.0 \
+    --hash=sha256:3159cceb54f5aa8b85b141c7f0ce3fac8bdd1ffdc7c79e67dca9133eac7c4d11
+pygeoif==1.6.0 \
+    --hash=sha256:02f84807dadbaf1941c4bb2a9ef1ebac99b1b0404597d2602efdbb58910c69c9
+pyproj==3.8.0 \
+    --hash=sha256:6b34cec6bdd66b721980c003cc2a0fce0cab7949444ad037fc2a7ecb6f3b996c
+python-dateutil==2.9.0.post0 \
+    --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
+PyYAML==6.0.3 \
+    --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
+regex==2026.9.29 \
+    --hash=sha256:39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0
+requests==2.34.2 \
+    --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0
+setuptools==84.0.0 \
+    --hash=sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670
+shapely==2.2.0 \
+    --hash=sha256:650a5f4d8a8e3c96982079d8c99b6ddbe6602bbd1e34c75c2b95dbc0d28ac997
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274
+typing_extensions==4.16.0 \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+tzdata==2026.5 \
+    --hash=sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac
+urllib3==2.8.0 \
+    --hash=sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3
+validators==0.35.0 \
+    --hash=sha256:e8c947097eae7892cb3d26868d637f79f47b4a0554bc6b80065dfe5aac3705dd
+xarray==2026.9.0 \
+    --hash=sha256:fe349fa871628b1a0a5217af3fe1283a2862d5485156e6eda354fffb81c3bb7c

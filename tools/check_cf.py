@@ -109,25 +109,46 @@ def flatten(results: Iterable) -> Iterator:
         yield from flatten(getattr(result, "children", None) or [])
 
 
-def check_ioos(path: Path, waivers: list[re.Pattern[str]], report: Report) -> None:
+def check_ioos(
+    path: Path, waivers: list[re.Pattern[str]], used: set[str], report: Report
+) -> None:
+    """
+    Fail on IOOS errors, and on warnings no waiver matches.
+
+    A waiver matches from the start of the finding (it names the section, so
+    it cannot match elsewhere). The waivers that matched are added to `used`.
+    """
     for weight, text in ioos_findings(path):
         if weight >= HIGH:
             report.fail(f"IOOS error: {text}")
         elif weight == MEDIUM:
-            if any(w.search(text) for w in waivers):
+            matched = [w.pattern for w in waivers if w.match(text)]
+            if matched:
+                used.update(matched)
                 report.note(f"IOOS warning (waived): {text}")
             else:
                 report.fail(f"IOOS warning: {text}")
 
 
-def check_cfchecks(path: Path, table: Path, report: Report) -> None:
+def check_cfchecks(path: Path, tables: Path, report: Report) -> None:
     with tempfile.TemporaryDirectory() as scratch:
         copy = Path(scratch) / path.name
         shutil.copyfile(path, copy)
         with netCDF4.Dataset(copy, "a") as ds:
             ds.Conventions = "CF-1.8"
         run = subprocess.run(
-            ["cfchecks", "-v", "1.8", "-s", str(table), str(copy)],
+            [
+                "cfchecks",
+                "-v",
+                "1.8",
+                "-s",
+                str(tables / "cf-standard-name-table.xml"),
+                "-a",
+                str(tables / "area-type-table.xml"),
+                "-r",
+                str(tables / "standardized-region-list.xml"),
+                str(copy),
+            ],
             capture_output=True,
             text=True,
             check=False,
@@ -140,6 +161,8 @@ def check_cfchecks(path: Path, table: Path, report: Report) -> None:
     ]
     for line in bad:
         report.fail(f"cfchecks: {line}")
+    if run.returncode != 0:
+        report.fail(f"cfchecks: exit status {run.returncode}")
     errors = re.search(r"ERRORS detected:\s*(\d+)", output)
     warnings = re.search(r"WARNINGS given:\s*(\d+)", output)
     if not errors or not warnings:
@@ -263,12 +286,12 @@ def main() -> int:
         "--cdl", type=Path, required=True, help="directory of the golden CDL"
     )
     parser.add_argument(
-        "--standard-names",
+        "--tables",
         type=Path,
-        default=Path(
-            os.environ.get("CF_STANDARD_NAME_TABLE", "cf-standard-name-table.xml")
-        ),
-        help="the pinned CF standard name table (default: $CF_STANDARD_NAME_TABLE)",
+        default=Path(os.environ.get("CF_TABLES", ".")),
+        help="directory of the pinned CF tables tools/compliance/setup.sh "
+        "installs: the standard names, area types and region names "
+        "(default: $CF_TABLES)",
     )
     parser.add_argument(
         "--waivers",
@@ -279,6 +302,11 @@ def main() -> int:
     args = parser.parse_args()
 
     waivers = load_waivers(args.waivers)
+    # Both checkers read the pinned tables, never the network.
+    os.environ["CF_STANDARD_NAME_TABLE"] = str(
+        args.tables / "cf-standard-name-table.xml"
+    )
+    used: set[str] = set()
     files = sorted(args.dir.glob("station_timeseries_*.nc"))
     if not files:
         print(f"check_cf: no station_timeseries_*.nc in {args.dir}", file=sys.stderr)
@@ -286,14 +314,19 @@ def main() -> int:
     reports = []
     for path in files:
         report = Report(path.name)
-        check_ioos(path, waivers, report)
-        check_cfchecks(path, args.standard_names, report)
+        check_ioos(path, waivers, used, report)
+        check_cfchecks(path, args.tables, report)
         check_xarray(path, report)
         check_cdl(path, args.cdl, report)
         reports.append(report)
     probe = args.dir / "ncdump_probe.nc"
     report = Report(probe.name)
     check_cdl(probe, args.cdl, report)
+    reports.append(report)
+    report = Report(args.waivers.name)
+    for waiver in waivers:
+        if waiver.pattern not in used:
+            report.fail(f"waiver matched nothing (remove it): {waiver.pattern}")
     reports.append(report)
 
     for report in reports:
@@ -304,7 +337,7 @@ def main() -> int:
         for line in report.failures:
             print(f"    FAILED: {line}")
     failed = sum(1 for r in reports if r.failures)
-    print(f"check_cf: {len(reports) - failed} of {len(reports)} files pass")
+    print(f"check_cf: {len(reports) - failed} of {len(reports)} checks pass")
     return 1 if failed else 0
 
 

@@ -354,7 +354,7 @@ jobs:
         run: >-
           python tools/check_cf.py build/format-compliance
           --cdl tests/fixtures/io/station_netcdf
-          --standard-names "${RUNNER_TEMP}/compliance/cf-standard-name-table.xml"
+          --tables "${RUNNER_TEMP}/compliance"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

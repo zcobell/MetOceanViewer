@@ -12,7 +12,8 @@
 #   2. builds the checker image (tools/compliance/Dockerfile: IOOS
 #      compliance-checker, cfchecker, xarray, ncdump, all pinned), tagged with a
 #      hash of its inputs, unless it exists;
-#   3. runs tools/check_cf.py on the files in it.
+#   3. runs tools/check_cf.py on the files in it, without network
+#      (--network none): every table the checkers read is in the image.
 #
 #   tools/check_station_netcdf.sh
 #
@@ -48,7 +49,7 @@ if ! docker image inspect "${image}" >/dev/null 2>&1; then
   docker build --build-arg "UBUNTU_IMAGE=${ubuntu_image}" --tag "${image}" "${compliance_dir}"
 fi
 
-docker run --rm --init \
+docker run --rm --init --network none \
   --user "$(id -u):$(id -g)" \
   --env HOME=/tmp \
   --volume "${repo_root}:${repo_root}:ro" \

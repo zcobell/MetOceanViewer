@@ -1,8 +1,10 @@
 # IOOS compliance-checker (cf:1.11) warnings tools/check_cf.py allows, one
-# Python regular expression per line, searched in "<check name>: <message>".
-# Each needs a reason; docs/station-netcdf.md 14.2 has the background.
+# Python regular expression per line, matched from the start of
+# "<check section>: <message>" (so each names the section it waives). A waiver
+# that matches no warning fails the check: remove it. Each needs a reason;
+# docs/station-netcdf.md 14.2 has the background.
 #
 # CF-1.11 has no units_metadata for time (the leap_seconds values arrived in
 # a later CF version), and CF-1.11 3.1.2 allows units_metadata only on
 # temperature variables, so the recommendation cannot be followed here.
-Variable time has a calendar attribute of proleptic_gregorian and it is recommended that the units_metadata attribute is present
+§4\.4 Time Coordinate: Variable time has a calendar attribute of proleptic_gregorian and it is recommended that the units_metadata attribute is present
