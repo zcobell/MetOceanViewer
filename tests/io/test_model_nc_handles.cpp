@@ -13,6 +13,7 @@
 #include <string>
 #include <utility>
 
+#include "model_fixtures.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
@@ -21,7 +22,6 @@
 #include "mov/io/netcdf/name.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/test/scratch_dir.hpp"
-#include "model_fixtures.hpp"
 #include "nc_counts.hpp"
 
 namespace {
@@ -68,7 +68,8 @@ TEST_CASE("the model readers close their file on every path (B5)",
   dflow.vars = {level};
   make_dflow_nc(dir / "his.nc", dflow);
   const auto start = std::chrono::time_point_cast<std::chrono::milliseconds>(
-      std::chrono::sys_days{std::chrono::year{2010} / std::chrono::January / 1});
+      std::chrono::sys_days{std::chrono::year{2010} / std::chrono::January /
+                            1});
 
   const auto before = counts::counts();
   constexpr std::int64_t rounds = 100;
@@ -79,37 +80,60 @@ TEST_CASE("the model readers close their file on every path (B5)",
     const auto adcirc_path = dir / "adcirc.nc";
     const auto his_path = dir / "his.nc";
     // Each of these opens the file, and each ends differently.
-    succeeded += static_cast<std::int64_t>(mov::io::inspect_adcirc_netcdf(adcirc_path, Epsg::wgs84(), {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_adcirc_netcdf(
-        adcirc_path,
-        adcirc_request(AdcircKind::elevation, start, StationSelection::all(3)),
-        {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_adcirc_netcdf(  // cold_start_required
-        adcirc_path,
-        adcirc_request(AdcircKind::elevation, std::nullopt,
-                       StationSelection::all(3)),
-        {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_adcirc_netcdf(  // missing_variable
-        adcirc_path,
-        adcirc_request(AdcircKind::pressure, start, StationSelection::all(3)),
-        {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_adcirc_netcdf(  // station_count_mismatch
-        adcirc_path,
-        adcirc_request(AdcircKind::elevation, start, StationSelection::all(7)),
-        {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_adcirc_netcdf(  // Cancelled
-        adcirc_path,
-        adcirc_request(AdcircKind::elevation, start, StationSelection::all(3)),
-        stopped).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::inspect_dflow(adcirc_path, Epsg::wgs84(), {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::inspect_dflow(his_path, Epsg::wgs84(), {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_dflow(
-        his_path, dflow_request("waterlevel", StationSelection::all(3)), {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_dflow(  // missing_variable
-        his_path, dflow_request("salinity", StationSelection::all(3)), {}).has_value());
-    succeeded += static_cast<std::int64_t>(mov::io::read_dflow(  // Cancelled
-        his_path, dflow_request("waterlevel", StationSelection::all(3)),
-        stopped).has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::inspect_adcirc_netcdf(adcirc_path, Epsg::wgs84(), {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_adcirc_netcdf(adcirc_path,
+                                    adcirc_request(AdcircKind::elevation, start,
+                                                   StationSelection::all(3)),
+                                    {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_adcirc_netcdf(  // cold_start_required
+            adcirc_path,
+            adcirc_request(AdcircKind::elevation, std::nullopt,
+                           StationSelection::all(3)),
+            {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_adcirc_netcdf(  // missing_variable
+            adcirc_path,
+            adcirc_request(AdcircKind::pressure, start,
+                           StationSelection::all(3)),
+            {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_adcirc_netcdf(  // station_count_mismatch
+            adcirc_path,
+            adcirc_request(AdcircKind::elevation, start,
+                           StationSelection::all(7)),
+            {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_adcirc_netcdf(  // Cancelled
+            adcirc_path,
+            adcirc_request(AdcircKind::elevation, start,
+                           StationSelection::all(3)),
+            stopped)
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::inspect_dflow(adcirc_path, Epsg::wgs84(), {}).has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::inspect_dflow(his_path, Epsg::wgs84(), {}).has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_dflow(
+            his_path, dflow_request("waterlevel", StationSelection::all(3)), {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_dflow(  // missing_variable
+            his_path, dflow_request("salinity", StationSelection::all(3)), {})
+            .has_value());
+    succeeded += static_cast<std::int64_t>(
+        mov::io::read_dflow(  // Cancelled
+            his_path, dflow_request("waterlevel", StationSelection::all(3)),
+            stopped)
+            .has_value());
   }
   const auto now = counts::counts();
   // Four of the eleven calls end in a value.
