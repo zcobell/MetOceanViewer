@@ -214,6 +214,9 @@ enum class FormatErrc : std::uint8_t {
   // writers
   empty_collection,
   invalid_variable_name,  // a token the format cannot use as a variable name
+  no_samples,             // no station has a sample
+  too_many_samples,       // more samples than the format can count
+  bad_option,             // a writer option the format cannot store
 };
 
 /// A file that parses but does not mean what its format requires.

@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <filesystem>
 #include <string_view>
 #include <vector>
@@ -26,7 +27,7 @@ struct Canonical {
 };
 
 /// 2026-10-06T12:00:00Z, the `date_created` of every canonical file.
-[[nodiscard]] core::Time canonical_now();
+[[nodiscard]] std::chrono::sys_seconds canonical_now();
 
 /// SN 9.2: two NOAA stations sharing four times, water level (MLLW, one
 /// sample of station 2 dry, so a status variable) and water temperature (all
@@ -38,8 +39,9 @@ struct Canonical {
 
 /// One station and every registry quantity (each in its canonical unit), a
 /// `value` column with a datum and a non-canonical unit, a generic quantity
-/// with a CF standard name, and a `difference`: every standard name and unit
-/// the writer can produce, for the checkers.
+/// with a CF standard name, a generic temperature (`temperature: unknown`) and
+/// a `difference`: every standard name, unit and units_metadata the writer can
+/// produce, for the checkers.
 [[nodiscard]] Canonical registry();
 
 /// All three, in the order above.

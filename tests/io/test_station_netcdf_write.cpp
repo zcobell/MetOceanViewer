@@ -50,7 +50,7 @@ TEST_CASE("the orthogonal file: format, dimensions, chunks and deflate",
   const auto c = station_nc::orthogonal();
   const auto path = dir / "o.nc";
   const auto written = must_write(path, c.table, c.options);
-  CHECK(written.value == StationNcLayout::orthogonal);
+  CHECK(written.layout == StationNcLayout::orthogonal);
   CHECK(written.warnings.empty());
 
   const Inspect f{path};
@@ -94,7 +94,7 @@ TEST_CASE("the incomplete file: obs, obs_count and fill padding",
   const ScratchDir dir;
   const auto c = station_nc::incomplete();
   const auto path = dir / "i.nc";
-  CHECK(must_write(path, c.table, c.options).value ==
+  CHECK(must_write(path, c.table, c.options).layout ==
         StationNcLayout::incomplete);
 
   const Inspect f{path};
@@ -193,7 +193,7 @@ TEST_CASE("layout: orthogonal iff every station has the same non-empty times",
   const ScratchDir dir;
   const auto layout_of = [&dir](const StationTable& table) {
     CHECK(mov::io::choose_layout(table) ==
-          must_write(dir / "l.nc", table).value);
+          must_write(dir / "l.nc", table).layout);
     return mov::io::choose_layout(table);
   };
   const core_axis axis{t(0), t(1), t(2)};
@@ -434,22 +434,95 @@ TEST_CASE("an empty label is written as the registry's long name",
   CHECK(f.text("wind_gust", "long_name") == "Wind gust speed");
 }
 
-TEST_CASE("empty_collection: nothing to write",
+TEST_CASE("nothing to write: no stations, columns or samples",
           "[io][station_nc][write][errors]") {
   const ScratchDir dir;
   const auto path = dir / "e.nc";
-  const auto refused = [&](const StationTable& table) {
+  const auto refused = [&](const StationTable& table, FormatErrc code) {
     const auto e = format_error_of(write(path, table));
-    CHECK(e.code == FormatErrc::empty_collection);
+    CHECK(e.code == code);
     CHECK(not std::filesystem::exists(path));
   };
-  SECTION("no stations") { refused(StationTable{}); }
+  SECTION("no stations") {
+    refused(StationTable{}, FormatErrc::empty_collection);
+  }
   SECTION("stations without samples") {
-    refused(water_levels({{}, {}}, {{}, {}}));
+    refused(water_levels({{}, {}}, {{}, {}}), FormatErrc::no_samples);
   }
   SECTION("no columns") {
-    refused(table({}, {{t(0)}}, {{.station = station("A"), .axis = 0}}));
+    refused(table({}, {{t(0)}}, {{.station = station("A"), .axis = 0}}),
+            FormatErrc::no_data_variables);
   }
+}
+
+TEST_CASE("too_many_samples: more than obs_count can count (N1)",
+          "[io][station_nc][write][errors]") {
+  const auto t2 =
+      water_levels({{t(0), t(1), t(2)}, {t(0)}}, {{v(1), v(2), v(3)}, {v(4)}});
+  const auto at = [&](std::size_t limit) {
+    return mov::io::detail::validate_station_netcdf(
+        t2, {}, {.max_station_samples = limit});
+  };
+  CHECK(at(3).has_value());
+  const auto e = format_error_of(at(2));
+  CHECK(e.code == FormatErrc::too_many_samples);
+  CHECK(e.subject == "S0");
+}
+
+TEST_CASE("options: UTF-8 without NUL, bounded, a title (N6)",
+          "[io][station_nc][write][errors]") {
+  const ScratchDir dir;
+  const auto one = water_levels({{t(0)}}, {{v(1)}});
+  const auto refused = [&](const mov::io::StationNcWriteOptions& o,
+                           const std::string& subject) {
+    const auto e = format_error_of(write(dir / "o.nc", one, o));
+    CHECK(e.code == FormatErrc::bad_option);
+    CHECK(e.subject == subject);
+    CHECK(not std::filesystem::exists(dir / "o.nc"));
+  };
+  refused({.title = ""}, ":title");
+  refused({.title = "bad \xFF"}, ":title");
+  refused({.title = "x", .institution = std::string("a\0b", 3)},
+          ":institution");
+  refused({.title = "x",
+           .comment = std::string(
+               mov::io::StationNcWriteOptions::max_option_bytes + 1, 'c')},
+          ":comment");
+  SECTION("an empty optional text is absent") {
+    static_cast<void>(must_write(
+        dir / "o.nc", one, {.title = "t", .source = "", .references = "r"}));
+    const Inspect f{dir / "o.nc"};
+    CHECK(not f.att("", "source"));
+    CHECK(f.text("", "references") == "r");
+  }
+}
+
+TEST_CASE("validate_station_netcdf: the writer's verdict without a file",
+          "[io][station_nc][write]") {
+  const ScratchDir dir;
+  const core::FileStation unnamed = station("A", "");
+  const auto t2 = table({{.meta = meta(Quantity::water_level, "wl", "ft"),
+                          .per_station = {{v(1)}}}},
+                        {{t(0)}}, {{.station = unnamed, .axis = 0}});
+  const auto preview = mov::io::validate_station_netcdf(t2, {});
+  REQUIRE(preview.has_value());
+  CHECK(preview == write(dir / "p.nc", t2));
+  CHECK(format_error_of(mov::io::validate_station_netcdf(StationTable{}, {}))
+            .code == FormatErrc::empty_collection);
+}
+
+TEST_CASE("a generic temperature is `temperature: unknown` (N2)",
+          "[io][station_nc][write][units]") {
+  const ScratchDir dir;
+  static_cast<void>(must_write(
+      dir / "t.nc",
+      table({{.meta = meta(generic("probe_temperature"), "probe", "degF"),
+              .per_station = {{v(50)}}}},
+            {{t(0)}}, {{.station = station("A"), .axis = 0}})));
+  const Inspect f{dir / "t.nc"};
+  CHECK(f.text("probe_temperature", "units") == "degF");
+  CHECK(f.text("probe_temperature", "units_metadata") ==
+        "temperature: unknown");
 }
 
 TEST_CASE("invalid_variable_name: a generic token the format cannot use",
@@ -482,26 +555,24 @@ TEST_CASE("invalid_variable_name: a generic token the format cannot use",
                    .per_station = {{v(1)}}}}),
             "water_level_status");
   }
-  SECTION("not the status of a column without Dry samples") {
-    static_cast<void>(must_write(
-        dir / "ok.nc", with({{.meta = meta(Quantity::water_level, "wl", "m"),
-                              .per_station = {{v(2)}}},
-                             {.meta = meta(generic("water_level_status"), "x"),
-                              .per_station = {{v(1)}}}})));
+  SECTION("the status name of a column without Dry samples too") {
+    // Every column reserves its status name: whether a table can be written
+    // depends on its schema, not on whether a sample is Dry (F2).
+    refused(with({{.meta = meta(Quantity::water_level, "wl", "m"),
+                   .per_station = {{v(2)}}},
+                  {.meta = meta(generic("water_level_status"), "x"),
+                   .per_station = {{v(1)}}}}),
+            "water_level_status");
   }
-  SECTION("longer than a netCDF name") {
-    const std::string longest(256, 'a');
+  SECTION("longer than a netCDF name with _status appended") {
+    const std::string longest(249, 'a');  // 249 + "_status" = 256
     static_cast<void>(
         must_write(dir / "ok.nc", with({{.meta = meta(generic(longest), "x"),
                                          .per_station = {{v(1)}}}})));
-    const std::string too_long(257, 'a');
+    const std::string too_long(250, 'b');
     refused(
         with({{.meta = meta(generic(too_long), "x"), .per_station = {{v(1)}}}}),
         too_long);
-    const std::string status_too_long(250, 'b');
-    refused(with({{.meta = meta(generic(status_too_long), "x"),
-                   .per_station = {{dry}}}}),
-            status_too_long);
   }
 }
 

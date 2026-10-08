@@ -36,25 +36,27 @@ inline constexpr nc::NcNameRef crs{"crs"};
 inline constexpr nc::NcNameRef time{"time"};
 inline constexpr nc::NcNameRef obs_count{"obs_count"};
 
+inline constexpr nc::NcNameRef elevation{"elevation"};  // reserved (SN 4.2)
+
 /// Every variable and dimension name the format uses for itself (SN 4.1,
 /// 4.2), `elevation` included (reserved for a later minor version): a data
 /// variable may not take one. Dimensions are listed too, because a variable
 /// named like a dimension it is not the coordinate of confuses xarray.
-inline constexpr std::array<std::string_view, 14> reserved_names{
-    "station",
-    "time",
-    "obs",
-    "station_id_len",
-    "station_name_len",
-    "station_provider_len",
-    "station_id",
-    "station_name",
-    "station_provider",
-    "lat",
-    "lon",
-    "elevation",
-    "crs",
-    "obs_count"};
+inline constexpr std::array<nc::NcNameRef, 14> reserved_names{
+    station_dim, time_dim,     obs_dim,
+    id_len_dim,  name_len_dim, provider_len_dim,
+    station_id,  station_name, station_provider,
+    lat,         lon,          elevation,
+    crs,         obs_count};
+
+[[nodiscard]] constexpr bool is_reserved(std::string_view name) noexcept {
+  for (const nc::NcNameRef reserved : reserved_names) {
+    if (reserved.view() == name) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /// The suffix of a data variable's wet/dry status variable (SN 8.2).
 inline constexpr std::string_view status_suffix = "_status";
@@ -87,12 +89,5 @@ inline constexpr std::string_view flag_meanings = "dry wet";
 /// doubles).
 inline constexpr std::size_t chunk_elements = 65536;
 inline constexpr int deflate_level = 2;
-
-// ---- header attributes
-// ----------------------------------------------------------------
-
-/// Whether `text` (a Conventions attribute: tokens separated by blanks or
-/// commas, CF 2.6.1) has a `CF-<major>.<minor>` token of version 1.6 or later.
-[[nodiscard]] bool has_cf_1_6_or_later(std::string_view text) noexcept;
 
 }  // namespace mov::io::detail::station_nc

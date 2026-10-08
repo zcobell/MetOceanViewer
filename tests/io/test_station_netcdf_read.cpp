@@ -30,6 +30,7 @@
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "mov/test/scratch_dir.hpp"
+#include "nc_edit.hpp"
 #include "station_nc_support.hpp"
 
 namespace {
@@ -42,7 +43,6 @@ using core::Quantity;
 using core::VerticalDatum;
 using io::FormatErrc;
 using io::StationNcLayout;
-using io::WarningCode;
 using mov::test::ScratchDir;
 
 constexpr std::int64_t max_ms = core::max_abs_time_ms;
@@ -55,14 +55,14 @@ void reopens(const std::filesystem::path& path) {
   CHECK(std::move(*file).close().has_value());
 }
 
-io::Read<io::V5StationFile> round_trip(const ScratchDir& dir,
-                                       const StationTable& table) {
+io::Read<io::StationFile> round_trip(const ScratchDir& dir,
+                                     const StationTable& table) {
   const auto path = dir / "rt.nc";
   const auto written = must_write(path, table);
   CHECK(written.warnings.empty());
   auto read = must_read(read_all(path));
-  CHECK(read.value.layout == written.value);
-  CHECK(read.value.version == io::station_nc_version);
+  CHECK(layout_of(read.value) == written.layout);
+  CHECK(version_of(read.value) == io::station_nc_version);
   reopens(path);
   return read;
 }
@@ -74,9 +74,7 @@ TEST_CASE("the canonical files read back as the tables that were written",
     CAPTURE(c.name);
     const auto path = station_nc::write(c, dir.path());
     const auto read = must_read(read_all(path));
-    // The registry file has one generic quantity other than `value`.
-    CHECK(read.warnings.size() ==
-          count_of(read.warnings, WarningCode::unknown_quantity));
+    CHECK(read.warnings.empty());
     CHECK(read.value.table == c.table);
   }
 }
@@ -91,14 +89,14 @@ TEST_CASE("round trip: Missing, Dry and values at start, middle and end",
                              {dry, dry, dry, dry, dry},
                              {missing, missing, missing, missing, missing}});
     const auto read = round_trip(dir, table);
-    CHECK(read.value.layout == StationNcLayout::orthogonal);
+    CHECK(layout_of(read.value) == StationNcLayout::orthogonal);
     CHECK(read.value.table == table);
   }
   SECTION("incomplete, with an empty station") {
     const auto table = water_levels(
         {axis, {}, {t(7)}}, {{dry, v(1), missing, v(2), dry}, {}, {missing}});
     const auto read = round_trip(dir, table);
-    CHECK(read.value.layout == StationNcLayout::incomplete);
+    CHECK(layout_of(read.value) == StationNcLayout::incomplete);
     CHECK(read.value.table == table);
   }
 }
@@ -396,8 +394,8 @@ TEST_CASE("round trip: random tables of both layouts",
     const StationTable table = tables.next();
     const auto read = round_trip(dir, table);
     CHECK(read.value.table == table);
-    (read.value.layout == StationNcLayout::orthogonal ? orthogonal
-                                                      : incomplete) += 1;
+    (layout_of(read.value) == StationNcLayout::orthogonal ? orthogonal
+                                                          : incomplete) += 1;
   }
   CHECK(orthogonal > 10);
   CHECK(incomplete > 10);
@@ -500,11 +498,14 @@ TEST_CASE("inspect: stations, sample counts and schema without the samples",
   const auto catalog = io::inspect_station_netcdf(path, {});
   REQUIRE(catalog.has_value());
   CHECK(catalog->warnings.empty());
-  CHECK(catalog->value.version == io::StationNcVersion{.major = 1, .minor = 0});
-  CHECK(catalog->value.layout == StationNcLayout::incomplete);
+  CHECK(catalog->value.origin == io::StationFileOrigin{io::V5Origin{
+                                     .version = {.major = 1, .minor = 0},
+                                     .layout = StationNcLayout::incomplete}});
   REQUIRE(catalog->value.stations.size() == 2);
-  CHECK(catalog->value.stations[1] == c.table.station(core::StationIndex{1}));
-  CHECK(catalog->value.sample_counts == std::vector<std::size_t>{3, 5});
+  CHECK(catalog->value.stations[1] ==
+        io::CatalogStation{.station = c.table.station(core::StationIndex{1}),
+                           .samples = 5});
+  CHECK(catalog->value.stations[0].samples == 3);
   CHECK(catalog->value.schema ==
         std::vector<core::SeriesMeta>(c.table.schema().begin(),
                                       c.table.schema().end()));
@@ -513,8 +514,10 @@ TEST_CASE("inspect: stations, sample counts and schema without the samples",
   const auto o = station_nc::write(station_nc::orthogonal(), dir.path());
   const auto ortho = io::inspect_station_netcdf(o, {});
   REQUIRE(ortho.has_value());
-  CHECK(ortho->value.layout == StationNcLayout::orthogonal);
-  CHECK(ortho->value.sample_counts == std::vector<std::size_t>{4, 4});
+  CHECK(std::get<io::V5Origin>(ortho->value.origin).layout ==
+        StationNcLayout::orthogonal);
+  CHECK(ortho->value.stations[0].samples == 4);
+  CHECK(ortho->value.stations[1].samples == 4);
 }
 
 TEST_CASE("limits and cancellation", "[io][station_nc][read][limits]") {
@@ -567,6 +570,109 @@ TEST_CASE("parse_station_nc_version", "[io][station_nc]") {
     CAPTURE(bad);
     CHECK(not parse_station_nc_version(bad));
   }
+}
+
+// ---- what an incomplete read costs (review blocker B1)
+// ---------------------------
+
+/// One long station among many short ones: obs is 10000, every other station
+/// has one sample, so a read of the short ones that reads whole rows would
+/// read 10000 elements per station for one sample each.
+StationTable pathological() {
+  std::vector<core::TimeAxis> axes;
+  std::vector<core::Column> columns;
+  core::TimeAxis long_axis;
+  core::Column long_column;
+  for (std::int64_t k = 0; k < 10000; ++k) {
+    long_axis.push_back(t(k));
+    long_column.push_back(v(static_cast<double>(k)));
+  }
+  axes.push_back(std::move(long_axis));
+  columns.push_back(std::move(long_column));
+  for (std::int64_t s = 1; s < 50; ++s) {
+    axes.push_back({t(s)});
+    columns.push_back({v(static_cast<double>(s))});
+  }
+  return water_levels(std::move(axes), std::move(columns));
+}
+
+TEST_CASE("an incomplete read costs what the samples cost, not obs (B1)",
+          "[io][station_nc][read][padding][regression]") {
+  const ScratchDir dir;
+  const StationTable table = pathological();
+  const auto path = dir / "pathological.nc";
+  static_cast<void>(must_write(path, table));
+  std::vector<std::size_t> short_ones(49);
+  std::ranges::copy(std::views::iota(std::size_t{1}, std::size_t{50}),
+                    short_ones.begin());
+  const auto which = core::StationSelection::make(short_ones, 50).value();
+  // A bound on what is read: every read (and every block of one) is held to
+  // max_elements. The short stations hold 49 samples; their whole rows hold
+  // 490000 elements.
+  io::ReadContext ctx;
+  ctx.limits.max_elements = 1000;
+
+  SECTION("the default reads each group's samples and one padding element") {
+    const auto read = must_read(io::read_station_netcdf(path, which, ctx));
+    REQUIRE(read.value.table.size() == 49);
+    for (std::size_t p = 0; p < 49; ++p) {
+      CHECK(read.value.table.series(core::StationIndex{p},
+                                    core::ColumnIndex{0}) ==
+            table.series(core::StationIndex{p + 1}, core::ColumnIndex{0}));
+    }
+  }
+  SECTION("the whole padding is opt-in and charged as selected x obs") {
+    const auto read = io::read_station_netcdf(
+        path, which, ctx, {.padding = io::PaddingCheck::whole});
+    REQUIRE(not read.has_value());
+    const auto* nc = std::get_if<io::NcError>(&read.error());
+    REQUIRE(nc != nullptr);
+    CHECK(nc->status == io::NcStatus{io::WrapperFault::too_large});
+  }
+}
+
+TEST_CASE("PaddingCheck::whole sees padding the boundary check does not read",
+          "[io][station_nc][read][padding]") {
+  const ScratchDir dir;
+  const auto path = dir / "pathological.nc";
+  static_cast<void>(must_write(path, pathological()));
+  {
+    mov::test::ncgen::Editor edit{path};
+    edit.put("water_level", {7, 5}, 1.0);  // station 7 has one sample
+  }
+  const auto which = core::StationSelection::make({7, 8}, 50).value();
+  CHECK(io::read_station_netcdf(path, which, {}).has_value());
+  const auto e = format_error_of(io::read_station_netcdf(
+      path, which, {}, {.padding = io::PaddingCheck::whole}));
+  CHECK(e.code == FormatErrc::padding_not_missing);
+  CHECK(e.station == 7);
+  CHECK(e.index == 5);
+  CHECK(
+      format_error_of(read_all(path, {}, {.padding = io::PaddingCheck::whole}))
+          .code == FormatErrc::padding_not_missing);
+}
+
+// ---- the idempotence law (F16)
+// ----------------------------------------------------
+
+TEST_CASE("re-writing a read-back table gives no writer warnings",
+          "[io][station_nc][read][roundtrip]") {
+  const ScratchDir dir;
+  core::FileStation unnamed = station("A", "");
+  unnamed.native =
+      core::NativePoint::make({.x = 1, .y = 2}, core::Epsg::wgs84()).value();
+  const auto table = mov::test::snc::table(
+      {{.meta = meta(Quantity::water_level, "", "ft"),
+        .per_station = {{v(10), dry, missing}}},
+       {.meta = meta(Quantity::air_temperature, "air", "degF"),
+        .per_station = {{v(50), v(51), v(52)}}}},
+      {{t(0), t(1), t(2)}}, {{.station = unnamed, .axis = 0}});
+  const auto first = must_write(dir / "a.nc", table);
+  CHECK(not first.warnings.empty());
+  const auto once = must_read(read_all(dir / "a.nc"));
+  const auto second = must_write(dir / "b.nc", once.value.table);
+  CHECK(second.warnings.empty());
+  CHECK(must_read(read_all(dir / "b.nc")).value.table == once.value.table);
 }
 
 }  // namespace

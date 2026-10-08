@@ -21,6 +21,7 @@
 #include <variant>
 #include <vector>
 
+#include "mov/core/detail/utf8.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -31,6 +32,7 @@
 #include "mov/core/version.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
+#include "mov/io/read.hpp"
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_format.hpp"
@@ -57,14 +59,16 @@ struct ColumnPlan {
   nc::NcName name;
   std::optional<nc::NcName> status;  // engaged iff a sample is Dry
   std::optional<core::Affine> map;   // to the canonical unit, if not identity
-  std::string standard_name;         // empty: none
+  std::optional<std::string> standard_name;
   std::string long_name;
   std::optional<std::string> units;
   std::optional<std::string_view> units_metadata;
   std::optional<std::string_view> datum;
+  std::size_t reads_as_fill;  // values written as the _FillValue
 };
 
-/// Everything the body writes, decided before the file exists.
+/// Everything the body writes, decided before the file exists, and what the
+/// warnings are made of.
 struct Plan {
   StationNcLayout layout;
   std::size_t samples;  // the length of `time` (orthogonal) or `obs`
@@ -72,7 +76,30 @@ struct Plan {
   std::vector<std::string> names;
   std::optional<std::vector<std::string>> providers;
   std::vector<ColumnPlan> columns;
+  std::size_t names_substituted;
+  std::size_t natives_dropped;
 };
+
+/// The writer's warnings, in their documented order, from what the plan says.
+std::vector<Warning> warnings_of(const Plan& plan) {
+  std::vector<Warning> warnings;
+  for (const ColumnPlan& c : plan.columns) {
+    if (c.map) {
+      warnings.push_back({.code = WarningCode::unit_converted,
+                          .subject = std::string{c.name.view()}});
+    }
+  }
+  append_if_counted(warnings, {.code = WarningCode::station_name_substituted,
+                               .count = plan.names_substituted});
+  append_if_counted(warnings, {.code = WarningCode::native_position_dropped,
+                               .count = plan.natives_dropped});
+  for (const ColumnPlan& c : plan.columns) {
+    append_if_counted(warnings, {.code = WarningCode::value_reads_as_missing,
+                                 .subject = std::string{c.name.view()},
+                                 .count = c.reads_as_fill});
+  }
+  return warnings;
+}
 
 /// A Unit and how values convert to it.
 struct Target {
@@ -103,27 +130,25 @@ std::expected<Target, Error> target_unit(const core::SeriesMeta& meta) {
                            : std::optional{*conversion}};
 }
 
-bool is_reserved(std::string_view token) {
-  return std::ranges::find(sn::reserved_names, token) !=
-         sn::reserved_names.end();
-}
+/// The names of a column: its token and `<token>_status`, both reserved for
+/// it whether or not it has Dry samples, so whether a table can be written
+/// depends on its schema only. A generic token may not be a name the format
+/// uses itself.
+struct ColumnNames {
+  nc::NcName name;
+  nc::NcName status;
+};
 
-/// The variable name of a column: its token, which a generic quantity may
-/// not take from the format.
-std::expected<nc::NcName, Error> variable_name(const core::QuantityId& q) {
+std::expected<ColumnNames, Error> column_names(const core::QuantityId& q) {
   const std::string_view token = core::token(q);
   auto name = nc::NcName::make(token);
-  if (is_reserved(token) or not name) {
+  auto status =
+      nc::NcName::make(std::string{token} + std::string{sn::status_suffix});
+  if (sn::is_reserved(token) or not name or not status) {
     return refuse(FormatErrc::invalid_variable_name, std::string{token});
   }
-  return *std::move(name);
+  return ColumnNames{.name = *std::move(name), .status = *std::move(status)};
 }
-
-/// What a pass over a column's samples finds.
-struct ColumnFacts {
-  bool any_dry{false};
-  std::size_t reads_as_fill{0};  // values written as the _FillValue
-};
 
 /// The number written for a sample: the value in the stored unit, or the
 /// _FillValue for Missing and Dry (and, as core::convert makes it Missing, for
@@ -139,6 +164,12 @@ double stored(const core::Sample& s, const std::optional<core::Affine>& map) {
   return core::finite_or_missing((*map)(*x)).value().value_or(sn::fill_double);
 }
 
+/// What a pass over a column's samples finds.
+struct ColumnFacts {
+  bool any_dry{false};
+  std::size_t reads_as_fill{0};
+};
+
 ColumnFacts facts_of(const core::StationTable& table, ColumnIndex k,
                      const std::optional<core::Affine>& map) {
   ColumnFacts facts;
@@ -153,15 +184,20 @@ ColumnFacts facts_of(const core::StationTable& table, ColumnIndex k,
   return facts;
 }
 
-/// CF 1.11 3.1.2: temperatures say whether they are on the scale or a
-/// difference.
+/// CF 1.11 3.1.2: a temperature says whether it is on the scale, a
+/// difference, or (a generic quantity, which the format knows nothing about)
+/// unknown.
 std::optional<std::string_view> units_metadata(const Target& target,
                                                const core::QuantityId& q) {
   if (not target.unit or not core::is_temperature(*target.unit)) {
     return std::nullopt;
   }
-  const bool difference = q == core::QuantityId{core::Quantity::difference};
-  return difference ? "temperature: difference" : "temperature: on_scale";
+  if (std::holds_alternative<core::GenericQuantity>(q)) {
+    return "temperature: unknown";
+  }
+  return q == core::QuantityId{core::Quantity::difference}
+             ? "temperature: difference"
+             : "temperature: on_scale";
 }
 
 std::string long_name_of(const core::SeriesMeta& meta) {
@@ -173,85 +209,67 @@ std::string long_name_of(const core::SeriesMeta& meta) {
                                          : core::token(meta.quantity())};
 }
 
-std::string standard_name_of(const core::QuantityId& q) {
-  if (const auto* registry = std::get_if<core::Quantity>(&q)) {
-    return std::string{core::info(*registry).standard_name};
+std::optional<std::string> standard_name_of(const core::QuantityId& q) {
+  const auto* registry = std::get_if<core::Quantity>(&q);
+  const auto* generic = std::get_if<core::GenericQuantity>(&q);
+  const std::string_view name = registry != nullptr
+                                    ? core::info(*registry).standard_name
+                                : generic != nullptr ? generic->standard_name()
+                                                     : std::string_view{};
+  return name.empty() ? std::nullopt : std::optional{std::string{name}};
+}
+
+std::optional<std::string> units_text(const std::optional<core::Unit>& unit) {
+  if (not unit or core::udunits(*unit).empty()) {
+    return std::nullopt;  // an OtherUnit with no symbol says nothing
   }
-  return std::string{std::get<core::GenericQuantity>(q).standard_name()};
+  return std::string{core::udunits(*unit)};
 }
 
 std::expected<ColumnPlan, Error> plan_column(const core::StationTable& table,
-                                             ColumnIndex k,
-                                             std::vector<Warning>& warnings) {
+                                             ColumnIndex k) {
   const core::SeriesMeta& meta = table.schema()[k.value()];
-  auto name = variable_name(meta.quantity());
-  if (not name) {
-    return std::unexpected{std::move(name.error())};
+  auto parts = collect([&] { return column_names(meta.quantity()); },
+                       [&] { return target_unit(meta); });
+  if (not parts) {
+    return std::unexpected{std::move(parts).error()};
   }
-  auto target = target_unit(meta);
-  if (not target) {
-    return std::unexpected{std::move(target.error())};
-  }
-  const ColumnFacts facts = facts_of(table, k, target->map);
-  ColumnPlan plan{
+  auto& [names, target] = *parts;
+  const ColumnFacts facts = facts_of(table, k, target.map);
+  return ColumnPlan{
       .column = k,
-      .name = *std::move(name),
-      .status = std::nullopt,
-      .map = target->map,
+      .name = std::move(names.name),
+      .status =
+          facts.any_dry ? std::optional{std::move(names.status)} : std::nullopt,
+      .map = target.map,
       .standard_name = standard_name_of(meta.quantity()),
       .long_name = long_name_of(meta),
-      .units = target->unit
-                   ? std::optional{std::string{core::udunits(*target->unit)}}
-                   : std::nullopt,
-      .units_metadata = std::nullopt,
+      .units = units_text(target.unit),
+      .units_metadata = units_metadata(target, meta.quantity()),
       .datum = meta.datum() ? std::optional{core::to_string(*meta.datum())}
-                            : std::nullopt};
-  plan.units_metadata = units_metadata(*target, meta.quantity());
-  if (plan.units and plan.units->empty()) {
-    plan.units.reset();  // an OtherUnit with no symbol says nothing
-  }
-  if (facts.any_dry) {
-    auto status = nc::NcName::make(std::string{plan.name.view()} +
-                                   std::string{sn::status_suffix});
-    if (not status) {
-      return refuse(FormatErrc::invalid_variable_name,
-                    std::string{plan.name.view()});
-    }
-    plan.status = *std::move(status);
-  }
-  if (target->map) {
-    warnings.push_back({.code = WarningCode::unit_converted,
-                        .subject = std::string{plan.name.view()}});
-  }
-  append_if_counted(warnings, {.code = WarningCode::value_reads_as_missing,
-                               .subject = std::string{plan.name.view()},
-                               .count = facts.reads_as_fill});
-  return plan;
+                            : std::nullopt,
+      .reads_as_fill = facts.reads_as_fill};
 }
 
-/// No column may be named like another column's status variable.
-std::expected<void, Error> check_status_names(
-    std::span<const ColumnPlan> columns) {
-  for (const ColumnPlan& c : columns) {
-    if (not c.status) {
-      continue;
-    }
-    const auto clash = std::ranges::find_if(columns, [&](const ColumnPlan& d) {
-      return d.name == c.status->view();
-    });
-    if (clash != columns.end()) {
-      return refuse(FormatErrc::invalid_variable_name,
-                    std::string{clash->name.view()});
+/// No column may be named like another column's status variable, which every
+/// column reserves (whether or not it is written).
+std::expected<void, Error> check_status_names(const core::StationTable& table) {
+  for (const core::SeriesMeta& meta : table.schema()) {
+    const std::string status = std::string{core::token(meta.quantity())} +
+                               std::string{sn::status_suffix};
+    const auto clash =
+        std::ranges::find_if(table.schema(), [&](const core::SeriesMeta& m) {
+          return core::token(m.quantity()) == status;
+        });
+    if (clash != table.schema().end()) {
+      return refuse(FormatErrc::invalid_variable_name, status);
     }
   }
   return {};
 }
 
 /// The station texts; an empty name becomes "Station <id>".
-void plan_stations(const core::StationTable& table, Plan& plan,
-                   std::vector<Warning>& warnings) {
-  std::size_t substituted = 0;
-  std::size_t native = 0;
+void plan_stations(const core::StationTable& table, Plan& plan) {
   bool any_source = false;
   std::vector<std::string> providers;
   for (const StationIndex i : table.stations()) {
@@ -259,69 +277,115 @@ void plan_stations(const core::StationTable& table, Plan& plan,
     plan.ids.emplace_back(s.id.view());
     if (s.name.empty()) {
       plan.names.push_back(std::format("Station {}", s.id.view()));
-      ++substituted;
+      ++plan.names_substituted;
     } else {
       plan.names.emplace_back(s.name.view());
     }
-    native += s.native ? std::size_t{1} : std::size_t{0};
+    plan.natives_dropped += s.native ? std::size_t{1} : std::size_t{0};
     any_source = any_source or s.source.has_value();
     providers.emplace_back(s.source ? core::to_token(*s.source) : "");
   }
   if (any_source) {
     plan.providers = std::move(providers);
   }
-  append_if_counted(warnings, {.code = WarningCode::station_name_substituted,
-                               .count = substituted});
-  append_if_counted(warnings, {.code = WarningCode::native_position_dropped,
-                               .count = native});
 }
 
-std::size_t sample_length(const core::StationTable& table,
-                          StationNcLayout layout) {
-  if (layout == StationNcLayout::orthogonal) {
-    return table.times(StationIndex{0}).size();
-  }
+/// The length of the sample dimension; every station within the limit.
+std::expected<std::size_t, Error> sample_length(
+    const core::StationTable& table, StationNcLayout layout,
+    const detail::StationNcWriteLimits& limits) {
   std::size_t longest = 0;
   for (const StationIndex i : table.stations()) {
-    longest = std::max(longest, table.times(i).size());
+    const std::size_t n = table.times(i).size();
+    if (n > limits.max_station_samples) {
+      return refuse(FormatErrc::too_many_samples,
+                    std::string{table.station(i).id.view()});
+    }
+    longest = std::max(longest, n);
   }
-  return longest;
+  return layout == StationNcLayout::orthogonal
+             ? table.times(StationIndex{0}).size()
+             : longest;
 }
 
-std::expected<Read<Plan>, Error> plan_write(const core::StationTable& table) {
+/// An option text the format can store: UTF-8 without NUL, bounded.
+std::expected<void, Error> check_option(std::string_view attribute,
+                                        std::string_view text) {
+  if (text.size() > StationNcWriteOptions::max_option_bytes or
+      text.find('\0') != std::string_view::npos or
+      not core::detail::is_valid_utf8(text)) {
+    return refuse(FormatErrc::bad_option, ":" + std::string{attribute});
+  }
+  return {};
+}
+
+std::expected<void, Error> check_options(const StationNcWriteOptions& o) {
+  if (o.title.empty()) {
+    return refuse(FormatErrc::bad_option, ":title");
+  }
+  using Optional =
+      std::pair<std::string_view, const std::optional<std::string>*>;
+  const std::array<Optional, 4> optional{{{"institution", &o.institution},
+                                          {"source", &o.source},
+                                          {"references", &o.references},
+                                          {"comment", &o.comment}}};
+  auto done = check_option("title", o.title);
+  for (const auto& [attribute, text] : optional) {
+    if (done and *text) {
+      done = check_option(attribute, text->value_or(""));
+    }
+  }
+  return done;
+}
+
+std::expected<void, Error> check_collection(const core::StationTable& table) {
   if (table.size() == 0) {
     return refuse(FormatErrc::empty_collection, "station");
   }
-  if (table.schema().empty() or table.total_samples() == 0) {
-    return refuse(FormatErrc::empty_collection,
-                  table.schema().empty() ? "schema" : "samples");
+  if (table.schema().empty()) {
+    return refuse(FormatErrc::no_data_variables, "");
   }
+  if (table.total_samples() == 0) {
+    return refuse(FormatErrc::no_samples, "");
+  }
+  return {};
+}
+
+/// The table-wide checks, in order; the length of the sample dimension.
+std::expected<std::size_t, Error> check_table(
+    const core::StationTable& table, const StationNcWriteOptions& options,
+    StationNcLayout layout, const detail::StationNcWriteLimits& limits) {
+  return check_collection(table)
+      .and_then([&] { return check_options(options); })
+      .and_then([&] { return check_status_names(table); })
+      .and_then([&] { return sample_length(table, layout, limits); });
+}
+
+std::expected<Plan, Error> plan_write(
+    const core::StationTable& table, const StationNcWriteOptions& options,
+    const detail::StationNcWriteLimits& limits) {
   const StationNcLayout layout = choose_layout(table);
-  Read<Plan> plan{.value = {.layout = layout,
-                            .samples = sample_length(table, layout),
-                            .ids = {},
-                            .names = {},
-                            .providers = std::nullopt,
-                            .columns = {}},
-                  .warnings = {}};
-  std::vector<Warning> later;  // value_reads_as_missing comes last
+  auto samples = check_table(table, options, layout, limits);
+  if (not samples) {
+    return std::unexpected{std::move(samples).error()};
+  }
+  Plan plan{.layout = layout,
+            .samples = *samples,
+            .ids = {},
+            .names = {},
+            .providers = std::nullopt,
+            .columns = {},
+            .names_substituted = 0,
+            .natives_dropped = 0};
+  plan.columns.reserve(table.schema().size());
   for (std::size_t k = 0; k < table.schema().size(); ++k) {
-    std::vector<Warning> column_warnings;
-    auto column = plan_column(table, ColumnIndex{k}, column_warnings);
+    auto column = plan_column(table, ColumnIndex{k});
     if (not column) {
-      return std::unexpected{std::move(column.error())};
+      return std::unexpected{std::move(column).error()};
     }
-    for (Warning& w : column_warnings) {
-      (w.code == WarningCode::unit_converted ? plan.warnings : later)
-          .push_back(std::move(w));
-    }
-    plan.value.columns.push_back(*std::move(column));
+    plan.columns.push_back(*std::move(column));
   }
-  if (auto names = check_status_names(plan.value.columns); not names) {
-    return std::unexpected{std::move(names.error())};
-  }
-  plan_stations(table, plan.value, plan.warnings);
-  plan.warnings.insert(plan.warnings.end(), later.begin(), later.end());
+  plan_stations(table, plan);
   return plan;
 }
 
@@ -356,7 +420,7 @@ std::expected<void, Error> in_order(Step&& step, Rest&&... rest) {
 }
 
 template <class T>
-std::expected<void, Error> lifted(std::expected<T, NcError> r) {
+std::expected<void, Error> as_io_error(std::expected<T, NcError> r) {
   if (not r) {
     return std::unexpected{Error{std::move(r.error())}};
   }
@@ -384,33 +448,31 @@ std::expected<Dims, Error> define_dims(nc::NewFile& file, const Plan& plan) {
   const auto dim = [&file](nc::NcNameRef name, std::size_t length) {
     return file.define_dim(name, length).transform_error(lift<Error>);
   };
-  auto station = dim(sn::station_dim, plan.ids.size());
-  auto id_len = station.and_then(
-      [&](const auto&) { return dim(sn::id_len_dim, longest(plan.ids)); });
-  auto name_len = id_len.and_then(
-      [&](const auto&) { return dim(sn::name_len_dim, longest(plan.names)); });
-  if (not name_len) {
-    return std::unexpected{std::move(name_len.error())};
+  // netCDF numbers the dimensions in definition order, so the order is SN 9's.
+  auto dims = collect(
+      [&] { return dim(sn::station_dim, plan.ids.size()); },
+      [&] { return dim(sn::id_len_dim, longest(plan.ids)); },
+      [&] { return dim(sn::name_len_dim, longest(plan.names)); },
+      [&]() -> std::expected<std::optional<nc::DimInfo>, Error> {
+        if (not plan.providers) {
+          return std::nullopt;
+        }
+        return dim(sn::provider_len_dim, longest(*plan.providers));
+      },
+      [&] {
+        return dim(plan.layout == StationNcLayout::orthogonal ? sn::time_dim
+                                                              : sn::obs_dim,
+                   plan.samples);
+      });
+  if (not dims) {
+    return std::unexpected{std::move(dims).error()};
   }
-  std::optional<nc::DimInfo> provider_len;
-  if (plan.providers) {
-    auto d = dim(sn::provider_len_dim, longest(*plan.providers));
-    if (not d) {
-      return std::unexpected{std::move(d.error())};
-    }
-    provider_len = *std::move(d);
-  }
-  auto sample = dim(
-      plan.layout == StationNcLayout::orthogonal ? sn::time_dim : sn::obs_dim,
-      plan.samples);
-  if (not sample) {
-    return std::unexpected{std::move(sample.error())};
-  }
-  return Dims{.station = *std::move(station),
-              .id_len = *std::move(id_len),
-              .name_len = *std::move(name_len),
+  auto& [station, id_len, name_len, provider_len, sample] = *dims;
+  return Dims{.station = std::move(station),
+              .id_len = std::move(id_len),
+              .name_len = std::move(name_len),
               .provider_len = std::move(provider_len),
-              .sample = *std::move(sample)};
+              .sample = std::move(sample)};
 }
 
 std::expected<void, Error> define_text_var(nc::NewFile& file,
@@ -419,7 +481,7 @@ std::expected<void, Error> define_text_var(nc::NewFile& file,
                                            const nc::DimInfo& length,
                                            std::span<const TextAtt> atts) {
   const std::array<nc::DimInfo, 2> dims{station, length};
-  return lifted(file.define_char_var(name, dims)).and_then([&] {
+  return as_io_error(file.define_char_var(name, dims)).and_then([&] {
     return put_texts(file, name, atts);
   });
 }
@@ -460,7 +522,7 @@ std::expected<void, Error> define_coordinate(nc::NewFile& file,
                                              const nc::DimInfo& station,
                                              std::span<const TextAtt> atts) {
   const std::array<nc::DimInfo, 1> dims{station};
-  return lifted(file.define_var<double>(name, dims, {})).and_then([&] {
+  return as_io_error(file.define_var<double>(name, dims, {})).and_then([&] {
     return put_texts(file, name, atts);
   });
 }
@@ -468,7 +530,8 @@ std::expected<void, Error> define_coordinate(nc::NewFile& file,
 std::expected<void, Error> define_crs(nc::NewFile& file) {
   const auto number = [&file](nc::NcNameRef att, double value) {
     return [&file, att, value] {
-      return lifted(file.put_att(sn::crs, att, std::array<double, 1>{value}));
+      return as_io_error(
+          file.put_att(sn::crs, att, std::array<double, 1>{value}));
     };
   };
   const std::array<TextAtt, 1> mapping{
@@ -477,7 +540,9 @@ std::expected<void, Error> define_crs(nc::NewFile& file) {
       {{.name = "crs_wkt", .value = sn::wgs84_wkt},
        {.name = "epsg_code", .value = sn::epsg_4326}}};
   return in_order(
-      [&] { return lifted(file.define_var<std::int32_t>(sn::crs, {}, {})); },
+      [&] {
+        return as_io_error(file.define_var<std::int32_t>(sn::crs, {}, {}));
+      },
       [&] { return put_texts(file, sn::crs, mapping); },
       number("longitude_of_prime_meridian", 0.0),
       number("semi_major_axis", sn::wgs84_semi_major_axis),
@@ -503,9 +568,8 @@ std::expected<void, Error> define_time(nc::NewFile& file, const Plan& plan,
        {.name = "axis", .value = "T"}}};
   if (plan.layout == StationNcLayout::orthogonal) {
     const std::array<nc::DimInfo, 1> dims{d.sample};
-    return lifted(file.define_var<double>(sn::time, dims, {})).and_then([&] {
-      return put_texts(file, sn::time, atts);
-    });
+    return as_io_error(file.define_var<double>(sn::time, dims, {}))
+        .and_then([&] { return put_texts(file, sn::time, atts); });
   }
   const std::array<nc::DimInfo, 2> dims{d.station, d.sample};
   const std::array<TextAtt, 1> count{
@@ -514,7 +578,7 @@ std::expected<void, Error> define_time(nc::NewFile& file, const Plan& plan,
   const std::array<nc::DimInfo, 1> station{d.station};
   return in_order(
       [&] {
-        return lifted(
+        return as_io_error(
             file.define_var<double>(sn::time, dims,
                                     {.fill = sn::fill_double,
                                      .deflate_level = sn::deflate_level,
@@ -522,7 +586,7 @@ std::expected<void, Error> define_time(nc::NewFile& file, const Plan& plan,
       },
       [&] { return put_texts(file, sn::time, atts); },
       [&] {
-        return lifted(
+        return as_io_error(
             file.define_var<std::int32_t>(sn::obs_count, station, {}));
       },
       [&] { return put_texts(file, sn::obs_count, count); });
@@ -541,16 +605,16 @@ std::expected<void, Error> define_status(nc::NewFile& file, const ColumnPlan& c,
   const std::array<std::int8_t, 2> flags{sn::status_dry, sn::status_wet};
   return in_order(
       [&] {
-        return lifted(
+        return as_io_error(
             file.define_var<std::int8_t>(name, dims,
                                          {.fill = sn::fill_status,
                                           .deflate_level = sn::deflate_level,
                                           .chunks = sample_chunks(d)}));
       },
       [&] { return put_texts(file, name, names); },
-      [&] { return lifted(file.put_att(name, "flag_values", flags)); },
+      [&] { return as_io_error(file.put_att(name, "flag_values", flags)); },
       [&] { return put_texts(file, name, meanings); },
-      [&] { return lifted(file.put_att(name, "valid_range", flags)); });
+      [&] { return as_io_error(file.put_att(name, "valid_range", flags)); });
 }
 
 std::expected<void, Error> define_column(nc::NewFile& file, const ColumnPlan& c,
@@ -558,8 +622,8 @@ std::expected<void, Error> define_column(nc::NewFile& file, const ColumnPlan& c,
   const std::array<nc::DimInfo, 2> dims{d.station, d.sample};
   std::vector<TextAtt> atts{{.name = "coordinates", .value = sn::coordinates},
                             {.name = "grid_mapping", .value = "crs"}};
-  if (not c.standard_name.empty()) {
-    atts.push_back({.name = "standard_name", .value = c.standard_name});
+  if (c.standard_name) {
+    atts.push_back({.name = "standard_name", .value = *c.standard_name});
   }
   atts.push_back({.name = "long_name", .value = c.long_name});
   if (c.units) {
@@ -576,7 +640,7 @@ std::expected<void, Error> define_column(nc::NewFile& file, const ColumnPlan& c,
   }
   return in_order(
       [&] {
-        return lifted(
+        return as_io_error(
             file.define_var<double>(c.name, dims,
                                     {.fill = sn::fill_double,
                                      .deflate_level = sn::deflate_level,
@@ -593,9 +657,8 @@ std::expected<void, Error> define_column(nc::NewFile& file, const ColumnPlan& c,
 
 std::expected<void, Error> define_globals(nc::NewFile& file,
                                           const StationNcWriteOptions& options,
-                                          core::Time now) {
-  const std::string created =
-      std::format("{:%FT%TZ}", std::chrono::floor<std::chrono::seconds>(now));
+                                          std::chrono::sys_seconds now) {
+  const std::string created = std::format("{:%FT%TZ}", now);
   const std::string version =
       std::format("{}.{}", station_nc_version.major, station_nc_version.minor);
   const std::string history =
@@ -606,8 +669,8 @@ std::expected<void, Error> define_globals(nc::NewFile& file,
                             {.name = "title", .value = options.title}};
   const auto optional = [&atts](nc::NcNameRef name,
                                 const std::optional<std::string>& value) {
-    if (value) {
-      atts.push_back({name, *value});
+    if (value and not value->empty()) {  // empty is absent
+      atts.push_back({.name = name, .value = *value});
     }
   };
   optional("institution", options.institution);
@@ -624,7 +687,7 @@ std::expected<void, Error> define_globals(nc::NewFile& file,
 std::expected<void, Error> define_all(nc::NewFile& file, const Plan& plan,
                                       const Dims& d,
                                       const StationNcWriteOptions& options,
-                                      core::Time now) {
+                                      std::chrono::sys_seconds now) {
   const std::array<TextAtt, 4> lat{
       {{.name = "standard_name", .value = "latitude"},
        {.name = "long_name", .value = "station latitude"},
@@ -645,7 +708,7 @@ std::expected<void, Error> define_all(nc::NewFile& file, const Plan& plan,
     done = done.and_then([&] { return define_column(file, c, d); });
   }
   return done.and_then([&] { return define_globals(file, options, now); })
-      .and_then([&] { return lifted(file.end_define()); });
+      .and_then([&] { return as_io_error(file.end_define()); });
 }
 
 // ---- the data
@@ -673,24 +736,26 @@ std::expected<void, Error> put_stations(nc::NewFile& file, const Plan& plan,
   }
   const nc::Slab all{{.start = 0, .count = table.size()}};
   return in_order(
-      [&] { return lifted(file.put_char_rows(sn::station_id, plan.ids)); },
-      [&] { return lifted(file.put_char_rows(sn::station_name, plan.names)); },
+      [&] { return as_io_error(file.put_char_rows(sn::station_id, plan.ids)); },
+      [&] {
+        return as_io_error(file.put_char_rows(sn::station_name, plan.names));
+      },
       [&]() -> std::expected<void, Error> {
         if (not plan.providers) {
           return {};
         }
-        return lifted(
+        return as_io_error(
             file.put_char_rows(sn::station_provider, *plan.providers));
       },
-      [&] { return lifted(file.put(sn::lat, lats, all)); },
-      [&] { return lifted(file.put(sn::lon, lons, all)); });
+      [&] { return as_io_error(file.put(sn::lat, lats, all)); },
+      [&] { return as_io_error(file.put(sn::lon, lons, all)); });
 }
 
 std::expected<void, Error> put_times(nc::NewFile& file, const Plan& plan,
                                      const core::StationTable& table) {
   if (plan.layout == StationNcLayout::orthogonal) {
     const auto times = time_values(table.times(StationIndex{0}));
-    return lifted(
+    return as_io_error(
         file.put(sn::time, times, {{.start = 0, .count = times.size()}}));
   }
   std::vector<std::int32_t> counts;
@@ -700,13 +765,13 @@ std::expected<void, Error> put_times(nc::NewFile& file, const Plan& plan,
     if (times.empty()) {
       continue;  // the padding is left unwritten: it reads as fill
     }
-    if (auto done = lifted(file.put(sn::time, time_values(times),
-                                    row_slab(i.value(), times.size())));
+    if (auto done = as_io_error(file.put(sn::time, time_values(times),
+                                         row_slab(i.value(), times.size())));
         not done) {
       return done;
     }
   }
-  return lifted(
+  return as_io_error(
       file.put(sn::obs_count, counts, {{.start = 0, .count = counts.size()}}));
 }
 
@@ -729,7 +794,7 @@ std::expected<void, Error> put_column(nc::NewFile& file, const ColumnPlan& c,
         samples, values.begin(),
         [&c](const core::Sample& s) { return stored(s, c.map); });
     const nc::Slab slab = row_slab(i.value(), samples.size());
-    if (auto done = lifted(file.put(c.name, values, slab)); not done) {
+    if (auto done = as_io_error(file.put(c.name, values, slab)); not done) {
       return done;
     }
     if (not c.status) {
@@ -737,7 +802,7 @@ std::expected<void, Error> put_column(nc::NewFile& file, const ColumnPlan& c,
     }
     std::vector<std::int8_t> flags(samples.size());
     std::ranges::transform(samples, flags.begin(), status_of);
-    if (auto done = lifted(file.put(*c.status, flags, slab)); not done) {
+    if (auto done = as_io_error(file.put(*c.status, flags, slab)); not done) {
       return done;
     }
   }
@@ -747,7 +812,7 @@ std::expected<void, Error> put_column(nc::NewFile& file, const ColumnPlan& c,
 std::expected<void, Error> write_body(nc::NewFile& file, const Plan& plan,
                                       const core::StationTable& table,
                                       const StationNcWriteOptions& options,
-                                      core::Time now) {
+                                      std::chrono::sys_seconds now) {
   auto done = define_dims(file, plan)
                   .and_then([&](const Dims& d) {
                     return define_all(file, plan, d, options, now);
@@ -764,32 +829,42 @@ std::expected<void, Error> write_body(nc::NewFile& file, const Plan& plan,
 
 namespace detail {
 
-std::expected<Read<StationNcLayout>, Error> write_station_netcdf(
+std::expected<std::vector<Warning>, Error> validate_station_netcdf(
+    const core::StationTable& table, const StationNcWriteOptions& options,
+    const StationNcWriteLimits& limits) {
+  return plan_write(table, options, limits).transform(warnings_of);
+}
+
+std::expected<std::vector<Warning>, Error> write_station_netcdf(
     const std::filesystem::path& path, const core::StationTable& table,
-    const StationNcWriteOptions& options, core::Time now,
+    const StationNcWriteOptions& options, std::chrono::sys_seconds now,
     const FaultInjector& fault) {
-  auto plan = plan_write(table);
+  auto plan = plan_write(table, options, {});
   if (not plan) {
-    return std::unexpected{std::move(plan.error())};
+    return std::unexpected{std::move(plan).error()};
   }
   auto written = nc::detail::write_netcdf_atomic_impl(
       path, ReadLimits{},
       [&](nc::NewFile& file) {
-        return write_body(file, plan->value, table, options, now);
+        return write_body(file, *plan, table, options, now);
       },
       fault);
   if (not written) {
-    return std::unexpected{std::move(written.error())};
+    return std::unexpected{std::move(written).error()};
   }
-  return Read<StationNcLayout>{.value = plan->value.layout,
-                               .warnings = std::move(plan->warnings)};
+  return warnings_of(*plan);
 }
 
 }  // namespace detail
 
-std::expected<Read<StationNcLayout>, Error> write_station_netcdf(
+std::expected<std::vector<Warning>, Error> validate_station_netcdf(
+    const core::StationTable& table, const StationNcWriteOptions& options) {
+  return detail::validate_station_netcdf(table, options, {});
+}
+
+std::expected<std::vector<Warning>, Error> write_station_netcdf(
     const std::filesystem::path& path, const core::StationTable& table,
-    const StationNcWriteOptions& options, core::Time now) {
+    const StationNcWriteOptions& options, std::chrono::sys_seconds now) {
   return detail::write_station_netcdf(path, table, options, now, {});
 }
 

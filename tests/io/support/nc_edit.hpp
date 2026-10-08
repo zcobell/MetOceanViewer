@@ -62,6 +62,13 @@ class Editor {
                          std::data(values)),
           att);
   }
+  void bytes(std::string_view var, const char* att,
+             std::initializer_list<signed char> values) {
+    redef();
+    check(nc_put_att_schar(ncid_, varid(var), att, NC_BYTE, values.size(),
+                           std::data(values)),
+          att);
+  }
   void remove_att(std::string_view var, const char* att) {
     redef();
     check(nc_del_att(ncid_, varid(var), att), att);

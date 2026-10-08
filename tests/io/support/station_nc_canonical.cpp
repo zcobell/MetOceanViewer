@@ -114,10 +114,10 @@ core::StationTable table(std::vector<core::Variable> variables,
 
 }  // namespace
 
-core::Time canonical_now() {
-  return core::Time{std::chrono::sys_days{std::chrono::year{2026} /
-                                          std::chrono::October /
-                                          std::chrono::day{6}}} +
+std::chrono::sys_seconds canonical_now() {
+  return std::chrono::sys_seconds{std::chrono::sys_days{
+             std::chrono::year{2026} / std::chrono::October /
+             std::chrono::day{6}}} +
          std::chrono::hours{12};
 }
 
@@ -186,6 +186,13 @@ Canonical registry() {
                          "generic"),
                     "grid-relative current x", "m s-1"),
        .per_station = {{v(-0.5), v(0.25)}}});
+  variables.push_back(
+      {.meta =
+           meta(must(core::GenericQuantity::parse(
+                         {.token = "probe_temperature", .standard_name = ""}),
+                     "generic"),
+                "probe temperature", "degF"),
+       .per_station = {{v(50.0), v(51.5)}}});
   std::vector<core::StationRow> rows{
       {.station = station("8761724", "Grand Isle, LA", 29.2633, -89.9567),
        .axis = 0}};

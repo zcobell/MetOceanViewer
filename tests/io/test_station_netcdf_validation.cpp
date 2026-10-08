@@ -57,7 +57,7 @@ class Broken {
   [[nodiscard]] io::FormatError inspect_error() const {
     return format_error_of(io::inspect_station_netcdf(path_, {}));
   }
-  [[nodiscard]] io::Read<io::V5StationFile> read() const {
+  [[nodiscard]] io::Read<io::StationFile> read() const {
     return must_read(read_all(path_));
   }
 
@@ -79,6 +79,8 @@ struct Skeleton {
   const char* station_dim{"station"};
   bool time_over_station{false};  // orthogonal dims, time(station, time)
   bool data{true};
+  bool unlimited_station{false};
+  bool unlimited_sample{false};
   std::vector<std::string> omit{};
 };
 
@@ -92,9 +94,11 @@ void make_skeleton(const std::filesystem::path& path, const Skeleton& k) {
   const auto omitted = [&k](std::string_view name) {
     return std::ranges::find(k.omit, name) != k.omit.end();
   };
-  const int station = raw.dim(k.station_dim, 2);
+  const int station =
+      raw.dim(k.station_dim, k.unlimited_station ? NC_UNLIMITED : 2);
   const int len = raw.dim("station_id_len", 1);
-  const int sample = raw.dim(k.incomplete ? "obs" : "time", 2);
+  const int sample = raw.dim(k.incomplete ? "obs" : "time",
+                             k.unlimited_sample ? NC_UNLIMITED : 2);
   raw.text(NC_GLOBAL, "Conventions", "CF-1.11");
   raw.text(NC_GLOBAL, "featureType", "timeSeries");
   raw.text(NC_GLOBAL, "metoceanviewer_format", "station-timeseries");
@@ -161,8 +165,9 @@ TEST_CASE("the skeleton is a valid file", "[io][station_nc][validation]") {
     make_skeleton(dir / "s.nc", {.incomplete = incomplete});
     const auto read = must_read(read_all(dir / "s.nc"));
     CHECK(read.value.table.size() == 2);
-    CHECK(read.value.layout == (incomplete ? io::StationNcLayout::incomplete
-                                           : io::StationNcLayout::orthogonal));
+    CHECK(layout_of(read.value) == (incomplete
+                                        ? io::StationNcLayout::incomplete
+                                        : io::StationNcLayout::orthogonal));
     CHECK(count_of(read.warnings, WarningCode::crs_assumed) == 1);
     std::filesystem::remove(dir / "s.nc");
   }
@@ -216,7 +221,8 @@ TEST_CASE("the format version: bad, unsupported, newer minor",
     f.edit().text("", "metoceanviewer_format_version", "1.7");
     f.edit().text("water_level", "some_future_attribute", "ignored");
     const auto read = f.read();
-    CHECK(read.value.version == io::StationNcVersion{.major = 1, .minor = 7});
+    CHECK(version_of(read.value) ==
+          io::StationNcVersion{.major = 1, .minor = 7});
     CHECK(warning_of(read.warnings, WarningCode::minor_newer).subject == "1.7");
     CHECK(read.value.table == station_nc::orthogonal().table);
   }
@@ -235,7 +241,8 @@ TEST_CASE("Conventions: a CF-1.6 or later token",
     f.edit().remove_att("", "Conventions");
     expect(f, FormatErrc::missing_attribute, ":Conventions");
   }
-  for (const char* bad : {"CF-1.5", "COARDS", "CF-1", "CF-2.x", "UGRID-1.0"}) {
+  for (const char* bad : {"CF-1.5", "COARDS", "CF-1", "CF-2.x", "UGRID-1.0",
+                          "CF-2.0", "CF-2.0 CF-1.8"}) {
     CAPTURE(bad);
     f.edit().text("", "Conventions", bad);
     expect(f, FormatErrc::unsupported_version, ":Conventions");
@@ -356,6 +363,25 @@ TEST_CASE("station_provider: unknown tokens are dropped with a warning",
   CHECK(not read.value.table.station(core::StationIndex{1}).source);
   CHECK(read.value.table.station(core::StationIndex{0}).source ==
         core::DataSource::noaa_coops);
+}
+
+TEST_CASE("station_provider must be UTF-8 without NUL (N3)",
+          "[io][station_nc][validation][stations]") {
+  const Broken f{station_nc::orthogonal()};
+  f.edit().put_chars("station_provider", 1, "\xFF\xFE");
+  const auto e = expect(f, FormatErrc::bad_encoding, "station_provider");
+  CHECK(e.station == 1);
+}
+
+TEST_CASE("unlimited dimensions are refused (S4)",
+          "[io][station_nc][validation][structure]") {
+  for (const bool station : {true, false}) {
+    CAPTURE(station);
+    const auto e = skeleton_error(
+        {.unlimited_station = station, .unlimited_sample = not station});
+    CHECK(e.code == FormatErrc::unsupported_layout);
+    CHECK(e.subject == (station ? "station" : "time"));
+  }
 }
 
 TEST_CASE("time: units, calendar, values (orthogonal)",
@@ -496,11 +522,50 @@ TEST_CASE("wet/dry status: flags and consistency",
     CHECK(first[0] == v(0.5));
     CHECK(second[1] == missing);
   }
-  SECTION("an ancillary variable that is not a wet/dry status is ignored") {
+  SECTION("a status variable written wrongly is refused, not ignored (S1)") {
     f.edit().text("water_level_status", "flag_meanings", "bad good");
-    const auto read = f.read();
-    CHECK(read.value.table.column(core::StationIndex{1},
-                                  core::ColumnIndex{0})[1] == missing);
+    expect(f, FormatErrc::bad_flag, "water_level_status");
+    CHECK(f.inspect_error().code == FormatErrc::bad_flag);
+  }
+  SECTION("flag_values of another type") {
+    f.edit().ints("water_level_status", "flag_values", {0, 1});
+    expect(f, FormatErrc::bad_flag, "water_level_status");
+  }
+  SECTION("a status that is not byte") {
+    f.edit().add_var("water_temperature_status", NC_INT, {"station", "time"});
+    f.edit().text("water_temperature", "ancillary_variables",
+                  "water_temperature_status");
+    expect(f, FormatErrc::bad_flag, "water_temperature_status");
+  }
+  SECTION("a status whose fill value is a flag") {
+    {
+      auto edit = f.edit();  // the fill value goes with the definition
+      edit.add_var("water_temperature_status", NC_BYTE, {"station", "time"});
+      edit.bytes("water_temperature_status", "_FillValue", {1});
+    }
+    f.edit().bytes("water_temperature_status", "flag_values", {0, 1});
+    f.edit().text("water_temperature_status", "flag_meanings", "dry wet");
+    f.edit().text("water_temperature", "ancillary_variables",
+                  "water_temperature_status");
+    expect(f, FormatErrc::bad_flag, "water_temperature_status");
+  }
+  SECTION("a well-formed status of fill only changes nothing") {
+    {
+      auto edit = f.edit();  // the fill value goes with the definition
+      edit.add_var("water_temperature_status", NC_BYTE, {"station", "time"});
+      edit.bytes("water_temperature_status", "_FillValue", {-128});
+    }
+    f.edit().bytes("water_temperature_status", "flag_values", {0, 1});
+    f.edit().text("water_temperature_status", "flag_meanings", "dry wet");
+    f.edit().text("water_temperature", "ancillary_variables",
+                  "water_temperature_status");
+    CHECK(f.read().value.table == station_nc::orthogonal().table);
+  }
+  SECTION("another ancillary variable (a newer minor's) is ignored") {
+    f.edit().add_var("water_level_quality", NC_BYTE, {"station", "time"});
+    f.edit().text("water_level", "ancillary_variables",
+                  "water_level_status water_level_quality");
+    CHECK(f.read().value.table == station_nc::orthogonal().table);
   }
   SECTION("an ancillary target over other dimensions") {
     f.edit().add_var("quality", NC_BYTE, {"station"});
@@ -575,11 +640,43 @@ TEST_CASE("quantities, units and datums of a data variable",
     CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit).subject ==
           "smoots");
   }
-  SECTION("a generic token other than value is reported") {
+  SECTION("generic quantities v5 wrote read back without a warning (F4)") {
     const auto read = f.read();
-    CHECK(warning_of(read.warnings, WarningCode::unknown_quantity).subject ==
-          "sea_water_x_velocity");
-    CHECK(count_of(read.warnings, WarningCode::unknown_quantity) == 1);
+    CHECK(read.warnings.empty());
+    CHECK(read.value.table == station_nc::registry().table);
+  }
+  SECTION("a name that is no quantity token (S5)") {
+    f.edit().add_var("my-var", NC_DOUBLE, {"station", "time"});
+    expect(f, FormatErrc::invalid_variable_name, "my-var");
+    CHECK(f.inspect_error().code == FormatErrc::invalid_variable_name);
+  }
+  SECTION("a name the format reserves (S5)") {
+    f.edit().add_var("elevation", NC_DOUBLE, {"station", "time"});
+    expect(f, FormatErrc::invalid_variable_name, "elevation");
+  }
+  SECTION("a registry quantity in a unit that is not its own (S2)") {
+    f.edit().text("water_level", "units", "m s-1");
+    expect(f, FormatErrc::noncanonical_unit, "water_level");
+    CHECK(f.inspect_error().code == FormatErrc::noncanonical_unit);
+  }
+  SECTION("a registry quantity without units (S2)") {
+    f.edit().remove_att("air_temperature", "units");
+    expect(f, FormatErrc::noncanonical_unit, "air_temperature");
+  }
+  SECTION("a registry quantity in another unit of its family reads as is") {
+    f.edit().text("water_level", "units", "ft");
+    const auto read = f.read();
+    const auto k = read.value.table.column_of(core::Quantity::water_level);
+    REQUIRE(k.has_value());
+    if (k) {
+      CHECK(read.value.table.schema()[k->value()].unit() == unit("ft"));
+    }
+  }
+  SECTION("subjects from the file are cut to 120 bytes (N3)") {
+    f.edit().text("value", "units", std::string(300, 'x'));
+    const auto read = f.read();
+    CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit)
+              .subject.size() == 120);
   }
   SECTION("a variable without long_name is labelled with its token") {
     f.edit().remove_att("air_pressure", "long_name");
@@ -599,6 +696,17 @@ TEST_CASE("the horizontal CRS (SN 10.1)", "[io][station_nc][validation][crs]") {
   SECTION("no epsg_code: latitude_longitude on WGS 84") {
     f.edit().remove_att("crs", "epsg_code");
     CHECK(f.read().value.table == original);
+  }
+  SECTION("no ellipsoid: assumed WGS 84, with a warning (S3)") {
+    f.edit().remove_att("crs", "epsg_code");
+    f.edit().remove_att("crs", "semi_major_axis");
+    const auto read = f.read();
+    CHECK(warning_of(read.warnings, WarningCode::crs_assumed).subject == "crs");
+    CHECK(read.value.table == original);
+  }
+  SECTION("a prime meridian other than Greenwich (S3)") {
+    f.edit().doubles("crs", "longitude_of_prime_meridian", {2.337229167});
+    expect(f, FormatErrc::unsupported_crs, "crs");
   }
   SECTION("no grid_mapping at all: assumed, with a warning") {
     f.edit().remove_att("water_level", "grid_mapping");

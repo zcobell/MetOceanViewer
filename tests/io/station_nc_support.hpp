@@ -134,37 +134,60 @@ inline const Sample missing{};
 }
 
 /// write_station_netcdf at a fixed creation time.
-[[nodiscard]] inline std::expected<io::Read<io::StationNcLayout>, io::Error>
-write(const std::filesystem::path& path, const StationTable& t,
-      const io::StationNcWriteOptions& options = {}) {
+[[nodiscard]] inline std::expected<std::vector<io::Warning>, io::Error> write(
+    const std::filesystem::path& path, const StationTable& t,
+    const io::StationNcWriteOptions& options = {}) {
   return io::write_station_netcdf(path, t, options,
                                   station_nc::canonical_now());
 }
 
+/// What a successful write wrote: the layout (choose_layout's) and the
+/// writer's warnings.
+struct Written {
+  io::StationNcLayout layout;
+  std::vector<io::Warning> warnings;
+};
+
 /// write, which must succeed.
-inline io::Read<io::StationNcLayout> must_write(
-    const std::filesystem::path& path, const StationTable& t,
-    const io::StationNcWriteOptions& options = {}) {
+inline Written must_write(const std::filesystem::path& path,
+                          const StationTable& t,
+                          const io::StationNcWriteOptions& options = {}) {
   auto written = write(path, t, options);
   INFO((written ? std::string{} : what(written.error())));
   REQUIRE(written.has_value());
-  return *std::move(written);
+  return {.layout = io::choose_layout(t),
+          .warnings = written.value_or(std::vector<io::Warning>{})};
 }
 
 /// read_station_netcdf of every station.
 [[nodiscard]] inline std::expected<io::Read<io::StationFile>, io::Error>
-read_all(const std::filesystem::path& path, const io::ReadContext& ctx = {}) {
-  return io::read_station_netcdf(path, io::AllStations{}, ctx);
+read_all(const std::filesystem::path& path, const io::ReadContext& ctx = {},
+         const io::StationNcReadOptions& options = {}) {
+  return io::read_station_netcdf(path, io::AllStations{}, ctx, options);
 }
 
-/// The v5 file of a successful read.
-[[nodiscard]] inline io::Read<io::V5StationFile> must_read(
+/// A successful read.
+[[nodiscard]] inline io::Read<io::StationFile> must_read(
     std::expected<io::Read<io::StationFile>, io::Error> result) {
   INFO((result ? std::string{} : what(result.error())));
   REQUIRE(result.has_value());
-  auto* v5 = std::get_if<io::V5StationFile>(&result->value);
+  return *std::move(result);
+}
+
+/// The origin of a v5 file; the test fails for another origin.
+[[nodiscard]] inline io::V5Origin v5_origin(const io::StationFileOrigin& o) {
+  const auto* v5 = std::get_if<io::V5Origin>(&o);
   REQUIRE(v5 != nullptr);
-  return {.value = std::move(*v5), .warnings = std::move(result->warnings)};
+  return v5 != nullptr
+             ? *v5
+             : io::V5Origin{.version = {.major = 0, .minor = 0},
+                            .layout = io::StationNcLayout::orthogonal};
+}
+[[nodiscard]] inline io::StationNcLayout layout_of(const io::StationFile& f) {
+  return v5_origin(f.origin).layout;
+}
+[[nodiscard]] inline io::StationNcVersion version_of(const io::StationFile& f) {
+  return v5_origin(f.origin).version;
 }
 
 /// The FormatError of a failed result; the test fails on success or another
