@@ -202,7 +202,8 @@ Planned, not done:
 
 `MOV_DEV_IMAGE=appimage tools/dev/run.sh <cmd>` runs `<cmd>` in a second
 image, `tools/dev/appimage/Dockerfile`: Ubuntu 22.04 (`APPIMAGE_UBUNTU_IMAGE`)
-with GCC `GCC_VERSION` from the `ubuntu-toolchain-r/test` PPA, the same CMake,
+with a GCC 14 release built from source in the image (`APPIMAGE_GCC_VERSION`,
+`docs/packaging.md`), the same CMake,
 vcpkg and Qt, so the AppImage keeps the glibc 2.35 floor of plan §6.24. It
 shares the caches and `~/Qt` with the dev image; its vcpkg binaries are its
 own (another compiler). Use it only for `--preset package-linux`

@@ -208,10 +208,10 @@ dropped: their client libraries are not shipped.
 Ubuntu 22.04+, Debian 12+, RHEL/Rocky/Alma 10, Fedora 36+. RHEL 9 has 2.34 and
 is not covered. C++23 with GCC 14 is fixed; the floor was negotiable (owner,
 2026-10-07: a newer Ubuntu is acceptable if 22.04 proves fragile; plan §6.24
-records the decision). The build runs in an Ubuntu 22.04 image with GCC 14 from
-the `ubuntu-toolchain-r/test` PPA (`tools/dev/appimage/Dockerfile`), because a
-binary needs at least the glibc it was linked against and 22.04's own GCC is
-12. Qt 6.11's Linux binaries need glibc 2.34, so Qt does not raise the floor.
+records the decision). The build runs in an Ubuntu 22.04 image
+(`tools/dev/appimage/Dockerfile`), because a binary needs at least the glibc
+it was linked against, with a GCC 14 release, because 22.04's own GCC is 12.
+Qt 6.11's Linux binaries need glibc 2.34, so Qt does not raise the floor.
 
 Building on 24.04 instead would need no libstdc++ handling, but would raise
 the floor to glibc 2.39 (Ubuntu 24.04, Debian 13, Fedora 40) and drop Ubuntu
@@ -219,19 +219,43 @@ the floor to glibc 2.39 (Ubuntu 24.04, Debian 13, Fedora 40) and drop Ubuntu
 `package-linux` in the dev image and setting `APPIMAGE_GLIBC_MAX=2.39`; the
 hook then never fires, because the system libstdc++ is always new enough.
 
-**The toolchain** is pinned in `tools/versions.env`: the image digest, the
-PPA's signing key (full fingerprint, checked when the image is built), and the
-exact `gcc-14`/`g++-14` and `libstdc++6` package versions. The PPA's
-`libstdc++6` is the newest GCC's runtime, at the time of writing a GCC 16
-snapshot (`16-20260315`). It is the copy the AppImage bundles, and it is
-backward compatible with what GCC 14 compiled. The PPA deletes superseded
-versions, so a fresh image build fails until the pins are updated.
+**The toolchain**, pinned in `tools/versions.env`, is all released software
+fetched by URL and SHA-256, so the image can be rebuilt later:
+
+- The compiler is GCC `APPIMAGE_GCC_VERSION` (14.4.0), built in the image's
+  first stage from GNU's release tarball (`APPIMAGE_GCC_SHA256`; its GPG
+  signature was checked when the pin was set) by 22.04's GCC 12. It is C and
+  C++ only, without multilib or the sanitizer runtimes. Like Ubuntu's GCC it
+  defaults to PIE, the strong stack protector, a build id and `--as-needed`
+  (a specs edit). `cmake/MapLibre.cmake`'s run-time layout relies on
+  `--as-needed`: without it QMapLibre lists Qt libraries it does not use,
+  which the loader then cannot find. Unlike Ubuntu's, it does not default to
+  `_FORTIFY_SOURCE`, `-fcf-protection` or `-fstack-clash-protection`; add
+  them as flags if wanted (plan §6.20 leaves release hardening open). It lives in
+  `/opt/gcc`, and its libstdc++ is first in the image's loader cache, so the
+  tests run against the runtime the code was compiled for. The
+  `ubuntu-toolchain-r/test` PPA was the first choice and was dropped: its
+  `gcc-14` needs the PPA's newest runtime packages, at the time a GCC 16
+  development snapshot, and the PPA expires superseded packages (Launchpad
+  removes their files), so no pinned set survives an update. A source build
+  adds about 8 minutes on 20 cores to a cold image build (an estimated
+  30-60 minutes on CI's 4-core runners, not yet measured).
+- The bundled runtime is conda-forge's `libstdcxx` of the same GCC release
+  (`APPIMAGE_LIBSTDCXX_URL` and `APPIMAGE_LIBSTDCXX_SHA256`). It is built for
+  glibc 2.17 and provides up to `GLIBCXX_3.4.33`. Its license files (GPL-3.0
+  with the GCC Runtime Library Exception) ship in
+  `share/doc/metoceanviewer/third-party/libstdc++/`. The CMake configure
+  fails if the compiler is newer than this runtime (the URL names the GCC
+  version), so the headers are never newer than the runtime. The packaging
+  script fails unless the bundled copy provides the `GLIBCXX`/`CXXABI`
+  versions the binaries need, needs no glibc above the floor and has no
+  absolute RUNPATH. The log names it and what it provides.
 
 **libstdc++.** The binaries GCC 14 makes need `GLIBCXX_3.4.32` and
 `CXXABI_1.3.15`, which Ubuntu 22.04's libstdc++ (GCC 12, `3.4.30`) lacks.
 Static libstdc++ is not an option: QMapLibre and the executable are separate
 C++ shared objects that exchange standard-library types. The AppImage
-carries the image's libstdc++ in `usr/optional/libstdc++/`. The AppRun hook
+carries the released libstdc++ above in `usr/optional/libstdc++/`. The AppRun hook
 `apprun-hooks/mov-runtime.sh` finds the libstdc++ the loader would pick, in
 the loader's order (`LD_LIBRARY_PATH`, then ldconfig's cache, then the usual
 directories). It puts the bundled directory first on `LD_LIBRARY_PATH` only
@@ -404,7 +428,8 @@ and the split symbols (`symbols-<platform>`) as artifacts:
 - **macos** (macos-15, Xcode 16.2) and **windows** (windows-2022) use the
   CI toolchains and share the build-test jobs' vcpkg caches.
 - **release** (tags only) checks that the tag is `v` + `project(VERSION)`,
-  collects the packages, writes `SHA256SUMS.txt`, and creates a **draft**
+  collects the packages, builds the [corresponding source](#corresponding-source)
+  archive, writes `SHA256SUMS.txt` over all of them, and creates a **draft**
   GitHub Release, or replaces the files of an existing draft on a rerun. It
   refuses to touch a published release. The owner publishes the draft.
 
@@ -412,7 +437,8 @@ and the split symbols (`symbols-<platform>`) as artifacts:
 cache is off (`VCPKG_BINARY_SOURCES=clear`), ccache and sccache are off, Qt is
 downloaded, and the Linux container starts with an empty `HOME`. A release
 therefore depends only on pinned sources, not on what an earlier build left
-behind. Allow 30-60 minutes per job for MapLibre. Other runs use the caches;
+behind. Allow 30-60 minutes per job for MapLibre; the Linux job also builds
+GCC in its image on every run (not measured on CI yet). Other runs use the caches;
 the Linux job caches Qt along with vcpkg and ccache.
 
 **Provenance.** Check a downloaded package with
@@ -421,6 +447,36 @@ the Linux job caches Qt along with vcpkg and ccache.
 **Symbols.** The `symbols-*` artifacts hold what the stripped binaries lack:
 `metoceanviewer.debug` (Linux; matched by its build id), the `.dSYM` bundle
 and the `.pdb`. Keep the release's ones to read crash reports.
+
+## Corresponding source
+
+GPL-3.0 §6 (plan §6.29): every GitHub Release carries
+`MetOceanViewer-<v>-sources.tar.xz`, made by the release job with
+`tools/source_archive.py` and covered by `SHA256SUMS.txt`. Its `SOURCES.md`
+lists the contents:
+
+| Included | What |
+|---|---|
+| `metoceanviewer/` | this repository at the tag (`git archive`), without the legacy v4 trees no v5 package contains |
+| `vcpkg/downloads/`, `vcpkg/ports/`, `vcpkg/BASELINE` | the source archives and recipes of the vcpkg ports at the pinned baseline (`vcpkg install --only-downloads`): netCDF-C, HDF5, libaec, PROJ, SQLite, zlib, nlohmann-json, tinyxml2 (and Catch2, used only by tests) |
+| `maplibre-native-qt/` | MapLibre Native Qt at the overlay port's commit, with the submodules the port builds |
+| `qt/` | the source archives of the Qt modules the packages ship (qtbase, qtdeclarative, qtlocation, qtpositioning, qtsvg), from Qt's online repository, checked against `packaging/sources/qt-sources.sha256` |
+
+| Referenced (URL and checksum, or package and version) | Why not copied |
+|---|---|
+| GCC (the AppImage's bundled libstdc++ and its compiler) | under the GCC Runtime Library Exception; the release tarball's URL and SHA-256 are in `tools/versions.env` |
+| ICU 73 (inside Qt's Linux binaries) | permissive (Unicode license) |
+| The AppImage runtime | permissive (MIT) |
+| The Ubuntu 22.04 packages whose libraries the AppImage bundles | listed with source package and version (the packaging script writes `<AppImage>.ubuntu-sources.md`; the release job appends it to `SOURCES.md`, and it is a release asset too); Ubuntu keeps them at `launchpad.net/ubuntu/+source/...` |
+| The MSVC runtime of the Windows packages | Microsoft's redistributable binaries, no source |
+
+Size: about 230 MB. MapLibre's test and render-test data and documents
+vendored in it (about 400 MB, mostly images and tile databases) are left out:
+the build does not use them, and they are upstream at the pinned commits
+(`MAPLIBRE_LEFT_OUT` in the script, listed in `SOURCES.md`).
+
+Locally, with vcpkg at the baseline (the dev image's): `tools/dev/run.sh
+python3 tools/source_archive.py --output-dir build/sources --work-dir build`.
 
 ## Signing
 
@@ -481,17 +537,13 @@ package-macos`.
    require a reviewer. Add a tag ruleset (Settings, Rules, Rulesets) that lets
    only maintainers create, update or delete `v*` tags. Once the signing
    secrets are in, set the repository variable `MOV_REQUIRE_SIGNING=true`.
-5. **GPL-3.0 §6.** Before the first public release, decide how corresponding
-   source is offered for the bundled libraries (Qt, MapLibre, netCDF, HDF5,
-   PROJ, ...): for example a source archive attached to each release, or a
-   written offer.
-6. **MapLibre source archive.** Publish the pinned maplibre-native-qt tree with
+5. **MapLibre source archive.** Publish the pinned maplibre-native-qt tree with
    its submodules as a release asset, so the vcpkg port no longer depends on
    about 30 shallow git fetches (`tools/dev/README.md`, MapLibre Native Qt).
-7. **AppStream metainfo.** Add `usr/share/metainfo/<app id>.metainfo.xml`
+6. **AppStream metainfo.** Add `usr/share/metainfo/<app id>.metainfo.xml`
    (description, screenshots) when there is something to publish;
    `appimagetool` warns until then.
-8. **Releasing.** Push `v<project(VERSION)>` (the release job checks it),
+7. **Releasing.** Push `v<project(VERSION)>` (the release job checks it),
    review the draft release, and publish it.
 
 ## Keep in sync
@@ -507,8 +559,9 @@ Values repeated across files; change them together.
 | Bare Ubuntu 22.04 package list | `package.yml` (smoke test) and the list under [Linux](#linux) |
 | `lukka/get-cmake` pin | `ci.yml` and `package.yml` |
 | Qt license texts | `packaging/licenses/qt/` follows `QT_VERSION` (`tools/fetch_qt_licenses.py`) |
+| Qt source archives | `packaging/sources/qt-sources.sha256` follows `QT_VERSION` and the Qt modules the packages ship (Qt's online repository, `qt6_<version>_unix_line_endings_src`) |
 | Icons | `packaging/icons/`, `packaging/macos/dmg-background.png` follow their SVGs (`tools/make_icons.py`; the pre-commit hook `icons` checks) |
-| AppImage toolchain | `tools/versions.env` (`APPIMAGE_*`, `LINUXDEPLOY_*`), read by `tools/dev/run.sh` and `packaging/CMakeLists.txt` |
+| AppImage toolchain | `tools/versions.env` (`APPIMAGE_*`, `LINUXDEPLOY_*`), read by `tools/dev/run.sh` and `packaging/CMakeLists.txt`; `APPIMAGE_GCC_VERSION` and the GCC version in `APPIMAGE_LIBSTDCXX_URL` move together (the runtime may be newer, never older) |
 
 ## Icons
 
@@ -533,5 +586,3 @@ tools/dev/run.sh python3 tools/make_icons.py --check  # verify they are current
 - The DMG background is a single 1x image; a Retina copy needs a
   multi-resolution TIFF (`tiffutil -cathidpicheck`).
 - The Inno Setup uninstaller is unsigned.
-- The bundled libstdc++ is the toolchain PPA's GCC 16 snapshot (see the
-  toolchain paragraph under [Linux](#linux)).

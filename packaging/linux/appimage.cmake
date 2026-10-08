@@ -7,8 +7,9 @@
 # CPack has installed the project into CPACK_TEMPORARY_DIRECTORY with the
 # prefix /usr, so that directory is the AppDir. The steps, in this order
 # because each needs the one before:
-#   1. download linuxdeploy, its Qt plugin and the AppImage runtime (pinned
-#      in tools/versions.env, SHA-256 verified) into CPACK_MOV_TOOLS_DIR, once;
+#   1. download linuxdeploy, its Qt plugin, the AppImage runtime and the
+#      libstdc++ to bundle (pinned in tools/versions.env, SHA-256 verified)
+#      into CPACK_MOV_TOOLS_DIR, once;
 #   2. give the Qt plugin a view of Qt without the plugins whose libraries
 #      are not installed (SQL drivers other than SQLite, NMEA positioning);
 #   3. deploy: linuxdeploy with the Qt plugin bundles Qt, the QML imports and
@@ -17,8 +18,9 @@
 #   4. check the complete AppDir: the glibc floor (plan §6.24), no
 #      GLIBC_PRIVATE, no absolute RUNPATH, libgcc_s's floor, and a license
 #      for every Ubuntu library linuxdeploy bundled;
-#   5. bundle libstdc++ and the AppRun hook, configured with the symbol
-#      versions the binaries just checked need; replace the Qt plugin's own
+#   5. bundle libstdc++ (after checking that it has the symbol versions the
+#      binaries need and needs no newer glibc than the floor) and the AppRun
+#      hook, configured with those versions; replace the Qt plugin's own
 #      hook (it only sets a gtk2 platform theme, which Qt 6 does not have);
 #   6. make the AppImage: linuxdeploy again, which rewrites AppRun to source
 #      the hooks now present.
@@ -79,6 +81,33 @@ mov_fetch_verified(
     "${runtime}"
     "${CPACK_MOV_LINUXDEPLOY_APPIMAGE_RUNTIME_SHA256}"
 )
+
+# The libstdc++ to bundle: a released GCC's, from conda-forge's libstdcxx
+# package (a zip holding zstd tarballs; built for glibc 2.17). Its license
+# files (GPL-3.0 with the GCC Runtime Library Exception) ship with it.
+get_filename_component(libstdcxx_package "${CPACK_MOV_APPIMAGE_LIBSTDCXX_URL}" NAME)
+mov_fetch_verified(
+    "${CPACK_MOV_APPIMAGE_LIBSTDCXX_URL}"
+    "${CPACK_MOV_TOOLS_DIR}/${libstdcxx_package}"
+    "${CPACK_MOV_APPIMAGE_LIBSTDCXX_SHA256}"
+)
+set(libstdcxx_dir "${CPACK_TOPLEVEL_DIRECTORY}/libstdcxx")
+file(REMOVE_RECURSE "${libstdcxx_dir}")
+file(ARCHIVE_EXTRACT INPUT "${CPACK_MOV_TOOLS_DIR}/${libstdcxx_package}" DESTINATION "${libstdcxx_dir}/conda")
+file(GLOB parts "${libstdcxx_dir}/conda/*.tar.zst")
+foreach(part IN LISTS parts)
+    file(ARCHIVE_EXTRACT INPUT "${part}" DESTINATION "${libstdcxx_dir}/files")
+endforeach()
+file(GLOB libstdcxx LIST_DIRECTORIES false "${libstdcxx_dir}/files/lib/libstdc++.so.6.*")
+list(FILTER libstdcxx EXCLUDE REGEX "-gdb\\.py$")
+list(LENGTH libstdcxx count)
+if(NOT count EQUAL 1)
+    message(FATAL_ERROR "Expected one lib/libstdc++.so.6.* in ${libstdcxx_package}, found: ${libstdcxx}")
+endif()
+file(GLOB libstdcxx_licenses LIST_DIRECTORIES false "${libstdcxx_dir}/files/share/licenses/libstdc++/*")
+if(NOT libstdcxx_licenses)
+    message(FATAL_ERROR "${libstdcxx_package} has no share/licenses/libstdc++/: its license would not ship")
+endif()
 
 # --- 2. The Qt the plugin sees -------------------------------------------------
 
@@ -213,7 +242,7 @@ endforeach()
 
 # libgcc_s is not bundled: the binaries (and the bundled libstdc++) must not
 # need more of it than the oldest supported system has (Ubuntu 22.04's).
-mov_highest_version(GCC "${binaries};${CPACK_MOV_LIBSTDCXX}" gcc_s_needed gcc_s_needed_by)
+mov_highest_version(GCC "${binaries};${libstdcxx}" gcc_s_needed gcc_s_needed_by)
 if(gcc_s_needed VERSION_GREATER CPACK_MOV_LIBGCC_S_MAX)
     message(
         FATAL_ERROR
@@ -227,6 +256,7 @@ endif()
 # (cmake/Packaging.cmake).
 file(GLOB bundled LIST_DIRECTORIES false "${appdir}/usr/lib/*.so*")
 list(FILTER bundled EXCLUDE REGEX "/lib(Qt6|icu|QMapLibre)[^/]*$")
+set(ubuntu_packages "")
 foreach(library IN LISTS bundled)
     get_filename_component(name "${library}" NAME)
     execute_process(
@@ -239,6 +269,7 @@ foreach(library IN LISTS bundled)
         message(FATAL_ERROR "No Ubuntu package owns ${name}: its license cannot be shipped")
     endif()
     set(package "${CMAKE_MATCH_1}")
+    list(APPEND ubuntu_packages "${package}")
     set(notice "${appdir}/usr/share/doc/${package}/copyright")
     if(NOT EXISTS "${notice}")
         if(NOT EXISTS "/usr/share/doc/${package}/copyright")
@@ -250,25 +281,79 @@ foreach(library IN LISTS bundled)
     endif()
 endforeach()
 
+# Where the source of those packages is (GPL-3.0 section 6, LGPL): a section
+# of the release's SOURCES.md (tools/source_archive.py --reference), written
+# beside the AppImage.
+list(REMOVE_DUPLICATES ubuntu_packages)
+list(SORT ubuntu_packages)
+set(ubuntu_sources "${CPACK_TOPLEVEL_DIRECTORY}/${CPACK_PACKAGE_FILE_NAME}.ubuntu-sources.md")
+file(
+    WRITE "${ubuntu_sources}"
+    "## Ubuntu 22.04 packages in the Linux AppImage\n\n"
+    "linuxdeploy bundled libraries of these binary packages of the build image. Each source\n"
+    "package is at https://launchpad.net/ubuntu/+source/<source>/<version>\n"
+    "(or `apt-get source <source>=<version>`).\n\n"
+    "| Package | Version | Source | Source version |\n|---|---|---|---|\n"
+)
+foreach(package IN LISTS ubuntu_packages)
+    execute_process(
+        COMMAND
+            dpkg-query --show "--showformat=| \${Package} | \${Version} | \${source:Package} | \${source:Version} |\n"
+            "${package}"
+        OUTPUT_VARIABLE row
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    file(APPEND "${ubuntu_sources}" "${row}")
+endforeach()
+
 # --- 5. libstdc++ and the AppRun hook -------------------------------------------
 
 list(FILTER binaries EXCLUDE REGEX "/usr/optional/")
 mov_highest_version(GLIBCXX "${binaries}" glibcxx unused)
 mov_highest_version(CXXABI "${binaries}" cxxabi unused)
 set(MOV_STDCXX_REQUIRED "GLIBCXX_${glibcxx} CXXABI_${cxxabi}")
-execute_process(
-    COMMAND dpkg-query --show --showformat=\${Version} libstdc++6
-    OUTPUT_VARIABLE libstdcxx_package
-    OUTPUT_STRIP_TRAILING_WHITESPACE
+# The bundled copy must provide what the binaries need, and itself need no
+# newer glibc than the floor.
+foreach(version IN ITEMS "GLIBCXX_${glibcxx}" "CXXABI_${cxxabi}")
+    file(STRINGS "${libstdcxx}" provided REGEX "^${version}$")
+    if(NOT provided)
+        message(FATAL_ERROR "${libstdcxx_package} has no ${version}, which the binaries need")
+    endif()
+endforeach()
+mov_highest_version(GLIBC "${libstdcxx}" libstdcxx_glibc unused)
+if(libstdcxx_glibc VERSION_GREATER CPACK_MOV_GLIBC_MAX)
+    message(FATAL_ERROR "${libstdcxx_package} needs glibc ${libstdcxx_glibc}, above ${CPACK_MOV_GLIBC_MAX}")
+endif()
+file(
+    READ_ELF
+    "${libstdcxx}"
+    RPATH
+    rpath
+    RUNPATH
+    runpath
 )
+string(REPLACE ":" ";" search "${rpath}:${runpath}")
+foreach(entry IN LISTS search)
+    if(entry AND NOT entry MATCHES "^\\$ORIGIN")
+        message(FATAL_ERROR "${libstdcxx_package}'s libstdc++ searches ${entry}: a path outside the AppDir")
+    endif()
+endforeach()
+mov_highest_version(GLIBCXX "${libstdcxx}" libstdcxx_provides unused)
 message(
     STATUS
-    "The binaries need ${MOV_STDCXX_REQUIRED}; bundling ${CPACK_MOV_LIBSTDCXX} (libstdc++6 ${libstdcxx_package})"
+    "The binaries need ${MOV_STDCXX_REQUIRED}; bundling ${libstdcxx_package} "
+    "(up to GLIBCXX_${libstdcxx_provides}, needs glibc ${libstdcxx_glibc})"
 )
 file(MAKE_DIRECTORY "${appdir}/usr/optional/libstdc++")
-# Under its soname (libstdc++.so.6.0.35 -> libstdc++.so.6), which the loader
+# Under its soname (libstdc++.so.6.0.33 -> libstdc++.so.6), which the loader
 # looks for.
-file(COPY_FILE "${CPACK_MOV_LIBSTDCXX}" "${appdir}/usr/optional/libstdc++/libstdc++.so.6")
+file(COPY_FILE "${libstdcxx}" "${appdir}/usr/optional/libstdc++/libstdc++.so.6")
+set(notices "${appdir}/usr/share/doc/metoceanviewer/third-party/libstdc++")
+file(MAKE_DIRECTORY "${notices}")
+foreach(license IN LISTS libstdcxx_licenses)
+    get_filename_component(name "${license}" NAME)
+    file(COPY_FILE "${license}" "${notices}/${name}")
+endforeach()
 file(REMOVE "${appdir}/apprun-hooks/linuxdeploy-plugin-qt-hook.sh")
 configure_file(
     "${CPACK_MOV_PACKAGING_DIR}/linux/apprun-hooks/mov-runtime.sh.in"
@@ -287,4 +372,4 @@ if(NOT EXISTS "${output}")
     message(FATAL_ERROR "linuxdeploy did not write ${output}")
 endif()
 
-set(CPACK_EXTERNAL_BUILT_PACKAGES "${output}")
+set(CPACK_EXTERNAL_BUILT_PACKAGES "${output}" "${ubuntu_sources}")

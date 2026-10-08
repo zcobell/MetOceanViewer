@@ -105,6 +105,8 @@ else()
         LINUXDEPLOY_APPIMAGE_RUNTIME_SHA256
         APPIMAGE_GLIBC_MAX
         APPIMAGE_LIBGCC_S_MAX
+        APPIMAGE_LIBSTDCXX_URL
+        APPIMAGE_LIBSTDCXX_SHA256
     )
         if(NOT CPACK_MOV_${pin})
             message(FATAL_ERROR "${pin} is missing from tools/versions.env")
@@ -119,19 +121,23 @@ else()
     set(CPACK_MOV_QMAKE "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}/qmake")
     set(CPACK_MOV_QT_PLUGINS_DIR "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_PLUGINS}")
 
-    # The build compiler's libstdc++, carried for systems whose own is older
-    # (packaging/linux/apprun-hooks/mov-runtime.sh.in).
-    execute_process(
-        COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libstdc++.so.6
-        OUTPUT_VARIABLE libstdcxx
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        COMMAND_ERROR_IS_FATAL ANY
-    )
-    # The compiler prints the bare name when it does not know the file.
-    if(NOT IS_ABSOLUTE "${libstdcxx}" OR NOT EXISTS "${libstdcxx}")
-        message(FATAL_ERROR "${CMAKE_CXX_COMPILER} does not know where libstdc++.so.6 is ('${libstdcxx}')")
+    # The libstdc++ the AppImage carries for systems whose own is older
+    # (packaging/linux/apprun-hooks/mov-runtime.sh.in): a released one, of a
+    # GCC no older than the compiler, whose headers the code was compiled with.
+    if(NOT CPACK_MOV_APPIMAGE_LIBSTDCXX_URL MATCHES "/libstdcxx-([0-9]+\\.[0-9]+\\.[0-9]+)-[^/]*$")
+        message(FATAL_ERROR "No GCC version in APPIMAGE_LIBSTDCXX_URL (${CPACK_MOV_APPIMAGE_LIBSTDCXX_URL})")
     endif()
-    file(REAL_PATH "${libstdcxx}" CPACK_MOV_LIBSTDCXX)
+    set(CPACK_MOV_LIBSTDCXX_GCC_VERSION "${CMAKE_MATCH_1}")
+    if(
+        CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+        AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER CPACK_MOV_LIBSTDCXX_GCC_VERSION
+    )
+        message(
+            FATAL_ERROR
+            "The bundled libstdc++ (GCC ${CPACK_MOV_LIBSTDCXX_GCC_VERSION}) is older than the compiler "
+            "(GCC ${CMAKE_CXX_COMPILER_VERSION}): binaries may need symbols it lacks"
+        )
+    endif()
 endif()
 
 set(CPACK_PACKAGE_FILE_NAME "${MOV_APP_NAME}-${PROJECT_VERSION}-${CPACK_SYSTEM_NAME}")

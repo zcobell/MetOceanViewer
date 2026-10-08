@@ -55,7 +55,7 @@ qt_prefix="${qt_root}/${qt_version}/gcc_64"
 cache_root="${MOV_DEV_CACHE:-${HOME}/.cache/metoceanviewer-dev}"
 
 # MOV_DEV_IMAGE picks the image: "dev" (default, Ubuntu 24.04, mirrors CI) or
-# "appimage" (Ubuntu 22.04 + GCC from the toolchain PPA; the AppImage build,
+# "appimage" (Ubuntu 22.04 + a GCC release built from source; the AppImage build,
 # see docs/packaging.md). Both share the caches and the Qt prefix below.
 case "${MOV_DEV_IMAGE:-dev}" in
   dev) dockerfile="${script_dir}/Dockerfile" image_name=metoceanviewer-dev ;;
@@ -78,9 +78,8 @@ if ! docker image inspect "${image}" >/dev/null 2>&1; then
     --file "${dockerfile}" \
     --build-arg "UBUNTU_IMAGE=$(version_of UBUNTU_IMAGE)" \
     --build-arg "APPIMAGE_UBUNTU_IMAGE=$(version_of APPIMAGE_UBUNTU_IMAGE)" \
-    --build-arg "APPIMAGE_TOOLCHAIN_PPA_KEY=$(version_of APPIMAGE_TOOLCHAIN_PPA_KEY)" \
-    --build-arg "APPIMAGE_GCC_PACKAGE_VERSION=$(version_of APPIMAGE_GCC_PACKAGE_VERSION)" \
-    --build-arg "APPIMAGE_LIBSTDCXX_PACKAGE_VERSION=$(version_of APPIMAGE_LIBSTDCXX_PACKAGE_VERSION)" \
+    --build-arg "APPIMAGE_GCC_VERSION=$(version_of APPIMAGE_GCC_VERSION)" \
+    --build-arg "APPIMAGE_GCC_SHA256=$(version_of APPIMAGE_GCC_SHA256)" \
     --build-arg "GCC_VERSION=$(version_of GCC_VERSION)" \
     --build-arg "LLVM_VERSION=$(version_of LLVM_VERSION)" \
     --build-arg "LIBCXX_VERSION=$(version_of LIBCXX_VERSION)" \
