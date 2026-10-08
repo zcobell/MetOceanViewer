@@ -238,10 +238,10 @@ Reading the table:
 
 All green on `dev`, `dev-clang`, `dev-libcxx`, `asan`, `release`, `fuzz` and `coverage` (the
 death tests skip in `release` and `fuzz`, which define `NDEBUG`), the tidy gate (0 findings in 130
-translation units) and `pre-commit run --all-files`. Line coverage of `src/io` is 96 % (the
-floor is 90 %); the new files are at 92 to 100 % when instantiations of the templates for types
-nobody uses are not counted (gcovr counts each instantiation's lines on its own, which shows
-`adcirc_netcdf.cpp` and `dflow.cpp` at 82 %).
+translation units) and `pre-commit run --all-files`. Line coverage (gcovr) is 94 % over `src/`
+and 96 % over `src/io` (floors 80 % and 90 %); `adcirc_netcdf.cpp` 91 %, `dflow.cpp` 88 %,
+`model_netcdf.cpp` 92 %, `station_groups.hpp` 100 %. The lines left are the forwarding of a
+netCDF-C failure (`return std::unexpected{x.error()}`) and template instantiations nobody uses.
 
 ## Deviations from the brief
 
