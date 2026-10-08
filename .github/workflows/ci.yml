@@ -283,8 +283,22 @@ jobs:
           cache-key: linux-gcc
       # Builds, runs the tests and writes build/coverage/coverage-report/;
       # fails below the floors in the coverage preset (80% overall, 90% per
-      # Qt-free layer).
-      - run: cmake --workflow --preset coverage
+      # Qt-free layer). The output is kept for the next step: gcovr prints its
+      # traceback as plain lines, which the annotations list only by first line.
+      - name: Coverage
+        id: coverage
+        shell: bash # with pipefail, so a failing workflow fails the step through tee
+        run: cmake --workflow --preset coverage 2>&1 | tee coverage-workflow.log
+
+      # The gcovr (ERROR) block (traceback included) as one annotation.
+      - name: Report coverage failure
+        if: failure() && steps.coverage.outcome == 'failure'
+        shell: bash
+        run: |
+          out="$(awk '/\(ERROR\)/ { found = 1 } found' coverage-workflow.log | tail -c 12000)"
+          [[ -n "${out}" ]] || out="$(tail -c 6000 coverage-workflow.log)"
+          out="${out//'%'/'%25'}"; out="${out//$'\r'/'%0D'}"; out="${out//$'\n'/'%0A'}"
+          echo "::error title=coverage failure::${out}"
       - name: Coverage summary
         if: always()
         run: cat build/coverage/coverage-report/summary.txt >> "$GITHUB_STEP_SUMMARY" || true

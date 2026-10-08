@@ -11,7 +11,12 @@ function(mov_enable_coverage target)
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         message(WARNING "Coverage is most accurate in a Debug build (current: ${CMAKE_BUILD_TYPE})")
     endif()
-    target_compile_options(${target} INTERFACE --coverage)
+    # Atomic counter updates: the default (-fprofile-update=single, without
+    # -pthread) loses increments when threads run instrumented code at once
+    # (tests/io/test_projection.cpp starts four). gcov then derives negative
+    # counts from the inconsistent arcs and gcovr aborts with "count must not
+    # be a negative value", on some runs only.
+    target_compile_options(${target} INTERFACE --coverage -fprofile-update=atomic)
     target_link_options(${target} INTERFACE --coverage)
 endfunction()
 
