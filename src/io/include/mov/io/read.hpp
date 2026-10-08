@@ -7,6 +7,7 @@
 #include <expected>
 #include <functional>
 #include <iterator>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -122,6 +123,98 @@ template <class T, class E, class F>
   next->warnings = detail::concatenated(std::move(first.warnings),
                                         std::move(next->warnings));
   return *std::move(next);
+}
+
+namespace detail {
+
+/// What a thunk returns, without reference or const.
+template <class F>
+using thunk_result_t = std::remove_cvref_t<std::invoke_result_t<const F&>>;
+
+/// The T of a `std::expected<Read<T>, E>`.
+template <class X>
+using read_value_t = decltype(std::declval<typename X::value_type>().value);
+
+}  // namespace detail
+
+/// The applicative counterpart of `and_then`: runs the thunks in order, each
+/// returning a `std::expected<T_i, E>` (one E for all), and yields the tuple
+/// of their values, or the first error, after which no further thunk runs.
+/// For stages that do not depend on each other's values, so no value is
+/// unwrapped before every stage has succeeded:
+///
+///   auto parts = collect([&] { return a(); }, [&] { return b(); });
+///   if (not parts) { return std::unexpected{std::move(parts).error()}; }
+///   auto& [x, y] = *parts;
+template <class F>
+  requires std::invocable<const F&>
+[[nodiscard]] auto collect(const F& f)
+    -> std::expected<std::tuple<typename detail::thunk_result_t<F>::value_type>,
+                     typename detail::thunk_result_t<F>::error_type> {
+  using T = typename detail::thunk_result_t<F>::value_type;
+  return std::invoke(f).transform(
+      [](T&& v) { return std::tuple<T>{std::move(v)}; });
+}
+
+template <class F, class G, class... Rest>
+  requires std::invocable<const F&> and std::invocable<const G&> and
+           (std::invocable<const Rest&> and ...)
+[[nodiscard]] auto collect(const F& f, const G& g, const Rest&... rest)
+    -> std::expected<
+        std::tuple<typename detail::thunk_result_t<F>::value_type,
+                   typename detail::thunk_result_t<G>::value_type,
+                   typename detail::thunk_result_t<Rest>::value_type...>,
+        typename detail::thunk_result_t<F>::error_type> {
+  using T = typename detail::thunk_result_t<F>::value_type;
+  using Out = std::expected<
+      std::tuple<T, typename detail::thunk_result_t<G>::value_type,
+                 typename detail::thunk_result_t<Rest>::value_type...>,
+      typename detail::thunk_result_t<F>::error_type>;
+  return std::invoke(f).and_then([&](T&& head) -> Out {
+    return collect(g, rest...).transform([&](auto&& tail) {
+      return std::tuple_cat(std::tuple<T>{std::move(head)}, std::move(tail));
+    });
+  });
+}
+
+/// collect over stages that return `std::expected<Read<T_i>, E>`: the
+/// values as a tuple, and the warnings of every stage in stage order.
+template <class F>
+  requires std::invocable<const F&>
+[[nodiscard]] auto collect_read(const F& f) -> std::expected<
+    Read<std::tuple<detail::read_value_t<detail::thunk_result_t<F>>>>,
+    typename detail::thunk_result_t<F>::error_type> {
+  using T = detail::read_value_t<detail::thunk_result_t<F>>;
+  return std::invoke(f).transform([](Read<T>&& r) {
+    return Read<std::tuple<T>>{.value = std::tuple<T>{std::move(r.value)},
+                               .warnings = std::move(r.warnings)};
+  });
+}
+
+template <class F, class G, class... Rest>
+  requires std::invocable<const F&> and std::invocable<const G&> and
+           (std::invocable<const Rest&> and ...)
+[[nodiscard]] auto collect_read(const F& f, const G& g, const Rest&... rest)
+    -> std::expected<
+        Read<std::tuple<detail::read_value_t<detail::thunk_result_t<F>>,
+                        detail::read_value_t<detail::thunk_result_t<G>>,
+                        detail::read_value_t<detail::thunk_result_t<Rest>>...>>,
+        typename detail::thunk_result_t<F>::error_type> {
+  using T = detail::read_value_t<detail::thunk_result_t<F>>;
+  using Tuple =
+      std::tuple<T, detail::read_value_t<detail::thunk_result_t<G>>,
+                 detail::read_value_t<detail::thunk_result_t<Rest>>...>;
+  using Out = std::expected<Read<Tuple>,
+                            typename detail::thunk_result_t<F>::error_type>;
+  return std::invoke(f).and_then([&](Read<T>&& head) -> Out {
+    return collect_read(g, rest...).transform([&](auto&& tail) {
+      return Read<Tuple>{
+          .value = std::tuple_cat(std::tuple<T>{std::move(head.value)},
+                                  std::move(tail.value)),
+          .warnings = detail::concatenated(std::move(head.warnings),
+                                           std::move(tail.warnings))};
+    });
+  });
 }
 
 }  // namespace mov::io

@@ -15,6 +15,7 @@
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
 #include "nc_counts.hpp"
+#include "nc_header_dump.hpp"
 #include "nc_test_helpers.hpp"
 
 #if !defined(_WIN32)
@@ -173,6 +174,18 @@ TEST_CASE("a close that fails while netCDF-C releases the file does not crash",
 
 #endif
 
+TEST_CASE("DimInfo says whether a dimension is unlimited", "[io][netcdf]") {
+  const Fixtures fx;
+  const auto path = fx.path("probe.nc");
+  mov::test::ncgen::make_ncdump_probe(path);  // n = 3, u = UNLIMITED (2)
+  const File file = open(path);
+  const DimInfo n = must(file.find_dim("n").value());
+  const DimInfo u = must(file.find_dim("u").value());
+  CHECK(not n.unlimited);
+  CHECK(u.unlimited);
+  CHECK(u.length == 2);
+}
+
 TEST_CASE("find_dim and find_var: absent is nullopt, never id 0 (B12)",
           "[io][netcdf][regression][B12]") {
   Fixtures fx;
@@ -180,7 +193,8 @@ TEST_CASE("find_dim and find_var: absent is nullopt, never id 0 (B12)",
   CHECK(file.find_dim("nope").value() == std::nullopt);
   CHECK(file.find_var("nope").value() == std::nullopt);
   const DimInfo n = must(file.find_dim("n").value());
-  CHECK(n == DimInfo{.id = 0, .name = name("n"), .length = 4});
+  CHECK(n ==
+        DimInfo{.id = 0, .name = name("n"), .length = 4, .unlimited = false});
   const DimInfo cols = must(file.find_dim("cols").value());
   CHECK(cols.id != 0);
   CHECK(cols.length == 4);

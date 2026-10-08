@@ -18,6 +18,7 @@
 #include <expected>
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -169,10 +170,24 @@ std::expected<DimInfo, NcError> Dataset::dim_info(int dimid, NcOp op) const {
         not done) {
       return std::unexpected{done.error()};
     }
+    // netCDF-4 may have several unlimited dimensions (NC_MAX_DIMS at most).
+    int count = 0;
+    std::array<int, NC_MAX_DIMS> unlimited{};
+    if (auto done = nc_call(
+            op, {}, path_,
+            [&] { return nc_inq_unlimdims(ncid, &count, unlimited.data()); });
+        not done) {
+      return std::unexpected{done.error()};
+    }
+    const auto ids =
+        std::span{unlimited}.first(static_cast<std::size_t>(count));
+    const bool is_unlimited = std::ranges::find(ids, dimid) != ids.end();
     return name_from(name.data())
         .transform([&](NcName&& valid) {
-          return DimInfo{
-              .id = dimid, .name = std::move(valid), .length = length};
+          return DimInfo{.id = dimid,
+                         .name = std::move(valid),
+                         .length = length,
+                         .unlimited = is_unlimited};
         })
         .transform_error([&](int status) {
           return fail(LibraryStatus{status}, op, name.data());
