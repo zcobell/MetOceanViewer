@@ -146,6 +146,8 @@ set_tests_properties(layering_guard_rejects_violations qt_include_scanner_reject
 if(NOT MSVC)
     # The harness runs the compiler by hand, so it needs the flags that pick
     # the standard library and SDK (-stdlib=libc++, -isysroot on macOS) too.
+    # Cases tagged `requires-diagnostic` are skipped only on Apple Clang when
+    # it lacks the diagnostic (see cmake/compile_fail/run.cmake).
     set(compile_fail_flags "${CMAKE_CXX_FLAGS}")
     if(CMAKE_OSX_SYSROOT)
         string(APPEND compile_fail_flags " -isysroot ${CMAKE_OSX_SYSROOT}")
@@ -153,7 +155,8 @@ if(NOT MSVC)
     add_test(
         NAME core_compile_fail_checks
         COMMAND
-            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DCXX_FLAGS=${compile_fail_flags}"
+            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DCXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}"
+            "-DCXX_FLAGS=${compile_fail_flags}" "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/compile_fail_probe"
             "-DINCLUDE_DIR=${PROJECT_SOURCE_DIR}/src/core/include"
             "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail" -P
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail/run.cmake"
@@ -164,7 +167,8 @@ if(NOT MSVC)
     add_test(
         NAME io_compile_fail_checks
         COMMAND
-            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DCXX_FLAGS=${compile_fail_flags}"
+            ${CMAKE_COMMAND} "-DCXX_COMPILER=${CMAKE_CXX_COMPILER}" "-DCXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}"
+            "-DCXX_FLAGS=${compile_fail_flags}" "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/compile_fail_probe"
             "-DINCLUDE_DIR=${PROJECT_SOURCE_DIR}/src/io/include"
             "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail_io" -P
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_fail/run.cmake"

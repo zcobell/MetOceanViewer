@@ -85,6 +85,20 @@ vcpkg_check_linkage(ONLY_DYNAMIC_LIBRARY)
 set(VCPKG_BUILD_TYPE release)
 set(VCPKG_POLICY_MISMATCHED_NUMBER_OF_BINARIES enabled)
 
+# macOS: upstream builds QMapLibre, QMapLibreLocation and QMapLibreQuickPrivate
+# as frameworks (FRAMEWORK ON), installed to lib/<Name>.framework/Versions/A/
+# <Name> with the install name @rpath/<Name>.framework/Versions/A/<Name>.
+# vcpkg's Mach-O fix-up (z_vcpkg_fixup_macho_rpath_in_dir, run after this
+# portfile) rewrites the id of every shared library to @rpath/<file name>,
+# i.e. @rpath/QMapLibre, and points the dependents at it; no rpath directory
+# holds a file of that name, so dyld fails with "Library not loaded:
+# @rpath/QMapLibre". CMake already installs correct ids and leaves the
+# consumers' rpaths (the app's, from its link line) to resolve them, so the
+# fix-up is switched off for this port.
+if(VCPKG_TARGET_IS_OSX)
+    set(VCPKG_FIXUP_MACHO_RPATH OFF)
+endif()
+
 # The GitHub archives omit submodules, so fetch with git: shallow, at pinned
 # commits (the core commit is pinned by mln_qt_ref's tree).
 vcpkg_find_acquire_program(GIT)

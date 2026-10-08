@@ -163,6 +163,12 @@ measured there); the build-test and clang-tidy jobs allow 120 min.
 - The port passes `Qt6_DIR` explicitly, reads back the Qt the build actually
   resolved (failing if it is not under `$QT_ROOT_DIR`) and records that
   version.
+- macOS: upstream builds the three libraries as frameworks
+  (`lib/QMapLibre.framework`, ...). The port turns vcpkg's Mach-O fix-up off
+  (`VCPKG_FIXUP_MACHO_RPATH`), which would otherwise rename their install
+  names to the unloadable `@rpath/QMapLibre`; build-tree executables find the
+  frameworks through the rpaths CMake gives them (vcpkg `lib`, Qt `lib`), and
+  the packaging step must copy the frameworks into the bundle.
 - Notices: the port's copyright file carries the bindings' licenses, the
   core's `LICENSE.md` and `LICENSES.core.md` (its vendored libraries) and the
   ICU, nunicode and MapLibre Tile licenses; packaging must ship it.

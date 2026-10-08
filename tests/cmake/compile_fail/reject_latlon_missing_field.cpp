@@ -3,6 +3,7 @@
 
 // LatLon has no default member values: leaving a coordinate out of a
 // designated initializer is a compile error, not a silent 0.
+// requires-diagnostic: missing-designated-field
 
 #include "mov/core/geo.hpp"
 
