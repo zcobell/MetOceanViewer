@@ -234,7 +234,9 @@ class AttTarget {
   template <std::size_t N>
   // NOLINTNEXTLINE(modernize-avoid-c-arrays): a string literal is the input
   consteval AttTarget(const char (&variable)[N])
-      : variable_{NcNameRef{variable}} {}
+      : variable_{NcNameRef{variable, N - 1}} {
+    NcNameRef::check_literal(variable);
+  }
   AttTarget(const NcName& variable) noexcept : variable_{variable} {}
   AttTarget(const NcName&&) = delete;
 

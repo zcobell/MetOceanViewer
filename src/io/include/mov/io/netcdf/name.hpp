@@ -56,10 +56,7 @@ class NcNameRef {
   template <std::size_t N>
   // NOLINTNEXTLINE(modernize-avoid-c-arrays): a string literal is the input
   consteval NcNameRef(const char (&literal)[N]) : data_{literal}, size_{N - 1} {
-    if (literal[N - 1] != '\0' or
-        not detail::check_name(std::string_view{literal, N - 1})) {
-      detail::invalid_netcdf_name_literal();
-    }
+    check_literal(literal);
   }
   NcNameRef(const NcName& name) noexcept;
   NcNameRef(const NcName&&) = delete;
@@ -74,6 +71,23 @@ class NcNameRef {
   }
 
  private:
+  friend class AttTarget;
+
+  // A literal's check, shared with AttTarget's literal constructor: that one
+  // checks and then uses the unchecked constructor below rather than calling
+  // this class's consteval constructor, which MSVC rejects when nested in
+  // another consteval constructor.
+  template <std::size_t N>
+  // NOLINTNEXTLINE(modernize-avoid-c-arrays): a string literal is the input
+  static consteval void check_literal(const char (&literal)[N]) {
+    if (literal[N - 1] != '\0' or
+        not detail::check_name(std::string_view{literal, N - 1})) {
+      detail::invalid_netcdf_name_literal();
+    }
+  }
+  constexpr NcNameRef(const char* data, std::size_t size) noexcept
+      : data_{data}, size_{size} {}
+
   const char* data_;
   std::size_t size_;
 };
