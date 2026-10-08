@@ -110,14 +110,27 @@ TEST_CASE("stations in different chunk columns are not grouped",
   CHECK(groups_of({0, 9}, 1, 10).size() == 2);
 }
 
+TEST_CASE("without chunks, far-apart stations are read separately",
+          "[io][netcdf][groups]") {
+  const auto policy = grouping_for(std::nullopt, 1);
+  const auto groups_for = [&](std::vector<std::size_t> selected) {
+    return station_groups(selected, policy);
+  };
+  CHECK(groups_for({0, 9999}).size() == 2);
+  CHECK(groups_for({4000, 4010}).size() == 1);
+  CHECK(groups_for({0, mov::io::detail::contiguous_stride}).size() == 1);
+  CHECK(groups_for({0, mov::io::detail::contiguous_stride + 1}).size() == 2);
+}
+
 TEST_CASE("the grouping for a variable follows its chunk shape",
           "[io][netcdf][groups]") {
   constexpr std::size_t unbounded = std::numeric_limits<std::size_t>::max();
   // (time, station) chunked 100 x 25: chunk columns of 25 stations.
   CHECK(grouping_for(std::vector<std::size_t>{100, 25}, 1) ==
         GroupingPolicy{.stride = unbounded, .chunk = 25});
-  // Not chunked: one chunk column.
-  CHECK(grouping_for(std::nullopt, 1) == GroupingPolicy{.stride = unbounded});
+  // Not chunked: stations far apart are read one at a time.
+  CHECK(grouping_for(std::nullopt, 1) ==
+        GroupingPolicy{.stride = mov::io::detail::contiguous_stride});
   // A shape without the station axis, or a zero chunk, says nothing.
   CHECK(grouping_for(std::vector<std::size_t>{100}, 1) ==
         GroupingPolicy{.stride = unbounded});

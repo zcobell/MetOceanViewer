@@ -33,6 +33,7 @@
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/projection.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/text_file.hpp"
 #include "mov/io/warning.hpp"
@@ -106,6 +107,20 @@ std::expected<HeaderAndRest, ParseError> read_header(std::string_view text) {
                                   .stations = *stations,
                                   .columns = *columns},
                        .rest = cursor};
+}
+
+// The grid the output is on, which only the station file says: its CRS, as the
+// native points of its stations (WGS84 stations have none). The vector
+// components of a projected grid point along its axes (design decision 28).
+CrsKind grid_of(std::span<const core::FileStation> stations) {
+  for (const core::FileStation& station : stations) {
+    if (station.native) {
+      // The CRS is one the station file's reader could already use; if PROJ
+      // cannot say now, the safe reading is the one that claims no direction.
+      return crs_kind(station.native->crs()).value_or(CrsKind::projected);
+    }
+  }
+  return CrsKind::geographic;
 }
 
 // ---- values
@@ -461,7 +476,8 @@ class AsciiReader {
         warnings(ended, complete_records, order.report);
 
     std::vector<core::Variable> variables;
-    std::vector<core::SeriesMeta> schema = detail::adcirc_schema(request_.kind);
+    std::vector<core::SeriesMeta> schema =
+        detail::adcirc_schema(request_.kind, grid_of(stations_));
     variables.reserve(value_columns_);
     for (std::size_t j = 0; j < value_columns_; ++j) {
       variables.push_back({.meta = std::move(schema[j]),

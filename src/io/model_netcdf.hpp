@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <initializer_list>
 #include <optional>
@@ -50,6 +51,10 @@ template <class E>
 [[nodiscard]] NcError nc_fault(const nc::File& file, WrapperFault fault,
                                NcOp op, std::string_view object);
 
+/// `warnings` followed by `more`: the one way a reader joins the warnings of
+/// its stages.
+void append(std::vector<Warning>& warnings, std::vector<Warning> more);
+
 // ---- structure -------------------------------------------------------------
 
 /// `missing_dimension` (subject: the name) unless the file has it.
@@ -78,13 +83,20 @@ template <class E>
 
 // ---- stations --------------------------------------------------------------
 
-/// Where a model file keeps its stations.
+/// Where a model file keeps its stations. The whole file's stations are read
+/// (every coordinate and every name) whatever `which` selects below: the
+/// variables are small next to the data, and a slab of a char variable would
+/// need the wrapper to read one.
 struct StationVariables {
   const nc::DimInfo& dim;  // the station dimension
   nc::NcNameRef x;         // double (station)
   nc::NcNameRef y;         // double (station)
   /// char (station, length): absent in some ADCIRC files.
   std::optional<nc::NcNameRef> names;
+  /// The id of the time dimension, for files whose coordinates may be over
+  /// (time, station) (D-Flow FM with moving stations): step 0 is read, with
+  /// the warning `coordinates_from_first_step`.
+  std::optional<int> time_dim;
   core::DataSource source;
 };
 
@@ -98,7 +110,7 @@ struct StationVariables {
 /// Errors: those of require_var / require_shape for the variables;
 /// `unsupported_crs`, `projection_unavailable`, `bad_coordinates` (with the
 /// station); NcError; Cancelled. Warnings: `invalid_utf8_replaced` (count:
-/// names), `crs_approximate`.
+/// names), `crs_approximate`, `coordinates_from_first_step`.
 [[nodiscard]] std::expected<Read<std::vector<core::FileStation>>, Error>
 read_stations(const nc::File& file, const StationVariables& vars,
               core::Epsg crs, std::span<const std::size_t> which,
@@ -106,17 +118,23 @@ read_stations(const nc::File& file, const StationVariables& vars,
 
 // ---- time ------------------------------------------------------------------
 
+/// The `calendar` of the time variable (absent: standard), or
+/// `unsupported_calendar` (subject: `<variable>:calendar`).
+[[nodiscard]] std::expected<CfCalendar, Error> read_calendar(
+    const nc::File& file, const nc::VarInfo& time);
+
 /// The clock of a (units, calendar) pair: `unsupported_calendar` (subject:
 /// the variable) when the standard calendar starts before 1582-10-15.
 [[nodiscard]] std::expected<CfClock, Error> make_clock(
     const CfTimeUnits& units, CfCalendar calendar, std::string_view variable);
 
 /// Every value of the time variable (over exactly the time dimension) as a
-/// time on `clock`. A masked value is `time_missing` and one the clock
-/// refuses is `time_out_of_range`, both with its index; the axis must be
-/// strictly increasing (`time_not_increasing`, with the index of the first
-/// element that is not above its predecessor). Integer (64-bit) times are
-/// read as integers, all others masked in their own type.
+/// time on `clock`. A masked value is `time_missing` (an integer time is
+/// masked by its attributes too) and one the clock refuses is
+/// `time_out_of_range`, both with its index; the axis must be strictly
+/// increasing (`time_not_increasing`, with the index of the first element
+/// that is not above its predecessor). Integer (64-bit) times are read as
+/// integers, all others masked in their own type.
 [[nodiscard]] std::expected<core::TimeAxis, Error> read_time_axis(
     const nc::File& file, const nc::VarInfo& time, const CfClock& clock,
     const StopToken& stop);
@@ -148,11 +166,39 @@ read_stations(const nc::File& file, const StationVariables& vars,
 [[nodiscard]] std::vector<core::Column> empty_columns(std::size_t stations,
                                                       std::size_t times);
 
-/// The groups of the selected stations that are read together for `var`, over
-/// (time, station[, ...]): `forced` if given (tests, the measurement), else
-/// grouping_for the chunk shape of the variable.
+/// Runs `run.template operator()<T>()` with the memory type of the data
+/// variable `var` (double, float, int8_t, int16_t or int32_t: the types
+/// nc::sample_readable lets through), or fails with `type_mismatch` for any
+/// other: 64-bit integers, unsigned, text. There is no instantiation for the
+/// types a model reader refuses.
+template <class Run>
+[[nodiscard]] std::expected<void, Error> dispatch_model_numeric(
+    const nc::File& file, const nc::VarInfo& var, Run&& run) {
+  if (nc::sample_readable(var.type)) {
+    switch (var.type) {
+      case nc::Type::double_:
+        return run.template operator()<double>();
+      case nc::Type::float_:
+        return run.template operator()<float>();
+      case nc::Type::byte:
+        return run.template operator()<std::int8_t>();
+      case nc::Type::short_:
+        return run.template operator()<std::int16_t>();
+      case nc::Type::int_:
+        return run.template operator()<std::int32_t>();
+      default:
+        break;  // not sample_readable
+    }
+  }
+  return fail(nc_fault(file, WrapperFault::type_mismatch, NcOp::get_var,
+                       var.name.view()));
+}
+
+/// The groups of the selected stations that are read together for `var`
+/// (whose station dimension has id `station_dim`): `forced` if given (tests,
+/// the measurement), else grouping_for the chunk shape of the variable.
 [[nodiscard]] std::expected<std::vector<StationGroup>, Error> plan_groups(
-    const nc::File& file, const nc::VarInfo& var,
+    const nc::File& file, const nc::VarInfo& var, int station_dim,
     std::span<const std::size_t> selection,
     const std::optional<GroupingPolicy>& forced);
 
@@ -164,58 +210,42 @@ struct GatherPlan {
   std::span<const StationGroup> groups;
 };
 
-/// The most time steps one read of `width` stations may cover under the
-/// file's limits (at least 1): a read is checked as a whole against
-/// max_elements and max_result_bytes before it starts, and a group spans the
-/// stations between its first and last selected station, so a selection of
-/// two far apart stations would otherwise fail on a span that is never held
-/// in memory at once (File::read_blocks holds one block).
-[[nodiscard]] inline std::size_t rows_per_window(const ReadLimits& limits,
-                                                 std::size_t width,
-                                                 std::size_t element_bytes) {
-  const std::size_t by_count = limits.max_elements / width;
-  const std::size_t by_bytes =
-      limits.max_result_bytes / (width * element_bytes);
-  return std::max<std::size_t>(1, std::min(by_count, by_bytes));
-}
-
 /// Reads `plan.variable` over (time, station[, layer]) one group at a time,
-/// each as File::read_blocks of whole time steps over the stations the group
-/// spans (in windows of rows_per_window time steps), and calls
-/// `sink(position, time_index, raw)` for every selected station's value, in
-/// time order per station. The block partition is read_blocks' (its
-/// rows_per_block); this only walks it.
+/// each as one File::read_blocks of every time step over the stations the
+/// group spans, and calls `sink(position, time_index, raw)` for every
+/// selected station's value, in time order per station. The partition into
+/// blocks, and the limits on a block, are read_blocks' (its rows_per_block);
+/// this only walks it.
 template <nc::Numeric T, class Sink>
 [[nodiscard]] std::expected<void, Error> gather(const nc::File& file,
                                                 const GatherPlan& plan,
                                                 const StopToken& stop,
-                                                Sink&& sink) {
+                                                Sink sink) {
   for (const StationGroup& group : plan.groups) {
     const std::size_t width = group.width();
-    const std::size_t window = rows_per_window(file.limits(), width, sizeof(T));
-    for (std::size_t t0 = 0; t0 < plan.times; t0 += window) {
-      nc::Slab slab{{.start = t0, .count = std::min(window, plan.times - t0)},
-                    {.start = group.first, .count = width}};
-      if (plan.layer) {
-        slab.push_back({.start = *plan.layer, .count = 1});
-      }
-      auto done = file.read_blocks<T>(
-          plan.variable, slab,
-          [&](std::span<const T> block,
-              nc::DimRange rows) -> std::expected<void, Error> {
-            for (const SelectedStation& member : group.members) {
-              const std::size_t column = member.station - group.first;
-              for (std::size_t r = 0; r < rows.count; ++r) {
-                sink(member.position, rows.start + r,
-                     block[r * width + column]);
-              }
+    nc::Slab slab{{.start = 0, .count = plan.times},
+                  {.start = group.first, .count = width}};
+    if (plan.layer) {
+      slab.push_back({.start = *plan.layer, .count = 1});
+    }
+    auto done = file.read_blocks<T>(
+        plan.variable, slab,
+        [&](std::span<const T> block,
+            nc::DimRange rows) -> std::expected<void, Error> {
+          // A raw loop where a per-member strided view would be: the sink
+          // wants the position and the time as well, which views::enumerate
+          // and views::stride would only add to (not on every libc++ yet).
+          for (const SelectedStation& member : group.members) {
+            const std::size_t column = member.station - group.first;
+            for (std::size_t r = 0; r < rows.count; ++r) {
+              sink(member.position, rows.start + r, block[r * width + column]);
             }
-            return {};
-          },
-          stop);
-      if (not done) {
-        return done;
-      }
+          }
+          return {};
+        },
+        stop);
+    if (not done) {
+      return done;
     }
   }
   return {};

@@ -49,8 +49,8 @@ using mov::io::DflowChoice;
 using mov::io::DflowDerived;
 using mov::io::DflowRequest;
 using mov::io::Flat;
+using mov::io::FlatChoice;
 using mov::io::FormatErrc;
-using mov::io::Layer;
 using mov::io::Layered;
 using mov::io::ParseErrc;
 using mov::io::ReadContext;
@@ -94,8 +94,7 @@ DflowNc basic() {
 
 DflowRequest flat_request(const std::string& name, StationSelection stations,
                           Epsg crs = Epsg::wgs84()) {
-  return {.choice = Flat{.source = *mov::io::nc::NcName::make(name),
-                         .long_name = name},
+  return {.choice = FlatChoice{.source = *mov::io::nc::NcName::make(name)},
           .stations = std::move(stations),
           .crs = crs};
 }
@@ -105,12 +104,11 @@ DflowRequest derived_request(DflowDerived d, StationSelection stations,
                              std::size_t one_based = 1) {
   if (layers) {
     const Layered layered{.source = d, .long_name = "", .layers = *layers};
-    return {.choice = AtLayer{.variable = layered,
-                              .layer = Layer::make(layered, one_based).value()},
+    return {.choice = AtLayer::make(layered, one_based).value(),
             .stations = std::move(stations),
             .crs = Epsg::wgs84()};
   }
-  return {.choice = Flat{.source = d, .long_name = ""},
+  return {.choice = FlatChoice{.source = d},
           .stations = std::move(stations),
           .crs = Epsg::wgs84()};
 }
@@ -120,8 +118,7 @@ DflowRequest layered_request(const std::string& name, std::size_t layers,
   const Layered layered{.source = *mov::io::nc::NcName::make(name),
                         .long_name = name,
                         .layers = layers};
-  return {.choice = AtLayer{.variable = layered,
-                            .layer = Layer::make(layered, one_based).value()},
+  return {.choice = AtLayer::make(layered, one_based).value(),
           .stations = std::move(stations),
           .crs = Epsg::wgs84()};
 }
@@ -645,13 +642,18 @@ TEST_CASE("layers: counted from 1, checked against the variable (N16)",
   const Layered v{.source = *mov::io::nc::NcName::make("x_velocity"),
                   .long_name = "x velocity",
                   .layers = 3};
-  CHECK(Layer::make(v, 1).value().zero_based() == 0);
-  CHECK(Layer::make(v, 3).value().zero_based() == 2);
-  const auto zero = Layer::make(v, 0);
+  CHECK(AtLayer::make(v, 1).value().zero_based() == 0);
+  CHECK(AtLayer::make(v, 3).value().zero_based() == 2);
+  const auto third = AtLayer::make(v, 3);
+  REQUIRE(third.has_value());
+  if (third) {
+    CHECK(third->source() == v.source);
+  }
+  const auto zero = AtLayer::make(v, 0);
   REQUIRE(not(zero.has_value()));
   CHECK(zero.error().code == FormatErrc::layer_out_of_range);
   CHECK(zero.error().index == 0U);
-  const auto beyond = Layer::make(v, 4);
+  const auto beyond = AtLayer::make(v, 4);
   REQUIRE(not(beyond.has_value()));
   CHECK(beyond.error().code == FormatErrc::layer_out_of_range);
   CHECK(beyond.error().index == 4U);
@@ -1028,4 +1030,111 @@ TEST_CASE("the readers close their file: it can be opened again at once",
     CHECK(not absent.has_value());
     CHECK(mov::io::nc::File::open(path, {}).has_value());
   }
+}
+
+// ---- design decision 28: the grid decides what the vector components are
+// --------
+
+namespace {
+
+// Positions valid in EPSG:32615 (WGS 84 / UTM zone 15N).
+DflowNc projected_basic() {
+  DflowNc spec;
+  spec.x = {500000.0, 510000.0, 520000.0};
+  spec.y = {3000000.0, 3010000.0, 3020000.0};
+  spec.vars = {
+      variable("x_velocity", 0, "m s-1",
+               [](std::size_t, std::size_t, std::size_t) { return 3.0; }),
+      variable("y_velocity", 0, "m s-1",
+               [](std::size_t, std::size_t, std::size_t) { return 4.0; }),
+      variable("windx", 0, "m s-1"), variable("windy", 0, "m s-1")};
+  return spec;
+}
+
+}  // namespace
+
+TEST_CASE("projected grids: components are generic and grid-relative",
+          "[io][dflow][regression][D28]") {
+  mov::test::configure_projection_database();
+  const mov::test::ScratchDir dir;
+  make_dflow_nc(dir / "his.nc", projected_basic());
+  const auto path = dir / "his.nc";
+  const auto crs = mov::test::epsg(32615);
+  const auto request_for = [&](DflowChoice choice) {
+    return DflowRequest{
+        .choice = std::move(choice), .stations = everything(3), .crs = crs};
+  };
+
+  const auto u =
+      read_ok(path, request_for(FlatChoice{
+                        .source = *mov::io::nc::NcName::make("x_velocity")}));
+  CHECK(mov::core::token(u.value.schema()[0].quantity()) ==
+        "sea_water_x_velocity");
+  const auto wind = read_ok(
+      path,
+      request_for(FlatChoice{.source = *mov::io::nc::NcName::make("windy")}));
+  CHECK(mov::core::token(wind.value.schema()[0].quantity()) == "y_wind");
+
+  const auto speed = read_ok(
+      path, request_for(FlatChoice{.source = DflowDerived::current_speed_2d}));
+  CHECK(number(samples_of(speed.value, 0, 0)[0]) == 5.0);  // 3-4-5 still
+  CHECK(mov::core::token(speed.value.schema()[0].quantity()) == "value");
+
+  const auto direction = read_ok(
+      path,
+      request_for(FlatChoice{.source = DflowDerived::current_direction_2d}));
+  CHECK(direction.value.schema()[0].label().starts_with("grid-relative "));
+  CHECK(number(samples_of(direction.value, 0, 0)[0]) ==
+        Catch::Approx(53.13010235415598).epsilon(1e-12));
+}
+
+TEST_CASE("geographic grids keep the registry's quantities and labels",
+          "[io][dflow][regression][D28]") {
+  mov::test::configure_projection_database();
+  const mov::test::ScratchDir dir;
+  DflowNc spec = projected_basic();
+  spec.x = {10.0, 11.0, 12.0};
+  spec.y = {40.0, 41.0, 42.0};
+  make_dflow_nc(dir / "his.nc", spec);
+  // EPSG:4269 is geographic, though not EPSG:4326.
+  const auto read = mov::io::read_dflow(
+      dir / "his.nc",
+      {.choice = FlatChoice{.source = *mov::io::nc::NcName::make("x_velocity")},
+       .stations = everything(3),
+       .crs = mov::test::epsg(4269)},
+      {});
+  REQUIRE(read.has_value());
+  if (read) {
+    CHECK(mov::core::token(read->value.schema()[0].quantity()) == "current_u");
+  }
+  const auto direction = read_ok(
+      dir / "his.nc",
+      {.choice = FlatChoice{.source = DflowDerived::current_direction_2d},
+       .stations = everything(3),
+       .crs = Epsg::wgs84()});
+  CHECK(not direction.value.schema()[0].label().starts_with("grid-relative"));
+}
+
+TEST_CASE("coordinates over (time, stations): step 0, with a warning",
+          "[io][dflow]") {
+  const mov::test::ScratchDir dir;
+  DflowNc spec = basic();
+  spec.coordinates_over_time = true;
+  spec.x = {10.0, 20.0, 30.0};
+  spec.y = {40.0, 41.0, 42.0};
+  make_dflow_nc(dir / "his.nc", spec);
+  const auto inspected = inspect_ok(dir / "his.nc");
+  CHECK(inspected.value.stations[1].location.lon() == 20.0);
+  CHECK(inspected.value.stations[1].location.lat() == 41.0);
+  CHECK(warning_count(inspected.warnings,
+                      WarningCode::coordinates_from_first_step) == 1);
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
+  CHECK(read.value.station(StationIndex{2}).location.lon() == 30.0);
+  CHECK(warning_count(read.warnings,
+                      WarningCode::coordinates_from_first_step) == 1);
+  // Fixed coordinates have no such warning.
+  make_dflow_nc(dir / "fixed.nc", basic());
+  CHECK(warning_count(inspect_ok(dir / "fixed.nc").warnings,
+                      WarningCode::coordinates_from_first_step) == 0);
 }

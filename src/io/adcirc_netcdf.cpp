@@ -4,17 +4,21 @@
 #include "mov/io/adcirc_netcdf.hpp"
 
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <cmath>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <format>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "model_netcdf.hpp"
@@ -30,6 +34,7 @@
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
+#include "mov/io/projection.hpp"
 #include "mov/io/warning.hpp"
 
 namespace mov::io {
@@ -40,6 +45,39 @@ using detail::cut_at_nul;
 using detail::fail;
 using detail::format_error;
 
+// ---- the data variables of each kind
+// ------------------------------------------
+
+// One table: the names, and for each kind (in AdcircKind's order) which of
+// them it reads. A vector's second component is the partner of its first.
+constexpr std::array<nc::NcNameRef, 6> data_names{"zeta",     "u-vel", "v-vel",
+                                                  "pressure", "windx", "windy"};
+
+struct Components {
+  std::size_t first;
+  std::size_t count;
+};
+
+constexpr std::array<Components, 4> components_of_kind{
+    {{.first = 0, .count = 1},
+     {.first = 1, .count = 2},
+     {.first = 3, .count = 1},
+     {.first = 4, .count = 2}}};
+
+static_assert(static_cast<std::size_t>(AdcircKind::elevation) == 0 and
+              static_cast<std::size_t>(AdcircKind::velocity) == 1 and
+              static_cast<std::size_t>(AdcircKind::pressure) == 2 and
+              static_cast<std::size_t>(AdcircKind::wind) == 3);
+
+constexpr std::array<AdcircKind, 4> kinds_in_search_order{
+    AdcircKind::elevation, AdcircKind::velocity, AdcircKind::pressure,
+    AdcircKind::wind};
+
+std::span<const nc::NcNameRef> names_of(AdcircKind kind) {
+  const Components c = components_of_kind[static_cast<std::size_t>(kind)];
+  return std::span{data_names}.subspan(c.first, c.count);
+}
+
 // ---- the file's structure ---------------------------------------------------
 
 struct Structure {
@@ -48,31 +86,12 @@ struct Structure {
   nc::VarInfo time_var;
 };
 
-// The data variables of a kind: the second is the partner of a vector.
-struct KindVariables {
-  nc::NcNameRef first{"zeta"};
-  std::optional<nc::NcNameRef> second{};
-};
-
-KindVariables variables_of(AdcircKind kind) {
-  switch (kind) {
-    case AdcircKind::elevation:
-      return {.first = "zeta", .second = std::nullopt};
-    case AdcircKind::velocity:
-      return {.first = "u-vel", .second = nc::NcNameRef{"v-vel"}};
-    case AdcircKind::pressure:
-      return {.first = "pressure", .second = std::nullopt};
-    case AdcircKind::wind:
-      return {.first = "windx", .second = nc::NcNameRef{"windy"}};
-  }
-  return {.first = "zeta", .second = std::nullopt};
-}
-
 // Global attribute `model` is "ADCIRC" (LF 1.1: how v4 tells the file apart).
+// An attribute that is no text is not that.
 std::expected<void, Error> require_model(const nc::File& file) {
-  auto model = file.text_att(nc::global, "model");
+  auto model = detail::optional_text(file, nc::global, "model");
   if (not model) {
-    return fail(std::move(model.error()));
+    return std::unexpected{std::move(model.error())};
   }
   const bool adcirc =
       *model and core::detail::trim(cut_at_nul(**model)) == "ADCIRC";
@@ -115,33 +134,20 @@ std::expected<bool, Error> has_var(const nc::File& file, nc::NcNameRef name) {
   return found->has_value();
 }
 
-// The first of zeta, u-vel, pressure, windx the file has (LF 3.2). A vector
-// needs its partner; a lone v-vel or windy is another kind of file.
+// The first of zeta, u-vel, pressure, windx the file has (LF 3.2). Whether a
+// vector has its partner is data_variables' business; a lone v-vel or windy
+// is another kind of file.
 std::expected<AdcircKind, Error> detect_kind(const nc::File& file) {
-  for (const AdcircKind kind : {AdcircKind::elevation, AdcircKind::velocity,
-                                AdcircKind::pressure, AdcircKind::wind}) {
-    const KindVariables names = variables_of(kind);
-    const auto present = has_var(file, names.first);
+  for (const AdcircKind kind : kinds_in_search_order) {
+    const auto present = has_var(file, names_of(kind).front());
     if (not present) {
       return std::unexpected{present.error()};
     }
-    if (not *present) {
-      continue;
+    if (*present) {
+      return kind;
     }
-    if (names.second) {
-      const auto partner = has_var(file, *names.second);
-      if (not partner) {
-        return std::unexpected{partner.error()};
-      }
-      if (not *partner) {
-        return fail(format_error(FormatErrc::partner_variable_missing,
-                                 std::string{names.second->view()}));
-      }
-    }
-    return kind;
   }
-  for (const nc::NcNameRef lone :
-       {nc::NcNameRef{"v-vel"}, nc::NcNameRef{"windy"}}) {
+  for (const nc::NcNameRef lone : {data_names[2], data_names[5]}) {
     const auto present = has_var(file, lone);
     if (not present) {
       return std::unexpected{present.error()};
@@ -151,41 +157,39 @@ std::expected<AdcircKind, Error> detect_kind(const nc::File& file) {
           format_error(FormatErrc::not_this_format, std::string{lone.view()}));
     }
   }
-  return fail(format_error(FormatErrc::missing_variable, "zeta"));
+  return fail(format_error(FormatErrc::missing_variable,
+                           std::string{data_names.front().view()}));
 }
 
-// The data variables of `kind`, each over (time, station).
+// The data variables of `kind`, each over (time, station): the first missing
+// is `missing_variable`, a later one the first's partner.
 std::expected<std::vector<nc::VarInfo>, Error> data_variables(
     const nc::File& file, const Structure& structure, AdcircKind kind) {
-  const KindVariables names = variables_of(kind);
   std::vector<nc::VarInfo> vars;
-  auto first = detail::require_var(file, names.first);
-  if (not first) {
-    return std::unexpected{std::move(first.error())};
-  }
-  vars.push_back(*std::move(first));
-  if (names.second) {
-    auto second = detail::require_var(file, *names.second);
-    if (not second) {
-      // The first is there: the second is its partner.
-      const auto* missing = std::get_if<FormatError>(&second.error());
-      if (missing != nullptr and
-          missing->code == FormatErrc::missing_variable) {
-        return fail(format_error(FormatErrc::partner_variable_missing,
-                                 std::string{names.second->view()}));
-      }
-      return std::unexpected{std::move(second.error())};
+  for (const nc::NcNameRef name : names_of(kind)) {
+    auto var = detail::require_var(file, name);
+    const auto* missing =
+        var ? nullptr : std::get_if<FormatError>(&var.error());
+    if (missing != nullptr and missing->code == FormatErrc::missing_variable and
+        not vars.empty()) {
+      return fail(format_error(FormatErrc::partner_variable_missing,
+                               std::string{name.view()}));
     }
-    vars.push_back(*std::move(second));
-  }
-  for (const nc::VarInfo& var : vars) {
+    if (not var) {
+      return std::unexpected{std::move(var.error())};
+    }
     if (auto shape = detail::require_shape(
-            var, {structure.time_dim.id, structure.station_dim.id});
+            *var, {structure.time_dim.id, structure.station_dim.id});
         not shape) {
       return std::unexpected{std::move(shape.error())};
     }
+    vars.push_back(*std::move(var));
   }
   return vars;
+}
+
+std::expected<bool, Error> has_names(const nc::File& file) {
+  return has_var(file, "station_name");
 }
 
 detail::StationVariables station_variables(const nc::DimInfo& dim, bool names) {
@@ -196,11 +200,55 @@ detail::StationVariables station_variables(const nc::DimInfo& dim, bool names) {
       .names = names
                    ? std::optional<nc::NcNameRef>{nc::NcNameRef{"station_name"}}
                    : std::nullopt,
+      .time_dim = std::nullopt,
       .source = core::DataSource::adcirc};
 }
 
-std::expected<bool, Error> has_names(const nc::File& file) {
-  return has_var(file, "station_name");
+// ---- the CRS the caller gave, against the one the file says
+// ---------------------
+
+// ADCIRC's ICS: 1 is Cartesian coordinates (a projected CRS), 2 spherical
+// (longitude and latitude). Any other value, or no `ics`, says nothing.
+std::expected<std::optional<int>, Error> read_ics(const nc::File& file) {
+  const auto ics = file.numeric_att<std::int32_t>(nc::global, "ics");
+  if (ics) {
+    return *ics and (*ics)->size() == 1 ? std::optional<int>{(*ics)->front()}
+                                        : std::nullopt;
+  }
+  const auto* fault = std::get_if<WrapperFault>(&ics.error().status);
+  if (fault != nullptr and (*fault == WrapperFault::type_mismatch or
+                            *fault == WrapperFault::count_mismatch)) {
+    return std::optional<int>{};
+  }
+  return fail(ics.error());
+}
+
+constexpr int ics_cartesian = 1;
+constexpr int ics_spherical = 2;
+
+// A `crs_mismatch` warning when `ics` and the kind of `crs` disagree: the
+// positions, and the direction of the vectors, would be wrong.
+std::expected<std::vector<Warning>, Error> ics_warnings(const nc::File& file,
+                                                        core::Epsg crs,
+                                                        CrsKind grid) {
+  auto ics = read_ics(file);
+  if (not ics) {
+    return std::unexpected{std::move(ics.error())};
+  }
+  const int says = ics->value_or(0);
+  const bool says_spherical = says == ics_spherical;
+  const bool says_cartesian = says == ics_cartesian;
+  const bool geographic = grid == CrsKind::geographic;
+  const bool mismatch =
+      (says_spherical and not geographic) or (says_cartesian and geographic);
+  if (mismatch) {
+    return std::vector<Warning>{
+        {.code = WarningCode::crs_mismatch,
+         .subject = std::format("ics {} but EPSG:{} is {}", says, crs.code(),
+                                geographic ? "geographic" : "projected"),
+         .count = 1}};
+  }
+  return std::vector<Warning>{};
 }
 
 // ---- the clock
@@ -211,58 +259,88 @@ struct Clock {
   std::vector<Warning> warnings;
 };
 
-std::expected<Clock, Error> clock_of(const nc::File& file,
-                                     const Structure& structure,
-                                     const std::optional<core::Time>& given) {
-  if (given) {
-    // ADCIRC counts seconds from its cold start; the file's own record of it
-    // is not consulted (it is often a placeholder).
-    auto clock = detail::make_clock(
-        {.unit = CfTimeUnit::second, .epoch = *given},
-        CfCalendar::proleptic_gregorian, structure.time_var.name.view());
-    if (not clock) {
-      return std::unexpected{std::move(clock.error())};
-    }
-    return Clock{.clock = *clock, .warnings = {}};
-  }
-  const std::string variable{structure.time_var.name.view()};
-  const auto required = [&](std::string subject) {
-    return fail(
-        format_error(FormatErrc::cold_start_required, std::move(subject)));
-  };
-  auto text = detail::optional_text(file, structure.time_var.name, "units");
+// The `units` of `time`, as text, and what it says if it is a CF time unit.
+struct UnitsOfTime {
+  std::optional<std::string> text;
+  std::optional<Read<CfTimeUnits>> parsed;
+};
+
+std::expected<UnitsOfTime, Error> read_units(const nc::File& file,
+                                             const nc::VarInfo& time) {
+  auto text = detail::optional_text(file, time.name, "units");
   if (not text) {
     return std::unexpected{std::move(text.error())};
   }
-  if (not *text) {
-    return required(variable + ":units");
+  UnitsOfTime out{.text = std::nullopt, .parsed = std::nullopt};
+  if (*text) {
+    out.text = std::string{cut_at_nul(**text)};
+    if (auto parsed = parse_cf_time_units(*out.text)) {
+      out.parsed = *std::move(parsed);
+    }
   }
-  const std::string units_text{cut_at_nul(**text)};
-  auto parsed = parse_cf_time_units(units_text);
-  if (not parsed) {
-    return required(units_text);  // a placeholder such as "seconds since Met"
-  }
-  auto calendar_text =
-      detail::optional_text(file, structure.time_var.name, "calendar");
-  if (not calendar_text) {
-    return std::unexpected{std::move(calendar_text.error())};
-  }
-  const std::optional<std::string_view> calendar_view =
-      *calendar_text ? std::optional<std::string_view>{**calendar_text}
-                     : std::nullopt;
-  const auto calendar = parse_cf_calendar(calendar_view);
-  if (not calendar) {
-    return fail(
-        format_error(FormatErrc::unsupported_calendar, variable + ":calendar"));
-  }
-  auto clock = detail::make_clock(parsed->value, *calendar, variable);
+  return out;
+}
+
+// ADCIRC counts seconds from its cold start. A given one wins; the epoch of
+// `units` is then only checked against it.
+std::expected<Clock, Error> clock_from_cold_start(const Structure& structure,
+                                                  const UnitsOfTime& units,
+                                                  core::Time given) {
+  auto clock = detail::make_clock({.unit = CfTimeUnit::second, .epoch = given},
+                                  CfCalendar::proleptic_gregorian,
+                                  structure.time_var.name.view());
   if (not clock) {
     return std::unexpected{std::move(clock.error())};
   }
-  Clock out{.clock = *clock, .warnings = std::move(parsed->warnings)};
-  out.warnings.push_back(
-      {.code = WarningCode::epoch_used, .subject = units_text, .count = 1});
+  Clock out{.clock = *clock, .warnings = {}};
+  if (units.text and units.parsed and
+      std::chrono::abs(units.parsed->value.epoch - given) >
+          std::chrono::seconds{1}) {
+    out.warnings.push_back({.code = WarningCode::cold_start_differs,
+                            .subject = *units.text,
+                            .count = 1});
+  }
   return out;
+}
+
+// No cold start: the unit and epoch of `units`, if they are a CF time unit and
+// not the placeholder NCDATE leaves.
+std::expected<Clock, Error> clock_from_units(const nc::File& file,
+                                             const Structure& structure,
+                                             UnitsOfTime units) {
+  const std::string variable{structure.time_var.name.view()};
+  if (not units.text) {
+    return fail(
+        format_error(FormatErrc::cold_start_required, variable + ":units"));
+  }
+  if (not units.parsed) {
+    return fail(format_error(FormatErrc::cold_start_required, *units.text));
+  }
+  const auto calendar = detail::read_calendar(file, structure.time_var);
+  if (not calendar) {
+    return std::unexpected{calendar.error()};
+  }
+  auto clock = detail::make_clock(units.parsed->value, *calendar, variable);
+  if (not clock) {
+    return std::unexpected{std::move(clock.error())};
+  }
+  Clock out{.clock = *clock, .warnings = std::move(units.parsed->warnings)};
+  out.warnings.push_back(
+      {.code = WarningCode::epoch_used, .subject = *units.text, .count = 1});
+  return out;
+}
+
+std::expected<Clock, Error> clock_of(const nc::File& file,
+                                     const Structure& structure,
+                                     const std::optional<core::Time>& given) {
+  auto units = read_units(file, structure.time_var);
+  if (not units) {
+    return std::unexpected{std::move(units.error())};
+  }
+  if (given) {
+    return clock_from_cold_start(structure, *units, *given);
+  }
+  return clock_from_units(file, structure, *std::move(units));
 }
 
 // ---- classifying values
@@ -305,45 +383,40 @@ Cell classify(AdcircKind kind, const nc::Masking<T>& mask, T raw,
   return {.sample = mask.apply(raw), .fill = false};
 }
 
-// ---- reading one data variable
-// ---------------------------------------------------
+// ---- reading the data variables
+// -------------------------------------------------
 
+// The columns of one data variable for the selected stations, and which of
+// their cells were fill (flat, [position * times + time]; N7 needs it).
 struct Gathered {
   std::vector<core::Column> columns;  // [selected position]
+  std::vector<bool> fill;
+  std::size_t times{0};
   std::size_t nonfinite{0};
-};
-
-// The state a vector's two components share (N7): the first records which of
-// its cells were fill; the second reads that, and a fill in either component
-// empties both.
-struct VectorState {
-  std::vector<std::vector<std::uint8_t>> fill;  // [position][time]
-  std::vector<core::Column>* first{nullptr};    // set once the first is read
 };
 
 // What the data variables of a read have in common.
 struct ValueSource {
   const nc::File& file;
   AdcircKind kind;
+  CrsKind grid;
   std::size_t times;
+  int station_dim;
   std::span<const std::size_t> selection;
-  const std::optional<detail::GroupingPolicy>& policy;
+  std::optional<detail::GroupingPolicy> policy;
   const StopToken& stop;
 };
 
 std::expected<Gathered, Error> read_component(const ValueSource& source,
-                                              const nc::VarInfo& var,
-                                              VectorState* vector) {
-  const nc::File& file = source.file;
-  const auto type_mismatch = [&]() -> std::expected<void, Error> {
-    return fail(detail::nc_fault(file, WrapperFault::type_mismatch,
-                                 NcOp::get_var, var.name.view()));
-  };
-  Gathered out{
-      .columns = detail::empty_columns(source.selection.size(), source.times)};
+                                              const nc::VarInfo& var) {
+  const std::size_t selected = source.selection.size();
+  Gathered out{.columns = detail::empty_columns(selected, source.times),
+               .fill = std::vector<bool>(selected * source.times, false),
+               .times = source.times,
+               .nonfinite = 0};
   // Nearby stations share a read, as far as the file's chunks make that cheap.
-  const auto groups =
-      detail::plan_groups(file, var, source.selection, source.policy);
+  const auto groups = detail::plan_groups(source.file, var, source.station_dim,
+                                          source.selection, source.policy);
   if (not groups) {
     return std::unexpected{groups.error()};
   }
@@ -352,34 +425,38 @@ std::expected<Gathered, Error> read_component(const ValueSource& source,
                                 .layer = std::nullopt,
                                 .groups = *groups};
   const auto run = [&]<nc::Numeric T>() -> std::expected<void, Error> {
-    if constexpr (std::same_as<T, std::int64_t>) {
-      return type_mismatch();  // a double cannot hold every value
-    } else {
-      const auto mask = file.masking<T>(var.name);
-      if (not mask) {
-        return fail(mask.error());
-      }
-      const auto store = [&](std::size_t position, std::size_t t, T raw) {
-        const Cell cell = classify(source.kind, *mask, raw, out.nonfinite);
-        const bool second = vector != nullptr and vector->first != nullptr;
-        if (second and (cell.fill or vector->fill[position][t] != 0)) {
-          out.columns[position][t] = core::Missing{};
-          (*vector->first)[position][t] = core::Missing{};
-          return;
-        }
-        out.columns[position][t] = cell.sample;
-        if (vector != nullptr and not second) {  // the first component
-          vector->fill[position][t] = cell.fill ? 1 : 0;
-        }
-      };
-      return detail::gather<T>(file, plan, source.stop, store);
+    const auto mask = source.file.masking<T>(var.name);
+    if (not mask) {
+      return fail(mask.error());
     }
+    return detail::gather<T>(
+        source.file, plan, source.stop,
+        [&](std::size_t position, std::size_t t, T raw) {
+          const Cell cell = classify(source.kind, *mask, raw, out.nonfinite);
+          out.columns[position][t] = cell.sample;
+          out.fill[(position * source.times) + t] = cell.fill;
+        });
   };
-  const auto done = nc::dispatch_numeric(var.type, run, type_mismatch);
-  if (not done) {
-    return std::unexpected{done.error()};
+  if (auto done = detail::dispatch_model_numeric(source.file, var, run);
+      not done) {
+    return std::unexpected{std::move(done.error())};
   }
   return out;
+}
+
+// N7: a fill in either component of a vector makes both Missing. (A NaN is
+// not fill: it empties its own component only, and the magnitude is Missing
+// either way.)
+void combine_partner_fill(Gathered& first, Gathered& second) {
+  for (std::size_t position = 0; position < first.columns.size(); ++position) {
+    for (std::size_t t = 0; t < first.times; ++t) {
+      const std::size_t i = (position * first.times) + t;
+      if (first.fill[i] or second.fill[i]) {
+        first.columns[position][t] = core::Missing{};
+        second.columns[position][t] = core::Missing{};
+      }
+    }
+  }
 }
 
 // The columns of every data variable, and what was not finite in them.
@@ -389,29 +466,30 @@ struct Values {
   std::string nonfinite_in;  // the first variable that had one
 };
 
-std::expected<Values, Error> read_values(const ValueSource& source,
+std::expected<Values, Error> read_values(const ValueSource source,
                                          std::span<const nc::VarInfo> vars) {
+  std::vector<Gathered> parts;
+  parts.reserve(vars.size());
   Values out;
-  out.variables.reserve(vars.size());  // VectorState points at variables[0]
-  std::vector<core::SeriesMeta> schema = detail::adcirc_schema(source.kind);
-  VectorState vector;
-  if (vars.size() > 1) {
-    vector.fill.assign(source.selection.size(),
-                       std::vector<std::uint8_t>(source.times, 0));
-  }
-  for (std::size_t c = 0; c < vars.size(); ++c) {
-    auto gathered =
-        read_component(source, vars[c], vars.size() > 1 ? &vector : nullptr);
+  for (const nc::VarInfo& var : vars) {
+    auto gathered = read_component(source, var);
     if (not gathered) {
       return std::unexpected{std::move(gathered.error())};
     }
     if (gathered->nonfinite > 0 and out.nonfinite == 0) {
-      out.nonfinite_in = std::string{vars[c].name.view()};
+      out.nonfinite_in = std::string{var.name.view()};
     }
     out.nonfinite += gathered->nonfinite;
+    parts.push_back(*std::move(gathered));
+  }
+  if (parts.size() == 2) {
+    combine_partner_fill(parts[0], parts[1]);
+  }
+  std::vector<core::SeriesMeta> schema =
+      detail::adcirc_schema(source.kind, source.grid);
+  for (std::size_t c = 0; c < parts.size(); ++c) {
     out.variables.push_back({.meta = std::move(schema[c]),
-                             .per_station = std::move(gathered->columns)});
-    vector.first = &out.variables.front().per_station;
+                             .per_station = std::move(parts[c].columns)});
   }
   return out;
 }
@@ -457,6 +535,14 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
 
 }  // namespace
 
+std::vector<std::string> adcirc_variables(AdcircKind kind) {
+  std::vector<std::string> names;
+  for (const nc::NcNameRef name : names_of(kind)) {
+    names.emplace_back(name.view());
+  }
+  return names;
+}
+
 // ---- inspect
 // ---------------------------------------------------------------------
 
@@ -474,8 +560,7 @@ std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
   if (not kind) {
     return std::unexpected{std::move(kind.error())};
   }
-  auto vars = data_variables(*file, *structure, *kind);
-  if (not vars) {
+  if (auto vars = data_variables(*file, *structure, *kind); not vars) {
     return std::unexpected{std::move(vars.error())};
   }
   const auto names = has_names(*file);
@@ -486,38 +571,43 @@ std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
       not size) {
     return std::unexpected{std::move(size.error())};
   }
-  std::vector<std::size_t> all(structure->station_dim.length);
-  std::ranges::copy(std::views::iota(std::size_t{0}, all.size()), all.begin());
+  const core::StationSelection all =
+      core::StationSelection::all(structure->station_dim.length);
   auto stations = detail::read_stations(
-      *file, station_variables(structure->station_dim, *names), crs, all,
-      ctx.stop);
+      *file, station_variables(structure->station_dim, *names), crs,
+      all.indices(), ctx.stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
-  auto units = detail::optional_text(*file, structure->time_var.name, "units");
+  auto units = read_units(*file, structure->time_var);
   if (not units) {
     return std::unexpected{std::move(units.error())};
   }
+  const auto grid = crs_kind(crs);
+  if (not grid) {
+    return fail(detail::to_format_error(grid.error(), std::nullopt));
+  }
+  auto mismatch = ics_warnings(*file, crs, *grid);
+  if (not mismatch) {
+    return std::unexpected{std::move(mismatch.error())};
+  }
   AdcircNcCatalog catalog{.kind = *kind,
-                          .variables = {},
                           .stations = std::move(stations->value),
                           .times = structure->time_dim.length,
-                          .time_units = std::nullopt,
-                          .parsed_time_units = std::nullopt};
-  for (const nc::VarInfo& var : *vars) {
-    catalog.variables.emplace_back(var.name.view());
-  }
-  if (*units) {
-    catalog.time_units = std::string{cut_at_nul(**units)};
-    if (auto parsed = parse_cf_time_units(*catalog.time_units)) {
-      catalog.parsed_time_units = parsed->value;
-      for (Warning& w : parsed->warnings) {
-        stations->warnings.push_back(std::move(w));
-      }
+                          .time_units = std::nullopt};
+  std::vector<Warning> warnings = std::move(stations->warnings);
+  detail::append(warnings, *std::move(mismatch));
+  if (units->text) {
+    catalog.time_units = TimeUnitsAttr{
+        .text = *units->text,
+        .parsed =
+            units->parsed ? std::optional{units->parsed->value} : std::nullopt};
+    if (units->parsed) {
+      detail::append(warnings, std::move(units->parsed->warnings));
     }
   }
   return Read<AdcircNcCatalog>{.value = std::move(catalog),
-                               .warnings = std::move(stations->warnings)};
+                               .warnings = std::move(warnings)};
 }
 
 // ---- read
@@ -534,6 +624,10 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
   }
   const nc::File& file = setup->file;
   const Structure& structure = setup->structure;
+  const auto grid = crs_kind(request.crs);
+  if (not grid) {
+    return fail(to_format_error(grid.error(), std::nullopt));
+  }
   auto clock = clock_of(file, structure, request.cold_start);
   if (not clock) {
     return std::unexpected{std::move(clock.error())};
@@ -553,9 +647,15 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
+  auto mismatch = ics_warnings(file, request.crs, *grid);
+  if (not mismatch) {
+    return std::unexpected{std::move(mismatch.error())};
+  }
   auto values = read_values({.file = file,
                              .kind = request.kind,
+                             .grid = *grid,
                              .times = structure.time_dim.length,
+                             .station_dim = structure.station_dim.id,
                              .selection = selection,
                              .policy = policy,
                              .stop = ctx.stop},
@@ -563,7 +663,8 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
   if (not values) {
     return std::unexpected{std::move(values.error())};
   }
-  std::vector<Warning> warnings = std::move(clock->warnings);
+  std::vector<Warning> warnings = std::move(*mismatch);
+  append(warnings, std::move(clock->warnings));
   append_if_counted(warnings, {.code = WarningCode::nonfinite_masked,
                                .subject = std::move(values->nonfinite_in),
                                .count = values->nonfinite});

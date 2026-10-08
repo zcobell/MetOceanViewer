@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -82,33 +83,41 @@ struct Layered {
 /// the inputs for.
 using DflowVariable = std::variant<Flat, Layered>;
 
-/// A layer of a layered variable, counted from 1 as v4's layer argument was
-/// (N16: v4 passed layer 0 for the wind of a 3-D file and underflowed).
-class Layer {
+/// What a request asks for, without the display data of the catalog entry
+/// (`long_name`, the layer count): only what selects the data. A flat variable
+/// is asked for by its source.
+struct FlatChoice {
+  DflowSource source;
+  friend bool operator==(const FlatChoice&, const FlatChoice&) = default;
+};
+
+/// A layered variable at one of its layers, counted from 1 as v4's layer
+/// argument was (N16: v4 passed layer 0 for the wind of a 3-D file and
+/// underflowed). Made only from the catalog entry it is a layer of, so the
+/// layer is one that variable has.
+class AtLayer {
  public:
   /// `layer_out_of_range` (subject: the variable's long name, index: the
   /// number given) unless 1 <= one_based <= v.layers.
-  [[nodiscard]] static std::expected<Layer, FormatError> make(
+  [[nodiscard]] static std::expected<AtLayer, FormatError> make(
       const Layered& v, std::size_t one_based);
 
+  [[nodiscard]] const DflowSource& source() const& noexcept { return source_; }
+  const DflowSource& source() const&& = delete;
   [[nodiscard]] std::size_t zero_based() const noexcept { return index_; }
-  friend constexpr bool operator==(Layer, Layer) = default;
+  friend bool operator==(const AtLayer&, const AtLayer&) = default;
 
  private:
-  explicit constexpr Layer(std::size_t index) noexcept : index_{index} {}
-  std::size_t index_;
-};
+  AtLayer(DflowSource source, std::size_t index)
+      : source_{std::move(source)}, index_{index} {}
 
-/// A layered variable at one of its layers.
-struct AtLayer {
-  Layered variable;
-  Layer layer;
-  friend bool operator==(const AtLayer&, const AtLayer&) = default;
+  DflowSource source_;
+  std::size_t index_;
 };
 
 /// What to read: a flat variable, or a layered one at a layer. The type is the
 /// shape, so a layered variable cannot be asked for without a layer.
-using DflowChoice = std::variant<Flat, AtLayer>;
+using DflowChoice = std::variant<FlatChoice, AtLayer>;
 
 struct DflowCatalog {
   /// Every station, in file order: id the 0-based index, name from
@@ -139,7 +148,9 @@ struct DflowCatalog {
 /// `bad_coordinates`; ParseError `bad_time_units` / `bad_date` (the `units`
 /// of `time`); NcError (including `too_large`); Cancelled.
 /// Warnings: `invalid_utf8_replaced`, `crs_approximate`, `skipped_variable`,
-/// `time_precision_dropped`.
+/// `time_precision_dropped`, `coordinates_from_first_step` (the station
+/// coordinates are over (time, stations), as in a model with moving stations:
+/// step 0 is used).
 [[nodiscard]] std::expected<Read<DflowCatalog>, Error> inspect_dflow(
     const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx);
 
@@ -148,6 +159,7 @@ struct DflowRequest {
   /// Required (never an implicit "all"); made for the file's station count.
   core::StationSelection stations;
   core::Epsg crs;
+  friend bool operator==(const DflowRequest&, const DflowRequest&) = default;
 };
 
 /// The selected stations of one variable, with one shared time axis and the
@@ -155,14 +167,19 @@ struct DflowRequest {
 ///
 /// Schema: one column. A variable named like a registry quantity (`waterlevel`
 /// is `water_level`, `x_velocity` / `y_velocity` are `current_u` / `current_v`,
-/// `windx` / `windy` are `wind_u` / `wind_v`) has it; any other becomes a
+/// `windx` / `windy` are `wind_u` / `wind_v`) has it, if `crs` is geographic;
+/// the components of a model on a projected grid point along the grid's axes
+/// (design decision 28), so then they are the generic `sea_water_x_velocity`,
+/// `sea_water_y_velocity`, `x_wind` and `y_wind`. Any other variable becomes a
 /// generic quantity with its name as the token and its `standard_name`, or
 /// `value` with an `unknown_quantity` warning when the name is no token.
 /// The label is `long_name` (else the name) and the unit the `units`
 /// attribute (else the registry quantity's own unit, else none; an unknown
 /// spelling warns `unrecognized_unit`). A derived variable has the meta of
 /// core::VectorSeries::magnitude / cartesian_direction / magnitude3 (its
-/// components must be in one known unit: `noncanonical_unit`).
+/// components must be in one known unit: `noncanonical_unit`); the components
+/// of a projected grid are paired with VectorSeries::assume_components, and
+/// the direction's label starts "grid-relative".
 ///
 /// A layered variable is read at the one layer; the layer is checked against
 /// `laydim` of the file (`layer_out_of_range`).
@@ -176,6 +193,9 @@ struct DflowRequest {
 /// `ReadLimits::max_elements`, or their samples over `max_result_bytes`).
 /// Warnings: those of inspect_dflow (except `skipped_variable`), and
 /// `nonfinite_masked`, `unknown_quantity`, `unrecognized_unit`.
+///
+/// Derived series are made from the columns read, which are consumed station
+/// by station: the peak is the input columns plus one station's.
 [[nodiscard]] std::expected<Read<core::StationTable>, Error> read_dflow(
     const std::filesystem::path& path, const DflowRequest& request,
     const ReadContext& ctx);

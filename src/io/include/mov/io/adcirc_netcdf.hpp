@@ -34,23 +34,33 @@ namespace mov::io {
 // every other netCDF call (nc/file.hpp). Each opens the file once and closes
 // it before it returns. Blocking I/O: call them from a worker.
 
+/// The names of the data variables of a kind: `zeta`; `u-vel`, `v-vel`;
+/// `pressure`; `windx`, `windy`. The columns of the table read have the same
+/// number, in this order.
+[[nodiscard]] std::vector<std::string> adcirc_variables(AdcircKind kind);
+
+/// The `units` attribute of `time`, as written, and what it says when it is a
+/// CF time unit with a date. ADCIRC writes "seconds since <NCDATE>" and, when
+/// the run had no usable NCDATE, a placeholder such as "seconds since Met"
+/// (`parsed` is then empty).
+struct TimeUnitsAttr {
+  std::string text;
+  std::optional<CfTimeUnits> parsed;
+  friend bool operator==(const TimeUnitsAttr&, const TimeUnitsAttr&) = default;
+};
+
 /// What a station output file holds.
 struct AdcircNcCatalog {
-  /// The first of zeta, u-vel, pressure, windx the file has (that order).
+  /// The first of zeta, u-vel, pressure, windx the file has (that order);
+  /// adcirc_variables(kind) names its data variables.
   AdcircKind kind;
-  /// The names of that kind's data variables (`u-vel`, `v-vel`).
-  std::vector<std::string> variables;
   /// Every station, in file order: id the 0-based index, name from
   /// `station_name` (or "Station <id>"), position projected to WGS84.
   std::vector<core::FileStation> stations;
   /// The length of `time` (the unlimited dimension's current length).
   std::size_t times;
-  /// The `units` attribute of `time` as written, if the file has a text one.
-  /// ADCIRC writes "seconds since <NCDATE>" and, when the run had no usable
-  /// NCDATE, a placeholder such as "seconds since Met".
-  std::optional<std::string> time_units;
-  /// time_units, when it is a CF time unit with a date (not a placeholder).
-  std::optional<CfTimeUnits> parsed_time_units;
+  /// The `units` attribute of `time`, if the file has a text one.
+  std::optional<TimeUnitsAttr> time_units;
   friend bool operator==(const AdcircNcCatalog&,
                          const AdcircNcCatalog&) = default;
 };
@@ -69,7 +79,11 @@ struct AdcircNcCatalog {
 /// named above, in that order), `unsupported_crs`, `projection_unavailable`,
 /// `bad_coordinates` (a position that PROJ cannot transform or that is not a
 /// Location, with the station); NcError (including `too_large`);
-/// Cancelled. Warnings: `invalid_utf8_replaced` (names), `crs_approximate`.
+/// Cancelled. Warnings: `invalid_utf8_replaced` (names), `crs_approximate`,
+/// `crs_mismatch` (the global `ics` says Cartesian and `crs` is geographic,
+/// or spherical and `crs` is projected: one of them is wrong), and the ones
+/// of parse_cf_time_units for `time:units`. The whole file's stations are
+/// read (every coordinate and name), however few are selected.
 [[nodiscard]] std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
     const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx);
 
@@ -80,19 +94,27 @@ struct AdcircNcRequest {
   AdcircKind kind;
   /// The start of the model clock. ADCIRC counts seconds from its cold start,
   /// and the file's own record of it (NCDATE) is often a placeholder: when
-  /// this is given, `time` is that many seconds after it and the `units`
-  /// attribute is not read. Otherwise the unit and epoch of `units` are used,
-  /// with an `epoch_used` warning; if `units` is absent or no CF time unit
-  /// (a placeholder), `cold_start_required`.
+  /// this is given, `time` is that many seconds after it, whatever `units`
+  /// says; if `units` parses and its epoch is more than a second from this,
+  /// `cold_start_differs` says so. Otherwise the unit and epoch of `units`
+  /// are used, with an `epoch_used` warning; if `units` is absent or no CF
+  /// time unit (a placeholder), `cold_start_required`.
   std::optional<core::Time> cold_start;
   core::Epsg crs;
   core::StationSelection stations;
+  friend bool operator==(const AdcircNcRequest&,
+                         const AdcircNcRequest&) = default;
 };
 
 /// The selected stations of a station output as a table with one shared time
-/// axis and the schema of `adcirc_schema(kind)`: `water_level` (m);
+/// axis and the schema of `adcirc_schema(kind, grid)`: `water_level` (m);
 /// `current_u`, `current_v` (m s-1); `air_pressure` (m of water); `wind_u`,
-/// `wind_v` (m s-1). The stations follow the order of the selection.
+/// `wind_v` (m s-1). If `crs` is projected the vector components are along the
+/// grid's axes, not east and north (design decision 28), and are the generic
+/// `sea_water_x_velocity`, `sea_water_y_velocity` and `x_wind`, `y_wind`
+/// (labels "grid-relative ..."; pair them with
+/// VectorSeries::assume_components). The stations follow the order of the
+/// selection.
 ///
 /// Values, in the data variable's own type (float, double or a packed integer;
 /// never 64-bit integers: `type_mismatch`), with _FillValue, the library's
@@ -120,7 +142,7 @@ struct AdcircNcRequest {
 /// NcError `too_large` (selected stations x times x columns over
 /// `ReadLimits::max_elements`, or their samples over `max_result_bytes`).
 /// Warnings: those of inspect_adcirc_netcdf, and `epoch_used`,
-/// `time_precision_dropped`, `nonfinite_masked`.
+/// `cold_start_differs`, `nonfinite_masked`.
 [[nodiscard]] std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
     const std::filesystem::path& path, const AdcircNcRequest& request,
     const ReadContext& ctx);

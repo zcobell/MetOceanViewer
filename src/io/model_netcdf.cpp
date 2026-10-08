@@ -52,6 +52,10 @@ NcError nc_fault(const nc::File& file, WrapperFault fault, NcOp op,
                  .file = file.path()};
 }
 
+void append(std::vector<Warning>& warnings, std::vector<Warning> more) {
+  std::ranges::move(more, std::back_inserter(warnings));
+}
+
 // ---- structure -------------------------------------------------------------
 
 std::expected<nc::DimInfo, Error> require_dim(const nc::File& file,
@@ -124,21 +128,39 @@ constexpr std::size_t stations_per_stop_poll = 1024;
 
 // The coordinates of every station: float and double variables only convert
 // to double without changing a value (B4); 64-bit integers do not.
-std::expected<std::vector<double>, Error> read_coordinate(
-    const nc::File& file, const nc::DimInfo& dim, nc::NcNameRef name,
-    const StopToken& stop) {
+struct Coordinate {
+  std::vector<double> values;
+  bool first_step;  // read from step 0 of a (time, station) variable
+};
+
+std::expected<Coordinate, Error> read_coordinate(const nc::File& file,
+                                                 const StationVariables& vars,
+                                                 nc::NcNameRef name,
+                                                 const StopToken& stop) {
   auto info = require_var(file, name);
   if (not info) {
     return std::unexpected{std::move(info.error())};
   }
-  if (auto shape = require_shape(*info, {dim.id}); not shape) {
-    return std::unexpected{std::move(shape.error())};
+  const bool over_time = vars.time_dim and info->dims.size() == 2 and
+                         info->dims[0].id == *vars.time_dim and
+                         info->dims[1].id == vars.dim.id;
+  if (not over_time) {
+    if (auto shape = require_shape(*info, {vars.dim.id}); not shape) {
+      return std::unexpected{std::move(shape.error())};
+    }
   }
   if (info->type == nc::Type::int64) {
     return fail(nc_fault(file, WrapperFault::type_mismatch, NcOp::get_var,
                          name.view()));
   }
-  return file.read<double>(name, nc::whole(*info), stop);
+  const nc::Slab slab = over_time
+                            ? nc::Slab{{.start = 0, .count = 1},
+                                       {.start = 0, .count = vars.dim.length}}
+                            : nc::whole(*info);
+  return file.read<double>(name, slab, stop).transform([&](auto&& values) {
+    return Coordinate{.values = std::forward<decltype(values)>(values),
+                      .first_step = over_time};
+  });
 }
 
 // The cleaned, simplified name of one row of a char variable.
@@ -171,10 +193,10 @@ namespace {
 
 // The rows of the char variable `names` (over the station dimension and a
 // length), or none if the file has no names.
-std::expected<std::vector<std::string>, Error> read_names(
+std::expected<std::optional<std::vector<std::string>>, Error> read_names(
     const nc::File& file, const StationVariables& vars, const StopToken& stop) {
   if (not vars.names) {
-    return std::vector<std::string>{};
+    return std::nullopt;
   }
   auto info = require_var(file, *vars.names);
   if (not info) {
@@ -185,15 +207,17 @@ std::expected<std::vector<std::string>, Error> read_names(
     return fail(format_error(FormatErrc::dimension_mismatch,
                              std::string{info->name.view()}));
   }
-  return file.read_char_rows(*vars.names, stop);
+  return file.read_char_rows(*vars.names, stop).transform([](auto&& rows) {
+    return std::optional{std::forward<decltype(rows)>(rows)};
+  });
 }
 
 // What the file says about every station; makes one FileStation at a time.
 class StationMaker {
  public:
   StationMaker(std::vector<double> x, std::vector<double> y,
-               std::vector<std::string> names, Projector projector,
-               core::DataSource source)
+               std::optional<std::vector<std::string>> names,
+               Projector projector, core::DataSource source)
       : x_{std::move(x)},
         y_{std::move(y)},
         names_{std::move(names)},
@@ -208,7 +232,7 @@ class StationMaker {
       return fail(position_error(where.error(), index));
     }
     auto name = clean_name(
-        names_.empty() ? std::string_view{} : std::string_view{names_[index]},
+        names_ ? std::string_view{(*names_)[index]} : std::string_view{},
         index);
     replaced_ += name.replaced ? 1U : 0U;
     auto key = core::StationKey::make(std::to_string(index));
@@ -222,7 +246,7 @@ class StationMaker {
                              .source = source_};
   }
 
-  [[nodiscard]] std::vector<Warning> warnings() {
+  [[nodiscard]] std::vector<Warning> warnings() && {
     std::vector<Warning> out;
     append_if_counted(out, {.code = WarningCode::invalid_utf8_replaced,
                             .subject = {},
@@ -248,7 +272,7 @@ class StationMaker {
 
   std::vector<double> x_;
   std::vector<double> y_;
-  std::vector<std::string> names_;
+  std::optional<std::vector<std::string>> names_;
   Projector projector_;
   core::DataSource source_;
   std::size_t replaced_{0};
@@ -259,11 +283,11 @@ class StationMaker {
 std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     const nc::File& file, const StationVariables& vars, core::Epsg crs,
     std::span<const std::size_t> which, const StopToken& stop) {
-  auto x = read_coordinate(file, vars.dim, vars.x, stop);
+  auto x = read_coordinate(file, vars, vars.x, stop);
   if (not x) {
     return std::unexpected{std::move(x.error())};
   }
-  auto y = read_coordinate(file, vars.dim, vars.y, stop);
+  auto y = read_coordinate(file, vars, vars.y, stop);
   if (not y) {
     return std::unexpected{std::move(y.error())};
   }
@@ -275,8 +299,9 @@ std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
   if (not projector) {
     return fail(to_format_error(projector.error(), std::nullopt));
   }
-  StationMaker maker{*std::move(x), *std::move(y), *std::move(names),
-                     *std::move(projector), vars.source};
+  const bool first_step = x->first_step or y->first_step;
+  StationMaker maker{std::move(x->values), std::move(y->values),
+                     *std::move(names), *std::move(projector), vars.source};
   std::vector<core::FileStation> stations;
   stations.reserve(which.size());
   for (const std::size_t index : which) {
@@ -290,8 +315,14 @@ std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     }
     stations.push_back(*std::move(station));
   }
+  std::vector<Warning> warnings = std::move(maker).warnings();
+  if (first_step) {
+    warnings.push_back({.code = WarningCode::coordinates_from_first_step,
+                        .subject = std::string{vars.x.view()},
+                        .count = 1});
+  }
   return Read<std::vector<core::FileStation>>{.value = std::move(stations),
-                                              .warnings = maker.warnings()};
+                                              .warnings = std::move(warnings)};
 }
 
 // ---- time ------------------------------------------------------------------
@@ -307,60 +338,44 @@ std::expected<CfClock, Error> make_clock(const CfTimeUnits& units,
   return *clock;
 }
 
-namespace {
-
-// Time `index` of the variable on `clock`, or the error that says why not.
-template <class V>
-std::expected<core::Time, Error> time_at(const CfClock& clock, V value,
-                                         std::string_view variable,
-                                         std::size_t index) {
-  const auto time = clock.at(value);
-  if (not time) {
-    return fail(format_error(FormatErrc::time_out_of_range,
-                             std::string{variable}, std::nullopt, index));
+std::expected<CfCalendar, Error> read_calendar(const nc::File& file,
+                                               const nc::VarInfo& time) {
+  auto text = optional_text(file, time.name, "calendar");
+  if (not text) {
+    return std::unexpected{std::move(text.error())};
   }
-  return *time;
+  const auto calendar = parse_cf_calendar(
+      *text ? std::optional<std::string_view>{cut_at_nul(**text)}
+            : std::nullopt);
+  if (not calendar) {
+    return fail(format_error(FormatErrc::unsupported_calendar,
+                             std::string{time.name.view()} + ":calendar"));
+  }
+  return *calendar;
 }
 
-}  // namespace
+namespace {
 
-std::expected<core::TimeAxis, Error> read_time_axis(const nc::File& file,
-                                                    const nc::VarInfo& time,
-                                                    const CfClock& clock,
-                                                    const StopToken& stop) {
-  const std::string_view name = time.name.view();
+// The times of `values` (nullopt: masked) on `clock`, strictly increasing.
+template <class V>
+std::expected<core::TimeAxis, Error> axis_of(
+    std::span<const std::optional<V>> values, const CfClock& clock,
+    std::string_view name) {
   core::TimeAxis axis;
-  if (time.type == nc::Type::int64) {
-    auto values = file.read<std::int64_t>(time.name, nc::whole(time), stop);
-    if (not values) {
-      return std::unexpected{std::move(values.error())};
+  axis.reserve(values.size());
+  // (An enumerate over the values; not yet on every standard library.)
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    const std::optional<V>& value = values[i];
+    if (not value) {
+      return fail(format_error(FormatErrc::time_missing, std::string{name},
+                               std::nullopt, i));
     }
-    axis.reserve(values->size());
-    for (std::size_t i = 0; i < values->size(); ++i) {
-      auto at = time_at(clock, (*values)[i], name, i);
-      if (not at) {
-        return std::unexpected{std::move(at.error())};
-      }
-      axis.push_back(*at);
+    const std::optional<core::Time> time = clock.at(*value);
+    if (not time) {
+      return fail(format_error(FormatErrc::time_out_of_range, std::string{name},
+                               std::nullopt, i));
     }
-  } else {
-    auto samples = file.read_samples(time.name, nc::whole(time), stop);
-    if (not samples) {
-      return std::unexpected{std::move(samples.error())};
-    }
-    axis.reserve(samples->size());
-    for (std::size_t i = 0; i < samples->size(); ++i) {
-      const std::optional<double> value = (*samples)[i].value();
-      if (not value) {
-        return fail(format_error(FormatErrc::time_missing, std::string{name},
-                                 std::nullopt, i));
-      }
-      auto at = time_at(clock, *value, name, i);
-      if (not at) {
-        return std::unexpected{std::move(at.error())};
-      }
-      axis.push_back(*at);
-    }
+    axis.push_back(*time);
   }
   const auto descent = std::ranges::adjacent_find(
       axis, [](core::Time a, core::Time b) { return not(a < b); });
@@ -370,6 +385,55 @@ std::expected<core::TimeAxis, Error> read_time_axis(const nc::File& file,
         static_cast<std::size_t>(descent - axis.begin()) + 1));
   }
   return axis;
+}
+
+// A 64-bit time is read as an integer (a double would round it) and masked by
+// its attributes in its own type, like every other variable.
+std::expected<std::vector<std::optional<std::int64_t>>, Error> masked_int64(
+    const nc::File& file, const nc::VarInfo& time, const StopToken& stop) {
+  auto mask = file.masking<std::int64_t>(time.name);
+  if (not mask) {
+    return fail(std::move(mask.error()));
+  }
+  return file.read<std::int64_t>(time.name, nc::whole(time), stop)
+      .transform([&mask](const std::vector<std::int64_t>& raw) {
+        std::vector<std::optional<std::int64_t>> out;
+        out.reserve(raw.size());
+        std::ranges::transform(
+            raw, std::back_inserter(out), [&mask](std::int64_t v) {
+              return mask->masks(v) ? std::nullopt : std::optional{v};
+            });
+        return out;
+      });
+}
+
+std::expected<std::vector<std::optional<double>>, Error> masked_double(
+    const nc::File& file, const nc::VarInfo& time, const StopToken& stop) {
+  return file.read_samples(time.name, nc::whole(time), stop)
+      .transform([](const std::vector<core::Sample>& samples) {
+        std::vector<std::optional<double>> out;
+        out.reserve(samples.size());
+        std::ranges::transform(samples, std::back_inserter(out),
+                               [](const core::Sample& s) { return s.value(); });
+        return out;
+      });
+}
+
+}  // namespace
+
+std::expected<core::TimeAxis, Error> read_time_axis(const nc::File& file,
+                                                    const nc::VarInfo& time,
+                                                    const CfClock& clock,
+                                                    const StopToken& stop) {
+  const std::string_view name = time.name.view();
+  if (time.type == nc::Type::int64) {
+    return masked_int64(file, time, stop).and_then([&](const auto& values) {
+      return axis_of<std::int64_t>(values, clock, name);
+    });
+  }
+  return masked_double(file, time, stop).and_then([&](const auto& values) {
+    return axis_of<double>(values, clock, name);
+  });
 }
 
 // ---- values ----------------------------------------------------------------
@@ -400,19 +464,77 @@ std::expected<void, Error> check_station_count(const nc::File& file,
   return {};
 }
 
-std::expected<std::vector<StationGroup>, Error> plan_groups(
+namespace {
+
+// The bytes of one value of an external type (0: not a number).
+std::size_t external_size(nc::Type t) {
+  switch (t) {
+    case nc::Type::byte:
+    case nc::Type::ubyte:
+    case nc::Type::char_:
+      return 1;
+    case nc::Type::short_:
+    case nc::Type::ushort:
+      return 2;
+    case nc::Type::int_:
+    case nc::Type::uint:
+    case nc::Type::float_:
+      return 4;
+    case nc::Type::int64:
+    case nc::Type::uint64:
+    case nc::Type::double_:
+      return 8;
+    case nc::Type::string:
+    case nc::Type::other:
+      break;
+  }
+  return 0;
+}
+
+// A chunk is read and decompressed whole, and read in blocks that are smaller
+// than it, it would be decompressed again for each block unless the library's
+// chunk cache holds it. So the cache is made big enough for one chunk, as far
+// as the limits allow that memory (measured: docs/wp-notes/WP9.md).
+std::expected<void, Error> keep_chunk_in_cache(
     const nc::File& file, const nc::VarInfo& var,
+    const std::optional<std::vector<std::size_t>>& chunks) {
+  if (not chunks) {
+    return {};
+  }
+  const auto elements = checked_product(*chunks);
+  const std::size_t element_bytes = external_size(var.type);
+  const std::size_t limit = file.limits().max_result_bytes;
+  if (not elements or element_bytes == 0 or *elements > limit / element_bytes) {
+    return {};  // too big to hold: the block reads re-read it
+  }
+  return file.reserve_chunk_cache(var.name, *elements * element_bytes)
+      .transform_error(lift<Error>);
+}
+
+}  // namespace
+
+std::expected<std::vector<StationGroup>, Error> plan_groups(
+    const nc::File& file, const nc::VarInfo& var, int station_dim,
     std::span<const std::size_t> selection,
     const std::optional<GroupingPolicy>& forced) {
   if (forced) {
     return station_groups(selection, *forced);
   }
+  const auto axis = std::ranges::find(var.dims, station_dim, &nc::DimInfo::id);
+  if (axis == var.dims.end()) {
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             std::string{var.name.view()}));
+  }
   auto chunks = file.chunk_shape(var.name);
   if (not chunks) {
     return fail(std::move(chunks.error()));
   }
-  return station_groups(selection,
-                        grouping_for(*chunks, 1));  // (time, station)
+  if (auto cached = keep_chunk_in_cache(file, var, *chunks); not cached) {
+    return std::unexpected{std::move(cached.error())};
+  }
+  return station_groups(
+      selection,
+      grouping_for(*chunks, static_cast<std::size_t>(axis - var.dims.begin())));
 }
 
 std::expected<Read<core::StationTable>, Error> assemble_table(
@@ -433,9 +555,7 @@ std::expected<Read<core::StationTable>, Error> assemble_table(
   }
   // The station warnings come before the ones of the values.
   std::vector<Warning> all = std::move(stations.warnings);
-  for (Warning& w : warnings) {
-    all.push_back(std::move(w));
-  }
+  append(all, std::move(warnings));
   return Read<core::StationTable>{.value = *std::move(table),
                                   .warnings = std::move(all)};
 }

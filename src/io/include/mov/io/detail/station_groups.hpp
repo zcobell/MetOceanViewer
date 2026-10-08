@@ -8,6 +8,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <limits>
 #include <optional>
@@ -43,11 +44,11 @@ struct StationGroup {
 ///  - chunks as wide as the file (netCDF-C's default for a variable with an
 ///    unlimited time dimension, and what ADCIRC writes): every station is in
 ///    the one chunk column, and one read of the span beats a read per station
-///    by the number of stations (84 ms against 82 s for 1000 of 1000);
+///    by two orders of magnitude (0.5 s against 85 s for 1000 of 1000);
 ///  - chunks of one station: a read per station reads only that station, and
-///    one read of the span reads all stations in between (5 ms against
-///    700 ms for ten stations a hundred apart).
-/// docs/wp-notes/WP9.md has the measurement.
+///    one read of the span reads all stations in between (7 ms against
+///    0.7 s for ten stations a hundred apart).
+/// docs/wp-notes/WP9.md has the measurements.
 ///
 /// `stride` is the largest difference of two neighbouring selected station
 /// indices that is bridged by one read: 0 never groups (a read per station,
@@ -64,16 +65,29 @@ struct GroupingPolicy {
                                    const GroupingPolicy&) = default;
 };
 
+/// Stations that are further apart than this, in a variable that is not
+/// chunked (contiguous HDF5 storage, or a classic file), are read one at a
+/// time: the rows are then more than about 8 KiB apart (for doubles), and
+/// reading all the rows in between costs more than seeking for each station's
+/// value. Measured on 10000 stations (docs/wp-notes/WP9.md): in a classic file
+/// two stations 9999 apart read 4 times faster separately, two stations 1000
+/// apart about the same either way. Contiguous netCDF-4 storage shows the
+/// reverse, by less (a block read 1.5 times faster), so this is an order of
+/// magnitude, not a constant to tune.
+inline constexpr std::size_t contiguous_stride = 1024;
+
 /// The grouping a reader uses for a variable whose chunk sizes are
-/// `chunk_shape` (nullopt: not chunked, which reads like one chunk column),
-/// stations on dimension `station_axis`: as many stations as one chunk column
-/// holds share a read.
+/// `chunk_shape` (nullopt: not chunked), stations on dimension
+/// `station_axis`: with chunks, as many stations as one chunk column holds
+/// share a read; without, stations within contiguous_stride of each other do.
 [[nodiscard]] inline GroupingPolicy grouping_for(
     const std::optional<std::vector<std::size_t>>& chunk_shape,
     std::size_t station_axis) {
   constexpr std::size_t unbounded = std::numeric_limits<std::size_t>::max();
-  if (chunk_shape and station_axis < chunk_shape->size() and
-      (*chunk_shape)[station_axis] > 0) {
+  if (not chunk_shape) {
+    return {.stride = contiguous_stride};
+  }
+  if (station_axis < chunk_shape->size() and (*chunk_shape)[station_axis] > 0) {
     return {.stride = unbounded, .chunk = (*chunk_shape)[station_axis]};
   }
   return {.stride = unbounded};
@@ -91,6 +105,8 @@ struct GroupingPolicy {
     sorted[p] = {.station = selected[p], .position = p};
   }
   std::ranges::sort(sorted, {}, &SelectedStation::station);
+  assert((not policy.chunk or *policy.chunk > 0) and
+         "a chunk size is a positive number of stations");
   const auto column_of = [&policy](std::size_t station) {
     return policy.chunk ? station / *policy.chunk : std::size_t{0};
   };

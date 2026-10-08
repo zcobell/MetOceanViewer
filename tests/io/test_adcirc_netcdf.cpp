@@ -32,9 +32,11 @@
 #include "mov/core/vector_series.hpp"
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/adcirc_netcdf.hpp"
+#include "mov/io/detail/adcirc_schema.hpp"
 #include "mov/io/detail/station_groups.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
+#include "mov/io/projection.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
 
@@ -261,7 +263,8 @@ TEST_CASE("velocity: a fill in either component empties both (N7)",
   CHECK(samples_of(table, 0, 1) ==
         std::vector<Sample>{Missing{}, Missing{}, sample(0.5),
                             sample(0.012227184139), Missing{}});
-  // B1: the magnitude is the hypotenuse; v4 printed (u^2 + v^2)^2 = 6.66e-6.
+  // Parity with the ASCII reader's B1 test: the magnitude is the hypotenuse;
+  // v4 printed (u^2 + v^2)^2 = 6.66e-6.
   const auto vector = mov::core::vector_series(table, StationIndex{0},
                                                ColumnIndex{0}, ColumnIndex{1});
   REQUIRE(vector.has_value());
@@ -549,11 +552,25 @@ TEST_CASE("cold start: given, or the epoch of time:units with a warning",
     REQUIRE(warning != nullptr);
     CHECK(warning->subject == "seconds since 2011-02-03 04:05:06");
   }
-  SECTION("a cold start wins and the units are not consulted") {
+  SECTION("a cold start wins, and the warning says the file disagrees") {
     const auto read =
         read_ok(dir / "a.nc", request(AdcircKind::elevation, everything(3)));
     CHECK(read.value.times(StationIndex{0})[0] == at_seconds(600.0));
     CHECK(warning_count(read.warnings, WarningCode::epoch_used) == 0);
+    const auto* differs =
+        mov::test::find_warning(read.warnings, WarningCode::cold_start_differs);
+    REQUIRE(differs != nullptr);
+    CHECK(differs->subject == "seconds since 2011-02-03 04:05:06");
+  }
+  SECTION("a cold start within a second of the file's epoch is the same") {
+    const auto agrees =
+        read_ok(dir / "a.nc", request(AdcircKind::elevation, everything(3),
+                                      epoch + std::chrono::milliseconds{900}));
+    CHECK(warning_count(agrees.warnings, WarningCode::cold_start_differs) == 0);
+    const auto late =
+        read_ok(dir / "a.nc", request(AdcircKind::elevation, everything(3),
+                                      epoch + std::chrono::milliseconds{1100}));
+    CHECK(warning_count(late.warnings, WarningCode::cold_start_differs) == 1);
   }
 }
 
@@ -952,16 +969,19 @@ TEST_CASE("inspect: kind, variables, stations, time units",
   REQUIRE(inspected.has_value());
   const auto& catalog = inspected->value;
   CHECK(catalog.kind == AdcircKind::velocity);
-  CHECK(catalog.variables == std::vector<std::string>{"u-vel", "v-vel"});
+  CHECK(mov::io::adcirc_variables(catalog.kind) ==
+        std::vector<std::string>{"u-vel", "v-vel"});
   CHECK(catalog.times == 5);
   REQUIRE(catalog.stations.size() == 3);
   CHECK(catalog.stations[2].name.view() == "Three");
   CHECK(catalog.stations[2].id.view() == "2");
-  CHECK(catalog.time_units ==
-        std::optional<std::string>{"seconds since 2012-06-01 00:00:00"});
-  REQUIRE(catalog.parsed_time_units.has_value());
-  if (catalog.parsed_time_units) {
-    CHECK(catalog.parsed_time_units->unit == mov::io::CfTimeUnit::second);
+  REQUIRE(catalog.time_units.has_value());
+  if (catalog.time_units) {
+    CHECK(catalog.time_units->text == "seconds since 2012-06-01 00:00:00");
+    REQUIRE(catalog.time_units->parsed.has_value());
+    if (catalog.time_units->parsed) {
+      CHECK(catalog.time_units->parsed->unit == mov::io::CfTimeUnit::second);
+    }
   }
 
   // A placeholder is reported as text and not parsed.
@@ -971,8 +991,8 @@ TEST_CASE("inspect: kind, variables, stations, time units",
       mov::io::inspect_adcirc_netcdf(dir / "b.nc", Epsg::wgs84(), {});
   REQUIRE(placeholder.has_value());
   CHECK(placeholder->value.time_units ==
-        std::optional<std::string>{"seconds since Met"});
-  CHECK(not(placeholder->value.parsed_time_units.has_value()));
+        std::optional<mov::io::TimeUnitsAttr>{
+            {.text = "seconds since Met", .parsed = std::nullopt}});
 }
 
 TEST_CASE("the readers close their file: it can be opened again at once",
@@ -1053,8 +1073,8 @@ TEST_CASE("legacy netCDF: the catalog of each output",
     CHECK(catalog.stations[2].location.lat() == 25.0);
     // The units attribute is the NCDATE placeholder of these runs.
     CHECK(catalog.time_units ==
-          std::optional<std::string>{"seconds since Met"});
-    CHECK(not(catalog.parsed_time_units.has_value()));
+          std::optional<mov::io::TimeUnitsAttr>{
+              {.text = "seconds since Met", .parsed = std::nullopt}});
   }
 }
 
@@ -1081,7 +1101,7 @@ TEST_CASE("legacy netCDF: first and last values are pinned",
     CHECK(r.value.times(StationIndex{0}).back() == at_seconds(86400.0));
     CHECK(r.warnings.empty());
   }
-  SECTION("fort.62: u and v, and the magnitude (B1)") {
+  SECTION("fort.62: u and v, and the magnitude (parity with the ASCII B1)") {
     const auto r = read(legacy_outputs[1]);
     CHECK(samples_of(r.value, 0, 0).front() == sample(0.049298094832642407));
     CHECK(samples_of(r.value, 0, 0).back() == sample(0.06176053710657186));
@@ -1151,5 +1171,202 @@ TEST_CASE("legacy: the ASCII and the netCDF output of one run agree to 1e-9",
         }
       }
     }
+  }
+}
+
+// ---- design decision 28: the grid decides what the vector components are
+// --------
+
+namespace {
+
+// Station positions that are valid in EPSG:26915 (and nowhere as degrees).
+AdcircNc projected_spec(AdcircNc spec) {
+  spec.x = {500000.0, 510000.0, 520000.0};
+  spec.y = {3000000.0, 3010000.0, 3020000.0};
+  return spec;
+}
+
+}  // namespace
+
+TEST_CASE("a geographic CRS keeps the registry's eastward and northward",
+          "[io][adcirc][netcdf][regression][D28]") {
+  mov::test::configure_projection_database();
+  const mov::test::ScratchDir dir;
+  make_adcirc_nc(dir / "a.nc", velocity_spec());
+  // EPSG:4269 (NAD83) is geographic though it is not EPSG:4326.
+  for (const int code : {4326, 4269}) {
+    const auto read =
+        read_ok(dir / "a.nc", request(AdcircKind::velocity, everything(3),
+                                      cold_start(), mov::test::epsg(code)));
+    CHECK(mov::core::token(read.value.schema()[0].quantity()) == "current_u");
+    CHECK(mov::core::token(read.value.schema()[1].quantity()) == "current_v");
+  }
+}
+
+TEST_CASE("a projected CRS makes the components grid-relative",
+          "[io][adcirc][netcdf][regression][D28]") {
+  mov::test::configure_projection_database();
+  const mov::test::ScratchDir dir;
+  const auto crs = mov::test::epsg(26915);
+  SECTION("velocity: generic CF grid names, paired by assume_components") {
+    AdcircNc spec = projected_spec(velocity_spec());
+    spec.value = [](std::size_t, std::size_t, std::size_t c) {
+      return c == 0 ? 3.0 : 4.0;
+    };
+    make_adcirc_nc(dir / "a.nc", spec);
+    const auto read = read_ok(
+        dir / "a.nc",
+        request(AdcircKind::velocity, everything(3), cold_start(), crs));
+    const auto& schema = read.value.schema();
+    REQUIRE(schema.size() == 2);
+    CHECK(mov::core::token(schema[0].quantity()) == "sea_water_x_velocity");
+    CHECK(mov::core::token(schema[1].quantity()) == "sea_water_y_velocity");
+    CHECK(schema[0].label() == "grid-relative current x");
+    // The registry's pair would refuse them; the declared pair works.
+    CHECK(not(mov::core::vector_series(read.value, StationIndex{0},
+                                       ColumnIndex{0}, ColumnIndex{1})
+                  .has_value()));
+    const auto vector = mov::core::VectorSeries::assume_components(
+        read.value.series(StationIndex{0}, ColumnIndex{0}),
+        read.value.series(StationIndex{0}, ColumnIndex{1}));
+    REQUIRE(vector.has_value());
+    if (vector) {
+      const auto speed = vector->magnitude();
+      CHECK(number(speed.samples()[0]) == 5.0);
+    }
+  }
+  SECTION("wind: x_wind and y_wind") {
+    AdcircNc spec = projected_spec(AdcircNc{});
+    spec.variables = {"windx", "windy"};
+    make_adcirc_nc(dir / "a.nc", spec);
+    const auto read =
+        read_ok(dir / "a.nc",
+                request(AdcircKind::wind, everything(3), cold_start(), crs));
+    CHECK(mov::core::token(read.value.schema()[0].quantity()) == "x_wind");
+    CHECK(mov::core::token(read.value.schema()[1].quantity()) == "y_wind");
+  }
+  SECTION("scalars are not vectors") {
+    make_adcirc_nc(dir / "a.nc", projected_spec(zeta_spec()));
+    const auto read = read_ok(
+        dir / "a.nc",
+        request(AdcircKind::elevation, everything(3), cold_start(), crs));
+    CHECK(mov::core::token(read.value.schema()[0].quantity()) == "water_level");
+  }
+}
+
+TEST_CASE("the ASCII reader takes the grid from the station file's CRS",
+          "[io][adcirc][ascii][regression][D28]") {
+  mov::test::configure_projection_database();
+  const std::string stations_text =
+      "3\n500000 3000000\n500010 3000000\n500020 3000000\n";
+  const auto text = mov::test::fixture_text("io/adcirc/legacy/fort.62");
+  for (const bool projected : {false, true}) {
+    CAPTURE(projected);
+    // The same three stations, as degrees or as UTM metres.
+    const auto stations = mov::io::parse_adcirc_station_file(
+        projected ? stations_text : "3\n-90 30\n-91 29\n-92 28\n",
+        projected ? mov::test::epsg(26915) : Epsg::wgs84(), ReadContext{});
+    REQUIRE(stations.has_value());
+    const auto parsed =
+        mov::io::parse_adcirc_ascii(text, stations->value,
+                                    {.kind = AdcircKind::velocity,
+                                     .cold_start = cold_start(),
+                                     .stations = everything(3)},
+                                    ReadContext{});
+    REQUIRE(parsed.has_value());
+    CHECK(mov::core::token(parsed->value.schema()[0].quantity()) ==
+          (projected ? "sea_water_x_velocity" : "current_u"));
+  }
+}
+
+TEST_CASE("the schema has one column per data variable",
+          "[io][adcirc][netcdf]") {
+  for (const AdcircKind kind : {AdcircKind::elevation, AdcircKind::velocity,
+                                AdcircKind::pressure, AdcircKind::wind}) {
+    for (const mov::io::CrsKind grid :
+         {mov::io::CrsKind::geographic, mov::io::CrsKind::projected}) {
+      CHECK(mov::io::adcirc_variables(kind).size() ==
+            mov::io::detail::adcirc_schema(kind, grid).size());
+    }
+  }
+  // Only the vectors have a pair, and the pair is the first and second.
+  CHECK(mov::io::adcirc_variables(AdcircKind::wind) ==
+        std::vector<std::string>{"windx", "windy"});
+}
+
+TEST_CASE("the global ics is checked against the CRS", "[io][adcirc][netcdf]") {
+  mov::test::configure_projection_database();
+  const mov::test::ScratchDir dir;
+  struct Case {
+    std::optional<int> ics;
+    bool projected;
+    std::size_t warnings;
+  };
+  for (const Case c :
+       {Case{
+            .ics = 2, .projected = false, .warnings = 0},  // spherical, degrees
+        Case{.ics = 1, .projected = true, .warnings = 0},  // Cartesian, UTM
+        Case{.ics = 2, .projected = true, .warnings = 1},  // says degrees
+        Case{.ics = 1, .projected = false, .warnings = 1},  // says metres
+        Case{.ics = std::nullopt, .projected = true, .warnings = 0},
+        Case{.ics = 20, .projected = true, .warnings = 0}}) {  // not 1 or 2
+    CAPTURE(c.ics.value_or(0), c.projected);
+    AdcircNc spec = c.projected ? projected_spec(zeta_spec()) : zeta_spec();
+    spec.ics = c.ics;
+    make_adcirc_nc(dir / "a.nc", spec);
+    const Epsg crs = c.projected ? mov::test::epsg(26915) : Epsg::wgs84();
+    const auto read = read_ok(
+        dir / "a.nc",
+        request(AdcircKind::elevation, everything(3), cold_start(), crs));
+    CHECK(warning_count(read.warnings, WarningCode::crs_mismatch) ==
+          c.warnings);
+    const auto inspected =
+        mov::io::inspect_adcirc_netcdf(dir / "a.nc", crs, ReadContext{});
+    REQUIRE(inspected.has_value());
+    CHECK(warning_count(inspected->warnings, WarningCode::crs_mismatch) ==
+          c.warnings);
+  }
+}
+
+// ---- review fixes
+// ---------------------------------------------------------------------
+
+TEST_CASE("a 64-bit time is masked by its attributes like any other",
+          "[io][adcirc][netcdf]") {
+  const mov::test::ScratchDir dir;
+  AdcircNc spec = zeta_spec();
+  spec.time_type = TimeType::int64;
+  spec.time_fill = -1;
+  spec.times = {-1, 1200, 1800, 2400, 3000};  // the fill is the first time
+  make_adcirc_nc(dir / "a.nc", spec);
+  const auto read = mov::io::read_adcirc_netcdf(
+      dir / "a.nc", request(AdcircKind::elevation, everything(3)), {});
+  CHECK(format_error_of(read).code == FormatErrc::time_missing);
+  CHECK(format_error_of(read).index == 0U);
+}
+
+TEST_CASE("a model attribute that is not text is not ADCIRC's",
+          "[io][adcirc][netcdf]") {
+  const mov::test::ScratchDir dir;
+  AdcircNc spec = zeta_spec();
+  spec.model_as_number = true;
+  make_adcirc_nc(dir / "a.nc", spec);
+  const auto inspected =
+      mov::io::inspect_adcirc_netcdf(dir / "a.nc", Epsg::wgs84(), {});
+  CHECK(format_error_of(inspected).code == FormatErrc::not_this_format);
+}
+
+TEST_CASE("legacy netCDF: the global ics is spherical, as EPSG:4326 is",
+          "[io][adcirc][netcdf][legacy]") {
+  const auto path = legacy_nc(legacy_outputs[0]);
+  auto file = mov::io::nc::File::open(path, {});
+  REQUIRE(file.has_value());
+  if (file) {
+    const auto ics =
+        file->numeric_att<std::int32_t>(mov::io::nc::global, "ics");
+    INFO((ics ? std::string{} : mov::test::what(mov::io::Error{ics.error()})));
+    REQUIRE(ics.has_value());
+    CHECK(ics.value_or(std::nullopt) ==
+          std::optional<std::vector<std::int32_t>>{{2}});
   }
 }

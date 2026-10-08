@@ -10,6 +10,7 @@
 
 #include "mov/core/meta.hpp"
 #include "mov/io/adcirc_ascii.hpp"
+#include "mov/io/projection.hpp"
 
 namespace mov::io::detail {
 
@@ -18,6 +19,14 @@ namespace mov::io::detail {
 /// water); `wind_u`, `wind_v` (m s-1). Labels are the registry long names. No
 /// datum. The ASCII and the netCDF reader share it, so the same run read from
 /// either file gives equal tables.
-[[nodiscard]] std::vector<core::SeriesMeta> adcirc_schema(AdcircKind kind);
+///
+/// The vector components of a model on a projected grid point along the grid's
+/// axes, not east and north (design decision 28), so for `grid ==
+/// CrsKind::projected` they are not the registry's eastward and northward
+/// quantities but generic ones with CF's grid names: `sea_water_x_velocity`,
+/// `sea_water_y_velocity` and `x_wind`, `y_wind` (labels "grid-relative ...").
+/// Rotating them by the meridian convergence is deferred.
+[[nodiscard]] std::vector<core::SeriesMeta> adcirc_schema(AdcircKind kind,
+                                                          CrsKind grid);
 
 }  // namespace mov::io::detail

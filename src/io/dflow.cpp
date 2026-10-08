@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <optional>
@@ -34,6 +35,7 @@
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
+#include "mov/io/projection.hpp"
 #include "mov/io/warning.hpp"
 
 namespace mov::io {
@@ -45,55 +47,65 @@ using detail::fail;
 using detail::format_error;
 using detail::simplified;
 
+// ---- the derived variables
+// ------------------------------------------------------
+
+constexpr std::array<std::string_view, 2> current_2d_inputs{"x_velocity",
+                                                            "y_velocity"};
+constexpr std::array<std::string_view, 3> current_3d_inputs{
+    "x_velocity", "y_velocity", "z_velocity"};
+constexpr std::array<std::string_view, 2> wind_inputs{"windx", "windy"};
+
 struct DerivedRow {
   DflowDerived derived;
   std::string_view token;
   std::string_view long_name;
+  std::span<const std::string_view> inputs;  // u, v and for the 3-D speed w
 };
 
-// In the order v4 listed them after the file's own variables.
+// Indexed by the enumerator (checked below).
 constexpr std::array<DerivedRow, 5> derived_rows{{
-    {.derived = DflowDerived::current_speed_3d,
-     .token = "3D_current_speed",
-     .long_name = "3D current speed"},
     {.derived = DflowDerived::current_speed_2d,
      .token = "2D_current_speed",
-     .long_name = "2D current speed"},
+     .long_name = "2D current speed",
+     .inputs = current_2d_inputs},
     {.derived = DflowDerived::current_direction_2d,
      .token = "2D_current_direction",
-     .long_name = "2D current direction"},
+     .long_name = "2D current direction",
+     .inputs = current_2d_inputs},
+    {.derived = DflowDerived::current_speed_3d,
+     .token = "3D_current_speed",
+     .long_name = "3D current speed",
+     .inputs = current_3d_inputs},
     {.derived = DflowDerived::wind_speed,
      .token = "wind_speed",
-     .long_name = "Wind speed"},
+     .long_name = "Wind speed",
+     .inputs = wind_inputs},
     {.derived = DflowDerived::wind_direction,
      .token = "wind_direction",
-     .long_name = "Wind direction"},
+     .long_name = "Wind direction",
+     .inputs = wind_inputs},
 }};
 
-const DerivedRow& row_of(DflowDerived d) {
-  return *std::ranges::find(derived_rows, d, &DerivedRow::derived);
-}
-
-// The variables a derived one is computed from (u, v and for the 3-D speed
-// w), by the names D-Flow FM gives them.
-struct Inputs {
-  std::array<std::string_view, 3> names;
-  std::size_t count{0};
-};
-
-Inputs inputs_of(DflowDerived d) {
-  switch (d) {
-    case DflowDerived::current_speed_2d:
-    case DflowDerived::current_direction_2d:
-      return {.names = {"x_velocity", "y_velocity", ""}, .count = 2};
-    case DflowDerived::current_speed_3d:
-      return {.names = {"x_velocity", "y_velocity", "z_velocity"}, .count = 3};
-    case DflowDerived::wind_speed:
-    case DflowDerived::wind_direction:
-      return {.names = {"windx", "windy", ""}, .count = 2};
+[[nodiscard]] constexpr bool rows_in_enumerator_order() noexcept {
+  for (std::size_t i = 0; i < derived_rows.size(); ++i) {
+    if (static_cast<std::size_t>(derived_rows[i].derived) != i) {
+      return false;
+    }
   }
-  return {.names = {}, .count = 0};
+  return true;
 }
+static_assert(rows_in_enumerator_order());
+
+const DerivedRow& row_of(DflowDerived d) {
+  return derived_rows[static_cast<std::size_t>(d)];
+}
+
+// The order v4 listed them in after the file's own variables.
+constexpr std::array<DflowDerived, 5> catalog_order{
+    DflowDerived::current_speed_3d, DflowDerived::current_speed_2d,
+    DflowDerived::current_direction_2d, DflowDerived::wind_speed,
+    DflowDerived::wind_direction};
 
 // ---- the file's structure
 // -----------------------------------------------------
@@ -146,11 +158,12 @@ std::expected<Structure, Error> structure_of(const nc::File& file) {
                    .time_var = *std::move(time_var)};
 }
 
-detail::StationVariables station_variables(const nc::DimInfo& dim) {
-  return {.dim = dim,
+detail::StationVariables station_variables(const Structure& structure) {
+  return {.dim = structure.stations_dim,
           .x = "station_x_coordinate",
           .y = "station_y_coordinate",
           .names = nc::NcNameRef{"station_name"},
+          .time_dim = structure.time_dim.id,
           .source = core::DataSource::dflowfm};
 }
 
@@ -179,17 +192,9 @@ std::expected<TimeSetup, Error> time_of(const nc::File& file,
   if (not parsed) {
     return fail(std::move(parsed.error()));
   }
-  auto calendar_text =
-      detail::optional_text(file, structure.time_var.name, "calendar");
-  if (not calendar_text) {
-    return std::unexpected{std::move(calendar_text.error())};
-  }
-  const auto calendar = parse_cf_calendar(
-      *calendar_text ? std::optional<std::string_view>{**calendar_text}
-                     : std::nullopt);
+  const auto calendar = detail::read_calendar(file, structure.time_var);
   if (not calendar) {
-    return fail(
-        format_error(FormatErrc::unsupported_calendar, variable + ":calendar"));
+    return std::unexpected{calendar.error()};
   }
   auto clock = detail::make_clock(parsed->value, *calendar, variable);
   if (not clock) {
@@ -202,41 +207,49 @@ std::expected<TimeSetup, Error> time_of(const nc::File& file,
 }
 
 // ---- the variables of the file
-// ------------------------------------------------------
+// ---------------------------------------------------
 
-// A variable the file offers: over (time, stations), or (time, stations,
-// laydim) with that many layers.
-struct Listed {
-  nc::VarInfo info;
-  std::optional<std::size_t> layers;
+// How a variable lies over the dimensions: not at all like a data variable,
+// over (time, stations), or over (time, stations, laydim) with that many
+// layers. One type, so no caller has a flag and an out-parameter to keep in
+// step.
+struct VarShape {
+  enum class Offer : std::uint8_t { no, flat, layered };
+  Offer offer{Offer::no};
+  std::size_t layers{0};  // of a layered variable
+  friend bool operator==(const VarShape&, const VarShape&) = default;
 };
 
-bool readable(nc::Type t) {
-  return t == nc::Type::byte or t == nc::Type::short_ or t == nc::Type::int_ or
-         t == nc::Type::float_ or t == nc::Type::double_;
-}
-
-std::optional<std::size_t> layers_of(const nc::VarInfo& var,
-                                     const Structure& structure,
-                                     bool& offered) {
+VarShape shape_of(const nc::VarInfo& var, const Structure& structure) {
   const auto& dims = var.dims;
-  offered = false;
-  if (dims.size() < 2 or dims[0].id != structure.time_dim.id or
-      dims[1].id != structure.stations_dim.id) {
-    return std::nullopt;
+  const bool over_time_and_stations = dims.size() >= 2 and
+                                      dims[0].id == structure.time_dim.id and
+                                      dims[1].id == structure.stations_dim.id;
+  if (not over_time_and_stations) {
+    return {};
   }
   if (dims.size() == 2) {
-    offered = true;
-    return std::nullopt;
+    return {.offer = VarShape::Offer::flat, .layers = 0};
   }
   // Variables on laydimw (layer interfaces) are not offered.
   if (dims.size() == 3 and structure.laydim and
       dims[2].id == structure.laydim->id) {
-    offered = true;
-    return structure.laydim->length;
+    return {.offer = VarShape::Offer::layered,
+            .layers = structure.laydim->length};
   }
-  return std::nullopt;
+  return {};
 }
+
+// A variable the file offers.
+struct Listed {
+  nc::VarInfo info;
+  VarShape shape;
+
+  [[nodiscard]] std::optional<std::size_t> layers() const {
+    return shape.offer == VarShape::Offer::layered ? std::optional{shape.layers}
+                                                   : std::nullopt;
+  }
+};
 
 struct Listing {
   std::vector<Listed> variables;
@@ -251,70 +264,69 @@ std::expected<Listing, Error> list_variables(const nc::File& file,
   }
   Listing out;
   for (nc::VarInfo& var : *all) {
-    bool offered = false;
-    const auto layers = layers_of(var, structure, offered);
-    if (not offered) {
+    const VarShape shape = shape_of(var, structure);
+    if (shape.offer == VarShape::Offer::no) {
       continue;
     }
-    if (not readable(var.type)) {
+    if (not nc::sample_readable(var.type)) {
       out.warnings.push_back({.code = WarningCode::skipped_variable,
                               .subject = std::string{var.name.view()},
                               .count = 1});
       continue;
     }
-    out.variables.push_back({.info = std::move(var), .layers = layers});
+    out.variables.push_back({.info = std::move(var), .shape = shape});
   }
   return out;
 }
 
-const Listed* find_listed(const std::vector<Listed>& listed,
+const Listed* find_listed(std::span<const Listed> listed,
                           std::string_view name) {
   const auto it = std::ranges::find_if(
       listed, [name](const Listed& l) { return l.info.name == name; });
   return it == listed.end() ? nullptr : &*it;
 }
 
-// The Flat or Layered entry for `source`, from variables of one shape.
+// The shape that all the inputs of `d` have, if they are all in the file and
+// agree. (The 3-D speed needs layered inputs.)
+std::optional<VarShape> common_shape(std::span<const Listed> listed,
+                                     const DerivedRow& row) {
+  // The shapes of the inputs, in order (a transform that stops at an input the
+  // file does not have; ranges::to is not on every standard library yet).
+  std::vector<VarShape> shapes;
+  shapes.reserve(row.inputs.size());
+  for (const std::string_view name : row.inputs) {
+    const Listed* l = find_listed(listed, name);
+    if (l == nullptr) {
+      return std::nullopt;
+    }
+    shapes.push_back(l->shape);
+  }
+  if (std::ranges::adjacent_find(shapes, std::ranges::not_equal_to{}) !=
+      shapes.end()) {
+    return std::nullopt;
+  }
+  if (row.derived == DflowDerived::current_speed_3d and
+      shapes.front().offer != VarShape::Offer::layered) {
+    return std::nullopt;
+  }
+  return shapes.front();
+}
+
+// The Flat or Layered entry for `source`.
 DflowVariable entry_for(DflowSource source, std::string long_name,
-                        std::optional<std::size_t> layers) {
-  if (layers) {
+                        const VarShape& shape) {
+  if (shape.offer == VarShape::Offer::layered) {
     return Layered{.source = std::move(source),
                    .long_name = std::move(long_name),
-                   .layers = *layers};
+                   .layers = shape.layers};
   }
   return Flat{.source = std::move(source), .long_name = std::move(long_name)};
 }
 
-// Whether every input of `d` is in the file with one shape: the shape.
-struct Shape {
-  bool ok;
-  std::optional<std::size_t> layers;
-};
-
-Shape shape_of_inputs(const std::vector<Listed>& listed, DflowDerived d) {
-  const Inputs inputs = inputs_of(d);
-  std::optional<Shape> shape;
-  for (std::size_t i = 0; i < inputs.count; ++i) {
-    const Listed* l = find_listed(listed, inputs.names[i]);
-    if (l == nullptr or (shape and shape->layers != l->layers)) {
-      return {.ok = false, .layers = std::nullopt};
-    }
-    shape = Shape{.ok = true, .layers = l->layers};
-  }
-  return shape.value_or(Shape{.ok = false, .layers = std::nullopt});
-}
-
-// The 3-D speed is for layered variables only.
-bool derivable(const std::vector<Listed>& listed, DflowDerived d,
-               Shape& shape) {
-  shape = shape_of_inputs(listed, d);
-  return shape.ok and
-         (d != DflowDerived::current_speed_3d or shape.layers.has_value());
-}
-
 std::expected<std::vector<DflowVariable>, Error> variables_of(
-    const nc::File& file, const std::vector<Listed>& listed) {
+    const nc::File& file, std::span<const Listed> listed) {
   std::vector<DflowVariable> out;
+  out.reserve(listed.size() + catalog_order.size());
   for (const Listed& l : listed) {
     auto label = detail::optional_text(file, l.info.name, "long_name");
     if (not label) {
@@ -323,33 +335,45 @@ std::expected<std::vector<DflowVariable>, Error> variables_of(
     std::string long_name = *label and not cut_at_nul(**label).empty()
                                 ? simplified(cut_at_nul(**label))
                                 : std::string{l.info.name.view()};
-    out.push_back(entry_for(l.info.name, std::move(long_name), l.layers));
+    out.push_back(entry_for(l.info.name, std::move(long_name), l.shape));
   }
-  for (const DerivedRow& row : derived_rows) {
-    Shape shape{.ok = false, .layers = std::nullopt};
-    if (derivable(listed, row.derived, shape)) {
-      out.push_back(
-          entry_for(row.derived, std::string{row.long_name}, shape.layers));
+  for (const DflowDerived d : catalog_order) {
+    const DerivedRow& row = row_of(d);
+    if (const auto shape = common_shape(listed, row)) {
+      out.push_back(entry_for(d, std::string{row.long_name}, *shape));
     }
   }
   return out;
 }
 
 // ---- one variable's meta
-// -------------------------------------------------------------------
+// -------------------------------------------------------------
 
 struct NamedQuantity {
   std::string_view name;
   core::Quantity quantity;
+  std::string_view grid_token;  // what it is on a projected grid
 };
 
 // D-Flow FM's names for the registry quantities (LF section 4, SN section 6).
+// On a projected grid the components are along the grid's axes (design
+// decision 28): CF's names for those.
 constexpr std::array<NamedQuantity, 5> dflow_quantities{{
-    {.name = "waterlevel", .quantity = core::Quantity::water_level},
-    {.name = "x_velocity", .quantity = core::Quantity::current_u},
-    {.name = "y_velocity", .quantity = core::Quantity::current_v},
-    {.name = "windx", .quantity = core::Quantity::wind_u},
-    {.name = "windy", .quantity = core::Quantity::wind_v},
+    {.name = "waterlevel",
+     .quantity = core::Quantity::water_level,
+     .grid_token = ""},
+    {.name = "x_velocity",
+     .quantity = core::Quantity::current_u,
+     .grid_token = "sea_water_x_velocity"},
+    {.name = "y_velocity",
+     .quantity = core::Quantity::current_v,
+     .grid_token = "sea_water_y_velocity"},
+    {.name = "windx",
+     .quantity = core::Quantity::wind_u,
+     .grid_token = "x_wind"},
+    {.name = "windy",
+     .quantity = core::Quantity::wind_v,
+     .grid_token = "y_wind"},
 }};
 
 struct Described {
@@ -357,8 +381,61 @@ struct Described {
   std::vector<Warning> warnings;
 };
 
+// The quantity of variable `name`: the table's (or its grid-relative generic
+// on a projected grid), a registry token, a token of its own, or `value`.
+core::QuantityId quantity_of(std::string_view name,
+                             std::string_view standard_name, CrsKind grid,
+                             std::vector<Warning>& warnings) {
+  const auto named =
+      std::ranges::find(dflow_quantities, name, &NamedQuantity::name);
+  if (named != dflow_quantities.end()) {
+    if (grid == CrsKind::projected and not named->grid_token.empty()) {
+      return core::GenericQuantity::parse({.token = named->grid_token,
+                                           .standard_name = named->grid_token})
+          .value_or(core::GenericQuantity::value());
+    }
+    return named->quantity;
+  }
+  if (const auto registry = core::parse_quantity_token(name)) {
+    return *registry;
+  }
+  if (auto generic = core::GenericQuantity::parse(
+          {.token = name, .standard_name = standard_name})) {
+    return *std::move(generic);
+  }
+  warnings.push_back({.code = WarningCode::unknown_quantity,
+                      .subject = std::string{name},
+                      .count = 1});
+  return core::GenericQuantity::value();
+}
+
+// The unit of the `units` attribute; absent, the registry quantity's own.
+std::optional<core::Unit> unit_of(const std::optional<std::string>& units,
+                                  const core::QuantityId& quantity,
+                                  std::string_view name,
+                                  std::vector<Warning>& warnings) {
+  std::optional<core::Unit> unit;
+  if (units) {
+    unit = core::parse_unit(cut_at_nul(*units));
+  }
+  if (not unit) {
+    if (const auto* registry = std::get_if<core::Quantity>(&quantity)) {
+      return core::canonical_unit(*registry);
+    }
+    return std::nullopt;
+  }
+  if (const auto* other = std::get_if<core::OtherUnit>(&*unit);
+      other != nullptr and not core::is_canonical_other(*other)) {
+    warnings.push_back({.code = WarningCode::unrecognized_unit,
+                        .subject = std::string{name},
+                        .count = 1});
+  }
+  return unit;
+}
+
 std::expected<Described, Error> describe_variable(const nc::File& file,
-                                                  const nc::VarInfo& var) {
+                                                  const nc::VarInfo& var,
+                                                  CrsKind grid) {
   const std::string_view name = var.name.view();
   auto label = detail::optional_text(file, var.name, "long_name");
   auto standard = detail::optional_text(file, var.name, "standard_name");
@@ -373,40 +450,11 @@ std::expected<Described, Error> describe_variable(const nc::File& file,
     return std::unexpected{std::move(units.error())};
   }
   Described out{.meta = {}, .warnings = {}};
-
-  core::QuantityId quantity;
-  if (const auto it =
-          std::ranges::find(dflow_quantities, name, &NamedQuantity::name);
-      it != dflow_quantities.end()) {
-    quantity = it->quantity;
-  } else if (const auto registry = core::parse_quantity_token(name)) {
-    quantity = *registry;
-  } else if (auto generic = core::GenericQuantity::parse(
-                 {.token = name,
-                  .standard_name = *standard ? cut_at_nul(**standard)
-                                             : std::string_view{}})) {
-    quantity = *std::move(generic);
-  } else {
-    quantity = core::GenericQuantity::value();
-    out.warnings.push_back({.code = WarningCode::unknown_quantity,
-                            .subject = std::string{name},
-                            .count = 1});
-  }
-
-  std::optional<core::Unit> unit;
-  if (*units) {
-    unit = core::parse_unit(cut_at_nul(**units));
-  }
-  if (not unit) {
-    if (const auto* registry = std::get_if<core::Quantity>(&quantity)) {
-      unit = core::canonical_unit(*registry);
-    }
-  } else if (const auto* other = std::get_if<core::OtherUnit>(&*unit);
-             other != nullptr and not core::is_canonical_other(*other)) {
-    out.warnings.push_back({.code = WarningCode::unrecognized_unit,
-                            .subject = std::string{name},
-                            .count = 1});
-  }
+  core::QuantityId quantity =
+      quantity_of(name, *standard ? cut_at_nul(**standard) : std::string_view{},
+                  grid, out.warnings);
+  std::optional<core::Unit> unit =
+      unit_of(*units, quantity, name, out.warnings);
   out.meta = core::SeriesMeta::make(
       {.quantity = std::move(quantity),
        .label = *label and not cut_at_nul(**label).empty()
@@ -417,7 +465,7 @@ std::expected<Described, Error> describe_variable(const nc::File& file,
 }
 
 // ---- reading one variable
-// ------------------------------------------------------------------
+// ------------------------------------------------------------
 
 struct Component {
   std::string name;
@@ -440,95 +488,138 @@ core::Sample sample_of(const nc::Masking<T>& mask, T raw,
   return mask.apply(raw);
 }
 
-std::expected<Component, Error> read_component(
-    const nc::File& file, const Listed& listed,
-    std::optional<std::size_t> layer, std::size_t times,
-    std::span<const std::size_t> selection, const StopToken& stop) {
-  const nc::VarInfo& var = listed.info;
-  auto described = describe_variable(file, var);
+// What every component of a read has in common.
+struct ComponentSource {
+  const nc::File& file;
+  CrsKind grid;
+  std::size_t times;
+  int station_dim;
+  std::optional<std::size_t> layer;
+  std::span<const std::size_t> selection;
+  const StopToken& stop;
+};
+
+std::expected<Component, Error> read_component(const ComponentSource& source,
+                                               const nc::VarInfo& var) {
+  auto described = describe_variable(source.file, var, source.grid);
   if (not described) {
     return std::unexpected{std::move(described.error())};
   }
-  Component out{.name = std::string{var.name.view()},
-                .meta = std::move(described->meta),
-                .columns = detail::empty_columns(selection.size(), times),
-                .nonfinite = 0,
-                .warnings = std::move(described->warnings)};
+  Component out{
+      .name = std::string{var.name.view()},
+      .meta = std::move(described->meta),
+      .columns = detail::empty_columns(source.selection.size(), source.times),
+      .nonfinite = 0,
+      .warnings = std::move(described->warnings)};
   // Nearby stations share a read, as far as the file's chunks make that cheap.
-  const auto groups = detail::plan_groups(file, var, selection, std::nullopt);
+  const auto groups = detail::plan_groups(source.file, var, source.station_dim,
+                                          source.selection, std::nullopt);
   if (not groups) {
     return std::unexpected{groups.error()};
   }
-  const detail::GatherPlan plan{
-      .variable = var.name, .times = times, .layer = layer, .groups = *groups};
+  const detail::GatherPlan plan{.variable = var.name,
+                                .times = source.times,
+                                .layer = source.layer,
+                                .groups = *groups};
   const auto run = [&]<nc::Numeric T>() -> std::expected<void, Error> {
-    const auto mask = file.masking<T>(var.name);
+    const auto mask = source.file.masking<T>(var.name);
     if (not mask) {
       return fail(mask.error());
     }
-    return detail::gather<T>(
-        file, plan, stop, [&](std::size_t position, std::size_t t, T raw) {
-          out.columns[position][t] = sample_of(*mask, raw, out.nonfinite);
-        });
+    return detail::gather<T>(source.file, plan, source.stop,
+                             [&](std::size_t position, std::size_t t, T raw) {
+                               out.columns[position][t] =
+                                   sample_of(*mask, raw, out.nonfinite);
+                             });
   };
-  const auto done =
-      nc::dispatch_numeric(var.type, run, [&]() -> std::expected<void, Error> {
-        return fail(detail::nc_fault(file, WrapperFault::type_mismatch,
-                                     NcOp::get_var, var.name.view()));
-      });
-  if (not done) {
-    return std::unexpected{done.error()};
+  if (auto done = detail::dispatch_model_numeric(source.file, var, run);
+      not done) {
+    return std::unexpected{std::move(done.error())};
   }
   return out;
 }
 
 // ---- derived variables
-// -------------------------------------------------------------------
+// -------------------------------------------------------------
 
-FormatError alignment_error(std::string_view subject) {
-  return format_error(FormatErrc::noncanonical_unit, std::string{subject});
-}
-
-std::expected<core::TimeSeries, Error> series_of(const core::TimeAxis& axis,
-                                                 const Component& component,
-                                                 std::size_t position) {
-  auto series =
-      core::TimeSeries::make(axis, component.columns[position], component.meta);
-  if (not series) {
-    return fail(format_error(FormatErrc::dimension_mismatch, component.name));
+// The alignment errors of core, as FormatErrors: units that are unknown or
+// differ are a unit problem; the rest cannot happen to columns of one axis
+// and are a shape problem.
+FormatError alignment_error(core::VectorErrc code, std::string subject) {
+  switch (code) {
+    case core::VectorErrc::unit_unknown:
+    case core::VectorErrc::units_differ:
+      return format_error(FormatErrc::noncanonical_unit, std::move(subject));
+    case core::VectorErrc::not_a_vector_pair:
+    case core::VectorErrc::times_differ:
+      return format_error(FormatErrc::dimension_mismatch, std::move(subject));
   }
-  return *std::move(series);
+  return format_error(FormatErrc::dimension_mismatch, std::move(subject));
 }
 
-// The derived series of one station.
+FormatError alignment_error(core::VerticalErrc code, std::string subject) {
+  switch (code) {
+    case core::VerticalErrc::unit_unknown:
+    case core::VerticalErrc::units_differ:
+      return format_error(FormatErrc::noncanonical_unit, std::move(subject));
+    case core::VerticalErrc::not_generic:
+    case core::VerticalErrc::times_differ:
+      return format_error(FormatErrc::dimension_mismatch, std::move(subject));
+  }
+  return format_error(FormatErrc::dimension_mismatch, std::move(subject));
+}
+
+// Registry components pair as they are; the generic ones of a projected grid
+// are declared to be components (design decision 28).
+std::expected<core::VectorSeries, core::VectorErrc> pair_of(
+    core::TimeSeries u, core::TimeSeries v) {
+  const bool registered =
+      std::holds_alternative<core::Quantity>(u.meta().quantity());
+  return registered ? core::VectorSeries::make(std::move(u), std::move(v))
+                    : core::VectorSeries::assume_components(std::move(u),
+                                                            std::move(v));
+}
+
+// The derived series of one station. Its input columns are moved into the
+// series, so the inputs never exist twice (the axis is copied for the series,
+// one station at a time).
 std::expected<core::TimeSeries, Error> derive_one(
-    DflowDerived d, const core::TimeAxis& axis,
-    const std::vector<Component>& components, std::size_t position) {
+    DflowDerived d, CrsKind grid, const core::TimeAxis& axis,
+    std::vector<Component>& components, std::size_t position) {
   std::vector<core::TimeSeries> series;
-  for (const Component& c : components) {
-    auto s = series_of(axis, c, position);
+  series.reserve(components.size());
+  for (Component& c : components) {
+    auto s =
+        core::TimeSeries::make(axis, std::move(c.columns[position]), c.meta);
     if (not s) {
-      return std::unexpected{std::move(s.error())};
+      return fail(format_error(FormatErrc::dimension_mismatch, c.name));
     }
     series.push_back(*std::move(s));
   }
   const std::string subject = components[0].name + ", " + components[1].name;
-  auto vector =
-      core::VectorSeries::make(std::move(series[0]), std::move(series[1]));
+  auto vector = pair_of(std::move(series[0]), std::move(series[1]));
   if (not vector) {
-    return fail(alignment_error(subject));
+    return fail(alignment_error(vector.error(), subject));
   }
   switch (d) {
     case DflowDerived::current_speed_2d:
     case DflowDerived::wind_speed:
       return vector->magnitude();
     case DflowDerived::current_direction_2d:
-    case DflowDerived::wind_direction:
-      return vector->cartesian_direction();
+    case DflowDerived::wind_direction: {
+      core::TimeSeries direction = vector->cartesian_direction();
+      if (grid == CrsKind::projected) {
+        const std::string label =
+            "grid-relative " + std::string{direction.meta().label()};
+        return std::move(direction).with_label(label);
+      }
+      return direction;
+    }
     case DflowDerived::current_speed_3d: {
       auto speed = core::magnitude3(*vector, series[2]);
       if (not speed) {
-        return fail(alignment_error(subject + ", " + components[2].name));
+        return fail(alignment_error(speed.error(),
+                                    subject + ", " + components[2].name));
       }
       return *std::move(speed);
     }
@@ -536,13 +627,12 @@ std::expected<core::TimeSeries, Error> derive_one(
   return fail(format_error(FormatErrc::dimension_mismatch, subject));
 }
 
-std::expected<core::Variable, Error> derive(DflowDerived d,
+std::expected<core::Variable, Error> derive(DflowDerived d, CrsKind grid,
                                             const core::TimeAxis& axis,
                                             std::vector<Component>& components,
                                             std::size_t selected) {
   // The meta is that of an empty station's series, so it exists with no
   // station selected.
-  const core::TimeAxis none;
   std::vector<Component> shapes;
   shapes.reserve(components.size());
   for (const Component& c : components) {
@@ -552,14 +642,14 @@ std::expected<core::Variable, Error> derive(DflowDerived d,
                       .nonfinite = 0,
                       .warnings = {}});
   }
-  auto meta = derive_one(d, none, shapes, 0);
+  auto meta = derive_one(d, grid, core::TimeAxis{}, shapes, 0);
   if (not meta) {
     return std::unexpected{std::move(meta.error())};
   }
   core::Variable out{.meta = meta->meta(), .per_station = {}};
   out.per_station.reserve(selected);
   for (std::size_t position = 0; position < selected; ++position) {
-    auto series = derive_one(d, axis, components, position);
+    auto series = derive_one(d, grid, axis, components, position);
     if (not series) {
       return std::unexpected{std::move(series.error())};
     }
@@ -571,7 +661,7 @@ std::expected<core::Variable, Error> derive(DflowDerived d,
 }  // namespace
 
 // ---- the vocabulary
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------
 
 std::string_view to_token(DflowDerived d) noexcept { return row_of(d).token; }
 
@@ -584,17 +674,17 @@ std::optional<DflowDerived> parse_dflow_derived(
   return it->derived;
 }
 
-std::expected<Layer, FormatError> Layer::make(const Layered& v,
-                                              std::size_t one_based) {
+std::expected<AtLayer, FormatError> AtLayer::make(const Layered& v,
+                                                  std::size_t one_based) {
   if (one_based < 1 or one_based > v.layers) {
     return std::unexpected{format_error(FormatErrc::layer_out_of_range,
                                         v.long_name, std::nullopt, one_based)};
   }
-  return Layer{one_based - 1};
+  return AtLayer{v.source, one_based - 1};
 }
 
 // ---- inspect
-// ------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 std::expected<Read<DflowCatalog>, Error> inspect_dflow(
     const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
@@ -622,19 +712,16 @@ std::expected<Read<DflowCatalog>, Error> inspect_dflow(
       not size) {
     return std::unexpected{std::move(size.error())};
   }
-  std::vector<std::size_t> all(structure->stations_dim.length);
-  std::ranges::copy(std::views::iota(std::size_t{0}, all.size()), all.begin());
-  auto stations = detail::read_stations(
-      *file, station_variables(structure->stations_dim), crs, all, ctx.stop);
+  const core::StationSelection all =
+      core::StationSelection::all(structure->stations_dim.length);
+  auto stations = detail::read_stations(*file, station_variables(*structure),
+                                        crs, all.indices(), ctx.stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
   std::vector<Warning> warnings = std::move(time->warnings);
-  for (auto* more : {&stations->warnings, &listing->warnings}) {
-    for (Warning& w : *more) {
-      warnings.push_back(std::move(w));
-    }
-  }
+  detail::append(warnings, std::move(stations->warnings));
+  detail::append(warnings, std::move(listing->warnings));
   return Read<DflowCatalog>{.value = {.stations = std::move(stations->value),
                                       .variables = *std::move(variables),
                                       .times = structure->time_dim.length,
@@ -644,59 +731,54 @@ std::expected<Read<DflowCatalog>, Error> inspect_dflow(
 }
 
 // ---- read
-// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 namespace {
 
-// What the request asks for, resolved against the file.
+// What the request asks for, resolved against nothing yet: the source, and the
+// zero-based layer of a layered variable.
 struct Target {
   DflowSource source;
-  std::string long_name;
-  std::optional<std::size_t> layer;  // zero-based, for a layered variable
+  std::optional<std::size_t> layer;
 };
 
 Target target_of(const DflowChoice& choice) {
-  if (const auto* flat = std::get_if<Flat>(&choice)) {
-    return {.source = flat->source,
-            .long_name = flat->long_name,
-            .layer = std::nullopt};
+  if (const auto* flat = std::get_if<FlatChoice>(&choice)) {
+    return {.source = flat->source, .layer = std::nullopt};
   }
   const auto& at = std::get<AtLayer>(choice);
-  return {.source = at.variable.source,
-          .long_name = at.variable.long_name,
-          .layer = at.layer.zero_based()};
+  return {.source = at.source(), .layer = at.zero_based()};
 }
 
-// The variables the target reads and that they have the shape it asks for:
-// flat for Flat, layered with a layer inside the file's layers for AtLayer.
-std::expected<std::vector<const Listed*>, Error> resolve(
-    const std::vector<Listed>& listed, const Target& target) {
+// The variables the target reads, and that they have the shape it asks for:
+// flat for FlatChoice, layered with a layer inside the file's layers for
+// AtLayer.
+std::expected<std::vector<Listed>, Error> resolve(
+    std::span<const Listed> listed, const Target& target) {
   std::vector<std::string_view> names;
   if (const auto* name = std::get_if<nc::NcName>(&target.source)) {
     names.push_back(name->view());
   } else {
-    const Inputs inputs = inputs_of(std::get<DflowDerived>(target.source));
-    names.assign(
-        inputs.names.begin(),
-        inputs.names.begin() + static_cast<std::ptrdiff_t>(inputs.count));
+    const auto inputs = row_of(std::get<DflowDerived>(target.source)).inputs;
+    names.assign(inputs.begin(), inputs.end());
   }
-  std::vector<const Listed*> out;
+  std::vector<Listed> out;
   for (const std::string_view name : names) {
     const Listed* l = find_listed(listed, name);
     if (l == nullptr) {
       return fail(
           format_error(FormatErrc::missing_variable, std::string{name}));
     }
-    if (l->layers.has_value() != target.layer.has_value()) {
+    if (l->layers().has_value() != target.layer.has_value()) {
       return fail(
           format_error(FormatErrc::dimension_mismatch, std::string{name}));
     }
-    if (l->layers and *target.layer >= *l->layers) {
+    if (target.layer and *target.layer >= l->shape.layers) {
       return fail(format_error(FormatErrc::layer_out_of_range,
                                std::string{name}, std::nullopt,
                                *target.layer + 1));
     }
-    out.push_back(l);
+    out.push_back(*l);
   }
   return out;
 }
@@ -707,8 +789,7 @@ struct Setup {
   nc::File file;
   Structure structure;
   Target target;
-  std::vector<const Listed*> inputs;
-  Listing listing;  // owns what `inputs` points to
+  std::vector<Listed> inputs;
 };
 
 std::expected<Setup, Error> set_up(const std::filesystem::path& path,
@@ -737,7 +818,7 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
     return std::unexpected{std::move(inputs.error())};
   }
   if (auto size =
-          detail::check_result_size(*file, inputs->front()->info.name.view(),
+          detail::check_result_size(*file, inputs->front().info.name.view(),
                                     request.stations.indices().size(),
                                     structure->time_dim.length, inputs->size());
       not size) {
@@ -746,8 +827,7 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
   return Setup{.file = *std::move(file),
                .structure = *std::move(structure),
                .target = std::move(target),
-               .inputs = *std::move(inputs),
-               .listing = *std::move(listing)};
+               .inputs = *std::move(inputs)};
 }
 
 // The components of the target, read, and what was not finite in them.
@@ -759,13 +839,10 @@ struct Values {
 };
 
 std::expected<Values, Error> read_values(const Setup& setup,
-                                         std::span<const std::size_t> selection,
-                                         const StopToken& stop) {
+                                         const ComponentSource source) {
   Values out;
-  for (const Listed* input : setup.inputs) {
-    auto component =
-        read_component(setup.file, *input, setup.target.layer,
-                       setup.structure.time_dim.length, selection, stop);
+  for (const Listed& input : setup.inputs) {
+    auto component = read_component(source, input.info);
     if (not component) {
       return std::unexpected{std::move(component.error())};
     }
@@ -773,9 +850,7 @@ std::expected<Values, Error> read_values(const Setup& setup,
       out.nonfinite_in = component->name;
     }
     out.nonfinite += component->nonfinite;
-    for (Warning& w : component->warnings) {
-      out.warnings.push_back(std::move(w));
-    }
+    detail::append(out.warnings, std::move(component->warnings));
     out.components.push_back(*std::move(component));
   }
   return out;
@@ -783,10 +858,10 @@ std::expected<Values, Error> read_values(const Setup& setup,
 
 // The one column of the table: the variable itself, or the derived series.
 std::expected<core::Variable, Error> variable_of(
-    const Target& target, const core::TimeAxis& axis,
+    const Target& target, CrsKind grid, const core::TimeAxis& axis,
     std::vector<Component>& components, std::size_t selected) {
   if (const auto* derived = std::get_if<DflowDerived>(&target.source)) {
-    return derive(*derived, axis, components, selected);
+    return derive(*derived, grid, axis, components, selected);
   }
   return core::Variable{.meta = std::move(components[0].meta),
                         .per_station = std::move(components[0].columns)};
@@ -802,6 +877,10 @@ std::expected<Read<core::StationTable>, Error> read_dflow(
     return std::unexpected{std::move(setup.error())};
   }
   const std::span<const std::size_t> selection = request.stations.indices();
+  const auto grid = crs_kind(request.crs);
+  if (not grid) {
+    return fail(detail::to_format_error(grid.error(), std::nullopt));
+  }
   auto time = time_of(setup->file, setup->structure);
   if (not time) {
     return std::unexpected{std::move(time.error())};
@@ -811,25 +890,30 @@ std::expected<Read<core::StationTable>, Error> read_dflow(
   if (not axis) {
     return std::unexpected{std::move(axis.error())};
   }
-  auto stations = detail::read_stations(
-      setup->file, station_variables(setup->structure.stations_dim),
-      request.crs, selection, ctx.stop);
+  auto stations =
+      detail::read_stations(setup->file, station_variables(setup->structure),
+                            request.crs, selection, ctx.stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
-  auto values = read_values(*setup, selection, ctx.stop);
+  auto values =
+      read_values(*setup, {.file = setup->file,
+                           .grid = *grid,
+                           .times = setup->structure.time_dim.length,
+                           .station_dim = setup->structure.stations_dim.id,
+                           .layer = setup->target.layer,
+                           .selection = selection,
+                           .stop = ctx.stop});
   if (not values) {
     return std::unexpected{std::move(values.error())};
   }
-  auto variable =
-      variable_of(setup->target, *axis, values->components, selection.size());
+  auto variable = variable_of(setup->target, *grid, *axis, values->components,
+                              selection.size());
   if (not variable) {
     return std::unexpected{std::move(variable.error())};
   }
   std::vector<Warning> warnings = std::move(time->warnings);
-  for (Warning& w : values->warnings) {
-    warnings.push_back(std::move(w));
-  }
+  detail::append(warnings, std::move(values->warnings));
   append_if_counted(warnings, {.code = WarningCode::nonfinite_masked,
                                .subject = std::move(values->nonfinite_in),
                                .count = values->nonfinite});

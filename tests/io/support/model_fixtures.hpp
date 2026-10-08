@@ -21,6 +21,8 @@ namespace mov::test::ncgen {
 
 /// The external type of the data variables.
 enum class DataType { float64, float32, int8, int16, int32, int64, uint8 };
+/// The file format.
+enum class FileFormat { netcdf4, classic, offset64 };
 /// The external type of the time variable.
 enum class TimeType { float64, int64 };
 
@@ -64,6 +66,10 @@ struct AdcircNc {
   /// `time:calendar`; no attribute if empty.
   std::optional<std::string> time_calendar;
   std::optional<std::string> model{"ADCIRC"};
+  /// `model` is written as an integer, not text.
+  bool model_as_number{false};
+  /// The global `ics` (1 Cartesian, 2 spherical); none if empty.
+  std::optional<int> ics;
 
   /// Rows of `station_name` (NUL-padded to `name_len`; a row may hold junk
   /// after a NUL). No variable if empty.
@@ -74,6 +80,12 @@ struct AdcircNc {
   /// dimension 0).
   bool station_dim_first{false};
   bool fixed_time{false};
+  /// netcdf4 (HDF5), or a classic file: CDF-1, or CDF-2 (64-bit offsets). A
+  /// classic file has no chunks or compression (`chunks` and `deflate` are
+  /// ignored) and its variables are contiguous.
+  FileFormat format{FileFormat::netcdf4};
+  /// Deflate level of the data variables (shuffle on); 0 is none.
+  int deflate{0};
   /// The data variables are over (station, time), not (time, station).
   bool transposed_data{false};
   /// Chunk sizes (time, station) of the data variables; netCDF-C's default
@@ -136,6 +148,9 @@ struct DflowNc {
   bool omit_time_var{false};
   bool omit_coordinates{false};
   bool omit_names{false};
+  /// The coordinates are over (time, stations); step t is the position plus
+  /// 0.5 t (a model with moving stations).
+  bool coordinates_over_time{false};
 };
 
 void make_dflow_nc(const std::filesystem::path& path, const DflowNc& spec);

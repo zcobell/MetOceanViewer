@@ -110,8 +110,25 @@ std::vector<double> default_times(std::size_t steps, double dt) {
 
 // ---- ADCIRC ----------------------------------------------------------------
 
+namespace {
+
+int create_mode(FileFormat format) {
+  switch (format) {
+    case FileFormat::netcdf4:
+      return NC_NETCDF4;
+    case FileFormat::classic:
+      return 0;
+    case FileFormat::offset64:
+      return NC_64BIT_OFFSET;
+  }
+  return NC_NETCDF4;
+}
+
+}  // namespace
+
 void make_adcirc_nc(const std::filesystem::path& path, const AdcircNc& spec) {
-  Raw f{path};
+  Raw f{path, create_mode(spec.format)};
+  const bool netcdf4 = spec.format == FileFormat::netcdf4;
   int time_dim = 0;
   int station_dim = 0;
   const std::size_t time_length = spec.fixed_time ? spec.steps : NC_UNLIMITED;
@@ -123,8 +140,16 @@ void make_adcirc_nc(const std::filesystem::path& path, const AdcircNc& spec) {
     station_dim = f.dim("station", spec.stations);
   }
   f.text(NC_GLOBAL, "base_date", "seconds since Met");
-  if (spec.model) {
+  if (spec.model and spec.model_as_number) {
+    const int number = 7;
+    check(nc_put_att_int(f.id(), NC_GLOBAL, "model", NC_INT, 1, &number),
+          "model");
+  } else if (spec.model) {
     f.text(NC_GLOBAL, "model", *spec.model);
+  }
+  if (spec.ics) {
+    const int ics = *spec.ics;
+    check(nc_put_att_int(f.id(), NC_GLOBAL, "ics", NC_INT, 1, &ics), "ics");
   }
   const double dt = 600.0;
   check(nc_put_att_double(f.id(), NC_GLOBAL, "dt", NC_DOUBLE, 1, &dt), "dt");
@@ -162,9 +187,12 @@ void make_adcirc_nc(const std::filesystem::path& path, const AdcircNc& spec) {
         f.var(name.c_str(), type,
               spec.transposed_data ? std::vector<int>{station_dim, time_dim}
                                    : std::vector<int>{time_dim, station_dim});
-    if (not spec.chunks.empty()) {
+    if (netcdf4 and not spec.chunks.empty()) {
       check(nc_def_var_chunking(f.id(), id, NC_CHUNKED, spec.chunks.data()),
             "chunking");
+    }
+    if (netcdf4 and spec.deflate > 0) {
+      check(nc_def_var_deflate(f.id(), id, 1, 1, spec.deflate), "deflate");
     }
     if (spec.fill) {
       put_double_att(f, id, "_FillValue", type, *spec.fill);
@@ -298,8 +326,11 @@ void make_dflow_nc(const std::filesystem::path& path, const DflowNc& spec) {
     names = f.var("station_name", NC_CHAR, dims_of({station_dim, name_len}));
   }
   if (not spec.omit_coordinates) {
-    xs = f.var("station_x_coordinate", coordinate_type, dims_of({station_dim}));
-    ys = f.var("station_y_coordinate", coordinate_type, dims_of({station_dim}));
+    const std::vector<int> coordinate_dims =
+        spec.coordinates_over_time ? dims_of({time_dim, station_dim})
+                                   : dims_of({station_dim});
+    xs = f.var("station_x_coordinate", coordinate_type, coordinate_dims);
+    ys = f.var("station_y_coordinate", coordinate_type, coordinate_dims);
   }
   std::vector<int> ids;
   for (const DflowVar& v : spec.vars) {
@@ -340,10 +371,24 @@ void make_dflow_nc(const std::filesystem::path& path, const DflowNc& spec) {
         y[s] = 40.0 + 0.5 * static_cast<double>(s);
       }
     }
-    const std::vector<std::size_t> start{0};
-    const std::vector<std::size_t> count{spec.stations};
-    put_block(f, xs, start, count, x);
-    put_block(f, ys, start, count, y);
+    if (spec.coordinates_over_time) {
+      // Step t is the position plus 0.5 t.
+      std::vector<double> xt(spec.steps * spec.stations);
+      std::vector<double> yt(xt.size());
+      for (std::size_t t = 0; t < spec.steps; ++t) {
+        for (std::size_t s = 0; s < spec.stations; ++s) {
+          xt[(t * spec.stations) + s] = x[s] + (0.5 * static_cast<double>(t));
+          yt[(t * spec.stations) + s] = y[s] + (0.5 * static_cast<double>(t));
+        }
+      }
+      put_block(f, xs, {0, 0}, {spec.steps, spec.stations}, xt);
+      put_block(f, ys, {0, 0}, {spec.steps, spec.stations}, yt);
+    } else {
+      const std::vector<std::size_t> start{0};
+      const std::vector<std::size_t> count{spec.stations};
+      put_block(f, xs, start, count, x);
+      put_block(f, ys, start, count, y);
+    }
   }
   const std::size_t rows = time_dim < 0 ? 1 : spec.steps;
   for (std::size_t k = 0; k < spec.vars.size(); ++k) {
