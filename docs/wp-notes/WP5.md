@@ -215,10 +215,15 @@ Text helpers (`detail/text.hpp`, `line_cursor.hpp`, `parse_at.hpp`)
   and in its own `PROJ_DATA`. **No build-tree path is compiled in** (the earlier
   `MOV_PROJ_DATA_DIR` definition is gone). The tests find the vcpkg copy through a
   compile definition of `test_projection.cpp` (`tests/io/CMakeLists.txt`), which warns at
-  configure when `proj.db` is not found. **Packaging (Phase 7) must ship `proj.db` and
-  call the setter.** Note that a search path *adds* nothing to what PROJ also tries (its
+  configure when `proj.db` is not found. **Packaging (Phase 1, `docs/packaging.md`) ships
+  `proj.db` and calls the setter.** Note that a search path *adds* nothing to what PROJ also tries (its
   compiled-in default can find a database anyway), so the tests provoke
   `database_unavailable` with a file named `proj.db` that is not a database.
+  **Changed by packaging:** the "compiled-in default" is a copy of proj.db built into the
+  static PROJ, which PROJ also falls back to when the file it is given cannot be opened.
+  A configured directory now means exactly `<dir>/proj.db` (`proj_context_set_database_path`
+  plus a check of the path PROJ reports), and `projection_database_path()` reports it;
+  `docs/packaging.md`, PROJ data.
 - PROJ logging is off (`PJ_LOG_NONE`); a failure is a result, not stderr noise.
 - Goldens: `tests/io/utm_reference.py` computes UTM 15N (Krueger series, GRS80) and Web
   Mercator without PROJ; the tests agree to 1e-7 degrees. The thread test uses

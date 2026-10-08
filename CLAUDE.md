@@ -96,12 +96,16 @@ tools/dev/run.sh cmake --build --preset dev-qt --target all_qmllint   # QML type
 # On a machine with a display: build natively and run build/<preset>/src/ui/metoceanviewer
 # (macOS: MetOceanViewer.app); see "Running the app" in tools/dev/README.md.
 
-# Packages (docs/packaging.md). The AppImage builds in the Ubuntu 22.04 image (glibc 2.35
-# floor); the DMG and the Windows installer natively (package-macos, package-windows) or in
-# CI (.github/workflows/package.yml: tags v*, manual runs; signing gated on secrets).
+# Packages (docs/packaging.md; macOS/Windows not yet run). The AppImage builds in the Ubuntu
+# 22.04 image (glibc 2.35 floor); the DMG and the Windows installer natively (package-macos,
+# package-windows) or in CI (.github/workflows/package.yml: tags v*, manual runs, packaging
+# PRs, weekly; signing gated on secrets in the `release` environment). Each package preset
+# builds RelWithDebInfo, runs ctest -LE gui, then cpack.
 MOV_DEV_IMAGE=appimage tools/dev/run.sh cmake --workflow --preset package-linux
-tools/dev/run.sh packaging/smoke-test.sh build/package-linux/packages/<name>.AppImage  # runs --self-test
+tools/dev/run.sh packaging/smoke-test.sh build/package-linux/packages/<name>.AppImage
+#   runs metoceanviewer --self-test and --self-test=render from the package
 tools/dev/run.sh python3 tools/make_icons.py       # after editing an icon SVG (outputs are committed)
+python3 tools/fetch_qt_licenses.py                 # after a Qt bump (packaging/licenses/qt)
 
 # clang-tidy gate (CI runs the same; the tidy preset includes the Qt layers):
 tools/dev/run.sh cmake --preset tidy

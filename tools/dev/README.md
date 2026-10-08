@@ -245,8 +245,11 @@ Studio developer prompt).
   `LINUXDEPLOY_*_SHA256` with its tag.
 - The Qt system packages of `tools/dev/appimage/Dockerfile` (Ubuntu 22.04
   names) follow the dev image's.
-- The committed icons (`packaging/icons/`): `tools/make_icons.py --check`
-  after editing their SVG sources.
+- The committed icons (`packaging/icons/`): `tools/make_icons.py`
+  after editing their SVG sources (the pre-commit hook `icons` checks), and
+  Qt's license texts (`packaging/licenses/qt/`): `tools/fetch_qt_licenses.py`
+  after a Qt bump.
+- The packaging values listed in `docs/packaging.md`, "Keep in sync".
 - `cmake_minimum_required` in `CMakeLists.txt` and `cmakeMinimumRequired` in
   `CMakePresets.json` follow `CMAKE_VERSION` (the only version CI exercises).
 - `actions/*` versions in the workflow and composite actions (Dependabot).
