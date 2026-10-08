@@ -213,6 +213,7 @@ enum class FormatErrc : std::uint8_t {
   dimension_mismatch,
   // writers
   empty_collection,
+  invalid_variable_name,  // a token the format cannot use as a variable name
 };
 
 /// A file that parses but does not mean what its format requires.

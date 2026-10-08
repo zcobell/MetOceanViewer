@@ -44,3 +44,6 @@ target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_n
 
 # ADCIRC netCDF station output and D-Flow FM history files (WP9).
 target_sources(mov_io PRIVATE adcirc_netcdf.cpp adcirc_schema.cpp dflow.cpp model_netcdf.cpp)
+
+# The v5 station netCDF writer and reader (WP10a).
+target_sources(mov_io PRIVATE station_netcdf.cpp station_netcdf_read.cpp station_netcdf_write.cpp)

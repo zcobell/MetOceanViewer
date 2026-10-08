@@ -30,7 +30,7 @@ Warning warning(WarningCode code, std::string subject = {},
 
 TEST_CASE("every WarningCode has its own stable token", "[io][warning]") {
   using mov::io::to_token;
-  const std::array<std::pair<WarningCode, std::string_view>, 32> expected{{
+  const std::array<std::pair<WarningCode, std::string_view>, 35> expected{{
       {WarningCode::times_reordered, "times_reordered"},
       {WarningCode::duplicate_times_dropped, "duplicate_times_dropped"},
       {WarningCode::conflicting_duplicate_times, "conflicting_duplicate_times"},
@@ -64,6 +64,9 @@ TEST_CASE("every WarningCode has its own stable token", "[io][warning]") {
       {WarningCode::crs_mismatch, "crs_mismatch"},
       {WarningCode::cold_start_differs, "cold_start_differs"},
       {WarningCode::coordinates_from_first_step, "coordinates_from_first_step"},
+      {WarningCode::unit_converted, "unit_converted"},
+      {WarningCode::station_name_substituted, "station_name_substituted"},
+      {WarningCode::native_position_dropped, "native_position_dropped"},
   }};
   for (const auto& [code, token] : expected) {
     CHECK(to_token(code) == token);

@@ -1,0 +1,35 @@
+netcdf ncdump_probe {
+dimensions:
+	n = 3 ;
+	u = UNLIMITED ; // (2 currently)
+variables:
+	byte b(n) ;
+		b:bytes = -128b, 0b, 1b ;
+	short s(n) ;
+		s:shorts = -32768s, 7s ;
+	int i ;
+		i:ints = -2147483647, 42 ;
+	int64 l(u) ;
+		l:longs = -9007199254740993LL, 5LL ;
+	float f(n) ;
+		f:floats = 9.96921e+36f, 0.1f, -2.5f, 1.e-10f, 0.f ;
+	double d(n, u) ;
+		d:_FillValue = -99999. ;
+		d:doubles = 0., 6378137., 298.257223563, 9.96920996838687e+36, 1.e+20, -1.5, 0.1, NaN ;
+	char c(n) ;
+		c:text = "q\"uote \\ it\'s\ttab\nline \001 é" ;
+	string str(n) ;
+		string str:strings = "one", "two \"q\"" ;
+	ubyte ub ;
+		ub:ubytes = 255UB ;
+	ushort us ;
+		us:ushorts = 65535US ;
+	uint ui ;
+		ui:uints = 4294967295U ;
+	uint64 ul ;
+		ul:ulongs = 18446744073709551615ULL ;
+
+// global attributes:
+		:title = "ncdump probe" ;
+		:version = 1. ;
+}

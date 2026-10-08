@@ -54,6 +54,10 @@ enum class WarningCode : std::uint8_t {
   crs_mismatch,  // the CRS the caller gave is not the kind the file says (ics)
   cold_start_differs,  // a given cold start is not the epoch of time:units
   coordinates_from_first_step,  // station coordinates over time: step 0 used
+  // station netCDF writer: what is written differs from the table
+  unit_converted,            // a column stored in its canonical unit
+  station_name_substituted,  // an empty name written as "Station <id>"
+  native_position_dropped,   // the file keeps WGS 84 only (SN 10.1)
 };
 
 /// A stable lower-case identifier, the same as the enumerator's name
