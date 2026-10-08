@@ -8,6 +8,7 @@
 #include <expected>
 #include <filesystem>
 #include <string>
+#include <system_error>
 #include <variant>
 #include <vector>
 
@@ -41,8 +42,12 @@ std::expected<void, Error> one_variable(NewFile& f) {
       .transform_error(mov::io::lift<Error>);
 }
 
+// Whether the platform's file system may refuse the path itself.
+enum class Refusal { never, apfs_non_utf8 };
+
 // Writes, reads back and checks a file at `path` (its directory must exist).
-void round_trip(const std::filesystem::path& path) {
+void round_trip(const std::filesystem::path& path,
+                [[maybe_unused]] const Refusal refusal = Refusal::never) {
   const auto written = write_netcdf_atomic(path, ReadLimits{}, one_variable);
 #if defined(_WIN32)
   // netCDF-C reads paths in the active code page; a path it cannot express
@@ -51,6 +56,17 @@ void round_trip(const std::filesystem::path& path) {
     const auto* nc = std::get_if<mov::io::NcError>(&written.error());
     REQUIRE(nc != nullptr);
     WARN("not opened on Windows: " << path.string());
+    return;
+  }
+#endif
+#if defined(__APPLE__)
+  // APFS rejects a file name that is not valid UTF-8 (EILSEQ), so there the
+  // write must fail with an error and leave no file; every other path must
+  // still round-trip.
+  if (refusal == Refusal::apfs_non_utf8 and not written) {
+    WARN("refused by the file system, as APFS does: " << path.string());
+    std::error_code ec;  // stat of such a name may itself fail with EILSEQ
+    CHECK_FALSE(std::filesystem::exists(path, ec));
     return;
   }
 #endif
@@ -92,6 +108,6 @@ TEST_CASE("nc_path passes POSIX bytes unchanged", "[io][netcdf][posix]") {
   const std::filesystem::path latin1{"\xe9t\xe9.nc"};
   CHECK(mov::io::nc::detail::nc_path(latin1).value() == "\xe9t\xe9.nc");
   const ScratchDir dir;
-  round_trip(dir.path() / latin1);
+  round_trip(dir.path() / latin1, Refusal::apfs_non_utf8);
 #endif
 }
