@@ -79,6 +79,43 @@ Production constexpr code is untouched. The runtime half of each gated check
 still runs on libc++ 18/19 (and the relaxed constexpr executables run the other
 checks at run time too).
 
+## macOS CI findings (run on `b2297a64`, macos-15, Xcode 16.2, arm64)
+
+1031 of 1034 tests passed; the three failures, and what was done:
+
+- `core_compile_fail_checks`: `reject_latlon_missing_field.cpp` and
+  `reject_swapped_designators.cpp` compiled. Both depend on a Clang diagnostic
+  (`-Wmissing-designated-field-initializers`, which is Clang 19+;
+  `-Wreorder-init-list`), and Apple Clang 16 (LLVM ~17) did not report them
+  under `-Wall -Wextra -Wpedantic -Werror`. Why it stayed silent for the
+  reordered case is not known: Clang 17.0.6 on Linux does report it for
+  the same file, so the cause is something in Apple's build; the probe
+  below covers either. Cases that need such a diagnostic carry
+  `// requires-diagnostic: <name>`; `tests/cmake/compile_fail/run.cmake` first
+  compiles a minimal probe of that kind. Apple Clang that compiles the probe
+  skips the case (printed as `SKIPPED`); any other compiler that compiles it
+  fails the test, so GCC and Clang cannot lose the check silently. The type
+  rules themselves are still enforced by the other cases and by Linux CI.
+- `nc_path passes POSIX bytes unchanged`: APFS refuses file names that are not
+  valid UTF-8 (`EILSEQ`), so writing `\xe9t\xe9.nc` fails there. The
+  `nc_path` identity check still runs everywhere; the write/read round trip on
+  Apple accepts a clean refusal (an `Error`, no file) and still round-trips if
+  a future macOS allows the name.
+- `mov_ui_qt_tests` aborted in dyld: `Library not loaded: @rpath/QMapLibre`.
+  Upstream builds QMapLibre, QMapLibreLocation and QMapLibreQuickPrivate as
+  frameworks on Apple, with install names
+  `@rpath/QMapLibre.framework/Versions/A/QMapLibre`. vcpkg's Mach-O fix-up
+  (`z_vcpkg_fixup_macho_rpath_in_dir`) sets every shared library's id to
+  `@rpath/<file name>`, which for a framework binary is the bare
+  `@rpath/QMapLibre`, and rewrites the dependents to match. No rpath
+  directory has such a file (the error lists exactly the app's two: the vcpkg
+  `lib` and Qt's `lib`). The overlay port now sets `VCPKG_FIXUP_MACHO_RPATH
+  OFF` on macOS, leaving CMake's framework ids; the executables' build rpaths
+  (vcpkg `lib`, Qt `lib`) then resolve the frameworks and, through rpath
+  inheritance, the staged `geoservices` plugin's dependencies. Not verified
+  (no macOS here); the port change invalidates the binary cache, so the next
+  macOS run rebuilds MapLibre.
+
 ## MSVC (no compiler available locally)
 
 Verified by reasoning and by emulation on Linux:

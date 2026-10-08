@@ -3,6 +3,7 @@
 
 // Designated initializers must follow declaration order, so a swapped
 // token / standard_name pair does not compile.
+// requires-diagnostic: reordered-designators
 
 #include "mov/core/quantity.hpp"
 
