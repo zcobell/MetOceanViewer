@@ -96,6 +96,11 @@ bool has_database(PJ_CONTEXT* ctx) {
 
 // Only a CRS whose coordinates are positions on the ground can be turned into
 // a Location: a vertical or geocentric CRS converts to meaningless angles.
+bool is_geographic_crs(const PJ* crs) {
+  const PJ_TYPE type = proj_get_type(crs);
+  return type == PJ_TYPE_GEOGRAPHIC_2D_CRS or type == PJ_TYPE_GEOGRAPHIC_3D_CRS;
+}
+
 bool is_horizontal_crs(const PJ* crs) {
   switch (proj_get_type(crs)) {
     case PJ_TYPE_GEOGRAPHIC_2D_CRS:
@@ -123,8 +128,9 @@ struct Projector::Impl {
   Object transformation;
 };
 
-Projector::Projector(core::Epsg crs, std::unique_ptr<Impl> impl) noexcept
-    : crs_{crs}, impl_{std::move(impl)} {}
+Projector::Projector(core::Epsg crs, CrsKind kind,
+                     std::unique_ptr<Impl> impl) noexcept
+    : crs_{crs}, kind_{kind}, impl_{std::move(impl)} {}
 
 Projector::Projector(Projector&&) noexcept = default;
 Projector& Projector::operator=(Projector&&) noexcept = default;
@@ -139,7 +145,7 @@ void set_projection_data_dir(const std::filesystem::path& dir) {
 
 std::expected<Projector, ProjectionError> Projector::make(core::Epsg crs) {
   if (crs == core::Epsg::wgs84()) {
-    return Projector{crs, nullptr};
+    return Projector{crs, CrsKind::geographic, nullptr};
   }
   const auto fail = [crs](ProjectionErrc code) {
     return std::unexpected{ProjectionError{.code = code, .crs = crs}};
@@ -166,9 +172,17 @@ std::expected<Projector, ProjectionError> Projector::make(core::Epsg crs) {
   if (not normalized) {
     return fail(ProjectionErrc::transform_failed);
   }
-  return Projector{crs, std::make_unique<Impl>(
-                            Impl{.context = std::move(context),
-                                 .transformation = std::move(normalized)})};
+  return Projector{
+      crs,
+      is_geographic_crs(source_crs.get()) ? CrsKind::geographic
+                                          : CrsKind::projected,
+      std::make_unique<Impl>(Impl{.context = std::move(context),
+                                  .transformation = std::move(normalized)})};
+}
+
+std::expected<CrsKind, ProjectionError> crs_kind(core::Epsg crs) {
+  return Projector::make(crs).transform(
+      [](const Projector& p) { return p.kind(); });
 }
 
 namespace {

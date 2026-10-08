@@ -50,6 +50,10 @@ enum class WarningCode : std::uint8_t {
   value_reads_as_missing,  // written text that a reader masks as a sentinel
   station_id_not_written,  // the format has no id: only the name was written
   rows_omitted,            // Missing and Dry samples the format cannot hold
+  // netCDF model output
+  crs_mismatch,  // the CRS the caller gave is not the kind the file says (ics)
+  cold_start_differs,  // a given cold start is not the epoch of time:units
+  coordinates_from_first_step,  // station coordinates over time: step 0 used
 };
 
 /// A stable lower-case identifier, the same as the enumerator's name

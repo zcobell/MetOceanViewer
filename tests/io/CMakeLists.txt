@@ -138,3 +138,23 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         PRIVATE "LINKER:--wrap=nc_open,--wrap=nc_create,--wrap=nc_close,--wrap=nc_abort,--wrap=nc_sync,--wrap=remove"
     )
 endif()
+
+# ---- ADCIRC netCDF station output and D-Flow FM history files (WP9) -------------
+#
+# The fixtures are written at test time with netCDF-C itself
+# (support/model_fixtures.cpp, in mov_nc_fixtures). The [legacy] tests read the
+# 4 MB ADCIRC files of the legacy tree and skip when it is absent.
+target_sources(mov_nc_fixtures PRIVATE support/model_fixtures.cpp)
+
+mov_add_test(
+    mov_io_model_netcdf_tests
+    SOURCES measure_adcirc_netcdf.cpp test_adcirc_netcdf.cpp test_dflow.cpp test_station_groups.cpp
+    LIBRARIES mov::io mov_nc_fixtures
+)
+target_compile_definitions(mov_io_model_netcdf_tests PRIVATE MOV_TEST_REPO_DIR="${PROJECT_SOURCE_DIR}")
+if(MOV_PROJ_DB)
+    target_compile_definitions(mov_io_model_netcdf_tests PRIVATE MOV_TEST_PROJ_DATA_DIR="${MOV_TEST_PROJ_DATA_DIR}")
+endif()
+
+# The model readers close their file on every path (needs the --wrap shims).
+target_sources(mov_io_netcdf_tests PRIVATE test_model_nc_handles.cpp)

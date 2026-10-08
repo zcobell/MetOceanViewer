@@ -53,6 +53,14 @@ TEST_CASE("every open is closed on every error path (B5)",
   const auto before = counts::counts();
   const Slab four{{.start = 0, .count = 4}};
   for (int i = 0; i < 1000; ++i) {
+    if (i % 5 == 4) {
+      // One handle per file: no other File is open here.
+      CHECK(not open(path, ReadLimits{.max_att_bytes = 1})
+                    .text_att(global, "nope")
+                    .value()
+                    .has_value());
+      continue;
+    }
     const File file = open(path);
     // v4 returned early from each of these without nc_close.
     switch (i % 5) {
@@ -65,21 +73,15 @@ TEST_CASE("every open is closed on every error path (B5)",
       case 2:
         CHECK(not file.text_att("nope", "units"));
         break;
-      case 3:
-        CHECK(not file.read_samples("v_int64", four));
-        break;
       default:
-        CHECK(not open(path, ReadLimits{.max_att_bytes = 1})
-                      .text_att(global, "nope")
-                      .value()
-                      .has_value());
+        CHECK(not file.read_samples("v_int64", four));
         break;
     }
   }
   const auto& now = counts::counts();
-  CHECK(now.opened - before.opened == 1200);
-  CHECK(now.closed - before.closed == 1200);
-  CHECK(now.close_calls - before.close_calls == 1200);
+  CHECK(now.opened - before.opened == 1000);
+  CHECK(now.closed - before.closed == 1000);
+  CHECK(now.close_calls - before.close_calls == 1000);
   CHECK(now.abort_calls == before.abort_calls);
 }
 

@@ -220,11 +220,11 @@ crashes. The tests avoid it by never holding two handles on a file whose strings
 are read.
 
 Readers that open the same file twice at once could hit it. v5 files have no
-`NC_STRING`, but foreign files may (SN §12.5). Options:
-- a process-wide "already open" refusal in `File::open`;
-- or documenting "one handle per file".
+`NC_STRING`, but foreign files may (SN §12.5).
 
-**Decision needed.** Not reported upstream yet.
+**Decision (maintainer, after WP6): one handle per file.** `File::open` documents it and
+debug builds assert on a second open of the same file (docs/wp-notes/WP9.md, "One handle
+per file"). Not reported upstream yet.
 
 ## Paths (Windows)
 
@@ -263,12 +263,37 @@ all six types.
     through the shared C++ library, which is not wrapped.
   - The B1 test settles its one accepted leak by hand.
 - Regression tags:
-  - B5: 1200 opens over five error paths.
+  - B5: 1000 opens over five error paths (WP9: the fifth path no longer opens
+    twice).
   - B6: missing file (no close call at all), unwritable directory.
   - B19: a fault at every atomic stage.
   - Others as before.
 - The re-entry death test uses `fork()`. The child sets `SIGABRT` to the default
   and `RLIMIT_CORE` to 0.
+
+## Changes made in WP9 (docs/wp-notes/WP9.md has the reasons)
+
+- **`File::open` and one handle per file.** Debug builds list the open files by
+  identity (`st_dev`/`st_ino`; Windows volume serial and file id, **not compiled
+  here**), taken when the file is opened. A second open of the same file asserts,
+  whatever the spelling of the path, the working directory, a symbolic or a hard
+  link; a file that cannot be examined (anything but "not there") asserts too.
+  The death tests pipe the child's standard error and match the message (glibc;
+  elsewhere only the abort is checked), and change directory between opens.
+- **`read_blocks` checks each block against the limits, not the whole slab.**
+  The rank, the bounds and the overflow of the total are still checked up front;
+  `max_elements` and `max_result_bytes` are checked per block (a block is
+  larger than `slab_elements` only when one outer index is). `read` and
+  `read_samples`, which return the whole slab, charge it whole as before.
+  A reader can therefore walk a slab of any size with one call; WP9's window
+  loop is gone. `read_limits.hpp` and the comment on the data reads say so.
+- **`nc::sample_readable(Type)`** (types.hpp): the types `read_samples` and a
+  reader built on it can read (byte, short, int, float, double). `read_samples`
+  uses it; so do the WP9 readers.
+- **`File::chunk_shape(name)`**: the chunk sizes, or nullopt for contiguous and
+  compact storage (and classic files).
+- **`File::reserve_chunk_cache(name, bytes)`**: grows the variable's chunk cache
+  (`nc_set_var_chunk_cache`); never shrinks it.
 
 ## Not verified here (Linux x86-64 only)
 

@@ -41,3 +41,6 @@ target_sources(
 )
 # IMEDS and CSV (WP7).
 target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_names.cpp)
+
+# ADCIRC netCDF station output and D-Flow FM history files (WP9).
+target_sources(mov_io PRIVATE adcirc_netcdf.cpp adcirc_schema.cpp dflow.cpp model_netcdf.cpp)

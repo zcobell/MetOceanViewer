@@ -12,7 +12,7 @@ namespace mov::io {
 namespace {
 
 // Indexed by the enumerator's value; the static_assert keeps it in step.
-constexpr std::array<std::string_view, 29> tokens{
+constexpr std::array<std::string_view, 32> tokens{
     "times_reordered",
     "duplicate_times_dropped",
     "conflicting_duplicate_times",
@@ -42,11 +42,15 @@ constexpr std::array<std::string_view, 29> tokens{
     "value_reads_as_missing",
     "station_id_not_written",
     "rows_omitted",
+    "crs_mismatch",
+    "cold_start_differs",
+    "coordinates_from_first_step",
 };
 
-static_assert(static_cast<std::size_t>(WarningCode::rows_omitted) + 1 ==
-                  tokens.size(),
-              "a WarningCode has no token");
+static_assert(
+    static_cast<std::size_t>(WarningCode::coordinates_from_first_step) + 1 ==
+        tokens.size(),
+    "a WarningCode has no token");
 
 }  // namespace
 

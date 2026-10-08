@@ -27,6 +27,12 @@ enum class ProjectionErrc : std::uint8_t {
   database_unavailable,  // PROJ cannot open its database (proj.db)
 };
 
+/// What the coordinates of a CRS are: angles on the ellipsoid (a PROJ
+/// geographic 2D or 3D CRS, whatever the datum: EPSG:4326, 4269, ...) or
+/// distances on a map projection. Vector components of a model on a projected
+/// grid point along the grid's axes, not east and north (design decision 28).
+enum class CrsKind : std::uint8_t { geographic, projected };
+
 struct ProjectionError {
   ProjectionErrc code;
   core::Epsg crs;
@@ -81,6 +87,7 @@ class Projector {
   ~Projector();
 
   [[nodiscard]] core::Epsg crs() const noexcept { return crs_; }
+  [[nodiscard]] CrsKind kind() const noexcept { return kind_; }
 
   /// Longitudes in [0, 360] are normalized like Location::make does.
   [[nodiscard]] std::expected<core::Location, ToLocationError> to_location(
@@ -101,14 +108,19 @@ class Projector {
 
  private:
   struct Impl;
-  Projector(core::Epsg crs, std::unique_ptr<Impl> impl) noexcept;
+  Projector(core::Epsg crs, CrsKind kind, std::unique_ptr<Impl> impl) noexcept;
 
   [[nodiscard]] std::expected<core::Xy, ProjectionError> project(core::Xy p);
 
   core::Epsg crs_;
+  CrsKind kind_;
   std::unique_ptr<Impl> impl_;  // null for EPSG:4326
   ProjectionAccuracy accuracy_;
 };
+
+/// The kind of `crs` (EPSG:4326 without building anything; another code builds
+/// a Projector). Errors are Projector::make's.
+[[nodiscard]] std::expected<CrsKind, ProjectionError> crs_kind(core::Epsg crs);
 
 /// The WGS84 Location of a point in its own CRS. EPSG:4326 takes a fast path
 /// that never builds a Projector; any other code builds one for this call (a

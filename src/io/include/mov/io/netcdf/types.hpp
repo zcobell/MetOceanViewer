@@ -114,6 +114,15 @@ template <Numeric T>
       .at(detail::read_column<T>);
 }
 
+/// Whether read_samples, and a reader built on it, can read a variable of type
+/// `t`: the types whose every value a double holds, masked in their own type.
+/// 64-bit integers are not among them (time variables read int64_t instead),
+/// nor are unsigned, text and user-defined types.
+[[nodiscard]] constexpr bool sample_readable(Type t) noexcept {
+  return t == Type::byte or t == Type::short_ or t == Type::int_ or
+         t == Type::float_ or t == Type::double_;
+}
+
 /// Calls `on_numeric.template operator()<T>()` with the Numeric T whose
 /// netCDF type is `t`, or `on_other()` for the types that have none. Both must
 /// return the same type.

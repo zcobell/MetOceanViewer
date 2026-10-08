@@ -37,11 +37,13 @@ namespace mov::io::nc::detail {
 
 /// The element count of `slab` of `var` after checking it: the rank
 /// (`rank_mismatch`), each range inside its dimension (NC_EINVALCOORDS,
-/// NC_EEDGE), the product (`overflow`), limits.max_elements and, for
-/// results of `element_bytes` each, limits.max_result_bytes (`too_large`).
+/// NC_EEDGE), the product (`overflow`) and, when `whole_result` (the read
+/// holds all of it), limits.max_elements and, for results of `element_bytes`
+/// each, limits.max_result_bytes (`too_large`). A read that holds one block at
+/// a time (read_blocks) checks each block instead.
 [[nodiscard]] std::expected<std::size_t, NcStatus> check_slab(
     const VarInfo& var, const Slab& slab, const ReadLimits& limits,
-    std::size_t element_bytes);
+    std::size_t element_bytes, bool whole_result = true);
 
 /// Whether `count` elements of `element_bytes` each, plus `extra_bytes`,
 /// fit in `limit` bytes (no overflow).

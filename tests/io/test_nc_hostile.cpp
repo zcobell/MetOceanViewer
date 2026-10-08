@@ -104,12 +104,15 @@ TEST_CASE("hostile: a _FillValue of the wrong type or length", "[io][netcdf]") {
 
 TEST_CASE("hostile: an unlimited name length of 0", "[io][netcdf]") {
   Fixtures fx;
-  const File file = open(fx.hostile(Hostile::zero_length_name_len));
-  CHECK(must(file.find_dim("name_len").value()).length == 0);
-  CHECK(value_of(file.read_char_rows("station_name")) ==
-        std::vector<std::string>{"", ""});
-  CHECK(status_of(error_of(open(file.path(), {.max_elements = 1})
-                               .read_char_rows("station_name"))) ==
+  const auto path = fx.hostile(Hostile::zero_length_name_len);
+  {
+    const File file = open(path);
+    CHECK(must(file.find_dim("name_len").value()).length == 0);
+    CHECK(value_of(file.read_char_rows("station_name")) ==
+          std::vector<std::string>{"", ""});
+  }  // one handle per file
+  CHECK(status_of(error_of(
+            open(path, {.max_elements = 1}).read_char_rows("station_name"))) ==
         NcStatus{WrapperFault::too_large});
 }
 

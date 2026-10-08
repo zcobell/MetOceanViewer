@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "model_fixtures.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
 #include "nc_counts.hpp"
@@ -228,4 +229,80 @@ TEST_CASE("the time dimension need not be dimension 0 (B12)",
   const VarInfo time = must(file.find_var("time").value());
   CHECK(time.id == 1);
   CHECK(time.dims.front().name.view() == "time");
+}
+
+TEST_CASE(
+    "chunk_shape: the chunk sizes of a chunked variable, nothing for the rest",
+    "[io][netcdf]") {
+  Fixtures fx;
+  SECTION("a chunked variable") {
+    mov::test::ncgen::AdcircNc spec;
+    spec.stations = 6;
+    spec.steps = 20;
+    spec.chunks = {5, 2};
+    mov::test::ncgen::make_adcirc_nc(fx.path("chunked.nc"), spec);
+    const File file = open(fx.path("chunked.nc"));
+    CHECK(file.chunk_shape("zeta").value() ==
+          std::optional<std::vector<std::size_t>>{{5, 2}});
+  }
+  SECTION(
+      "netCDF-C's choice for an unlimited dimension: one step of the file") {
+    mov::test::ncgen::AdcircNc spec;
+    spec.stations = 6;
+    spec.steps = 20;
+    mov::test::ncgen::make_adcirc_nc(fx.path("default.nc"), spec);
+    const File file = open(fx.path("default.nc"));
+    const auto shape = file.chunk_shape("zeta").value();
+    REQUIRE(shape.has_value());
+    CHECK(shape.value_or(std::vector<std::size_t>{}).size() == 2);
+    // All the stations.
+    CHECK(shape.value_or(std::vector<std::size_t>{}).at(1) == 6);
+  }
+  SECTION("contiguous variables, scalars and classic files") {
+    const File typed = open(fx.typed());
+    CHECK(typed.chunk_shape("v_double").value() == std::nullopt);
+    CHECK(typed.chunk_shape("s_double").value() == std::nullopt);
+    CHECK(typed.chunk_shape("grid").value() == std::nullopt);
+  }
+  SECTION("a classic file has no chunks") {
+    const File classic =
+        open(fx.hostile(mov::test::ncgen::Hostile::fill_two_values));
+    CHECK(classic.chunk_shape("v").value() == std::nullopt);
+  }
+  SECTION("an absent variable, and a closed file") {
+    File file = open(fx.typed());
+    CHECK(error_of(file.chunk_shape("nope")).status ==
+          NcStatus{LibraryStatus{-49}});  // NC_ENOTVAR
+    const auto closed = std::move(file).close();
+    REQUIRE(closed.has_value());
+    // NOLINTNEXTLINE(bugprone-use-after-move): a closed File answers `closed`
+    CHECK(error_of(file.chunk_shape("v_double")).status ==
+          NcStatus{WrapperFault::closed});
+  }
+}
+
+TEST_CASE(
+    "reserve_chunk_cache grows the cache of a variable and never shrinks it",
+    "[io][netcdf]") {
+  const Fixtures fx;
+  mov::test::ncgen::AdcircNc spec;
+  spec.stations = 6;
+  spec.steps = 20;
+  spec.chunks = {5, 2};
+  mov::test::ncgen::make_adcirc_nc(fx.path("chunked.nc"), spec);
+  File file = open(fx.path("chunked.nc"));
+  CHECK(file.reserve_chunk_cache("zeta", std::size_t{64} << 20U).has_value());
+  CHECK(file.reserve_chunk_cache("zeta", 1).has_value());  // no shrinking
+  // The same data still reads.
+  CHECK(file.read<double>("zeta",
+                          {{.start = 0, .count = 20}, {.start = 1, .count = 3}})
+            .value()
+            .size() == 60);
+  CHECK(error_of(file.reserve_chunk_cache("nope", 1)).status ==
+        NcStatus{LibraryStatus{-49}});  // NC_ENOTVAR
+  const auto closed = std::move(file).close();
+  REQUIRE(closed.has_value());
+  // NOLINTNEXTLINE(bugprone-use-after-move): a closed File answers `closed`
+  CHECK(error_of(file.reserve_chunk_cache("zeta", 1)).status ==
+        NcStatus{WrapperFault::closed});
 }

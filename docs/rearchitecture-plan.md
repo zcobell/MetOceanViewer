@@ -523,6 +523,18 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     the D-Flow FM documentation, to be checked against a real file when one turns up.
 27. **CSV export:** long format, one row per sample (station id/name, ISO-8601 UTC time,
     quantity, value, units, datum).
+28. **Vector components of model output (D-Flow FM, ADCIRC netCDF and ASCII):** what they
+    are depends on the CRS the caller states for the file.
+    (1) If it is geographic (a PROJ geographic 2D or 3D CRS, whatever the datum, not just
+    EPSG:4326) the components are eastward and northward: `current_u`/`current_v` and
+    `wind_u`/`wind_v`.
+    (2) If it is projected they point along the grid's axes: they are generic quantities with
+    CF's grid names `sea_water_x_velocity`, `sea_water_y_velocity`, `x_wind` and `y_wind`,
+    paired with `VectorSeries::assume_components` (speed is the same), and the direction's
+    label says "grid-relative".
+    (3) Rotating grid-relative components by the meridian convergence is deferred.
+    For ADCIRC netCDF the global `ics` is checked against the CRS (`crs_mismatch` warning);
+    the ASCII reader takes the CRS of its station file.
 
 29. **GPL-3.0 §6 corresponding source (decided 2026-10-07):** every GitHub Release
     carries a source archive: this repository at the tag plus the exact sources of

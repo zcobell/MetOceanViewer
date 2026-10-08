@@ -64,15 +64,16 @@ TEST_CASE("text_att limits and types", "[io][netcdf]") {
                 .op = NcOp::get_att,
                 .object = ":history",
                 .file = path});
+  CHECK(open(path, ReadLimits{.max_att_bytes = 4})
+            .text_att(global, "s_title")
+            .error()
+            .status == NcStatus{WrapperFault::too_large});
+  // One handle per file: the limited opens above are gone by now.
   const File file = open(path);
   // NC_STRING: one string reads as text; two do not.
   CHECK(file.text_att(global, "s_title").value() == "hello");
   CHECK(error_of(file.text_att(global, "s_pair")).status ==
         NcStatus{WrapperFault::count_mismatch});
-  CHECK(open(path, ReadLimits{.max_att_bytes = 4})
-            .text_att(global, "s_title")
-            .error()
-            .status == NcStatus{WrapperFault::too_large});
   CHECK(error_of(file.text_att(global, "doubles")).status ==
         NcStatus{WrapperFault::type_mismatch});
   // An attribute of a variable that does not exist.
@@ -87,6 +88,14 @@ TEST_CASE("numeric_att requires the exact type (B10)",
           "[io][netcdf][regression][B10]") {
   Fixtures fx;
   const auto path = fx.attributes();
+  CHECK(open(path, ReadLimits{.max_att_bytes = 23})
+            .numeric_att<double>(global, "doubles")
+            .error()
+            .status == NcStatus{WrapperFault::too_large});
+  CHECK(open(path, ReadLimits{.max_att_bytes = 24})
+            .numeric_att<double>(global, "doubles")
+            .has_value());
+  // One handle per file: the limited opens above are gone by now.
   const File file = open(path);
   CHECK(
       file.numeric_att<std::int32_t>("x", "HorizontalProjectionEPSG").value() ==
@@ -107,11 +116,4 @@ TEST_CASE("numeric_att requires the exact type (B10)",
         NcStatus{WrapperFault::type_mismatch});
   CHECK(error_of(file.numeric_att<double>(global, "title")).status ==
         NcStatus{WrapperFault::type_mismatch});
-  CHECK(open(path, ReadLimits{.max_att_bytes = 23})
-            .numeric_att<double>(global, "doubles")
-            .error()
-            .status == NcStatus{WrapperFault::too_large});
-  CHECK(open(path, ReadLimits{.max_att_bytes = 24})
-            .numeric_att<double>(global, "doubles")
-            .has_value());
 }
