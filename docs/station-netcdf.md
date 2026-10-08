@@ -302,7 +302,7 @@ variables:
 		crs:crs_wkt = "GEOGCRS[\"WGS 84\",DATUM[\"World Geodetic System 1984\",ELLIPSOID[\"WGS 84\",6378137,298.257223563,LENGTHUNIT[\"metre\",1]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433]],CS[ellipsoidal,2],AXIS[\"geodetic latitude (Lat)\",north,ORDER[1],ANGLEUNIT[\"degree\",0.0174532925199433]],AXIS[\"geodetic longitude (Lon)\",east,ORDER[2],ANGLEUNIT[\"degree\",0.0174532925199433]],ID[\"EPSG\",4326]]" ;
 		crs:epsg_code = "EPSG:4326" ;
 	double time(station, obs) ;
-		time:_FillValue = 9.969209968386869e+36 ;
+		time:_FillValue = 9.96920996838687e+36 ;
 		time:standard_name = "time" ;
 		time:long_name = "time" ;
 		time:units = "milliseconds since 1970-01-01 00:00:00" ;
@@ -311,7 +311,7 @@ variables:
 	int obs_count(station) ;
 		obs_count:long_name = "number of valid samples in this station time series" ;
 	double water_level(station, obs) ;
-		water_level:_FillValue = 9.969209968386869e+36 ;
+		water_level:_FillValue = 9.96920996838687e+36 ;
 		water_level:coordinates = "time lat lon station_id station_name" ;
 		water_level:grid_mapping = "crs" ;
 		water_level:standard_name = "water_surface_height_above_reference_datum" ;
@@ -327,7 +327,7 @@ variables:
 		water_level_status:flag_meanings = "dry wet" ;
 		water_level_status:valid_range = 0b, 1b ;
 	double water_temperature(station, obs) ;
-		water_temperature:_FillValue = 9.969209968386869e+36 ;
+		water_temperature:_FillValue = 9.96920996838687e+36 ;
 		water_temperature:coordinates = "time lat lon station_id station_name" ;
 		water_temperature:grid_mapping = "crs" ;
 		water_temperature:standard_name = "sea_water_temperature" ;
@@ -377,8 +377,10 @@ data:
 }
 ```
 
-Note: `crs:crs_wkt` is a single line in the file. The header above is the prototype's structure printed in `ncdump -h` style
-(`ncdump` itself was not available on this host, so it was rendered by a small script; the CI golden-CDL test in §14.1 re-checks it with the real tool).
+Note: `crs:crs_wkt` is a single line in the file. The header above is what `ncdump -h` (netCDF-C 4.9.2) prints for the v5
+writer's file of this table (WP10a, 2026-10-07); ncdump prints double attributes with 15 significant digits, so the fill
+value `9.969209968386869e+36` appears as `9.96920996838687e+36`. The full headers of both files are committed as
+`tests/fixtures/io/station_netcdf/*.cdl` and checked by the golden tests and the `format-compliance` job (§14).
 
 ### 9.2 Orthogonal layout (L1): two stations sharing four times
 

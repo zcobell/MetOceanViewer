@@ -157,6 +157,7 @@ struct DimInfo {
   int id;
   NcName name;
   std::size_t length;  // the current length of an unlimited dimension
+  bool unlimited;      // NC_UNLIMITED: it grows as records are written
   friend bool operator==(const DimInfo&, const DimInfo&) = default;
 };
 

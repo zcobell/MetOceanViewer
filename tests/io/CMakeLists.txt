@@ -157,3 +157,35 @@ endif()
 
 # The model readers close their file on every path (needs the --wrap shims).
 target_sources(mov_io_netcdf_tests PRIVATE test_model_nc_handles.cpp)
+
+# ---- the v5 station netCDF format (WP10a) ------------------------------------
+#
+# mov_station_nc_canonical holds the canonical files of docs/station-netcdf.md
+# section 9, written with mov::io; the golden CDL tests and the
+# format-compliance job (station_nc_fixtures + tools/check_cf.py) share it.
+# The header dumper and the raw editor are in mov_nc_fixtures (netCDF-C only).
+target_sources(mov_nc_fixtures PRIVATE support/nc_header_dump.cpp)
+
+add_library(mov_station_nc_canonical STATIC support/station_nc_canonical.cpp)
+target_include_directories(mov_station_nc_canonical PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/support")
+target_link_libraries(mov_station_nc_canonical PUBLIC mov::io PRIVATE mov::options mov::warnings)
+target_compile_features(mov_station_nc_canonical PUBLIC cxx_std_23)
+mov_enable_static_analysis(mov_station_nc_canonical)
+
+mov_add_test(
+    mov_io_station_netcdf_tests
+    SOURCES
+        test_station_netcdf_golden.cpp
+        test_station_netcdf_read.cpp
+        test_station_netcdf_validation.cpp
+        test_station_netcdf_write.cpp
+    LIBRARIES mov::io mov_nc_fixtures mov_station_nc_canonical
+)
+if(MOV_PROJ_DB)
+    target_compile_definitions(mov_io_station_netcdf_tests PRIVATE MOV_TEST_PROJ_DATA_DIR="${MOV_TEST_PROJ_DATA_DIR}")
+endif()
+
+# Writes the canonical files for tools/check_cf.py (not a test).
+add_executable(station_nc_fixtures station_nc_fixtures.cpp)
+target_link_libraries(station_nc_fixtures PRIVATE mov_station_nc_canonical mov_nc_fixtures mov::options mov::warnings)
+mov_enable_static_analysis(station_nc_fixtures)

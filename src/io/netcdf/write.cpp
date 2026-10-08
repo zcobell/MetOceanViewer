@@ -153,7 +153,10 @@ std::expected<DimInfo, NcError> NewFile::define_dim(NcNameRef name,
                NcOp::def_dim, name.view(), path_,
                [&] { return nc_def_dim(ncid, name.c_str(), length, &dimid); })
         .transform([&] {
-          return DimInfo{.id = dimid, .name = NcName{name}, .length = length};
+          return DimInfo{.id = dimid,
+                         .name = NcName{name},
+                         .length = length,
+                         .unlimited = false};
         });
   });
 }

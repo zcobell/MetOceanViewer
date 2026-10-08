@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <expected>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -30,7 +31,7 @@ Warning warning(WarningCode code, std::string subject = {},
 
 TEST_CASE("every WarningCode has its own stable token", "[io][warning]") {
   using mov::io::to_token;
-  const std::array<std::pair<WarningCode, std::string_view>, 32> expected{{
+  const std::array<std::pair<WarningCode, std::string_view>, 35> expected{{
       {WarningCode::times_reordered, "times_reordered"},
       {WarningCode::duplicate_times_dropped, "duplicate_times_dropped"},
       {WarningCode::conflicting_duplicate_times, "conflicting_duplicate_times"},
@@ -64,6 +65,9 @@ TEST_CASE("every WarningCode has its own stable token", "[io][warning]") {
       {WarningCode::crs_mismatch, "crs_mismatch"},
       {WarningCode::cold_start_differs, "cold_start_differs"},
       {WarningCode::coordinates_from_first_step, "coordinates_from_first_step"},
+      {WarningCode::unit_converted, "unit_converted"},
+      {WarningCode::station_name_substituted, "station_name_substituted"},
+      {WarningCode::native_position_dropped, "native_position_dropped"},
   }};
   for (const auto& [code, token] : expected) {
     CHECK(to_token(code) == token);
@@ -332,3 +336,69 @@ TEST_CASE("StopToken polls its predicate; a default token never stops",
   CHECK(token.stop_requested());
   CHECK_FALSE(mov::io::ReadContext{}.stop.stop_requested());
 }
+
+namespace {
+
+using Step = std::expected<int, std::string>;
+using ReadStep = std::expected<Read<int>, std::string>;
+
+TEST_CASE("collect: the values in order, as a tuple", "[io][read][collect]") {
+  const auto all = mov::io::collect(
+      [] { return Step{1}; },
+      [] { return std::expected<std::string, std::string>{"two"}; },
+      [] { return Step{3}; });
+  REQUIRE(all.has_value());
+  CHECK(all == std::expected<std::tuple<int, std::string, int>, std::string>{
+                   std::tuple<int, std::string, int>{1, "two", 3}});
+  const auto one = mov::io::collect([] { return Step{7}; });
+  CHECK(one == std::expected<std::tuple<int>, std::string>{std::tuple<int>{7}});
+}
+
+TEST_CASE("collect: the first error, and no stage runs after it",
+          "[io][read][collect]") {
+  std::vector<int> ran;
+  const auto stage = [&ran](int n, bool ok) {
+    return [&ran, n, ok]() -> Step {
+      ran.push_back(n);
+      if (ok) {
+        return n;
+      }
+      return std::unexpected{"stage " + std::to_string(n)};
+    };
+  };
+  const auto r = mov::io::collect(stage(1, true), stage(2, false),
+                                  stage(3, true), stage(4, false));
+  REQUIRE(not r.has_value());
+  CHECK(r.error() == "stage 2");
+  CHECK(ran == std::vector<int>{1, 2});
+}
+
+TEST_CASE("collect_read: values as a tuple, warnings in stage order",
+          "[io][read][collect]") {
+  const auto r = mov::io::collect_read(
+      [] {
+        return ReadStep{Read<int>{
+            .value = 1, .warnings = {warning(WarningCode::epoch_used)}}};
+      },
+      [] { return ReadStep{Read<int>{.value = 2, .warnings = {}}}; },
+      [] {
+        return ReadStep{Read<int>{
+            .value = 3, .warnings = {warning(WarningCode::crs_assumed)}}};
+      });
+  REQUIRE(r.has_value());
+  CHECK(r == std::expected<Read<std::tuple<int, int, int>>, std::string>{
+                 Read<std::tuple<int, int, int>>{
+                     .value = {1, 2, 3},
+                     .warnings = {warning(WarningCode::epoch_used),
+                                  warning(WarningCode::crs_assumed)}}});
+  const auto failed = mov::io::collect_read(
+      [] {
+        return ReadStep{Read<int>{
+            .value = 1, .warnings = {warning(WarningCode::epoch_used)}}};
+      },
+      [] { return ReadStep{std::unexpected{"no"}}; });
+  REQUIRE(not failed.has_value());
+  CHECK(failed.error() == "no");
+}
+
+}  // namespace

@@ -316,6 +316,52 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
+  # The station netCDF format against the CF checkers (docs/station-netcdf.md
+  # 14.2, WP10a): the canonical files the station_nc_fixtures test executable
+  # writes go through the IOOS compliance-checker (cf:1.11), cfchecks on a
+  # CF-1.8 copy, an xarray smoke test and `ncdump -h` against the golden CDL
+  # (tools/check_cf.py; tools/check_station_netcdf.sh runs the same locally).
+  # The checkers are pinned in tools/compliance/. Seconds of checking after
+  # one dev build; meant to be a required check on v5, because format drift is
+  # silent otherwise.
+  format-compliance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/load-versions
+      - uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - uses: ./.github/actions/setup-gcc
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: format-compliance
+          max-size: 500M
+      - uses: ./.github/actions/setup-vcpkg
+        with:
+          cache-key: linux-gcc
+      - run: cmake --preset dev
+      - run: cmake --build --preset dev --target station_nc_fixtures
+      - run: build/dev/tests/io/station_nc_fixtures build/format-compliance
+      - name: Checkers
+        run: |
+          tools/compliance/setup.sh "${RUNNER_TEMP}/compliance"
+          echo "${RUNNER_TEMP}/compliance/venv/bin" >> "$GITHUB_PATH"
+      - name: Check
+        env:
+          UDUNITS2_XML_PATH: /usr/share/xml/udunits/udunits2.xml
+        run: >-
+          python tools/check_cf.py build/format-compliance
+          --cdl tests/fixtures/io/station_netcdf
+          --tables "${RUNNER_TEMP}/compliance"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: format-compliance-files
+          path: build/format-compliance/
+          if-no-files-found: ignore
+
   clang-tidy:
     runs-on: ubuntu-24.04
     # The tidy preset includes the Qt layers, so a cold vcpkg cache builds

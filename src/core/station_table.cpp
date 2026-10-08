@@ -228,9 +228,12 @@ bool StationTable::single_axis() const noexcept {
   if (rows_.empty() or axes_[rows_.front().axis].empty()) {
     return false;
   }
-  const TimeAxis& first = axes_[rows_.front().axis];
-  return std::ranges::all_of(rows_, [this, &first](const StationRow& row) {
-    return std::ranges::equal(axes_[row.axis], first);
+  // A station on the first station's pooled axis has its times without a
+  // comparison: model output, which shares one axis, costs O(stations).
+  const std::size_t first_axis = rows_.front().axis;
+  const TimeAxis& first = axes_[first_axis];
+  return std::ranges::all_of(rows_, [&](const StationRow& row) {
+    return row.axis == first_axis or std::ranges::equal(axes_[row.axis], first);
   });
 }
 

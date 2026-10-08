@@ -65,13 +65,17 @@ TEST_CASE("NcNameRef views an NcName and copies back", "[io][netcdf]") {
 }
 
 TEST_CASE("whole and unzip", "[io][netcdf]") {
-  const VarInfo var{
-      .id = 0,
-      .name = NcName::make("v").value(),
-      .type = Type::double_,
-      .dims = {
-          DimInfo{.id = 0, .name = NcName::make("a").value(), .length = 3},
-          DimInfo{.id = 1, .name = NcName::make("b").value(), .length = 5}}};
+  const VarInfo var{.id = 0,
+                    .name = NcName::make("v").value(),
+                    .type = Type::double_,
+                    .dims = {DimInfo{.id = 0,
+                                     .name = NcName::make("a").value(),
+                                     .length = 3,
+                                     .unlimited = false},
+                             DimInfo{.id = 1,
+                                     .name = NcName::make("b").value(),
+                                     .length = 5,
+                                     .unlimited = false}}};
   const Slab all = mov::io::nc::whole(var);
   CHECK(all == Slab{{.start = 0, .count = 3}, {.start = 0, .count = 5}});
   const auto h = mov::io::nc::detail::unzip(

@@ -121,6 +121,10 @@ python3 tools/fetch_qt_licenses.py                 # after a Qt bump (packaging/
 tools/dev/run.sh cmake --preset tidy
 tools/dev/run.sh python3 tools/clang_tidy_gate.py -p build/tidy
 
+# Station netCDF format compliance (the format-compliance CI job, locally): IOOS
+# compliance-checker, cfchecks, xarray and ncdump in their own pinned image.
+tools/check_station_netcdf.sh
+
 # pre-commit (formatting, codespell, license header, lizard). It checks only
 # files git tracks and reports fixer edits only on tracked files: stage first.
 tools/dev/run.sh pre-commit run --all-files
