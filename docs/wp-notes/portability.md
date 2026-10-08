@@ -116,7 +116,14 @@ checks at run time too).
   (no macOS here); the port change invalidates the binary cache, so the next
   macOS run rebuilds MapLibre.
 
-## MSVC (no compiler available locally)
+## MSVC (no `cl` locally; clang-cl cross-check)
+
+`MOV_DEV_IMAGE=msvc tools/dev/run.sh cmake --workflow --preset dev-msvc-xwin`
+builds and tests the Qt-free layers with clang-cl against the real MSVC STL, UCRT
+and Windows SDK headers, with `/W4 /WX`, tests under Wine
+(`tools/dev/README.md`, "Windows/MSVC cross-check"). It is not MSVC's front end: the
+`AttTarget` nested-`consteval` error and `cl`-only warnings such as C4702 do not
+reproduce there. The list below is what that leaves unverified.
 
 Verified by reasoning and by emulation on Linux:
 

@@ -533,6 +533,10 @@ TEST_CASE("a read-only target is not silently replaced",
 TEST_CASE("the new file keeps the permission bits of the one it replaces",
           "[io][atomic][posix]") {
   namespace fs = std::filesystem;
+#if defined(_WIN32)
+  // Windows has only a read-only attribute: status() reports 0777 or 0555.
+  SKIP("Windows has no group or other permission bits");
+#endif
   const ScratchDir dir;
   const auto target = dir / "shared.txt";
   write_bytes(target, "old");

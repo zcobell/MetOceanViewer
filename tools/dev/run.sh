@@ -7,6 +7,8 @@
 #   tools/dev/run.sh cmake --workflow --preset dev
 #   tools/dev/run.sh                      # interactive shell
 #   MOV_DEV_QT=1 tools/dev/run.sh ...     # make sure Qt is installed first
+#   MOV_DEV_IMAGE=msvc tools/dev/run.sh cmake --workflow --preset dev-msvc-xwin
+#                                         # Windows/MSVC cross-check image
 #
 # The repository is mounted at its host path and the command runs as the host
 # uid/gid, so build trees and compile_commands.json are valid on both sides.
@@ -56,12 +58,15 @@ cache_root="${MOV_DEV_CACHE:-${HOME}/.cache/metoceanviewer-dev}"
 
 # MOV_DEV_IMAGE picks the image: "dev" (default, Ubuntu 24.04, mirrors CI) or
 # "appimage" (Ubuntu 22.04 + a GCC release built from source; the AppImage build,
-# see docs/packaging.md). Both share the caches and the Qt prefix below.
+# see docs/packaging.md), or "msvc" (clang-cl + the MSVC STL/CRT and Windows SDK
+# from xwin, plus Wine: the Windows cross-check, tools/dev/msvc). All share the
+# caches and the Qt prefix below.
 case "${MOV_DEV_IMAGE:-dev}" in
   dev) dockerfile="${script_dir}/Dockerfile" image_name=metoceanviewer-dev ;;
   appimage) dockerfile="${script_dir}/appimage/Dockerfile" image_name=metoceanviewer-appimage ;;
+  msvc) dockerfile="${script_dir}/msvc/Dockerfile" image_name=metoceanviewer-msvc ;;
   *)
-    echo "run.sh: MOV_DEV_IMAGE must be dev or appimage, not '${MOV_DEV_IMAGE}'" >&2
+    echo "run.sh: MOV_DEV_IMAGE must be dev, appimage or msvc, not '${MOV_DEV_IMAGE}'" >&2
     exit 1
     ;;
 esac
@@ -85,6 +90,10 @@ if ! docker image inspect "${image}" >/dev/null 2>&1; then
     --build-arg "LIBCXX_VERSION=$(version_of LIBCXX_VERSION)" \
     --build-arg "CMAKE_VERSION=$(version_of CMAKE_VERSION)" \
     --build-arg "CMAKE_SHA256=$(version_of CMAKE_SHA256)" \
+    --build-arg "XWIN_VERSION=$(version_of XWIN_VERSION)" \
+    --build-arg "XWIN_SHA256=$(version_of XWIN_SHA256)" \
+    --build-arg "XWIN_CRT_VERSION=$(version_of XWIN_CRT_VERSION)" \
+    --build-arg "XWIN_SDK_VERSION=$(version_of XWIN_SDK_VERSION)" \
     --build-arg "VCPKG_COMMIT=${vcpkg_commit}" \
     --tag "${image}" --tag "${image_name}:latest" \
     "${script_dir}"
