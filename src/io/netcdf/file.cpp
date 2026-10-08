@@ -14,6 +14,7 @@
 #include <cassert>
 #include <cerrno>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <optional>
@@ -22,6 +23,14 @@
 #include <system_error>
 #include <utility>
 #include <vector>
+
+#if !defined(NDEBUG)
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#endif
+#endif
 
 #include "internal.hpp"
 #include "mov/io/detail/traverse.hpp"
@@ -265,13 +274,61 @@ namespace {
 // ONE HANDLE PER FILE (see File::open): netCDF-C 4.9.3 with HDF5 2.1.1 can
 // crash when a file is opened through a second handle while the first is
 // open. In debug builds the files this process has open through File are
-// listed here, and opening one that is already open asserts. Like nc_busy it
-// is a detector, not a lock: the list is touched only inside the choke point
-// (nc_status), so the debug entry check also catches a second thread using it.
-// Release builds keep no list and check nothing.
+// listed here by identity (the device and inode, or the volume and file id),
+// taken when the file is opened, so neither the spelling of the path nor the
+// working directory at a later open matters. Opening a file that is already
+// open asserts, and so does failing to find a file's identity: "I could not
+// tell" is not "it is not open". Like nc_busy it is a detector, not a lock:
+// the list is touched only inside the choke point (nc_status), so the debug
+// entry check also catches a second thread using it. Release builds keep no
+// list and check nothing.
+struct FileIdentity {
+  std::uint64_t volume;
+  std::uint64_t index;
+  friend bool operator==(const FileIdentity&, const FileIdentity&) = default;
+};
+
+// Why a file has no identity: it is not there (the open that follows reports
+// that), or it could not be examined (a detector that cannot tell asserts).
+enum class NoIdentity : std::uint8_t { absent, unexamined };
+
+std::expected<FileIdentity, NoIdentity> file_identity(
+    const std::filesystem::path& path) {
+#if defined(_WIN32)
+  const HANDLE handle = ::CreateFileW(
+      path.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+  if (handle == INVALID_HANDLE_VALUE) {
+    const DWORD error = ::GetLastError();
+    return std::unexpected{error == ERROR_FILE_NOT_FOUND or
+                                   error == ERROR_PATH_NOT_FOUND
+                               ? NoIdentity::absent
+                               : NoIdentity::unexamined};
+  }
+  BY_HANDLE_FILE_INFORMATION info{};
+  const bool found = ::GetFileInformationByHandle(handle, &info) != 0;
+  ::CloseHandle(handle);
+  if (not found) {
+    return std::unexpected{NoIdentity::unexamined};
+  }
+  return FileIdentity{.volume = info.dwVolumeSerialNumber,
+                      .index = (std::uint64_t{info.nFileIndexHigh} << 32U) |
+                               info.nFileIndexLow};
+#else
+  struct stat info{};
+  if (::stat(path.c_str(), &info) != 0) {
+    return std::unexpected{errno == ENOENT or errno == ENOTDIR
+                               ? NoIdentity::absent
+                               : NoIdentity::unexamined};
+  }
+  return FileIdentity{.volume = static_cast<std::uint64_t>(info.st_dev),
+                      .index = static_cast<std::uint64_t>(info.st_ino)};
+#endif
+}
+
 struct OpenFile {
   int ncid;
-  std::filesystem::path path;
+  FileIdentity identity;
 };
 
 std::vector<OpenFile>& open_files() {
@@ -279,25 +336,20 @@ std::vector<OpenFile>& open_files() {
   return files;
 }
 
-// True when `path` is the same file as one a File holds open (equivalent():
-// symbolic and hard links included).
-bool already_open(const std::filesystem::path& path) {
+bool is_listed_open(const FileIdentity& identity) {
   return detail::nc_status([&] {
-           std::error_code ec;
            return std::ranges::any_of(open_files(),
                                       [&](const OpenFile& open) {
-                                        return std::filesystem::equivalent(
-                                                   open.path, path, ec) and
-                                               not ec;
+                                        return open.identity == identity;
                                       })
                       ? 1
                       : 0;
          }) == 1;
 }
 
-void note_open(int ncid, const std::filesystem::path& path) {
+void note_open(int ncid, const FileIdentity& identity) {
   static_cast<void>(detail::nc_status([&] {
-    open_files().push_back({.ncid = ncid, .path = path});
+    open_files().push_back({.ncid = ncid, .identity = identity});
     return 0;
   }));
 }
@@ -343,7 +395,11 @@ std::expected<File, NcError> File::open(const std::filesystem::path& path,
     return error(native.error());
   }
 #if !defined(NDEBUG)
-  assert(not already_open(owned) and
+  const std::expected<FileIdentity, NoIdentity> identity = file_identity(owned);
+  assert((identity.has_value() or identity.error() == NoIdentity::absent) and
+         "cannot tell which file this is (stat failed), so cannot tell "
+         "whether it is already open");
+  assert(not(identity and is_listed_open(*identity)) and
          "this file is already open through another nc::File: hold one handle "
          "per file (netCDF-C 4.9.3 with HDF5 2.1.1 can crash otherwise)");
 #endif
@@ -354,7 +410,9 @@ std::expected<File, NcError> File::open(const std::filesystem::path& path,
     return error(LibraryStatus{status});
   }
 #if !defined(NDEBUG)
-  note_open(ncid, owned);
+  if (identity) {
+    note_open(ncid, *identity);
+  }
 #endif
   return File{ncid, std::move(owned), limits};
 }
@@ -453,6 +511,31 @@ File::chunk_shape(NcNameRef name) const {
         return std::nullopt;
       }
       return chunks;
+    });
+  });
+}
+
+std::expected<void, NcError> File::reserve_chunk_cache(
+    NcNameRef name, std::size_t bytes) const {
+  return var(name, NcOp::inquire).and_then([&](const VarInfo& info) {
+    return id(NcOp::inquire, name.view()).and_then([&](int ncid) {
+      std::size_t size = 0;
+      std::size_t slots = 0;
+      float preemption = 0;
+      return detail::nc_call(NcOp::inquire, name.view(), path_,
+                             [&] {
+                               return nc_get_var_chunk_cache(
+                                   ncid, info.id, &size, &slots, &preemption);
+                             })
+          .and_then([&]() -> std::expected<void, NcError> {
+            if (bytes <= size) {
+              return {};
+            }
+            return detail::nc_call(NcOp::inquire, name.view(), path_, [&] {
+              return nc_set_var_chunk_cache(ncid, info.id, bytes, slots,
+                                            preemption);
+            });
+          });
     });
   });
 }

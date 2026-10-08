@@ -32,7 +32,8 @@ namespace detail {
 std::expected<std::size_t, NcStatus> check_slab(const VarInfo& var,
                                                 const Slab& slab,
                                                 const ReadLimits& limits,
-                                                std::size_t element_bytes) {
+                                                std::size_t element_bytes,
+                                                bool whole_result) {
   if (slab.size() != var.dims.size()) {
     return std::unexpected{WrapperFault::rank_mismatch};
   }
@@ -50,8 +51,9 @@ std::expected<std::size_t, NcStatus> check_slab(const VarInfo& var,
   if (not total) {
     return std::unexpected{WrapperFault::overflow};
   }
-  if (*total > limits.max_elements or
-      not fits_bytes(*total, element_bytes, 0, limits.max_result_bytes)) {
+  if (whole_result and
+      (*total > limits.max_elements or
+       not fits_bytes(*total, element_bytes, 0, limits.max_result_bytes))) {
     return std::unexpected{WrapperFault::too_large};
   }
   return *total;
@@ -125,7 +127,7 @@ class VarStrings {
 
 std::expected<File::ReadPlan, Error> File::plan_read(
     NcNameRef name, const Slab& slab, bool (*readable)(Type) noexcept,
-    std::size_t element_bytes) const {
+    std::size_t element_bytes, bool whole_result) const {
   const auto info = var(name, NcOp::get_var);
   if (not info) {
     return std::unexpected{Error{info.error()}};
@@ -136,7 +138,8 @@ std::expected<File::ReadPlan, Error> File::plan_read(
   if (not readable(info->type)) {
     return refuse(WrapperFault::type_mismatch);
   }
-  const auto total = detail::check_slab(*info, slab, limits_, element_bytes);
+  const auto total =
+      detail::check_slab(*info, slab, limits_, element_bytes, whole_result);
   if (not total) {
     return refuse(total.error());
   }
@@ -177,6 +180,13 @@ std::expected<void, Error> File::stream(NcNameRef name, int varid,
   std::vector<T> buffer;  // one block, reused
   return for_each_block(
       slab, stop, [&](const Block& block) -> std::expected<void, Error> {
+        // A block is what is held: it, not the whole slab, is under the limits.
+        if (block.size > limits_.max_elements or
+            not detail::fits_bytes(block.size, sizeof(T), 0,
+                                   limits_.max_result_bytes)) {
+          return std::unexpected{
+              Error{fail(WrapperFault::too_large, NcOp::get_var, name.view())}};
+        }
         buffer.resize(block.size);
         return detail::nc_call(NcOp::get_var, name.view(), path_,
                                [&] {
@@ -194,7 +204,7 @@ template <Numeric T>
 std::expected<void, Error> File::read_blocks(NcNameRef name, const Slab& slab,
                                              const BlockVisitor<T>& visit,
                                              const StopToken& stop) const {
-  return plan_read(name, slab, &readable_as<T>, sizeof(T))
+  return plan_read(name, slab, &readable_as<T>, sizeof(T), false)
       .and_then([&](const ReadPlan& plan) {
         return stream<T>(name, plan.varid, slab, stop, visit);
       });
@@ -212,7 +222,7 @@ std::expected<std::vector<core::Sample>, Error> File::read_samples(
         Error{fail(WrapperFault::type_mismatch, NcOp::get_var, name.view())}};
   };
   // No 64-bit integer data: a double cannot hold every value (section 4.3).
-  if (info->type == Type::int64) {
+  if (not sample_readable(info->type)) {
     return type_mismatch();
   }
   return dispatch_numeric(

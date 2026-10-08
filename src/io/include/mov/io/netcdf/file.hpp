@@ -183,6 +183,16 @@ class File : private detail::Dataset {
   /// contiguous or compact storage, which is all a classic file has.
   [[nodiscard]] std::expected<std::optional<std::vector<std::size_t>>, NcError>
   chunk_shape(NcNameRef name) const;
+  /// Makes the chunk cache of variable `name` at least `bytes` big (it never
+  /// shrinks one). netCDF-C keeps 16 MiB per variable by default, and a chunk
+  /// bigger than the cache is decompressed again by each read that touches it:
+  /// a deflated chunk of 80 MB read in blocks of 8 MB is decompressed ten
+  /// times. The cache is memory the read holds until the File is closed, so a
+  /// caller bounds `bytes` (a reader by ReadLimits::max_result_bytes). `const`
+  /// because it changes the library's cache for this file, not the File's
+  /// state.
+  [[nodiscard]] std::expected<void, NcError> reserve_chunk_cache(
+      NcNameRef name, std::size_t bytes) const;
 
   // ---- attributes ----------------------------------------------------------
   // An absent attribute is nullopt; an absent variable is an error.
@@ -202,9 +212,12 @@ class File : private detail::Dataset {
 
   // ---- data ----------------------------------------------------------------
   // Before anything is allocated, the slab must lie inside the dimensions
-  // (NC_EINVALCOORDS, NC_EEDGE), its element count must fit in size_t
-  // (`overflow`) and stay within limits.max_elements, and the result's bytes
-  // within limits.max_result_bytes (`too_large`; peaks in read_limits.hpp).
+  // (NC_EINVALCOORDS, NC_EEDGE) and its element count must fit in size_t
+  // (`overflow`). A read that returns the whole slab (read, read_samples)
+  // also keeps it within limits.max_elements and its bytes within
+  // limits.max_result_bytes (`too_large`; peaks in read_limits.hpp);
+  // read_blocks holds one block, so each block is held to those limits
+  // instead, and a slab of any size can be walked.
   // Reads go in blocks of rows_per_block(slab, limits.slab_elements) outer
   // indices, polling `stop` before each (Cancelled). Errors are therefore
   // io::Error.
@@ -281,10 +294,11 @@ class File : private detail::Dataset {
     std::size_t total;
   };
   /// The variable and element count of a read, after every check; the
-  /// result has `total` elements of `element_bytes`.
+  /// result has `total` elements of `element_bytes`. `whole_result` is false
+  /// for read_blocks, whose blocks are checked as they are read.
   [[nodiscard]] std::expected<ReadPlan, Error> plan_read(
       NcNameRef name, const Slab& slab, bool (*readable)(Type) noexcept,
-      std::size_t element_bytes) const;
+      std::size_t element_bytes, bool whole_result = true) const;
   struct Block {
     std::span<const std::size_t> start;
     std::span<const std::size_t> count;

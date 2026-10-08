@@ -325,3 +325,52 @@ TEST_CASE("read_strings reads NC_STRING and frees it (B21)", "[io][netcdf]") {
             open(fx.typed(), {.max_elements = 3}).read_strings("v_string"))) ==
         NcStatus{WrapperFault::too_large});
 }
+
+TEST_CASE("read_blocks holds one block under the limits, not the whole slab",
+          "[io][netcdf]") {
+  const Fixtures fx;
+  mov::test::ncgen::make_matrix(fx.path("m.nc"), 100, 10);  // 1000 elements
+  const Slab whole{{.start = 0, .count = 100}, {.start = 0, .count = 10}};
+  const auto walk = [&](const ReadLimits& limits) {
+    const File file = open(fx.path("m.nc"), limits);
+    std::size_t seen = 0;
+    const auto done = file.read_blocks<double>(
+        "data", whole,
+        [&seen](std::span<const double> values,
+                DimRange) -> std::expected<void, Error> {
+          seen += values.size();
+          return {};
+        });
+    return std::pair{done, seen};
+  };
+  // Blocks of 5 rows (50 elements, 400 bytes) under a limit of 60 elements:
+  // the whole slab (1000) is over it and read() refuses, the walk does not.
+  const ReadLimits small{.max_elements = 60, .slab_elements = 50};
+  CHECK(status_of(error_of(
+            open(fx.path("m.nc"), small).read<double>("data", whole))) ==
+        NcStatus{WrapperFault::too_large});
+  const auto [walked, seen] = walk(small);
+  CHECK(walked.has_value());
+  CHECK(seen == 1000);
+  // A block over the limit is refused, before it is read.
+  const auto [elements, elements_seen] =
+      walk({.max_elements = 49, .slab_elements = 50});
+  CHECK(status_of(error_of(elements)) == NcStatus{WrapperFault::too_large});
+  CHECK(elements_seen == 0);
+  const auto [bytes, bytes_seen] =
+      walk({.max_elements = 60, .slab_elements = 50, .max_result_bytes = 399});
+  CHECK(status_of(error_of(bytes)) == NcStatus{WrapperFault::too_large});
+  CHECK(bytes_seen == 0);
+  // One outer index can be bigger than slab_elements: the block is that row.
+  const auto [row, row_seen] = walk({.max_elements = 9, .slab_elements = 4});
+  CHECK(status_of(error_of(row)) == NcStatus{WrapperFault::too_large});
+  CHECK(row_seen == 0);
+  CHECK(walk({.max_elements = 10, .slab_elements = 4}).first.has_value());
+  // The overflow and bounds checks still cover the whole slab.
+  const Slab beyond{{.start = 90, .count = 20}, {.start = 0, .count = 10}};
+  const File file = open(fx.path("m.nc"));
+  CHECK(status_of(error_of(file.read_blocks<double>(
+            "data", beyond, [](std::span<const double>, DimRange) {
+              return std::expected<void, Error>{};
+            }))) == NcStatus{LibraryStatus{nc_eedge}});
+}

@@ -280,3 +280,29 @@ TEST_CASE(
           NcStatus{WrapperFault::closed});
   }
 }
+
+TEST_CASE(
+    "reserve_chunk_cache grows the cache of a variable and never shrinks it",
+    "[io][netcdf]") {
+  const Fixtures fx;
+  mov::test::ncgen::AdcircNc spec;
+  spec.stations = 6;
+  spec.steps = 20;
+  spec.chunks = {5, 2};
+  mov::test::ncgen::make_adcirc_nc(fx.path("chunked.nc"), spec);
+  File file = open(fx.path("chunked.nc"));
+  CHECK(file.reserve_chunk_cache("zeta", std::size_t{64} << 20U).has_value());
+  CHECK(file.reserve_chunk_cache("zeta", 1).has_value());  // no shrinking
+  // The same data still reads.
+  CHECK(file.read<double>("zeta",
+                          {{.start = 0, .count = 20}, {.start = 1, .count = 3}})
+            .value()
+            .size() == 60);
+  CHECK(error_of(file.reserve_chunk_cache("nope", 1)).status ==
+        NcStatus{LibraryStatus{-49}});  // NC_ENOTVAR
+  const auto closed = std::move(file).close();
+  REQUIRE(closed.has_value());
+  // NOLINTNEXTLINE(bugprone-use-after-move): a closed File answers `closed`
+  CHECK(error_of(file.reserve_chunk_cache("zeta", 1)).status ==
+        NcStatus{WrapperFault::closed});
+}

@@ -15,7 +15,8 @@ namespace mov::io {
 ///
 /// The netCDF reads (nc::File) check, before allocating, both the element
 /// count against `max_elements` and the bytes of the result against
-/// `max_result_bytes`. Their peak memory, for n elements of the request:
+/// `max_result_bytes` (read_blocks: the same for each block, since it never
+/// holds more). Their peak memory, for n elements of the request:
 ///   read<T>          n * sizeof(T)
 ///   read_blocks<T>   one block: rows_per_block(slab, slab_elements) outer
 ///                    indices of the slab, of sizeof(T) each element
