@@ -142,6 +142,37 @@ TEST_CASE("read_text_file checks the size limit before reading",
             .has_value());
 }
 
+TEST_CASE("read_text_prefix reads at most the bytes asked for",
+          "[io][text_file]") {
+  const mov::test::ScratchDir dir;
+  const std::filesystem::path file = dir / "twenty.txt";
+  mov::test::write_bytes(file, "0123456789abcdefghij");
+
+  const auto head = mov::io::read_text_prefix(file, 5);
+  REQUIRE(head.has_value());
+  CHECK(*head == "01234");
+  // A file shorter than the prefix is read whole; an empty prefix is empty.
+  CHECK(mov::io::read_text_prefix(file, 100).value_or("") ==
+        "0123456789abcdefghij");
+  CHECK(mov::io::read_text_prefix(file, 0).value_or("x").empty());
+  // No size limit applies: the file may be far over max_text_bytes.
+  mov::test::write_bytes(dir / "big.txt", std::string(100000, 'q'));
+  const auto big = mov::io::read_text_prefix(dir / "big.txt", 16);
+  REQUIRE(big.has_value());
+  CHECK(big->size() == 16);
+}
+
+TEST_CASE("read_text_prefix refuses what read_text_file refuses",
+          "[io][text_file]") {
+  const mov::test::ScratchDir dir;
+  const auto missing = mov::io::read_text_prefix(dir / "nope", 10);
+  REQUIRE(not missing.has_value());
+  CHECK(missing.error().op == FileOp::open);
+  const auto directory = mov::io::read_text_prefix(dir.path(), 10);
+  REQUIRE(not directory.has_value());
+  CHECK(directory.error().ec == std::errc::is_a_directory);
+}
+
 // B3: v4 opened the file with std::fstream (read and write), so a read-only
 // file failed to open and the reader returned "no stations" as a success.
 TEST_CASE("read_text_file reads a read-only file",

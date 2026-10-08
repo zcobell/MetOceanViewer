@@ -189,3 +189,36 @@ endif()
 add_executable(station_nc_fixtures station_nc_fixtures.cpp)
 target_link_libraries(station_nc_fixtures PRIVATE mov_station_nc_canonical mov_nc_fixtures mov::options mov::warnings)
 mov_enable_static_analysis(station_nc_fixtures)
+
+# ---- foreign CF, legacy v4 and hostile station netCDF files (WP10b) -----------
+#
+# The fixtures are written at test time with netCDF-C itself (support/nc_build.hpp,
+# support/legacy_fixtures.cpp), independent of mov::io.
+target_sources(mov_nc_fixtures PRIVATE support/foreign_fixtures.cpp support/legacy_fixtures.cpp)
+target_sources(
+    mov_io_station_netcdf_tests
+    PRIVATE
+        test_file_type.cpp
+        test_station_netcdf_foreign.cpp
+        test_station_netcdf_foreign_names.cpp
+        test_station_netcdf_hostile.cpp
+        test_station_netcdf_legacy.cpp
+)
+target_sources(mov_io_netcdf_tests PRIVATE test_station_nc_handles.cpp)
+target_link_libraries(mov_io_netcdf_tests PRIVATE mov_station_nc_canonical)
+
+# The structure fuzzer (core-design.md 7.5): bytes -> a netCDF schema written
+# under the build directory -> every netCDF reader. The ASan allocation cap is
+# set by the target itself.
+mov_add_fuzz_test(
+    fuzz_station_netcdf_structure
+    SOURCES fuzz_station_netcdf_structure.cpp
+    LIBRARIES mov::io netCDF::netcdf
+    CORPUS io/station_netcdf_structure
+)
+if(TARGET fuzz_station_netcdf_structure)
+    target_compile_definitions(
+        fuzz_station_netcdf_structure
+        PRIVATE MOV_FUZZ_SCRATCH_DIR="${CMAKE_CURRENT_BINARY_DIR}/fuzz_station_netcdf_structure.scratch"
+    )
+endif()

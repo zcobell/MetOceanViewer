@@ -57,7 +57,7 @@ namespace {
 
 namespace sn = ::mov::io::detail::station_nc;
 
-using Vars = std::vector<nc::VarInfo>;
+}  // namespace
 
 /// A text attribute of `on`, cut at its first NUL; nullopt when absent or not
 /// text.
@@ -70,6 +70,8 @@ std::expected<std::optional<std::string>, Error> text_of(const nc::File& file,
             [](const std::string& t) { return std::string{cut_at_nul(t)}; });
       });
 }
+
+namespace {
 
 // ---- the header (SN 12.1, 13)
 // ----------------------------------------------------
@@ -155,11 +157,15 @@ std::expected<Read<StationNcVersion>, Error> read_header(const nc::File& file) {
 // ---- the structure (SN 12.2, 12.3)
 // -------------------------------------------------
 
+}  // namespace
+
 std::optional<nc::VarInfo> named(const Vars& vars, std::string_view name) {
   const auto it = std::ranges::find_if(
       vars, [name](const nc::VarInfo& v) { return v.name == name; });
   return it == vars.end() ? std::nullopt : std::optional{*it};
 }
+
+namespace {
 
 std::expected<nc::VarInfo, Error> require_named(const Vars& vars,
                                                 std::string_view name) {
@@ -514,6 +520,8 @@ std::expected<std::vector<std::string>, Error> grid_mappings(
   return names;
 }
 
+}  // namespace
+
 /// "EPSG:<digits>" (at most 9 digits), positive.
 std::optional<core::Epsg> parse_epsg(std::string_view text) {
   constexpr std::string_view prefix = "EPSG:";
@@ -550,6 +558,8 @@ std::expected<std::optional<double>, Error> double_att(const nc::File& file,
   return values->transform([](const std::vector<double>& v) { return v[0]; });
 }
 
+namespace {
+
 /// The CRS of a grid mapping variable without `epsg_code`:
 /// latitude_longitude on the WGS 84 ellipsoid; without ellipsoid parameters,
 /// assumed to be WGS 84 (warning).
@@ -578,6 +588,8 @@ std::expected<Read<core::Epsg>, Error> crs_from_parameters(
   return out;
 }
 
+}  // namespace
+
 /// The grid mapping variable's CRS: `epsg_code`, else its parameters. A
 /// prime meridian other than Greenwich is refused either way.
 std::expected<Read<core::Epsg>, Error> crs_of_mapping(const nc::File& file,
@@ -603,6 +615,8 @@ std::expected<Read<core::Epsg>, Error> crs_of_mapping(const nc::File& file,
   }
   return Read<core::Epsg>{.value = *epsg, .warnings = {}};
 }
+
+namespace {
 
 std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file,
                                               const Structure& s) {
@@ -645,6 +659,8 @@ std::expected<std::optional<Projector>, Error> projector_for(core::Epsg epsg) {
 // ---- the stations (SN 12.4)
 // ---------------------------------------------------------
 
+}  // namespace
+
 /// The bytes of a char row without its trailing NUL padding.
 std::string trimmed(std::string row) {
   while (not row.empty() and row.back() == '\0') {
@@ -652,6 +668,8 @@ std::string trimmed(std::string row) {
   }
   return row;
 }
+
+namespace {
 
 std::expected<std::vector<core::StationKey>, Error> station_ids(
     const nc::File& file, const nc::VarInfo& var, const StopToken& stop) {
@@ -738,6 +756,8 @@ station_sources(const nc::File& file, const Structure& s,
   return out;
 }
 
+}  // namespace
+
 std::expected<std::vector<double>, Error> coordinate(const nc::File& file,
                                                      const nc::VarInfo& var,
                                                      const StopToken& stop) {
@@ -758,19 +778,13 @@ std::expected<std::vector<double>, Error> coordinate(const nc::File& file,
   return values;
 }
 
-/// Where a station is: its WGS 84 Location and, when the file's CRS is
-/// another geographic one, its point in that CRS.
-struct Position {
-  core::Location location;
-  std::optional<core::NativePoint> native;
-};
-
 /// The position of station i from lon/lat in `projector`'s CRS, or WGS 84.
-std::expected<Position, Error> place(double lat, double lon,
+std::expected<Position, Error> place(double latitude, double longitude,
                                      std::optional<Projector>& projector,
                                      std::size_t i) {
   if (not projector) {
-    const auto where = core::Location::make({.lat = lat, .lon = lon});
+    const auto where =
+        core::Location::make({.lat = latitude, .lon = longitude});
     if (not where) {
       return invalid(
           FormatErrc::bad_coordinates,
@@ -780,14 +794,16 @@ std::expected<Position, Error> place(double lat, double lon,
     }
     return Position{.location = *where, .native = std::nullopt};
   }
-  const auto native =
-      core::NativePoint::make({.x = lon, .y = lat}, projector->crs());
-  const auto where = projector->to_location({.x = lon, .y = lat});
+  const auto native = core::NativePoint::make({.x = longitude, .y = latitude},
+                                              projector->crs());
+  const auto where = projector->to_location({.x = longitude, .y = latitude});
   if (not native or not where) {
     return invalid(FormatErrc::bad_coordinates, "lon, lat", i);
   }
   return Position{.location = *where, .native = *native};
 }
+
+namespace {
 
 std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     const nc::File& file, const Structure& s, core::Epsg epsg,
@@ -871,6 +887,8 @@ std::expected<Read<std::optional<core::Unit>>, Error> unit_of(
   return out;
 }
 
+}  // namespace
+
 /// `meta` with the datum of `vertical_datum`, when it has one it can carry.
 Read<core::SeriesMeta> with_datum(core::SeriesMeta meta,
                                   const std::optional<std::string>& text,
@@ -898,6 +916,8 @@ Read<core::SeriesMeta> with_datum(core::SeriesMeta meta,
   out.value = *std::move(assumed);
   return out;
 }
+
+namespace {
 
 std::expected<Read<core::SeriesMeta>, Error> meta_of(const nc::File& file,
                                                      const nc::VarInfo& var) {

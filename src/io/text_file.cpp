@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <system_error>
 
@@ -52,7 +53,8 @@ std::error_code last_error_code() noexcept {
 
 // Opens, asks the open handle what it is and how big, and reads it.
 std::expected<std::string, FileError> read_open_file(
-    const std::filesystem::path& path, const ReadLimits& limits) {
+    const std::filesystem::path& path, const ReadLimits& limits,
+    std::optional<std::uintmax_t> prefix) {
   // BACKUP_SEMANTICS lets a directory be opened, to be recognized and refused.
   const detail::FileHandle file{::CreateFileW(
       path.c_str(), GENERIC_READ,
@@ -72,10 +74,12 @@ std::expected<std::string, FileError> read_open_file(
   if (::GetFileType(file.get()) != FILE_TYPE_DISK) {
     return failure(FileOp::open, path, not_regular_code(Kind::other));
   }
-  const std::uintmax_t size =
+  std::uintmax_t size =
       (static_cast<std::uintmax_t>(info.nFileSizeHigh) << 32U) |
       info.nFileSizeLow;
-  if (size > limits.max_text_bytes) {
+  if (prefix) {
+    size = std::min(size, *prefix);
+  } else if (size > limits.max_text_bytes) {
     return failure(FileOp::size, path,
                    std::make_error_code(std::errc::file_too_large));
   }
@@ -139,7 +143,8 @@ std::expected<std::string, std::error_code> read_all(int fd, std::size_t size) {
 // Opens, asks the open descriptor what it is and how big, and reads it.
 // O_NONBLOCK so that opening a FIFO does not wait for a writer.
 std::expected<std::string, FileError> read_open_file(
-    const std::filesystem::path& path, const ReadLimits& limits) {
+    const std::filesystem::path& path, const ReadLimits& limits,
+    std::optional<std::uintmax_t> prefix) {
   errno = 0;
   const detail::FileHandle file{
       ::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC)};
@@ -154,8 +159,10 @@ std::expected<std::string, FileError> read_open_file(
   if (const Kind kind = kind_of(info); kind != Kind::regular) {
     return failure(FileOp::open, path, not_regular_code(kind));
   }
-  const auto size = static_cast<std::uintmax_t>(info.st_size);
-  if (size > limits.max_text_bytes) {
+  auto size = static_cast<std::uintmax_t>(info.st_size);
+  if (prefix) {
+    size = std::min(size, *prefix);
+  } else if (size > limits.max_text_bytes) {
     return failure(FileOp::size, path,
                    std::make_error_code(std::errc::file_too_large));
   }
@@ -172,7 +179,12 @@ std::expected<std::string, FileError> read_open_file(
 
 std::expected<std::string, FileError> read_text_file(
     const std::filesystem::path& path, const ReadLimits& limits) {
-  return read_open_file(path, limits);
+  return read_open_file(path, limits, std::nullopt);
+}
+
+std::expected<std::string, FileError> read_text_prefix(
+    const std::filesystem::path& path, std::size_t max_bytes) {
+  return read_open_file(path, ReadLimits{}, std::uintmax_t{max_bytes});
 }
 
 }  // namespace mov::io

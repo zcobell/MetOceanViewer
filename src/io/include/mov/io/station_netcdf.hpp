@@ -4,8 +4,10 @@
 // The station time-series netCDF format of v5 (docs/station-netcdf.md, "SN"):
 // CF-1.11 discrete sampling geometry, featureType timeSeries, in a netCDF-4
 // file restricted to CF-classic constructs. This header has the v5 writer and
-// the v5 reader (WP10a); the foreign CF and legacy dialect readers and file
-// detection are WP10b.
+// read_station_netcdf, which reads a v5 file (WP10a), a foreign CF discrete
+// sampling geometry `timeSeries` file or a legacy v4 station file (WP10b).
+// What kind of file a path is, before any reader is chosen, is file_type.hpp's
+// detect_file_type.
 //
 // netCDF-C is not thread-safe: the caller serializes these functions with
 // every other netCDF call (nc/file.hpp). Each opens its file once and closes
@@ -210,9 +212,52 @@ struct V5Origin {
   friend constexpr bool operator==(const V5Origin&, const V5Origin&) = default;
 };
 
-/// Where a station file's table came from. WP10b adds the foreign CF and
-/// legacy dialect origins.
-using StationFileOrigin = std::variant<V5Origin>;
+/// The representation of a foreign CF discrete-sampling-geometry file (CF 9.3;
+/// the v5 layouts are `StationNcLayout`):
+///  - `orthogonal` (9.3.1): `time(time)`, data over (station, time) or (time,
+///    station);
+///  - `incomplete` (9.3.2): `time(station, obs)` (or transposed), padded with
+///    missing values;
+///  - `contiguous_ragged` (9.3.3): `time(obs)`, a count variable named by its
+///    `sample_dimension` attribute gives each station's run;
+///  - `indexed_ragged` (9.3.4): `time(obs)`, an index variable named by its
+///    `instance_dimension` attribute gives each sample's station;
+///  - `single_station` (9.2): no station dimension; scalar coordinates, data
+///    over time.
+enum class CfDsgLayout : std::uint8_t {
+  orthogonal,
+  incomplete,
+  contiguous_ragged,
+  indexed_ragged,
+  single_station,
+};
+
+/// A CF discrete-sampling-geometry `timeSeries` file written by someone else
+/// (SN 12 "Foreign"): its layout and the CF version its `Conventions` names.
+struct ForeignCfOrigin {
+  CfDsgLayout layout;
+  CfVersion version;
+  friend constexpr bool operator==(const ForeignCfOrigin&,
+                                   const ForeignCfOrigin&) = default;
+};
+
+/// The two shapes of the legacy v4 station netCDF (legacy-formats.md 5; the
+/// `%4.4i` and `%04i` spellings of the station number are one dialect, and
+/// CRMS, dialect C, is not read). `a` carries the marks of v4's
+/// `Hmdf::writeNetcdf` (a global `fileformat` attribute or a `stationId`
+/// variable); `b` is a file in the same layout without them, which v4's reader
+/// accepted. Both are read the same way.
+enum class LegacyDialect : std::uint8_t { a, b };
+
+/// A legacy v4 station file (SN 11).
+struct LegacyOrigin {
+  LegacyDialect dialect;
+  friend constexpr bool operator==(const LegacyOrigin&,
+                                   const LegacyOrigin&) = default;
+};
+
+/// Where a station file's table came from.
+using StationFileOrigin = std::variant<V5Origin, ForeignCfOrigin, LegacyOrigin>;
 
 /// What read_station_netcdf returns.
 struct StationFile {
@@ -241,20 +286,53 @@ struct StationNcCatalog {
                          const StationNcCatalog&) = default;
 };
 
-/// The stations and the schema of a v5 file, read and validated as
-/// read_station_netcdf does, without the time and data variables. Errors and
-/// warnings are read_station_netcdf's, except the ones about samples.
+/// The stations and the schema of a station file (v5, foreign CF or legacy),
+/// read and validated as read_station_netcdf does, without the time and data
+/// variables. Errors and warnings are read_station_netcdf's, except the ones
+/// about samples. (A foreign incomplete layout without `obs_count` has to look
+/// at its times to count each station's samples, so they are checked here.)
 [[nodiscard]] std::expected<Read<StationNcCatalog>, Error>
 inspect_station_netcdf(const std::filesystem::path& path,
                        const ReadContext& ctx);
 
-/// Reads the stations `which` of a v5 file into a table (stations in the order
-/// of the selection; one shared axis in the orthogonal layout, one per
+/// Reads the stations `which` of a station file into a table. The kind of file
+/// decides the reader (the order of SN 12.1; any other kind is
+/// `not_this_format`):
+///  - v5: the rules below;
+///  - foreign CF (`featureType` timeSeries, CF-1.6 or later; SN 12 "Foreign",
+///    CF 9.3): any of the five layouts, variables found by `cf_role`,
+///    `standard_name`, `units`, `coordinates`, `sample_dimension` and
+///    `instance_dimension`; `_FillValue`, `missing_value`, `valid_*`,
+///    packing, int and float data and times, NC_STRING and integer ids are
+///    accepted; a registry quantity when the standard name is its own and the
+///    unit converts, else a generic one named after the variable (a
+///    substitute token, `variable_renamed`, when the name is none); variables
+///    that are not series are skipped (`skipped_variable`); warnings
+///    `foreign_cf` first, then `crs_assumed`, `duplicate_station_id_renamed`,
+///    `invalid_utf8_replaced`, `skipped_variable`, `variable_renamed`,
+///    `unknown_quantity`, `unrecognized_unit`, `datum_unknown`, the time
+///    units'. Errors: `missing_variable` (latitude, longitude, time),
+///    `no_station_id`, `no_data_variables`, `unsupported_layout`,
+///    `dimension_mismatch`, `bad_obs_count`, `bad_row_size`,
+///    `bad_ragged_index`, `padding_not_missing`, `time_*`, `missing_attribute`
+///    (`time:units`), `unsupported_calendar`, NcError (a `_FillValue` of the
+///    wrong type, `too_large`);
+///  - legacy v4 (SN 11): see station_netcdf_legacy.cpp; origin LegacyOrigin,
+///    warnings `legacy_dialect` first, then `tz_assumed_utc`, `epoch_used`,
+///    `crs_assumed`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`,
+///    `crs_approximate`, `unrecognized_unit`, `datum_unknown`. Errors:
+///    `missing_dimension`/`missing_variable` (with the station for the
+///    per-station variables), `dimension_mismatch`, `inconsistent_metadata`,
+///    `unsupported_crs`, ParseError `bad_date` (`referenceDate`), NcError
+///    `type_mismatch` for a `HorizontalProjectionEPSG` that is not an integer.
+///
+/// For a v5 file: reads the stations `which` into a table (stations in the
+/// order of the selection; one shared axis in the orthogonal layout, one per
 /// station in the incomplete one). Validation (SN 12, v5 column; every rule
 /// is a hard error, none is downgraded):
 ///
 ///  - header: global `metoceanviewer_format` = "station-timeseries" (else
-///    `not_this_format`: WP10b reads foreign and legacy files);
+///    `not_this_format`: another kind of file);
 ///    `metoceanviewer_format_version` present and "<major>.<minor>"
 ///    (`bad_version`), major 1 (`unsupported_version`); `Conventions` with a
 ///    CF-1.N token, N >= 6 (`missing_attribute`, `unsupported_version`; a

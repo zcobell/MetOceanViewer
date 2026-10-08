@@ -496,8 +496,13 @@ Warnings are returned alongside a successful result.
 ### 12.1 Detection and version gate
 
 1. File opens as netCDF (else `NotNetcdf`).
-2. If global `metoceanviewer_format == "station-timeseries"`: this spec. Else if `featureType` is `timeSeries` (case-insensitive) and `Conventions` has a `CF-1.N` token with N >= 6: generic
-   CF-DSG file, same rules as below with `W-FOREIGN-CF` and every "written by us" requirement relaxed to the *Foreign* column. Else legacy detection (legacy-formats.md §1.1).
+2. The kinds are tried in this order (`detect_file_type`, WP10b; the station reader dispatches on the same rule):
+   global `metoceanviewer_format == "station-timeseries"`: this spec; a file that names any other `metoceanviewer_format` is none of ours (it is not guessed to be foreign CF);
+   global `model == "ADCIRC"` or the D-Flow FM station coordinate variables: the model-output readers, even when the file carries CF attributes;
+   `featureType` is `timeSeries` (case-insensitive) and `Conventions` has a `CF-1.N` token with N >= 6: generic
+   CF-DSG file, same rules as below with `W-FOREIGN-CF` and every "written by us" requirement relaxed to the *Foreign* column;
+   variable `time_station_0001` (or `time_station_000001` with `numStations` and `stationXCoordinate`): the legacy dialects (legacy-formats.md §1.1, §5).
+   Anything else, CRMS (dialect C) included, is `not_this_format`. A v5 file whose `metoceanviewer_format` attribute was removed is therefore read as foreign CF.
 3. `Conventions` is tokenized on blanks/commas (CF §2.6.1) and must contain `CF-1.6` or later. Later CF versions do not invalidate earlier usage (CF §2.6.1), so `CF-1.12` is accepted.
 4. `metoceanviewer_format_version`: see §13.
 
@@ -520,9 +525,9 @@ Warnings are returned alongside a successful result.
 |---|---|---|
 | L1 orthogonal | `time` is 1-D with the time dimension, data `(station, time)` or `(time, station)` | MUST |
 | L2 incomplete | `time` is 2-D `(station, obs)` (or transposed) | MUST |
-| L3 contiguous ragged | integer variable with `sample_dimension` attribute whose only dim is the instance dim (CF §9.3.3); samples on that dim | SHOULD (Phase 2 recommended; the writer never emits it in 1.0) |
-| L4 indexed ragged | variable with `instance_dimension` attribute (CF §9.3.4) | not supported in 1.0: `UnsupportedLayout` |
-| Scalar single station (instance dim omitted, CF §9.2) | no `station` dim, scalar `cf_role` variable | SHOULD (treated as one station) |
+| L3 contiguous ragged | integer variable with `sample_dimension` attribute whose only dim is the instance dim (CF §9.3.3); samples on that dim; the counts must be non-negative, unmasked and add up to the sample dimension (`bad_row_size`) | MUST (WP10b; the writer never emits it in 1.0) |
+| L4 indexed ragged | variable over the sample dimension with an `instance_dimension` attribute naming the instance dimension (CF §9.3.4); every index must be in `[0, stations)` and unmasked (`bad_ragged_index`) | MUST (WP10b; was `UnsupportedLayout` in the first draft) |
+| Scalar single station (instance dim omitted, CF §9.2) | no `station` dimension, scalar `lat`/`lon`, the id (if any) a scalar string or one char row | MUST (WP10b; treated as one station; no id means the id `0`) |
 
 ### 12.4 Value validation
 

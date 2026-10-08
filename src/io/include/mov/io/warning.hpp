@@ -58,6 +58,8 @@ enum class WarningCode : std::uint8_t {
   unit_converted,            // a column stored in its canonical unit
   station_name_substituted,  // an empty name written as "Station <id>"
   native_position_dropped,   // the file keeps WGS 84 only (SN 10.1)
+  // foreign station netCDF
+  variable_renamed,  // a variable name that is no quantity token became one
 };
 
 /// A stable lower-case identifier, the same as the enumerator's name

@@ -42,19 +42,17 @@ namespace {
 
 namespace sn = ::mov::io::detail::station_nc;
 
-/// What a read needs besides the file.
+/// What a v5 read needs besides the file: its structure and the generic row
+/// specification.
 struct Rows {
   const Structure& s;
-  std::span<const std::size_t> counts;  // samples per station of the file
-  std::span<const std::size_t> selected;
-  PaddingCheck padding;
-  const StopToken& stop;
+  RowSpec spec;
 };
 
 /// How far into the sample dimension a group reads: its longest station's
 /// samples and the first padding element (boundary), or all of it (whole).
-std::size_t read_length(const Rows& rows, const StationGroup& group) {
-  const std::size_t obs = rows.s.timing.sample.length;
+std::size_t read_length(const RowSpec& rows, const StationGroup& group) {
+  const std::size_t obs = rows.sample_length;
   if (rows.padding == PaddingCheck::whole) {
     return obs;
   }
@@ -70,7 +68,7 @@ std::size_t read_length(const Rows& rows, const StationGroup& group) {
 template <nc::Numeric T, class Sink>
 std::expected<void, Error> raw_rows(const nc::File& file, nc::NcNameRef var,
                                     std::span<const StationGroup> groups,
-                                    const Rows& rows, const Sink& sink) {
+                                    const RowSpec& rows, const Sink& sink) {
   for (const StationGroup& group : groups) {
     const std::size_t length = read_length(rows, group);
     const nc::Slab slab{{.start = group.first, .count = group.width()},
@@ -115,42 +113,77 @@ std::expected<void, Error> check_padding(std::span<const T> tail,
   return {};
 }
 
-/// The kept samples of each selected station of `var`, masked in the
-/// variable's own type; the padding read is checked for fill. Calls
-/// sink(member, kept).
-template <class Sink>
+/// The kept samples of each selected station of `var` as a T, masked in T;
+/// the padding read is checked for fill when `rows.check_padding`.
+template <nc::Numeric T>
+std::expected<void, Error> rows_as(const nc::File& file, const nc::VarInfo& var,
+                                   std::span<const StationGroup> groups,
+                                   const RowSpec& rows, const RowSink& sink) {
+  auto mask = file.masking<T>(var.name);
+  if (not mask) {
+    return fail(std::move(mask).error());
+  }
+  std::vector<core::Sample> kept;
+  return raw_rows<T>(
+      file, var.name, groups, rows,
+      [&](const SelectedStation& m,
+          std::span<const T> raw) -> std::expected<void, Error> {
+        const std::size_t n = rows.counts[m.station];
+        if (rows.check_padding) {
+          auto padding = check_padding(
+              raw.subspan(n), n, var.name.view(), m.station,
+              [&](T x) { return not mask->apply(x).is_missing(); });
+          if (not padding) {
+            return padding;
+          }
+        }
+        kept.resize(n);
+        std::ranges::transform(raw.first(n), kept.begin(),
+                               [&](T x) { return mask->apply(x); });
+        return sink(m, std::span<const core::Sample>{kept});
+      });
+}
+
+}  // namespace
+
 std::expected<void, Error> sample_rows(const nc::File& file,
-                                       const nc::VarInfo& var, const Rows& rows,
-                                       const Sink& sink) {
+                                       const nc::VarInfo& var,
+                                       const RowSpec& rows, RowRole role,
+                                       const RowSink& sink) {
   auto groups =
-      plan_groups(file, var, rows.s.station.id, rows.selected, std::nullopt);
+      plan_groups(file, var, rows.station_dim, rows.selected, std::nullopt);
   if (not groups) {
     return std::unexpected{std::move(groups).error()};
   }
+  if (role == RowRole::times and var.type == nc::Type::int64) {
+    // A 64-bit time is read as integers (masked in its own type); checked_time
+    // bounds it, so the widening to a Sample cannot hide an out-of-range time.
+    return rows_as<std::int64_t>(file, var, *groups, rows, sink);
+  }
   return dispatch_model_numeric(
       file, var, [&]<class T>() -> std::expected<void, Error> {
-        auto mask = file.masking<T>(var.name);
-        if (not mask) {
-          return fail(std::move(mask).error());
-        }
-        std::vector<core::Sample> kept;
-        return raw_rows<T>(
-            file, var.name, *groups, rows,
-            [&](const SelectedStation& m,
-                std::span<const T> raw) -> std::expected<void, Error> {
-              const std::size_t n = rows.counts[m.station];
-              auto padding = check_padding(
-                  raw.subspan(n), n, var.name.view(), m.station,
-                  [&](T x) { return not mask->apply(x).is_missing(); });
-              if (not padding) {
-                return padding;
-              }
-              kept.resize(n);
-              std::ranges::transform(raw.first(n), kept.begin(),
-                                     [&](T x) { return mask->apply(x); });
-              return sink(m, std::span<const core::Sample>{kept});
-            });
+        return rows_as<T>(file, var, *groups, rows, sink);
       });
+}
+
+std::expected<std::vector<core::Sample>, Error> read_masked(
+    const nc::File& file, const nc::VarInfo& var, const nc::Slab& slab,
+    RowRole role, const StopToken& stop) {
+  if (role != RowRole::times or var.type != nc::Type::int64) {
+    return file.read_samples(var.name, slab, stop);
+  }
+  auto mask = file.masking<std::int64_t>(var.name);
+  if (not mask) {
+    return fail(std::move(mask).error());
+  }
+  auto raw = file.read<std::int64_t>(var.name, slab, stop);
+  if (not raw) {
+    return std::unexpected{std::move(raw).error()};
+  }
+  std::vector<core::Sample> out(raw->size());
+  std::ranges::transform(*raw, out.begin(),
+                         [&mask](std::int64_t x) { return mask->apply(x); });
+  return out;
 }
 
 /// One station's times: present, on the clock, strictly increasing.
@@ -165,37 +198,37 @@ std::expected<core::TimeAxis, Error> axis_of(std::span<const core::Sample> row,
     if (not x) {
       return invalid(FormatErrc::time_missing, std::string{var}, station, j);
     }
-    const auto time = clock.at(*x);
-    if (not time) {
+    const auto instant = clock.at(*x);
+    if (not instant) {
       return invalid(FormatErrc::time_out_of_range, std::string{var}, station,
                      j);
     }
-    if (not axis.empty() and not(axis.back() < *time)) {
+    if (not axis.empty() and not(axis.back() < *instant)) {
       return invalid(FormatErrc::time_not_increasing, std::string{var}, station,
                      j);
     }
-    axis.push_back(*time);
+    axis.push_back(*instant);
   }
   return axis;
 }
 
 std::expected<Read<CfClock>, Error> clock_of(const nc::File& file,
-                                             const nc::VarInfo& time) {
-  auto units = optional_text(file, time.name, "units");
+                                             const nc::VarInfo& time_var) {
+  auto units = optional_text(file, time_var.name, "units");
   if (not units) {
     return std::unexpected{std::move(units).error()};
   }
   if (not *units) {
     return invalid(FormatErrc::missing_attribute,
-                   std::string{time.name.view()} + ":units");
+                   std::string{time_var.name.view()} + ":units");
   }
   auto parsed = parse_cf_time_units(cut_at_nul(**units));
   if (not parsed) {
     return fail(std::move(parsed).error());
   }
-  return read_calendar(file, time)
-      .and_then([&](CfCalendar calendar) {
-        return make_clock(parsed->value, calendar, time.name.view());
+  return read_calendar(file, time_var)
+      .and_then([&](CfCalendar cal) {
+        return make_clock(parsed->value, cal, time_var.name.view());
       })
       .transform([&](CfClock clock) {
         return Read<CfClock>{.value = clock,
@@ -203,19 +236,21 @@ std::expected<Read<CfClock>, Error> clock_of(const nc::File& file,
       });
 }
 
+namespace {
+
 /// The axes: one shared (orthogonal) or one per selected station.
 std::expected<std::vector<core::TimeAxis>, Error> read_axes(
     const nc::File& file, const Rows& rows, const CfClock& clock) {
   const nc::VarInfo& time = rows.s.timing.time;
   if (rows.s.timing.layout == StationNcLayout::orthogonal) {
-    return read_time_axis(file, time, clock, rows.stop)
+    return read_time_axis(file, time, clock, rows.spec.stop)
         .transform([](core::TimeAxis axis) {
           return std::vector<core::TimeAxis>{std::move(axis)};
         });
   }
-  std::vector<core::TimeAxis> axes(rows.selected.size());
+  std::vector<core::TimeAxis> axes(rows.spec.selected.size());
   auto done = sample_rows(
-      file, time, rows,
+      file, time, rows.spec, RowRole::times,
       [&](const SelectedStation& m,
           std::span<const core::Sample> kept) -> std::expected<void, Error> {
         return axis_of(kept, clock, time.name.view(), m.station)
@@ -232,9 +267,9 @@ std::expected<std::vector<core::TimeAxis>, Error> read_axes(
 /// The kept samples of a data variable at each selected station.
 std::expected<std::vector<core::Column>, Error> read_values(
     const nc::File& file, const nc::VarInfo& var, const Rows& rows) {
-  std::vector<core::Column> columns(rows.selected.size());
+  std::vector<core::Column> columns(rows.spec.selected.size());
   auto done = sample_rows(
-      file, var, rows,
+      file, var, rows.spec, RowRole::values,
       [&](const SelectedStation& m,
           std::span<const core::Sample> kept) -> std::expected<void, Error> {
         columns[m.position].assign(kept.begin(), kept.end());
@@ -261,7 +296,7 @@ std::expected<Flags, Error> read_flags(const nc::File& file,
         return file.masking<std::int8_t>(var.name).transform_error(lift<Error>);
       },
       [&] {
-        return plan_groups(file, var, rows.s.station.id, rows.selected,
+        return plan_groups(file, var, rows.spec.station_dim, rows.spec.selected,
                            std::nullopt);
       });
   if (not setup) {
@@ -269,13 +304,13 @@ std::expected<Flags, Error> read_flags(const nc::File& file,
   }
   const auto& [mask, groups] = *setup;
   Flags flags{
-      .rows = std::vector<std::vector<std::int8_t>>(rows.selected.size()),
+      .rows = std::vector<std::vector<std::int8_t>>(rows.spec.selected.size()),
       .fill = mask.fill};
   auto done = raw_rows<std::int8_t>(
-      file, var.name, groups, rows,
+      file, var.name, groups, rows.spec,
       [&](const SelectedStation& m,
           std::span<const std::int8_t> raw) -> std::expected<void, Error> {
-        const std::size_t n = rows.counts[m.station];
+        const std::size_t n = rows.spec.counts[m.station];
         auto padding =
             check_padding(raw.subspan(n), n, var.name.view(), m.station,
                           [&](std::int8_t f) { return f != flags.fill; });
@@ -331,9 +366,9 @@ std::expected<std::vector<core::Column>, Error> read_data(const nc::File& file,
   if (not flags) {
     return std::unexpected{std::move(flags).error()};
   }
-  for (std::size_t p = 0; p < rows.selected.size(); ++p) {
+  for (std::size_t p = 0; p < rows.spec.selected.size(); ++p) {
     if (auto done = apply_flags((*columns)[p], flags->rows[p], flags->fill,
-                                d.var, status, rows.selected[p]);
+                                d.var, status, rows.spec.selected[p]);
         not done) {
       return std::unexpected{std::move(done).error()};
     }
@@ -345,9 +380,10 @@ std::expected<std::vector<core::Column>, Error> read_data(const nc::File& file,
 /// samples (boundary), or every selected station's whole row (whole).
 std::expected<void, Error> check_size(const nc::File& file, const Rows& rows) {
   std::size_t samples = 0;
-  for (const std::size_t i : rows.selected) {
-    samples += rows.padding == PaddingCheck::whole ? rows.s.timing.sample.length
-                                                   : rows.counts[i];
+  for (const std::size_t i : rows.spec.selected) {
+    samples += rows.spec.padding == PaddingCheck::whole
+                   ? rows.spec.sample_length
+                   : rows.spec.counts[i];
   }
   return check_result_size(file, rows.s.data.front().var.name.view(), 1,
                            samples, rows.s.data.size());
@@ -366,10 +402,13 @@ std::expected<Read<core::StationTable>, Error> read_table(
     counts.push_back(c.samples);
   }
   const Rows rows{.s = s,
-                  .counts = counts,
-                  .selected = selected,
-                  .padding = padding,
-                  .stop = stop};
+                  .spec = {.station_dim = s.station.id,
+                           .sample_length = s.timing.sample.length,
+                           .counts = counts,
+                           .selected = selected,
+                           .padding = padding,
+                           .check_padding = true,
+                           .stop = stop}};
   auto timing = check_size(file, rows)
                     .and_then([&] { return clock_of(file, s.timing.time); })
                     .and_then([&](Read<CfClock> clock) {
