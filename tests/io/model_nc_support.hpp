@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "adcirc_test_support.hpp"
+#include "model_fixtures.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station_table.hpp"
@@ -24,7 +25,6 @@
 #include "mov/io/projection.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/test/scratch_dir.hpp"
-#include "model_fixtures.hpp"
 
 namespace mov::test {
 
@@ -40,9 +40,9 @@ inline void configure_projection_database() {
 [[nodiscard]] inline std::optional<std::filesystem::path> legacy_file(
     std::string_view relative) {
 #if defined(MOV_TEST_REPO_DIR)
-  const std::filesystem::path path =
-      std::filesystem::path{MOV_TEST_REPO_DIR} / "MetOceanViewer" /
-      "function_tests" / relative;
+  const std::filesystem::path path = std::filesystem::path{MOV_TEST_REPO_DIR} /
+                                     "MetOceanViewer" / "function_tests" /
+                                     relative;
   if (std::filesystem::is_regular_file(path)) {
     return path;
   }
@@ -82,8 +82,7 @@ inline void configure_projection_database() {
   }
   if (const auto* nc = std::get_if<io::NcError>(&error)) {
     return std::format("NcError op {} object '{}' file {}",
-                       static_cast<int>(nc->op), nc->object,
-                       nc->file.string());
+                       static_cast<int>(nc->op), nc->object, nc->file.string());
   }
   if (const auto* parse = std::get_if<io::ParseError>(&error)) {
     return std::format("ParseError code {} context '{}'",

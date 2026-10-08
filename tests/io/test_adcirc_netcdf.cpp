@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
 #include <array>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -20,6 +20,8 @@
 #include <vector>
 
 #include "adcirc_test_support.hpp"
+#include "model_fixtures.hpp"
+#include "model_nc_support.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -35,8 +37,6 @@
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
-#include "model_fixtures.hpp"
-#include "model_nc_support.hpp"
 
 namespace {
 
@@ -121,7 +121,8 @@ AdcircNc velocity_spec() {
 
 }  // namespace
 
-// ---- the values ---------------------------------------------------------------
+// ---- the values
+// ---------------------------------------------------------------
 
 TEST_CASE("elevation: fill and -999 are Dry, -998.99 and -950 are values",
           "[io][adcirc][netcdf]") {
@@ -248,8 +249,8 @@ TEST_CASE("velocity: a fill in either component empties both (N7)",
     }
   };
   make_adcirc_nc(dir / "fort.62.nc", spec);
-  const auto read = read_ok(dir / "fort.62.nc",
-                            request(AdcircKind::velocity, everything(3)));
+  const auto read =
+      read_ok(dir / "fort.62.nc", request(AdcircKind::velocity, everything(3)));
   const StationTable& table = read.value;
   REQUIRE(table.schema().size() == 2);
   CHECK(mov::core::token(table.schema()[0].quantity()) == "current_u");
@@ -279,8 +280,8 @@ TEST_CASE("pressure and wind: values at or below -999 are Missing, not Dry",
     return (s == 0 and t == 0) ? -99999.0 : 10.0 + static_cast<double>(t);
   };
   make_adcirc_nc(dir / "fort.71.nc", pressure);
-  const auto p = read_ok(dir / "fort.71.nc",
-                         request(AdcircKind::pressure, everything(3)));
+  const auto p =
+      read_ok(dir / "fort.71.nc", request(AdcircKind::pressure, everything(3)));
   CHECK(samples_of(p.value, 0, 0)[0] == Sample{Missing{}});
   CHECK(samples_of(p.value, 0, 0)[1] == sample(11.0));
   CHECK(mov::core::token(p.value.schema()[0].quantity()) == "air_pressure");
@@ -310,12 +311,12 @@ TEST_CASE("packed data and missing_value", "[io][adcirc][netcdf]") {
     return 2.0 * static_cast<double>(t) + static_cast<double>(s);
   };
   make_adcirc_nc(dir / "packed.nc", spec);
-  const auto read = read_ok(dir / "packed.nc",
-                            request(AdcircKind::pressure, everything(3)));
+  const auto read =
+      read_ok(dir / "packed.nc", request(AdcircKind::pressure, everything(3)));
   // Stored values are unpacked after masking: stored * 0.5 + 10.
   CHECK(samples_of(read.value, 0, 0) ==
-        std::vector<Sample>{sample(10.0), Missing{}, sample(12.0),
-                            sample(13.0), sample(14.0)});
+        std::vector<Sample>{sample(10.0), Missing{}, sample(12.0), sample(13.0),
+                            sample(14.0)});
   CHECK(samples_of(read.value, 1, 0)[0] == sample(10.5));
 
   AdcircNc marked;
@@ -325,13 +326,43 @@ TEST_CASE("packed data and missing_value", "[io][adcirc][netcdf]") {
     return t == 2 ? -1.0 : 5.0;
   };
   make_adcirc_nc(dir / "marked.nc", marked);
-  const auto m = read_ok(dir / "marked.nc",
-                         request(AdcircKind::pressure, everything(3)));
+  const auto m =
+      read_ok(dir / "marked.nc", request(AdcircKind::pressure, everything(3)));
   CHECK(samples_of(m.value, 0, 0)[2] == Sample{Missing{}});
   CHECK(samples_of(m.value, 0, 0)[1] == sample(5.0));
 }
 
-TEST_CASE("data that is 64-bit or unsigned is refused", "[io][adcirc][netcdf]") {
+TEST_CASE("integer data of every width is unpacked after masking",
+          "[io][adcirc][netcdf]") {
+  struct Width {
+    DataType type;
+    double fill;
+  };
+  const mov::test::ScratchDir dir;
+  for (const Width w : {Width{.type = DataType::int8, .fill = -100.0},
+                        Width{.type = DataType::int16, .fill = -32767.0},
+                        Width{.type = DataType::int32, .fill = -99999.0}}) {
+    AdcircNc spec;
+    spec.variables = {"pressure"};
+    spec.type = w.type;
+    spec.fill = w.fill;
+    spec.scale_factor = 0.5;
+    spec.add_offset = 10.0;
+    spec.value = [fill = w.fill](std::size_t t, std::size_t s, std::size_t) {
+      return (s == 0 and t == 1) ? fill : static_cast<double>(t);
+    };
+    make_adcirc_nc(dir / "ints.nc", spec);
+    const auto read =
+        read_ok(dir / "ints.nc", request(AdcircKind::pressure, everything(3)));
+    CHECK(samples_of(read.value, 0, 0) ==
+          std::vector<Sample>{sample(10.0), Missing{}, sample(11.0),
+                              sample(11.5), sample(12.0)});
+    CHECK(samples_of(read.value, 1, 0)[1] == sample(10.5));
+  }
+}
+
+TEST_CASE("data that is 64-bit or unsigned is refused",
+          "[io][adcirc][netcdf]") {
   // No silent all-Missing column: a double cannot hold every 64-bit value,
   // and the wrapper reads no unsigned types.
   const mov::test::ScratchDir dir;
@@ -351,10 +382,12 @@ TEST_CASE("data that is 64-bit or unsigned is refused", "[io][adcirc][netcdf]") 
   }
 }
 
-// ---- station names ----------------------------------------------------------------
+// ---- station names
+// ----------------------------------------------------------------
 
-TEST_CASE("station_name: cut at the first NUL, simplified, stride from the file",
-          "[io][adcirc][netcdf][regression][B11]") {
+TEST_CASE(
+    "station_name: cut at the first NUL, simplified, stride from the file",
+    "[io][adcirc][netcdf][regression][B11]") {
   // The legacy fixtures have name_len 50; v4's DFlow reader hard-coded 200.
   const mov::test::ScratchDir dir;
   for (const std::size_t name_len : {10U, 50U, 300U}) {
@@ -375,17 +408,17 @@ TEST_CASE("station_name: bytes that are not UTF-8 are replaced, with a warning",
           "[io][adcirc][netcdf]") {
   const mov::test::ScratchDir dir;
   AdcircNc spec = zeta_spec();
-  spec.station_names = {"caf\xE9"s, "ok"s, "x\xFF\xFE"s};
+  spec.station_names = {"ab\xE9"s, "ok"s, "x\xFF\xFE"s};
   make_adcirc_nc(dir / "names.nc", spec);
-  const auto read = read_ok(dir / "names.nc",
-                            request(AdcircKind::elevation, everything(3)));
-  CHECK(read.value.station(StationIndex{0}).name.view() ==
-        "caf\xEF\xBF\xBD");
+  const auto read =
+      read_ok(dir / "names.nc", request(AdcircKind::elevation, everything(3)));
+  CHECK(read.value.station(StationIndex{0}).name.view() == "ab\xEF\xBF\xBD");
   CHECK(read.value.station(StationIndex{1}).name.view() == "ok");
   CHECK(warning_count(read.warnings, WarningCode::invalid_utf8_replaced) == 2);
 }
 
-// ---- which file is it -------------------------------------------------------------------
+// ---- which file is it
+// -------------------------------------------------------------------
 
 TEST_CASE("kinds: partner variables and the files that are not ADCIRC's",
           "[io][adcirc][netcdf]") {
@@ -468,16 +501,17 @@ TEST_CASE("kinds: partner variables and the files that are not ADCIRC's",
   }
 }
 
-TEST_CASE("dimensions are found by name and variables matched by identity (B12)",
-          "[io][adcirc][netcdf][regression][B12]") {
+TEST_CASE(
+    "dimensions are found by name and variables matched by identity (B12)",
+    "[io][adcirc][netcdf][regression][B12]") {
   // v4 mapped a missing name to dimension 0 and compared positions.
   const mov::test::ScratchDir dir;
   SECTION("`time` is not dimension 0") {
     AdcircNc spec = zeta_spec();
     spec.station_dim_first = true;
     make_adcirc_nc(dir / "a.nc", spec);
-    const auto read = read_ok(dir / "a.nc",
-                              request(AdcircKind::elevation, everything(3)));
+    const auto read =
+        read_ok(dir / "a.nc", request(AdcircKind::elevation, everything(3)));
     CHECK(samples_of(read.value, 2, 0)[4] == sample(21.0));
     CHECK(read.value.times(StationIndex{0}).size() == 5);
   }
@@ -492,7 +526,8 @@ TEST_CASE("dimensions are found by name and variables matched by identity (B12)"
   }
 }
 
-// ---- the clock ----------------------------------------------------------------------------
+// ---- the clock
+// ----------------------------------------------------------------------------
 
 TEST_CASE("cold start: given, or the epoch of time:units with a warning",
           "[io][adcirc][netcdf]") {
@@ -500,12 +535,13 @@ TEST_CASE("cold start: given, or the epoch of time:units with a warning",
   AdcircNc spec = zeta_spec();
   spec.time_units = "seconds since 2011-02-03 04:05:06";
   make_adcirc_nc(dir / "a.nc", spec);
-  const Time epoch = mov::core::parse_utc_datetime("2011-02-03 04:05:06").value();
+  const Time epoch =
+      mov::core::parse_utc_datetime("2011-02-03 04:05:06").value();
 
   SECTION("no cold start: the file's epoch, and the warning says so") {
-    const auto read = read_ok(
-        dir / "a.nc",
-        request(AdcircKind::elevation, everything(3), std::nullopt));
+    const auto read =
+        read_ok(dir / "a.nc",
+                request(AdcircKind::elevation, everything(3), std::nullopt));
     CHECK(read.value.times(StationIndex{0})[0] ==
           epoch + std::chrono::seconds{600});
     const auto* warning =
@@ -514,8 +550,8 @@ TEST_CASE("cold start: given, or the epoch of time:units with a warning",
     CHECK(warning->subject == "seconds since 2011-02-03 04:05:06");
   }
   SECTION("a cold start wins and the units are not consulted") {
-    const auto read = read_ok(
-        dir / "a.nc", request(AdcircKind::elevation, everything(3)));
+    const auto read =
+        read_ok(dir / "a.nc", request(AdcircKind::elevation, everything(3)));
     CHECK(read.value.times(StationIndex{0})[0] == at_seconds(600.0));
     CHECK(warning_count(read.warnings, WarningCode::epoch_used) == 0);
   }
@@ -528,9 +564,8 @@ TEST_CASE("cold start: the unit of time:units is honoured when it is used",
   spec.time_units = "minutes since 2010-01-01 00:00:00";
   spec.times = {10, 20, 30, 40, 50};
   make_adcirc_nc(dir / "a.nc", spec);
-  const auto read = read_ok(
-      dir / "a.nc",
-      request(AdcircKind::elevation, everything(3), std::nullopt));
+  const auto read = read_ok(dir / "a.nc", request(AdcircKind::elevation,
+                                                  everything(3), std::nullopt));
   CHECK(read.value.times(StationIndex{0})[0] == at_seconds(600.0));
   CHECK(read.value.times(StationIndex{0})[4] == at_seconds(3000.0));
 }
@@ -654,22 +689,22 @@ TEST_CASE("time: masked, out of range and non-increasing values are errors",
   SECTION("a 64-bit integer time reads") {
     spec.time_type = TimeType::int64;
     make_adcirc_nc(dir / "a.nc", spec);
-    const auto read = read_ok(dir / "a.nc",
-                              request(AdcircKind::elevation, everything(3)));
+    const auto read =
+        read_ok(dir / "a.nc", request(AdcircKind::elevation, everything(3)));
     CHECK(read.value.times(StationIndex{0})[4] == at_seconds(3000.0));
   }
 }
 
-// ---- the selection -----------------------------------------------------------------------------
+// ---- the selection
+// -----------------------------------------------------------------------------
 
 TEST_CASE("the selection: order, empty, and made for another file",
           "[io][adcirc][netcdf]") {
   const mov::test::ScratchDir dir;
   make_adcirc_nc(dir / "a.nc", zeta_spec());
   SECTION("the table follows the order of the selection") {
-    const auto read =
-        read_ok(dir / "a.nc",
-                request(AdcircKind::elevation, select({2, 0}, 3)));
+    const auto read = read_ok(
+        dir / "a.nc", request(AdcircKind::elevation, select({2, 0}, 3)));
     REQUIRE(read.value.size() == 2);
     CHECK(read.value.station(StationIndex{0}).id.view() == "2");
     CHECK(read.value.station(StationIndex{1}).id.view() == "0");
@@ -677,8 +712,8 @@ TEST_CASE("the selection: order, empty, and made for another file",
     CHECK(samples_of(read.value, 1, 0)[1] == sample(0.25));
   }
   SECTION("an empty selection reads no station") {
-    const auto read = read_ok(
-        dir / "a.nc", request(AdcircKind::elevation, select({}, 3)));
+    const auto read =
+        read_ok(dir / "a.nc", request(AdcircKind::elevation, select({}, 3)));
     CHECK(read.value.size() == 0);
     CHECK(read.value.schema().size() == 1);
   }
@@ -689,7 +724,8 @@ TEST_CASE("the selection: order, empty, and made for another file",
   }
 }
 
-// ---- reading in blocks -------------------------------------------------------------------------
+// ---- reading in blocks
+// -------------------------------------------------------------------------
 
 TEST_CASE("blocks of any size, and any grouping, give the same table",
           "[io][adcirc][netcdf]") {
@@ -704,8 +740,7 @@ TEST_CASE("blocks of any size, and any grouping, give the same table",
     return plain(t, s, c);
   };
   make_adcirc_nc(dir / "a.nc", spec);
-  const auto req =
-      request(AdcircKind::velocity, select({7, 0, 3, 4, 8, 1}, 9));
+  const auto req = request(AdcircKind::velocity, select({7, 0, 3, 4, 8, 1}, 9));
 
   const auto whole = read_ok(dir / "a.nc", req).value;
   for (const std::size_t slab : {1U, 7U, 9U, 100U, 360U}) {
@@ -741,8 +776,7 @@ TEST_CASE("a time block read agrees with a read of each column",
   ReadContext ctx;
   ctx.limits.slab_elements = 11;
   const auto read = read_ok(
-      dir / "a.nc",
-      request(AdcircKind::elevation, select({5, 2, 3}, 6)), ctx);
+      dir / "a.nc", request(AdcircKind::elevation, select({5, 2, 3}, 6)), ctx);
 
   // v4's way: one strided column at a time (a handle of its own, closed first).
   std::vector<std::vector<double>> columns;
@@ -797,8 +831,7 @@ TEST_CASE("cancellation between blocks, and limits before the read",
     REQUIRE(not(read.has_value()));
     const auto* error = nc_error_in(read.error());
     REQUIRE(error != nullptr);
-    CHECK(error->status ==
-          mov::io::NcStatus{mov::io::WrapperFault::too_large});
+    CHECK(error->status == mov::io::NcStatus{mov::io::WrapperFault::too_large});
     // One station fits.
     CHECK(mov::io::read_adcirc_netcdf(
               dir / "a.nc", request(AdcircKind::elevation, select({1}, 3)), ctx)
@@ -812,8 +845,7 @@ TEST_CASE("cancellation between blocks, and limits before the read",
     REQUIRE(not(inspected.has_value()));
     const auto* error = nc_error_in(inspected.error());
     REQUIRE(error != nullptr);
-    CHECK(error->status ==
-          mov::io::NcStatus{mov::io::WrapperFault::too_large});
+    CHECK(error->status == mov::io::NcStatus{mov::io::WrapperFault::too_large});
     CHECK(error->object == "station");
   }
   SECTION("a span wider than max_elements is read in windows of time") {
@@ -836,12 +868,12 @@ TEST_CASE("cancellation between blocks, and limits before the read",
     REQUIRE(not(read.has_value()));
     const auto* error = nc_error_in(read.error());
     REQUIRE(error != nullptr);
-    CHECK(error->status ==
-          mov::io::NcStatus{mov::io::WrapperFault::too_large});
+    CHECK(error->status == mov::io::NcStatus{mov::io::WrapperFault::too_large});
   }
 }
 
-// ---- positions -----------------------------------------------------------------------------------
+// ---- positions
+// -----------------------------------------------------------------------------------
 
 TEST_CASE("positions in another CRS are projected, the native point is kept",
           "[io][adcirc][netcdf][projection]") {
@@ -852,9 +884,9 @@ TEST_CASE("positions in another CRS are projected, the native point is kept",
   spec.y = {3000000.0, 3100000.0, 2900000.0};
   make_adcirc_nc(dir / "a.nc", spec);
   const auto crs = mov::test::epsg(26915);  // NAD83 / UTM zone 15N
-  const auto read = read_ok(
-      dir / "a.nc", request(AdcircKind::elevation, everything(3), cold_start(),
-                            crs));
+  const auto read =
+      read_ok(dir / "a.nc",
+              request(AdcircKind::elevation, everything(3), cold_start(), crs));
   const auto& station = read.value.station(StationIndex{0});
   CHECK(station.location.lon() == Catch::Approx(-93.0).margin(1e-4));
   CHECK(station.location.lat() > 27.0);
@@ -888,11 +920,11 @@ TEST_CASE("positions that cannot be converted are errors with the station",
   spec.x = {500000.0, 1e15, 500000.0};
   spec.y = {3000000.0, 3000000.0, 3000000.0};
   make_adcirc_nc(dir / "c.nc", spec);
-  const auto far = mov::io::read_adcirc_netcdf(
-      dir / "c.nc",
-      request(AdcircKind::elevation, everything(3), cold_start(),
-              mov::test::epsg(32615)),
-      {});
+  const auto far =
+      mov::io::read_adcirc_netcdf(dir / "c.nc",
+                                  request(AdcircKind::elevation, everything(3),
+                                          cold_start(), mov::test::epsg(32615)),
+                                  {});
   CHECK(format_error_of(far).code == FormatErrc::bad_coordinates);
   CHECK(format_error_of(far).station == 1U);
 
@@ -905,7 +937,8 @@ TEST_CASE("positions that cannot be converted are errors with the station",
   CHECK(format_error_of(unknown).code == FormatErrc::unsupported_crs);
 }
 
-// ---- inspect ----------------------------------------------------------------------------------------
+// ---- inspect
+// ----------------------------------------------------------------------------------------
 
 TEST_CASE("inspect: kind, variables, stations, time units",
           "[io][adcirc][netcdf]") {
@@ -924,8 +957,8 @@ TEST_CASE("inspect: kind, variables, stations, time units",
   REQUIRE(catalog.stations.size() == 3);
   CHECK(catalog.stations[2].name.view() == "Three");
   CHECK(catalog.stations[2].id.view() == "2");
-  CHECK(catalog.time_units == std::optional<std::string>{
-                                  "seconds since 2012-06-01 00:00:00"});
+  CHECK(catalog.time_units ==
+        std::optional<std::string>{"seconds since 2012-06-01 00:00:00"});
   REQUIRE(catalog.parsed_time_units.has_value());
   if (catalog.parsed_time_units) {
     CHECK(catalog.parsed_time_units->unit == mov::io::CfTimeUnit::second);
@@ -961,7 +994,8 @@ TEST_CASE("the readers close their file: it can be opened again at once",
   }
 }
 
-// ---- the legacy fixtures ----------------------------------------------------------
+// ---- the legacy fixtures
+// ----------------------------------------------------------
 //
 // MetOceanViewer/function_tests/ReadADCIRC/netCDF/fort.6x.nc are 4 MB files
 // for three stations (the data is a few kB; the rest is HDF5 chunking and
@@ -985,8 +1019,8 @@ constexpr std::array<LegacyOutput, 4> legacy_outputs{{
 }};
 
 std::filesystem::path legacy_nc(const LegacyOutput& output) {
-  const auto path = mov::test::legacy_file(
-      std::string{"ReadADCIRC/netCDF/"} + output.file + ".nc");
+  const auto path = mov::test::legacy_file(std::string{"ReadADCIRC/netCDF/"} +
+                                           output.file + ".nc");
   if (not path) {
     SKIP("the legacy tree (MetOceanViewer/function_tests) is not here");
   }
@@ -995,7 +1029,8 @@ std::filesystem::path legacy_nc(const LegacyOutput& output) {
 
 }  // namespace
 
-TEST_CASE("legacy netCDF: the catalog of each output", "[io][adcirc][netcdf][legacy]") {
+TEST_CASE("legacy netCDF: the catalog of each output",
+          "[io][adcirc][netcdf][legacy]") {
   for (const LegacyOutput& output : legacy_outputs) {
     CAPTURE(output.file);
     const auto path = legacy_nc(output);
@@ -1011,18 +1046,20 @@ TEST_CASE("legacy netCDF: the catalog of each output", "[io][adcirc][netcdf][leg
     CHECK(catalog.stations[1].name.view() == "Station Two");
     CHECK(catalog.stations[2].name.view() == "Station Three");
     // x and y are floats in these files: the double is the float's value.
-    CHECK(catalog.stations[0].location.lon() ==
-          static_cast<double>(-90.0127F));
-    CHECK(catalog.stations[0].location.lat() == static_cast<double>(29.987793F));
+    CHECK(catalog.stations[0].location.lon() == static_cast<double>(-90.0127F));
+    CHECK(catalog.stations[0].location.lat() ==
+          static_cast<double>(29.987793F));
     CHECK(catalog.stations[1].location.lon() == -90.5);
     CHECK(catalog.stations[2].location.lat() == 25.0);
     // The units attribute is the NCDATE placeholder of these runs.
-    CHECK(catalog.time_units == std::optional<std::string>{"seconds since Met"});
+    CHECK(catalog.time_units ==
+          std::optional<std::string>{"seconds since Met"});
     CHECK(not(catalog.parsed_time_units.has_value()));
   }
 }
 
-TEST_CASE("legacy netCDF: a cold start is needed", "[io][adcirc][netcdf][legacy]") {
+TEST_CASE("legacy netCDF: a cold start is needed",
+          "[io][adcirc][netcdf][legacy]") {
   const auto path = legacy_nc(legacy_outputs[0]);
   const auto result = mov::io::read_adcirc_netcdf(
       path, request(AdcircKind::elevation, everything(3), std::nullopt), {});
@@ -1032,13 +1069,11 @@ TEST_CASE("legacy netCDF: a cold start is needed", "[io][adcirc][netcdf][legacy]
 TEST_CASE("legacy netCDF: first and last values are pinned",
           "[io][adcirc][netcdf][legacy]") {
   const auto read = [](const LegacyOutput& output) {
-    return read_ok(legacy_nc(output),
-                   request(output.kind, everything(3)));
+    return read_ok(legacy_nc(output), request(output.kind, everything(3)));
   };
   SECTION("fort.61: the first station is dry throughout") {
     const auto r = read(legacy_outputs[0]);
-    CHECK(samples_of(r.value, 0, 0) ==
-          std::vector<Sample>(144, Sample{Dry{}}));
+    CHECK(samples_of(r.value, 0, 0) == std::vector<Sample>(144, Sample{Dry{}}));
     const auto st1 = samples_of(r.value, 1, 0);
     CHECK(st1.front() == sample(0.91211551722566142));
     CHECK(st1.back() == sample(1.2906693860101193));
@@ -1077,8 +1112,8 @@ TEST_CASE("legacy: the ASCII and the netCDF output of one run agree to 1e-9",
           "[io][adcirc][netcdf][legacy]") {
   for (const LegacyOutput& output : legacy_outputs) {
     CAPTURE(output.file);
-    const auto nc = read_ok(legacy_nc(output),
-                            request(output.kind, everything(3)));
+    const auto nc =
+        read_ok(legacy_nc(output), request(output.kind, everything(3)));
     const auto ascii = mov::io::read_adcirc_ascii(
         mov::test::fixture(std::string{"io/adcirc/legacy/"} + output.file),
         mov::test::fixture("io/adcirc/legacy/stations.csv"), Epsg::wgs84(),

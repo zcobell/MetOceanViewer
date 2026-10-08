@@ -174,7 +174,8 @@ struct GatherPlan {
                                                  std::size_t width,
                                                  std::size_t element_bytes) {
   const std::size_t by_count = limits.max_elements / width;
-  const std::size_t by_bytes = limits.max_result_bytes / (width * element_bytes);
+  const std::size_t by_bytes =
+      limits.max_result_bytes / (width * element_bytes);
   return std::max<std::size_t>(1, std::min(by_count, by_bytes));
 }
 

@@ -27,10 +27,11 @@ namespace mov::io {
 // D-Flow FM history ("his") output (LF section 4): dimensions `time`,
 // `stations` and `name_len`, and for a 3-D model `laydim` (layer centres) and
 // `laydimw` (layer interfaces); variables `time(time)`, `station_name(stations,
-// name_len)`, `station_x_coordinate(stations)`, `station_y_coordinate(stations)`
-// and the data, `(time, stations)` or `(time, stations, laydim)`. Variables on
-// `laydimw` are not offered. There is no real D-Flow file in the repository
-// (plan decision 26): the format is read as the D-Flow FM manual describes it.
+// name_len)`, `station_x_coordinate(stations)`,
+// `station_y_coordinate(stations)` and the data, `(time, stations)` or `(time,
+// stations, laydim)`. Variables on `laydimw` are not offered. There is no real
+// D-Flow file in the repository (plan decision 26): the format is read as the
+// D-Flow FM manual describes it.
 //
 // Unlike ADCIRC, D-Flow has no dry sentinel (a dry station reports its bed
 // level, which can be below -999 m): a value is missing only when the

@@ -20,7 +20,7 @@
 namespace mov::test::ncgen {
 
 /// The external type of the data variables.
-enum class DataType { float64, float32, int16, int64, uint8 };
+enum class DataType { float64, float32, int8, int16, int32, int64, uint8 };
 /// The external type of the time variable.
 enum class TimeType { float64, int64 };
 

@@ -5,7 +5,8 @@
 // docs/wp-notes/WP9.md): reading some stations of a model output one column
 // at a time (v4's strided reads) against reading time blocks of every station
 // the selection spans, and against the policy the readers use (which groups
-// the selected stations by the chunk columns of the file). Hidden (`[.measure]`); run it from a release build:
+// the selected stations by the chunk columns of the file). Hidden
+// (`[.measure]`); run it from a release build:
 //
 //   mov_io_model_netcdf_tests "[.measure]"
 //
@@ -13,24 +14,24 @@
 // doubles) into a scratch directory, reads the file once to warm the page
 // cache, and prints the best of three reads for each selection and policy.
 
-#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstddef>
-#include <format>
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "adcirc_test_support.hpp"
+#include "model_fixtures.hpp"
+#include "model_nc_support.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/io/adcirc_netcdf.hpp"
 #include "mov/io/detail/station_groups.hpp"
-#include "model_fixtures.hpp"
-#include "model_nc_support.hpp"
 
 namespace {
 
@@ -38,7 +39,8 @@ using Clock = std::chrono::steady_clock;
 
 struct Layout {
   const char* name;
-  std::vector<std::size_t> chunks;  // (time, station); empty: netCDF-C's default
+  std::vector<std::size_t>
+      chunks;  // (time, station); empty: netCDF-C's default
 };
 
 struct Selection {
@@ -62,7 +64,8 @@ double best_ms(const std::filesystem::path& path,
   double best = 1e300;
   for (int round = 0; round < 3; ++round) {
     const auto start = Clock::now();
-    const auto read = mov::io::detail::read_adcirc_netcdf(path, request, {}, policy);
+    const auto read =
+        mov::io::detail::read_adcirc_netcdf(path, request, {}, policy);
     const auto stop = Clock::now();
     INFO((read ? std::string{} : mov::test::what(read.error())));
     REQUIRE(read.has_value());
@@ -122,8 +125,8 @@ TEST_CASE("per-column reads against time-block reads", "[.measure]") {
           .stations =
               mov::core::StationSelection::make(selection.stations, stations)
                   .value()};
-      const double columns = best_ms(path, request,
-                                   mov::io::detail::GroupingPolicy{.stride = 0});
+      const double columns =
+          best_ms(path, request, mov::io::detail::GroupingPolicy{.stride = 0});
       const double block = best_ms(
           path, request, mov::io::detail::GroupingPolicy{.stride = stations});
       const double aware = best_ms(path, request, std::nullopt);

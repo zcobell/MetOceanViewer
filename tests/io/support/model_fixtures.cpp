@@ -27,8 +27,12 @@ nc_type nc_type_of(DataType t) {
       return NC_DOUBLE;
     case DataType::float32:
       return NC_FLOAT;
+    case DataType::int8:
+      return NC_BYTE;
     case DataType::int16:
       return NC_SHORT;
+    case DataType::int32:
+      return NC_INT;
     case DataType::int64:
       return NC_INT64;
     case DataType::uint8:
@@ -154,10 +158,10 @@ void make_adcirc_nc(const std::filesystem::path& path, const AdcircNc& spec) {
   std::vector<int> data;
   for (const std::string& name : spec.variables) {
     const nc_type type = nc_type_of(spec.type);
-    const int id = f.var(name.c_str(), type,
-                         spec.transposed_data
-                             ? std::vector<int>{station_dim, time_dim}
-                             : std::vector<int>{time_dim, station_dim});
+    const int id =
+        f.var(name.c_str(), type,
+              spec.transposed_data ? std::vector<int>{station_dim, time_dim}
+                                   : std::vector<int>{time_dim, station_dim});
     if (not spec.chunks.empty()) {
       check(nc_def_var_chunking(f.id(), id, NC_CHUNKED, spec.chunks.data()),
             "chunking");
@@ -203,13 +207,13 @@ void make_adcirc_nc(const std::filesystem::path& path, const AdcircNc& spec) {
         padded_rows(spec.station_names, spec.name_len, '\0');
     check(nc_put_var_text(f.id(), names, bytes.data()), "station_name");
   }
-  const auto value = spec.value ? spec.value
-                                : [](std::size_t t, std::size_t s,
-                                     std::size_t c) {
-                                    return 100.0 * static_cast<double>(c) +
-                                           10.0 * static_cast<double>(s) +
-                                           0.25 * static_cast<double>(t);
-                                  };
+  const auto value = spec.value
+                         ? spec.value
+                         : [](std::size_t t, std::size_t s, std::size_t c) {
+                             return 100.0 * static_cast<double>(c) +
+                                    10.0 * static_cast<double>(s) +
+                                    0.25 * static_cast<double>(t);
+                           };
   for (std::size_t c = 0; c < data.size(); ++c) {
     if (spec.transposed_data) {
       std::vector<double> all(spec.stations * spec.steps);
@@ -316,9 +320,9 @@ void make_dflow_nc(const std::filesystem::path& path, const DflowNc& spec) {
   f.enddef();
 
   if (time >= 0) {
-    put_times(f, time,
-              spec.times.empty() ? default_times(spec.steps, 600.0)
-                                 : spec.times);
+    put_times(
+        f, time,
+        spec.times.empty() ? default_times(spec.steps, 600.0) : spec.times);
   }
   if (names >= 0 and not spec.station_names.empty()) {
     const std::string bytes =

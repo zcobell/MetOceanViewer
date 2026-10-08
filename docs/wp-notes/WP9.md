@@ -43,12 +43,16 @@ copies could drift; a test compares the two readers' tables); `nc::File::chunk_s
 - Death tests (`test_nc_call.cpp`, fork, Linux, skipped in release): same path, other spelling,
   symlink, hard link, moved handle (abort); closed or destroyed handle, two different files,
   failed opens (no abort).
-- Twelve WP6 tests opened a second handle while the first was alive (to open the same fixture with
-  other `ReadLimits`). They now close or scope the first. The B5 count test makes 1000 opens (it
-  made 1200: its fifth path opened twice); the counts it pins are 1000.
-- Both readers open their file once and close it before they return; their tests open the file
+- Seven WP6 test cases (thirteen ctest entries) opened a second handle while the first was alive
+  (to open the same fixture with other `ReadLimits`). They now do the limited opens first, or close
+  or scope the first handle. The B5 count test makes 1000 opens (it made 1200: its fifth path
+  opened twice); the counts it pins are 1000.
+- Both readers open their file once and close it before they return. Their tests open the file
   with `nc::File` right after every read and failed read, which asserts in a debug build if a
-  handle leaked.
+  handle leaked; `test_model_nc_handles.cpp` (in `mov_io_netcdf_tests`, with the `--wrap` shims,
+  so also in release) counts 11 opens and 11 closes per round over eleven calls that end in a
+  value, `cold_start_required`, `missing_variable`, `station_count_mismatch`, `Cancelled` and a
+  file that is not a history file (B5).
 
 ## ADCIRC netCDF (§5.4)
 
@@ -220,13 +224,24 @@ Reading the table:
   placeholder, `cold_start_required` without a cold start), first and last values pinned to 17
   digits (fort.61's first station is dry throughout), and the ASCII and netCDF output of the run
   agree to 1e-9 (`tests/fixtures/io/adcirc/legacy/fort.6x`), the schema and times exactly.
-- Regression tags: B4 (float variables and coordinates, ADCIRC and D-Flow), B11 (station name
-  stride at lengths other than 200 and 64, D-Flow time units), B12 (dimensions by name and id,
-  `laydim`/`laydimw`, no hard-coded fill, missing dimension or variable), B2 (a file that is not a
-  history file, and one that is), N7 (partner fill), N16 (layers 0 and n + 1; wind without a
-  layer), B1 (the magnitude from the netCDF `u-vel`/`v-vel`), B10 and B15 are not in scope (generic
-  dialects). Mutations run by hand: a name stride of 200 and a hard-coded `-999 ==` each fail 9
-  test cases.
+- Regression tags: B4 (float variables and coordinates, ADCIRC and D-Flow), B5 (open and close
+  counts), B11 (station name stride at lengths other than 200 and 64, D-Flow time units), B12
+  (dimensions by name and id, `laydim`/`laydimw`, no hard-coded fill, missing dimension or
+  variable), B2 (a file that is not a history file, and one that is), N7 (partner fill), N16
+  (layers 0 and n + 1; wind without a layer), B1 (the magnitude from the netCDF `u-vel`/`v-vel`).
+  B10 (an EPSG attribute read with the wrong type) has no place here: neither format carries an
+  EPSG attribute, the CRS is the caller's, and the exact-type rule is WP6's `numeric_att` (tested
+  there) for the generic dialects of WP10b. B15 is a writer bug. Mutations run by hand: a name
+  stride of 200 and a hard-coded `-999 ==` each fail 9 test cases.
+
+## Gates
+
+All green on `dev`, `dev-clang`, `dev-libcxx`, `asan`, `release`, `fuzz` and `coverage` (the
+death tests skip in `release` and `fuzz`, which define `NDEBUG`), the tidy gate (0 findings in 130
+translation units) and `pre-commit run --all-files`. Line coverage of `src/io` is 96 % (the
+floor is 90 %); the new files are at 92 to 100 % when instantiations of the templates for types
+nobody uses are not counted (gcovr counts each instantiation's lines on its own, which shows
+`adcirc_netcdf.cpp` and `dflow.cpp` at 82 %).
 
 ## Deviations from the brief
 

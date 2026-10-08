@@ -70,9 +70,8 @@ struct AdcircNcCatalog {
 /// `bad_coordinates` (a position that PROJ cannot transform or that is not a
 /// Location, with the station); NcError (including `too_large`);
 /// Cancelled. Warnings: `invalid_utf8_replaced` (names), `crs_approximate`.
-[[nodiscard]] std::expected<Read<AdcircNcCatalog>, Error>
-inspect_adcirc_netcdf(const std::filesystem::path& path, core::Epsg crs,
-                      const ReadContext& ctx);
+[[nodiscard]] std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
+    const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx);
 
 /// What to read. `kind` says which data variables (the file must have them),
 /// `crs` is the CRS of `x` and `y`, and `stations` is required (never an
@@ -122,9 +121,9 @@ struct AdcircNcRequest {
 /// `ReadLimits::max_elements`, or their samples over `max_result_bytes`).
 /// Warnings: those of inspect_adcirc_netcdf, and `epoch_used`,
 /// `time_precision_dropped`, `nonfinite_masked`.
-[[nodiscard]] std::expected<Read<core::StationTable>, Error>
-read_adcirc_netcdf(const std::filesystem::path& path,
-                   const AdcircNcRequest& request, const ReadContext& ctx);
+[[nodiscard]] std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
+    const std::filesystem::path& path, const AdcircNcRequest& request,
+    const ReadContext& ctx);
 
 namespace detail {
 
@@ -132,10 +131,9 @@ namespace detail {
 /// chosen by the caller (the measurement of docs/wp-notes/WP9.md and the
 /// tests); nullopt is what read_adcirc_netcdf does: grouping_for the chunk
 /// shape of the data variable.
-[[nodiscard]] std::expected<Read<core::StationTable>, Error>
-read_adcirc_netcdf(const std::filesystem::path& path,
-                   const AdcircNcRequest& request, const ReadContext& ctx,
-                   std::optional<GroupingPolicy> policy);
+[[nodiscard]] std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
+    const std::filesystem::path& path, const AdcircNcRequest& request,
+    const ReadContext& ctx, std::optional<GroupingPolicy> policy);
 
 }  // namespace detail
 

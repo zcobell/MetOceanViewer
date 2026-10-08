@@ -155,3 +155,6 @@ target_compile_definitions(mov_io_model_netcdf_tests PRIVATE MOV_TEST_REPO_DIR="
 if(MOV_PROJ_DB)
     target_compile_definitions(mov_io_model_netcdf_tests PRIVATE MOV_TEST_PROJ_DATA_DIR="${MOV_TEST_PROJ_DATA_DIR}")
 endif()
+
+# The model readers close their file on every path (needs the --wrap shims).
+target_sources(mov_io_netcdf_tests PRIVATE test_model_nc_handles.cpp)

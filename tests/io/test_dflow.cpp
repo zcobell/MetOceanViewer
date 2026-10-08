@@ -18,6 +18,8 @@
 #include <vector>
 
 #include "adcirc_test_support.hpp"
+#include "model_fixtures.hpp"
+#include "model_nc_support.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -31,8 +33,6 @@
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
-#include "model_fixtures.hpp"
-#include "model_nc_support.hpp"
 
 namespace {
 
@@ -72,7 +72,8 @@ constexpr double not_a_number = std::numeric_limits<double>::quiet_NaN();
 constexpr double default_fill = 9.9692099683868690e+36;
 
 // The ids of the layered variables of the tests: u(l) = l + 1, etc.
-using Value = std::function<double(std::size_t t, std::size_t s, std::size_t l)>;
+using Value =
+    std::function<double(std::size_t t, std::size_t s, std::size_t l)>;
 
 DflowVar variable(std::string name, int shape, std::string units,
                   Value value = {}) {
@@ -171,15 +172,17 @@ std::vector<std::string> names_of(const mov::io::DflowCatalog& catalog) {
 
 }  // namespace
 
-// ---- the catalog ------------------------------------------------------------------------
+// ---- the catalog
+// ------------------------------------------------------------------------
 
 TEST_CASE("inspect: stations, variables, time", "[io][dflow]") {
   const mov::test::ScratchDir dir;
   DflowNc spec = basic();
   spec.steps = 5;
-  spec.vars = {variable("waterlevel", 0, "m"), variable("x_velocity", 0, "m s-1"),
-               variable("y_velocity", 0, "m s-1"), variable("windx", 0, "m s-1"),
-               variable("windy", 0, "m s-1"), variable("bedlevel", 0, "m")};
+  spec.vars = {
+      variable("waterlevel", 0, "m"),     variable("x_velocity", 0, "m s-1"),
+      variable("y_velocity", 0, "m s-1"), variable("windx", 0, "m s-1"),
+      variable("windy", 0, "m s-1"),      variable("bedlevel", 0, "m")};
   spec.station_names = {"Alpha", "Beta", "Gamma"};
   spec.x = {10.0, 20.0, 30.0};
   spec.y = {40.0, 41.0, 42.0};
@@ -213,21 +216,18 @@ TEST_CASE("inspect: a 3-D file offers layered variables, not those on laydimw",
   DflowNc spec = basic();
   spec.layers = 3;
   spec.interfaces = 4;
-  spec.vars = {variable("waterlevel", 0, "m"),
-               variable("x_velocity", 1, "m s-1"),
-               variable("y_velocity", 1, "m s-1"),
-               variable("z_velocity", 1, "m s-1"),
-               variable("zcoordinate_w", 2, "m"),
-               variable("windx", 0, "m s-1"),
-               variable("windy", 0, "m s-1")};
+  spec.vars = {
+      variable("waterlevel", 0, "m"),     variable("x_velocity", 1, "m s-1"),
+      variable("y_velocity", 1, "m s-1"), variable("z_velocity", 1, "m s-1"),
+      variable("zcoordinate_w", 2, "m"),  variable("windx", 0, "m s-1"),
+      variable("windy", 0, "m s-1")};
   make_dflow_nc(dir / "his.nc", spec);
   const auto inspected = inspect_ok(dir / "his.nc");
   CHECK(names_of(inspected.value) ==
-        std::vector<std::string>{"waterlevel", "x_velocity", "y_velocity",
-                                 "z_velocity", "windx", "windy",
-                                 "3D_current_speed", "2D_current_speed",
-                                 "2D_current_direction", "wind_speed",
-                                 "wind_direction"});
+        std::vector<std::string>{
+            "waterlevel", "x_velocity", "y_velocity", "z_velocity", "windx",
+            "windy", "3D_current_speed", "2D_current_speed",
+            "2D_current_direction", "wind_speed", "wind_direction"});
   const auto& v = inspected.value.variables;
   CHECK(std::holds_alternative<Flat>(v[0]));
   REQUIRE(std::holds_alternative<Layered>(v[1]));
@@ -270,7 +270,8 @@ TEST_CASE("inspect: other files are not history files (B2)",
   const mov::test::ScratchDir dir;
   const mov::test::ncgen::AdcircNc adcirc;
   make_adcirc_nc(dir / "adcirc.nc", adcirc);
-  const auto other = mov::io::inspect_dflow(dir / "adcirc.nc", Epsg::wgs84(), {});
+  const auto other =
+      mov::io::inspect_dflow(dir / "adcirc.nc", Epsg::wgs84(), {});
   CHECK(format_error_of(other).code == FormatErrc::missing_dimension);
   CHECK(format_error_of(other).subject == "stations");
 
@@ -328,13 +329,14 @@ TEST_CASE("a missing dimension or variable is an error, not dimension 0 (B12)",
     spec.stations_dim_first = true;
     spec.vars = {variable("waterlevel", 0, "m")};
     make_dflow_nc(dir / "his.nc", spec);
-    const auto read = read_ok(dir / "his.nc",
-                              flat_request("waterlevel", everything(3)));
+    const auto read =
+        read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
     CHECK(samples_of(read.value, 2, 0)[3] == sample(20.75));
   }
 }
 
-// ---- stations ---------------------------------------------------------------------------
+// ---- stations
+// ---------------------------------------------------------------------------
 
 TEST_CASE("station names: the stride is name_len, never 200 (B11)",
           "[io][dflow][regression][B11]") {
@@ -343,11 +345,10 @@ TEST_CASE("station names: the stride is name_len, never 200 (B11)",
     std::size_t name_len;
     char pad;
   };
-  for (const Case c : {Case{.name_len = 64, .pad = ' '},
-                       Case{.name_len = 20, .pad = '\0'},
-                       Case{.name_len = 300, .pad = ' '},
-                       Case{.name_len = 200, .pad = '\0'},
-                       Case{.name_len = 9, .pad = ' '}}) {
+  for (const Case c :
+       {Case{.name_len = 64, .pad = ' '}, Case{.name_len = 20, .pad = '\0'},
+        Case{.name_len = 300, .pad = ' '}, Case{.name_len = 200, .pad = '\0'},
+        Case{.name_len = 9, .pad = ' '}}) {
     DflowNc spec = basic();
     spec.name_len = c.name_len;
     spec.pad = c.pad;
@@ -370,11 +371,11 @@ TEST_CASE("station names: junk after a NUL is dropped, bad UTF-8 replaced",
   DflowNc spec = basic();
   spec.name_len = 20;
   spec.pad = '\0';
-  spec.station_names = {"Alpha"s + '\0' + "junk", "caf\xE9"s, ""s};
+  spec.station_names = {"Alpha"s + '\0' + "junk", "ab\xE9"s, ""s};
   make_dflow_nc(dir / "his.nc", spec);
   const auto inspected = inspect_ok(dir / "his.nc");
   CHECK(inspected.value.stations[0].name.view() == "Alpha");
-  CHECK(inspected.value.stations[1].name.view() == "caf\xEF\xBF\xBD");
+  CHECK(inspected.value.stations[1].name.view() == "ab\xEF\xBF\xBD");
   CHECK(inspected.value.stations[2].name.view() == "Station 2");
   CHECK(warning_count(inspected.warnings, WarningCode::invalid_utf8_replaced) ==
         1);
@@ -416,7 +417,8 @@ TEST_CASE("coordinates in a projected CRS are converted",
   CHECK(warning_count(inspected->warnings, WarningCode::crs_approximate) == 0);
 }
 
-// ---- time -------------------------------------------------------------------------------
+// ---- time
+// -------------------------------------------------------------------------------
 
 TEST_CASE("time units: the unit, the epoch and the zone are parsed (B11)",
           "[io][dflow][regression][B11]") {
@@ -452,8 +454,8 @@ TEST_CASE("time units: the unit, the epoch and the zone are parsed (B11)",
     spec.time_units = c.units;
     spec.times = c.times;
     make_dflow_nc(dir / "his.nc", spec);
-    const auto read = read_ok(dir / "his.nc",
-                              flat_request("waterlevel", everything(3)));
+    const auto read =
+        read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
     CHECK(read.value.times(StationIndex{0})[0] == utc(c.first));
     CHECK(read.value.times(StationIndex{0}).size() == 4);
   }
@@ -465,33 +467,38 @@ TEST_CASE("time units that cannot be used", "[io][dflow]") {
   SECTION("an unknown unit") {
     spec.time_units = "furlongs since 2000-01-01";
     make_dflow_nc(dir / "his.nc", spec);
-    const auto result = mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
+    const auto result =
+        mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
     CHECK(parse_error_of(result).code() == ParseErrc::bad_time_units);
   }
   SECTION("no date") {
     spec.time_units = "seconds since";
     make_dflow_nc(dir / "his.nc", spec);
-    const auto result = mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
+    const auto result =
+        mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
     REQUIRE(not(result.has_value()));
     CHECK(std::holds_alternative<mov::io::ParseError>(result.error()));
   }
   SECTION("no units attribute") {
     spec.time_units = "";  // the generator writes no attribute
     make_dflow_nc(dir / "his.nc", spec);
-    const auto result = mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
+    const auto result =
+        mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
     CHECK(format_error_of(result).code == FormatErrc::missing_attribute);
     CHECK(format_error_of(result).subject == "time:units");
   }
   SECTION("a calendar that is not reproduced") {
     spec.calendar = "360_day";
     make_dflow_nc(dir / "his.nc", spec);
-    const auto result = mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
+    const auto result =
+        mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
     CHECK(format_error_of(result).code == FormatErrc::unsupported_calendar);
   }
   SECTION("an epoch before the Gregorian reform") {
     spec.time_units = "seconds since 1500-01-01 00:00:00";
     make_dflow_nc(dir / "his.nc", spec);
-    const auto result = mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
+    const auto result =
+        mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
     CHECK(format_error_of(result).code == FormatErrc::unsupported_calendar);
   }
   SECTION("times that are not increasing") {
@@ -504,7 +511,8 @@ TEST_CASE("time units that cannot be used", "[io][dflow]") {
   }
 }
 
-// ---- values ------------------------------------------------------------------------------
+// ---- values
+// ------------------------------------------------------------------------------
 
 TEST_CASE("values: only the variable's own attributes make a value missing",
           "[io][dflow][regression][B12]") {
@@ -521,11 +529,12 @@ TEST_CASE("values: only the variable's own attributes make a value missing",
                           return 1.0 + static_cast<double>(t);
                         })};
   make_dflow_nc(dir / "his.nc", spec);
-  const auto read = read_ok(dir / "his.nc",
-                            flat_request("waterlevel", everything(3)));
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
   // _FillValue is -999: that is missing; -1500 is a value (a deep bed level).
-  CHECK(samples_of(read.value, 0, 0) ==
-        std::vector<Sample>{Missing{}, sample(-1500.0), Missing{}, sample(2.5)});
+  CHECK(
+      samples_of(read.value, 0, 0) ==
+      std::vector<Sample>{Missing{}, sample(-1500.0), Missing{}, sample(2.5)});
   CHECK(warning_count(read.warnings, WarningCode::nonfinite_masked) == 1);
 }
 
@@ -535,17 +544,18 @@ TEST_CASE("values: a -999 is a value when the fill is something else",
   DflowNc spec = basic();
   DflowVar v = variable("waterlevel", 0, "m",
                         [](std::size_t t, std::size_t s, std::size_t) {
-                          return (s == 0 and t == 1) ? -999.0
+                          return (s == 0 and t == 1)   ? -999.0
                                  : (s == 0 and t == 2) ? -9999.0
                                                        : 1.0;
                         });
   v.fill = -9999.0;
   spec.vars = {v};
   make_dflow_nc(dir / "his.nc", spec);
-  const auto read = read_ok(dir / "his.nc",
-                            flat_request("waterlevel", everything(3)));
-  CHECK(samples_of(read.value, 0, 0) ==
-        std::vector<Sample>{sample(1.0), sample(-999.0), Missing{}, sample(1.0)});
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
+  CHECK(
+      samples_of(read.value, 0, 0) ==
+      std::vector<Sample>{sample(1.0), sample(-999.0), Missing{}, sample(1.0)});
 }
 
 TEST_CASE("values: no _FillValue means the library's default fill",
@@ -561,8 +571,8 @@ TEST_CASE("values: no _FillValue means the library's default fill",
     v.type = type;
     spec.vars = {v};
     make_dflow_nc(dir / "his.nc", spec);
-    const auto read = read_ok(dir / "his.nc",
-                              flat_request("waterlevel", everything(3)));
+    const auto read =
+        read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
     const auto column = samples_of(read.value, 1, 0);
     REQUIRE(column.size() == 4);
     CHECK(column.at(0) == Sample{Missing{}});
@@ -581,10 +591,31 @@ TEST_CASE("float variables read as the float values (B4)",
   v.type = DataType::float32;
   spec.vars = {v};
   make_dflow_nc(dir / "his.nc", spec);
-  const auto read = read_ok(dir / "his.nc",
-                            flat_request("waterlevel", everything(3)));
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
   CHECK(samples_of(read.value, 2, 0)[3] ==
         sample(static_cast<double>(static_cast<float>(0.1 * 6.0))));
+}
+
+TEST_CASE("integer variables read with their own fill", "[io][dflow]") {
+  const mov::test::ScratchDir dir;
+  for (const DataType type :
+       {DataType::int8, DataType::int16, DataType::int32}) {
+    DflowNc spec = basic();
+    DflowVar v = variable(
+        "waterlevel", 0, "m", [](std::size_t t, std::size_t s, std::size_t) {
+          return (s == 0 and t == 0) ? -100.0 : static_cast<double>(t);
+        });
+    v.type = type;
+    v.fill = -100.0;
+    spec.vars = {v};
+    make_dflow_nc(dir / "his.nc", spec);
+    const auto read =
+        read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
+    CHECK(
+        samples_of(read.value, 0, 0) ==
+        std::vector<Sample>{Missing{}, sample(1.0), sample(2.0), sample(3.0)});
+  }
 }
 
 TEST_CASE("the table: schema, selection order, shared axis", "[io][dflow]") {
@@ -592,8 +623,7 @@ TEST_CASE("the table: schema, selection order, shared axis", "[io][dflow]") {
   make_dflow_nc(dir / "his.nc", basic());
   const auto read = read_ok(
       dir / "his.nc",
-      flat_request("waterlevel",
-                   StationSelection::make({2, 0}, 3).value()));
+      flat_request("waterlevel", StationSelection::make({2, 0}, 3).value()));
   const StationTable& table = read.value;
   REQUIRE(table.size() == 2);
   CHECK(table.station(StationIndex{0}).id.view() == "2");
@@ -607,7 +637,8 @@ TEST_CASE("the table: schema, selection order, shared axis", "[io][dflow]") {
         std::optional<mov::core::Unit>{mov::core::LengthUnit::meter});
 }
 
-// ---- layers ----------------------------------------------------------------------------------
+// ---- layers
+// ----------------------------------------------------------------------------------
 
 TEST_CASE("layers: counted from 1, checked against the variable (N16)",
           "[io][dflow][regression][N16]") {
@@ -664,14 +695,15 @@ TEST_CASE("layers: each layer of a layered variable, by the layer asked for",
     CHECK(format_error_of(stale).index == 5U);
   }
   SECTION("a variable the file does not have") {
-    const auto missing = mov::io::read_dflow(
-        path, flat_request("salinity", everything(3)), {});
+    const auto missing =
+        mov::io::read_dflow(path, flat_request("salinity", everything(3)), {});
     CHECK(format_error_of(missing).code == FormatErrc::missing_variable);
     CHECK(format_error_of(missing).subject == "salinity");
   }
 }
 
-// ---- derived variables ------------------------------------------------------------------------
+// ---- derived variables
+// ------------------------------------------------------------------------
 
 TEST_CASE("derived: current speed and direction (3-4-5, and straight south)",
           "[io][dflow]") {
@@ -700,8 +732,7 @@ TEST_CASE("derived: current speed and direction (3-4-5, and straight south)",
         std::optional<mov::core::Unit>{mov::core::SpeedUnit::meter_per_second});
 
   const auto direction = read_ok(
-      path,
-      derived_request(DflowDerived::current_direction_2d, everything(3)));
+      path, derived_request(DflowDerived::current_direction_2d, everything(3)));
   const auto angles = samples_of(direction.value, 1, 0);
   CHECK(number(angles[0]) == Catch::Approx(53.13010235415598).epsilon(1e-12));
   CHECK(number(angles[1]) == Catch::Approx(-90.0).epsilon(1e-12));
@@ -714,36 +745,37 @@ TEST_CASE("derived: wind, and the 3-D speed at a layer", "[io][dflow]") {
   DflowNc spec = basic();
   spec.layers = 2;
   spec.interfaces = 3;
-  spec.vars = {
-      variable("x_velocity", 1, "m s-1",
-               [](std::size_t, std::size_t, std::size_t l) {
-                 return l == 0 ? 2.0 : 20.0;
-               }),
-      variable("y_velocity", 1, "m s-1",
-               [](std::size_t, std::size_t, std::size_t l) {
-                 return l == 0 ? 3.0 : 30.0;
-               }),
-      variable("z_velocity", 1, "m s-1",
-               [](std::size_t, std::size_t, std::size_t l) {
-                 return l == 0 ? 6.0 : 60.0;
-               }),
-      variable("windx", 0, "m s-1"), variable("windy", 0, "m s-1")};
+  spec.vars = {variable("x_velocity", 1, "m s-1",
+                        [](std::size_t, std::size_t, std::size_t l) {
+                          return l == 0 ? 2.0 : 20.0;
+                        }),
+               variable("y_velocity", 1, "m s-1",
+                        [](std::size_t, std::size_t, std::size_t l) {
+                          return l == 0 ? 3.0 : 30.0;
+                        }),
+               variable("z_velocity", 1, "m s-1",
+                        [](std::size_t, std::size_t, std::size_t l) {
+                          return l == 0 ? 6.0 : 60.0;
+                        }),
+               variable("windx", 0, "m s-1"), variable("windy", 0, "m s-1")};
   make_dflow_nc(dir / "his.nc", spec);
   const auto path = dir / "his.nc";
 
   const auto speed3 = read_ok(
-      path, derived_request(DflowDerived::current_speed_3d, everything(3), 2, 1));
+      path,
+      derived_request(DflowDerived::current_speed_3d, everything(3), 2, 1));
   CHECK(number(samples_of(speed3.value, 0, 0)[0]) ==
         Catch::Approx(7.0).epsilon(1e-12));  // hypot(2, 3, 6)
   CHECK(speed3.value.schema()[0].label() == "3D current speed");
   const auto speed3b = read_ok(
-      path, derived_request(DflowDerived::current_speed_3d, everything(3), 2, 2));
+      path,
+      derived_request(DflowDerived::current_speed_3d, everything(3), 2, 2));
   CHECK(number(samples_of(speed3b.value, 0, 0)[0]) ==
         Catch::Approx(70.0).epsilon(1e-12));
 
   // N16: the wind of a 3-D file is flat, and is read without a layer.
-  const auto wind = read_ok(
-      path, derived_request(DflowDerived::wind_speed, everything(3)));
+  const auto wind =
+      read_ok(path, derived_request(DflowDerived::wind_speed, everything(3)));
   CHECK(number(samples_of(wind.value, 1, 0)[0]) ==
         Catch::Approx(std::hypot(1000.0 * 3.0 + 10.0, 1000.0 * 4.0 + 10.0))
             .epsilon(1e-12));
@@ -753,23 +785,20 @@ TEST_CASE("derived: wind, and the 3-D speed at a layer", "[io][dflow]") {
   CHECK(bearing.value.schema()[0].label().starts_with("wind direction"));
 }
 
-TEST_CASE("derived: the schema exists for an empty selection",
-          "[io][dflow]") {
+TEST_CASE("derived: the schema exists for an empty selection", "[io][dflow]") {
   const mov::test::ScratchDir dir;
   DflowNc spec = basic();
   spec.vars = {variable("windx", 0, "m s-1"), variable("windy", 0, "m s-1")};
   make_dflow_nc(dir / "his.nc", spec);
   const auto read = read_ok(
-      dir / "his.nc",
-      derived_request(DflowDerived::wind_speed,
-                      StationSelection::make({}, 3).value()));
+      dir / "his.nc", derived_request(DflowDerived::wind_speed,
+                                      StationSelection::make({}, 3).value()));
   CHECK(read.value.size() == 0);
   REQUIRE(read.value.schema().size() == 1);
   CHECK(mov::core::token(read.value.schema()[0].quantity()) == "wind_speed");
 }
 
-TEST_CASE("derived: components in different units are refused",
-          "[io][dflow]") {
+TEST_CASE("derived: components in different units are refused", "[io][dflow]") {
   const mov::test::ScratchDir dir;
   DflowNc spec = basic();
   spec.vars = {variable("x_velocity", 0, "m s-1"),
@@ -816,11 +845,13 @@ TEST_CASE("derived tokens round trip", "[io][dflow]") {
         DflowDerived::wind_direction}) {
     CHECK(mov::io::parse_dflow_derived(mov::io::to_token(d)) == d);
   }
-  CHECK(mov::io::to_token(DflowDerived::current_speed_2d) == "2D_current_speed");
+  CHECK(mov::io::to_token(DflowDerived::current_speed_2d) ==
+        "2D_current_speed");
   CHECK(not(mov::io::parse_dflow_derived("current_speed").has_value()));
 }
 
-// ---- quantities and units ------------------------------------------------------------------------
+// ---- quantities and units
+// ------------------------------------------------------------------------
 
 TEST_CASE("quantities: registry names, tokens, and the unknown",
           "[io][dflow]") {
@@ -830,8 +861,7 @@ TEST_CASE("quantities: registry names, tokens, and the unknown",
   DflowVar salinity = variable("salinity", 0, "ppt");
   salinity.standard_name = "sea_water_salinity";
   const DflowVar odd = variable("sea-water temperature", 0, "degC");
-  const DflowVar discharge =
-      variable("cross_section_discharge", 0, "m3/s");
+  const DflowVar discharge = variable("cross_section_discharge", 0, "m3/s");
   spec.vars = {no_unit, salinity, odd, discharge};
   make_dflow_nc(dir / "his.nc", spec);
   const auto path = dir / "his.nc";
@@ -841,24 +871,25 @@ TEST_CASE("quantities: registry names, tokens, and the unknown",
   // No unit attribute: the registry's own.
   CHECK(level.value.schema()[0].unit() ==
         std::optional<mov::core::Unit>{mov::core::LengthUnit::meter});
-  INFO((level.warnings.empty() ? std::string_view{} : mov::io::to_token(level.warnings[0].code)));
+  INFO((level.warnings.empty() ? std::string_view{}
+                               : mov::io::to_token(level.warnings[0].code)));
   CHECK(level.warnings.empty());
 
   const auto sal = read_ok(path, flat_request("salinity", everything(3)));
   CHECK(mov::core::token(sal.value.schema()[0].quantity()) == "salinity");
-  const auto* generic =
-      std::get_if<mov::core::GenericQuantity>(&sal.value.schema()[0].quantity());
+  const auto* generic = std::get_if<mov::core::GenericQuantity>(
+      &sal.value.schema()[0].quantity());
   REQUIRE(generic != nullptr);
   CHECK(generic->standard_name() == "sea_water_salinity");
   CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 1);
 
-  const auto strange = read_ok(
-      path, flat_request("sea-water temperature", everything(3)));
+  const auto strange =
+      read_ok(path, flat_request("sea-water temperature", everything(3)));
   CHECK(mov::core::token(strange.value.schema()[0].quantity()) == "value");
   CHECK(warning_count(strange.warnings, WarningCode::unknown_quantity) == 1);
 
-  const auto flow = read_ok(
-      path, flat_request("cross_section_discharge", everything(3)));
+  const auto flow =
+      read_ok(path, flat_request("cross_section_discharge", everything(3)));
   CHECK(flow.value.schema()[0].unit() ==
         std::optional<mov::core::Unit>{
             mov::core::DischargeUnit::cubic_meter_per_second});
@@ -872,13 +903,13 @@ TEST_CASE("quantities: a name that is a registry token is that quantity",
   spec.vars = {variable("wave_height", 0, "m"),
                variable("air_pressure", 0, "hPa")};
   make_dflow_nc(dir / "his.nc", spec);
-  const auto read = read_ok(dir / "his.nc",
-                            flat_request("wave_height", everything(3)));
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("wave_height", everything(3)));
   CHECK(mov::core::token(read.value.schema()[0].quantity()) == "wave_height");
   CHECK(read.value.schema()[0].unit() ==
         std::optional<mov::core::Unit>{mov::core::LengthUnit::meter});
-  const auto pressure = read_ok(dir / "his.nc",
-                                flat_request("air_pressure", everything(3)));
+  const auto pressure =
+      read_ok(dir / "his.nc", flat_request("air_pressure", everything(3)));
   CHECK(pressure.value.schema()[0].unit() ==
         std::optional<mov::core::Unit>{mov::core::PressureUnit::hectopascal});
 }
@@ -891,8 +922,8 @@ TEST_CASE("attributes that are not text are not labels or units",
   odd.numeric_attributes = true;
   spec.vars = {odd};
   make_dflow_nc(dir / "his.nc", spec);
-  const auto read = read_ok(dir / "his.nc",
-                            flat_request("waterlevel", everything(3)));
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
   // The label is the name; the unit is the registry's own.
   CHECK(read.value.schema()[0].label() == "waterlevel");
   CHECK(read.value.schema()[0].unit() ==
@@ -908,7 +939,8 @@ TEST_CASE("coordinates that cannot be used", "[io][dflow]") {
   SECTION("64-bit integer coordinates are refused like 64-bit data") {
     spec.coordinate_type = DataType::int64;
     make_dflow_nc(dir / "his.nc", spec);
-    const auto result = mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
+    const auto result =
+        mov::io::inspect_dflow(dir / "his.nc", Epsg::wgs84(), {});
     REQUIRE(not(result.has_value()));
     const auto* error = nc_error_in(result.error());
     REQUIRE(error != nullptr);
@@ -940,7 +972,8 @@ TEST_CASE("inspect: a variable of a type that is not read is skipped",
   CHECK(warning_count(inspected.warnings, WarningCode::skipped_variable) == 1);
 }
 
-// ---- selection, limits, cancellation -----------------------------------------------------------------
+// ---- selection, limits, cancellation
+// -----------------------------------------------------------------
 
 TEST_CASE("a selection for another station count", "[io][dflow]") {
   const mov::test::ScratchDir dir;
@@ -970,8 +1003,7 @@ TEST_CASE("limits and cancellation", "[io][dflow]") {
     REQUIRE(not(read.has_value()));
     const auto* error = nc_error_in(read.error());
     REQUIRE(error != nullptr);
-    CHECK(error->status ==
-          mov::io::NcStatus{mov::io::WrapperFault::too_large});
+    CHECK(error->status == mov::io::NcStatus{mov::io::WrapperFault::too_large});
   }
   SECTION("blocks of any size give the same table") {
     ReadContext small;
@@ -988,10 +1020,11 @@ TEST_CASE("the readers close their file: it can be opened again at once",
   const auto path = dir / "his.nc";
   for (int round = 0; round < 3; ++round) {
     CHECK(mov::io::inspect_dflow(path, Epsg::wgs84(), {}).has_value());
-    CHECK(mov::io::read_dflow(path, flat_request("waterlevel", everything(3)), {})
-              .has_value());
-    const auto absent = mov::io::read_dflow(
-        path, flat_request("salinity", everything(3)), {});
+    CHECK(
+        mov::io::read_dflow(path, flat_request("waterlevel", everything(3)), {})
+            .has_value());
+    const auto absent =
+        mov::io::read_dflow(path, flat_request("salinity", everything(3)), {});
     CHECK(not absent.has_value());
     CHECK(mov::io::nc::File::open(path, {}).has_value());
   }

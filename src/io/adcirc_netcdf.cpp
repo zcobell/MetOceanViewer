@@ -10,13 +10,14 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
-#include <ranges>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "model_netcdf.hpp"
 #include "mov/core/detail/ascii.hpp"
 #include "mov/core/hwm.hpp"
 #include "mov/core/sample.hpp"
@@ -30,7 +31,6 @@
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/warning.hpp"
-#include "model_netcdf.hpp"
 
 namespace mov::io {
 
@@ -118,9 +118,8 @@ std::expected<bool, Error> has_var(const nc::File& file, nc::NcNameRef name) {
 // The first of zeta, u-vel, pressure, windx the file has (LF 3.2). A vector
 // needs its partner; a lone v-vel or windy is another kind of file.
 std::expected<AdcircKind, Error> detect_kind(const nc::File& file) {
-  for (const AdcircKind kind :
-       {AdcircKind::elevation, AdcircKind::velocity, AdcircKind::pressure,
-        AdcircKind::wind}) {
+  for (const AdcircKind kind : {AdcircKind::elevation, AdcircKind::velocity,
+                                AdcircKind::pressure, AdcircKind::wind}) {
     const KindVariables names = variables_of(kind);
     const auto present = has_var(file, names.first);
     if (not present) {
@@ -141,7 +140,8 @@ std::expected<AdcircKind, Error> detect_kind(const nc::File& file) {
     }
     return kind;
   }
-  for (const nc::NcNameRef lone : {nc::NcNameRef{"v-vel"}, nc::NcNameRef{"windy"}}) {
+  for (const nc::NcNameRef lone :
+       {nc::NcNameRef{"v-vel"}, nc::NcNameRef{"windy"}}) {
     const auto present = has_var(file, lone);
     if (not present) {
       return std::unexpected{present.error()};
@@ -188,21 +188,23 @@ std::expected<std::vector<nc::VarInfo>, Error> data_variables(
   return vars;
 }
 
-detail::StationVariables station_variables(
-    const nc::DimInfo& dim, bool names) {
-  return {.dim = dim,
-          .x = "x",
-          .y = "y",
-          .names = names ? std::optional<nc::NcNameRef>{nc::NcNameRef{"station_name"}}
-                         : std::nullopt,
-          .source = core::DataSource::adcirc};
+detail::StationVariables station_variables(const nc::DimInfo& dim, bool names) {
+  return {
+      .dim = dim,
+      .x = "x",
+      .y = "y",
+      .names = names
+                   ? std::optional<nc::NcNameRef>{nc::NcNameRef{"station_name"}}
+                   : std::nullopt,
+      .source = core::DataSource::adcirc};
 }
 
 std::expected<bool, Error> has_names(const nc::File& file) {
   return has_var(file, "station_name");
 }
 
-// ---- the clock ----------------------------------------------------------------
+// ---- the clock
+// ----------------------------------------------------------------
 
 struct Clock {
   CfClock clock;
@@ -250,8 +252,8 @@ std::expected<Clock, Error> clock_of(const nc::File& file,
                      : std::nullopt;
   const auto calendar = parse_cf_calendar(calendar_view);
   if (not calendar) {
-    return fail(format_error(FormatErrc::unsupported_calendar,
-                             variable + ":calendar"));
+    return fail(
+        format_error(FormatErrc::unsupported_calendar, variable + ":calendar"));
   }
   auto clock = detail::make_clock(parsed->value, *calendar, variable);
   if (not clock) {
@@ -263,7 +265,8 @@ std::expected<Clock, Error> clock_of(const nc::File& file,
   return out;
 }
 
-// ---- classifying values -------------------------------------------------------
+// ---- classifying values
+// -------------------------------------------------------
 
 // One raw value, classified. `fill` marks a value the model or the file says
 // is no data (as opposed to NaN): in a vector it takes the partner with it.
@@ -302,7 +305,8 @@ Cell classify(AdcircKind kind, const nc::Masking<T>& mask, T raw,
   return {.sample = mask.apply(raw), .fill = false};
 }
 
-// ---- reading one data variable ---------------------------------------------------
+// ---- reading one data variable
+// ---------------------------------------------------
 
 struct Gathered {
   std::vector<core::Column> columns;  // [selected position]
@@ -335,8 +339,8 @@ std::expected<Gathered, Error> read_component(const ValueSource& source,
     return fail(detail::nc_fault(file, WrapperFault::type_mismatch,
                                  NcOp::get_var, var.name.view()));
   };
-  Gathered out{.columns =
-                   detail::empty_columns(source.selection.size(), source.times)};
+  Gathered out{
+      .columns = detail::empty_columns(source.selection.size(), source.times)};
   // Nearby stations share a read, as far as the file's chunks make that cheap.
   const auto groups =
       detail::plan_groups(file, var, source.selection, source.policy);
@@ -453,7 +457,8 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
 
 }  // namespace
 
-// ---- inspect ---------------------------------------------------------------------
+// ---- inspect
+// ---------------------------------------------------------------------
 
 std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
     const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
@@ -515,7 +520,8 @@ std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
                                .warnings = std::move(stations->warnings)};
 }
 
-// ---- read ------------------------------------------------------------------------
+// ---- read
+// ------------------------------------------------------------------------
 
 namespace detail {
 
@@ -547,14 +553,13 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
-  auto values = read_values(
-      {.file = file,
-       .kind = request.kind,
-       .times = structure.time_dim.length,
-       .selection = selection,
-       .policy = policy,
-       .stop = ctx.stop},
-      setup->vars);
+  auto values = read_values({.file = file,
+                             .kind = request.kind,
+                             .times = structure.time_dim.length,
+                             .selection = selection,
+                             .policy = policy,
+                             .stop = ctx.stop},
+                            setup->vars);
   if (not values) {
     return std::unexpected{std::move(values.error())};
   }

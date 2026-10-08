@@ -9,8 +9,8 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
-#include <ranges>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -18,6 +18,7 @@
 #include <variant>
 #include <vector>
 
+#include "model_netcdf.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -34,7 +35,6 @@
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/warning.hpp"
-#include "model_netcdf.hpp"
 
 namespace mov::io {
 
@@ -95,7 +95,8 @@ Inputs inputs_of(DflowDerived d) {
   return {.names = {}, .count = 0};
 }
 
-// ---- the file's structure -----------------------------------------------------
+// ---- the file's structure
+// -----------------------------------------------------
 
 struct Structure {
   nc::DimInfo time_dim;
@@ -126,7 +127,8 @@ std::expected<Structure, Error> structure_of(const nc::File& file) {
   if (not time_var) {
     return std::unexpected{std::move(time_var.error())};
   }
-  if (auto shape = detail::require_shape(*time_var, {time_dim->id}); not shape) {
+  if (auto shape = detail::require_shape(*time_var, {time_dim->id});
+      not shape) {
     return std::unexpected{std::move(shape.error())};
   }
   auto names = detail::require_var(file, "station_name");
@@ -152,7 +154,8 @@ detail::StationVariables station_variables(const nc::DimInfo& dim) {
           .source = core::DataSource::dflowfm};
 }
 
-// ---- the clock ------------------------------------------------------------------
+// ---- the clock
+// ------------------------------------------------------------------
 
 struct TimeSetup {
   CfTimeUnits units;
@@ -162,7 +165,7 @@ struct TimeSetup {
 };
 
 std::expected<TimeSetup, Error> time_of(const nc::File& file,
-                                   const Structure& structure) {
+                                        const Structure& structure) {
   const std::string variable{structure.time_var.name.view()};
   auto text = detail::optional_text(file, structure.time_var.name, "units");
   if (not text) {
@@ -185,20 +188,21 @@ std::expected<TimeSetup, Error> time_of(const nc::File& file,
       *calendar_text ? std::optional<std::string_view>{**calendar_text}
                      : std::nullopt);
   if (not calendar) {
-    return fail(format_error(FormatErrc::unsupported_calendar,
-                             variable + ":calendar"));
+    return fail(
+        format_error(FormatErrc::unsupported_calendar, variable + ":calendar"));
   }
   auto clock = detail::make_clock(parsed->value, *calendar, variable);
   if (not clock) {
     return std::unexpected{std::move(clock.error())};
   }
   return TimeSetup{.units = parsed->value,
-              .calendar = *calendar,
-              .clock = *clock,
-              .warnings = std::move(parsed->warnings)};
+                   .calendar = *calendar,
+                   .clock = *clock,
+                   .warnings = std::move(parsed->warnings)};
 }
 
-// ---- the variables of the file ------------------------------------------------------
+// ---- the variables of the file
+// ------------------------------------------------------
 
 // A variable the file offers: over (time, stations), or (time, stations,
 // laydim) with that many layers.
@@ -304,8 +308,8 @@ Shape shape_of_inputs(const std::vector<Listed>& listed, DflowDerived d) {
 bool derivable(const std::vector<Listed>& listed, DflowDerived d,
                Shape& shape) {
   shape = shape_of_inputs(listed, d);
-  return shape.ok and (d != DflowDerived::current_speed_3d or
-                       shape.layers.has_value());
+  return shape.ok and
+         (d != DflowDerived::current_speed_3d or shape.layers.has_value());
 }
 
 std::expected<std::vector<DflowVariable>, Error> variables_of(
@@ -316,23 +320,23 @@ std::expected<std::vector<DflowVariable>, Error> variables_of(
     if (not label) {
       return std::unexpected{std::move(label.error())};
     }
-    std::string long_name =
-        *label and not cut_at_nul(**label).empty()
-            ? simplified(cut_at_nul(**label))
-            : std::string{l.info.name.view()};
+    std::string long_name = *label and not cut_at_nul(**label).empty()
+                                ? simplified(cut_at_nul(**label))
+                                : std::string{l.info.name.view()};
     out.push_back(entry_for(l.info.name, std::move(long_name), l.layers));
   }
   for (const DerivedRow& row : derived_rows) {
     Shape shape{.ok = false, .layers = std::nullopt};
     if (derivable(listed, row.derived, shape)) {
-      out.push_back(entry_for(row.derived, std::string{row.long_name},
-                              shape.layers));
+      out.push_back(
+          entry_for(row.derived, std::string{row.long_name}, shape.layers));
     }
   }
   return out;
 }
 
-// ---- one variable's meta -------------------------------------------------------------------
+// ---- one variable's meta
+// -------------------------------------------------------------------
 
 struct NamedQuantity {
   std::string_view name;
@@ -379,8 +383,8 @@ std::expected<Described, Error> describe_variable(const nc::File& file,
     quantity = *registry;
   } else if (auto generic = core::GenericQuantity::parse(
                  {.token = name,
-                  .standard_name =
-                      *standard ? cut_at_nul(**standard) : std::string_view{}})) {
+                  .standard_name = *standard ? cut_at_nul(**standard)
+                                             : std::string_view{}})) {
     quantity = *std::move(generic);
   } else {
     quantity = core::GenericQuantity::value();
@@ -412,7 +416,8 @@ std::expected<Described, Error> describe_variable(const nc::File& file,
   return out;
 }
 
-// ---- reading one variable ------------------------------------------------------------------
+// ---- reading one variable
+// ------------------------------------------------------------------
 
 struct Component {
   std::string name;
@@ -466,8 +471,8 @@ std::expected<Component, Error> read_component(
           out.columns[position][t] = sample_of(*mask, raw, out.nonfinite);
         });
   };
-  const auto done = nc::dispatch_numeric(
-      var.type, run, [&]() -> std::expected<void, Error> {
+  const auto done =
+      nc::dispatch_numeric(var.type, run, [&]() -> std::expected<void, Error> {
         return fail(detail::nc_fault(file, WrapperFault::type_mismatch,
                                      NcOp::get_var, var.name.view()));
       });
@@ -477,7 +482,8 @@ std::expected<Component, Error> read_component(
   return out;
 }
 
-// ---- derived variables -------------------------------------------------------------------
+// ---- derived variables
+// -------------------------------------------------------------------
 
 FormatError alignment_error(std::string_view subject) {
   return format_error(FormatErrc::noncanonical_unit, std::string{subject});
@@ -486,8 +492,8 @@ FormatError alignment_error(std::string_view subject) {
 std::expected<core::TimeSeries, Error> series_of(const core::TimeAxis& axis,
                                                  const Component& component,
                                                  std::size_t position) {
-  auto series = core::TimeSeries::make(axis, component.columns[position],
-                                       component.meta);
+  auto series =
+      core::TimeSeries::make(axis, component.columns[position], component.meta);
   if (not series) {
     return fail(format_error(FormatErrc::dimension_mismatch, component.name));
   }
@@ -507,7 +513,8 @@ std::expected<core::TimeSeries, Error> derive_one(
     series.push_back(*std::move(s));
   }
   const std::string subject = components[0].name + ", " + components[1].name;
-  auto vector = core::VectorSeries::make(std::move(series[0]), std::move(series[1]));
+  auto vector =
+      core::VectorSeries::make(std::move(series[0]), std::move(series[1]));
   if (not vector) {
     return fail(alignment_error(subject));
   }
@@ -529,9 +536,10 @@ std::expected<core::TimeSeries, Error> derive_one(
   return fail(format_error(FormatErrc::dimension_mismatch, subject));
 }
 
-std::expected<core::Variable, Error> derive(
-    DflowDerived d, const core::TimeAxis& axis,
-    std::vector<Component>& components, std::size_t selected) {
+std::expected<core::Variable, Error> derive(DflowDerived d,
+                                            const core::TimeAxis& axis,
+                                            std::vector<Component>& components,
+                                            std::size_t selected) {
   // The meta is that of an empty station's series, so it exists with no
   // station selected.
   const core::TimeAxis none;
@@ -562,7 +570,8 @@ std::expected<core::Variable, Error> derive(
 
 }  // namespace
 
-// ---- the vocabulary ---------------------------------------------------------------------------
+// ---- the vocabulary
+// ---------------------------------------------------------------------------
 
 std::string_view to_token(DflowDerived d) noexcept { return row_of(d).token; }
 
@@ -584,7 +593,8 @@ std::expected<Layer, FormatError> Layer::make(const Layered& v,
   return Layer{one_based - 1};
 }
 
-// ---- inspect ------------------------------------------------------------------------------------
+// ---- inspect
+// ------------------------------------------------------------------------------------
 
 std::expected<Read<DflowCatalog>, Error> inspect_dflow(
     const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
@@ -625,16 +635,16 @@ std::expected<Read<DflowCatalog>, Error> inspect_dflow(
       warnings.push_back(std::move(w));
     }
   }
-  return Read<DflowCatalog>{
-      .value = {.stations = std::move(stations->value),
-                .variables = *std::move(variables),
-                .times = structure->time_dim.length,
-                .time_units = time->units,
-                .calendar = time->calendar},
-      .warnings = std::move(warnings)};
+  return Read<DflowCatalog>{.value = {.stations = std::move(stations->value),
+                                      .variables = *std::move(variables),
+                                      .times = structure->time_dim.length,
+                                      .time_units = time->units,
+                                      .calendar = time->calendar},
+                            .warnings = std::move(warnings)};
 }
 
-// ---- read -----------------------------------------------------------------------------------------
+// ---- read
+// -----------------------------------------------------------------------------------------
 
 namespace {
 
@@ -666,8 +676,9 @@ std::expected<std::vector<const Listed*>, Error> resolve(
     names.push_back(name->view());
   } else {
     const Inputs inputs = inputs_of(std::get<DflowDerived>(target.source));
-    names.assign(inputs.names.begin(), inputs.names.begin() +
-                                           static_cast<std::ptrdiff_t>(inputs.count));
+    names.assign(
+        inputs.names.begin(),
+        inputs.names.begin() + static_cast<std::ptrdiff_t>(inputs.count));
   }
   std::vector<const Listed*> out;
   for (const std::string_view name : names) {
@@ -677,8 +688,8 @@ std::expected<std::vector<const Listed*>, Error> resolve(
           format_error(FormatErrc::missing_variable, std::string{name}));
     }
     if (l->layers.has_value() != target.layer.has_value()) {
-      return fail(format_error(FormatErrc::dimension_mismatch,
-                               std::string{name}));
+      return fail(
+          format_error(FormatErrc::dimension_mismatch, std::string{name}));
     }
     if (l->layers and *target.layer >= *l->layers) {
       return fail(format_error(FormatErrc::layer_out_of_range,
@@ -725,10 +736,10 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
   if (not inputs) {
     return std::unexpected{std::move(inputs.error())};
   }
-  if (auto size = detail::check_result_size(
-          *file, inputs->front()->info.name.view(),
-          request.stations.indices().size(), structure->time_dim.length,
-          inputs->size());
+  if (auto size =
+          detail::check_result_size(*file, inputs->front()->info.name.view(),
+                                    request.stations.indices().size(),
+                                    structure->time_dim.length, inputs->size());
       not size) {
     return std::unexpected{std::move(size.error())};
   }
@@ -747,9 +758,9 @@ struct Values {
   std::string nonfinite_in;  // the first variable that had one
 };
 
-std::expected<Values, Error> read_values(
-    const Setup& setup, std::span<const std::size_t> selection,
-    const StopToken& stop) {
+std::expected<Values, Error> read_values(const Setup& setup,
+                                         std::span<const std::size_t> selection,
+                                         const StopToken& stop) {
   Values out;
   for (const Listed* input : setup.inputs) {
     auto component =

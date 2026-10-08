@@ -82,8 +82,7 @@ std::expected<nc::VarInfo, Error> require_var(const nc::File& file,
 
 std::expected<void, Error> require_shape(const nc::VarInfo& var,
                                          std::initializer_list<int> dim_ids) {
-  const bool same =
-      std::ranges::equal(var.dims, dim_ids, {}, &nc::DimInfo::id);
+  const bool same = std::ranges::equal(var.dims, dim_ids, {}, &nc::DimInfo::id);
   if (not same) {
     return fail(format_error(FormatErrc::dimension_mismatch,
                              std::string{var.name.view()}));
@@ -94,11 +93,10 @@ std::expected<void, Error> require_shape(const nc::VarInfo& var,
 std::expected<void, Error> require_selection(
     const core::StationSelection& selection, std::size_t station_count) {
   if (not selection.applies_to(station_count)) {
-    return fail(format_error(
-        FormatErrc::station_count_mismatch,
-        "the file has " + std::to_string(station_count) +
-            " stations, the selection is for " +
-            std::to_string(selection.station_count())));
+    return fail(format_error(FormatErrc::station_count_mismatch,
+                             "the file has " + std::to_string(station_count) +
+                                 " stations, the selection is for " +
+                                 std::to_string(selection.station_count())));
   }
   return {};
 }
@@ -137,8 +135,8 @@ std::expected<std::vector<double>, Error> read_coordinate(
     return std::unexpected{std::move(shape.error())};
   }
   if (info->type == nc::Type::int64) {
-    return fail(
-        nc_fault(file, WrapperFault::type_mismatch, NcOp::get_var, name.view()));
+    return fail(nc_fault(file, WrapperFault::type_mismatch, NcOp::get_var,
+                         name.view()));
   }
   return file.read<double>(name, nc::whole(*info), stop);
 }
@@ -150,8 +148,7 @@ struct CleanName {
 };
 
 CleanName clean_name(std::string_view row, std::size_t station) {
-  auto cleaned =
-      replace_invalid_utf8(simplified(cut_at_nul(row)));
+  auto cleaned = replace_invalid_utf8(simplified(cut_at_nul(row)));
   if (not cleaned.text.empty()) {
     return {.text = std::move(cleaned.text), .replaced = cleaned.replaced};
   }
@@ -175,8 +172,7 @@ namespace {
 // The rows of the char variable `names` (over the station dimension and a
 // length), or none if the file has no names.
 std::expected<std::vector<std::string>, Error> read_names(
-    const nc::File& file, const StationVariables& vars,
-    const StopToken& stop) {
+    const nc::File& file, const StationVariables& vars, const StopToken& stop) {
   if (not vars.names) {
     return std::vector<std::string>{};
   }
@@ -366,10 +362,8 @@ std::expected<core::TimeAxis, Error> read_time_axis(const nc::File& file,
       axis.push_back(*at);
     }
   }
-  const auto descent =
-      std::ranges::adjacent_find(axis, [](core::Time a, core::Time b) {
-        return not(a < b);
-      });
+  const auto descent = std::ranges::adjacent_find(
+      axis, [](core::Time a, core::Time b) { return not(a < b); });
   if (descent != axis.end()) {
     return fail(format_error(
         FormatErrc::time_not_increasing, std::string{name}, std::nullopt,
@@ -417,7 +411,8 @@ std::expected<std::vector<StationGroup>, Error> plan_groups(
   if (not chunks) {
     return fail(std::move(chunks.error()));
   }
-  return station_groups(selection, grouping_for(*chunks, 1));  // (time, station)
+  return station_groups(selection,
+                        grouping_for(*chunks, 1));  // (time, station)
 }
 
 std::expected<Read<core::StationTable>, Error> assemble_table(
