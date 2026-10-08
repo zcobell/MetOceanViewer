@@ -22,3 +22,28 @@ function(mov_enable_hardening target)
             $<IF:$<CONFIG:Debug>,_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE,_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST>
     )
 endfunction()
+
+# Code-generation hardening for optimized builds on Linux: what distribution
+# compilers enable by default, made explicit so a self-built toolchain (the
+# AppImage's GCC, docs/packaging.md) produces the same binaries. Off for
+# Debug (_FORTIFY_SOURCE needs optimization) and for sanitizer, coverage and
+# fuzz builds, which instrument the same calls.
+function(mov_enable_codegen_hardening target)
+    if(MSVC OR APPLE OR NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        return()
+    endif()
+    set(optimized "$<NOT:$<CONFIG:Debug>>")
+    # Undefine first: Ubuntu's GCC predefines _FORTIFY_SOURCE, and redefining
+    # it is a warning that -Werror makes fatal.
+    target_compile_options(
+        ${target}
+        INTERFACE
+            "$<${optimized}:-U_FORTIFY_SOURCE;-D_FORTIFY_SOURCE=3>"
+            -fstack-clash-protection
+            -fstack-protector-strong
+    )
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+        target_compile_options(${target} INTERFACE -fcf-protection)
+    endif()
+    target_link_options(${target} INTERFACE LINKER:-z,relro LINKER:-z,now)
+endfunction()

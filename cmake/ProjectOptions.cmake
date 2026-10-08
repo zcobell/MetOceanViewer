@@ -71,6 +71,15 @@ macro(mov_create_option_targets)
     if(MOV_ENABLE_HARDENING)
         mov_enable_hardening(mov_options)
     endif()
+    if(
+        NOT MOV_ENABLE_SANITIZER_ADDRESS
+        AND NOT MOV_ENABLE_SANITIZER_UNDEFINED
+        AND NOT MOV_ENABLE_SANITIZER_THREAD
+        AND NOT MOV_ENABLE_COVERAGE
+        AND NOT MOV_BUILD_FUZZ_TESTS
+    )
+        mov_enable_codegen_hardening(mov_options)
+    endif()
 
     include(cmake/Sanitizers.cmake)
     mov_enable_sanitizers(
