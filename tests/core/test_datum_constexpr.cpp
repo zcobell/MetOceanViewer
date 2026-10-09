@@ -149,7 +149,7 @@ TEST_CASE("every token round-trips", "[core][datum][constexpr]") {
   STATIC_REQUIRE(parse_vertical_datum("IGLD85") == VerticalDatum::igld85);
 }
 
-// N8: v4's datumID("MHW") fell through to NullDatum.
+// v4's datumID("MHW") fell through to NullDatum.
 TEST_CASE("MHW parses", "[core][datum][constexpr][regression][N8]") {
   STATIC_REQUIRE(parse_vertical_datum("MHW") == VerticalDatum::mhw);
   STATIC_REQUIRE(parse_vertical_datum("mhw") == VerticalDatum::mhw);

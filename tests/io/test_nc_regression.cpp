@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// Regression tests of plan section 1.2 bugs 5, 7 and 11 (the others are
-// tagged where their component is tested: B4 test_nc_read/_masking/_write,
-// B6 test_nc_file/_write, B8 and B10 test_nc_attributes, B9 test_nc_masking,
-// B12 test_nc_file/_masking, B15 test_nc_write).
+// Regression tests of v4 netCDF bugs that span the wrapper: ids leaked on
+// error paths, and char rows read with a hard-coded length of 200. The other
+// v4 netCDF bugs are pinned by [regression] tests beside their component
+// (test_nc_read, test_nc_masking, test_nc_write, test_nc_file,
+// test_nc_attributes).
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>

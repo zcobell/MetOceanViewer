@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 
 // The result of a function so marked holds views of the argument, so the
 // argument must outlive it. Clang and MSVC diagnose a temporary passed here;
@@ -53,7 +53,7 @@ concept TemporaryString = std::same_as<std::remove_cvref_t<S>, std::string> and
 /// `text` without its leading whitespace (ASCII space, tab, CR, LF, VT, FF).
 [[nodiscard]] constexpr std::string_view skip_space(
     std::string_view text) noexcept {
-  const auto first = std::ranges::find_if_not(text, core::detail::is_space);
+  const auto first = std::ranges::find_if_not(text, core::ascii::is_space);
   return text.substr(static_cast<std::size_t>(first - text.begin()));
 }
 
@@ -86,7 +86,7 @@ template <std::predicate<char> IsSeparator>
 
 [[nodiscard]] constexpr std::optional<std::string_view> next_word(
     std::string_view& rest) noexcept {
-  return next_word(rest, core::detail::is_space);
+  return next_word(rest, core::ascii::is_space);
 }
 
 /// The non-allocating comma-style counterpart of split_ws_into: puts the first
@@ -243,9 +243,7 @@ template <std::integral I>
   }
   std::string_view body = token;
   const Sign sign = strip_sign(body);
-  if (body.empty() or not std::ranges::all_of(body, [](char c) noexcept {
-        return c >= '0' and c <= '9';
-      })) {
+  if (body.empty() or not std::ranges::all_of(body, core::ascii::is_digit)) {
     return std::unexpected{NumberError::bad_syntax};
   }
   // std::from_chars takes a '-' but not a '+'.

@@ -4,7 +4,8 @@
 # mov_io: Qt-free file readers/writers on top of mov_core, netCDF-C and PROJ.
 
 find_package(netCDF CONFIG REQUIRED)
-# PROJ is a private dependency (core-design.md C19): no PROJ header is public.
+# PROJ is a private dependency: no PROJ header is public, and core never
+# sees another CRS (readers project to WGS 84 at the read boundary).
 # vcpkg builds it without network (curl) and TIFF-grid support. No path of the
 # build is compiled in: the application tells mov::io where proj.db is
 # (set_projection_data_dir), or $MOV_PROJ_DATA does.
@@ -30,6 +31,7 @@ mov_add_module(
         netcdf/read.cpp
         netcdf/write.cpp
         projection.cpp
+        reporting.cpp
         text.cpp
         text_file.cpp
         warning.cpp
@@ -37,41 +39,35 @@ mov_add_module(
     PRIVATE_LINK netCDF::netcdf PROJ::proj
 )
 
-# ADCIRC ASCII output and the HWM file (WP8).
+# ADCIRC ASCII output and the HWM file.
 target_sources(
     mov_io
     PRIVATE model_number.cpp table_error.cpp adcirc_station_file.cpp adcirc_ascii.cpp hwm_file.cpp
 )
-# IMEDS and CSV (WP7).
+# IMEDS and CSV.
 target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_names.cpp)
 
-# ADCIRC netCDF station output and D-Flow FM history files (WP9).
+# ADCIRC netCDF station output and D-Flow FM history files, and what the
+# netCDF readers share (model_netcdf).
 target_sources(mov_io PRIVATE adcirc_netcdf.cpp adcirc_schema.cpp dflow.cpp model_netcdf.cpp)
 
-# The v5 station netCDF writer and reader (WP10a).
-target_sources(
-    mov_io
-    PRIVATE
-        station_netcdf.cpp
-        station_netcdf_open.cpp
-        station_netcdf_read.cpp
-        station_netcdf_samples.cpp
-        station_netcdf_write.cpp
-)
+# File-type detection.
+target_sources(mov_io PRIVATE file_type.cpp netcdf_kind.cpp)
 
-# Foreign CF and legacy v4 station netCDF readers, file-type detection (WP10b).
+# The station netCDF format: the entry points (dispatch), the v5 writer and
+# reader (open, samples), the foreign CF and legacy v4 readers, and what the
+# readers share.
 target_sources(
     mov_io
     PRIVATE
-        file_type.cpp
-        netcdf_kind.cpp
+        station_netcdf_dispatch.cpp
+        station_netcdf_write.cpp
+        station_netcdf_open.cpp
+        station_netcdf_samples.cpp
+        station_netcdf_foreign_facts.cpp
         station_netcdf_foreign_open.cpp
         station_netcdf_foreign_read.cpp
+        station_netcdf_foreign_schema.cpp
         station_netcdf_legacy.cpp
+        station_netcdf_shared.cpp
 )
-
-# Helpers the v5, foreign and legacy station netCDF readers share (WP10b review).
-target_sources(mov_io PRIVATE station_netcdf_shared.cpp)
-
-# The foreign CF reader: what each variable says, and the schema (WP10b review).
-target_sources(mov_io PRIVATE station_netcdf_foreign_facts.cpp station_netcdf_foreign_schema.cpp)

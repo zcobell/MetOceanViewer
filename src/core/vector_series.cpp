@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "core_access.hpp"
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -74,12 +74,12 @@ bool is_separator(char c) noexcept { return c == ' ' or c == '_' or c == '-'; }
 // The label of a generic u component without its component suffix:
 // "velocity u" -> "velocity", "flow_X" -> "flow"; "" or "u" -> "vector".
 std::string generic_stem(std::string_view label) {
-  label = detail::trim(label);
+  label = ascii::trim(label);
   if (label.size() == 1 and is_component_letter(label.front())) {
     label = {};
   } else if (label.size() >= 2 and is_component_letter(label.back()) and
              is_separator(label[label.size() - 2])) {
-    label = detail::trim(label.substr(0, label.size() - 2));
+    label = ascii::trim(label.substr(0, label.size() - 2));
   }
   return label.empty() ? std::string{"vector"} : std::string{label};
 }

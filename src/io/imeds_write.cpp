@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
@@ -40,7 +40,7 @@ constexpr std::size_t chunk_bytes = std::size_t{1} << 16;
 // A row is 14 + 20 characters of date and value, and a line end.
 constexpr std::size_t typical_row_bytes = 40;
 
-bool separates(char c) { return core::detail::is_space(c) or c == ','; }
+bool separates(char c) { return core::ascii::is_space(c) or c == ','; }
 
 // Each run of white space or commas becomes one '_'.
 std::string underscored(std::string_view text) {
@@ -142,8 +142,7 @@ std::expected<void, FormatError> check_range(const core::StationTable& table,
 // A unit named "unknown" would read back as no unit.
 std::expected<void, FormatError> check_unit(const core::SeriesMeta& meta) {
   const std::optional<core::Unit>& unit = meta.unit();
-  if (unit and
-      core::detail::equal_ignore_case(core::symbol(*unit), "unknown")) {
+  if (unit and core::ascii::equal_ignore_case(core::symbol(*unit), "unknown")) {
     return std::unexpected{FormatError{.code = FormatErrc::noncanonical_unit,
                                        .subject = "unknown"}};
   }

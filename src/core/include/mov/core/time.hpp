@@ -353,7 +353,7 @@ parse_optional_clock(DateTimeCursor& cursor) noexcept {
 }  // namespace detail
 
 /// Parses "yyyy-mm-dd[( |T)hh:mm[:ss[.f[f[f]]]]][Z]", always as UTC, whatever
-/// the machine's time zone (v4 used local time, N5). Strict: four-digit
+/// the machine's time zone (v4 used local time). Strict: four-digit
 /// year, two-digit fields, no surrounding whitespace, no UTC offsets, no
 /// leap seconds. 1 to 3 fraction digits are milliseconds.
 [[nodiscard]] constexpr std::expected<Time, DateTimeError> parse_utc_datetime(

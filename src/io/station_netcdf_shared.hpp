@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The two halves of the v5 station netCDF reader (docs/station-netcdf.md
-// section 12, the v5 column): opening a file (station_netcdf_open.cpp: the
-// header, the structure, the CRS, the stations and the schema, all a catalog
-// needs) and reading the samples of selected stations
-// (station_netcdf_samples.cpp). Private to src/io/.
+// What the three station netCDF readers (v5: station_netcdf_v5.hpp; foreign CF
+// and legacy v4: station_netcdf_dialects.hpp) share, all implemented in
+// station_netcdf_shared.cpp: the row-wise reads of (station, sample)
+// variables, attributes, station positions and the CRS of a grid mapping, the
+// datum spellings, and the rule for series whose times are not strictly
+// increasing. Private to src/io/.
 
 #pragma once
 
@@ -21,14 +22,10 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/datum.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
-#include "mov/core/station.hpp"
-#include "mov/core/station_table.hpp"
+#include "mov/core/sample.hpp"
 #include "mov/core/timeseries.hpp"
-#include "mov/core/units.hpp"
-#include "mov/io/cf_time.hpp"
 #include "mov/io/detail/station_groups.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -36,73 +33,13 @@
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/station_netcdf.hpp"
+#include "mov/io/warning.hpp"
 
 namespace mov::io::detail::station_nc {
 
 using Vars = std::vector<nc::VarInfo>;
 
-/// A data variable and its wet/dry status variable, if it has one.
-struct DataVar {
-  nc::VarInfo var;
-  std::optional<nc::VarInfo> status;
-};
-
-/// The time variable, the layout it gives, and obs_count (incomplete).
-struct Timing {
-  nc::VarInfo time;
-  StationNcLayout layout;
-  nc::DimInfo sample;  // `time` or `obs`
-  std::optional<nc::VarInfo> obs_count;
-};
-
-/// The instance variables found by name (SN 4.2).
-struct Instances {
-  nc::VarInfo name;
-  nc::VarInfo lat;
-  nc::VarInfo lon;
-  std::optional<nc::VarInfo> provider;
-};
-
-/// Which variable of the file is what.
-struct Structure {
-  std::vector<nc::VarInfo> vars;
-  nc::DimInfo station;
-  nc::VarInfo id;
-  Instances instances;
-  Timing timing;
-  std::vector<DataVar> data;
-};
-
-/// An opened file: its structure and the catalog (origin, stations with their
-/// sample counts, schema).
-struct Opened {
-  Structure structure;
-  StationNcCatalog catalog;
-};
-
-/// Everything but the samples, validated.
-[[nodiscard]] std::expected<Read<Opened>, Error> open_v5(const nc::File& file,
-                                                         const StopToken& stop);
-
-/// The table of the stations `selected` (file indices, in the caller's order).
-[[nodiscard]] std::expected<Read<core::StationTable>, Error> read_table(
-    const nc::File& file, const Opened& opened,
-    std::span<const std::size_t> selected, PaddingCheck padding,
-    const StopToken& stop);
-
-/// `code` about `subject`, as an io::Error result.
-[[nodiscard]] std::unexpected<Error> invalid(
-    FormatErrc code, std::string subject,
-    std::optional<std::size_t> station = std::nullopt,
-    std::optional<std::size_t> index = std::nullopt);
-
-/// Text from a file as a warning or error subject: at most
-/// ParseError::max_context_bytes, cut on a UTF-8 boundary.
-[[nodiscard]] std::string subject_of(std::string_view text);
-
-// ---- row-wise reads of (station, sample) variables
-// (station_netcdf_samples.cpp)
-// ---------------------------------------------------------------------------
+// ---- row-wise reads of (station, sample) variables ------------------------
 
 /// What a read of the rows of an (station, sample) variable needs besides the
 /// file: the dimensions, how many samples each station has, and which
@@ -150,17 +87,17 @@ template <class Run>
   return dispatch_model_numeric(file, var, std::forward<Run>(run));
 }
 
-/// One station's times (nullopt: the one axis of every station): present and
-/// on the clock (`time_missing`, `time_out_of_range`, with the station and
-/// index), in file order.
-[[nodiscard]] std::expected<core::TimeAxis, Error> times_of(
-    std::span<const core::Sample> row, const CfClock& clock,
-    std::string_view var, std::optional<std::size_t> station);
+using FlagSink = std::function<std::expected<void, Error>(
+    const SelectedStation&, std::span<const std::int8_t>)>;
 
-/// times_of, and strictly increasing (`time_not_increasing`): a v5 file's rule.
-[[nodiscard]] std::expected<core::TimeAxis, Error> axis_of(
-    std::span<const core::Sample> row, const CfClock& clock,
-    std::string_view var, std::size_t station);
+/// Calls sink(member, flags) for each selected station with the first
+/// counts[station] values of the byte variable `var` (over (station, sample)),
+/// as they are: a flag outside valid_range must be seen, not masked. What the
+/// read covers of the padding after them (rows.padding: the first element, or
+/// all of it) must be `fill` (`padding_not_missing`).
+[[nodiscard]] std::expected<void, Error> flag_rows(
+    const nc::File& file, const nc::VarInfo& var, const RowSpec& rows,
+    std::optional<std::int8_t> fill, const FlagSink& sink);
 
 /// The samples of the `selected` stations (`counts` per file station), or
 /// nullopt when the sum does not fit in std::size_t.
@@ -174,24 +111,12 @@ template <class Run>
     const nc::File& file, std::string_view variable,
     std::optional<std::size_t> samples, std::size_t columns);
 
-/// The clock of a time variable: its `units` (missing_attribute without; a
-/// ParseError if they do not parse) and `calendar`, with the warnings of
-/// parse_cf_time_units.
-[[nodiscard]] std::expected<Read<CfClock>, Error> clock_of(
-    const nc::File& file, const nc::VarInfo& time_var);
-
-// ---- helpers the foreign and legacy readers share with the v5 reader
-// (station_netcdf_open.cpp) --------------------------------------------------
-
-/// A text attribute of `on`, cut at its first NUL; nullopt when absent or not
-/// text.
-[[nodiscard]] std::expected<std::optional<std::string>, Error> text_of(
-    const nc::File& file, nc::AttTarget on, nc::NcNameRef att);
+// ---- attributes, positions, CRS, datums -----------------------------------
 
 /// A signed integer attribute of any width (byte, short, int, int64) as
 /// int64: nullopt when absent; one inquiry of the type, then the read in
 /// exactly that type. Any other type is `type_mismatch` (an EPSG code stored
-/// as text or as a float is not a code, B10; unsigned types are refused, v4
+/// as text or as a float is not a code; unsigned types are refused, v4
 /// writes `int`). `object` names the attribute in the error.
 [[nodiscard]] std::expected<std::optional<std::vector<std::int64_t>>, Error>
 int_att(const nc::File& file, nc::AttTarget on, nc::NcNameRef att,
@@ -240,12 +165,6 @@ struct Position {
 [[nodiscard]] std::expected<Read<core::Epsg>, Error> crs_of_mapping(
     const nc::File& file, const nc::VarInfo& var);
 
-/// The unit of a `units` text (parse_unit), with `unrecognized_unit` when it
-/// is a spelling outside the unit table and the registry; nullopt without
-/// text.
-[[nodiscard]] Read<std::optional<core::Unit>> parsed_unit(
-    const std::optional<std::string>& text);
-
 /// `meta` with the datum of the `vertical_datum` text, when it has one it can
 /// carry; `datum_unknown` warnings otherwise.
 [[nodiscard]] Read<core::SeriesMeta> with_datum(
@@ -258,7 +177,7 @@ struct Position {
 /// with_datum to refuse with `datum_unknown`.
 [[nodiscard]] std::string datum_text(std::string_view text);
 
-// ---- series whose times are not strictly increasing (plan decision 30.3) ----
+// ---- series whose times are not strictly increasing -------------------------
 
 /// Puts the series of one station in time order, as IMEDS does
 /// (core::normalizing_order): rows are stably sorted by time and of equal times

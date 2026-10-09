@@ -24,7 +24,8 @@
 # packaging/CMakeLists.txt turns the install tree into packages (CPack).
 # Values other files repeat are listed in docs/packaging.md, "Keep in sync".
 
-set(MOV_APP_ID io.github.zcobell.metoceanviewer) # plan §6.19
+# The bundle id; also the desktop file name and the installer's AppId.
+set(MOV_APP_ID io.github.zcobell.metoceanviewer)
 set(MOV_APP_NAME MetOceanViewer)
 set(MOV_PACKAGING_DIR "${PROJECT_SOURCE_DIR}/packaging")
 
@@ -85,7 +86,7 @@ function(mov_set_app_metadata target)
         target_sources(${target} PRIVATE "${out}/metoceanviewer.rc" "${out}/metoceanviewer.manifest")
     elseif(APPLE)
         # LSMinimumSystemVersion is the deployment target the code is built
-        # for (plan §6.24: 14.0, set by the macOS presets).
+        # for (14.0, the oldest supported macOS, set by the macOS presets).
         if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
             message(FATAL_ERROR "Set CMAKE_OSX_DEPLOYMENT_TARGET (the ci-macos and package-macos presets do)")
         endif()

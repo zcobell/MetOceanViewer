@@ -16,11 +16,11 @@
 #include <string_view>
 #include <utility>
 
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/utf8.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/time.hpp"
+#include "mov/core/utf8.hpp"
 
 namespace mov::core {
 
@@ -30,7 +30,7 @@ enum class DataSource : std::uint8_t {
   noaa_coops,
   usgs,
   ndbc,
-  xtide,
+  harmonics,
   adcirc,
   dflowfm,
   user
@@ -48,7 +48,7 @@ inline constexpr std::array<DataSourceToken, 7> data_source_tokens{{
     {.source = DataSource::noaa_coops, .token = "noaa_coops"},
     {.source = DataSource::usgs, .token = "usgs"},
     {.source = DataSource::ndbc, .token = "ndbc"},
-    {.source = DataSource::xtide, .token = "xtide"},
+    {.source = DataSource::harmonics, .token = "harmonics"},
     {.source = DataSource::adcirc, .token = "adcirc"},
     {.source = DataSource::dflowfm, .token = "dflowfm"},
     {.source = DataSource::user, .token = "user"},
@@ -66,14 +66,8 @@ inline constexpr std::array<DataSourceToken, 7> data_source_tokens{{
 }
 static_assert(rows_in_enumerator_order());
 
-[[nodiscard]] constexpr bool is_digit(char c) noexcept {
-  return c >= '0' and c <= '9';
-}
 [[nodiscard]] constexpr bool is_upper_alnum(char c) noexcept {
-  return is_digit(c) or (c >= 'A' and c <= 'Z');
-}
-[[nodiscard]] constexpr bool is_alnum(char c) noexcept {
-  return is_upper_alnum(c) or (c >= 'a' and c <= 'z');
+  return ascii::is_digit(c) or (c >= 'A' and c <= 'Z');
 }
 [[nodiscard]] constexpr bool is_control(char c) noexcept {
   const auto byte = static_cast<unsigned char>(c);
@@ -100,7 +94,7 @@ static_assert(rows_in_enumerator_order());
 enum class StationTextError : std::uint8_t { embedded_nul, invalid_utf8 };
 
 /// Text a station file can store (SN 12.4): well-formed UTF-8 without NUL.
-/// May be empty. Readers of lenient sources clean the bytes first (C14).
+/// May be empty. Readers of lenient sources clean the bytes first.
 class StationText {
  public:
   constexpr StationText() = default;
@@ -110,7 +104,7 @@ class StationText {
     if (text.find('\0') != std::string::npos) {
       return std::unexpected{StationTextError::embedded_nul};
     }
-    if (not detail::is_valid_utf8(text)) {
+    if (not is_valid_utf8(text)) {
       return std::unexpected{StationTextError::invalid_utf8};
     }
     return StationText{std::move(text)};
@@ -148,7 +142,7 @@ class StationKey {
     if (text.find('\0') != std::string::npos) {
       return std::unexpected{StationKeyError::embedded_nul};
     }
-    if (not detail::is_valid_utf8(text)) {
+    if (not is_valid_utf8(text)) {
       return std::unexpected{StationKeyError::invalid_utf8};
     }
     return StationKey{StationText{std::move(text)}};
@@ -184,7 +178,7 @@ struct Coops {
     return std::string{id};
   }
   [[nodiscard]] static constexpr bool valid_id(std::string_view id) noexcept {
-    return id.size() == 7 and std::ranges::all_of(id, detail::is_digit);
+    return id.size() == 7 and std::ranges::all_of(id, ascii::is_digit);
   }
 };
 
@@ -195,7 +189,7 @@ struct Usgs {
   [[nodiscard]] static constexpr std::string canonical(std::string_view id) {
     std::string out{id};
     const auto dash = std::ranges::find(out, '-');
-    std::ranges::transform(out.begin(), dash, out.begin(), detail::to_upper);
+    std::ranges::transform(out.begin(), dash, out.begin(), ascii::to_upper);
     return out;
   }
   [[nodiscard]] static constexpr bool valid_id(std::string_view id) noexcept {
@@ -207,7 +201,7 @@ struct Usgs {
     const std::string_view number = id.substr(dash + 1);
     return not agency.empty() and not number.empty() and
            std::ranges::all_of(agency, detail::is_upper_alnum) and
-           std::ranges::all_of(number, detail::is_alnum);
+           std::ranges::all_of(number, ascii::is_alnum);
   }
 };
 
@@ -216,7 +210,7 @@ struct Ndbc {
   static constexpr DataSource source = DataSource::ndbc;
   [[nodiscard]] static constexpr std::string canonical(std::string_view id) {
     std::string out{id};
-    std::ranges::transform(out, out.begin(), detail::to_upper);
+    std::ranges::transform(out, out.begin(), ascii::to_upper);
     return out;
   }
   [[nodiscard]] static constexpr bool valid_id(std::string_view id) noexcept {
@@ -224,18 +218,19 @@ struct Ndbc {
   }
 };
 
-/// XTide: the station name. Non-empty well-formed UTF-8, at most 255 bytes,
-/// no control characters (bytes below 0x20 and 0x7F).
-struct Xtide {
-  static constexpr DataSource source = DataSource::xtide;
+/// A station of a tidal harmonics file (docs/harmonics-engine.md; v5's own
+/// engine replaces XTide). Non-empty well-formed UTF-8, at most
+/// 255 bytes, no control characters (bytes below 0x20 and 0x7F); the
+/// harmonics reader narrows this to its `<source>:<local>` ids.
+struct Harmonics {
+  static constexpr DataSource source = DataSource::harmonics;
   static constexpr std::size_t max_id_bytes = 255;
   [[nodiscard]] static constexpr std::string canonical(std::string_view id) {
     return std::string{id};
   }
   [[nodiscard]] static constexpr bool valid_id(std::string_view id) noexcept {
     return not id.empty() and id.size() <= max_id_bytes and
-           std::ranges::none_of(id, detail::is_control) and
-           detail::is_valid_utf8(id);
+           std::ranges::none_of(id, detail::is_control) and is_valid_utf8(id);
   }
 };
 
@@ -262,7 +257,7 @@ class StationId {
   /// Trims ASCII whitespace, canonicalizes (P::canonical), then validates.
   [[nodiscard]] static constexpr std::expected<StationId, StationIdError> make(
       std::string_view raw) {
-    const std::string_view trimmed = detail::trim(raw);
+    const std::string_view trimmed = ascii::trim(raw);
     if (trimmed.empty()) {
       return std::unexpected{StationIdError::empty};
     }
@@ -307,10 +302,11 @@ struct GaugeStation {
   friend bool operator==(const GaugeStation&, const GaugeStation&) = default;
 };
 
-/// A station as files store it (C5, C14): its id and name, a WGS84 location
+/// A station as files store it: its id and name, a WGS84 location
 /// projected at the read boundary, and the file's own point when its CRS is
-/// not WGS84. The name may be empty (the SN writer substitutes
-/// "Station <id>").
+/// not WGS84. The name is the file's and may be empty: no reader makes one
+/// up. A display shows the id instead; the station netCDF writer, whose
+/// format needs a name, writes "Station <id>".
 struct FileStation {
   StationKey id;
   StationText name;

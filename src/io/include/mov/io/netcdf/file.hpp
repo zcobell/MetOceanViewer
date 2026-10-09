@@ -9,7 +9,7 @@
 // wrapper adds no lock. The caller must serialize all calls into mov::io
 // netCDF functions (every member of File and NewFile, write_netcdf_atomic and
 // every reader built on them), across all files: the providers and the app
-// run them on one serial queue (C11). `const` on a File member means it does
+// run them on one serial queue. `const` on a File member means it does
 // not change the File; it does NOT mean the member may be called
 // concurrently, even on different files. Debug builds detect concurrent or
 // re-entrant entry and abort.
@@ -169,7 +169,8 @@ class File : private detail::Dataset {
   const ReadLimits& limits() const&& = delete;
 
   // ---- structure ----------------------------------------------------------
-  // An absent dimension or variable is nullopt, never id 0 (B12).
+  // An absent dimension or variable is nullopt, never id 0 (v4's lookup
+  // returned 0 for a missing name).
 
   [[nodiscard]] std::expected<std::optional<DimInfo>, NcError> find_dim(
       NcNameRef name) const;
@@ -202,7 +203,7 @@ class File : private detail::Dataset {
   [[nodiscard]] std::expected<std::optional<Type>, NcError> att_type(
       AttTarget on, NcNameRef name) const;
 
-  /// An NC_CHAR attribute (all attlen bytes, NULs included, B8) or a
+  /// An NC_CHAR attribute (all attlen bytes, NULs included) or a
   /// one-element NC_STRING attribute (a NULL string is ""). Longer than
   /// max_att_bytes is `too_large`; any other type is `type_mismatch`, an
   /// NC_STRING attribute of several strings `count_mismatch`.
@@ -210,7 +211,7 @@ class File : private detail::Dataset {
       AttTarget on, NcNameRef name) const;
 
   /// A numeric attribute whose type is exactly T's (`type_mismatch`
-  /// otherwise: an EPSG code stored as text is not a number, B10).
+  /// otherwise: an EPSG code stored as text is not a number).
   template <Numeric T>
   [[nodiscard]] std::expected<std::optional<std::vector<T>>, NcError>
   numeric_att(AttTarget on, NcNameRef name) const;
@@ -229,7 +230,7 @@ class File : private detail::Dataset {
 
   /// The values of `slab` of variable `name`, converted to T only where no
   /// value can change (readable_as, section 4.3): a float variable reads as
-  /// float or double, never a double variable as float (B4). An int64
+  /// float or double, never a double variable as float. An int64
   /// variable reads as double for times only: a double is exact only below
   /// 2^53, which checked_time enforces; read any other int64 variable as
   /// int64_t.
@@ -246,7 +247,7 @@ class File : private detail::Dataset {
       std::span<const T> values, DimRange outer)>;
 
   /// read, one block at a time through one reused buffer: for a caller that
-  /// consumes a large slab piecewise (a time block of every station, WP9).
+  /// consumes a large slab piecewise (a time block of every station).
   /// The checks and limits are read's.
   template <Numeric T>
   [[nodiscard]] std::expected<void, Error> read_blocks(
@@ -266,22 +267,22 @@ class File : private detail::Dataset {
       NcNameRef name) const;
 
   /// read, masked and unpacked in the variable's own type before widening
-  /// (B4, B9), block by block straight into the result: byte, short, int,
-  /// float and double variables. 64-bit integer and every other type are
-  /// `type_mismatch`.
+  /// (v4 compared in double and missed the default fill), block by block
+  /// straight into the result: byte, short, int, float and double variables.
+  /// 64-bit integer and every other type are `type_mismatch`.
   [[nodiscard]] std::expected<std::vector<core::Sample>, Error> read_samples(
       NcNameRef name, const Slab& slab, const StopToken& stop = {}) const;
 
   /// The rows of an NC_CHAR variable of rank >= 1: the last dimension is the
-  /// row length (the stride comes from the file, B7, B11), every other index
-  /// one row, in row-major order. Raw: NULs and the bytes after them are
-  /// kept; the caller applies its policy (C14). Another type is
+  /// row length (the stride comes from the file, not v4's fixed 200), every
+  /// other index one row, in row-major order. Raw: NULs and the bytes after
+  /// them are kept; the caller applies its policy. Another type is
   /// `type_mismatch`, a scalar `rank_mismatch`.
   [[nodiscard]] std::expected<std::vector<std::string>, Error> read_char_rows(
       NcNameRef name, const StopToken& stop = {}) const;
 
   /// Every element of an NC_STRING variable, in row-major order; a NULL
-  /// element is "". The library's strings are always freed (B21).
+  /// element is "". The library's strings are always freed (v4 leaked them).
   [[nodiscard]] std::expected<std::vector<std::string>, Error> read_strings(
       NcNameRef name, const StopToken& stop = {}) const;
 
@@ -384,8 +385,8 @@ class NewFile : private detail::Dataset {
   [[nodiscard]] std::expected<VarInfo, NcError> define_char_var(
       NcNameRef name, std::span<const DimInfo> dims);
 
-  /// An NC_CHAR attribute of exactly text.size() bytes (B15); longer than
-  /// max_att_bytes is `too_large`.
+  /// An NC_CHAR attribute of exactly text.size() bytes (v4 used character
+  /// counts and fixed lengths); longer than max_att_bytes is `too_large`.
   [[nodiscard]] std::expected<void, NcError> put_att(AttTarget on,
                                                      NcNameRef name,
                                                      std::string_view text);
@@ -418,9 +419,10 @@ class NewFile : private detail::Dataset {
   }
 
   /// Writes one row per element of the first dimension of a 2-D NC_CHAR
-  /// variable, NUL-padded to the second (B15). The rows are anything that
-  /// converts to std::string_view. Their number must equal the first
-  /// dimension (`count_mismatch`); a longer row is `name_too_long`.
+  /// variable, NUL-padded to the second (v4 wrote a fixed count over shorter
+  /// strings). The rows are anything that converts to std::string_view. Their
+  /// number must equal the first dimension (`count_mismatch`); a longer row is
+  /// `name_too_long`.
   template <std::ranges::input_range R>
     requires std::convertible_to<std::ranges::range_reference_t<R>,
                                  std::string_view>
@@ -491,7 +493,7 @@ concept AtomicNcBody =
             std::remove_cvref_t<std::invoke_result_t<Body, NewFile&>>>::type,
         Error>;
 
-/// Replaces `target` with the netCDF-4 file `body` writes, atomically (C16):
+/// Replaces `target` with the netCDF-4 file `body` writes, atomically:
 /// a unique temporary file beside the target, created with NC_NOCLOBBER;
 /// the body; sync and close; fsync; rename over the target; fsync of the
 /// directory (detail/atomic_file.hpp). On any failure the target is as it

@@ -63,7 +63,7 @@ class ScopedTimeZone {
 
 }  // namespace
 
-// N5: v4 parsed the ADCIRC cold start without a time spec, so the result
+// v4 parsed the ADCIRC cold start without a time spec, so the result
 // depended on the machine's zone and DST rules.
 TEST_CASE("parse_utc_datetime is independent of the TZ environment",
           "[core][time][regression][N5]") {

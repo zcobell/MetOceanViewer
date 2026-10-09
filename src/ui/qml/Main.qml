@@ -11,7 +11,7 @@ ApplicationWindow {
     id: window
 
     // MapLibre style URL. The default is OpenFreeMap "liberty": keyless
-    // OpenStreetMap vector tiles (plan §6.3), loaded asynchronously; offline
+    // OpenStreetMap vector tiles, loaded asynchronously; offline
     // the map stays empty. The attribution label below belongs to this
     // basemap and must change with it. Settings will offer others; the GUI
     // test sets a local style.

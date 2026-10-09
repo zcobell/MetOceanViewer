@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The WP1 toolchain probe (docs/core-design.md section 1), compile-time half:
+// The toolchain probe (docs/core-design.md section 1), compile-time half:
 // one STATIC_REQUIRE per standard-library feature the core design gates on.
 // A feature a compiler lacks fails the build of this file, which is the
 // point: CI on every platform runs this probe, and the first failure names
@@ -19,7 +19,7 @@
 // chunk_by, constexpr from_chars, chrono calendar and expected monadic
 // operations: available. fold_left, enumerate: missing (SKIP). std::isfinite:
 // constexpr. Still to confirm on the Windows (MSVC STL) CI runner: every test
-// below. See docs/wp-notes/portability.md.
+// below.
 
 #include <algorithm>
 #include <array>

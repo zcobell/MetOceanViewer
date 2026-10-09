@@ -10,7 +10,7 @@
 #include <string>
 #include <variant>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/units.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
@@ -23,7 +23,7 @@ namespace {
 // Non-empty, no whitespace at either end, no two whitespace characters in a
 // row, and no whitespace other than the single space.
 bool is_normalized(std::string_view text) {
-  using mov::core::detail::is_space;
+  using mov::core::ascii::is_space;
   if (text.empty() or is_space(text.front()) or is_space(text.back())) {
     return false;
   }

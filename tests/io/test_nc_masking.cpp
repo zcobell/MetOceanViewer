@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Zach Cobell
 
 // nc::File::masking and read_samples: missing data in the variable's own
-// type (B4, B9, B12).
+// type, the library's default fill included, and never a hard-coded -999.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>

@@ -96,7 +96,8 @@ FitOutcome free_fit(const Moments& m) noexcept {
                                     : std::nullopt};
 }
 
-/// slope = sum(xy) / sum(x^2); R^2 = 1 - SSres / sum(y^2), uncentred (D25).
+/// slope = sum(xy) / sum(x^2); R^2 = 1 - SSres / sum(y^2), uncentred, as R
+/// and statsmodels report it for a fit without intercept.
 /// SSres = sum(y^2) - slope sum(xy), which is sum((y - slope x)^2) by the
 /// normal equation; the clamp keeps rounding from making it negative. A single
 /// mark fits exactly, so it has no R^2.
@@ -126,7 +127,8 @@ FitOutcome fit_of(const Moments& m, Intercept mode) noexcept {
   return origin_fit(m);
 }
 
-/// sqrt(m2e / (n - 1)): the sample standard deviation of the error (D17).
+/// sqrt(m2e / (n - 1)): the sample standard deviation of the error (v4
+/// divided by n).
 std::optional<Length> error_stddev(const Moments& m) noexcept {
   if (m.n() < 2) {
     return std::nullopt;

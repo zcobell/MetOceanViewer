@@ -183,7 +183,8 @@ TEST_CASE("schema quantities are unique by token", "[core][station_table]") {
                            {}, {}) ==
         std::unexpected{schema_error(SchemaErrc::duplicate_quantity, 2)});
 
-  // Same token, different standard names: equal tokens collide (WP1 note).
+  // Same token, different standard names: equal tokens collide, because both
+  // would name the same file variable.
   const auto a =
       GenericQuantity::parse({.token = "salinity", .standard_name = ""});
   const auto b = GenericQuantity::parse(

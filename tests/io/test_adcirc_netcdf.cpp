@@ -167,7 +167,7 @@ TEST_CASE("elevation: fill and -999 are Dry, -998.99 and -950 are values",
   CHECK(table.single_axis());
 }
 
-TEST_CASE("the stations: ids, default names, positions, source",
+TEST_CASE("the stations: ids, empty names, positions, source",
           "[io][adcirc][netcdf]") {
   const mov::test::ScratchDir dir;
   make_adcirc_nc(dir / "fort.61.nc", zeta_spec());
@@ -176,7 +176,7 @@ TEST_CASE("the stations: ids, default names, positions, source",
   for (std::size_t s = 0; s < 3; ++s) {
     const auto& station = read.value.station(StationIndex{s});
     CHECK(station.id.view() == std::to_string(s));
-    CHECK(station.name.view() == "Station " + std::to_string(s));
+    CHECK(station.name.empty());  // no station_name: no names
     CHECK(station.location.lon() == -90.0 - 0.5 * static_cast<double>(s));
     CHECK(station.location.lat() == 29.0 - static_cast<double>(s));
     CHECK(station.source == mov::core::DataSource::adcirc);
@@ -212,7 +212,8 @@ TEST_CASE("float variables read as the float values (B4)",
 
 TEST_CASE("the library's default fill is Missing, not Dry",
           "[io][adcirc][netcdf]") {
-  // No _FillValue attribute: the fill is netCDF-C's 9.97e36 (B9).
+  // No _FillValue attribute: the fill is netCDF-C's 9.97e36, which v4 never
+  // masked.
   const mov::test::ScratchDir dir;
   for (const DataType type : {DataType::float64, DataType::float32}) {
     AdcircNc spec = zeta_spec();
@@ -402,7 +403,7 @@ TEST_CASE(
                               request(AdcircKind::elevation, everything(3)));
     CHECK(read.value.station(StationIndex{0}).name.view() == "Alpha");
     CHECK(read.value.station(StationIndex{1}).name.view() == "B C");
-    CHECK(read.value.station(StationIndex{2}).name.view() == "Station 2");
+    CHECK(read.value.station(StationIndex{2}).name.empty());
     CHECK(read.warnings.empty());
   }
 }
@@ -916,7 +917,7 @@ TEST_CASE("positions in another CRS are projected, the native point is kept",
     CHECK(native->crs() == crs);
   }
   // NAD83 to WGS 84 without grids is a datum shift of a few metres, which
-  // PROJ says (WP5); the count is the number of points converted.
+  // PROJ says; the count is the number of points converted.
   CHECK(warning_count(read.warnings, WarningCode::crs_approximate) == 3);
 }
 
@@ -1101,7 +1102,7 @@ TEST_CASE("legacy netCDF: first and last values are pinned",
     CHECK(r.value.times(StationIndex{0}).back() == at_seconds(86400.0));
     CHECK(r.warnings.empty());
   }
-  SECTION("fort.62: u and v, and the magnitude (parity with the ASCII B1)") {
+  SECTION("fort.62: u and v, and the magnitude (same as the ASCII reader)") {
     const auto r = read(legacy_outputs[1]);
     CHECK(samples_of(r.value, 0, 0).front() == sample(0.049298094832642407));
     CHECK(samples_of(r.value, 0, 0).back() == sample(0.06176053710657186));
@@ -1174,8 +1175,7 @@ TEST_CASE("legacy: the ASCII and the netCDF output of one run agree to 1e-9",
   }
 }
 
-// ---- design decision 28: the grid decides what the vector components are
-// --------
+// ---- the grid's CRS decides what the vector components are ---------------
 
 namespace {
 

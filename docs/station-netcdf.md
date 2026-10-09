@@ -46,7 +46,7 @@ Contents: 1 decisions, 2 representation, 3 file format, 4 structure, 5 attribute
 
 v4 data fall in three workloads:
 
-1. one fetched station (NOAA/USGS/NDBC/XTide): trivially orthogonal;
+1. one fetched or predicted station (NOAA/USGS/NDBC/harmonics): trivially orthogonal;
 2. model station output (ADCIRC, D-Flow FM; hundreds to thousands of stations, 1e4-1e6 shared times): orthogonal is
    mandatory here. Incomplete storage would add a full `time` copy per station (8 B x stations x times), and xarray
    would materialize it as `datetime64[ns]` (another 8 B/sample) when loaded;
@@ -114,7 +114,7 @@ Naming follows CF §2.3 (ASCII letters, digits, underscore; leading letter).
 |---|---|---|---|---|
 | `station_id` | char | `(S, station_id_len)` | yes | `cf_role="timeseries_id"` (CF §9.5), `standard_name="platform_id"`, `long_name="station identifier"`, `_Encoding="utf-8"`. Unique, non-empty. Provider-native id (`"8761724"`, `"USGS-07374000"`). |
 | `station_name` | char | `(S, station_name_len)` | yes | `standard_name="platform_name"`, `long_name="station name"`, `_Encoding`. Non-empty (writer substitutes `"Station <id>"` if the source has none). Not required unique. |
-| `station_provider` | char | `(S, station_provider_len)` | no | `long_name="data provider"`, `_Encoding`. Tokens: `noaa_coops`, `usgs`, `ndbc`, `xtide`, `adcirc`, `dflowfm`, `user` (the core `Provider` enum is authoritative). |
+| `station_provider` | char | `(S, station_provider_len)` | no | `long_name="data provider"`, `_Encoding`. Tokens: `noaa_coops`, `usgs`, `ndbc`, `harmonics`, `adcirc`, `dflowfm`, `user` (the core `DataSource` enum is authoritative; `harmonics`, the tidal harmonics engine of plan decision 31, replaced `xtide` before 1.0 was released, so 1.0 has never had `xtide`). |
 | `lat` | double | `(S)` | yes | `standard_name="latitude"`, `long_name="station latitude"`, `units="degrees_north"`, `axis="Y"` (CF §4.1, §9.5). No missing values. |
 | `lon` | double | `(S)` | yes | `standard_name="longitude"`, `long_name="station longitude"`, `units="degrees_east"`, `axis="X"` (CF §4.2). Written in [-180, 180]. No missing values. |
 | `elevation` | double | `(S)` | no | `standard_name="altitude"`, `long_name="station elevation above the geoid"`, `units="m"`, `positive="up"`, `axis="Z"`, `_FillValue`. Reserved; v5.0 writes it only if the domain model carries an elevation (CF §4.3). When present it is appended to every `coordinates`. |
@@ -181,7 +181,7 @@ series it was computed from; it is never a water level, so it carries no datum.
 | Token | `standard_name` (all verified present in table v95) | `units` | Source (v4 / provider) |
 |---|---|---|---|
 | `water_level` | `water_surface_height_above_reference_datum` | `m` | CO-OPS water_level, hourly_height; USGS gage height 00065 (datum `STND`) and tidal elevation 62620; ADCIRC `zeta`, D-Flow `waterlevel` |
-| `water_level_prediction` | `water_surface_height_above_reference_datum` | `m` | CO-OPS and XTide predictions |
+| `water_level_prediction` | `water_surface_height_above_reference_datum` | `m` | CO-OPS and harmonics predictions |
 | `air_temperature` | `air_temperature` | `degC` | CO-OPS, NDBC ATMP |
 | `water_temperature` | `sea_water_temperature` | `degC` | CO-OPS, NDBC WTMP |
 | `dew_point` | `dew_point_temperature` | `degC` | NDBC DEWP |
@@ -432,10 +432,10 @@ coordinates. xarray promotes the byte status flag to float32 because of its `_Fi
 
 | Item | Spec |
 |---|---|
-| Written coordinates | `lon`/`lat` in EPSG:4326 (WGS 84), degrees. A station whose native CRS is projected (legacy `HorizontalProjectionEPSG != 4326`, e.g. 26915) is reprojected to 4326 by `core` (PROJ) before the writer; the native coordinates and EPSG are **not** retained (owner question Q4). |
+| Written coordinates | `lon`/`lat` in EPSG:4326 (WGS 84), degrees. A station whose native CRS is projected (legacy `HorizontalProjectionEPSG != 4326`, e.g. 26915) is projected to 4326 by the reader that read it, in `io` (PROJ is a private dependency of `mov_io`; `core` has no PROJ), which keeps the native point beside the WGS 84 `Location`; the writer writes the `Location` and does **not** retain the native coordinates and EPSG (owner question Q4; `native_position_dropped`). |
 | `crs` variable | scalar `int`, no data. `grid_mapping_name="latitude_longitude"` (CF App. F), `longitude_of_prime_meridian=0.0`, `semi_major_axis=6378137.0`, `inverse_flattening=298.257223563` (single-property attributes, which CF §5.6.1 says should accompany `crs_wkt`), `crs_wkt` (constant WKT2 string shown in §9.1; CF §5.6.1), `epsg_code="EPSG:4326"` (our non-CF attribute: CF 1.11 has no EPSG attribute; the code lives inside `crs_wkt` as `ID["EPSG",4326]` and `epsg_code` saves the reader a WKT parse). |
 | Data variable link | `grid_mapping = "crs"`, the single-word form (CF §5.6). The extended form `"crs: lat lon"` is legal CF (§5.6, needed only to fix axis order for `crs_wkt`), but the IOOS checker 6.1.0 reports `grid mapping variable crs: must exist in this dataset` for it (verified), so we avoid it. Axis order for consumers is `lon, lat` by CF convention. |
-| Reader | Resolve the CRS from, in order: `crs`-variable (the one named by `grid_mapping`) `epsg_code` (`^EPSG:[0-9]+$`); else `grid_mapping_name="latitude_longitude"` with WGS 84 ellipsoid parameters => 4326; else no `grid_mapping` at all => assume 4326 and emit warning `W-CRS-ASSUMED`; else `UnsupportedCrs`. Any *geographic* EPSG with `epsg_code` is returned as `(lon, lat, epsg)` for `core` to reproject; projected `grid_mapping_name`s (CF App. F) => `UnsupportedCrs` in 1.0. |
+| Reader | Resolve the CRS from, in order: `crs`-variable (the one named by `grid_mapping`) `epsg_code` (`^EPSG:[0-9]+$`); else `grid_mapping_name="latitude_longitude"` with WGS 84 ellipsoid parameters => 4326; else no `grid_mapping` at all => assume 4326 and emit warning `W-CRS-ASSUMED`; else `UnsupportedCrs`. Any *geographic* EPSG with `epsg_code` is projected to WGS 84 by the reader (`io`, PROJ), the native point kept; projected `grid_mapping_name`s (CF App. F) => `UnsupportedCrs` in 1.0. |
 | Range | `lat` in [-90, 90], `lon` in [-180, 360]; reader normalizes to (-180, 180]. NaN/fill => `MalformedFile`. |
 
 ### 10.2 Vertical datum
@@ -463,9 +463,9 @@ lookup, never by assuming a width). All legacy values become the v5 in-memory mo
 |---|---|---|---|---|
 | Detection | variable `time_station_0001` | same | `time_station_000001` | Order: `metoceanviewer_format` attribute (new) -> A/B -> C |
 | `station` dim | `numStations` | `numStations` (required) | `nstation` | station i = number NNNN minus 1 |
-| `station_id` | `stationId` char `(numStations, 200)` | not read | none (use NNNNNN) | trimmed (trailing NUL/space); missing => `station_name`; duplicates get `#2`, `#3` suffixes (legacy files are lenient, new files are not, §12.4) |
+| `station_id` | `stationId` char `(numStations, 200)` | not read | none (use NNNNNN) | trimmed (trailing NUL/space); missing => `station_name`, else the decimal index (`station_id_substituted` when the file has `stationId`); duplicates get `#2`, `#3` suffixes (legacy files are lenient, new files are not, §12.4) |
 | `station_name` | `stationName` char | `stationName` | attribute `station_name` on data/time var | row stride = actual `stationNameLen` [B7] (A hard-codes 200), trim NUL/space; B keeps legacy `simplified()` whitespace collapse (legacy-formats.md A8) |
-| `lat`, `lon` | `stationYCoordinate`, `stationXCoordinate` double `(numStations)` | same | none in file | in the file CRS; EPSG from attribute `HorizontalProjectionEPSG` on `stationXCoordinate` (A writes 4326), absent => 4326 + warning (A7); reprojected to 4326 by `core` |
+| `lat`, `lon` | `stationYCoordinate`, `stationXCoordinate` double `(numStations)` | same | none in file | in the file CRS; EPSG from attribute `HorizontalProjectionEPSG` on `stationXCoordinate` (A writes 4326), absent => 4326 + warning (A7); projected to 4326 by the reader (`io`, PROJ) |
 | `time` (per station) | `time_station_NNNN` int64 `(stationLength_NNNN)` seconds since `referenceDate` | same | same name, 6 digits, absolute epoch seconds (`reference` attribute ignored) | `ms = (ref_seconds + value) * 1000`; `referenceDate` sized from `nc_inq_attlen` (not 80 bytes) [B8], 19-char `yyyy-MM-dd hh:mm:ss`, UTC, absent => 1970-01-01; A truncates `ms/1000` toward zero, so sub-second parts are lost in legacy files |
 | `timezone` (attr on time var) | `"utc"` | ignored | n/a | present and not `utc`/`gmt` (case-insens.) => warning `W-TZ-ASSUMED-UTC`, treated as UTC like v4. Text after the 19 characters of `referenceDate` (`Z`, `+02:00`, `local`) is said the same way, with the text as the subject; blanks, NULs and `utc`/`gmt` after the date say nothing |
 | samples | `data_station_NNNN` double `(stationLength_NNNN)` | same (float or double, typed read [B4]) | `data_station_NNNNNN` float `(numParam, stationLength_NNNNNN)` | quantity `value`; C: one data variable per `sensors` row, token = sanitized sensor name, quantity `value` |
@@ -479,9 +479,8 @@ lookup, never by assuming a width). All legacy values become the v5 in-memory mo
 A legacy file's origin (`LegacyOrigin`) records what the file has, not a label: the global `fileformat` text if any, whether it has a `stationId` variable, and the digits of its
 station numbers (four or six). The v4 writer and the v4 reader's files read the same way, so there is no A/B distinction in the reader. The `HorizontalProjectionEPSG` attribute
 is any signed integer type (byte, short, int, int64; v4 writes int); text, floating-point and unsigned types are `NcError type_mismatch`, never a code [B10]. A series whose times
-are not strictly increasing is put in order as in §12.5 (`times_reordered`, `duplicate_times_dropped`, `conflicting_duplicate_times`; decision 30.3). The warnings come in this
-order: `legacy_dialect`, `crs_assumed`, `tz_assumed_utc`, `epoch_used`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`, `crs_approximate`, `unrecognized_unit`,
-`datum_unknown`, then those of the series.
+are not strictly increasing is put in order as in §12.5 (`times_reordered`, `duplicate_times_dropped`, `conflicting_duplicate_times`; decision 30.3). The errors and
+the order of the warnings are in §12.9.
 
 Dialect C has no coordinates (they came from the embedded CRMS station CSV, legacy-formats.md §8) and CRMS is removed (decision 7), so a
 C file can only be opened if the caller supplies coordinates; see Q5.
@@ -497,8 +496,10 @@ session names the new kind `station_netcdf`, detected by `metoceanviewer_format`
 
 ## 12. Reader requirements and validation
 
-Reader entry point: `read_station_netcdf(path) -> std::expected<StationFile, NcError>` (`NcFile` RAII, plan §2.2); every library failure carries `{code, variable}`.
-Warnings are returned alongside a successful result.
+Reader entry points (`station_netcdf.hpp`): `read_station_netcdf(path, which, ctx[, options]) -> std::expected<Read<StationFile>, Error>` and
+`inspect_station_netcdf(path, ctx) -> std::expected<Read<StationNcCatalog>, Error>`. Each opens the file once and closes it on every path. A failure is an `io::Error`
+(a `FormatError` with the codes of §12.9, a `ParseError`, an `NcError` with the library status and the variable, a `FileError`, or `Cancelled`); the warnings come with a
+successful result (`Read`).
 
 ### 12.1 Detection and version gate
 
@@ -525,7 +526,7 @@ Warnings are returned alongside a successful result.
 | Exactly one variable has `cf_role="timeseries_id"`, values unique and non-empty | required (`NoStationId`, `DuplicateStationId{id}`) | two such variables: `AmbiguousStationId` naming both; duplicates uniquified with warning; an empty, NULL or masked id is the station's decimal index (`W-STATION-ID-SUBSTITUTED`); float ids are `BadEncoding` |
 | `lat`/`lon` identified by `units` string match (CF §4.1/§4.2) or `standard_name`, dim `(station)`, finite, in range | required (`BadCoordinates{station}`) | same |
 | `time` identified by units (CF §4.4); L1 = 1-D coordinate; L2 = 2-D `(station, obs)` | required | the best ranked variable with time units (neither a scalar nor a vector over the stations): the coordinate variable of its dimension (its name is its dimension's), then one named in a `coordinates` attribute, then one with `standard_name` `time` or `axis` T, then one with only time units; two of the same rank are `UnsupportedLayout` naming both |
-| `station_name` | required | a text variable over the station dimension with `standard_name="platform_name"`, else one called `station_name`, else the id; one that does not fit the station dimension is skipped (`W-SKIPPED-VARIABLE`) |
+| `station_name` | required | a text variable over the station dimension with `standard_name="platform_name"`, else one called `station_name`, else none (the names stay empty); one that does not fit the station dimension is skipped (`W-SKIPPED-VARIABLE`) |
 | `featureType`, `Conventions`, format attributes (§5) | required | `featureType` required, others optional |
 | >= 1 data variable: numeric, dims exactly `(station, T)` in that order (either order accepted from foreign files; a transposed variable is transposed on read) | required (`NoDataVariables`) | same; variables with other dims, and those whose masking attributes cannot be read (`W-SKIPPED-VARIABLE`, subject `<variable>:<attribute>`), are skipped; `NoDataVariables` when none is left |
 | every `ancillary_variables` target that exists has the same dims | required (`BadAncillary`) | same |
@@ -588,15 +589,83 @@ variable; any libnetcdf error (returned with its code and variable name).
 `W-FOREIGN-CF`, `W-CRS-ASSUMED`, `W-DATUM-UNKNOWN`, `W-TZ-ASSUMED-UTC`, `W-SKIPPED-VARIABLE`, `W-MINOR-NEWER` (§13), `W-UNKNOWN-PROVIDER`, `W-UNKNOWN-QUANTITY`, `W-LEGACY-DIALECT`,
 `W-VARIABLE-RENAMED`, `W-STATION-ID-SUBSTITUTED`, `W-QUALITY-FLAGS-IGNORED`, `W-FLAGGED-SAMPLES-MASKED`, `W-SUSPECT-SAMPLES-KEPT`, `W-TIMES-REORDERED`, `W-DUPLICATE-TIMES-DROPPED`,
 `W-CONFLICTING-DUPLICATE-TIMES`.
-The order of a foreign file's warnings is: `W-FOREIGN-CF`, `W-CRS-ASSUMED`, the stations' (`W-STATION-ID-SUBSTITUTED`, `W-INVALID-UTF8-REPLACED`, `W-DUPLICATE-STATION-ID-RENAMED`, `W-CRS-APPROXIMATE`),
-`W-SKIPPED-VARIABLE`, `W-UNKNOWN-QUANTITY`, `W-VARIABLE-RENAMED`, per data variable `W-UNRECOGNIZED-UNIT` and `W-DATUM-UNKNOWN`, `W-QUALITY-FLAGS-IGNORED`; reading adds the time units', the
-time-order warnings, then the flag warnings. A test pins the order (`foreign: the warnings come in the order SN 12 documents`).
+The order of each kind's warnings is in §12.9; a test pins each order (`foreign: the warnings come in the order SN 12 documents`, `legacy: the warnings come in
+the order SN 11 documents`).
 
 ### 12.8 Writer preconditions (all return `expected` errors, never throw, never write a partial file)
 
 `EmptyCollection` (0 stations, or zero samples in total, because a dimension of length 0 cannot be defined); `DuplicateStationId`; `EmptyStationId`; `NonMonotonicTime`; `NonFiniteValue`; `TimeOutOfRange` (|ms| >= 2^53); `BadLatLon`;
 `InconsistentAxis` (a data variable whose per-station sample count differs from the station's time vector); `NameTooLong`/`EmbeddedNul`; I/O errors (`nc_*` code and variable). A single station with zero samples in a
 multi-station set is legal (L2, `obs_count = 0`, an all-fill row).
+
+### 12.9 The reader's errors and warnings, kind by kind
+
+`read_station_netcdf` and `inspect_station_netcdf` (`station_netcdf.hpp`) report a failure as an `io::Error` and what they noticed as `io::Warning`s. This section
+names both by their tokens (`FormatErrc`, `WarningCode`) and is the reference the header points to; the `W-…` and CamelCase names above are this document's older
+spellings of the same codes. `inspect` reports what `read` reports, except what concerns samples (a foreign incomplete layout without `obs_count` reads its times to count
+each station's samples, so those are checked by `inspect` too). Subjects taken from the file are cut to 120 bytes on a UTF-8 boundary. Every kind can also fail with
+`station_count_mismatch` (a selection made for another station count), an `NcError` (any library failure, with its status and variable; `too_large` when the samples a read
+would hold exceed `ReadLimits`: the selected stations' samples, or selected stations × `obs` with `PaddingCheck::whole`) and `Cancelled`. A station without a name keeps an
+empty one in every kind; only the v5 writer substitutes `"Station <id>"`.
+
+**v5.** Every rule is a hard error; none is downgraded.
+
+- Header: global `metoceanviewer_format` = `"station-timeseries"` (else `not_this_format`: another kind of file); `metoceanviewer_format_version` present and
+  `"<major>.<minor>"` (`bad_version`), major 1 (`unsupported_version`); `Conventions` with a `CF-1.N` token, N ≥ 6 (`missing_attribute`, `unsupported_version`; a CF-2 or
+  later token too); `featureType` timeSeries, any case (`missing_attribute`, `unsupported_layout`).
+- Structure: dimension `station` (`missing_dimension`); no unlimited dimension (`unsupported_layout`, subject: the dimension); exactly one variable with `cf_role`
+  timeseries_id (`no_station_id`), char over (station, n) (`bad_encoding`, `dimension_mismatch`); `station_name`, `lat`, `lon` (`missing_variable`); `time` with `units`
+  (a CF time unit, else a `ParseError`) and a supported `calendar` (`unsupported_calendar`); `time(time)` for the orthogonal layout, `time(station, obs)` plus
+  `obs_count(station)` for the incomplete one (`unsupported_layout`, `dimension_mismatch`, `missing_variable`); every variable over the sample dimension is over
+  (station, sample) in that order (`dimension_mismatch`); at least one data variable (`no_data_variables`); every `ancillary_variables` target that exists has its data
+  variable's dimensions (`bad_ancillary`).
+- Data variables: the name is a quantity token, a registry token or a CF name the format does not use itself (else `invalid_variable_name`); a registry quantity other than
+  `difference` has `units` that convert to its canonical unit (`noncanonical_unit`, subject: the token); the `<name>_status` target of `ancillary_variables` is the wet/dry
+  status and must be byte, with `flag_values` 0, 1, `flag_meanings` "dry wet" and a `_FillValue` other than 0 and 1 (`bad_flag`, subject: the status variable).
+- CRS (§10.1): the `grid_mapping` variable's `epsg_code` (EPSG:4326, or another geographic code, projected to WGS 84 with the native point kept), else
+  `latitude_longitude` on the WGS 84 ellipsoid (without ellipsoid parameters: WGS 84 with `crs_assumed`); a nonzero `longitude_of_prime_meridian` or anything else is
+  `unsupported_crs`; no `grid_mapping`: WGS 84 with `crs_assumed`.
+- Values: ids unique (`duplicate_station_id`), non-empty (`no_station_id`), UTF-8 without NUL once trailing NULs are cut (`bad_encoding`), and so the names and the
+  providers; `lat`/`lon` finite and in range (`bad_coordinates`, with the station); times present (`time_missing`), in range (`time_out_of_range`), strictly increasing
+  (`time_not_increasing`); `obs_count` in 0..`obs` (`bad_obs_count`); the padding of `time`, the data and the status is fill (`padding_not_missing`, with the station and
+  index: the first padding element, or all of them with `PaddingCheck::whole`); a status flag is 0, 1 or its fill (`bad_flag`), a dry sample has no value and a wet one has
+  one (`wet_dry_inconsistent`).
+- Samples: Missing when equal to the variable's `_FillValue` (or the library's default fill), NaN, or masked by `missing_value` or `valid_*`; Dry when the wet/dry status
+  is 0. The quantity is the variable name: a registry token, else a generic quantity with the variable's `standard_name`. Labels are `long_name` (the token when there is
+  none); units are `units` (`unrecognized_unit` for one outside the unit table and the registry, subject: the unit text as the file has it); datums are `vertical_datum`
+  (`datum_unknown` and no datum for an unknown token, subject: the token, or for a datum on a quantity that cannot carry one, subject: `<variable>:vertical_datum`).
+- Warnings, in this order: `minor_newer` (subject: the version), `crs_assumed`, `unknown_provider` (a `station_provider` token core does not know: the station has no
+  source; one warning per token, counting its stations), `crs_approximate`, per data variable `unrecognized_unit` and `datum_unknown`, and last those of
+  `parse_cf_time_units` for `time:units`.
+
+**Foreign CF** (§12.2 *Foreign* column, §12.3, §12.5). The origin is `ForeignCfOrigin`: the layout of the five (CF 9.3.1–9.3.4 and 9.2) and the CF version
+`Conventions` names.
+
+- Finding the variables: by `cf_role`, `standard_name`, `units`, `axis`, `coordinates`, `sample_dimension` and `instance_dimension`; where CF has no attribute, by the
+  names `station_name` (the names, when no text variable has the standard name `platform_name`; either is used only over the station dimension, else skipped) and
+  `obs_count`. The time variable is the best ranked of those that can be one (§12.2); two of the same rank are `unsupported_layout` naming both. Two variables with
+  `cf_role` timeseries_id are `ambiguous_station_id`. An id that is missing (an empty or NULL string, a masked integer, no id variable) is the station's index in decimal
+  (`station_id_substituted` when the file has an id variable); float ids are `bad_encoding`. Without a name variable the names are empty.
+- Accepted: `_FillValue`, `missing_value`, `valid_*`, packing, int and float data and times, `NC_STRING` and integer ids. A data variable whose masking attributes cannot
+  be read is skipped (`skipped_variable`, subject `<variable>:<attribute>`); that is an error only when no data variable is left (`no_data_variables`) or for the time,
+  position and helper variables.
+- Quantities, datums, quality flags and time order: §12.5. The padding of an incomplete layout with `obs_count` is checked as `options.padding` says; without
+  `obs_count` the counts are the leading non-missing times.
+- Errors: `missing_variable` (latitude, longitude, time), `ambiguous_station_id`, `no_data_variables`, `unsupported_layout`, `dimension_mismatch`, `bad_obs_count`,
+  `bad_row_size`, `bad_ragged_index`, `padding_not_missing`, `time_missing`, `time_out_of_range`, `missing_attribute` (`time:units`), `unsupported_calendar`, an
+  `NcError` for a `_FillValue` of the wrong type on a time or position variable.
+- Warnings, in this order: `foreign_cf`, `crs_assumed`, then the stations' (`station_id_substituted`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`,
+  `crs_approximate`), `skipped_variable`, `unknown_quantity`, `variable_renamed`, per data variable `unrecognized_unit` and `datum_unknown`, `quality_flags_ignored`;
+  reading adds those of the time units, `times_reordered`, `duplicate_times_dropped`, `conflicting_duplicate_times`, `flagged_samples_masked`, `suspect_samples_kept`.
+
+**Legacy v4** (§11). The origin is `LegacyOrigin`: what the file has (a `fileformat` text, a `stationId` variable, the digits of the station numbers).
+
+- Errors: `missing_dimension` and `missing_variable` (with the station for the per-station variables), `dimension_mismatch`, `inconsistent_metadata` (a station whose
+  `units` or `datum` differ from the first's), `unsupported_crs`, a `ParseError` `bad_date` for `referenceDate`, an `NcError` `type_mismatch` for a
+  `HorizontalProjectionEPSG` that is not a signed integer.
+- Warnings, in this order: `legacy_dialect`, `crs_assumed`, `tz_assumed_utc` (a `timezone` that is not UTC or GMT, or text after the 19 characters of
+  `referenceDate`), `epoch_used`, `station_id_substituted`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`, `crs_approximate`, `unrecognized_unit`,
+  `datum_unknown`, and from reading `times_reordered`, `duplicate_times_dropped`, `conflicting_duplicate_times` (the series are put in order as §12.5 says).
 
 ---
 

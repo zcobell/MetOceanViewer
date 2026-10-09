@@ -105,7 +105,8 @@ inline constexpr std::array<std::array<bool, 6>, 13> read_table{{
 }  // namespace detail
 
 /// Whether `read<T>` accepts a variable of type `from` (design section 4.3):
-/// only conversions that keep every value, so never double to float (B4).
+/// only conversions that keep every value, so never double to float (v4's
+/// untyped reads misread float variables).
 /// int64 widens to double for time variables only, whose callers check the
 /// range with checked_time.
 template <Numeric T>

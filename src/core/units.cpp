@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 
 namespace mov::core {
 
@@ -145,7 +145,7 @@ template <class U, std::size_t N>
 [[nodiscard]] std::optional<Unit> lookup(
     const std::array<Spelling<U>, N>& table, std::string_view text) {
   const auto it = std::ranges::find_if(table, [text](const Spelling<U>& s) {
-    return s.match == Match::any_case ? detail::equal_ignore_case(text, s.text)
+    return s.match == Match::any_case ? ascii::equal_ignore_case(text, s.text)
                                       : text == s.text;
   });
   if (it == table.end()) {
@@ -176,7 +176,7 @@ template <class U, std::size_t N>
   out.reserve(text.size());
   bool pending_space = false;
   for (const char c : text) {
-    if (detail::is_space(c)) {
+    if (ascii::is_space(c)) {
       pending_space = not out.empty();
       continue;
     }

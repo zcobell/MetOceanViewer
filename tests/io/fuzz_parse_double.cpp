@@ -14,6 +14,7 @@
 #include <array>
 #include <bit>
 #include <charconv>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -23,7 +24,6 @@
 #include <string_view>
 #include <system_error>
 
-#include "mov/core/detail/numeric.hpp"
 #include "mov/io/detail/text.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
@@ -115,7 +115,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
 #endif
   check_grammar(token, result);
   if (result) {
-    if (not mov::core::detail::is_finite(*result)) {
+    if (not std::isfinite(*result)) {
       fail();
     }
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L

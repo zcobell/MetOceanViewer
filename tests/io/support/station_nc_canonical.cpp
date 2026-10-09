@@ -160,7 +160,9 @@ Canonical registry() {
   const std::int64_t t0 = 1700000000000;
   core::TimeAxis axis{ms(t0), ms(t0 + 3600000)};
   std::vector<core::Variable> variables;
-  for (std::size_t q = 0; q < core::detail::quantity_registry.size(); ++q) {
+  // Every registry quantity: `difference` is the last (quantity.hpp).
+  for (std::size_t q = 0;
+       q <= static_cast<std::size_t>(core::Quantity::difference); ++q) {
     const auto quantity = static_cast<core::Quantity>(q);
     const core::QuantityInfo row = core::info(quantity);
     std::optional<std::string_view> unit_text = row.canonical_unit;

@@ -52,7 +52,7 @@ struct AdcircAsciiHeader {
 };
 
 /// Line 1 is a free-text run description and is not read (it may be blank).
-/// A probe, not a reader (WP7's convention that a `parse_*` takes a
+/// A probe, not a reader (the convention that a `parse_*` takes a
 /// `ReadContext` and returns `expected<Read<T>, Error>` is for the readers
 /// below): it looks at two lines, so it needs no limits, cannot be cancelled
 /// and has no warnings.
@@ -68,8 +68,8 @@ parse_adcirc_ascii_header(std::string_view text);
 /// and become WGS84 Locations here; a station in another CRS keeps its native
 /// point. The id of a station is its 0-based index in the file (the row order
 /// of the output); the name is the remaining words joined by single spaces (a
-/// NUL ends it; bytes that are not UTF-8 become U+FFFD with a warning), or
-/// "Station <id>" when there are none. `source` is `adcirc`.
+/// NUL ends it; bytes that are not UTF-8 become U+FFFD with a warning), empty
+/// when there are none. `source` is `adcirc`.
 ///
 /// Errors: `empty_input`; `bad_integer` / `out_of_range` for the count;
 /// `too_large` when the count is over `ctx.limits.max_elements`;
@@ -115,7 +115,7 @@ struct AdcircAsciiRequest {
 /// `current_v` (m s-1); `air_pressure` (m of water); `wind_u`, `wind_v`
 /// (m s-1). No datum is stated, none is assumed.
 ///
-/// Values (design C9):
+/// Values:
 ///  - elevation: a value at or below -999 (ADCIRC writes -99999) is `Dry`;
 ///  - every other output: a value at or below -999 is fill, so `Missing`, and
 ///    a fill in either component of a vector makes both `Missing`;

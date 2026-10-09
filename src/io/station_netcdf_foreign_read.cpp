@@ -8,9 +8,8 @@
 // over the observation dimension for the indexed ragged layout. Every value is
 // masked in the variable's own type (nc::Masking: _FillValue, missing_value,
 // valid_*, the library's default fill, NaN; packing applied after). Samples a
-// known quality scheme calls bad become Missing (owner decision 30.1); a
-// series whose times are not strictly increasing is put in order, as IMEDS
-// does (30.3).
+// known quality scheme calls bad become Missing; a series whose times are not
+// strictly increasing is put in order, as IMEDS does.
 
 #include <algorithm>
 #include <array>
@@ -28,7 +27,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
@@ -43,13 +42,13 @@
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_dialects.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 
 namespace {
 
-using core::detail::Overloaded;
+using core::Overloaded;
 
 /// Where the next sample of each selected station goes in an indexed ragged
 /// pass; made once per read, reset for each variable.
@@ -162,8 +161,9 @@ std::expected<std::vector<core::Column>, Error> time_major_columns(
     return std::unexpected{std::move(done).error()};
   }
   if (misplaced) {
-    return invalid(FormatErrc::padding_not_missing, subject_of(var.name.view()),
-                   r.selected[misplaced->position], misplaced->step);
+    return fail(format_error(FormatErrc::padding_not_missing,
+                             subject_of(var.name.view()),
+                             r.selected[misplaced->position], misplaced->step));
   }
   return columns;
 }

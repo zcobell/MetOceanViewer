@@ -102,7 +102,7 @@ int get_vara(int ncid, int varid, std::span<const std::size_t> start_span,
 }
 
 // The strings one nc_get_vara_string call allocated, freed through the
-// choke point however the copy ends (B21).
+// choke point however the copy ends (v4 never freed them).
 class VarStrings {
  public:
   explicit VarStrings(std::size_t n) : ptrs_(n, nullptr) {}

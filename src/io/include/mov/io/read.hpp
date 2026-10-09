@@ -6,7 +6,6 @@
 #include <concepts>
 #include <expected>
 #include <functional>
-#include <iterator>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -40,14 +39,6 @@ struct ExpectedRead<std::expected<Read<U>, E>> {
 
 template <class F, class T>
 using continuation_result_t = std::remove_cvref_t<std::invoke_result_t<F, T&&>>;
-
-/// Appends `later` to `earlier` and returns the result: ours first.
-[[nodiscard]] inline std::vector<Warning> concatenated(
-    std::vector<Warning> earlier, std::vector<Warning> later) {
-  earlier.insert(earlier.end(), std::make_move_iterator(later.begin()),
-                 std::make_move_iterator(later.end()));
-  return earlier;
-}
 
 }  // namespace detail
 
@@ -84,8 +75,8 @@ struct Read {
              detail::is_read_v<detail::continuation_result_t<F, T>>
   [[nodiscard]] auto and_then(F&& f) && -> detail::continuation_result_t<F, T> {
     auto next = std::invoke(std::forward<F>(f), std::move(value));
-    next.warnings =
-        detail::concatenated(std::move(warnings), std::move(next.warnings));
+    append(warnings, std::move(next.warnings));
+    next.warnings = std::move(warnings);
     return next;
   }
 
@@ -120,8 +111,8 @@ template <class T, class E, class F>
   if (not next) {
     return std::unexpected<E>{std::move(next).error()};
   }
-  next->warnings = detail::concatenated(std::move(first.warnings),
-                                        std::move(next->warnings));
+  append(first.warnings, std::move(next->warnings));
+  next->warnings = std::move(first.warnings);
   return *std::move(next);
 }
 
@@ -208,11 +199,11 @@ template <class F, class G, class... Rest>
                             typename detail::thunk_result_t<F>::error_type>;
   return std::invoke(f).and_then([&](Read<T>&& head) -> Out {
     return collect_read(g, rest...).transform([&](auto&& tail) {
+      append(head.warnings, std::move(tail.warnings));
       return Read<Tuple>{
           .value = std::tuple_cat(std::tuple<T>{std::move(head.value)},
                                   std::move(tail.value)),
-          .warnings = detail::concatenated(std::move(head.warnings),
-                                           std::move(tail.warnings))};
+          .warnings = std::move(head.warnings)};
     });
   });
 }

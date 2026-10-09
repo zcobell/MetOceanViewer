@@ -78,8 +78,8 @@ template <Numeric T>
 
 }  // namespace detail
 
-/// The CF missing-data rules of one variable (SN section 8.1, C9), held in
-/// the variable's own type T so every comparison is exact (B4, B9): a float
+/// The CF missing-data rules of one variable (SN section 8.1), held in the
+/// variable's own type T so every comparison is exact: a float
 /// fill of -99999f is compared as a float, never as a double that happens to
 /// be close. File::masking builds it from the attributes.
 template <Numeric T>

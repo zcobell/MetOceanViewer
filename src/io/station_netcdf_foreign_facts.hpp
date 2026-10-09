@@ -24,7 +24,7 @@
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/read.hpp"
 #include "station_netcdf_dialects.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 

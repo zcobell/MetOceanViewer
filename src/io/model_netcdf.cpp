@@ -8,10 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
-#include <filesystem>
 #include <initializer_list>
-#include <iterator>
-#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -21,7 +18,6 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station.hpp"
@@ -33,16 +29,202 @@
 
 namespace mov::io::detail {
 
-// ---- errors ----------------------------------------------------------------
+namespace {
 
-FormatError format_error(FormatErrc code, std::string subject,
-                         std::optional<std::size_t> station,
-                         std::optional<std::size_t> index) {
-  return FormatError{.code = code,
-                     .subject = std::move(subject),
-                     .station = station,
-                     .index = index};
+// ---- stations --------------------------------------------------------------
+
+constexpr std::size_t stations_per_stop_poll = 1024;
+
+// The coordinates of every station: float and double variables only convert
+// to double without changing a value (v4 read them as float); 64-bit integers
+// do not.
+struct Coordinate {
+  std::vector<double> values;
+  bool first_step;  // read from step 0 of a (time, station) variable
+};
+
+std::expected<Coordinate, Error> read_coordinate(const nc::File& file,
+                                                 const StationVariables& vars,
+                                                 nc::NcNameRef name,
+                                                 const StopToken& stop) {
+  auto info = require_var(file, name);
+  if (not info) {
+    return std::unexpected{std::move(info.error())};
+  }
+  const bool over_time = vars.time_dim and info->dims.size() == 2 and
+                         info->dims[0].id == *vars.time_dim and
+                         info->dims[1].id == vars.dim.id;
+  if (not over_time) {
+    if (auto shape = require_shape(*info, {vars.dim.id}); not shape) {
+      return std::unexpected{std::move(shape.error())};
+    }
+  }
+  if (info->type == nc::Type::int64) {
+    return fail(nc_fault(file, WrapperFault::type_mismatch, NcOp::get_var,
+                         name.view()));
+  }
+  const nc::Slab slab = over_time
+                            ? nc::Slab{{.start = 0, .count = 1},
+                                       {.start = 0, .count = vars.dim.length}}
+                            : nc::whole(*info);
+  return file.read<double>(name, slab, stop).transform([&](auto&& values) {
+    return Coordinate{.values = std::forward<decltype(values)>(values),
+                      .first_step = over_time};
+  });
 }
+
+// One row of a char variable of names: cut at the first NUL, white space
+// simplified, bytes that are not UTF-8 replaced. Nothing left is an empty
+// name, which stays empty (core::FileStation).
+CleanedText clean_name(std::string_view row) {
+  return replace_invalid_utf8(simplified(cut_at_nul(row)));
+}
+
+FormatError position_error(const ToLocationError& why, std::size_t station) {
+  if (const auto* projection = std::get_if<ProjectionError>(&why)) {
+    return to_format_error(*projection, station);
+  }
+  return format_error(FormatErrc::bad_coordinates, "x, y", station);
+}
+
+// The rows of the char variable `names` (over the station dimension and a
+// length), or none if the file has no names.
+std::expected<std::optional<std::vector<std::string>>, Error> read_names(
+    const nc::File& file, const StationVariables& vars, const StopToken& stop) {
+  if (not vars.names) {
+    return std::nullopt;
+  }
+  auto info = require_var(file, *vars.names);
+  if (not info) {
+    return std::unexpected{std::move(info.error())};
+  }
+  // Over (station, length): any other shape has rows that are not stations.
+  if (info->dims.size() != 2 or info->dims.front().id != vars.dim.id) {
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             std::string{info->name.view()}));
+  }
+  return file.read_char_rows(*vars.names, stop).transform([](auto&& rows) {
+    return std::optional{std::forward<decltype(rows)>(rows)};
+  });
+}
+
+// What the file says about every station; makes one FileStation at a time.
+class StationMaker {
+ public:
+  StationMaker(std::vector<double> x, std::vector<double> y,
+               std::optional<std::vector<std::string>> names,
+               Projector projector, core::DataSource source)
+      : x_{std::move(x)},
+        y_{std::move(y)},
+        names_{std::move(names)},
+        projector_{std::move(projector)},
+        source_{source} {}
+
+  [[nodiscard]] std::expected<core::FileStation, Error> make(
+      std::size_t index) {
+    const core::Xy xy{.x = x_[index], .y = y_[index]};
+    const auto where = projector_.to_location(xy);
+    if (not where) {
+      return fail(position_error(where.error(), index));
+    }
+    CleanedText name = clean_name(names_ ? std::string_view{(*names_)[index]}
+                                         : std::string_view{});
+    replaced_ += name.replaced ? 1U : 0U;
+    auto key = core::StationKey::make(std::to_string(index));
+    if (not key) {
+      return fail(to_format_error(key.error(), index));
+    }
+    return core::FileStation{.id = *std::move(key),
+                             .name = std::move(name.text),
+                             .location = *where,
+                             .native = native_of(xy),
+                             .source = source_};
+  }
+
+  [[nodiscard]] std::vector<Warning> warnings() && {
+    std::vector<Warning> out;
+    append_if_counted(out, {.code = WarningCode::invalid_utf8_replaced,
+                            .subject = {},
+                            .count = replaced_});
+    if (auto approximate = projector_.approximation_warning()) {
+      out.push_back(std::move(*approximate));
+    }
+    return out;
+  }
+
+ private:
+  // The file's own point, when its CRS is not WGS84. Finite: the Location of
+  // the same point exists.
+  [[nodiscard]] std::optional<core::NativePoint> native_of(core::Xy xy) const {
+    if (projector_.crs() == core::Epsg::wgs84()) {
+      return std::nullopt;
+    }
+    if (auto point = core::NativePoint::make(xy, projector_.crs())) {
+      return *point;
+    }
+    return std::nullopt;
+  }
+
+  std::vector<double> x_;
+  std::vector<double> y_;
+  std::optional<std::vector<std::string>> names_;
+  Projector projector_;
+  core::DataSource source_;
+  std::size_t replaced_{0};
+};
+
+// ---- values ----------------------------------------------------------------
+
+// The bytes of one value of an external type (0: not a number).
+std::size_t external_size(nc::Type t) {
+  switch (t) {
+    case nc::Type::byte:
+    case nc::Type::ubyte:
+    case nc::Type::char_:
+      return 1;
+    case nc::Type::short_:
+    case nc::Type::ushort:
+      return 2;
+    case nc::Type::int_:
+    case nc::Type::uint:
+    case nc::Type::float_:
+      return 4;
+    case nc::Type::int64:
+    case nc::Type::uint64:
+    case nc::Type::double_:
+      return 8;
+    case nc::Type::string:
+    case nc::Type::other:
+      break;
+  }
+  return 0;
+}
+
+// A chunk is read and decompressed whole, and read in blocks that are smaller
+// than it, it would be decompressed again for each block unless the library's
+// chunk cache holds it. So the cache is made big enough for one chunk, as far
+// as the limits allow that memory. Measured on 1000 stations x 10000 steps of
+// doubles in one deflated 80 MB chunk, ten blocks long: all stations took
+// 2.4 s with netCDF-C's default 16 MiB cache and 0.7 s with one chunk's.
+std::expected<void, Error> keep_chunk_in_cache(
+    const nc::File& file, const nc::VarInfo& var,
+    const std::optional<std::vector<std::size_t>>& chunks) {
+  if (not chunks) {
+    return {};
+  }
+  const auto elements = checked_product(*chunks);
+  const std::size_t element_bytes = external_size(var.type);
+  const std::size_t limit = file.limits().max_result_bytes;
+  if (not elements or element_bytes == 0 or *elements > limit / element_bytes) {
+    return {};  // too big to hold: the block reads re-read it
+  }
+  return file.reserve_chunk_cache(var.name, *elements * element_bytes)
+      .transform_error(lift<Error>);
+}
+
+}  // namespace
+
+// ---- errors ----------------------------------------------------------------
 
 NcError nc_fault(const nc::File& file, WrapperFault fault, NcOp op,
                  std::string_view object) {
@@ -50,10 +232,6 @@ NcError nc_fault(const nc::File& file, WrapperFault fault, NcOp op,
                  .op = op,
                  .object = std::string{object},
                  .file = file.path()};
-}
-
-void append(std::vector<Warning>& warnings, std::vector<Warning> more) {
-  std::ranges::move(more, std::back_inserter(warnings));
 }
 
 // ---- structure -------------------------------------------------------------
@@ -109,6 +287,9 @@ std::expected<std::optional<std::string>, Error> optional_text(
     const nc::File& file, nc::AttTarget on, nc::NcNameRef att) {
   auto text = file.text_att(on, att);
   if (text) {
+    if (*text) {
+      (*text)->resize(cut_at_nul(**text).size());
+    }
     return *std::move(text);
   }
   // An attribute of another type or with several strings is not a label.
@@ -121,164 +302,6 @@ std::expected<std::optional<std::string>, Error> optional_text(
 }
 
 // ---- stations --------------------------------------------------------------
-
-namespace {
-
-constexpr std::size_t stations_per_stop_poll = 1024;
-
-// The coordinates of every station: float and double variables only convert
-// to double without changing a value (B4); 64-bit integers do not.
-struct Coordinate {
-  std::vector<double> values;
-  bool first_step;  // read from step 0 of a (time, station) variable
-};
-
-std::expected<Coordinate, Error> read_coordinate(const nc::File& file,
-                                                 const StationVariables& vars,
-                                                 nc::NcNameRef name,
-                                                 const StopToken& stop) {
-  auto info = require_var(file, name);
-  if (not info) {
-    return std::unexpected{std::move(info.error())};
-  }
-  const bool over_time = vars.time_dim and info->dims.size() == 2 and
-                         info->dims[0].id == *vars.time_dim and
-                         info->dims[1].id == vars.dim.id;
-  if (not over_time) {
-    if (auto shape = require_shape(*info, {vars.dim.id}); not shape) {
-      return std::unexpected{std::move(shape.error())};
-    }
-  }
-  if (info->type == nc::Type::int64) {
-    return fail(nc_fault(file, WrapperFault::type_mismatch, NcOp::get_var,
-                         name.view()));
-  }
-  const nc::Slab slab = over_time
-                            ? nc::Slab{{.start = 0, .count = 1},
-                                       {.start = 0, .count = vars.dim.length}}
-                            : nc::whole(*info);
-  return file.read<double>(name, slab, stop).transform([&](auto&& values) {
-    return Coordinate{.values = std::forward<decltype(values)>(values),
-                      .first_step = over_time};
-  });
-}
-
-// The cleaned, simplified name of one row of a char variable.
-struct CleanName {
-  core::StationText text;
-  bool replaced{false};
-};
-
-CleanName clean_name(std::string_view row, std::size_t station) {
-  auto cleaned = replace_invalid_utf8(simplified(cut_at_nul(row)));
-  if (not cleaned.text.empty()) {
-    return {.text = std::move(cleaned.text), .replaced = cleaned.replaced};
-  }
-  // Nothing readable: the default name (always valid text).
-  auto fallback = core::StationText::make("Station " + std::to_string(station));
-  return {.text = std::move(fallback).value_or(core::StationText{}),
-          .replaced = cleaned.replaced};
-}
-
-FormatError position_error(const ToLocationError& why, std::size_t station) {
-  if (const auto* projection = std::get_if<ProjectionError>(&why)) {
-    return to_format_error(*projection, station);
-  }
-  return format_error(FormatErrc::bad_coordinates, "x, y", station);
-}
-
-}  // namespace
-
-namespace {
-
-// The rows of the char variable `names` (over the station dimension and a
-// length), or none if the file has no names.
-std::expected<std::optional<std::vector<std::string>>, Error> read_names(
-    const nc::File& file, const StationVariables& vars, const StopToken& stop) {
-  if (not vars.names) {
-    return std::nullopt;
-  }
-  auto info = require_var(file, *vars.names);
-  if (not info) {
-    return std::unexpected{std::move(info.error())};
-  }
-  // Over (station, length): any other shape has rows that are not stations.
-  if (info->dims.size() != 2 or info->dims.front().id != vars.dim.id) {
-    return fail(format_error(FormatErrc::dimension_mismatch,
-                             std::string{info->name.view()}));
-  }
-  return file.read_char_rows(*vars.names, stop).transform([](auto&& rows) {
-    return std::optional{std::forward<decltype(rows)>(rows)};
-  });
-}
-
-// What the file says about every station; makes one FileStation at a time.
-class StationMaker {
- public:
-  StationMaker(std::vector<double> x, std::vector<double> y,
-               std::optional<std::vector<std::string>> names,
-               Projector projector, core::DataSource source)
-      : x_{std::move(x)},
-        y_{std::move(y)},
-        names_{std::move(names)},
-        projector_{std::move(projector)},
-        source_{source} {}
-
-  [[nodiscard]] std::expected<core::FileStation, Error> make(
-      std::size_t index) {
-    const core::Xy xy{.x = x_[index], .y = y_[index]};
-    const auto where = projector_.to_location(xy);
-    if (not where) {
-      return fail(position_error(where.error(), index));
-    }
-    auto name = clean_name(
-        names_ ? std::string_view{(*names_)[index]} : std::string_view{},
-        index);
-    replaced_ += name.replaced ? 1U : 0U;
-    auto key = core::StationKey::make(std::to_string(index));
-    if (not key) {
-      return fail(to_format_error(key.error(), index));
-    }
-    return core::FileStation{.id = *std::move(key),
-                             .name = std::move(name.text),
-                             .location = *where,
-                             .native = native_of(xy),
-                             .source = source_};
-  }
-
-  [[nodiscard]] std::vector<Warning> warnings() && {
-    std::vector<Warning> out;
-    append_if_counted(out, {.code = WarningCode::invalid_utf8_replaced,
-                            .subject = {},
-                            .count = replaced_});
-    if (auto approximate = projector_.approximation_warning()) {
-      out.push_back(std::move(*approximate));
-    }
-    return out;
-  }
-
- private:
-  // The file's own point, when its CRS is not WGS84. Finite: the Location of
-  // the same point exists.
-  [[nodiscard]] std::optional<core::NativePoint> native_of(core::Xy xy) const {
-    if (projector_.crs() == core::Epsg::wgs84()) {
-      return std::nullopt;
-    }
-    if (auto point = core::NativePoint::make(xy, projector_.crs())) {
-      return *point;
-    }
-    return std::nullopt;
-  }
-
-  std::vector<double> x_;
-  std::vector<double> y_;
-  std::optional<std::vector<std::string>> names_;
-  Projector projector_;
-  core::DataSource source_;
-  std::size_t replaced_{0};
-};
-
-}  // namespace
 
 std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     const nc::File& file, const StationVariables& vars, core::Epsg crs,
@@ -327,6 +350,20 @@ std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
 
 // ---- time ------------------------------------------------------------------
 
+std::expected<CfCalendar, Error> read_calendar(const nc::File& file,
+                                               const nc::VarInfo& time) {
+  auto text = optional_text(file, time.name, "calendar");
+  if (not text) {
+    return std::unexpected{std::move(text.error())};
+  }
+  const auto calendar = parse_cf_calendar(*text);
+  if (not calendar) {
+    return fail(format_error(FormatErrc::unsupported_calendar,
+                             std::string{time.name.view()} + ":calendar"));
+  }
+  return *calendar;
+}
+
 std::expected<CfClock, Error> make_clock(const CfTimeUnits& units,
                                          CfCalendar calendar,
                                          std::string_view variable) {
@@ -338,102 +375,97 @@ std::expected<CfClock, Error> make_clock(const CfTimeUnits& units,
   return *clock;
 }
 
-std::expected<CfCalendar, Error> read_calendar(const nc::File& file,
-                                               const nc::VarInfo& time) {
-  auto text = optional_text(file, time.name, "calendar");
-  if (not text) {
-    return std::unexpected{std::move(text.error())};
+std::expected<Read<CfClock>, Error> clock_of(const nc::File& file,
+                                             const nc::VarInfo& time_var) {
+  auto units = optional_text(file, time_var.name, "units");
+  if (not units) {
+    return std::unexpected{std::move(units).error()};
   }
-  const auto calendar = parse_cf_calendar(
-      *text ? std::optional<std::string_view>{cut_at_nul(**text)}
-            : std::nullopt);
-  if (not calendar) {
-    return fail(format_error(FormatErrc::unsupported_calendar,
-                             std::string{time.name.view()} + ":calendar"));
+  if (not *units) {
+    return fail(format_error(FormatErrc::missing_attribute,
+                             std::string{time_var.name.view()} + ":units"));
   }
-  return *calendar;
+  auto parsed = parse_cf_time_units(**units);
+  if (not parsed) {
+    return fail(std::move(parsed).error());
+  }
+  return read_calendar(file, time_var)
+      .and_then([&](CfCalendar calendar) {
+        return make_clock(parsed->value, calendar, time_var.name.view());
+      })
+      .transform([&](CfClock clock) {
+        return Read<CfClock>{.value = clock,
+                             .warnings = std::move(parsed->warnings)};
+      });
 }
 
-namespace {
+std::expected<std::vector<core::Sample>, Error> read_time_samples(
+    const nc::File& file, const nc::VarInfo& time, const nc::Slab& slab,
+    const StopToken& stop) {
+  if (time.type != nc::Type::int64) {
+    return file.read_samples(time.name, slab, stop);
+  }
+  auto mask = file.masking<std::int64_t>(time.name);
+  if (not mask) {
+    return fail(std::move(mask).error());
+  }
+  auto raw = file.read<std::int64_t>(time.name, slab, stop);
+  if (not raw) {
+    return std::unexpected{std::move(raw).error()};
+  }
+  std::vector<core::Sample> out(raw->size());
+  std::ranges::transform(*raw, out.begin(),
+                         [&mask](std::int64_t x) { return mask->apply(x); });
+  return out;
+}
 
-// The times of `values` (nullopt: masked) on `clock`, strictly increasing.
-template <class V>
-std::expected<core::TimeAxis, Error> axis_of(
-    std::span<const std::optional<V>> values, const CfClock& clock,
-    std::string_view name) {
-  core::TimeAxis axis;
-  axis.reserve(values.size());
+std::expected<core::TimeAxis, Error> times_of(
+    std::span<const core::Sample> values, const CfClock& clock,
+    std::string_view var, std::optional<std::size_t> station) {
+  core::TimeAxis times;
+  times.reserve(values.size());
   // (An enumerate over the values; not yet on every standard library.)
   for (std::size_t i = 0; i < values.size(); ++i) {
-    const std::optional<V>& value = values[i];
+    const std::optional<double> value = values[i].value();
     if (not value) {
-      return fail(format_error(FormatErrc::time_missing, std::string{name},
-                               std::nullopt, i));
+      return fail(
+          format_error(FormatErrc::time_missing, std::string{var}, station, i));
     }
     const std::optional<core::Time> time = clock.at(*value);
     if (not time) {
-      return fail(format_error(FormatErrc::time_out_of_range, std::string{name},
-                               std::nullopt, i));
+      return fail(format_error(FormatErrc::time_out_of_range, std::string{var},
+                               station, i));
     }
-    axis.push_back(*time);
+    times.push_back(*time);
   }
+  return times;
+}
+
+std::expected<core::TimeAxis, Error> strictly_increasing(
+    core::TimeAxis times, std::string_view var,
+    std::optional<std::size_t> station) {
   const auto descent = std::ranges::adjacent_find(
-      axis, [](core::Time a, core::Time b) { return not(a < b); });
-  if (descent != axis.end()) {
-    return fail(format_error(
-        FormatErrc::time_not_increasing, std::string{name}, std::nullopt,
-        static_cast<std::size_t>(descent - axis.begin()) + 1));
+      times, [](core::Time a, core::Time b) { return not(a < b); });
+  if (descent != times.end()) {
+    return fail(
+        format_error(FormatErrc::time_not_increasing, std::string{var}, station,
+                     static_cast<std::size_t>(descent - times.begin()) + 1));
   }
-  return axis;
+  return times;
 }
-
-// A 64-bit time is read as an integer (a double would round it) and masked by
-// its attributes in its own type, like every other variable.
-std::expected<std::vector<std::optional<std::int64_t>>, Error> masked_int64(
-    const nc::File& file, const nc::VarInfo& time, const StopToken& stop) {
-  auto mask = file.masking<std::int64_t>(time.name);
-  if (not mask) {
-    return fail(std::move(mask.error()));
-  }
-  return file.read<std::int64_t>(time.name, nc::whole(time), stop)
-      .transform([&mask](const std::vector<std::int64_t>& raw) {
-        std::vector<std::optional<std::int64_t>> out;
-        out.reserve(raw.size());
-        std::ranges::transform(
-            raw, std::back_inserter(out), [&mask](std::int64_t v) {
-              return mask->masks(v) ? std::nullopt : std::optional{v};
-            });
-        return out;
-      });
-}
-
-std::expected<std::vector<std::optional<double>>, Error> masked_double(
-    const nc::File& file, const nc::VarInfo& time, const StopToken& stop) {
-  return file.read_samples(time.name, nc::whole(time), stop)
-      .transform([](const std::vector<core::Sample>& samples) {
-        std::vector<std::optional<double>> out;
-        out.reserve(samples.size());
-        std::ranges::transform(samples, std::back_inserter(out),
-                               [](const core::Sample& s) { return s.value(); });
-        return out;
-      });
-}
-
-}  // namespace
 
 std::expected<core::TimeAxis, Error> read_time_axis(const nc::File& file,
                                                     const nc::VarInfo& time,
                                                     const CfClock& clock,
                                                     const StopToken& stop) {
   const std::string_view name = time.name.view();
-  if (time.type == nc::Type::int64) {
-    return masked_int64(file, time, stop).and_then([&](const auto& values) {
-      return axis_of<std::int64_t>(values, clock, name);
-    });
-  }
-  return masked_double(file, time, stop).and_then([&](const auto& values) {
-    return axis_of<double>(values, clock, name);
-  });
+  return read_time_samples(file, time, nc::whole(time), stop)
+      .and_then([&](const std::vector<core::Sample>& values) {
+        return times_of(values, clock, name, std::nullopt);
+      })
+      .and_then([&](core::TimeAxis times) {
+        return strictly_increasing(std::move(times), name, std::nullopt);
+      });
 }
 
 // ---- values ----------------------------------------------------------------
@@ -463,55 +495,6 @@ std::expected<void, Error> check_station_count(const nc::File& file,
   }
   return {};
 }
-
-namespace {
-
-// The bytes of one value of an external type (0: not a number).
-std::size_t external_size(nc::Type t) {
-  switch (t) {
-    case nc::Type::byte:
-    case nc::Type::ubyte:
-    case nc::Type::char_:
-      return 1;
-    case nc::Type::short_:
-    case nc::Type::ushort:
-      return 2;
-    case nc::Type::int_:
-    case nc::Type::uint:
-    case nc::Type::float_:
-      return 4;
-    case nc::Type::int64:
-    case nc::Type::uint64:
-    case nc::Type::double_:
-      return 8;
-    case nc::Type::string:
-    case nc::Type::other:
-      break;
-  }
-  return 0;
-}
-
-// A chunk is read and decompressed whole, and read in blocks that are smaller
-// than it, it would be decompressed again for each block unless the library's
-// chunk cache holds it. So the cache is made big enough for one chunk, as far
-// as the limits allow that memory (measured: docs/wp-notes/WP9.md).
-std::expected<void, Error> keep_chunk_in_cache(
-    const nc::File& file, const nc::VarInfo& var,
-    const std::optional<std::vector<std::size_t>>& chunks) {
-  if (not chunks) {
-    return {};
-  }
-  const auto elements = checked_product(*chunks);
-  const std::size_t element_bytes = external_size(var.type);
-  const std::size_t limit = file.limits().max_result_bytes;
-  if (not elements or element_bytes == 0 or *elements > limit / element_bytes) {
-    return {};  // too big to hold: the block reads re-read it
-  }
-  return file.reserve_chunk_cache(var.name, *elements * element_bytes)
-      .transform_error(lift<Error>);
-}
-
-}  // namespace
 
 std::expected<std::vector<StationGroup>, Error> plan_groups(
     const nc::File& file, const nc::VarInfo& var, int station_dim,

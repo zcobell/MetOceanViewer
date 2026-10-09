@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The schema of a foreign CF file (docs/station-netcdf.md 12 "Foreign", owner
-// decision 30): the quantity, label, unit and datum of each data variable, and
-// what its quality-flag variables say about its samples.
+// The schema of a foreign CF file (docs/station-netcdf.md 12 "Foreign"): the
+// quantity, label, unit and datum of each data variable, and what its
+// quality-flag variables say about its samples.
 //
 // A standard name that is exactly a registry quantity's (and whose units
 // convert to its canonical unit) gives that quantity; anything else is a
 // generic quantity named after the variable, with a deterministic substitute
-// when the name cannot be a column (decision F4). Tokens are made in two passes
+// when the name cannot be a column. Tokens are made in two passes
 // so that a substitute never takes the name a later variable has itself.
 
 #include <algorithm>
@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/units.hpp"
@@ -36,7 +36,7 @@
 #include "mov/io/warning.hpp"
 #include "station_netcdf_foreign_facts.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 
@@ -67,15 +67,17 @@ std::expected<std::optional<std::string>, Error> mapping_datum(
   if (mapping == nullptr) {
     return std::optional<std::string>{};
   }
-  return text_of(file, mapping->var.name, "geopotential_datum_name");
+  return optional_text(file, mapping->var.name, "geopotential_datum_name");
 }
 
 std::expected<Raw, Error> raw_of(const nc::File& file,
                                  std::span<const Facts> all, const Facts& f) {
   auto texts = collect(
-      [&] { return text_of(file, f.var.name, "long_name"); },
-      [&] { return text_of(file, f.var.name, "vertical_datum"); },
-      [&] { return text_of(file, f.var.name, "geopotential_datum_name"); },
+      [&] { return optional_text(file, f.var.name, "long_name"); },
+      [&] { return optional_text(file, f.var.name, "vertical_datum"); },
+      [&] {
+        return optional_text(file, f.var.name, "geopotential_datum_name");
+      },
       [&] { return mapping_datum(file, all, f); });
   if (not texts) {
     return std::unexpected{std::move(texts).error()};
@@ -86,30 +88,21 @@ std::expected<Raw, Error> raw_of(const nc::File& file,
                : (geopotential ? std::move(geopotential) : std::move(mapped));
   return Raw{.facts = &f,
              .standard = std::string{f.standard_name
-                                         ? core::detail::trim(*f.standard_name)
+                                         ? core::ascii::trim(*f.standard_name)
                                          : std::string_view{}},
              .long_name = std::move(long_name),
              .datum = std::move(datum),
              .unit = parsed_unit(f.units)};
 }
 
-// ---- the quantity (decision F4, owner decision 30.4)
-// -------------------------
-
-std::string lower(std::string_view text) {
-  std::string out{text};
-  for (char& c : out) {
-    c = c >= 'A' and c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
-  }
-  return out;
-}
+// ---- the quantity -----------------------------------------------------------
 
 /// The name or long_name of the variable says its values are predicted.
 bool hints_prediction(const Raw& r) {
   constexpr std::array<std::string_view, 4> hints{"predict", "tide",
                                                   "astronomical", "harmonic"};
-  const std::string text =
-      lower(r.facts->var.name.view()) + ' ' + lower(r.long_name.value_or(""));
+  const std::string text = to_lower_ascii(r.facts->var.name.view()) + ' ' +
+                           to_lower_ascii(r.long_name.value_or(""));
   return std::ranges::any_of(hints, [&text](std::string_view hint) {
     return text.find(hint) != std::string::npos;
   });
@@ -141,13 +134,7 @@ std::optional<core::Quantity> registry_choice(const Raw& r,
   return q;
 }
 
-bool ascii_letter(char c) {
-  return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
-}
-
-bool token_char(char c) {
-  return ascii_letter(c) or (c >= '0' and c <= '9') or c == '_';
-}
+bool token_char(char c) { return core::ascii::is_alnum(c) or c == '_'; }
 
 /// Whether `token` can be the token of a generic column next to `taken`.
 bool usable_token(std::string_view token, const TokenSet& taken) {
@@ -165,7 +152,7 @@ std::string mangled_token(std::string_view name, const TokenSet& taken) {
   for (const char c : name) {
     token.push_back(token_char(c) ? c : '_');
   }
-  if (token.empty() or not ascii_letter(token.front())) {
+  if (token.empty() or not core::ascii::is_alpha(token.front())) {
     token.insert(token.begin(), 'v');
   }
   token.resize(std::min(token.size(), max_token_bytes));
@@ -189,7 +176,8 @@ std::expected<core::QuantityId, Error> generic_quantity(
                             ? standard
                             : std::string_view{}});
   if (not generic) {
-    return invalid(FormatErrc::invalid_variable_name, subject_of(token));
+    return fail(
+        format_error(FormatErrc::invalid_variable_name, subject_of(token)));
   }
   return core::QuantityId{*std::move(generic)};
 }
@@ -238,8 +226,7 @@ std::expected<std::vector<core::QuantityId>, Error> quantities_of(
   return out;
 }
 
-// ---- quality flags (owner decision 30.1)
-// -------------------------------------
+// ---- quality flags ----------------------------------------------------------
 
 /// The values of the IOOS QARTOD scheme (1 pass, 2 not evaluated, 3 suspect or
 /// of high interest, 4 fail, 9 missing data), for a flag variable that gives
@@ -257,7 +244,7 @@ bool mentions(std::string_view meaning, std::string_view word) {
 enum class FlagClass : std::uint8_t { fine, suspect, bad };
 
 FlagClass classify_meaning(std::string_view meaning) {
-  const std::string text = lower(meaning);
+  const std::string text = to_lower_ascii(meaning);
   if (mentions(text, "bad") or mentions(text, "fail") or
       mentions(text, "missing")) {
     return FlagClass::bad;
@@ -310,7 +297,7 @@ std::expected<std::optional<QualityRules>, Error> quality_rules(
         }
         return int_att(file, var.name, "flag_values", var.name.view());
       },
-      [&] { return text_of(file, var.name, "flag_meanings"); });
+      [&] { return optional_text(file, var.name, "flag_meanings"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }

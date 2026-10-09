@@ -20,7 +20,6 @@
 #include <string_view>
 #include <utility>
 
-#include "mov/core/detail/numeric.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/io/error.hpp"
 
@@ -32,8 +31,8 @@ namespace {
 
 // Set once (set_projection_data_dir), then only read: the first call stores
 // the directory and publishes a pointer to it; a reader loads the pointer.
-// No lock in io (C11): call_once runs the store once, the atomic pointer
-// makes it visible.
+// No lock in io (its callers serialize): call_once runs the store once, the
+// atomic pointer makes it visible.
 std::once_flag data_dir_once;
 std::atomic<const std::string*> data_dir{nullptr};  // UTF-8
 
@@ -269,8 +268,7 @@ std::expected<core::Xy, ProjectionError> Projector::project(core::Xy p) {
                                      proj_coord(p.x, p.y, 0.0, HUGE_VAL));
   note_last_operation(impl_->context.get(), impl_->transformation.get(),
                       accuracy_);
-  if (not core::detail::is_finite(result.xy.x) or
-      not core::detail::is_finite(result.xy.y)) {
+  if (not std::isfinite(result.xy.x) or not std::isfinite(result.xy.y)) {
     return std::unexpected{
         ProjectionError{.code = ProjectionErrc::transform_failed, .crs = crs_}};
   }

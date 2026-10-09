@@ -15,13 +15,14 @@
 #include <utility>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/hwm.hpp"
 #include "mov/core/units.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/model_number.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read.hpp"
@@ -34,6 +35,7 @@ namespace {
 
 using Line = detail::LineCursor::Line;
 using Mark = core::HighWaterMark;
+using detail::fail;
 
 constexpr std::size_t rows_per_stop_poll = 1024;
 constexpr std::size_t header_subject_bytes = 60;
@@ -41,11 +43,6 @@ constexpr std::size_t header_subject_bytes = 60;
 // A row has this many fields; the last, the difference, may be left out.
 constexpr std::size_t value_fields = 5;
 constexpr std::size_t max_fields = 6;
-
-template <class E>
-auto fail(E&& e) {
-  return std::unexpected{lift<Error>(std::forward<E>(e))};
-}
 
 // The text of the five columns of a row; the views are into its line.
 struct RowText {
@@ -63,7 +60,7 @@ std::size_t split_fields(std::string_view line,
                          std::span<std::string_view> out) noexcept {
   const std::size_t count = detail::split_on_into(line, ',', out);
   for (std::string_view& field : out.first(std::min(count, out.size()))) {
-    field = core::detail::trim(field);
+    field = core::ascii::trim(field);
   }
   return count;
 }
@@ -206,7 +203,7 @@ class HwmReader {
       warnings_.push_back(
           {.code = WarningCode::header_line_skipped,
            .subject = std::string{detail::truncate_utf8(
-               core::detail::trim(line->text), header_subject_bytes)},
+               core::ascii::trim(line->text), header_subject_bytes)},
            .count = 1});
       line = cursor_.next_nonblank();
     }

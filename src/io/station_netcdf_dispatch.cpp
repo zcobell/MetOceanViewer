@@ -5,20 +5,25 @@
 // which kind of station file it is (netcdf_kind.hpp: v5, foreign CF or legacy
 // v4), run that kind's reader (station_netcdf_open.cpp and
 // station_netcdf_samples.cpp for v5, station_netcdf_foreign_*.cpp,
-// station_netcdf_legacy.cpp) and close the file on every path.
+// station_netcdf_legacy.cpp) and close the file on every path. Also the
+// parsers of the two versions a file declares, which decide its kind.
 
+#include <algorithm>
 #include <cstddef>
 #include <expected>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <ranges>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/ascii.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -27,32 +32,40 @@
 #include "mov/io/station_netcdf.hpp"
 #include "netcdf_kind.hpp"
 #include "station_netcdf_dialects.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_v5.hpp"
 
 namespace mov::io {
 
 namespace {
 
 namespace sn = detail::station_nc;
-using core::detail::Overloaded;
+using core::Overloaded;
 using detail::classify_netcdf;
+using detail::fail;
+using detail::format_error;
 using detail::NetcdfKind;
 
-/// Opens `path`, runs `read` on it and closes it, on every path.
-template <class F>
-auto with_file(const std::filesystem::path& path, const ReadContext& ctx,
-               const F& read)
-    -> std::invoke_result_t<const F&, const nc::File&> {
-  auto file = nc::File::open(path, ctx.limits);
-  if (not file) {
-    return detail::fail(std::move(file).error());
+// ---- versions
+// -----------------------------------------------------------------
+
+constexpr std::size_t max_version_digits = 4;
+
+/// 1 to 4 decimal digits without a leading zero (except "0" itself).
+constexpr std::optional<unsigned> version_number(std::string_view text) {
+  if (text.empty() or text.size() > max_version_digits or
+      not std::ranges::all_of(text, core::ascii::is_digit) or
+      (text.size() > 1 and text.front() == '0')) {
+    return std::nullopt;
   }
-  auto result = read(std::as_const(*file));
-  if (auto closed = std::move(*file).close(); not closed and result) {
-    return detail::fail(std::move(closed).error());
+  unsigned value = 0;
+  for (const char c : text) {
+    value = (value * 10U) + static_cast<unsigned>(c - '0');
   }
-  return result;
+  return value;
 }
+
+// ---- dispatch
+// -----------------------------------------------------------------
 
 /// The file indices `which` names, after checking that a selection was made
 /// for this file.
@@ -90,11 +103,10 @@ std::expected<Read<StationFile>, Error> with_table(
   if (not table) {
     return std::unexpected{std::move(table).error()};
   }
-  return Read<StationFile>{
-      .value = {.table = std::move(table->value),
-                .origin = opened.value.catalog.origin},
-      .warnings = detail::concatenated(std::move(opened.warnings),
-                                       std::move(table->warnings))};
+  append(opened.warnings, std::move(table->warnings));
+  return Read<StationFile>{.value = {.table = std::move(table->value),
+                                     .origin = opened.value.catalog.origin},
+                           .warnings = std::move(opened.warnings)};
 }
 
 std::expected<Read<StationFile>, Error> read_v5(
@@ -143,24 +155,25 @@ std::expected<Read<StationFile>, Error> read_legacy_file(
 /// says so.
 std::unexpected<Error> not_a_station_file(const NetcdfKind& kind) {
   return std::visit(
-      Overloaded{[](const detail::kind::Adcirc&) {
-                   return sn::invalid(FormatErrc::not_this_format, "model");
-                 },
-                 [](const detail::kind::Dflow&) {
-                   return sn::invalid(FormatErrc::not_this_format,
-                                      "station_x_coordinate");
-                 },
-                 [](const detail::kind::OtherFormat&) {
-                   return sn::invalid(FormatErrc::not_this_format,
-                                      ":metoceanviewer_format");
-                 },
-                 [](const detail::kind::Unrecognized& u) {
-                   return sn::invalid(FormatErrc::not_this_format, u.subject);
-                 },
-                 // The kinds the station reader reads are never refused here.
-                 [](const auto&) {
-                   return sn::invalid(FormatErrc::not_this_format, "");
-                 }},
+      Overloaded{
+          [](const detail::kind::Adcirc&) {
+            return fail(format_error(FormatErrc::not_this_format, "model"));
+          },
+          [](const detail::kind::Dflow&) {
+            return fail(format_error(FormatErrc::not_this_format,
+                                     "station_x_coordinate"));
+          },
+          [](const detail::kind::OtherFormat&) {
+            return fail(format_error(FormatErrc::not_this_format,
+                                     ":metoceanviewer_format"));
+          },
+          [](const detail::kind::Unrecognized& u) {
+            return fail(format_error(FormatErrc::not_this_format, u.subject));
+          },
+          // The kinds the station reader reads are never refused here.
+          [](const auto&) {
+            return fail(format_error(FormatErrc::not_this_format, ""));
+          }},
       kind);
 }
 
@@ -235,9 +248,47 @@ std::expected<Read<StationNcCatalog>, Error> inspect_any(
 
 }  // namespace
 
+std::optional<StationNcVersion> parse_station_nc_version(
+    std::string_view text) noexcept {
+  const std::size_t dot = text.find('.');
+  if (dot == std::string_view::npos) {
+    return std::nullopt;
+  }
+  const auto major = version_number(text.substr(0, dot));
+  const auto minor = version_number(text.substr(dot + 1));
+  if (not major or not minor) {
+    return std::nullopt;
+  }
+  return StationNcVersion{.major = *major, .minor = *minor};
+}
+
+std::optional<CfVersion> parse_cf_conventions(
+    std::string_view conventions) noexcept {
+  constexpr std::string_view separators = " \t\n\r,";
+  constexpr std::string_view prefix = "CF-";
+  while (not conventions.empty()) {
+    const std::size_t start = conventions.find_first_not_of(separators);
+    if (start == std::string_view::npos) {
+      break;
+    }
+    conventions.remove_prefix(start);
+    const std::size_t end = conventions.find_first_of(separators);
+    const std::string_view token = conventions.substr(0, end);
+    if (token.starts_with(prefix)) {
+      if (const auto v =
+              parse_station_nc_version(token.substr(prefix.size()))) {
+        return CfVersion{.major = v->major, .minor = v->minor};
+      }
+    }
+    conventions.remove_prefix(end == std::string_view::npos ? conventions.size()
+                                                            : end);
+  }
+  return std::nullopt;
+}
+
 std::expected<Read<StationNcCatalog>, Error> inspect_station_netcdf(
     const std::filesystem::path& path, const ReadContext& ctx) {
-  return with_file(path, ctx, [&](const nc::File& file) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
     return inspect_any(file, ctx.stop);
   });
 }
@@ -245,7 +296,7 @@ std::expected<Read<StationNcCatalog>, Error> inspect_station_netcdf(
 std::expected<Read<StationFile>, Error> read_station_netcdf(
     const std::filesystem::path& path, const StationNcSelection& which,
     const ReadContext& ctx, const StationNcReadOptions& options) {
-  return with_file(path, ctx, [&](const nc::File& file) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
     return read_any(file, which, options, ctx.stop);
   });
 }

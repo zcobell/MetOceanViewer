@@ -295,10 +295,12 @@ TEST_CASE("read_char_rows of a 1-D and a 3-D char variable", "[io][netcdf]") {
         NcStatus{WrapperFault::rank_mismatch});
 }
 
-TEST_CASE("read_strings reads NC_STRING and frees it (B21)", "[io][netcdf]") {
+TEST_CASE("read_strings reads NC_STRING and frees it", "[io][netcdf]") {
+  // v4 never called nc_free_string, so every string it read leaked.
+  //
   // One handle at a time: netCDF-C 4.9.3 with HDF5 2.1.1 crashes when a file
   // whose NC_STRING data was read through a second handle is opened again
-  // (docs/wp-notes/WP6.md, "Library defect").
+  // (an HDF5 defect, not ours).
   Fixtures fx;
   const std::vector<std::string> expected{"one", "two", "three", "four"};
   {

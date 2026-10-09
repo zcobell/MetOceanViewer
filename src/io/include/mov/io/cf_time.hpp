@@ -10,14 +10,14 @@
 #include <optional>
 #include <string_view>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/time.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read.hpp"
 
 namespace mov::io {
 
-/// The units of a CF time variable (B11: v4 cut the attribute at a fixed
+/// The units of a CF time variable (v4 cut the attribute at a fixed
 /// offset and assumed seconds). Stored as an enumerator, so the factor to
 /// milliseconds is an integer.
 enum class CfTimeUnit : std::uint8_t { millisecond, second, minute, hour, day };
@@ -89,12 +89,12 @@ enum class CfCalendar : std::uint8_t { standard, proleptic_gregorian };
   if (not attribute) {
     return CfCalendar::standard;
   }
-  const std::string_view name = core::detail::trim(*attribute);
-  if (core::detail::equal_ignore_case(name, "standard") or
-      core::detail::equal_ignore_case(name, "gregorian")) {
+  const std::string_view name = core::ascii::trim(*attribute);
+  if (core::ascii::equal_ignore_case(name, "standard") or
+      core::ascii::equal_ignore_case(name, "gregorian")) {
     return CfCalendar::standard;
   }
-  if (core::detail::equal_ignore_case(name, "proleptic_gregorian")) {
+  if (core::ascii::equal_ignore_case(name, "proleptic_gregorian")) {
     return CfCalendar::proleptic_gregorian;
   }
   return std::nullopt;

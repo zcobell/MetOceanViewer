@@ -3,8 +3,8 @@
 
 // Foreign CF station netCDF files: what the reader tolerates (packing, fills,
 // valid ranges, strings, grid mappings), how it names the quantity of a
-// variable (standard names that are exactly a registry quantity's, decision
-// F4's substitute names for the rest), which variables it skips, and the errors
+// variable (standard names that are exactly a registry quantity's,
+// substitute names for the rest), which variables it skips, and the errors
 // of a file whose structure is not a `timeSeries`.
 
 #include <netcdf.h>
@@ -131,7 +131,7 @@ TEST_CASE("foreign: NC_STRING and integer station ids",
   spec.string_ids = true;
   auto read = read_spec(spec);
   CHECK(read.value.table.station(core::StationIndex{1}).id.view() == "B");
-  CHECK(read.value.table.station(core::StationIndex{1}).name.view() == "B");
+  CHECK(read.value.table.station(core::StationIndex{1}).name.empty());
 
   spec.string_ids = false;
   spec.integer_ids = true;
@@ -155,7 +155,7 @@ TEST_CASE("foreign: blanks around an id are trimmed, NUL padding is cut",
   CHECK(read.value.table.station(core::StationIndex{1}).id.view() == "B");
 }
 
-TEST_CASE("foreign: the platform name is the station name, the id otherwise",
+TEST_CASE("foreign: the platform name is the station name, else none",
           "[io][station_nc][foreign]") {
   const auto read = read_spec(with([](Cdf& f, int station, int /*sample*/) {
     const int wide = f.dim("name_width", 12);
@@ -166,7 +166,7 @@ TEST_CASE("foreign: the platform name is the station name, the id otherwise",
   CHECK(read.value.table.station(core::StationIndex{0}).name.view() ==
         "Alpha Pier");
   CHECK(read.value.table.station(core::StationIndex{2}).id.view() == "C");
-  CHECK(read.value.table.station(core::StationIndex{2}).name.view() == "C");
+  CHECK(read.value.table.station(core::StationIndex{2}).name.empty());
 }
 
 TEST_CASE("foreign: bytes that are not UTF-8 in an id are replaced",
@@ -196,8 +196,7 @@ TEST_CASE("foreign: duplicate ids are made unique, an empty one is the index",
   const auto substituted = read_spec(spec);
   CHECK(substituted.value.table.station(core::StationIndex{1}).id.view() ==
         "1");
-  CHECK(substituted.value.table.station(core::StationIndex{1}).name.view() ==
-        "1");
+  CHECK(substituted.value.table.station(core::StationIndex{1}).name.empty());
   const io::Warning s =
       warning_of(substituted.warnings, WarningCode::station_id_substituted);
   CHECK(s.count == 1);
@@ -349,7 +348,7 @@ TEST_CASE("foreign: standard names that are exactly a registry quantity",
   const core::StationTable& t = read.value.table;
   REQUIRE(t.schema().size() == 9);
   CHECK(t.schema()[0].quantity() == token("temperature"));
-  // Eastward and northward components are the registry's (decision 28); the
+  // Eastward and northward components are the registry's; the
   // grid-relative x velocity is a generic quantity that keeps its name.
   CHECK(t.schema()[1].quantity() ==
         core::QuantityId{core::Quantity::current_u});
@@ -377,7 +376,7 @@ TEST_CASE("foreign: standard names that are exactly a registry quantity",
   CHECK(t.schema()[8].unit() == unit("mb"));
 }
 
-TEST_CASE("foreign: a variable name that is no token gets a substitute (F4)",
+TEST_CASE("foreign: a variable name that is no token gets a substitute",
           "[io][station_nc][foreign]") {
   const auto read = read_spec(with([](Cdf& f, int station, int sample) {
     const auto add = [&](const char* name, const char* standard) {

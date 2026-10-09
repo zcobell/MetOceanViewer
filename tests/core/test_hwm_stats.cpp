@@ -305,7 +305,7 @@ TEST_CASE("Moments agrees with a two-pass reference on many marks",
   CHECK(near(r2_of(s), static_cast<double>((sxy * sxy) / (sxx * syy)), 1e-11));
 }
 
-// ---- golden numbers from golden.py (F8) -------------------------------------
+// ---- golden numbers from golden.py for the HWM fixtures ---------------------
 
 namespace {
 
@@ -407,7 +407,7 @@ TEST_CASE("hwm_basic hand check", "[core][hwm_stats][golden]") {
   CHECK(near(slope_of(s), 17.0 / 14.0, 1e-14));            // cxy 21.25/m2x 17.5
 }
 
-// ---- N1: the fit alternative matches the mode -------------------------------
+// ---- the fit alternative matches the mode -----------------------------------
 
 TEST_CASE("the requested intercept mode is the fit that comes back",
           "[core][hwm_stats][regression][N1]") {
@@ -515,8 +515,7 @@ TEST_CASE("R^2 is absent when its denominator is zero",
   CHECK_FALSE(origin.r_squared.has_value());
 }
 
-// ---- sigma uses n - 1 (D17)
-// --------------------------------------------------
+// ---- sigma uses n - 1 -------------------------------------------------------
 
 TEST_CASE("the error standard deviation divides by n - 1",
           "[core][hwm_stats][regression][D17]") {
@@ -550,8 +549,7 @@ TEST_CASE("one wet mark has no standard deviation",
   CHECK(near(slope_of(s), 1.75, 1e-14));
 }
 
-// ---- N2: one dry rule
-// --------------------------------------------------------
+// ---- one dry rule -----------------------------------------------------------
 
 TEST_CASE("one dry threshold decides what is in the statistics",
           "[core][hwm_stats][regression][N2]") {

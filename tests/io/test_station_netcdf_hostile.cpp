@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Zach Cobell
 
 // The hostile-structure set at the level of the station netCDF readers
-// (core-design.md 7.3, review finding S11): files whose structure is wrong in
+// (core-design.md 7.3): files whose structure is wrong in
 // one way each, written with the raw netCDF-C API. Each is read as a v5 file,
 // a foreign CF file and a legacy file where it applies, and gives a specific
 // error (or a defined value) through read_station_netcdf and

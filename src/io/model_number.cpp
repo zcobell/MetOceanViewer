@@ -11,7 +11,7 @@
 #include <string_view>
 #include <variant>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/io/detail/text.hpp"
 
 namespace mov::io::detail {
@@ -53,9 +53,7 @@ std::optional<std::string_view> fortran_spelling(
   // A sign after at least one mantissa character, and three digits to the end.
   if (sign == std::string_view::npos or sign <= lead or
       token.size() - sign - 1 != exponent_digits or
-      not std::ranges::all_of(token.substr(sign + 1), [](char c) noexcept {
-        return c >= '0' and c <= '9';
-      })) {
+      not std::ranges::all_of(token.substr(sign + 1), core::ascii::is_digit)) {
     return std::nullopt;
   }
   const auto after = std::ranges::copy(token.substr(0, sign), buffer.begin());
@@ -74,9 +72,9 @@ bool is_nonfinite_token(std::string_view token) noexcept {
     return true;
   }
   static_cast<void>(strip_sign(token));
-  return core::detail::equal_ignore_case(token, "nan") or
-         core::detail::equal_ignore_case(token, "inf") or
-         core::detail::equal_ignore_case(token, "infinity");
+  return core::ascii::equal_ignore_case(token, "nan") or
+         core::ascii::equal_ignore_case(token, "inf") or
+         core::ascii::equal_ignore_case(token, "infinity");
 }
 
 std::expected<ModelNumber, NumberError> parse_model_number(

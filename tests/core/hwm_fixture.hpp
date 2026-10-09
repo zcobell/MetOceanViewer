@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// Test-only readers for the F8 fixtures (tests/fixtures/core/hwm). The real
-// HWM file parser is io's (WP8); this one reads only the five or six numeric
+// Test-only readers for the HWM fixtures (tests/fixtures/core/hwm). The real
+// HWM file parser is io's; this one reads only the five or six numeric
 // columns of the fixtures and aborts the test on anything else.
 
 #pragma once

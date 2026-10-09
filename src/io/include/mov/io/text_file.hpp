@@ -22,10 +22,11 @@ namespace mov::io {
 /// The whole file as bytes, exactly as stored: a byte order mark, CR bytes
 /// and NULs are kept (LineCursor handles the first two, and the parsers the
 /// rest). The path must name a regular file; a missing file, a directory or
-/// any other kind of file is a FileError, never an empty success (B3). The
-/// file is opened first (without blocking, so a FIFO cannot hang the reader)
-/// and everything after that is asked of the open file, not of the name: what
-/// is checked is what is read. The size is checked against
+/// any other kind of file is a FileError, never an empty success (v4 returned
+/// success with no data when it could not open a file). The file is opened
+/// first (without blocking, so a FIFO cannot hang the reader) and everything
+/// after that is asked of the open file, not of the name: what is checked is
+/// what is read. The size is checked against
 /// `limits.max_text_bytes` before anything is allocated (`errc::file_too_large`
 /// on `FileOp::size`). A file that grows while it is read is cut at the size
 /// first seen; one that shrinks gives what was there.

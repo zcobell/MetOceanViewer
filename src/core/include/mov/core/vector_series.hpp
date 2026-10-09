@@ -50,7 +50,7 @@ class VectorSeries {
   [[nodiscard]] const Unit& unit() const& noexcept { return unit_; }
   const Unit& unit() const&& = delete;
 
-  /// hypot(u, v) under the combine rule (Missing, then Dry, wins; N7).
+  /// hypot(u, v) under the combine rule (Missing, then Dry, wins).
   /// Wind: quantity wind_speed, label "wind speed". Otherwise the generic
   /// `value` quantity, label "<stem> speed". Unit: unit(); no datum.
   [[nodiscard]] TimeSeries magnitude() const;

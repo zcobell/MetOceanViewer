@@ -22,7 +22,7 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
@@ -34,6 +34,7 @@
 #include "mov/io/detail/civil_time.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/station_names.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/text_file.hpp"
@@ -43,6 +44,7 @@ namespace mov::io {
 namespace {
 
 using detail::LineCursor;
+using detail::subject_of;
 
 // A data row has at most 7 words and a station line 3; one slot more makes
 // split_ws_into report a longer line.
@@ -65,19 +67,13 @@ ParseError too_large(std::size_t line, std::size_t used, std::size_t limit,
                           std::format("{} {}, limit {}", used, unit, limit));
 }
 
-// A warning subject is a piece of input: keep it as short as an error's.
-std::string subject_of(std::string_view token) {
-  return std::string{
-      detail::truncate_utf8(token, ParseError::max_context_bytes)};
-}
-
 // ---- header
 // ------------------------------------------------------------------
 
 bool is_utc_token(std::string_view zone) {
-  return core::detail::equal_ignore_case(zone, "UTC") or
-         core::detail::equal_ignore_case(zone, "GMT") or
-         core::detail::equal_ignore_case(zone, "Z");
+  return core::ascii::equal_ignore_case(zone, "UTC") or
+         core::ascii::equal_ignore_case(zone, "GMT") or
+         core::ascii::equal_ignore_case(zone, "Z");
 }
 
 Read<std::string> zone_of(std::optional<std::string_view> zone) {
@@ -101,24 +97,13 @@ bool is_family_unit(const core::Unit& unit) {
   return not std::holds_alternative<core::OtherUnit>(unit);
 }
 
-// The unit text is the rest of the line, so "S m-1" is one unit; "unknown" is
-// what the writer says for no unit.
+// The unit text is the rest of the line, so "S m-1" is one unit. "unknown" is
+// what the writer says for no unit: no unit, and no warning.
 Read<std::optional<core::Unit>> unit_of(std::string_view text) {
-  if (core::detail::equal_ignore_case(text, "unknown")) {
+  if (core::ascii::equal_ignore_case(text, "unknown")) {
     return {.value = std::nullopt, .warnings = {}};
   }
-  std::optional<core::Unit> unit = core::parse_unit(text);
-  const auto* other = unit ? std::get_if<core::OtherUnit>(&*unit) : nullptr;
-  Read<std::optional<core::Unit>> read{.value = std::move(unit),
-                                       .warnings = {}};
-  append_if_counted(
-      read.warnings,
-      {.code = WarningCode::unrecognized_unit,
-       .subject = subject_of(text),
-       .count = other != nullptr and not core::is_canonical_other(*other)
-                    ? 1U
-                    : 0U});
-  return read;
+  return detail::parsed_unit(text);
 }
 
 // The third word is the datum, with the unit after it. A v4 header may leave
@@ -147,8 +132,7 @@ Read<DatumAndUnit> datum_and_unit(std::optional<std::string_view> third,
       .warnings = {}};
   read.warnings.push_back(
       {.code = WarningCode::datum_unknown, .subject = subject_of(*third)});
-  read.warnings =
-      detail::concatenated(std::move(read.warnings), std::move(unit.warnings));
+  append(read.warnings, std::move(unit.warnings));
   return read;
 }
 
@@ -170,20 +154,20 @@ std::expected<Read<ImedsHeader>, ParseError> parse_header(
   const auto third = detail::next_word(rest);
   Read<std::string> time_zone = zone_of(zone);
   Read<DatumAndUnit> rest_of_line =
-      datum_and_unit(third, core::detail::trim(rest));
+      datum_and_unit(third, core::ascii::trim(rest));
+  append(time_zone.warnings, std::move(rest_of_line.warnings));
   return Read<ImedsHeader>{
       .value = {.source = std::string{*source},
                 .time_zone = std::move(time_zone.value),
                 .datum = rest_of_line.value.datum,
                 .unit = std::move(rest_of_line.value.unit)},
-      .warnings = detail::concatenated(std::move(time_zone.warnings),
-                                       std::move(rest_of_line.warnings))};
+      .warnings = std::move(time_zone.warnings)};
 }
 
 // ---- values
 // ------------------------------------------------------------------
 
-// v4 printed its null, -DBL_MAX, as "%10.4e" (N18).
+// v4 printed its null, -DBL_MAX, as "%10.4e".
 constexpr std::string_view printed_dbl_max{"-1.7977e+308"};
 
 constexpr std::array<double, 3> legacy_sentinels{
@@ -217,7 +201,7 @@ struct RowValue {
 
 std::expected<RowValue, ParseError> parse_value(const LineCursor::Line& line,
                                                 std::string_view token) {
-  if (core::detail::equal_ignore_case(token, printed_dbl_max)) {
+  if (core::ascii::equal_ignore_case(token, printed_dbl_max)) {
     return RowValue{.sample = core::Missing{},
                     .masked = Masked::legacy_sentinel};
   }
@@ -597,8 +581,8 @@ std::expected<Read<ImedsFile>, Error> ImedsParser::finish(
   if (not table) {
     return std::unexpected{std::move(table).error()};
   }
-  std::vector<Warning> warnings = detail::concatenated(
-      std::move(header_->warnings), std::move(table->warnings));
+  std::vector<Warning> warnings = std::move(header_->warnings);
+  append(warnings, std::move(table->warnings));
   append_if_counted(warnings, {.code = WarningCode::invalid_utf8_replaced,
                                .subject = {},
                                .count = names_cleaned_});
@@ -617,10 +601,6 @@ std::expected<Read<ImedsFile>, Error> ImedsParser::finish(
                                    .table = std::move(table->value)},
                          .warnings = std::move(warnings)};
 }
-
-}  // namespace
-
-namespace {
 
 // The one driver loop: header lines, then the non-blank lines, with the stop
 // token asked every stop_poll_interval lines. Callers ask once before they

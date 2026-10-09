@@ -91,7 +91,7 @@ struct TimeSeriesParts {
   SeriesMeta meta;
 };
 
-/// A series of samples at strictly increasing UTC times (C2), with its
+/// A series of samples at strictly increasing UTC times, with its
 /// metadata. A plain value: copies are deep, moves are cheap, and a
 /// constructed TimeSeries always satisfies the invariant. There is no
 /// builder: build the vectors and call make, or normalize unordered rows.

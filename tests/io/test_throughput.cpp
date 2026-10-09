@@ -4,8 +4,7 @@
 // How fast the text readers go. Hidden from the normal run (the "." tag) and
 // meant for a release build:
 //   mov_io_model_text_tests "[.throughput]"
-// It prints MB/s and checks only that the results are right. The numbers in
-// docs/wp-notes/WP8.md come from here.
+// It prints MB/s and checks only that the results are right.
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>

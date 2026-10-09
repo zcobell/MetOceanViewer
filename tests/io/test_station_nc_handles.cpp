@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Zach Cobell
 
 // The station netCDF readers and detect_file_type open their file once and
-// close it on every path (B5: v4 returned early from nearly every error path
-// without nc_close), and a file that cannot be opened closes nothing (B6: v4
+// close it on every path (v4 returned early from nearly every error path
+// without nc_close), and a file that cannot be opened closes nothing (v4
 // called nc_close on an uninitialised id). Linked with the --wrap shims of
 // mov_io_netcdf_tests, so the counts are the library's.
 

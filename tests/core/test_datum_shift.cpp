@@ -68,7 +68,8 @@ DatumTable table_of(VerticalDatum reference,
   return table.value_or(DatumTable{});
 }
 
-// The NOAA 8518750 (The Battery) heights above MSL, from the F12 fixture.
+// The NOAA 8518750 (The Battery) heights above MSL, from the datum offsets
+// fixture.
 DatumTable battery() {
   const auto stations = read_offsets_fixture();
   const auto& s = stations.at("noaa:8518750");
@@ -120,7 +121,7 @@ TEST_CASE("XTide: MLLW data minus 2.199 m is MSL data",
   CHECK(near_abs(only(msl->samples()[0]), 3.0 - 2.199, 1e-12));
 }
 
-TEST_CASE("every F12 expectation holds for a shifted series",
+TEST_CASE("every datum fixture expectation holds for a shifted series",
           "[core][datum_shift][fixture]") {
   const auto stations = read_offsets_fixture();
   std::size_t checked = 0;
@@ -170,7 +171,7 @@ TEST_CASE("the offset is converted to the unit of the series",
 
 TEST_CASE("any datum shifts to any other through MSL", "[core][datum_shift]") {
   const DatumTable table = battery();
-  // NGVD29 -> NAVD88: (-0.27441) - (0.06368) = -0.33809 (F12).
+  // NGVD29 -> NAVD88: (-0.27441) - (0.06368) = -0.33809 (fixture row).
   const TimeSeries ngvd = make_series(axis_of({0}), {val(1.0)},
                                       level_meta(metre, VerticalDatum::ngvd29));
   const auto navd = shift(ngvd, VerticalDatum::navd88, table);

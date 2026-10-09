@@ -11,13 +11,13 @@
 #include <variant>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/station_netcdf.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail {
 
@@ -45,13 +45,13 @@ std::expected<bool, Error> has_dim(const nc::File& file, nc::NcNameRef name) {
 std::expected<bool, Error> global_is(const nc::File& file, nc::NcNameRef name,
                                      std::string_view value,
                                      bool ignore_case = false) {
-  return sn::text_of(file, nc::global, name)
+  return optional_text(file, nc::global, name)
       .transform([&](const std::optional<std::string>& text) {
         if (not text) {
           return false;
         }
-        const std::string_view t = core::detail::trim(*text);
-        return ignore_case ? core::detail::equal_ignore_case(t, value)
+        const std::string_view t = core::ascii::trim(*text);
+        return ignore_case ? core::ascii::equal_ignore_case(t, value)
                            : t == value;
       });
 }
@@ -76,7 +76,7 @@ std::expected<ForeignCheck, Error> check_foreign_cf(const nc::File& file) {
   if (not *feature) {
     return ForeignCheck{kind::Unrecognized{.subject = ":featureType"}};
   }
-  return sn::text_of(file, nc::global, "Conventions")
+  return optional_text(file, nc::global, "Conventions")
       .transform([](const std::optional<std::string>& text) {
         const auto cf = text ? parse_cf_conventions(*text) : std::nullopt;
         return cf and cf->major == 1 and cf->minor >= 6
@@ -124,16 +124,16 @@ std::expected<std::optional<NetcdfKind>, Error> model_kind(
 
 std::expected<NetcdfKind, Error> classify_netcdf(const nc::File& file) {
   // A file that names its own format is that format or none of ours.
-  auto format = sn::text_of(file, nc::global, "metoceanviewer_format");
+  auto format = optional_text(file, nc::global, "metoceanviewer_format");
   if (not format) {
     return std::unexpected{std::move(format).error()};
   }
   if (*format) {
-    const std::string_view name = core::detail::trim(**format);
+    const std::string_view name = core::ascii::trim(**format);
     if (name == station_nc_format) {
       return NetcdfKind{kind::StationV5{}};
     }
-    return NetcdfKind{kind::OtherFormat{.name = sn::subject_of(name)}};
+    return NetcdfKind{kind::OtherFormat{.name = subject_of(name)}};
   }
   auto model = model_kind(file);
   if (not model) {

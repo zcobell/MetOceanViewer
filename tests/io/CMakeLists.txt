@@ -49,7 +49,7 @@ mov_add_fuzz_test(
     CORPUS io/parse_cf_time_units
 )
 
-# ADCIRC ASCII output and the HWM file (WP8).
+# ADCIRC ASCII output and the HWM file.
 mov_add_test(
     mov_io_model_text_tests
     SOURCES
@@ -86,7 +86,7 @@ mov_add_fuzz_test(
 )
 mov_add_fuzz_test(fuzz_parse_hwm_csv SOURCES fuzz_parse_hwm_csv.cpp LIBRARIES mov::io CORPUS io/parse_hwm_csv)
 
-# IMEDS and CSV (WP7).
+# IMEDS and CSV.
 mov_add_test(
     mov_io_text_formats_tests
     SOURCES test_imeds.cpp test_imeds_format.cpp test_csv_export.cpp test_text_helpers.cpp test_civil_time.cpp
@@ -101,8 +101,8 @@ mov_add_fuzz_test(fuzz_parse_imeds SOURCES fuzz_parse_imeds.cpp LIBRARIES mov::i
 # (src/io/netcdf/). On Linux it is linked with --wrap so that every
 # nc_open/nc_create/nc_close/nc_abort is counted (and nc_sync, nc_close and
 # remove can be observed or made to fail), and a listener fails any test
-# case that ends with a netCDF id open (B5). Other linkers have no
-# --wrap; there the counting tests skip.
+# case that ends with a netCDF id open (v4 leaked ids on its error paths).
+# Other linkers have no --wrap; there the counting tests skip.
 find_package(netCDF CONFIG REQUIRED)
 
 add_library(mov_nc_fixtures STATIC support/nc_fixtures.cpp support/nc_counts.cpp)
@@ -138,7 +138,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
 endif()
 
-# ---- ADCIRC netCDF station output and D-Flow FM history files (WP9) -------------
+# ---- ADCIRC netCDF station output and D-Flow FM history files ----------------
 #
 # The fixtures are written at test time with netCDF-C itself
 # (support/model_fixtures.cpp, in mov_nc_fixtures). The [legacy] tests read the
@@ -158,7 +158,7 @@ endif()
 # The model readers close their file on every path (needs the --wrap shims).
 target_sources(mov_io_netcdf_tests PRIVATE test_model_nc_handles.cpp)
 
-# ---- the v5 station netCDF format (WP10a) ------------------------------------
+# ---- the v5 station netCDF format --------------------------------------------
 #
 # mov_station_nc_canonical holds the canonical files of docs/station-netcdf.md
 # section 9, written with mov::io; the golden CDL tests and the
@@ -190,7 +190,7 @@ add_executable(station_nc_fixtures station_nc_fixtures.cpp)
 target_link_libraries(station_nc_fixtures PRIVATE mov_station_nc_canonical mov_nc_fixtures mov::options mov::warnings)
 mov_enable_static_analysis(station_nc_fixtures)
 
-# ---- foreign CF, legacy v4 and hostile station netCDF files (WP10b) -----------
+# ---- foreign CF, legacy v4 and hostile station netCDF files ------------------
 #
 # The fixtures are written at test time with netCDF-C itself (support/nc_build.hpp,
 # support/legacy_fixtures.cpp), independent of mov::io.
@@ -223,6 +223,7 @@ if(TARGET fuzz_station_netcdf_structure)
     )
 endif()
 
-# The WP10b review round: time ranking, bounded reads, padding options, names,
-# tokens, quality flags, datums, water-level hints, warning order.
+# Foreign and legacy reader details: time ranking, bounded reads, padding
+# options, names, tokens, quality flags, datums, water-level hints, warning
+# order.
 target_sources(mov_io_station_netcdf_tests PRIVATE test_station_netcdf_foreign_review.cpp)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The model readers open their file once and close it on every path (B5: v4
+// The model readers open their file once and close it on every path (v4
 // returned early from nearly every error path without nc_close). Linked with
 // the --wrap shims of mov_io_netcdf_tests, so the counts are the library's.
 

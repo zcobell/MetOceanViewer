@@ -22,14 +22,14 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/utf8.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/units.hpp"
+#include "mov/core/utf8.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -39,7 +39,7 @@
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_v5.hpp"
 
 namespace mov::io::detail::station_nc {
 
@@ -47,19 +47,16 @@ namespace {
 
 namespace sn = ::mov::io::detail::station_nc;
 
-}  // namespace
-
-namespace {
-
 // ---- the header (SN 12.1, 13)
 // ----------------------------------------------------
 
 std::expected<void, Error> check_format(const nc::File& file) {
-  return text_of(file, nc::global, "metoceanviewer_format")
+  return optional_text(file, nc::global, "metoceanviewer_format")
       .and_then([](const std::optional<std::string>& text)
                     -> std::expected<void, Error> {
         if (text != station_nc_format) {
-          return invalid(FormatErrc::not_this_format, ":metoceanviewer_format");
+          return fail(format_error(FormatErrc::not_this_format,
+                                   ":metoceanviewer_format"));
         }
         return {};
       });
@@ -67,20 +64,21 @@ std::expected<void, Error> check_format(const nc::File& file) {
 
 std::expected<Read<StationNcVersion>, Error> read_version(
     const nc::File& file) {
-  auto text = text_of(file, nc::global, "metoceanviewer_format_version");
+  auto text = optional_text(file, nc::global, "metoceanviewer_format_version");
   if (not text) {
     return std::unexpected{std::move(text).error()};
   }
   if (not *text) {
-    return invalid(FormatErrc::bad_version, ":metoceanviewer_format_version");
+    return fail(format_error(FormatErrc::bad_version,
+                             ":metoceanviewer_format_version"));
   }
   const std::string version = subject_of(**text);
   const auto parsed = parse_station_nc_version(**text);
   if (not parsed) {
-    return invalid(FormatErrc::bad_version, version);
+    return fail(format_error(FormatErrc::bad_version, version));
   }
   if (parsed->major != station_nc_version.major) {
-    return invalid(FormatErrc::unsupported_version, version);
+    return fail(format_error(FormatErrc::unsupported_version, version));
   }
   Read<StationNcVersion> out{.value = *parsed, .warnings = {}};
   if (parsed->minor > station_nc_version.minor) {
@@ -91,33 +89,33 @@ std::expected<Read<StationNcVersion>, Error> read_version(
 }
 
 /// `Conventions` names CF 1.6 or a later 1.x (CF 2 would be another
-/// convention: refused, N4).
+/// convention: refused).
 std::expected<void, Error> check_conventions(const nc::File& file) {
-  auto conventions = text_of(file, nc::global, "Conventions");
+  auto conventions = optional_text(file, nc::global, "Conventions");
   if (not conventions) {
     return std::unexpected{std::move(conventions).error()};
   }
   if (not *conventions) {
-    return invalid(FormatErrc::missing_attribute, ":Conventions");
+    return fail(format_error(FormatErrc::missing_attribute, ":Conventions"));
   }
   const auto cf = parse_cf_conventions(**conventions);
   if (not cf or cf->major != 1 or cf->minor < 6) {
-    return invalid(FormatErrc::unsupported_version, ":Conventions");
+    return fail(format_error(FormatErrc::unsupported_version, ":Conventions"));
   }
   return {};
 }
 
 std::expected<void, Error> check_feature_type(const nc::File& file) {
-  auto feature = text_of(file, nc::global, "featureType");
+  auto feature = optional_text(file, nc::global, "featureType");
   if (not feature) {
     return std::unexpected{std::move(feature).error()};
   }
   if (not *feature) {
-    return invalid(FormatErrc::missing_attribute, ":featureType");
+    return fail(format_error(FormatErrc::missing_attribute, ":featureType"));
   }
-  if (not core::detail::equal_ignore_case(core::detail::trim(**feature),
-                                          sn::feature_type)) {
-    return invalid(FormatErrc::unsupported_layout, ":featureType");
+  if (not core::ascii::equal_ignore_case(core::ascii::trim(**feature),
+                                         sn::feature_type)) {
+    return fail(format_error(FormatErrc::unsupported_layout, ":featureType"));
   }
   return {};
 }
@@ -135,15 +133,11 @@ std::expected<Read<StationNcVersion>, Error> read_header(const nc::File& file) {
 // ---- the structure (SN 12.2, 12.3)
 // -------------------------------------------------
 
-}  // namespace
-
-namespace {
-
 std::expected<nc::VarInfo, Error> require_named(const Vars& vars,
                                                 std::string_view name) {
   auto var = named(vars, name);
   if (not var) {
-    return invalid(FormatErrc::missing_variable, std::string{name});
+    return fail(format_error(FormatErrc::missing_variable, std::string{name}));
   }
   return *std::move(var);
 }
@@ -162,11 +156,12 @@ bool uses_dim(const nc::VarInfo& var, int dim) {
 std::expected<nc::VarInfo, Error> text_var(nc::VarInfo var,
                                            const nc::DimInfo& station) {
   if (var.type != nc::Type::char_) {
-    return invalid(FormatErrc::bad_encoding, std::string{var.name.view()});
+    return fail(
+        format_error(FormatErrc::bad_encoding, std::string{var.name.view()}));
   }
   if (var.dims.size() != 2 or var.dims[0].id != station.id) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   std::string{var.name.view()});
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             std::string{var.name.view()}));
   }
   return var;
 }
@@ -175,8 +170,8 @@ std::expected<nc::VarInfo, Error> text_var(nc::VarInfo var,
 std::expected<nc::VarInfo, Error> instance_var(nc::VarInfo var,
                                                const nc::DimInfo& station) {
   if (not is_over(var, {station.id})) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   std::string{var.name.view()});
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             std::string{var.name.view()}));
   }
   return var;
 }
@@ -188,8 +183,8 @@ std::expected<void, Error> check_fixed(const Vars& vars) {
     const auto unlimited = std::ranges::find_if(
         v.dims, [](const nc::DimInfo& d) { return d.unlimited; });
     if (unlimited != v.dims.end()) {
-      return invalid(FormatErrc::unsupported_layout,
-                     std::string{unlimited->name.view()});
+      return fail(format_error(FormatErrc::unsupported_layout,
+                               std::string{unlimited->name.view()}));
     }
   }
   return {};
@@ -201,16 +196,16 @@ std::expected<nc::VarInfo, Error> find_station_id(const nc::File& file,
                                                   const nc::DimInfo& station) {
   std::vector<const nc::VarInfo*> ids;
   for (const nc::VarInfo& v : vars) {
-    auto role = text_of(file, v.name, "cf_role");
+    auto role = optional_text(file, v.name, "cf_role");
     if (not role) {
       return std::unexpected{std::move(role).error()};
     }
-    if (role->transform(core::detail::trim) == "timeseries_id") {
+    if (role->transform(core::ascii::trim) == "timeseries_id") {
       ids.push_back(&v);
     }
   }
   if (ids.size() != 1) {
-    return invalid(FormatErrc::no_station_id, "cf_role");
+    return fail(format_error(FormatErrc::no_station_id, "cf_role"));
   }
   return text_var(*ids.front(), station);
 }
@@ -227,8 +222,8 @@ std::expected<Timing, Error> timing_of(const Vars& vars, nc::VarInfo time,
   }
   if (time.dims.size() != 2 or time.dims[0].id != station.id or
       time.dims[1].name != sn::obs_dim.view()) {
-    return invalid(FormatErrc::unsupported_layout,
-                   std::string{time.name.view()});
+    return fail(format_error(FormatErrc::unsupported_layout,
+                             std::string{time.name.view()}));
   }
   auto count =
       require_named(vars, sn::obs_count.view()).and_then([&](nc::VarInfo v) {
@@ -247,7 +242,7 @@ std::expected<Timing, Error> timing_of(const Vars& vars, nc::VarInfo time,
 /// The whitespace-separated names in `ancillary_variables` of `var`.
 std::expected<std::vector<std::string>, Error> ancillary_names(
     const nc::File& file, const nc::VarInfo& var) {
-  return text_of(file, var.name, "ancillary_variables")
+  return optional_text(file, var.name, "ancillary_variables")
       .transform([](const std::optional<std::string>& text) {
         std::vector<std::string> names;
         if (text) {
@@ -282,9 +277,9 @@ std::expected<void, Error> check_status(const nc::File& file,
                                         const nc::VarInfo& status) {
   const std::string subject{status.name.view()};
   if (status.type != nc::Type::byte) {
-    return invalid(FormatErrc::bad_flag, subject);
+    return fail(format_error(FormatErrc::bad_flag, subject));
   }
-  auto meanings = text_of(file, status.name, "flag_meanings");
+  auto meanings = optional_text(file, status.name, "flag_meanings");
   auto values = byte_att(file, status.name, "flag_values");
   auto fill = byte_att(file, status.name, "_FillValue");
   for (const auto* r : {&values, &fill}) {
@@ -307,7 +302,7 @@ std::expected<void, Error> check_status(const nc::File& file,
                              return f == sn::status_dry or f == sn::status_wet;
                            });
   if (not meanings_ok or not values_ok or not fill_ok) {
-    return invalid(FormatErrc::bad_flag, subject);
+    return fail(format_error(FormatErrc::bad_flag, subject));
   }
   return {};
 }
@@ -330,7 +325,7 @@ std::expected<std::set<std::string, std::less<>>, Error> ancillary_targets(
       }
       if (not std::ranges::equal(target->dims, c.dims, {}, &nc::DimInfo::id,
                                  &nc::DimInfo::id)) {
-        return invalid(FormatErrc::bad_ancillary, subject_of(name));
+        return fail(format_error(FormatErrc::bad_ancillary, subject_of(name)));
       }
       targets.insert(name);
     }
@@ -370,7 +365,8 @@ std::expected<std::vector<DataVar>, Error> find_data(const nc::File& file,
       continue;
     }
     if (not is_over(v, {station.id, timing.sample.id})) {
-      return invalid(FormatErrc::dimension_mismatch, subject_of(v.name.view()));
+      return fail(format_error(FormatErrc::dimension_mismatch,
+                               subject_of(v.name.view())));
     }
     candidates.push_back(v);
   }
@@ -390,7 +386,7 @@ std::expected<std::vector<DataVar>, Error> find_data(const nc::File& file,
     data.push_back({.var = std::move(v), .status = *std::move(status)});
   }
   if (data.empty()) {
-    return invalid(FormatErrc::no_data_variables, "");
+    return fail(format_error(FormatErrc::no_data_variables, ""));
   }
   return data;
 }
@@ -478,12 +474,12 @@ std::expected<std::vector<std::string>, Error> grid_mappings(
     const nc::File& file, std::span<const DataVar> data) {
   std::vector<std::string> names;
   for (const DataVar& d : data) {
-    auto text = text_of(file, d.var.name, "grid_mapping");
+    auto text = optional_text(file, d.var.name, "grid_mapping");
     if (not text) {
       return std::unexpected{std::move(text).error()};
     }
     if (*text) {
-      std::string name{core::detail::trim(**text)};
+      std::string name{core::ascii::trim(**text)};
       if (std::ranges::find(names, name) == names.end()) {
         names.push_back(std::move(name));
       }
@@ -491,10 +487,6 @@ std::expected<std::vector<std::string>, Error> grid_mappings(
   }
   return names;
 }
-
-}  // namespace
-
-namespace {
 
 std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file,
                                               const Structure& s) {
@@ -508,11 +500,13 @@ std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file,
                                           .subject = "EPSG:4326"}}};
   }
   if (names->size() > 1) {
-    return invalid(FormatErrc::unsupported_crs, subject_of(names->at(1)));
+    return fail(
+        format_error(FormatErrc::unsupported_crs, subject_of(names->at(1))));
   }
   const auto var = named(s.vars, names->front());
   if (not var) {
-    return invalid(FormatErrc::unsupported_crs, subject_of(names->front()));
+    return fail(
+        format_error(FormatErrc::unsupported_crs, subject_of(names->front())));
   }
   return crs_of_mapping(file, *var);
 }
@@ -528,18 +522,14 @@ std::expected<std::optional<Projector>, Error> projector_for(core::Epsg epsg) {
     return fail(to_format_error(projector.error(), std::nullopt));
   }
   if (projector->kind() != CrsKind::geographic) {
-    return invalid(FormatErrc::unsupported_crs,
-                   "EPSG:" + std::to_string(epsg.code()));
+    return fail(format_error(FormatErrc::unsupported_crs,
+                             "EPSG:" + std::to_string(epsg.code())));
   }
   return std::optional<Projector>{*std::move(projector)};
 }
 
 // ---- the stations (SN 12.4)
 // ---------------------------------------------------------
-
-}  // namespace
-
-namespace {
 
 std::expected<std::vector<core::StationKey>, Error> station_ids(
     const nc::File& file, const nc::VarInfo& var, const StopToken& stop) {
@@ -554,14 +544,15 @@ std::expected<std::vector<core::StationKey>, Error> station_ids(
   for (std::size_t i = 0; i < rows->size(); ++i) {
     std::string text = trimmed(std::move((*rows)[i]));
     if (seen.contains(text)) {
-      return invalid(FormatErrc::duplicate_station_id, subject_of(text), i);
+      return fail(
+          format_error(FormatErrc::duplicate_station_id, subject_of(text), i));
     }
     auto key = core::StationKey::make(text);
     if (not key) {
-      return invalid(key.error() == core::StationKeyError::empty
-                         ? FormatErrc::no_station_id
-                         : FormatErrc::bad_encoding,
-                     subject, i);
+      return fail(format_error(key.error() == core::StationKeyError::empty
+                                   ? FormatErrc::no_station_id
+                                   : FormatErrc::bad_encoding,
+                               subject, i));
     }
     seen.insert(std::move(text));
     ids.push_back(*std::move(key));
@@ -580,7 +571,8 @@ std::expected<std::vector<core::StationText>, Error> station_names(
   for (std::size_t i = 0; i < rows->size(); ++i) {
     auto text = core::StationText::make(trimmed(std::move((*rows)[i])));
     if (not text) {
-      return invalid(FormatErrc::bad_encoding, std::string{var.name.view()}, i);
+      return fail(format_error(FormatErrc::bad_encoding,
+                               std::string{var.name.view()}, i));
     }
     names.push_back(*std::move(text));
   }
@@ -606,8 +598,9 @@ station_sources(const nc::File& file, const Structure& s,
   for (std::size_t i = 0; i < rows->size(); ++i) {
     const std::string token = trimmed(std::move((*rows)[i]));
     if (token.find('\0') != std::string::npos or
-        not core::detail::is_valid_utf8(token)) {
-      return invalid(FormatErrc::bad_encoding, std::string{var.name.view()}, i);
+        not core::is_valid_utf8(token)) {
+      return fail(format_error(FormatErrc::bad_encoding,
+                               std::string{var.name.view()}, i));
     }
     out.value[i] = core::parse_data_source(token);
     if (out.value[i] or token.empty()) {
@@ -625,10 +618,6 @@ station_sources(const nc::File& file, const Structure& s,
   }
   return out;
 }
-
-}  // namespace
-
-namespace {
 
 std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     const nc::File& file, const Structure& s, core::Epsg epsg,
@@ -681,49 +670,38 @@ std::expected<core::QuantityId, Error> quantity_of(
   auto generic = core::GenericQuantity::parse(
       {.token = token, .standard_name = standard_name.value_or("")});
   if (not generic or sn::is_reserved(token)) {
-    return invalid(FormatErrc::invalid_variable_name, subject_of(token));
+    return fail(
+        format_error(FormatErrc::invalid_variable_name, subject_of(token)));
   }
   return *std::move(generic);
 }
 
-/// The unit of `units`: a registry quantity other than `difference` needs one
-/// that converts to its canonical unit (noncanonical_unit); an OtherUnit core
-/// does not know warns.
+/// The unit of `units` (parsed_unit): a registry quantity other than
+/// `difference` needs one that converts to its canonical unit
+/// (noncanonical_unit).
 std::expected<Read<std::optional<core::Unit>>, Error> unit_of(
     const core::QuantityId& q, const std::optional<std::string>& text) {
-  Read<std::optional<core::Unit>> out{
-      .value = text ? core::parse_unit(*text) : std::nullopt, .warnings = {}};
+  Read<std::optional<core::Unit>> out = parsed_unit(text);
   const auto* registry = std::get_if<core::Quantity>(&q);
   if (const auto canonical = registry != nullptr
                                  ? core::canonical_unit(*registry)
                                  : std::nullopt) {
     if (not out.value or not core::conversion(*out.value, *canonical)) {
-      return invalid(FormatErrc::noncanonical_unit,
-                     std::string{core::token(q)});
-    }
-  }
-  if (out.value) {
-    const auto* other = std::get_if<core::OtherUnit>(&*out.value);
-    if (other != nullptr and not core::is_canonical_other(*other)) {
-      out.warnings.push_back({.code = WarningCode::unrecognized_unit,
-                              .subject = subject_of(other->symbol())});
+      return fail(format_error(FormatErrc::noncanonical_unit,
+                               std::string{core::token(q)}));
     }
   }
   return out;
 }
 
-}  // namespace
-
-namespace {
-
 std::expected<Read<core::SeriesMeta>, Error> meta_of(const nc::File& file,
                                                      const nc::VarInfo& var) {
   const std::string_view token = var.name.view();
   auto texts =
-      collect([&] { return text_of(file, var.name, "standard_name"); },
-              [&] { return text_of(file, var.name, "long_name"); },
-              [&] { return text_of(file, var.name, "units"); },
-              [&] { return text_of(file, var.name, "vertical_datum"); });
+      collect([&] { return optional_text(file, var.name, "standard_name"); },
+              [&] { return optional_text(file, var.name, "long_name"); },
+              [&] { return optional_text(file, var.name, "units"); },
+              [&] { return optional_text(file, var.name, "vertical_datum"); });
   if (not texts) {
     return std::unexpected{std::move(texts).error()};
   }
@@ -736,13 +714,14 @@ std::expected<Read<core::SeriesMeta>, Error> meta_of(const nc::File& file,
   if (not unit) {
     return std::unexpected{std::move(unit).error()};
   }
+  // The unit's warnings come before the datum's.
   Read<core::SeriesMeta> meta = with_datum(
       core::SeriesMeta::make({.quantity = *std::move(quantity),
                               .label = long_name.value_or(std::string{token}),
                               .unit = std::move(unit->value)}),
       datum, token);
-  meta.warnings =
-      concatenated(std::move(unit->warnings), std::move(meta.warnings));
+  append(unit->warnings, std::move(meta.warnings));
+  meta.warnings = std::move(unit->warnings);
   return meta;
 }
 
@@ -758,12 +737,14 @@ std::expected<Read<std::vector<core::SeriesMeta>>, Error> read_schema(
     }
     const std::string token{core::token(meta->value.quantity())};
     if (tokens.contains(token)) {
-      return invalid(FormatErrc::duplicate_quantity, subject_of(token));
+      return fail(
+          format_error(FormatErrc::duplicate_quantity, subject_of(token)));
     }
     // The writer's own rule (writable_token): next to the columns before it,
     // the token is not another's status name nor has a status name taken.
     if (not writable_token(token, tokens)) {
-      return invalid(FormatErrc::invalid_variable_name, subject_of(token));
+      return fail(
+          format_error(FormatErrc::invalid_variable_name, subject_of(token)));
     }
     tokens.insert(token);
     out.value.push_back(std::move(meta->value));
@@ -792,8 +773,8 @@ std::expected<std::vector<std::size_t>, Error> sample_counts(
   for (std::size_t i = 0; i < raw->size(); ++i) {
     const std::int64_t n = (*raw)[i];
     if (n < 0 or std::cmp_greater(n, s.timing.sample.length)) {
-      return invalid(FormatErrc::bad_obs_count, std::string{var.name.view()},
-                     i);
+      return fail(format_error(FormatErrc::bad_obs_count,
+                               std::string{var.name.view()}, i));
     }
     counts.push_back(static_cast<std::size_t>(n));
   }
@@ -815,13 +796,8 @@ std::expected<Read<Opened>, Error> open_v5(const nc::File& file,
   const Structure& s = *structure;
   auto parts = collect_read(
       [&] {
-        return crs_of(file, s).and_then([&](Read<core::Epsg> epsg) {
-          return read_stations(file, s, epsg.value, stop)
-              .transform([&](Read<std::vector<core::FileStation>> stations) {
-                stations.warnings = concatenated(std::move(epsg.warnings),
-                                                 std::move(stations.warnings));
-                return stations;
-              });
+        return and_then_read(crs_of(file, s), [&](core::Epsg epsg) {
+          return read_stations(file, s, epsg, stop);
         });
       },
       [&] { return read_schema(file, s.data); },
@@ -841,10 +817,10 @@ std::expected<Read<Opened>, Error> open_v5(const nc::File& file,
     catalog.stations.push_back(
         {.station = std::move(stations[i]), .samples = counts[i]});
   }
+  append(header->warnings, std::move(parts->warnings));
   return Read<Opened>{.value = {.structure = *std::move(structure),
                                 .catalog = std::move(catalog)},
-                      .warnings = concatenated(std::move(header->warnings),
-                                               std::move(parts->warnings))};
+                      .warnings = std::move(header->warnings)};
 }
 
 }  // namespace mov::io::detail::station_nc

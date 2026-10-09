@@ -2,9 +2,10 @@
 // Copyright (c) 2026 Zach Cobell
 
 // File::masking: the CF missing-data attributes of a variable, in its own
-// type (B4, B9; SN section 8.1). plan_masking fetches and checks every
-// attribute once, whatever the variable's type; masking<T> only converts
-// the values to T, exactly or not at all.
+// type (SN section 8.1; v4 read floats untyped into doubles and never masked
+// the default fill). plan_masking fetches and checks every attribute once,
+// whatever the variable's type; masking<T> only converts the values to T,
+// exactly or not at all.
 
 #include <netcdf.h>
 
@@ -140,7 +141,7 @@ std::expected<File::MaskingPlan, NcError> File::plan_masking(NcNameRef name,
   }
   // The _FillValue is strict: the variable's own type and one value. It is
   // read with its type checked, never through nc_inq_var_fill, which copies
-  // an attribute of another type into a buffer sized for the variable's (B4).
+  // an attribute of another type into a buffer sized for the variable's.
   const auto fill = att_shape(info->id, name, "_FillValue");
   if (not fill) {
     return std::unexpected{fill.error()};

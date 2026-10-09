@@ -52,7 +52,8 @@ TEST_CASE("foreign orthogonal (CF H.2.1): data over (station, time)",
   CHECK(t.schema()[0].unit() == unit("degC"));
 
   CHECK(t.station(core::StationIndex{0}).id.view() == "A");
-  CHECK(t.station(core::StationIndex{1}).name.view() == "B");
+  CHECK(t.station(core::StationIndex{1}).id.view() == "B");
+  CHECK(t.station(core::StationIndex{1}).name.empty());  // the file has none
   CHECK_FALSE(t.station(core::StationIndex{1}).source.has_value());
   CHECK(t.station(core::StationIndex{1}).location.lat() == Catch::Approx(29.5));
   CHECK(t.station(core::StationIndex{1}).location.lon() ==

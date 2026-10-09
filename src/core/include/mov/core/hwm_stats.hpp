@@ -195,7 +195,7 @@ class Moments {
 
 /// Which line to fit. A named choice, never a bool: v4 passed a checkbox
 /// pointer that always converted to true, so every fit went through the
-/// origin whatever the user chose (N1).
+/// origin whatever the user chose.
 enum class Intercept : std::uint8_t { free, through_origin };
 
 /// y = slope * x.
@@ -219,15 +219,16 @@ struct HwmStats {
   std::size_t wet;    ///< marks that went into the statistics
   LinearFit fit;      ///< the alternative matches the requested Intercept
   /// Free fit: the Pearson r^2. Through the origin: the uncentred
-  /// 1 - SSres / sum(y^2) (decision D25; v4 centred the denominator, which
-  /// can make a good origin fit look negative). In [0, 1]. nullopt when the
-  /// fit has no degrees of freedom left (free fit with at most 2 wet marks,
-  /// origin fit with 1: the line passes through the data exactly, and 1.0
-  /// would be a claim about nothing), or when the denominator is zero (all
-  /// modeled values equal for the free fit, all zero for the origin fit).
+  /// 1 - SSres / sum(y^2), as R and statsmodels report it (v4 centred the
+  /// denominator, which can make a good origin fit look negative). In [0, 1].
+  /// nullopt when the fit has no degrees of freedom left (free fit with at
+  /// most 2 wet marks, origin fit with 1: the line passes through the data
+  /// exactly, and 1.0 would be a claim about nothing), or when the denominator
+  /// is zero (all modeled values equal for the free fit, all zero for the
+  /// origin fit).
   std::optional<double> r_squared;
   Length mean_error;  ///< mean of modeled - observed
-  /// sqrt(sum (e - mean)^2 / (n - 1)), the sample standard deviation (D17; v4
+  /// sqrt(sum (e - mean)^2 / (n - 1)), the sample standard deviation (v4
   /// divided by n). nullopt for a single wet mark.
   std::optional<Length> error_stddev;
   friend bool operator==(const HwmStats&, const HwmStats&) = default;

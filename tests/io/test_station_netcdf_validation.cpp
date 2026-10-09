@@ -184,7 +184,7 @@ TEST_CASE("the format attribute decides what the file is",
         expect(f, FormatErrc::not_this_format, ":metoceanviewer_format").code ==
         f.inspect_error().code);
   };
-  SECTION("absent: a CF timeSeries file all the same (WP10b)") {
+  SECTION("absent: a CF timeSeries file all the same") {
     f.edit().remove_att("", "metoceanviewer_format");
     const auto read = f.read();
     CHECK(std::holds_alternative<io::ForeignCfOrigin>(read.value.origin));
@@ -370,7 +370,28 @@ TEST_CASE("station_provider: unknown tokens are dropped with a warning",
         core::DataSource::noaa_coops);
 }
 
-TEST_CASE("station_provider must be UTF-8 without NUL (N3)",
+TEST_CASE("station_provider: harmonics is a token, xtide is not",
+          "[io][station_nc][validation][stations]") {
+  // v5 replaced XTide with its own harmonics engine; the format was
+  // not released, so the token changed in place.
+  const Broken harmonics{station_nc::orthogonal()};
+  harmonics.edit().put_chars("station_provider", 1,
+                             std::string_view{"harmonics\0", 10});
+  const auto read = harmonics.read();
+  CHECK(read.value.table.station(core::StationIndex{1}).source ==
+        core::DataSource::harmonics);
+  CHECK(count_of(read.warnings, WarningCode::unknown_provider) == 0);
+
+  const Broken xtide{station_nc::orthogonal()};
+  xtide.edit().put_chars("station_provider", 1,
+                         std::string_view{"xtide\0\0\0\0\0", 10});
+  const auto old = xtide.read();
+  CHECK(warning_of(old.warnings, WarningCode::unknown_provider).subject ==
+        "xtide");
+  CHECK(not old.value.table.station(core::StationIndex{1}).source);
+}
+
+TEST_CASE("station_provider must be UTF-8 without NUL",
           "[io][station_nc][validation][stations]") {
   const Broken f{station_nc::orthogonal()};
   f.edit().put_chars("station_provider", 1, "\xFF\xFE");
@@ -378,8 +399,10 @@ TEST_CASE("station_provider must be UTF-8 without NUL (N3)",
   CHECK(e.station == 1);
 }
 
-TEST_CASE("unlimited dimensions are refused (S4)",
+TEST_CASE("unlimited dimensions are refused",
           "[io][station_nc][validation][structure]") {
+  // With no unlimited dimension a v5 file cannot have zero stations or a
+  // zero-length sample dimension.
   for (const bool station : {true, false}) {
     CAPTURE(station);
     const auto e = skeleton_error(
@@ -527,7 +550,7 @@ TEST_CASE("wet/dry status: flags and consistency",
     CHECK(first[0] == v(0.5));
     CHECK(second[1] == missing);
   }
-  SECTION("a status variable written wrongly is refused, not ignored (S1)") {
+  SECTION("a status variable written wrongly is refused, not ignored") {
     f.edit().text("water_level_status", "flag_meanings", "bad good");
     expect(f, FormatErrc::bad_flag, "water_level_status");
     CHECK(f.inspect_error().code == FormatErrc::bad_flag);
@@ -645,26 +668,34 @@ TEST_CASE("quantities, units and datums of a data variable",
     CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit).subject ==
           "smoots");
   }
-  SECTION("generic quantities v5 wrote read back without a warning (F4)") {
+  SECTION("the unit warning names the text as the file has it") {
+    // parse_unit collapses the blanks of the unit it keeps; the subject does
+    // not, so the user can find the text in the file.
+    f.edit().text("value", "units", "smoots  per  hour");
+    const auto read = f.read();
+    CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit).subject ==
+          "smoots  per  hour");
+  }
+  SECTION("generic quantities v5 wrote read back without a warning") {
     const auto read = f.read();
     CHECK(read.warnings.empty());
     CHECK(read.value.table == station_nc::registry().table);
   }
-  SECTION("a name that is no quantity token (S5)") {
+  SECTION("a name that is no quantity token") {
     f.edit().add_var("my-var", NC_DOUBLE, {"station", "time"});
     expect(f, FormatErrc::invalid_variable_name, "my-var");
     CHECK(f.inspect_error().code == FormatErrc::invalid_variable_name);
   }
-  SECTION("a name the format reserves (S5)") {
+  SECTION("a name the format reserves") {
     f.edit().add_var("elevation", NC_DOUBLE, {"station", "time"});
     expect(f, FormatErrc::invalid_variable_name, "elevation");
   }
-  SECTION("a registry quantity in a unit that is not its own (S2)") {
+  SECTION("a registry quantity in a unit that is not its own") {
     f.edit().text("water_level", "units", "m s-1");
     expect(f, FormatErrc::noncanonical_unit, "water_level");
     CHECK(f.inspect_error().code == FormatErrc::noncanonical_unit);
   }
-  SECTION("a registry quantity without units (S2)") {
+  SECTION("a registry quantity without units") {
     f.edit().remove_att("air_temperature", "units");
     expect(f, FormatErrc::noncanonical_unit, "air_temperature");
   }
@@ -677,7 +708,7 @@ TEST_CASE("quantities, units and datums of a data variable",
       CHECK(read.value.table.schema()[k->value()].unit() == unit("ft"));
     }
   }
-  SECTION("subjects from the file are cut to 120 bytes (N3)") {
+  SECTION("subjects from the file are cut to 120 bytes") {
     f.edit().text("value", "units", std::string(300, 'x'));
     const auto read = f.read();
     CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit)
@@ -702,14 +733,14 @@ TEST_CASE("the horizontal CRS (SN 10.1)", "[io][station_nc][validation][crs]") {
     f.edit().remove_att("crs", "epsg_code");
     CHECK(f.read().value.table == original);
   }
-  SECTION("no ellipsoid: assumed WGS 84, with a warning (S3)") {
+  SECTION("no ellipsoid: assumed WGS 84, with a warning") {
     f.edit().remove_att("crs", "epsg_code");
     f.edit().remove_att("crs", "semi_major_axis");
     const auto read = f.read();
     CHECK(warning_of(read.warnings, WarningCode::crs_assumed).subject == "crs");
     CHECK(read.value.table == original);
   }
-  SECTION("a prime meridian other than Greenwich (S3)") {
+  SECTION("a prime meridian other than Greenwich") {
     f.edit().doubles("crs", "longitude_of_prime_meridian", {2.337229167});
     expect(f, FormatErrc::unsupported_crs, "crs");
   }

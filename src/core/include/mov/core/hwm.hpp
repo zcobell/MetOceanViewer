@@ -27,8 +27,8 @@ namespace mov::core {
 /// A model value at or below this is "no water here" (ADCIRC writes -99999).
 /// It is compared with the raw number in the file's own unit, before any unit
 /// is applied. The one rule for the statistics, the classes and the plots;
-/// v4 used -999, -9999 and -900 in different places (N2). Only readers of
-/// model output use it (design decision C9).
+/// v4 used -999, -9999 and -900 in different places. Only readers of model
+/// output use it.
 inline constexpr double dry_threshold = -999.0;
 
 /// True for a raw model value that means dry. NaN is neither dry nor

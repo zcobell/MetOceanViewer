@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// NewFile: defining and writing a new file, and write_netcdf_atomic (C16).
+// NewFile: defining and writing a new file, and write_netcdf_atomic.
 
 #include <netcdf.h>
 
@@ -320,7 +320,7 @@ std::expected<void, NcError> NewFile::put_char_rows_impl(
     return {};
   }
   // Each row is copied with its byte length and NUL-padded to the stride
-  // (B15: v4 wrote a fixed count over shorter strings).
+  // (v4 wrote a fixed count over shorter strings).
   std::string bytes(*total, '\0');
   for (std::size_t row = 0; row < rows.size(); ++row) {
     std::ranges::copy(

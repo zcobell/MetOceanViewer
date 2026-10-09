@@ -13,7 +13,7 @@ macro(mov_declare_options)
     )
     option(MOV_ENABLE_SANITIZER_ADDRESS "Enable AddressSanitizer" OFF)
     option(MOV_ENABLE_SANITIZER_UNDEFINED "Enable UndefinedBehaviorSanitizer" OFF)
-    # For the Phase 3 providers (QFuture/QtConcurrent); core and io are
+    # For the providers and the app (QFuture/QtConcurrent); core and io are
     # single-threaded.
     option(MOV_ENABLE_SANITIZER_THREAD "Enable ThreadSanitizer" OFF)
     option(MOV_ENABLE_COVERAGE "Instrument first-party code for gcov-based coverage" OFF)

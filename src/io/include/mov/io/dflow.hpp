@@ -31,8 +31,8 @@ namespace mov::io {
 // name_len)`, `station_x_coordinate(stations)`,
 // `station_y_coordinate(stations)` and the data, `(time, stations)` or `(time,
 // stations, laydim)`. Variables on `laydimw` are not offered. There is no real
-// D-Flow file in the repository (plan decision 26): the format is read as the
-// D-Flow FM manual describes it.
+// D-Flow file in the repository: the format is read as the D-Flow FM manual
+// describes it.
 //
 // Unlike ADCIRC, D-Flow has no dry sentinel (a dry station reports its bed
 // level, which can be below -999 m): a value is missing only when the
@@ -92,7 +92,7 @@ struct FlatChoice {
 };
 
 /// A layered variable at one of its layers, counted from 1 as v4's layer
-/// argument was (N16: v4 passed layer 0 for the wind of a 3-D file and
+/// argument was (v4 passed layer 0 for the wind of a 3-D file and
 /// underflowed). Made only from the catalog entry it is a layer of, so the
 /// layer is one that variable has.
 class AtLayer {
@@ -121,8 +121,8 @@ using DflowChoice = std::variant<FlatChoice, AtLayer>;
 
 struct DflowCatalog {
   /// Every station, in file order: id the 0-based index, name from
-  /// `station_name` (cut at the first NUL, white space simplified; "Station
-  /// <id>" if empty), position projected to WGS84, source `dflowfm`.
+  /// `station_name` (cut at the first NUL, white space simplified; empty if
+  /// nothing is left), position projected to WGS84, source `dflowfm`.
   std::vector<core::FileStation> stations;
   std::vector<DflowVariable> variables;
   std::size_t times;
@@ -138,7 +138,7 @@ struct DflowCatalog {
 /// A variable over (time, stations[, laydim]) of a numeric type is offered;
 /// another type is skipped with `skipped_variable`. The dimensions are found by
 /// name and variables are matched to them by identity, never by position: a
-/// file whose `time` is not the first dimension reads the same (B12).
+/// file whose `time` is not the first dimension reads the same.
 ///
 /// Errors: FormatError `missing_dimension` (`time`, `stations`, `name_len`),
 /// `missing_variable` (`time`, `station_x_coordinate`, `station_y_coordinate`,
@@ -169,7 +169,7 @@ struct DflowRequest {
 /// is `water_level`, `x_velocity` / `y_velocity` are `current_u` / `current_v`,
 /// `windx` / `windy` are `wind_u` / `wind_v`) has it, if `crs` is geographic;
 /// the components of a model on a projected grid point along the grid's axes
-/// (design decision 28), so then they are the generic `sea_water_x_velocity`,
+/// (they are not rotated), so then they are the generic `sea_water_x_velocity`,
 /// `sea_water_y_velocity`, `x_wind` and `y_wind`. Any other variable becomes a
 /// generic quantity with its name as the token and its `standard_name`, or
 /// `value` with an `unknown_quantity` warning when the name is no token.

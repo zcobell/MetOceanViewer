@@ -184,7 +184,7 @@ TEST_CASE("read_file_prefix refuses what read_text_file refuses",
   CHECK(directory.error().ec == std::errc::is_a_directory);
 }
 
-// B3: v4 opened the file with std::fstream (read and write), so a read-only
+// v4 opened the file with std::fstream (read and write), so a read-only
 // file failed to open and the reader returned "no stations" as a success.
 TEST_CASE("read_text_file reads a read-only file",
           "[io][text_file][regression][B3]") {

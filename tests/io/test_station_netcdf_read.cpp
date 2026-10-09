@@ -5,6 +5,7 @@
 // files, edge cases and random tables), selections, the catalog, and the
 // normalizations the writer reports.
 
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cfloat>
 #include <cmath>
@@ -44,6 +45,12 @@ using core::VerticalDatum;
 using io::FormatErrc;
 using io::StationNcLayout;
 using mov::test::ScratchDir;
+
+constexpr std::array all_datums{VerticalDatum::mhhw,   VerticalDatum::mhw,
+                                VerticalDatum::mtl,    VerticalDatum::msl,
+                                VerticalDatum::mlw,    VerticalDatum::mllw,
+                                VerticalDatum::navd88, VerticalDatum::ngvd29,
+                                VerticalDatum::igld85, VerticalDatum::stnd};
 
 constexpr std::int64_t max_ms = core::max_abs_time_ms;
 
@@ -202,7 +209,7 @@ TEST_CASE("round trip: datums on water levels and generic columns",
        .per_station = {{v(1)}}},
       {.meta = meta(Quantity::difference, "residual", "m"),
        .per_station = {{v(1)}}}};
-  for (const VerticalDatum d : core::detail::all_datums) {
+  for (const VerticalDatum d : all_datums) {
     variables.push_back({.meta = meta(generic(std::string{"v_"} +
                                               std::string{core::to_string(d)}),
                                       "x", "ft", d),
@@ -333,8 +340,7 @@ class RandomTables {
                           : std::optional{canonical};
     std::optional<VerticalDatum> datum;
     if (core::datum_applicable(core::QuantityId{q}) and coin()) {
-      datum = core::detail::all_datums[pick(
-          0, core::detail::all_datums.size() - 1)];
+      datum = all_datums[pick(0, all_datums.size() - 1)];
     }
     return meta(q, text(6), unit_text, datum);
   }
@@ -346,8 +352,7 @@ class RandomTables {
         coin() ? std::optional{units[pick(0, units.size() - 1)]} : std::nullopt;
     std::optional<VerticalDatum> datum;
     if (coin()) {
-      datum = core::detail::all_datums[pick(
-          0, core::detail::all_datums.size() - 1)];
+      datum = all_datums[pick(0, all_datums.size() - 1)];
     }
     const std::string token =
         k == 0 and coin() ? "value" : "q" + std::to_string(k);
@@ -572,8 +577,7 @@ TEST_CASE("parse_station_nc_version", "[io][station_nc]") {
   }
 }
 
-// ---- what an incomplete read costs (review blocker B1)
-// ---------------------------
+// ---- what an incomplete read costs ------------------------------------------
 
 /// One long station among many short ones: obs is 10000, every other station
 /// has one sample, so a read of the short ones that reads whole rows would
@@ -652,8 +656,7 @@ TEST_CASE("PaddingCheck::whole sees padding the boundary check does not read",
           .code == FormatErrc::padding_not_missing);
 }
 
-// ---- the idempotence law (F16)
-// ----------------------------------------------------
+// ---- the idempotence law ----------------------------------------------------
 
 TEST_CASE("re-writing a read-back table gives no writer warnings",
           "[io][station_nc][read][roundtrip]") {

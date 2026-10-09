@@ -49,11 +49,11 @@ TEST_CASE("SeriesMeta::make is total and keeps every field", "[core][meta]") {
   CHECK(meta.quantity() == QuantityId{Quantity::wind_speed});
   CHECK(meta.label() == "Wind at Pilots");
   CHECK(meta.unit() == std::optional<Unit>{SpeedUnit::knot});
-  // make cannot set a datum (C3): assume_datum is the only way.
+  // make cannot set a datum: assume_datum is the only way.
   CHECK(not meta.datum().has_value());
 }
 
-TEST_CASE("a datum is accepted exactly where datum_applicable holds (C3)",
+TEST_CASE("a datum is accepted exactly where datum_applicable holds",
           "[core][meta]") {
   const auto mllw = level.assume_datum(VerticalDatum::mllw);
   REQUIRE(mllw.has_value());
@@ -105,7 +105,7 @@ TEST_CASE("assume_unit fills an unset unit and refuses to replace one",
   REQUIRE(feet.has_value());
   CHECK(feet->unit() == std::optional<Unit>{LengthUnit::foot});
 
-  // An engaged unit changes only through convert (WP3), even to itself.
+  // An engaged unit changes only through convert, even to itself.
   CHECK(feet->assume_unit(LengthUnit::meter) ==
         std::unexpected{AssumeUnitError::already_set});
   CHECK(feet->assume_unit(LengthUnit::foot) ==

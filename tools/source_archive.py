@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 """
-Make the corresponding-source archive of a release (GPL-3.0 §6, plan §6.29).
+Make the corresponding-source archive every GitHub Release carries (GPL-3.0 §6).
 
     python3 tools/source_archive.py --output-dir <dir> [--work-dir <dir>]
         [--reference <file>]...

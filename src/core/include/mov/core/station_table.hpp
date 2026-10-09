@@ -59,7 +59,7 @@ enum class SelectionError : std::uint8_t {
   selection_mismatch,  // applies_to: made for a different station count
 };
 
-/// Which stations of a model file to read (C12): distinct 0-based indices,
+/// Which stations of a model file to read: distinct 0-based indices,
 /// each below the station count it was made for, in the caller's order.
 /// Every netCDF model read requires one; there is no default and no implicit
 /// "all". The count is part of the value, so a reader checks in O(1) that a
@@ -173,7 +173,7 @@ struct StationError {
 
 using TableError = std::variant<SchemaError, StationError>;
 
-/// The record every file reader returns and every file writer takes (C4).
+/// The record every file reader returns and every file writer takes.
 /// A schema of unique quantities (by token), stations, and per station a
 /// time axis plus one sample column per schema entry. Axes live in a pool,
 /// so model output, where every station shares one axis, stores its times

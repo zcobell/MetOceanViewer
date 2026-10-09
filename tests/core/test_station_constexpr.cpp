@@ -24,15 +24,15 @@ using mov::core::StationId;
 using mov::core::StationIdError;
 using mov::core::to_token;
 using mov::core::provider::Coops;
+using mov::core::provider::Harmonics;
 using mov::core::provider::Ndbc;
 using mov::core::provider::Usgs;
-using mov::core::provider::Xtide;
 
 namespace {
 
 constexpr DataSource all_sources[] = {  // NOLINT(modernize-avoid-c-arrays)
     DataSource::noaa_coops, DataSource::usgs,   DataSource::ndbc,
-    DataSource::xtide,      DataSource::adcirc, DataSource::dflowfm,
+    DataSource::harmonics,  DataSource::adcirc, DataSource::dflowfm,
     DataSource::user};
 
 constexpr bool tokens_round_trip() {
@@ -139,7 +139,7 @@ TEST_CASE("data source tokens round trip", "[core][station][constexpr]") {
   STATIC_REQUIRE(to_token(DataSource::noaa_coops) == "noaa_coops");
   STATIC_REQUIRE(to_token(DataSource::usgs) == "usgs");
   STATIC_REQUIRE(to_token(DataSource::ndbc) == "ndbc");
-  STATIC_REQUIRE(to_token(DataSource::xtide) == "xtide");
+  STATIC_REQUIRE(to_token(DataSource::harmonics) == "harmonics");
   STATIC_REQUIRE(to_token(DataSource::adcirc) == "adcirc");
   STATIC_REQUIRE(to_token(DataSource::dflowfm) == "dflowfm");
   STATIC_REQUIRE(to_token(DataSource::user) == "user");
@@ -153,7 +153,7 @@ TEST_CASE("providers match their sources", "[core][station][constexpr]") {
   STATIC_REQUIRE(Coops::source == DataSource::noaa_coops);
   STATIC_REQUIRE(Usgs::source == DataSource::usgs);
   STATIC_REQUIRE(Ndbc::source == DataSource::ndbc);
-  STATIC_REQUIRE(Xtide::source == DataSource::xtide);
+  STATIC_REQUIRE(Harmonics::source == DataSource::harmonics);
 }
 
 TEST_CASE("CO-OPS ids are seven digits", "[core][station][constexpr]") {
@@ -196,18 +196,19 @@ TEST_CASE("NDBC ids are five characters, upper-cased",
   STATIC_REQUIRE(fails<Ndbc>("burl_", StationIdError::invalid));
 }
 
-TEST_CASE("XTide ids are station names", "[core][station][constexpr]") {
-  STATIC_REQUIRE(Xtide::valid_id("Battery, New York Harbor, New York"));
-  STATIC_REQUIRE(Xtide::valid_id("\xC3\x89le"));  // UTF-8 bytes are fine
-  STATIC_REQUIRE_FALSE(Xtide::valid_id(""));
-  STATIC_REQUIRE_FALSE(Xtide::valid_id("a\tb"));
-  STATIC_REQUIRE_FALSE(Xtide::valid_id("a\x7F"));
-  STATIC_REQUIRE_FALSE(Xtide::valid_id(std::string_view{"a\0b", 3}));
-  STATIC_REQUIRE_FALSE(Xtide::valid_id("\xC3\x28"));  // not UTF-8
-  STATIC_REQUIRE_FALSE(Xtide::valid_id("Key West \xFF"));
-  STATIC_REQUIRE(Xtide::valid_id(repeated('x', 255)));
-  STATIC_REQUIRE_FALSE(Xtide::valid_id(repeated('x', 256)));
-  STATIC_REQUIRE(makes<Xtide>("  Key West, Florida \r\n", "Key West, Florida"));
+TEST_CASE("harmonics ids are station names", "[core][station][constexpr]") {
+  STATIC_REQUIRE(Harmonics::valid_id("Battery, New York Harbor, New York"));
+  STATIC_REQUIRE(Harmonics::valid_id("\xC3\x89le"));  // UTF-8 bytes are fine
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id(""));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("a\tb"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("a\x7F"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id(std::string_view{"a\0b", 3}));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("\xC3\x28"));  // not UTF-8
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("Key West \xFF"));
+  STATIC_REQUIRE(Harmonics::valid_id(repeated('x', 255)));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id(repeated('x', 256)));
+  STATIC_REQUIRE(
+      makes<Harmonics>("  Key West, Florida \r\n", "Key West, Florida"));
 }
 
 TEST_CASE("station text is UTF-8 without NUL", "[core][station][constexpr]") {
@@ -227,7 +228,7 @@ TEST_CASE("station keys are non-empty station text",
   using mov::core::StationKey;
   using mov::core::StationKeyError;
   STATIC_REQUIRE(key_is("0", "0"));
-  STATIC_REQUIRE(key_is(" padded ", " padded "));  // kept exactly (C14)
+  STATIC_REQUIRE(key_is(" padded ", " padded "));  // kept exactly
   STATIC_REQUIRE(StationKey::make("") ==
                  std::unexpected{StationKeyError::empty});
   STATIC_REQUIRE(StationKey::make(std::string{"\0", 1}) ==
@@ -241,7 +242,7 @@ TEST_CASE("station keys are non-empty station text",
 TEST_CASE("blank ids are empty, not invalid", "[core][station][constexpr]") {
   STATIC_REQUIRE(fails<Coops>("", StationIdError::empty));
   STATIC_REQUIRE(fails<Usgs>(" \t\r\n", StationIdError::empty));
-  STATIC_REQUIRE(fails<Xtide>("   ", StationIdError::empty));
+  STATIC_REQUIRE(fails<Harmonics>("   ", StationIdError::empty));
 }
 
 TEST_CASE("station ids are ordered by their text",

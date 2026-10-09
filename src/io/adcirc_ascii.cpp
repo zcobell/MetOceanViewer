@@ -30,6 +30,7 @@
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/model_number.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -43,11 +44,8 @@ namespace mov::io {
 namespace {
 
 using Line = detail::LineCursor::Line;
-
-template <class E>
-auto fail(E&& e) {
-  return std::unexpected{lift<Error>(std::forward<E>(e))};
-}
+using detail::fail;
+using detail::format_error;
 
 ParseError whole_line(ParseErrc code, const Line& line) {
   return ParseError::make(code, {.line = line.number}, line.text);
@@ -96,7 +94,7 @@ std::expected<HeaderAndRest, ParseError> read_header(std::string_view text) {
 
 // The grid the output is on, which only the station file says: its CRS, as the
 // native points of its stations (WGS84 stations have none). The vector
-// components of a projected grid point along its axes (design decision 28).
+// components of a projected grid point along its axes.
 CrsKind grid_of(std::span<const core::FileStation> stations) {
   for (const core::FileStation& station : stations) {
     if (station.native) {
@@ -112,7 +110,7 @@ CrsKind grid_of(std::span<const core::FileStation> stations) {
 // ------------------------------------------------------------------
 
 // The model's "no data" test on a finite number: the same threshold as the
-// dry rule, which only elevation turns into Dry (design C9).
+// dry rule, which only elevation turns into Dry.
 bool is_fill(double raw) noexcept { return core::is_dry(raw); }
 
 struct Classified {
@@ -122,7 +120,8 @@ struct Classified {
 
 // One station line's numbers as samples. Elevation: a fill is Dry. Every
 // other output: it is Missing, and a fill in either component of a vector
-// makes both Missing (N7). A number that is not finite is Missing and counted.
+// makes both Missing (v4 tested the first component only). A number that is
+// not finite is Missing and counted.
 Classified classify(AdcircKind kind,
                     std::span<const detail::ModelNumber> numbers) {
   Classified out{.samples = {}, .nonfinite = 0};
@@ -500,13 +499,6 @@ class AsciiReader {
   std::size_t nonfinite_{0};
   std::size_t first_masked_line_{0};
 };
-
-FormatError format_error(FormatErrc code, std::string subject) {
-  return FormatError{.code = code,
-                     .subject = std::move(subject),
-                     .station = std::nullopt,
-                     .index = std::nullopt};
-}
 
 }  // namespace
 

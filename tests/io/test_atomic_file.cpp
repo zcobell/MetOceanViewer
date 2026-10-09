@@ -189,7 +189,7 @@ TEST_CASE("a long target name does not make the temporary name too long",
   CHECK(read_bytes(target) == "x");
 }
 
-// B1: a body must be able to say that it failed.
+// A body must be able to say that it failed.
 TEST_CASE(
     "a failing body leaves the target byte-identical and its error is returned",
     "[io][atomic][regression][B1]") {
@@ -301,9 +301,10 @@ TEST_CASE("a body that throws leaves the target and the directory untouched",
 }
 
 // Every stage can fail. Before the rename the target is byte-identical to what
-// it was (B19) and the directory holds no temporary file; a failure of the
-// directory fsync comes after the rename, so the target is the complete new
-// file, but the error is still reported.
+// it was (v4 deleted it first, so a failed save lost it) and the directory
+// holds no temporary file; a failure of the directory fsync comes after the
+// rename, so the target is the complete new file, but the error is still
+// reported.
 TEST_CASE("fault injection at every stage", "[io][atomic][regression][B19]") {
   struct Case {
     AtomicStage stage;

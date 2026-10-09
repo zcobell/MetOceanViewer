@@ -15,8 +15,9 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "model_netcdf.hpp"
+#include "mov/core/ascii.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/units.hpp"
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/detail/text.hpp"
@@ -68,18 +69,13 @@ bool is_netcdf_magic(std::string_view bytes) {
 
 std::expected<FileDetection, Error> netcdf_detection(
     const std::filesystem::path& path, const ReadLimits& limits) {
-  auto file = nc::File::open(path, limits);
-  if (not file) {
-    return std::unexpected{Error{std::move(file).error()}};
-  }
-  auto kind = detail::classify_netcdf(*file);
-  if (auto closed = std::move(*file).close(); not closed and kind) {
-    return std::unexpected{Error{std::move(closed).error()}};
-  }
+  auto kind = detail::with_file(path, limits, [](const nc::File& file) {
+    return detail::classify_netcdf(file);
+  });
   if (not kind) {
     return std::unexpected{std::move(kind).error()};
   }
-  using core::detail::Overloaded;
+  using core::Overloaded;
   return std::visit(
       Overloaded{[](const detail::kind::StationV5&) {
                    return FileDetection{FileType::station_netcdf};
@@ -138,9 +134,7 @@ std::vector<std::string_view> lines_of(std::string_view prefix,
 }
 
 bool all_digits(std::string_view word) {
-  return not word.empty() and std::ranges::all_of(word, [](char c) {
-    return c >= '0' and c <= '9';
-  });
+  return not word.empty() and std::ranges::all_of(word, core::ascii::is_digit);
 }
 
 bool is_number(std::string_view word) {
@@ -150,8 +144,7 @@ bool is_number(std::string_view word) {
 bool mentions_imeds(std::string_view line) {
   constexpr std::string_view needle = "imeds";
   for (std::size_t i = 0; i + needle.size() <= line.size(); ++i) {
-    if (core::detail::equal_ignore_case(line.substr(i, needle.size()),
-                                        needle)) {
+    if (core::ascii::equal_ignore_case(line.substr(i, needle.size()), needle)) {
       return true;
     }
   }
@@ -190,7 +183,7 @@ std::size_t skip_blank(const std::vector<std::string_view>& lines,
 /// v4 wrote "% IMEDS generic format". A first line that merely mentions the
 /// word (a description) is not one.
 bool is_imeds_banner(std::string_view line) {
-  const std::string_view text = core::detail::trim(line);
+  const std::string_view text = core::ascii::trim(line);
   return text.starts_with('%') and mentions_imeds(text);
 }
 

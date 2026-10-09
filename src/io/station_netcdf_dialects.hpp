@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The two readers of station files that v5 did not write (WP10b): foreign CF
+// The two readers of station files that v5 did not write: foreign CF
 // discrete-sampling-geometry files (station_netcdf_foreign_open.cpp,
 // station_netcdf_foreign_schema.cpp, station_netcdf_foreign_read.cpp; docs/
 // station-netcdf.md 12 "Foreign") and the legacy v4 station netCDF
@@ -26,7 +26,7 @@
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/station_netcdf.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 

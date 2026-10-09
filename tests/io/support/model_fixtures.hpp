@@ -5,8 +5,7 @@
 // netCDF-C API, independent of mov::io (see nc_fixtures.hpp). The ADCIRC
 // layout is that of the legacy fixtures (MetOceanViewer/function_tests, LF
 // section 12); the D-Flow layout is built from the D-Flow FM manual's
-// description of a history file, because no real file is available (plan
-// decision 26).
+// description of a history file, because no real file is available.
 
 #pragma once
 

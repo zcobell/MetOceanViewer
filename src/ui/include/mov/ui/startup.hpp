@@ -18,8 +18,8 @@ namespace mov::ui {
 /// portfile.cmake). Must run before the QGuiApplication exists.
 void select_graphics_api();
 
-/// Sets the application identity (names, organization, desktop file name:
-/// app_identity, plan §6.19, which also namespaces QSettings), the version
+/// Sets the application identity (names, organization, desktop file name,
+/// from app_identity; it also namespaces QSettings), the version
 /// from project(VERSION) and the window icon. Must run after the
 /// QGuiApplication exists.
 void set_application_metadata();
@@ -35,7 +35,7 @@ void set_application_metadata();
 /// result is nullopt. `MOV_PROJ_DATA` in the environment still overrides it
 /// (mov::io::set_projection_data_dir). Must run after the QGuiApplication
 /// exists and before the first projection. Moves to src/app with the
-/// application state in Phase 4.
+/// application state (AppState) once that exists.
 std::optional<std::filesystem::path> configure_projection_data();
 
 /// Loads the main window (app_identity::qml_module, main_window_type) into

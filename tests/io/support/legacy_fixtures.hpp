@@ -10,7 +10,8 @@
 // padded) `stationLength_N`, `int64 time_station_N` (seconds since
 // `referenceDate`) and `data_station_N`. The writer-side defects of v4 that
 // reach a file are reproduced on request: junk after the NUL of a name row
-// (B15's over-read) and a 20-byte `referenceDate`.
+// (v4 wrote names with a fixed count of 200, over-reading shorter strings)
+// and a 20-byte `referenceDate`.
 #pragma once
 
 #include <cstddef>
@@ -65,7 +66,7 @@ struct LegacyNc {
   std::optional<std::string> timezone{"utc"};
   /// `HorizontalProjectionEPSG` on the X variable (an int); none if empty.
   std::optional<int> epsg{4326};
-  /// ... as text instead of an int (B10).
+  /// ... as text instead of an int (v4's getter misread it).
   bool epsg_as_text{false};
   /// The external type of the integer EPSG code.
   int epsg_type{4};  // NC_INT

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The HWM file parser feeding the statistics: the F8 fixtures through
+// The HWM file parser feeding the statistics: the HWM fixtures through
 // parse_hwm_csv, checked against the numbers golden.py wrote. tests/core does
 // the same through a test-only loader; this is the real reader.
 
@@ -172,8 +172,8 @@ TEST_CASE("the dry-rule fixture feeds the statistics only its wet marks",
       mov::io::read_hwm_csv(mov::test::fixture("io/hwm/hwm_dry_marks.csv"),
                             LengthUnit::meter, mov::io::ReadContext{});
   REQUIRE(read.has_value());
-  // -99999, -999 and -1.797e308 are dry; 1.5 and -998.5 are wet (N2: v4
-  // counted a different set in each place).
+  // -99999, -999 and -1.797e308 are dry; 1.5 and -998.5 are wet (v4 counted
+  // a different set in each place).
   const auto stats = hwm_stats(read->value, Intercept::through_origin);
   REQUIRE(stats.has_value());
   CHECK(stats->total == 5);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The hostile-structure set (design review S11): each file gives a specific
+// The hostile-structure set (core-design.md 7.3): each file gives a specific
 // error or a defined value, never a crash or an allocation sized by the file.
 
 #include <catch2/catch_test_macros.hpp>
@@ -84,7 +84,7 @@ TEST_CASE("hostile: a NULL NC_STRING element reads as empty", "[io][netcdf]") {
 TEST_CASE("hostile: a _FillValue of the wrong type or length", "[io][netcdf]") {
   Fixtures fx;
   // netCDF-C's nc_inq_var_fill would copy the 4-byte float fill into an
-  // 8-byte double, or the first of two values (B4); masking refuses both.
+  // 8-byte double, or the first of two values; masking refuses both.
   const auto wrong_type = fx.hostile(Hostile::fill_wrong_type);
   const File typed = open(wrong_type);
   CHECK(error_of(typed.masking<double>("v")) ==

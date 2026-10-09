@@ -31,10 +31,10 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/station.hpp"
 #include "mov/io/cf_time.hpp"
 #include "mov/io/detail/station_names.hpp"
@@ -49,13 +49,13 @@
 #include "station_netcdf_dialects.hpp"
 #include "station_netcdf_foreign_facts.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 
 CfDsgLayout layout_of(const ForeignSampling& sampling) {
   return std::visit(
-      core::detail::Overloaded{
+      core::Overloaded{
           [](const Orthogonal&) { return CfDsgLayout::orthogonal; },
           [](const Incomplete&) { return CfDsgLayout::incomplete; },
           [](const ContiguousRagged&) {
@@ -67,19 +67,19 @@ CfDsgLayout layout_of(const ForeignSampling& sampling) {
 }
 
 std::optional<nc::DimInfo> station_dim_of(const ForeignSampling& sampling) {
-  return std::visit(core::detail::Overloaded{
-                        [](const SingleStation&) -> std::optional<nc::DimInfo> {
-                          return std::nullopt;
-                        },
-                        [](const auto& layout) -> std::optional<nc::DimInfo> {
-                          return layout.station;
-                        }},
-                    sampling);
+  return std::visit(
+      core::Overloaded{[](const SingleStation&) -> std::optional<nc::DimInfo> {
+                         return std::nullopt;
+                       },
+                       [](const auto& layout) -> std::optional<nc::DimInfo> {
+                         return layout.station;
+                       }},
+      sampling);
 }
 
 namespace {
 
-using core::detail::Overloaded;
+using core::Overloaded;
 
 // ---- what each variable is
 // ---------------------------------------------------
@@ -194,7 +194,8 @@ std::expected<void, Error> id_type_ok(const nc::VarInfo& id) {
                   id.type == nc::Type::short_ or id.type == nc::Type::int_ or
                   id.type == nc::Type::int64;
   if (not ok) {
-    return invalid(FormatErrc::bad_encoding, subject_of(id.name.view()));
+    return fail(
+        format_error(FormatErrc::bad_encoding, subject_of(id.name.view())));
   }
   return {};
 }
@@ -212,7 +213,8 @@ std::expected<StationAxis, Error> axis_of_id(const nc::VarInfo& id) {
   if (rank == one_station_rank + 1) {
     return StationAxis{id.dims.front()};
   }
-  return invalid(FormatErrc::dimension_mismatch, subject_of(id.name.view()));
+  return fail(
+      format_error(FormatErrc::dimension_mismatch, subject_of(id.name.view())));
 }
 
 /// The one variable whose `cf_role` is timeseries_id (CF 9.5), or null. Two
@@ -224,8 +226,8 @@ std::expected<const Facts*, Error> find_id(std::span<const Facts> all) {
       continue;
     }
     if (found != nullptr) {
-      return invalid(FormatErrc::ambiguous_station_id,
-                     pair_subject(found->var, f.var));
+      return fail(format_error(FormatErrc::ambiguous_station_id,
+                               pair_subject(found->var, f.var)));
     }
     found = &f;
   }
@@ -267,10 +269,10 @@ std::expected<Positions, Error> find_positions(std::span<const Facts> all,
   const Facts* lat = pick(positions(all, is_latitude, axis), coordinate_set);
   const Facts* lon = pick(positions(all, is_longitude, axis), coordinate_set);
   if (lat == nullptr) {
-    return invalid(FormatErrc::missing_variable, "latitude");
+    return fail(format_error(FormatErrc::missing_variable, "latitude"));
   }
   if (lon == nullptr) {
-    return invalid(FormatErrc::missing_variable, "longitude");
+    return fail(format_error(FormatErrc::missing_variable, "longitude"));
   }
   if (const auto* dim = std::get_if<nc::DimInfo>(&axis)) {
     return Positions{.lat = lat, .lon = lon, .station = *dim};
@@ -283,8 +285,8 @@ std::expected<Positions, Error> find_positions(std::span<const Facts> all,
       lat->var.dims.size() == lon->var.dims.size() and
       (lat->var.dims.empty() or lat->var.dims[0].id == lon->var.dims[0].id);
   if (not same_shape) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(lon->var.name.view()));
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(lon->var.name.view())));
   }
   return Positions{.lat = lat,
                    .lon = lon,
@@ -359,11 +361,11 @@ std::expected<const Facts*, Error> find_time(
     }
   }
   if (best == nullptr) {
-    return invalid(FormatErrc::missing_variable, "time");
+    return fail(format_error(FormatErrc::missing_variable, "time"));
   }
   if (rival != nullptr) {
-    return invalid(FormatErrc::unsupported_layout,
-                   pair_subject(best->var, rival->var));
+    return fail(format_error(FormatErrc::unsupported_layout,
+                             pair_subject(best->var, rival->var)));
   }
   return best;
 }
@@ -400,7 +402,7 @@ std::expected<nc::DimInfo, Error> dimension_named(const nc::File& file,
                                                   std::string_view name) {
   const auto ref = nc::NcName::make(name);
   if (not ref) {
-    return invalid(FormatErrc::missing_dimension, subject_of(name));
+    return fail(format_error(FormatErrc::missing_dimension, subject_of(name)));
   }
   return require_dim(file, *ref);
 }
@@ -409,7 +411,8 @@ std::expected<nc::DimInfo, Error> same_station(
     const std::optional<nc::DimInfo>& known, nc::DimInfo found,
     const nc::VarInfo& by) {
   if (known and known->id != found.id) {
-    return invalid(FormatErrc::dimension_mismatch, subject_of(by.name.view()));
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(by.name.view())));
   }
   return found;
 }
@@ -419,14 +422,14 @@ std::expected<Located, Error> locate_incomplete(
     std::span<const Facts> all, const nc::VarInfo& time,
     const std::optional<nc::DimInfo>& station) {
   if (not station) {
-    return invalid(FormatErrc::unsupported_layout,
-                   subject_of(time.name.view()));
+    return fail(format_error(FormatErrc::unsupported_layout,
+                             subject_of(time.name.view())));
   }
   const bool station_first = time.dims[0].id == station->id;
   const bool station_second = time.dims[1].id == station->id;
   if (station_first == station_second) {
-    return invalid(FormatErrc::unsupported_layout,
-                   subject_of(time.name.view()));
+    return fail(format_error(FormatErrc::unsupported_layout,
+                             subject_of(time.name.view())));
   }
   std::optional<nc::VarInfo> obs_count;
   for (const Facts& f : all) {
@@ -447,8 +450,8 @@ std::expected<std::optional<ForeignSampling>, Error> locate_ragged(
   const Facts* counts = counting(all, sample);
   const Facts* indices = indexing(all, sample);
   if (counts != nullptr and indices != nullptr) {
-    return invalid(FormatErrc::unsupported_layout,
-                   subject_of(sample.name.view()));
+    return fail(format_error(FormatErrc::unsupported_layout,
+                             subject_of(sample.name.view())));
   }
   if (counts != nullptr) {
     return same_station(station, counts->var.dims.front(), counts->var)
@@ -486,8 +489,8 @@ std::expected<Located, Error> locate_coordinate(
     return Located{.sampling = SingleStation{}, .sample = sample};
   }
   if (station->id == sample.id) {
-    return invalid(FormatErrc::unsupported_layout,
-                   subject_of(time.name.view()));
+    return fail(format_error(FormatErrc::unsupported_layout,
+                             subject_of(time.name.view())));
   }
   return Located{.sampling = Orthogonal{.station = *station}, .sample = sample};
 }
@@ -503,8 +506,8 @@ std::expected<Located, Error> locate(
     case 2:
       return locate_incomplete(all, time, station);
     default:
-      return invalid(FormatErrc::unsupported_layout,
-                     subject_of(time.name.view()));
+      return fail(format_error(FormatErrc::unsupported_layout,
+                               subject_of(time.name.view())));
   }
 }
 
@@ -562,8 +565,8 @@ std::expected<Roles, Error> identify(const nc::File& file,
     const bool fits =
         station ? over(c->var, {station->id}) : c->var.dims.empty();
     if (not fits) {
-      return invalid(FormatErrc::dimension_mismatch,
-                     subject_of(c->var.name.view()));
+      return fail(format_error(FormatErrc::dimension_mismatch,
+                               subject_of(c->var.name.view())));
     }
   }
   return Roles{.id = *id,
@@ -600,7 +603,7 @@ bool concerns(const nc::VarInfo& v, const Located& l) {
 
 std::expected<bool, Error> says_unsigned(const nc::File& file,
                                          const nc::VarInfo& v) {
-  return text_of(file, v.name, "_Unsigned")
+  return optional_text(file, v.name, "_Unsigned")
       .transform([](const std::optional<std::string>& text) {
         return says(text, "true");
       });
@@ -827,7 +830,7 @@ std::expected<DataSearch, Error> find_data(const nc::File& file,
     return std::unexpected{std::move(ok).error()};
   }
   if (search.data.empty()) {
-    return invalid(FormatErrc::no_data_variables, "");
+    return fail(format_error(FormatErrc::no_data_variables, ""));
   }
   return search;
 }
@@ -895,15 +898,16 @@ std::expected<Runs, Error> runs_of(const nc::File& file,
     const std::int64_t n = raw->values[i];
     if (n < 0 or raw->masked[i] or
         std::cmp_greater(n, samples - std::min(total, samples))) {
-      return invalid(FormatErrc::bad_row_size, subject_of(row_size.name.view()),
-                     i);
+      return fail(format_error(FormatErrc::bad_row_size,
+                               subject_of(row_size.name.view()), i));
     }
     out.starts.push_back(total);
     out.counts.push_back(static_cast<std::size_t>(n));
     total += static_cast<std::size_t>(n);
   }
   if (total != samples) {
-    return invalid(FormatErrc::bad_row_size, subject_of(row_size.name.view()));
+    return fail(format_error(FormatErrc::bad_row_size,
+                             subject_of(row_size.name.view())));
   }
   return out;
 }
@@ -928,8 +932,8 @@ std::expected<Owners, Error> owners_of(const nc::File& file,
   for (std::size_t o = 0; o < raw->values.size(); ++o) {
     const std::int64_t s = raw->values[o];
     if (s < 0 or raw->masked[o] or std::cmp_greater_equal(s, stations)) {
-      return invalid(FormatErrc::bad_ragged_index,
-                     subject_of(index.name.view()), std::nullopt, o);
+      return fail(format_error(FormatErrc::bad_ragged_index,
+                               subject_of(index.name.view()), std::nullopt, o));
     }
     out.station_of_sample.push_back(static_cast<std::size_t>(s));
     ++out.counts[static_cast<std::size_t>(s)];
@@ -955,8 +959,8 @@ std::expected<std::vector<std::size_t>, Error> leading_counts(
     if (mask->apply(x).is_missing()) {
       ended[s] = true;
     } else if (ended[s]) {
-      return invalid(FormatErrc::padding_not_missing,
-                     subject_of(time.name.view()), s, j);
+      return fail(format_error(FormatErrc::padding_not_missing,
+                               subject_of(time.name.view()), s, j));
     } else {
       ++counts[s];
     }
@@ -998,8 +1002,8 @@ std::expected<std::vector<std::size_t>, Error> counts_from_obs_count(
   for (std::size_t i = 0; i < raw->values.size(); ++i) {
     const std::int64_t n = raw->values[i];
     if (n < 0 or raw->masked[i] or std::cmp_greater(n, length)) {
-      return invalid(FormatErrc::bad_obs_count,
-                     subject_of(obs_count.name.view()), i);
+      return fail(format_error(FormatErrc::bad_obs_count,
+                               subject_of(obs_count.name.view()), i));
     }
     counts.push_back(static_cast<std::size_t>(n));
   }
@@ -1087,16 +1091,10 @@ std::expected<Counted, Error> count_samples(const nc::File& file,
 // ---- stations
 // ----------------------------------------------------------------
 
-struct Cleaned {
-  std::string text;
-  bool replaced;
-};
-
-Cleaned cleaned_text(std::string_view raw) {
-  const std::string_view trimmed_text = core::detail::trim(cut_at_nul(raw));
-  auto cleaned = replace_invalid_utf8(trimmed_text);
-  return {.text = std::string{cleaned.text.view()},
-          .replaced = cleaned.replaced};
+/// An id or name: cut at the first NUL, trimmed, bytes that are not UTF-8
+/// replaced.
+CleanedText cleaned_text(std::string_view raw) {
+  return replace_invalid_utf8(core::ascii::trim(cut_at_nul(raw)));
 }
 
 /// The strings of a char or NC_STRING variable, one per station (a scalar or
@@ -1142,18 +1140,18 @@ std::expected<std::optional<std::vector<std::string>>, Error> text_column(
     return std::unexpected{std::move(rows).error()};
   }
   if (rows->size() != count) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(var->name.view()));
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(var->name.view())));
   }
   return Column{*std::move(rows)};
 }
 
 /// The ids and names of the stations. A station without an id (an empty
 /// string, a NULL one, a masked integer, or no id variable) is its index in
-/// decimal; one without a name has its id for a name.
+/// decimal; a name stays as the file has it, empty included.
 struct StationTexts {
   std::vector<std::string> ids;
-  std::vector<std::string> names;
+  std::vector<core::StationText> names;
   std::size_t replaced{0};
   std::size_t id_substituted{0};
 };
@@ -1173,15 +1171,18 @@ std::expected<StationTexts, Error> station_texts(
   out.ids.reserve(count);
   out.names.reserve(count);
   for (std::size_t i = 0; i < count; ++i) {
-    Cleaned id = id_rows ? cleaned_text((*id_rows)[i]) : Cleaned{};
-    const Cleaned name = name_rows ? cleaned_text((*name_rows)[i]) : Cleaned{};
+    const CleanedText id =
+        id_rows ? cleaned_text((*id_rows)[i]) : CleanedText{};
+    CleanedText name =
+        name_rows ? cleaned_text((*name_rows)[i]) : CleanedText{};
     out.replaced += (id.replaced ? 1U : 0U) + (name.replaced ? 1U : 0U);
-    if (id.text.empty()) {
-      id.text = std::to_string(i);
+    std::string id_text{id.text.view()};
+    if (id_text.empty()) {
+      id_text = std::to_string(i);
       out.id_substituted += id_rows ? 1U : 0U;
     }
-    out.names.push_back(name.text.empty() ? id.text : name.text);
-    out.ids.push_back(std::move(id.text));
+    out.names.push_back(std::move(name.text));
+    out.ids.push_back(std::move(id_text));
   }
   return out;
 }
@@ -1270,8 +1271,8 @@ std::expected<Read<std::vector<core::FileStation>>, Error> stations_of(
   Read<std::vector<core::FileStation>> out{
       .value = {}, .warnings = std::move(parts->warnings)};
   if (lats.size() != count or lons.size() != count) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(s.lat.name.view()));
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(s.lat.name.view())));
   }
   const UniqueIds unique = uniquify_ids(texts.ids);
   out.value.reserve(count);
@@ -1281,15 +1282,11 @@ std::expected<Read<std::vector<core::FileStation>>, Error> stations_of(
       return std::unexpected{std::move(position).error()};
     }
     auto key = core::StationKey::make(unique.ids[i]);
-    auto text = core::StationText::make(texts.names[i]);
     if (not key) {
       return fail(to_format_error(key.error(), i));
     }
-    if (not text) {
-      return fail(to_format_error(text.error(), i));
-    }
     out.value.push_back({.id = *std::move(key),
-                         .name = *std::move(text),
+                         .name = std::move(texts.names[i]),
                          .location = position->location,
                          .native = position->native,
                          .source = std::nullopt});
@@ -1347,13 +1344,13 @@ std::expected<Read<ForeignOpened>, Error> open_foreign(const nc::File& file,
     return std::unexpected{std::move(counted).error()};
   }
   if (counted->counts.size() != stations) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(roles->time->var.name.view()));
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(roles->time->var.name.view())));
   }
   auto parts =
       collect([&] { return crs_of_file(file, *all, search->data); },
               [&] { return foreign_schema(file, *all, search->data); },
-              [&] { return text_of(file, nc::global, "Conventions"); });
+              [&] { return optional_text(file, nc::global, "Conventions"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }

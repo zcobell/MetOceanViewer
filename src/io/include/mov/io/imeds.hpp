@@ -55,18 +55,19 @@ struct ImedsFile {
 ///   after the header are skipped.
 /// - A line with 3 words starts a station, one with 6 or 7 words is a data row
 ///   (6: no seconds, so `2015 07 01 00 00 2.605` is the value 2.605 at second
-///   0, N3), anything else is `wrong_field_count`. A 3-word line of three
-///   integers right after a row is a row cut short (`wrong_field_count`), not a
-///   station. Every number is checked: a bad date, number or coordinate is a
-///   ParseError with the line and column. A data row before the first station
-///   is `missing_header`. Years are 0000-9999.
+///   0; v4 read the 2 as the second and the fraction as the value), anything
+///   else is `wrong_field_count`. A 3-word line of three integers right after
+///   a row is a row cut short (`wrong_field_count`), not a station. Every
+///   number is checked: a bad date, number or coordinate is a ParseError with
+///   the line and column. A data row before the first station is
+///   `missing_header`. Years are 0000-9999.
 /// - The coordinates (latitude first!) go through `Location::make`; a
 ///   longitude in [180, 360] is wrapped.
 /// - The exact legacy sentinels -99999, -9999, -DBL_MAX and v4's printed
 ///   -1.7977e+308 become Missing (one `legacy_sentinel_masked` warning with the
 ///   count). `nan`, `inf`, `infinity` (any case, signed) and a Fortran `****`
 ///   become Missing too (`nonfinite_masked`). Nothing else is masked: -99998.9
-///   and -999 are values (C9).
+///   and -999 are values (the dry rule is for model output only).
 /// - Each station's rows go through `normalize` (`times_reordered`,
 ///   `duplicate_times_dropped`, `conflicting_duplicate_times`, subject the
 ///   station id). A station without rows is `empty_station`; a station whose
@@ -92,7 +93,8 @@ struct ImedsFile {
 [[nodiscard]] std::expected<Read<ImedsFile>, Error> read_imeds(
     const std::filesystem::path& path, const ReadContext& ctx);
 
-/// The file as IMEDS text (D15, byte-pinned):
+/// The file as IMEDS text, at fixed column-aligned precision (byte-pinned by
+/// the tests):
 ///
 ///   % IMEDS generic format
 ///   % year month day hour min sec value
@@ -115,7 +117,7 @@ struct ImedsFile {
 /// aggregate warnings (empty subject, count = rows or stations), in this order:
 /// - `station_id_not_written`: stations whose id is not the name as written
 ///   (IMEDS has no id column);
-/// - `rows_omitted`: Missing and Dry samples (N18: v4 printed -DBL_MAX);
+/// - `rows_omitted`: Missing and Dry samples (v4 printed -DBL_MAX);
 /// - `time_precision_dropped`: written rows whose milliseconds were cut;
 /// - `duplicate_times_dropped`: rows dropped because they floor to the same
 ///   second as the row before (the first is kept; a dropped row is not also

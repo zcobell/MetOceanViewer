@@ -10,7 +10,7 @@
 
 namespace mov::io {
 
-/// Upper bounds a reader enforces before it allocates (C12). Exceeding one
+/// Upper bounds a reader enforces before it allocates. Exceeding one
 /// is an error (`too_large`), never a truncation.
 ///
 /// The netCDF reads (nc::File) check, before allocating, both the element

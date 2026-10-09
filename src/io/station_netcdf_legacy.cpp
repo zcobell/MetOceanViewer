@@ -7,11 +7,12 @@
 // / `stationYCoordinate`, and per station N `stationLength_N`, `time_station_N`
 // (seconds since the `referenceDate` attribute) and `data_station_N`.
 //
-// What v4 got wrong is not repeated (plan 1.2): the row stride is the file's
-// (B7), `referenceDate` is read at its real length (B8), the default fill is
-// masked (B9), a missing EPSG is an assumed 4326 with a warning and a wrong
-// type is an error, never a code (B10), and whatever the writer left after the
-// NUL of a name is cut (core-design.md C14).
+// What v4 got wrong is not repeated: the row stride is the file's (v4 assumed
+// 200 and overran its buffer), `referenceDate` is read at its real length (v4
+// read it into a fixed 80-byte buffer), the default fill is masked (v4 never
+// masked it), a missing EPSG is an assumed 4326 with a warning and a wrong
+// type is an error (v4 returned netCDF error codes as EPSG codes), and
+// whatever the writer left after the NUL of a name is cut.
 
 #include <algorithm>
 #include <array>
@@ -27,8 +28,8 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
@@ -48,7 +49,7 @@
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_dialects.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 
@@ -78,11 +79,12 @@ struct Base {
 std::expected<nc::VarInfo, Error> char_rows(nc::VarInfo var,
                                             const nc::DimInfo& stations) {
   if (var.type != nc::Type::char_) {
-    return invalid(FormatErrc::bad_encoding, std::string{var.name.view()});
+    return fail(
+        format_error(FormatErrc::bad_encoding, std::string{var.name.view()}));
   }
   if (var.dims.size() != 2 or var.dims[0].id != stations.id) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   std::string{var.name.view()});
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             std::string{var.name.view()}));
   }
   return var;
 }
@@ -180,9 +182,9 @@ std::expected<StationNumberWidth, Error> number_width(const nc::File& file) {
       return width;
     }
   }
-  return invalid(
+  return fail(format_error(
       FormatErrc::missing_variable,
-      legacy_variable_name(time_prefix, 1, digits_of(widths.front())), 0);
+      legacy_variable_name(time_prefix, 1, digits_of(widths.front())), 0));
 }
 
 /// What the file says about itself: v4's writer puts a global `fileformat` and
@@ -190,7 +192,7 @@ std::expected<StationNumberWidth, Error> number_width(const nc::File& file) {
 std::expected<LegacyOrigin, Error> origin_of(const nc::File& file,
                                              const Base& base,
                                              StationNumberWidth width) {
-  return text_of(file, nc::global, "fileformat")
+  return optional_text(file, nc::global, "fileformat")
       .transform([&](std::optional<std::string> format) {
         return LegacyOrigin{.fileformat = std::move(format),
                             .has_station_ids = base.id.has_value(),
@@ -207,7 +209,8 @@ constexpr std::string_view epsg_object =
 
 /// The EPSG code of `stationXCoordinate`, any signed integer type; nullopt
 /// when the attribute is absent. A text, floating-point or unsigned attribute
-/// is `type_mismatch` (B10: an error, never a code).
+/// is `type_mismatch`: an error, never a code (v4 returned netCDF error codes
+/// as EPSG codes).
 std::expected<std::optional<std::int64_t>, Error> read_epsg(
     const nc::File& file) {
   auto values = int_att(file, x_var, epsg_att, epsg_object);
@@ -238,11 +241,11 @@ std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file) {
   const std::string subject = "EPSG:" + std::to_string(**code);
   constexpr std::int64_t largest = 999'999'999;  // nine digits, as v5 reads
   if (**code <= 0 or **code > largest) {
-    return invalid(FormatErrc::unsupported_crs, subject);
+    return fail(format_error(FormatErrc::unsupported_crs, subject));
   }
   const auto epsg = core::Epsg::make(static_cast<int>(**code));
   if (not epsg) {
-    return invalid(FormatErrc::unsupported_crs, subject);
+    return fail(format_error(FormatErrc::unsupported_crs, subject));
   }
   return Read<core::Epsg>{.value = *epsg, .warnings = {}};
 }
@@ -262,32 +265,26 @@ std::expected<std::optional<Projector>, Error> projector_of(core::Epsg epsg) {
 
 // ---- the stations -----------------------------------------------------------
 
-struct Cleaned {
-  std::string text;
-  bool replaced;
-};
-
 /// A name: cut at the first NUL (the writer's junk follows it), white space
-/// collapsed (v4's `simplified()`, A8), bytes that are not UTF-8 replaced.
-Cleaned clean_name(std::string_view row) {
-  const std::string simple = simplified(cut_at_nul(row));
-  auto cleaned = replace_invalid_utf8(simple);
-  return {.text = std::string{cleaned.text.view()},
-          .replaced = cleaned.replaced};
+/// collapsed (v4's `simplified()`), bytes that are not UTF-8 replaced.
+CleanedText clean_name(std::string_view row) {
+  return replace_invalid_utf8(simplified(cut_at_nul(row)));
 }
 
 /// An id: cut at the first NUL and trimmed.
-Cleaned clean_id(std::string_view row) {
-  const std::string_view trimmed_id = core::detail::trim(cut_at_nul(row));
-  auto cleaned = replace_invalid_utf8(trimmed_id);
-  return {.text = std::string{cleaned.text.view()},
-          .replaced = cleaned.replaced};
+CleanedText clean_id(std::string_view row) {
+  return replace_invalid_utf8(core::ascii::trim(cut_at_nul(row)));
 }
 
+/// The ids and names of the stations. The id is the `stationId` row, else the
+/// name, else the decimal index; a name stays as the file has it, empty
+/// included.
 struct Names {
   std::vector<std::string> ids;
-  std::vector<std::string> names;
+  std::vector<core::StationText> names;
   std::size_t replaced{0};
+  /// Stations of a file with `stationId` whose row was empty.
+  std::size_t id_substituted{0};
 };
 
 std::expected<Names, Error> read_names(const nc::File& file, const Base& base,
@@ -308,16 +305,17 @@ std::expected<Names, Error> read_names(const nc::File& file, const Base& base,
   out.ids.reserve(name_rows.size());
   out.names.reserve(name_rows.size());
   for (std::size_t i = 0; i < name_rows.size(); ++i) {
-    const Cleaned name = clean_name(name_rows[i]);
-    Cleaned id =
-        base.id ? clean_id(id_rows[i]) : Cleaned{.text = "", .replaced = false};
+    CleanedText name = clean_name(name_rows[i]);
+    const CleanedText id = base.id ? clean_id(id_rows[i]) : CleanedText{};
     out.replaced += (name.replaced ? 1U : 0U) + (id.replaced ? 1U : 0U);
-    // The id is the stationId, else the name, else the decimal index.
-    if (id.text.empty()) {
-      id.text = name.text.empty() ? std::to_string(i) : name.text;
+    std::string id_text{id.text.view()};
+    if (id_text.empty()) {
+      id_text =
+          name.text.empty() ? std::to_string(i) : std::string{name.text.view()};
+      out.id_substituted += base.id ? 1U : 0U;
     }
-    out.names.push_back(name.text.empty() ? "Station " + id.text : name.text);
-    out.ids.push_back(std::move(id.text));
+    out.names.push_back(std::move(name.text));
+    out.ids.push_back(std::move(id_text));
   }
   return out;
 }
@@ -343,19 +341,20 @@ std::expected<Read<std::vector<core::FileStation>>, Error> stations_of(
       return std::unexpected{std::move(position).error()};
     }
     auto key = core::StationKey::make(unique.ids[i]);
-    auto text = core::StationText::make(names.names[i]);
     if (not key) {
       return fail(to_format_error(key.error(), i));
     }
-    if (not text) {
-      return fail(to_format_error(text.error(), i));
-    }
     out.value.push_back({.id = *std::move(key),
-                         .name = *std::move(text),
+                         .name = std::move(names.names[i]),
                          .location = position->location,
                          .native = position->native,
                          .source = std::nullopt});
   }
+  append_if_counted(
+      out.warnings,
+      {.code = WarningCode::station_id_substituted,
+       .subject = base.id ? subject_of(base.id->name.view()) : std::string{},
+       .count = names.id_substituted});
   append_if_counted(out.warnings, {.code = WarningCode::invalid_utf8_replaced,
                                    .subject = {},
                                    .count = names.replaced});
@@ -384,14 +383,15 @@ std::expected<nc::VarInfo, Error> station_var(const nc::File& file,
       legacy_variable_name(prefix, i + 1, digits_of(width));
   const auto ref = nc::NcName::make(name);
   if (not ref) {
-    return invalid(FormatErrc::missing_variable, subject_of(name), i);
+    return fail(
+        format_error(FormatErrc::missing_variable, subject_of(name), i));
   }
   auto found = file.find_var(*ref);
   if (not found) {
     return fail(std::move(found).error());
   }
   if (not *found) {
-    return invalid(FormatErrc::missing_variable, name, i);
+    return fail(format_error(FormatErrc::missing_variable, name, i));
   }
   return **std::move(found);
 }
@@ -417,12 +417,12 @@ std::expected<StationVars, Error> station_vars(const nc::File& file,
   const std::string length =
       legacy_variable_name(length_prefix, i + 1, digits_of(width));
   if (time->dims.size() != 1 or time->dims[0].name != length) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(time->name.view()), i);
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(time->name.view()), i));
   }
   if (data->dims.size() != 1 or data->dims[0].id != time->dims[0].id) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(data->name.view()), i);
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(data->name.view()), i));
   }
   return StationVars{.time = *std::move(time), .data = *std::move(data)};
 }
@@ -438,10 +438,10 @@ struct Reference {
 };
 
 /// The epoch of `referenceDate`: its first 19 characters, `yyyy-MM-dd hh:mm:ss`
-/// (B8: whatever the attribute's length, and a `T` is accepted). ParseError
-/// `bad_date` when they are not a date.
+/// (whatever the attribute's length, which v4 did not check; a `T` is
+/// accepted). ParseError `bad_date` when they are not a date.
 std::expected<Reference, Error> parse_reference(std::string_view text) {
-  const std::string_view whole = core::detail::trim(cut_at_nul(text));
+  const std::string_view whole = core::ascii::trim(text);
   const auto parsed =
       core::parse_utc_datetime(whole.substr(0, reference_date_chars));
   if (not parsed) {
@@ -451,7 +451,7 @@ std::expected<Reference, Error> parse_reference(std::string_view text) {
   }
   const std::string_view rest =
       whole.size() > reference_date_chars
-          ? core::detail::trim(whole.substr(reference_date_chars))
+          ? core::ascii::trim(whole.substr(reference_date_chars))
           : std::string_view{};
   return Reference{.epoch = *parsed, .trailing = std::string{rest}};
 }
@@ -466,9 +466,9 @@ struct TimeNotes {
 /// `tz_assumed_utc` for a zone (or what trails the date) other than UTC or
 /// GMT, one warning per distinct text, counted.
 void note_zone(TimeNotes& notes, std::string_view text) {
-  const std::string_view zone = core::detail::trim(text);
-  if (zone.empty() or core::detail::equal_ignore_case(zone, "utc") or
-      core::detail::equal_ignore_case(zone, "gmt")) {
+  const std::string_view zone = core::ascii::trim(text);
+  if (zone.empty() or core::ascii::equal_ignore_case(zone, "utc") or
+      core::ascii::equal_ignore_case(zone, "gmt")) {
     return;
   }
   const std::string subject = subject_of(zone);
@@ -486,8 +486,8 @@ std::expected<void, Error> note_time(const nc::File& file,
                                      const nc::VarInfo& time,
                                      TimeNotes& notes) {
   auto parts =
-      collect([&] { return text_of(file, time.name, "referenceDate"); },
-              [&] { return text_of(file, time.name, "timezone"); });
+      collect([&] { return optional_text(file, time.name, "referenceDate"); },
+              [&] { return optional_text(file, time.name, "timezone"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
@@ -516,13 +516,13 @@ struct MetaNotes {
 
 std::expected<MetaNotes, Error> meta_notes_of(const nc::File& file,
                                               const nc::VarInfo& data) {
-  auto parts = collect([&] { return text_of(file, data.name, "units"); },
-                       [&] { return text_of(file, data.name, "datum"); });
+  auto parts = collect([&] { return optional_text(file, data.name, "units"); },
+                       [&] { return optional_text(file, data.name, "datum"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
   const auto& [units, datum] = *parts;
-  return MetaNotes{.units = std::string{core::detail::trim(units.value_or(""))},
+  return MetaNotes{.units = std::string{core::ascii::trim(units.value_or(""))},
                    .datum = to_upper_ascii(datum_text(datum.value_or("")))};
 }
 
@@ -540,10 +540,10 @@ std::expected<void, Error> note_meta(const nc::File& file,
     return {};
   }
   if (current->units != notes->units) {
-    return invalid(FormatErrc::inconsistent_metadata, "units", i);
+    return fail(format_error(FormatErrc::inconsistent_metadata, "units", i));
   }
   if (current->datum != notes->datum) {
-    return invalid(FormatErrc::inconsistent_metadata, "datum", i);
+    return fail(format_error(FormatErrc::inconsistent_metadata, "datum", i));
   }
   return {};
 }
@@ -551,14 +551,14 @@ std::expected<void, Error> note_meta(const nc::File& file,
 Read<core::SeriesMeta> meta_of(const MetaNotes& notes) {
   Read<std::optional<core::Unit>> unit = parsed_unit(
       notes.units.empty() ? std::nullopt : std::optional{notes.units});
-  Read<core::SeriesMeta> out = with_datum(
-      core::SeriesMeta::make({.quantity = core::GenericQuantity::value(),
-                              .label = {},
-                              .unit = std::move(unit.value)}),
-      notes.datum.empty() ? std::nullopt : std::optional{notes.datum}, "value");
-  out.warnings =
-      concatenated(std::move(unit.warnings), std::move(out.warnings));
-  return out;
+  return std::move(unit).and_then([&](std::optional<core::Unit> u) {
+    return with_datum(
+        core::SeriesMeta::make({.quantity = core::GenericQuantity::value(),
+                                .label = {},
+                                .unit = std::move(u)}),
+        notes.datum.empty() ? std::nullopt : std::optional{notes.datum},
+        "value");
+  });
 }
 
 /// Everything per station that a catalog holds besides the position.
@@ -647,7 +647,7 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
     return std::unexpected{std::move(count).error()};
   }
   if (base->stations.length == 0) {
-    return invalid(FormatErrc::empty_collection, "numStations");
+    return fail(format_error(FormatErrc::empty_collection, "numStations"));
   }
   auto parts =
       collect([&] { return number_width(file); }, [&] { return crs_of(file); });
@@ -668,7 +668,7 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
     return std::unexpected{std::move(sweep).error()};
   }
   if (not sweep->meta) {
-    return invalid(FormatErrc::empty_collection, "numStations");
+    return fail(format_error(FormatErrc::empty_collection, "numStations"));
   }
   Read<core::SeriesMeta> meta = meta_of(*sweep->meta);
 

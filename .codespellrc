@@ -3,7 +3,7 @@
 # .pre-commit-config.yaml). Domain words that look like typos go here:
 # "gage" (USGS stream gage), "pres" (NDBC pressure column), "nd" (netCDF
 # ndims), "fpr" (gpg --with-colons fingerprint records), "degreee" (the CF unit
-# spelling degreeE, which codespell reads as a typo), "lond" ("Proc. R. Soc.
-# Lond." in citations).
+# spelling degreeE, which codespell reads as a typo), "lond" (the journal
+# abbreviation "Proc. R. Soc. Lond.").
 ignore-words-list = thirdparty,gage,pres,nd,fpr,degreee,lond
 skip = ./build*,./MetOceanViewer,./MetOceanData,./MetOceanHWMStats,./MetOceanInstaller,./ProcessCrmsDatabase,./libraries,./thirdparty,./.git,./.claude,./docs/provider-apis,./tests/fixtures,./packaging/licenses

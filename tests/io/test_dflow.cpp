@@ -231,7 +231,7 @@ TEST_CASE("inspect: a 3-D file offers layered variables, not those on laydimw",
   CHECK(std::get<Layered>(v[1]).layers == 3);  // laydim's length, not laydimw's
   CHECK(std::holds_alternative<Layered>(v[6]));  // derived from layered inputs
   CHECK(std::holds_alternative<Layered>(v[7]));
-  CHECK(std::holds_alternative<Flat>(v[9]));  // the wind has no layers (N16)
+  CHECK(std::holds_alternative<Flat>(v[9]));  // the wind has no layers
 }
 
 TEST_CASE("laydim and laydimw are told apart (B12)",
@@ -373,7 +373,7 @@ TEST_CASE("station names: junk after a NUL is dropped, bad UTF-8 replaced",
   const auto inspected = inspect_ok(dir / "his.nc");
   CHECK(inspected.value.stations[0].name.view() == "Alpha");
   CHECK(inspected.value.stations[1].name.view() == "ab\xEF\xBF\xBD");
-  CHECK(inspected.value.stations[2].name.view() == "Station 2");
+  CHECK(inspected.value.stations[2].name.empty());
   CHECK(warning_count(inspected.warnings, WarningCode::invalid_utf8_replaced) ==
         1);
 }
@@ -775,7 +775,8 @@ TEST_CASE("derived: wind, and the 3-D speed at a layer", "[io][dflow]") {
   CHECK(number(samples_of(speed3b.value, 0, 0)[0]) ==
         Catch::Approx(70.0).epsilon(1e-12));
 
-  // N16: the wind of a 3-D file is flat, and is read without a layer.
+  // The wind of a 3-D file is flat, and is read without a layer (v4 asked
+  // for layer 0 and so a start of size_t(-1)).
   const auto wind =
       read_ok(path, derived_request(DflowDerived::wind_speed, everything(3)));
   CHECK(number(samples_of(wind.value, 1, 0)[0]) ==
@@ -884,6 +885,11 @@ TEST_CASE("quantities: registry names, tokens, and the unknown",
   REQUIRE(generic != nullptr);
   CHECK(generic->standard_name() == "sea_water_salinity");
   CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 1);
+  // The subject is the unit text as the file has it, as in every reader.
+  const auto* unit_warning =
+      mov::test::find_warning(sal.warnings, WarningCode::unrecognized_unit);
+  REQUIRE(unit_warning != nullptr);
+  CHECK(unit_warning->subject == "ppt");
 
   const auto strange =
       read_ok(path, flat_request("sea-water temperature", everything(3)));
@@ -914,6 +920,36 @@ TEST_CASE("quantities: a name that is a registry token is that quantity",
       read_ok(dir / "his.nc", flat_request("air_pressure", everything(3)));
   CHECK(pressure.value.schema()[0].unit() ==
         std::optional<mov::core::Unit>{mov::core::PressureUnit::hectopascal});
+}
+
+TEST_CASE("text attributes end at their first NUL", "[io][dflow]") {
+  // Fixed-width writers pad attributes with NULs and leave junk after them;
+  // every text attribute a reader gets is cut there, whoever reads it.
+  const mov::test::ScratchDir dir;
+  DflowNc spec = basic();
+  DflowVar level = variable("waterlevel", 0, "m"s + '\0' + "junk");
+  level.long_name = "Water level"s + '\0' + "\xFFjunk";
+  DflowVar salinity = variable("salinity", 0, "S m-1"s + '\0' + "xx");
+  salinity.standard_name = "sea_water_salinity"s + '\0' + "_junk";
+  spec.vars = {level, salinity};
+  spec.time_units = "seconds since 2010-01-01 00:00:00"s + '\0' + "junk";
+  make_dflow_nc(dir / "his.nc", spec);
+
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
+  CHECK(read.value.schema()[0].unit() ==
+        std::optional<mov::core::Unit>{mov::core::LengthUnit::meter});
+  CHECK(read.value.schema()[0].label() == "Water level");
+  CHECK(read.warnings.empty());
+
+  const auto sal =
+      read_ok(dir / "his.nc", flat_request("salinity", everything(3)));
+  const auto* generic = std::get_if<mov::core::GenericQuantity>(
+      &sal.value.schema()[0].quantity());
+  REQUIRE(generic != nullptr);
+  CHECK(generic->standard_name() == "sea_water_salinity");
+  CHECK(sal.value.schema()[0].unit() == mov::core::parse_unit("S m-1"));
+  CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 0);
 }
 
 TEST_CASE("attributes that are not text are not labels or units",
@@ -1032,8 +1068,7 @@ TEST_CASE("the readers close their file: it can be opened again at once",
   }
 }
 
-// ---- design decision 28: the grid decides what the vector components are
-// --------
+// ---- the grid's CRS decides what the vector components are ---------------
 
 namespace {
 

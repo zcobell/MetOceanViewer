@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// Test-only reader for the F12 fixture (tests/fixtures/core/datum/offsets.csv),
-// shared by the DatumTable and datum-shift tests. It aborts the test on any
-// line it does not understand.
+// Test-only reader for the datum offsets fixture
+// (tests/fixtures/core/datum/offsets.csv), shared by the DatumTable and
+// datum-shift tests. It aborts the test on any line it does not understand.
 
 #pragma once
 
