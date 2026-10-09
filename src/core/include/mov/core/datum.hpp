@@ -14,7 +14,7 @@
 #include <utility>
 #include <variant>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/detail/numeric.hpp"
 #include "mov/core/units.hpp"
 
@@ -86,20 +86,20 @@ struct UnknownDatum {
 [[nodiscard]] constexpr std::expected<std::optional<VerticalDatum>,
                                       UnknownDatum>
 parse_vertical_datum(std::string_view s) noexcept {
-  s = detail::trim(s);
-  if (s.empty() or detail::equal_ignore_case(s, "none")) {
+  s = ascii::trim(s);
+  if (s.empty() or ascii::equal_ignore_case(s, "none")) {
     return std::optional<VerticalDatum>{};
   }
   const auto token =
       std::ranges::find_if(detail::all_datums, [s](VerticalDatum d) {
-        return detail::equal_ignore_case(s, to_string(d));
+        return ascii::equal_ignore_case(s, to_string(d));
       });
   if (token != detail::all_datums.end()) {
     return std::optional<VerticalDatum>{*token};
   }
   const auto alias = std::ranges::find_if(
       detail::datum_aliases, [s](const detail::DatumAlias& a) {
-        return detail::equal_ignore_case(s, a.text);
+        return ascii::equal_ignore_case(s, a.text);
       });
   if (alias != detail::datum_aliases.end()) {
     return std::optional<VerticalDatum>{alias->datum};

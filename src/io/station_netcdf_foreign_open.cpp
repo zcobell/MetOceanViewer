@@ -31,10 +31,10 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/station.hpp"
 #include "mov/io/cf_time.hpp"
 #include "mov/io/detail/station_names.hpp"
@@ -55,7 +55,7 @@ namespace mov::io::detail::station_nc {
 
 CfDsgLayout layout_of(const ForeignSampling& sampling) {
   return std::visit(
-      core::detail::Overloaded{
+      core::Overloaded{
           [](const Orthogonal&) { return CfDsgLayout::orthogonal; },
           [](const Incomplete&) { return CfDsgLayout::incomplete; },
           [](const ContiguousRagged&) {
@@ -67,19 +67,19 @@ CfDsgLayout layout_of(const ForeignSampling& sampling) {
 }
 
 std::optional<nc::DimInfo> station_dim_of(const ForeignSampling& sampling) {
-  return std::visit(core::detail::Overloaded{
-                        [](const SingleStation&) -> std::optional<nc::DimInfo> {
-                          return std::nullopt;
-                        },
-                        [](const auto& layout) -> std::optional<nc::DimInfo> {
-                          return layout.station;
-                        }},
-                    sampling);
+  return std::visit(
+      core::Overloaded{[](const SingleStation&) -> std::optional<nc::DimInfo> {
+                         return std::nullopt;
+                       },
+                       [](const auto& layout) -> std::optional<nc::DimInfo> {
+                         return layout.station;
+                       }},
+      sampling);
 }
 
 namespace {
 
-using core::detail::Overloaded;
+using core::Overloaded;
 
 // ---- what each variable is
 // ---------------------------------------------------
@@ -1093,7 +1093,7 @@ struct Cleaned {
 };
 
 Cleaned cleaned_text(std::string_view raw) {
-  const std::string_view trimmed_text = core::detail::trim(cut_at_nul(raw));
+  const std::string_view trimmed_text = core::ascii::trim(cut_at_nul(raw));
   auto cleaned = replace_invalid_utf8(trimmed_text);
   return {.text = std::string{cleaned.text.view()},
           .replaced = cleaned.replaced};

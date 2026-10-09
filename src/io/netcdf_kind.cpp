@@ -11,7 +11,7 @@
 #include <variant>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -50,8 +50,8 @@ std::expected<bool, Error> global_is(const nc::File& file, nc::NcNameRef name,
         if (not text) {
           return false;
         }
-        const std::string_view t = core::detail::trim(*text);
-        return ignore_case ? core::detail::equal_ignore_case(t, value)
+        const std::string_view t = core::ascii::trim(*text);
+        return ignore_case ? core::ascii::equal_ignore_case(t, value)
                            : t == value;
       });
 }
@@ -129,7 +129,7 @@ std::expected<NetcdfKind, Error> classify_netcdf(const nc::File& file) {
     return std::unexpected{std::move(format).error()};
   }
   if (*format) {
-    const std::string_view name = core::detail::trim(**format);
+    const std::string_view name = core::ascii::trim(**format);
     if (name == station_nc_format) {
       return NetcdfKind{kind::StationV5{}};
     }

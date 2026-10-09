@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/hwm.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station.hpp"
@@ -94,7 +94,7 @@ std::expected<void, Error> require_model(const nc::File& file) {
     return std::unexpected{std::move(model.error())};
   }
   const bool adcirc =
-      *model and core::detail::trim(cut_at_nul(**model)) == "ADCIRC";
+      *model and core::ascii::trim(cut_at_nul(**model)) == "ADCIRC";
   if (not adcirc) {
     return fail(format_error(FormatErrc::not_this_format, "model"));
   }

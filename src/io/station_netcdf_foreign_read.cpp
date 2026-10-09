@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
@@ -49,7 +49,7 @@ namespace mov::io::detail::station_nc {
 
 namespace {
 
-using core::detail::Overloaded;
+using core::Overloaded;
 
 /// Where the next sample of each selected station goes in an indexed ragged
 /// pass; made once per read, reset for each variable.

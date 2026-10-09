@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -34,7 +34,7 @@ namespace mov::io {
 namespace {
 
 namespace sn = detail::station_nc;
-using core::detail::Overloaded;
+using core::Overloaded;
 using detail::classify_netcdf;
 using detail::NetcdfKind;
 

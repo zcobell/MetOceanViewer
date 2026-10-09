@@ -9,7 +9,9 @@
 #include <cstdint>
 #include <string_view>
 
-namespace mov::core::detail {
+namespace mov::core {
+
+namespace detail {
 
 /// One row of the well-formed UTF-8 table (Unicode 15, table 3-7): lead
 /// bytes in [lead_lo, lead_hi] start a sequence of `length` bytes whose
@@ -75,25 +77,27 @@ inline constexpr std::array<Utf8Form, 9> utf8_forms{{
   return b >= lo and b <= hi;
 }
 
+}  // namespace detail
+
 /// The length of the well-formed sequence at the start of `s`, or 0.
 [[nodiscard]] constexpr std::size_t utf8_sequence_length(
     std::string_view s) noexcept {
   const auto byte = [s](std::size_t i) {
     return static_cast<std::uint8_t>(s[i]);
   };
-  const auto form =
-      std::ranges::find_if(utf8_forms, [lead = byte(0)](const Utf8Form& f) {
-        return in_range(lead, f.lead_lo, f.lead_hi);
+  const auto form = std::ranges::find_if(
+      detail::utf8_forms, [lead = byte(0)](const detail::Utf8Form& f) {
+        return detail::in_range(lead, f.lead_lo, f.lead_hi);
       });
-  if (form == utf8_forms.end() or s.size() < form->length) {
+  if (form == detail::utf8_forms.end() or s.size() < form->length) {
     return 0;
   }
   if (form->length > 1 and
-      not in_range(byte(1), form->second_lo, form->second_hi)) {
+      not detail::in_range(byte(1), form->second_lo, form->second_hi)) {
     return 0;
   }
   for (std::size_t i = 2; i < form->length; ++i) {
-    if (not in_range(byte(i), 0x80, 0xBF)) {
+    if (not detail::in_range(byte(i), 0x80, 0xBF)) {
       return 0;
     }
   }
@@ -113,4 +117,4 @@ inline constexpr std::array<Utf8Form, 9> utf8_forms{{
   return true;
 }
 
-}  // namespace mov::core::detail
+}  // namespace mov::core

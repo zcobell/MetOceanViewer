@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/hwm.hpp"
 #include "mov/core/units.hpp"
@@ -63,7 +63,7 @@ std::size_t split_fields(std::string_view line,
                          std::span<std::string_view> out) noexcept {
   const std::size_t count = detail::split_on_into(line, ',', out);
   for (std::string_view& field : out.first(std::min(count, out.size()))) {
-    field = core::detail::trim(field);
+    field = core::ascii::trim(field);
   }
   return count;
 }
@@ -206,7 +206,7 @@ class HwmReader {
       warnings_.push_back(
           {.code = WarningCode::header_line_skipped,
            .subject = std::string{detail::truncate_utf8(
-               core::detail::trim(line->text), header_subject_bytes)},
+               core::ascii::trim(line->text), header_subject_bytes)},
            .count = 1});
       line = cursor_.next_nonblank();
     }

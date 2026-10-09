@@ -3,8 +3,11 @@
 
 #pragma once
 
-// detail:: is the fence. Names in mov::core::detail are not API: code outside
-// src/core must not use them, even where a public header has to declare them.
+// detail:: is the fence. Names in mov::core::detail are not API: only src/core
+// and its tests (tests/core) use them, even where a public header has to
+// declare them. A helper another layer needs is public instead (ascii.hpp,
+// utf8.hpp, overloaded.hpp). The core_detail_fence test checks every other
+// source and test.
 //
 // CoreKey is the one passkey of the core. Public members that bypass a
 // class's own checks (TimeSeries built from parts whose invariant the caller

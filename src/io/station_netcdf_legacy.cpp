@@ -27,8 +27,8 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
@@ -278,7 +278,7 @@ Cleaned clean_name(std::string_view row) {
 
 /// An id: cut at the first NUL and trimmed.
 Cleaned clean_id(std::string_view row) {
-  const std::string_view trimmed_id = core::detail::trim(cut_at_nul(row));
+  const std::string_view trimmed_id = core::ascii::trim(cut_at_nul(row));
   auto cleaned = replace_invalid_utf8(trimmed_id);
   return {.text = std::string{cleaned.text.view()},
           .replaced = cleaned.replaced};
@@ -441,7 +441,7 @@ struct Reference {
 /// (B8: whatever the attribute's length, and a `T` is accepted). ParseError
 /// `bad_date` when they are not a date.
 std::expected<Reference, Error> parse_reference(std::string_view text) {
-  const std::string_view whole = core::detail::trim(cut_at_nul(text));
+  const std::string_view whole = core::ascii::trim(cut_at_nul(text));
   const auto parsed =
       core::parse_utc_datetime(whole.substr(0, reference_date_chars));
   if (not parsed) {
@@ -451,7 +451,7 @@ std::expected<Reference, Error> parse_reference(std::string_view text) {
   }
   const std::string_view rest =
       whole.size() > reference_date_chars
-          ? core::detail::trim(whole.substr(reference_date_chars))
+          ? core::ascii::trim(whole.substr(reference_date_chars))
           : std::string_view{};
   return Reference{.epoch = *parsed, .trailing = std::string{rest}};
 }
@@ -466,9 +466,9 @@ struct TimeNotes {
 /// `tz_assumed_utc` for a zone (or what trails the date) other than UTC or
 /// GMT, one warning per distinct text, counted.
 void note_zone(TimeNotes& notes, std::string_view text) {
-  const std::string_view zone = core::detail::trim(text);
-  if (zone.empty() or core::detail::equal_ignore_case(zone, "utc") or
-      core::detail::equal_ignore_case(zone, "gmt")) {
+  const std::string_view zone = core::ascii::trim(text);
+  if (zone.empty() or core::ascii::equal_ignore_case(zone, "utc") or
+      core::ascii::equal_ignore_case(zone, "gmt")) {
     return;
   }
   const std::string subject = subject_of(zone);
@@ -522,7 +522,7 @@ std::expected<MetaNotes, Error> meta_notes_of(const nc::File& file,
     return std::unexpected{std::move(parts).error()};
   }
   const auto& [units, datum] = *parts;
-  return MetaNotes{.units = std::string{core::detail::trim(units.value_or(""))},
+  return MetaNotes{.units = std::string{core::ascii::trim(units.value_or(""))},
                    .datum = to_upper_ascii(datum_text(datum.value_or("")))};
 }
 

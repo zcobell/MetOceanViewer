@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station.hpp"
 #include "mov/io/adcirc_ascii.hpp"
@@ -36,7 +36,7 @@ using Line = detail::LineCursor::Line;
 constexpr std::size_t min_line_bytes = 4;
 
 constexpr bool is_separator(char c) noexcept {
-  return c == ',' or core::detail::is_space(c);
+  return c == ',' or core::ascii::is_space(c);
 }
 
 template <class E>

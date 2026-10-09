@@ -21,7 +21,6 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/utf8.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
@@ -29,6 +28,7 @@
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/units.hpp"
+#include "mov/core/utf8.hpp"
 #include "mov/core/version.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -311,7 +311,7 @@ std::expected<void, Error> check_option(std::string_view attribute,
                                         std::string_view text) {
   if (text.size() > StationNcWriteOptions::max_option_bytes or
       text.find('\0') != std::string_view::npos or
-      not core::detail::is_valid_utf8(text)) {
+      not core::is_valid_utf8(text)) {
     return refuse(FormatErrc::bad_option, ":" + std::string{attribute});
   }
   return {};

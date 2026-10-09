@@ -22,7 +22,7 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
@@ -75,9 +75,9 @@ std::string subject_of(std::string_view token) {
 // ------------------------------------------------------------------
 
 bool is_utc_token(std::string_view zone) {
-  return core::detail::equal_ignore_case(zone, "UTC") or
-         core::detail::equal_ignore_case(zone, "GMT") or
-         core::detail::equal_ignore_case(zone, "Z");
+  return core::ascii::equal_ignore_case(zone, "UTC") or
+         core::ascii::equal_ignore_case(zone, "GMT") or
+         core::ascii::equal_ignore_case(zone, "Z");
 }
 
 Read<std::string> zone_of(std::optional<std::string_view> zone) {
@@ -104,7 +104,7 @@ bool is_family_unit(const core::Unit& unit) {
 // The unit text is the rest of the line, so "S m-1" is one unit; "unknown" is
 // what the writer says for no unit.
 Read<std::optional<core::Unit>> unit_of(std::string_view text) {
-  if (core::detail::equal_ignore_case(text, "unknown")) {
+  if (core::ascii::equal_ignore_case(text, "unknown")) {
     return {.value = std::nullopt, .warnings = {}};
   }
   std::optional<core::Unit> unit = core::parse_unit(text);
@@ -170,7 +170,7 @@ std::expected<Read<ImedsHeader>, ParseError> parse_header(
   const auto third = detail::next_word(rest);
   Read<std::string> time_zone = zone_of(zone);
   Read<DatumAndUnit> rest_of_line =
-      datum_and_unit(third, core::detail::trim(rest));
+      datum_and_unit(third, core::ascii::trim(rest));
   return Read<ImedsHeader>{
       .value = {.source = std::string{*source},
                 .time_zone = std::move(time_zone.value),
@@ -217,7 +217,7 @@ struct RowValue {
 
 std::expected<RowValue, ParseError> parse_value(const LineCursor::Line& line,
                                                 std::string_view token) {
-  if (core::detail::equal_ignore_case(token, printed_dbl_max)) {
+  if (core::ascii::equal_ignore_case(token, printed_dbl_max)) {
     return RowValue{.sample = core::Missing{},
                     .masked = Masked::legacy_sentinel};
   }

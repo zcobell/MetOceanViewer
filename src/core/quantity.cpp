@@ -9,21 +9,17 @@
 #include <utility>
 #include <variant>
 
+#include "mov/core/ascii.hpp"
+
 namespace mov::core {
 
 namespace {
 
-constexpr bool is_ascii_letter(char c) noexcept {
-  return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
-}
-
-constexpr bool is_ascii_digit(char c) noexcept { return c >= '0' and c <= '9'; }
-
 // ^[A-Za-z][A-Za-z0-9_]*$
 constexpr bool is_cf_name(std::string_view text) noexcept {
-  return not text.empty() and is_ascii_letter(text.front()) and
+  return not text.empty() and ascii::is_alpha(text.front()) and
          std::ranges::all_of(text, [](char c) noexcept {
-           return is_ascii_letter(c) or is_ascii_digit(c) or c == '_';
+           return ascii::is_alnum(c) or c == '_';
          });
 }
 

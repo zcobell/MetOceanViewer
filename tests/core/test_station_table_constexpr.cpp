@@ -11,17 +11,17 @@
 #include <type_traits>
 #include <utility>
 
-#include "mov/core/detail/utf8.hpp"
 #include "mov/core/station_table.hpp"
+#include "mov/core/utf8.hpp"
 
 using mov::core::ColumnIndex;
+using mov::core::is_valid_utf8;
 using mov::core::StationIndex;
 using mov::core::StationRow;
 using mov::core::StationSelection;
 using mov::core::StationTable;
 using mov::core::TableError;
 using mov::core::Variable;
-using mov::core::detail::is_valid_utf8;
 
 namespace {
 

@@ -24,7 +24,7 @@
 #include <string_view>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -35,7 +35,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
 namespace {
 
 namespace detail = mov::io::detail;
-using mov::core::detail::is_space;
+using mov::core::ascii::is_space;
 
 [[noreturn]] void fail() { std::abort(); }
 

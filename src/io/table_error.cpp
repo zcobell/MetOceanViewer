@@ -9,7 +9,7 @@
 #include <utility>
 #include <variant>
 
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/io/error.hpp"
@@ -43,7 +43,7 @@ FormatError from_schema(const core::SchemaError& s) {
 FormatError from_station(const core::StationError& s) {
   const std::size_t station = s.station.value();
   return std::visit(
-      core::detail::Overloaded{
+      core::Overloaded{
           [station](core::DuplicateStationId) {
             return error_of(FormatErrc::duplicate_station_id, {}, station);
           },
@@ -76,7 +76,7 @@ std::string crs_subject(core::Epsg crs) {
 
 FormatError to_format_error(const core::TableError& e) {
   return std::visit(
-      core::detail::Overloaded{
+      core::Overloaded{
           [](const core::SchemaError& s) { return from_schema(s); },
           [](const core::StationError& s) { return from_station(s); }},
       e);

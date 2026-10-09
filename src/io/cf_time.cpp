@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/time.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -26,7 +26,7 @@ namespace mov::io {
 
 namespace {
 
-using core::detail::equal_ignore_case;
+using core::ascii::equal_ignore_case;
 
 // ---- units -----------------------------------------------------------------
 
@@ -86,8 +86,6 @@ constexpr std::optional<CfTimeUnit> parse_unit_word(std::string_view word) {
 
 // ---- numbers ---------------------------------------------------------------
 
-constexpr bool is_digit(char c) noexcept { return c >= '0' and c <= '9'; }
-
 // The value of a run of decimal digits; the one place a digit run becomes a
 // number.
 constexpr int decode_decimal(std::string_view digits) noexcept {
@@ -99,8 +97,8 @@ constexpr int decode_decimal(std::string_view digits) noexcept {
 }
 
 constexpr std::size_t digit_run(std::string_view text) noexcept {
-  return static_cast<std::size_t>(std::ranges::find_if_not(text, is_digit) -
-                                  text.begin());
+  return static_cast<std::size_t>(
+      std::ranges::find_if_not(text, core::ascii::is_digit) - text.begin());
 }
 
 // The fraction of a second as milliseconds, rounded half up, and whether a
@@ -316,8 +314,8 @@ std::expected<Clock, ParseError> scan_date_and_clock(
   date = *parsed_date;
   const std::string_view after = in.rest();
   const bool has_clock =
-      in.peek_is('T') or
-      (in.peek_is(' ') and after.size() > 1 and is_digit(after[1]));
+      in.peek_is('T') or (in.peek_is(' ') and after.size() > 1 and
+                          core::ascii::is_digit(after[1]));
   if (not has_clock) {
     return Clock{.time = std::chrono::milliseconds{0}, .dropped = false};
   }
@@ -325,20 +323,35 @@ std::expected<Clock, ParseError> scan_date_and_clock(
   return scan_clock(in);
 }
 
+// Exactly two digits, as a number no greater than `max`.
+constexpr std::optional<int> two_digits(std::string_view text,
+                                        int max) noexcept {
+  if (text.size() != 2 or digit_run(text) != 2) {
+    return std::nullopt;
+  }
+  const int value = decode_decimal(text);
+  return value <= max ? std::optional{value} : std::nullopt;
+}
+
 // "+hh", "+hh:mm" or "+hhmm" (or "-"); the scanner is on the sign. Errors are
-// reported at the sign. The digits are read with core's DateTimeCursor.
+// reported at the sign.
 std::expected<std::chrono::minutes, ParseError> scan_offset(Scanner& in) {
+  constexpr int max_hours = 23;
+  constexpr int max_minutes = 59;
   const Scanner::Word offset = in.word();
   const int sign = offset.text.starts_with('-') ? -1 : 1;
   std::string_view digits = offset.text;  // after the sign
   digits.remove_prefix(std::min<std::size_t>(1, digits.size()));
-  core::detail::DateTimeCursor cursor{digits};
-  const auto hours = cursor.field(2, 0, 23);
-  const bool has_minutes =
-      hours and (cursor.accept(':') or not cursor.at_end());
-  const auto minutes = has_minutes ? cursor.field(2, 0, 59)
-                                   : std::expected<int, core::DateTimeError>{0};
-  if (not hours or not minutes or not cursor.at_end()) {
+  const auto hours = two_digits(digits.substr(0, 2), max_hours);
+  std::string_view rest =
+      digits.substr(std::min<std::size_t>(2, digits.size()));
+  const bool colon = rest.starts_with(':');
+  rest.remove_prefix(colon ? 1 : 0);
+  // "hh" alone has no minutes; "hh:" lacks them.
+  const auto minutes = rest.empty() and not colon
+                           ? std::optional{0}
+                           : two_digits(rest, max_minutes);
+  if (not hours or not minutes) {
     return std::unexpected{in.error(ParseErrc::bad_time_units, offset.column)};
   }
   return std::chrono::minutes{sign * ((*hours * 60) + *minutes)};
@@ -393,7 +406,7 @@ std::expected<Read<CfTimeUnits>, ParseError> parse_cf_time_units(
     warnings.push_back(
         Warning{.code = WarningCode::time_precision_dropped,
                 .subject = std::string{detail::truncate_utf8(
-                    core::detail::trim(text), ParseError::max_context_bytes)}});
+                    core::ascii::trim(text), ParseError::max_context_bytes)}});
   }
   return Read<CfTimeUnits>{.value = CfTimeUnits{.unit = *unit, .epoch = epoch},
                            .warnings = std::move(warnings)};

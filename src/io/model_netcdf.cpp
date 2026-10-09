@@ -21,7 +21,7 @@
 #include <variant>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/station.hpp"

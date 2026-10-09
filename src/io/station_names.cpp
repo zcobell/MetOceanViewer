@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "mov/core/detail/utf8.hpp"
+#include "mov/core/utf8.hpp"
 
 namespace mov::io::detail {
 
@@ -29,7 +29,7 @@ CleanedText replace_invalid_utf8(std::string_view text) {
   while (not text.empty()) {
     // A NUL is well-formed UTF-8, but no station key or name may hold one.
     const std::size_t length =
-        text.front() == '\0' ? 0 : core::detail::utf8_sequence_length(text);
+        text.front() == '\0' ? 0 : core::utf8_sequence_length(text);
     if (length == 0) {
       cleaned += replacement_character;
       replaced = true;

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <charconv>
 #include <clocale>
+#include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <expected>
@@ -15,8 +16,7 @@
 #include <system_error>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/numeric.hpp"
+#include "mov/core/ascii.hpp"
 
 #if defined(__APPLE__)
 #include <xlocale.h>  // strtod_l, newlocale, freelocale
@@ -60,13 +60,13 @@ std::string simplified(std::string_view text) {
 
 std::string to_lower_ascii(std::string_view text) {
   std::string out{text};
-  std::ranges::transform(out, out.begin(), core::detail::to_lower);
+  std::ranges::transform(out, out.begin(), core::ascii::to_lower);
   return out;
 }
 
 std::string to_upper_ascii(std::string_view text) {
   std::string out{text};
-  std::ranges::transform(out, out.begin(), core::detail::to_upper);
+  std::ranges::transform(out, out.begin(), core::ascii::to_upper);
   return out;
 }
 
@@ -78,11 +78,9 @@ std::string_view cut_at_nul(std::string_view text) noexcept {
 
 namespace {
 
-constexpr bool is_digit(char c) noexcept { return c >= '0' and c <= '9'; }
-
 // Length of the run of digits at the start of `s`.
 std::size_t digit_run(std::string_view s) noexcept {
-  const auto end = std::ranges::find_if_not(s, is_digit);
+  const auto end = std::ranges::find_if_not(s, core::ascii::is_digit);
   return static_cast<std::size_t>(end - s.begin());
 }
 
@@ -142,7 +140,7 @@ std::expected<Decimal, NumberError> scan_decimal(std::string_view token) {
 // The shared verdict on a converted value: a nonzero decimal that became zero
 // has underflowed.
 std::expected<double, NumberError> checked(double value, const Decimal& d) {
-  if (not core::detail::is_finite(value) or (value == 0.0 and d.nonzero)) {
+  if (not std::isfinite(value) or (value == 0.0 and d.nonzero)) {
     return std::unexpected{NumberError::out_of_range};
   }
   return value;

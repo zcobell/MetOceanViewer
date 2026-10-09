@@ -8,6 +8,7 @@
 #include <optional>
 #include <string_view>
 
+#include "mov/core/ascii.hpp"
 #include "mov/core/station_table.hpp"
 
 namespace mov::io {
@@ -16,12 +17,10 @@ namespace {
 
 constexpr std::size_t max_version_digits = 4;
 
-constexpr bool is_digit(char c) noexcept { return c >= '0' and c <= '9'; }
-
 /// 1 to 4 decimal digits without a leading zero (except "0" itself).
 constexpr std::optional<unsigned> version_number(std::string_view text) {
   if (text.empty() or text.size() > max_version_digits or
-      not std::ranges::all_of(text, is_digit) or
+      not std::ranges::all_of(text, core::ascii::is_digit) or
       (text.size() > 1 and text.front() == '0')) {
     return std::nullopt;
   }

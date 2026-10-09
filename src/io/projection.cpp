@@ -20,7 +20,6 @@
 #include <string_view>
 #include <utility>
 
-#include "mov/core/detail/numeric.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/io/error.hpp"
 
@@ -269,8 +268,7 @@ std::expected<core::Xy, ProjectionError> Projector::project(core::Xy p) {
                                      proj_coord(p.x, p.y, 0.0, HUGE_VAL));
   note_last_operation(impl_->context.get(), impl_->transformation.get(),
                       accuracy_);
-  if (not core::detail::is_finite(result.xy.x) or
-      not core::detail::is_finite(result.xy.y)) {
+  if (not std::isfinite(result.xy.x) or not std::isfinite(result.xy.y)) {
     return std::unexpected{
         ProjectionError{.code = ProjectionErrc::transform_failed, .crs = crs_}};
   }

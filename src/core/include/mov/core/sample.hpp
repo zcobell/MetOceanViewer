@@ -10,7 +10,7 @@
 #include <variant>
 
 #include "mov/core/detail/numeric.hpp"
-#include "mov/core/detail/overloaded.hpp"
+#include "mov/core/overloaded.hpp"
 
 namespace mov::core {
 
@@ -61,7 +61,7 @@ class Sample {
   /// Calls the overload of f... that takes Missing, Dry or double.
   template <class... F>
   [[nodiscard]] constexpr decltype(auto) visit(F&&... f) const {
-    return std::visit(detail::Overloaded{std::forward<F>(f)...}, v_);
+    return std::visit(Overloaded{std::forward<F>(f)...}, v_);
   }
 
   friend constexpr bool operator==(const Sample&, const Sample&) = default;

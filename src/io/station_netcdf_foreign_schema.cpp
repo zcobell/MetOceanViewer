@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/units.hpp"
@@ -86,7 +86,7 @@ std::expected<Raw, Error> raw_of(const nc::File& file,
                : (geopotential ? std::move(geopotential) : std::move(mapped));
   return Raw{.facts = &f,
              .standard = std::string{f.standard_name
-                                         ? core::detail::trim(*f.standard_name)
+                                         ? core::ascii::trim(*f.standard_name)
                                          : std::string_view{}},
              .long_name = std::move(long_name),
              .datum = std::move(datum),
@@ -96,20 +96,12 @@ std::expected<Raw, Error> raw_of(const nc::File& file,
 // ---- the quantity (decision F4, owner decision 30.4)
 // -------------------------
 
-std::string lower(std::string_view text) {
-  std::string out{text};
-  for (char& c : out) {
-    c = c >= 'A' and c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
-  }
-  return out;
-}
-
 /// The name or long_name of the variable says its values are predicted.
 bool hints_prediction(const Raw& r) {
   constexpr std::array<std::string_view, 4> hints{"predict", "tide",
                                                   "astronomical", "harmonic"};
-  const std::string text =
-      lower(r.facts->var.name.view()) + ' ' + lower(r.long_name.value_or(""));
+  const std::string text = to_lower_ascii(r.facts->var.name.view()) + ' ' +
+                           to_lower_ascii(r.long_name.value_or(""));
   return std::ranges::any_of(hints, [&text](std::string_view hint) {
     return text.find(hint) != std::string::npos;
   });
@@ -141,13 +133,7 @@ std::optional<core::Quantity> registry_choice(const Raw& r,
   return q;
 }
 
-bool ascii_letter(char c) {
-  return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
-}
-
-bool token_char(char c) {
-  return ascii_letter(c) or (c >= '0' and c <= '9') or c == '_';
-}
+bool token_char(char c) { return core::ascii::is_alnum(c) or c == '_'; }
 
 /// Whether `token` can be the token of a generic column next to `taken`.
 bool usable_token(std::string_view token, const TokenSet& taken) {
@@ -165,7 +151,7 @@ std::string mangled_token(std::string_view name, const TokenSet& taken) {
   for (const char c : name) {
     token.push_back(token_char(c) ? c : '_');
   }
-  if (token.empty() or not ascii_letter(token.front())) {
+  if (token.empty() or not core::ascii::is_alpha(token.front())) {
     token.insert(token.begin(), 'v');
   }
   token.resize(std::min(token.size(), max_token_bytes));
@@ -257,7 +243,7 @@ bool mentions(std::string_view meaning, std::string_view word) {
 enum class FlagClass : std::uint8_t { fine, suspect, bad };
 
 FlagClass classify_meaning(std::string_view meaning) {
-  const std::string text = lower(meaning);
+  const std::string text = to_lower_ascii(meaning);
   if (mentions(text, "bad") or mentions(text, "fail") or
       mentions(text, "missing")) {
     return FlagClass::bad;

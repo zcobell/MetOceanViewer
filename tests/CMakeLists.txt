@@ -126,6 +126,20 @@ add_test(
         ${CMAKE_COMMAND} "-DMOV_SOURCE_DIRS=${qt_free_dirs}" -P "${PROJECT_SOURCE_DIR}/cmake/CheckQtFreeSources.cmake"
 )
 
+# Names in mov::core::detail are core-private (detail/core_key.hpp): no other
+# layer, and no test of another layer, uses them.
+add_test(
+    NAME core_detail_fence
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P "${PROJECT_SOURCE_DIR}/cmake/CheckCoreDetailFence.cmake"
+)
+add_test(
+    NAME core_detail_fence_rejects_violations
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/core_detail_fence/run.cmake"
+)
+
 # The guards themselves: each must reject what it exists to reject.
 add_test(
     NAME layering_guard_rejects_violations

@@ -22,14 +22,14 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
-#include "mov/core/detail/utf8.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/units.hpp"
+#include "mov/core/utf8.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
@@ -115,8 +115,8 @@ std::expected<void, Error> check_feature_type(const nc::File& file) {
   if (not *feature) {
     return invalid(FormatErrc::missing_attribute, ":featureType");
   }
-  if (not core::detail::equal_ignore_case(core::detail::trim(**feature),
-                                          sn::feature_type)) {
+  if (not core::ascii::equal_ignore_case(core::ascii::trim(**feature),
+                                         sn::feature_type)) {
     return invalid(FormatErrc::unsupported_layout, ":featureType");
   }
   return {};
@@ -205,7 +205,7 @@ std::expected<nc::VarInfo, Error> find_station_id(const nc::File& file,
     if (not role) {
       return std::unexpected{std::move(role).error()};
     }
-    if (role->transform(core::detail::trim) == "timeseries_id") {
+    if (role->transform(core::ascii::trim) == "timeseries_id") {
       ids.push_back(&v);
     }
   }
@@ -483,7 +483,7 @@ std::expected<std::vector<std::string>, Error> grid_mappings(
       return std::unexpected{std::move(text).error()};
     }
     if (*text) {
-      std::string name{core::detail::trim(**text)};
+      std::string name{core::ascii::trim(**text)};
       if (std::ranges::find(names, name) == names.end()) {
         names.push_back(std::move(name));
       }
@@ -606,7 +606,7 @@ station_sources(const nc::File& file, const Structure& s,
   for (std::size_t i = 0; i < rows->size(); ++i) {
     const std::string token = trimmed(std::move((*rows)[i]));
     if (token.find('\0') != std::string::npos or
-        not core::detail::is_valid_utf8(token)) {
+        not core::is_valid_utf8(token)) {
       return invalid(FormatErrc::bad_encoding, std::string{var.name.view()}, i);
     }
     out.value[i] = core::parse_data_source(token);

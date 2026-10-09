@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -74,7 +74,7 @@ std::expected<std::vector<Facts>, Error> all_facts(const nc::File& file) {
 
 bool says(const std::optional<std::string>& text, std::string_view value) {
   return text.has_value() and
-         core::detail::equal_ignore_case(core::detail::trim(*text), value);
+         core::ascii::equal_ignore_case(core::ascii::trim(*text), value);
 }
 
 std::vector<std::string> words(const std::optional<std::string>& text) {

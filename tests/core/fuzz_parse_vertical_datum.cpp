@@ -12,8 +12,8 @@
 #include <string>
 #include <string_view>
 
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size);
@@ -45,8 +45,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   }
   if (not parsed) {
     const std::string_view reported = parsed.error().text;
-    if (reported.empty() or mov::core::detail::is_space(reported.front()) or
-        mov::core::detail::is_space(reported.back())) {
+    if (reported.empty() or mov::core::ascii::is_space(reported.front()) or
+        mov::core::ascii::is_space(reported.back())) {
       fail();  // reported text is trimmed and never empty
     }
   }

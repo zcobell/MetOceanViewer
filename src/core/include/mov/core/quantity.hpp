@@ -13,7 +13,7 @@
 #include <utility>
 #include <variant>
 
-#include "mov/core/detail/ascii.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/units.hpp"
 
 namespace mov::core {
@@ -283,7 +283,7 @@ static_assert(
     std::ranges::none_of(detail::quantity_registry,
                          [](const QuantityInfo& row) {
                            return row.token != "difference" and
-                                  detail::trim(row.canonical_unit).empty();
+                                  ascii::trim(row.canonical_unit).empty();
                          }),
     "canonical_unit relies on non-blank registry units, except `difference`");
 

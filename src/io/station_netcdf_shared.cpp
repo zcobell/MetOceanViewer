@@ -21,8 +21,8 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
+#include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/detail/ascii.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/meta.hpp"
 #include "mov/core/sample.hpp"
@@ -116,8 +116,7 @@ std::optional<core::Epsg> parse_epsg(std::string_view text) {
   }
   const std::string_view digits = text.substr(prefix.size());
   if (digits.empty() or digits.size() > max_digits or
-      not std::ranges::all_of(digits,
-                              [](char c) { return c >= '0' and c <= '9'; })) {
+      not std::ranges::all_of(digits, core::ascii::is_digit)) {
     return std::nullopt;
   }
   int code = 0;
@@ -159,7 +158,7 @@ std::expected<Read<core::Epsg>, Error> crs_from_parameters(
   }
   const auto& [mapping, axis, flattening] = *parts;
   const std::string subject{var.name.view()};
-  if (mapping.transform(core::detail::trim) != "latitude_longitude" or
+  if (mapping.transform(core::ascii::trim) != "latitude_longitude" or
       axis.value_or(sn::wgs84_semi_major_axis) != sn::wgs84_semi_major_axis or
       flattening.value_or(sn::wgs84_inverse_flattening) !=
           sn::wgs84_inverse_flattening) {
@@ -194,7 +193,7 @@ std::expected<Read<core::Epsg>, Error> crs_of_mapping(const nc::File& file,
   if (not code) {
     return crs_from_parameters(file, var);
   }
-  const auto epsg = parse_epsg(core::detail::trim(*code));
+  const auto epsg = parse_epsg(core::ascii::trim(*code));
   if (not epsg) {
     return invalid(FormatErrc::unsupported_crs, std::string{var.name.view()});
   }
@@ -342,15 +341,12 @@ std::string datum_words(std::string_view text) {
   std::string out;
   bool gap = false;
   for (const char c : text) {
-    const bool alnum = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or
-                       (c >= '0' and c <= '9');
-    if (alnum) {
+    if (core::ascii::is_alnum(c)) {
       if (gap and not out.empty()) {
         out.push_back(' ');
       }
       gap = false;
-      out.push_back(c >= 'A' and c <= 'Z' ? static_cast<char>(c - 'A' + 'a')
-                                          : c);
+      out.push_back(core::ascii::to_lower(c));
     } else {
       gap = true;
     }
@@ -367,7 +363,7 @@ std::string datum_text(std::string_view text) {
   if (known != datum_spellings.end()) {
     return std::string{known->token};
   }
-  return std::string{core::detail::trim(text)};
+  return std::string{core::ascii::trim(text)};
 }
 
 // ---- series whose times are not strictly increasing (decision 30.3)

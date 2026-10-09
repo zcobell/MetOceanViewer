@@ -6,14 +6,32 @@
 #include <algorithm>
 #include <string_view>
 
-// ASCII-only text helpers, constexpr and locale-independent (std::isspace and
-// std::tolower depend on the global C locale).
+// ASCII-only character and text helpers, constexpr and independent of the C
+// and C++ locales (std::isspace, std::isdigit and std::tolower read the global
+// C locale). A byte outside ASCII is never a space, digit or letter, and case
+// folding leaves it alone, so UTF-8 text passes through unchanged.
 
-namespace mov::core::detail {
+namespace mov::core::ascii {
 
+/// Space, tab, CR, LF, VT or FF.
 [[nodiscard]] constexpr bool is_space(char c) noexcept {
   return c == ' ' or c == '\t' or c == '\n' or c == '\r' or c == '\v' or
          c == '\f';
+}
+
+/// 0-9.
+[[nodiscard]] constexpr bool is_digit(char c) noexcept {
+  return c >= '0' and c <= '9';
+}
+
+/// A-Z or a-z.
+[[nodiscard]] constexpr bool is_alpha(char c) noexcept {
+  return (c >= 'A' and c <= 'Z') or (c >= 'a' and c <= 'z');
+}
+
+/// A letter or a digit.
+[[nodiscard]] constexpr bool is_alnum(char c) noexcept {
+  return is_alpha(c) or is_digit(c);
 }
 
 [[nodiscard]] constexpr char to_lower(char c) noexcept {
@@ -42,4 +60,4 @@ namespace mov::core::detail {
       a, b, [](char x, char y) noexcept { return to_lower(x) == to_lower(y); });
 }
 
-}  // namespace mov::core::detail
+}  // namespace mov::core::ascii
