@@ -144,7 +144,7 @@ TEST_CASE("type_of and the read table of section 4.3",
 // std::vector member during constant evaluation.
 TEST_CASE("Masking compares in the variable's own type",
           "[io][netcdf][constexpr]") {
-  // B4: the float fill -99999f masks the float -99999f, and NaN is missing.
+  // The float fill -99999f masks the float -99999f, and NaN is missing.
   STATIC_REQUIRE([] {
     // NOLINTNEXTLINE(misc-const-correctness): GCC 14, see above
     Masking<float> m{.fill = -99999.0F};
@@ -155,7 +155,7 @@ TEST_CASE("Masking compares in the variable's own type",
                Sample{Missing{}} and
            m.apply(1.5F) == value(1.5);
   }());
-  // B9: the default double fill is a fill, not a value.
+  // The default double fill is a fill, not a value.
   STATIC_REQUIRE([] {
     // NOLINTNEXTLINE(misc-const-correctness): GCC 14, see above
     Masking<double> m{.fill = 9.9692099683868690e+36};

@@ -21,9 +21,9 @@ namespace mov::io::detail {
 /// either file gives equal tables.
 ///
 /// The vector components of a model on a projected grid point along the grid's
-/// axes, not east and north (design decision 28), so for `grid ==
-/// CrsKind::projected` they are not the registry's eastward and northward
-/// quantities but generic ones with CF's grid names: `sea_water_x_velocity`,
+/// axes, not east and north, so for `grid == CrsKind::projected` they are not
+/// the registry's eastward and northward quantities but generic ones with CF's
+/// grid names: `sea_water_x_velocity`,
 /// `sea_water_y_velocity` and `x_wind`, `y_wind` (labels "grid-relative ...").
 /// Rotating them by the meridian convergence is deferred.
 [[nodiscard]] std::vector<core::SeriesMeta> adcirc_schema(AdcircKind kind,

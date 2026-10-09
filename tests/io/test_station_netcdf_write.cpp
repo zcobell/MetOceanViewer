@@ -273,7 +273,7 @@ TEST_CASE("the status variable exists iff a sample of the column is Dry",
   CHECK(not wet.has_var("water_level_status"));
   CHECK(not(wet.att("water_level", "ancillary_variables")));
 
-  // Dry on a quantity that is not a water level is legal too (C1).
+  // Dry on a quantity that is not a water level is legal too.
   const auto air =
       table({{.meta = meta(Quantity::air_temperature, "air", "degC"),
               .per_station = {{dry, v(3)}}}},
@@ -455,7 +455,7 @@ TEST_CASE("nothing to write: no stations, columns or samples",
   }
 }
 
-TEST_CASE("too_many_samples: more than obs_count can count (N1)",
+TEST_CASE("too_many_samples: more than obs_count can count",
           "[io][station_nc][write][errors]") {
   const auto t2 =
       water_levels({{t(0), t(1), t(2)}, {t(0)}}, {{v(1), v(2), v(3)}, {v(4)}});
@@ -469,7 +469,7 @@ TEST_CASE("too_many_samples: more than obs_count can count (N1)",
   CHECK(e.subject == "S0");
 }
 
-TEST_CASE("options: UTF-8 without NUL, bounded, a title (N6)",
+TEST_CASE("options: UTF-8 without NUL, bounded, a title",
           "[io][station_nc][write][errors]") {
   const ScratchDir dir;
   const auto one = water_levels({{t(0)}}, {{v(1)}});
@@ -511,7 +511,7 @@ TEST_CASE("validate_station_netcdf: the writer's verdict without a file",
             .code == FormatErrc::empty_collection);
 }
 
-TEST_CASE("a generic temperature is `temperature: unknown` (N2)",
+TEST_CASE("a generic temperature is `temperature: unknown`",
           "[io][station_nc][write][units]") {
   const ScratchDir dir;
   static_cast<void>(must_write(
@@ -557,7 +557,7 @@ TEST_CASE("invalid_variable_name: a generic token the format cannot use",
   }
   SECTION("the status name of a column without Dry samples too") {
     // Every column reserves its status name: whether a table can be written
-    // depends on its schema, not on whether a sample is Dry (F2).
+    // depends on its schema, not on whether a sample is Dry.
     refused(with({{.meta = meta(Quantity::water_level, "wl", "m"),
                    .per_station = {{v(2)}}},
                   {.meta = meta(generic("water_level_status"), "x"),

@@ -3,8 +3,8 @@
 
 // Foreign CF station netCDF files: what the reader tolerates (packing, fills,
 // valid ranges, strings, grid mappings), how it names the quantity of a
-// variable (standard names that are exactly a registry quantity's, decision
-// F4's substitute names for the rest), which variables it skips, and the errors
+// variable (standard names that are exactly a registry quantity's,
+// substitute names for the rest), which variables it skips, and the errors
 // of a file whose structure is not a `timeSeries`.
 
 #include <netcdf.h>
@@ -348,7 +348,7 @@ TEST_CASE("foreign: standard names that are exactly a registry quantity",
   const core::StationTable& t = read.value.table;
   REQUIRE(t.schema().size() == 9);
   CHECK(t.schema()[0].quantity() == token("temperature"));
-  // Eastward and northward components are the registry's (decision 28); the
+  // Eastward and northward components are the registry's; the
   // grid-relative x velocity is a generic quantity that keeps its name.
   CHECK(t.schema()[1].quantity() ==
         core::QuantityId{core::Quantity::current_u});
@@ -376,7 +376,7 @@ TEST_CASE("foreign: standard names that are exactly a registry quantity",
   CHECK(t.schema()[8].unit() == unit("mb"));
 }
 
-TEST_CASE("foreign: a variable name that is no token gets a substitute (F4)",
+TEST_CASE("foreign: a variable name that is no token gets a substitute",
           "[io][station_nc][foreign]") {
   const auto read = read_spec(with([](Cdf& f, int station, int sample) {
     const auto add = [&](const char* name, const char* standard) {

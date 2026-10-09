@@ -11,7 +11,7 @@
 namespace mov::io::detail {
 
 /// The product of `factors` (element counts, dimension lengths), or nullopt
-/// when it does not fit in std::size_t (C12). The product of no factors is 1,
+/// when it does not fit in std::size_t. The product of no factors is 1,
 /// the element count of a scalar. A zero factor makes the product 0 whatever
 /// the other factors are, so an empty hyperslab of huge dimensions is not an
 /// overflow.

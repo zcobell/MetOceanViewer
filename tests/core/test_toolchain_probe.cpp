@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The WP1 toolchain probe (docs/core-design.md section 1), run-time half. See
+// The toolchain probe (docs/core-design.md section 1), run-time half. See
 // test_toolchain_probe_constexpr.cpp for the compile-time half and the
 // results recorded so far.
 

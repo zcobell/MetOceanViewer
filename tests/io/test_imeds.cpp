@@ -324,8 +324,7 @@ TEST_CASE("a file with a header and no station is an empty table",
   CHECK(read.warnings.empty());
 }
 
-// ---- row shapes (N3)
-// -----------------------------------------------------------
+// ---- row shapes -------------------------------------------------------------
 
 TEST_CASE("a 6-word row has no seconds: the last word is the value (N3)",
           "[io][imeds][regression][N3]") {
@@ -456,7 +455,7 @@ TEST_CASE("blank lines after the header are skipped (N13)",
   CHECK(nums(t, 1) == std::vector<std::optional<double>>{3.0});
 }
 
-// N17: v4 marked every station but CRMS "null" (isNull defaulted to true), so
+// v4 marked every station but CRMS "null" (isNull defaulted to true), so
 // the data bounds skipped them. Emptiness is derived from the samples here.
 TEST_CASE("whether a station has data is a fact of its samples (N17)",
           "[io][imeds][regression][N17]") {
@@ -559,8 +558,7 @@ TEST_CASE("NaN, Inf and Fortran stars are Missing with a count",
   CHECK(nums(parse_fixture("nonfinite.imeds").value.table, 0)[5] == 1.5);
 }
 
-// ---- sentinels (C9)
-// --------------------------------------------------------------
+// ---- sentinels --------------------------------------------------------------
 
 TEST_CASE("only the exact legacy sentinels are Missing, with a count",
           "[io][imeds][regression][C9][N18]") {

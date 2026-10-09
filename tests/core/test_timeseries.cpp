@@ -127,7 +127,7 @@ TEST_CASE("TimeSeries::make reports both lengths of a mismatch",
 TEST_CASE("TimeSeries::make rejects disorder at the first offending index",
           "[core][timeseries]") {
   const std::vector<Sample> four(4, Sample{});
-  // Equal times are not strictly increasing (C2).
+  // Equal times are not strictly increasing.
   CHECK(TimeSeries::make(times_of({0, 1, 1, 2}), four, SeriesMeta{}) ==
         std::unexpected{ConstructionError{TimeNotIncreasing{.index = 2}}});
   CHECK(TimeSeries::make(times_of({5, 1, 2, 3}), four, SeriesMeta{}) ==

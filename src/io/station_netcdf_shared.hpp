@@ -116,7 +116,7 @@ using FlagSink = std::function<std::expected<void, Error>(
 /// A signed integer attribute of any width (byte, short, int, int64) as
 /// int64: nullopt when absent; one inquiry of the type, then the read in
 /// exactly that type. Any other type is `type_mismatch` (an EPSG code stored
-/// as text or as a float is not a code, B10; unsigned types are refused, v4
+/// as text or as a float is not a code; unsigned types are refused, v4
 /// writes `int`). `object` names the attribute in the error.
 [[nodiscard]] std::expected<std::optional<std::vector<std::int64_t>>, Error>
 int_att(const nc::File& file, nc::AttTarget on, nc::NcNameRef att,
@@ -177,7 +177,7 @@ struct Position {
 /// with_datum to refuse with `datum_unknown`.
 [[nodiscard]] std::string datum_text(std::string_view text);
 
-// ---- series whose times are not strictly increasing (plan decision 30.3) ----
+// ---- series whose times are not strictly increasing -------------------------
 
 /// Puts the series of one station in time order, as IMEDS does
 /// (core::normalizing_order): rows are stably sorted by time and of equal times

@@ -23,7 +23,7 @@ enum class AssumeUnitError : std::uint8_t { already_set };
 enum class AssumeDatumError : std::uint8_t { already_set, not_applicable };
 
 /// What a series measures, how it is labelled, its unit and its vertical
-/// datum. Invariant (C3): a datum is engaged only if
+/// datum. Invariant: a datum is engaged only if
 /// datum_applicable(quantity()). make cannot set a datum, so it is total;
 /// assume_datum is the one checked way to add one. An engaged unit or datum
 /// is never replaced here: it changes only through convert() and shift(),

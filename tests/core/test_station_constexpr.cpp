@@ -228,7 +228,7 @@ TEST_CASE("station keys are non-empty station text",
   using mov::core::StationKey;
   using mov::core::StationKeyError;
   STATIC_REQUIRE(key_is("0", "0"));
-  STATIC_REQUIRE(key_is(" padded ", " padded "));  // kept exactly (C14)
+  STATIC_REQUIRE(key_is(" padded ", " padded "));  // kept exactly
   STATIC_REQUIRE(StationKey::make("") ==
                  std::unexpected{StationKeyError::empty});
   STATIC_REQUIRE(StationKey::make(std::string{"\0", 1}) ==

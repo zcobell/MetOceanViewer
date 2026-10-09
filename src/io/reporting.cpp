@@ -33,8 +33,11 @@ std::string subject_of(std::string_view text) {
 
 Read<std::optional<core::Unit>> parsed_unit(
     std::optional<std::string_view> text) {
-  Read<std::optional<core::Unit>> out{
-      .value = text ? core::parse_unit(*text) : std::nullopt, .warnings = {}};
+  Read<std::optional<core::Unit>> out{.value = std::nullopt, .warnings = {}};
+  if (not text) {
+    return out;
+  }
+  out.value = core::parse_unit(*text);
   const auto* other =
       out.value ? std::get_if<core::OtherUnit>(&*out.value) : nullptr;
   if (other != nullptr and not core::is_canonical_other(*other)) {

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// write_netcdf_atomic and NewFile, the write capability (C16, B15, B19).
+// write_netcdf_atomic and NewFile, the write capability: the old file stays
+// until the new one is complete, and text is written by its byte length.
 
 #include <algorithm>
 #include <array>
@@ -144,7 +145,7 @@ TEST_CASE("write_netcdf_atomic writes a netCDF-4 file", "[io][netcdf]") {
   CHECK(storage.chunks == std::vector<std::size_t>{1, 3});
   CHECK(ncgen::raw_doubles(target, "zeta") ==
         std::vector<double>{1, 2, 3, 4, 5, 6});
-  // NUL-padded rows of the byte length (B15).
+  // NUL-padded rows of the byte length.
   CHECK(ncgen::raw_chars(target, "station_name") ==
         "Grand Isle\0\0"s + "\xc3\xa9\0\0\0\0\0\0\0\0\0\0"s);
   // Read back through the wrapper.

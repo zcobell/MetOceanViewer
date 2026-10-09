@@ -129,7 +129,8 @@ std::expected<Structure, Error> structure_of(const nc::File& file) {
   if (not name_len) {
     return std::unexpected{std::move(name_len.error())};
   }
-  // The layer count is laydim's, whatever laydimw is (B12).
+  // The layer count is laydim's, whatever laydimw is (v4 checked laydimw but
+  // read laydim).
   auto laydim = file.find_dim("laydim");
   if (not laydim) {
     return fail(std::move(laydim.error()));
@@ -316,8 +317,8 @@ struct NamedQuantity {
 };
 
 // D-Flow FM's names for the registry quantities (LF section 4, SN section 6).
-// On a projected grid the components are along the grid's axes (design
-// decision 28): CF's names for those.
+// On a projected grid the components are along the grid's axes: CF's names
+// for those.
 constexpr std::array<NamedQuantity, 5> dflow_quantities{{
     {.name = "waterlevel",
      .quantity = core::Quantity::water_level,
@@ -426,7 +427,7 @@ struct Component {
 };
 
 // D-Flow has no dry sentinel: a value is Missing only by the attributes of
-// its variable (Masking) or because it is not finite (B12: v4 compared with a
+// its variable (Masking) or because it is not finite (v4 compared with a
 // hard-coded -999).
 template <nc::Numeric T>
 core::Sample sample_of(const nc::Masking<T>& mask, T raw,
@@ -520,7 +521,7 @@ FormatError alignment_error(core::VerticalErrc code, std::string subject) {
 }
 
 // Registry components pair as they are; the generic ones of a projected grid
-// are declared to be components (design decision 28).
+// are declared to be components: they point along the grid's axes.
 std::expected<core::VectorSeries, core::VectorErrc> pair_of(
     core::TimeSeries u, core::TimeSeries v) {
   const bool registered =

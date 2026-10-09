@@ -92,7 +92,7 @@ class NcNameRef {
   std::size_t size_;
 };
 
-/// An owning, validated netCDF name (C12): non-empty, at most nc_max_name
+/// An owning, validated netCDF name: non-empty, at most nc_max_name
 /// bytes, without an embedded NUL. netCDF-C's own syntax rules (no '/', NFC
 /// UTF-8) are left to the library, which reports them when a name is defined.
 /// A moved-from NcName is empty, so not a valid name: assign to it or

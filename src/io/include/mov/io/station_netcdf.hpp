@@ -4,8 +4,8 @@
 // The station time-series netCDF format of v5 (docs/station-netcdf.md, "SN"):
 // CF-1.11 discrete sampling geometry, featureType timeSeries, in a netCDF-4
 // file restricted to CF-classic constructs. This header has the v5 writer and
-// read_station_netcdf, which reads a v5 file (WP10a), a foreign CF discrete
-// sampling geometry `timeSeries` file or a legacy v4 station file (WP10b).
+// read_station_netcdf, which reads a v5 file, a foreign CF discrete sampling
+// geometry `timeSeries` file or a legacy v4 station file.
 // What kind of file a path is, before any reader is chosen, is file_type.hpp's
 // detect_file.
 //
@@ -77,7 +77,7 @@ struct CfVersion {
 /// The two layouts of one format (SN 2.2): `orthogonal` (CF 9.3.1, one
 /// `time(time)` coordinate shared by every station) and `incomplete` (CF
 /// 9.3.2, `time(station, obs)` padded with fill, plus `obs_count`). The
-/// foreign CF layouts are WP10b's own enumeration.
+/// layouts of foreign CF files are CfDsgLayout.
 enum class StationNcLayout : std::uint8_t { orthogonal, incomplete };
 
 /// The layout the writer uses for `table`: orthogonal iff every station has
@@ -128,7 +128,7 @@ struct StationNcWriteOptions {
 ///  - `station_name_substituted`: stations with an empty name, written as
 ///    "Station <id>" (count);
 ///  - `native_position_dropped`: stations whose native point is not kept,
-///    because the format stores WGS 84 only (SN 10.1, Q4; count);
+///    because the format stores WGS 84 only (SN 10.1; count);
 ///  - `value_reads_as_missing`: values written as the _FillValue (equal to it,
 ///    or not finite after the unit conversion), which every reader takes as
 ///    missing (subject: the token, count: samples).
@@ -177,7 +177,7 @@ validate_station_netcdf(const core::StationTable& table,
 
 /// Every station of the file, in file order: what a caller asks for when it
 /// wants the whole file without inspecting it first. It is explicit, never a
-/// default (C12).
+/// default: a model file can hold more stations than anyone wants read.
 struct AllStations {
   friend constexpr bool operator==(AllStations, AllStations) = default;
 };
@@ -306,151 +306,21 @@ struct StationNcCatalog {
 inspect_station_netcdf(const std::filesystem::path& path,
                        const ReadContext& ctx);
 
-/// Reads the stations `which` of a station file into a table. The kind of file
-/// decides the reader (the order of SN 12.1; any other kind is
-/// `not_this_format`):
-///  - v5: the rules below;
-///  - foreign CF (`featureType` timeSeries, CF-1.6 or later; SN 12 "Foreign",
-///    CF 9.3): any of the five layouts. Variables are found by `cf_role`,
-///    `standard_name`, `units`, `axis`, `coordinates`, `sample_dimension` and
-///    `instance_dimension`; where CF has no attribute, by the names
-///    `station_name` (the station names, when no text variable has the
-///    standard name `platform_name`; either is used only over the station
-///    dimension, else skipped) and `obs_count`. The time variable is the best
-///    ranked of those that can be one (not a scalar, not a vector over the
-///    stations): the coordinate variable of its dimension, then one listed in
-///    some `coordinates`, then one with standard name `time` or axis T, then
-///    one with time units; two of the same rank are `unsupported_layout`
-///    naming both. Two variables with `cf_role` timeseries_id are
-///    `ambiguous_station_id`. An id that is missing (an empty or NULL string,
-///    a masked integer, no id variable) is the station's index in decimal
-///    (`station_id_substituted` when the file has an id variable); float ids
-///    are `bad_encoding`.
-///    `_FillValue`, `missing_value`, `valid_*`, packing, int and float data
-///    and times, NC_STRING and integer ids are accepted; a data variable whose
-///    masking attributes cannot be read is skipped (`skipped_variable`,
-///    subject `<variable>:<attribute>`), an error only when no data variable
-///    is left (`no_data_variables`) or for the time, position and helper
-///    variables. The quantity is a registry one when the standard name is its
-///    own and the unit converts (of the two water levels, the name or
-///    `long_name` hints decide: predict, tide, astronomical, harmonic say
-///    prediction; a further variable of a taken quantity warns
-///    `unknown_quantity` and is generic), else a generic one named after the
-///    variable (a substitute token when the name is none or is taken,
-///    `variable_renamed`, subject: the variable's name). The datum is the
-///    variable's `vertical_datum`, else its `geopotential_datum_name`, else
-///    that of its `grid_mapping` variable, by token or long name; any other
-///    text is no datum (`datum_unknown`). Integer `ancillary_variables` are
-///    quality flags: values a known scheme calls bad (QARTOD 4 and 9, or a
-///    `flag_meanings` word containing bad, fail or missing) become Missing
-///    (`flagged_samples_masked`), suspect ones are kept and counted
-///    (`suspect_samples_kept`), an unknown scheme is ignored
-///    (`quality_flags_ignored`). A series whose times are not strictly
-///    increasing is put in order as IMEDS does (`times_reordered`,
-///    `duplicate_times_dropped`, `conflicting_duplicate_times`; one axis shared
-///    by every station is sorted for all of them). The padding of an
-///    incomplete layout with `obs_count` is checked as options.padding says;
-///    without `obs_count` the counts are the leading non-missing times.
-///    Warnings, in this order: `foreign_cf`, `crs_assumed`, then the stations'
-///    (`station_id_substituted`, `invalid_utf8_replaced`,
-///    `duplicate_station_id_renamed`, `crs_approximate`), `skipped_variable`,
-///    `unknown_quantity`, `variable_renamed`, per variable `unrecognized_unit`
-///    and `datum_unknown`, `quality_flags_ignored`; when reading the time
-///    units', `times_reordered`, `duplicate_times_dropped`,
-///    `conflicting_duplicate_times`, `flagged_samples_masked`,
-///    `suspect_samples_kept`. Errors: `missing_variable` (latitude, longitude,
-///    time), `ambiguous_station_id`, `no_data_variables`,
-///    `unsupported_layout`, `dimension_mismatch`, `bad_obs_count`,
-///    `bad_row_size`, `bad_ragged_index`, `padding_not_missing`, `time_*`,
-///    `missing_attribute` (`time:units`), `unsupported_calendar`, NcError (a
-///    `_FillValue` of the wrong type on a time or position variable,
-///    `too_large`);
-///  - legacy v4 (SN 11): see station_netcdf_legacy.cpp; origin LegacyOrigin
-///    (what the file has: `fileformat`, a `stationId`, the digits of the
-///    station numbers), warnings in this order: `legacy_dialect`,
-///    `crs_assumed`, `tz_assumed_utc` (a `timezone` that is not UTC or GMT, or
-///    text after the 19 characters of `referenceDate`), `epoch_used`,
-///    `invalid_utf8_replaced`, `duplicate_station_id_renamed`,
-///    `crs_approximate`, `unrecognized_unit`, `datum_unknown`, and reading
-///    `times_reordered`, `duplicate_times_dropped`,
-///    `conflicting_duplicate_times` (the series are put in order as above).
-///    Errors: `missing_dimension`/`missing_variable` (with the station for the
-///    per-station variables), `dimension_mismatch`, `inconsistent_metadata`,
-///    `unsupported_crs`, ParseError `bad_date` (`referenceDate`), NcError
-///    `type_mismatch` for a `HorizontalProjectionEPSG` that is not a signed
-///    integer.
+/// Reads the stations `which` of a station file into a table: a v5 file, a
+/// foreign CF discrete-sampling-geometry `timeSeries` file (CF-1.6 or later)
+/// or a legacy v4 station file, told apart by their content as detect_file
+/// tells them (any other file is `not_this_format`). The stations come in the
+/// order of the selection; an orthogonal file gives one time axis shared by
+/// every station, the other layouts one axis per station. `origin` says which
+/// kind of file it was and what it declared.
 ///
-/// For a v5 file: reads the stations `which` into a table (stations in the
-/// order of the selection; one shared axis in the orthogonal layout, one per
-/// station in the incomplete one). Validation (SN 12, v5 column; every rule
-/// is a hard error, none is downgraded):
-///
-///  - header: global `metoceanviewer_format` = "station-timeseries" (else
-///    `not_this_format`: another kind of file);
-///    `metoceanviewer_format_version` present and "<major>.<minor>"
-///    (`bad_version`), major 1 (`unsupported_version`); `Conventions` with a
-///    CF-1.N token, N >= 6 (`missing_attribute`, `unsupported_version`; a
-///    CF-2 or later token too); `featureType` timeSeries, any case
-///    (`missing_attribute`, `unsupported_layout`);
-///  - structure: dimension `station` (`missing_dimension`); no unlimited
-///    dimension (`unsupported_layout`, subject: the dimension); exactly one
-///    variable with `cf_role` timeseries_id (`no_station_id`), char over
-///    (station, n) (`bad_encoding`, `dimension_mismatch`); `station_name`,
-///    `lat`, `lon` (`missing_variable`), `time` with `units` (a CF time unit,
-///    else ParseError) and a supported `calendar` (`unsupported_calendar`);
-///    `time(time)` for the orthogonal layout, `time(station, obs)` plus
-///    `obs_count(station)` for the incomplete one (`unsupported_layout`,
-///    `dimension_mismatch`, `missing_variable`); every variable over the sample
-///    dimension is over (station, sample) in that order
-///    (`dimension_mismatch`); at least one data variable
-///    (`no_data_variables`); every `ancillary_variables` target that exists
-///    has its data variable's dimensions (`bad_ancillary`);
-///  - data variables: the name is a quantity token (a registry token, or a
-///    CF name the format does not use itself; else `invalid_variable_name`);
-///    a registry quantity other than `difference` has a `units` that converts
-///    to its canonical unit (`noncanonical_unit`, subject: the token); the
-///    target `<name>_status` of `ancillary_variables` is the wet/dry status
-///    and must be byte, with `flag_values` 0, 1, `flag_meanings` "dry wet"
-///    and a _FillValue other than 0 and 1 (`bad_flag`, subject: the status);
-///  - CRS (SN 10.1): the `grid_mapping` variable's `epsg_code` (EPSG:4326, or
-///    another geographic code, projected here with the native point kept),
-///    else `latitude_longitude` on the WGS 84 ellipsoid (without ellipsoid
-///    parameters: WGS 84 with `crs_assumed`); a nonzero
-///    `longitude_of_prime_meridian` or anything else is `unsupported_crs`;
-///    no `grid_mapping`: WGS 84 with `crs_assumed`;
-///  - values: ids unique (`duplicate_station_id`), non-empty
-///    (`no_station_id`), UTF-8 without NUL after trailing NULs are cut
-///    (`bad_encoding`), and so the names and the providers; `lat`/`lon` finite
-///    and in range (`bad_coordinates`, with the station); times present
-///    (`time_missing`), in range (`time_out_of_range`), strictly increasing
-///    (`time_not_increasing`); `obs_count` in 0..obs (`bad_obs_count`); the
-///    padding of `time`, the data and the status is fill
-///    (`padding_not_missing`, with the station and index; the first padding
-///    element, or all of them with PaddingCheck::whole); a status flag is 0,
-///    1 or its fill (`bad_flag`), a dry sample has no value and a wet one has
-///    one (`wet_dry_inconsistent`).
-///
-/// A sample is Missing when it equals its variable's _FillValue (or the
-/// library's default fill), is NaN, or is masked by `missing_value` or
-/// `valid_*` (nc::Masking); it is Dry when its wet/dry status is 0. The
-/// quantity is the variable name: a registry token, else a generic quantity
-/// with the variable's `standard_name`. Labels are `long_name` (the token
-/// when there is none), units `units` (parse_unit; `unrecognized_unit` for
-/// one outside the unit table and the registry, subject: the unit), datums
-/// `vertical_datum` (`datum_unknown`, and no datum, for an unknown token,
-/// subject: the token, or for a datum on a quantity that cannot carry one,
-/// subject: `<variable>:vertical_datum`). Subjects taken from the file are cut
-/// to ParseError::max_context_bytes on a UTF-8 boundary.
-///
-/// Other errors: FormatError `station_count_mismatch` (a selection made for
-/// another count); NcError (`too_large` when the samples read exceed
-/// ReadLimits: the selected stations' samples, or selected stations x `obs`
-/// with PaddingCheck::whole); Cancelled. Warnings, in this order:
-/// `minor_newer` (subject: the version), `crs_assumed`, `unknown_provider`
-/// (a `station_provider` token core does not know: the station has no
-/// source; one warning per token, counting its stations), `crs_approximate`,
-/// per data variable `unrecognized_unit` and `datum_unknown`, and last
-/// parse_cf_time_units's for `time:units`.
+/// docs/station-netcdf.md is the contract of each kind: section 11 for legacy
+/// files, section 12 for v5 and foreign ones, and section 12.9 for the errors
+/// and the order of the warnings of all three. Besides those, any read can
+/// fail with `station_count_mismatch` (a selection made for another station
+/// count), an NcError (`too_large` when the samples it would hold exceed
+/// ReadLimits) or Cancelled. `options.padding` says how much of the padding
+/// of an incomplete layout is checked (PaddingCheck).
 [[nodiscard]] std::expected<Read<StationFile>, Error> read_station_netcdf(
     const std::filesystem::path& path, const StationNcSelection& which,
     const ReadContext& ctx);

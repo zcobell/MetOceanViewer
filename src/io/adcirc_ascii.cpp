@@ -94,7 +94,7 @@ std::expected<HeaderAndRest, ParseError> read_header(std::string_view text) {
 
 // The grid the output is on, which only the station file says: its CRS, as the
 // native points of its stations (WGS84 stations have none). The vector
-// components of a projected grid point along its axes (design decision 28).
+// components of a projected grid point along its axes.
 CrsKind grid_of(std::span<const core::FileStation> stations) {
   for (const core::FileStation& station : stations) {
     if (station.native) {
@@ -110,7 +110,7 @@ CrsKind grid_of(std::span<const core::FileStation> stations) {
 // ------------------------------------------------------------------
 
 // The model's "no data" test on a finite number: the same threshold as the
-// dry rule, which only elevation turns into Dry (design C9).
+// dry rule, which only elevation turns into Dry.
 bool is_fill(double raw) noexcept { return core::is_dry(raw); }
 
 struct Classified {
@@ -120,7 +120,8 @@ struct Classified {
 
 // One station line's numbers as samples. Elevation: a fill is Dry. Every
 // other output: it is Missing, and a fill in either component of a vector
-// makes both Missing (N7). A number that is not finite is Missing and counted.
+// makes both Missing (v4 tested the first component only). A number that is
+// not finite is Missing and counted.
 Classified classify(AdcircKind kind,
                     std::span<const detail::ModelNumber> numbers) {
   Classified out{.samples = {}, .nonfinite = 0};

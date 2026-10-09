@@ -27,7 +27,7 @@ struct UnknownSourceDatum {
 using ShiftError = std::variant<UnknownUnit, NotALengthSeries,
                                 UnknownSourceDatum, MissingOffset>;
 
-/// Expresses a series in another vertical datum (D18): the source datum is the
+/// Expresses a series in another vertical datum: the source datum is the
 /// series' own, and table.offset(from, to) is added to every value (converted
 /// to the series' unit). Any datum shifts to any other through the table's MSL
 /// pivot.

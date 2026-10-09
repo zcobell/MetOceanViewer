@@ -7,11 +7,12 @@
 // / `stationYCoordinate`, and per station N `stationLength_N`, `time_station_N`
 // (seconds since the `referenceDate` attribute) and `data_station_N`.
 //
-// What v4 got wrong is not repeated (plan 1.2): the row stride is the file's
-// (B7), `referenceDate` is read at its real length (B8), the default fill is
-// masked (B9), a missing EPSG is an assumed 4326 with a warning and a wrong
-// type is an error, never a code (B10), and whatever the writer left after the
-// NUL of a name is cut (core-design.md C14).
+// What v4 got wrong is not repeated: the row stride is the file's (v4 assumed
+// 200 and overran its buffer), `referenceDate` is read at its real length (v4
+// read it into a fixed 80-byte buffer), the default fill is masked (v4 never
+// masked it), a missing EPSG is an assumed 4326 with a warning and a wrong
+// type is an error (v4 returned netCDF error codes as EPSG codes), and
+// whatever the writer left after the NUL of a name is cut.
 
 #include <algorithm>
 #include <array>
@@ -208,7 +209,8 @@ constexpr std::string_view epsg_object =
 
 /// The EPSG code of `stationXCoordinate`, any signed integer type; nullopt
 /// when the attribute is absent. A text, floating-point or unsigned attribute
-/// is `type_mismatch` (B10: an error, never a code).
+/// is `type_mismatch`: an error, never a code (v4 returned netCDF error codes
+/// as EPSG codes).
 std::expected<std::optional<std::int64_t>, Error> read_epsg(
     const nc::File& file) {
   auto values = int_att(file, x_var, epsg_att, epsg_object);
@@ -264,7 +266,7 @@ std::expected<std::optional<Projector>, Error> projector_of(core::Epsg epsg) {
 // ---- the stations -----------------------------------------------------------
 
 /// A name: cut at the first NUL (the writer's junk follows it), white space
-/// collapsed (v4's `simplified()`, A8), bytes that are not UTF-8 replaced.
+/// collapsed (v4's `simplified()`), bytes that are not UTF-8 replaced.
 CleanedText clean_name(std::string_view row) {
   return replace_invalid_utf8(simplified(cut_at_nul(row)));
 }
@@ -436,8 +438,8 @@ struct Reference {
 };
 
 /// The epoch of `referenceDate`: its first 19 characters, `yyyy-MM-dd hh:mm:ss`
-/// (B8: whatever the attribute's length, and a `T` is accepted). ParseError
-/// `bad_date` when they are not a date.
+/// (whatever the attribute's length, which v4 did not check; a `T` is
+/// accepted). ParseError `bad_date` when they are not a date.
 std::expected<Reference, Error> parse_reference(std::string_view text) {
   const std::string_view whole = core::ascii::trim(text);
   const auto parsed =

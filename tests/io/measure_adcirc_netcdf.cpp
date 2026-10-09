@@ -2,9 +2,9 @@
 // Copyright (c) 2026 Zach Cobell
 
 // The measurements behind the grouping of the selected stations into reads
-// (detail::grouping_for; design review findings S7 and 6 of the second WP9
-// review; docs/wp-notes/WP9.md). Hidden (`[.measure]`); run them from a release
-// build, one at a time:
+// (detail::grouping_for: stations in one chunk, or close together in
+// contiguous storage, share a read). Hidden (`[.measure]`); run them from a
+// release build, one at a time:
 //
 //   mov_io_model_netcdf_tests "[measure][chunks]"
 //   mov_io_model_netcdf_tests "[measure][contiguous]"

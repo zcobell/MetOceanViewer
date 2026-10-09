@@ -83,7 +83,7 @@ TEST_CASE("the legacy station file has three unnamed stations",
   CHECK(stations[0].location == where(29.987793, -90.0127));
   CHECK(stations[1].location == where(28.0, -90.5));
   CHECK(stations[2].location == where(25.0, -91.0));
-  // N6: ids are the 0-based index. A station without a name keeps an empty
+  // Ids are the 0-based index. A station without a name keeps an empty
   // one (v4 made up "Station_0" here and "Station 0" for netCDF); only the
   // station netCDF writer substitutes "Station <id>".
   for (std::size_t i = 0; i < stations.size(); ++i) {
@@ -141,7 +141,7 @@ TEST_CASE("bytes that are not UTF-8 become U+FFFD with a warning",
   CHECK(warning->count == 2);
 }
 
-TEST_CASE("a NUL ends the name (C14)", "[io][adcirc][stations]") {
+TEST_CASE("a NUL ends the name", "[io][adcirc][stations]") {
   const auto stations = parse_ok("1\n-90.0,29.0,Name\0junk after\n"s);
   REQUIRE(stations.size() == 1);
   CHECK(stations[0].name.view() == "Name");

@@ -546,7 +546,7 @@ using ShiftError = std::variant<NotALengthSeries, UnknownSourceDatum, MissingOff
 std::expected<TimeSeries, ShiftError> shift(TimeSeries s, VerticalDatum to, const DatumTable& table);
 ```
 
-### 2.12 Core error inventory and `describe.hpp`
+### 2.12 Core error inventory
 
 | Function family | Error (narrow) |
 |---|---|
@@ -563,8 +563,9 @@ std::expected<TimeSeries, ShiftError> shift(TimeSeries s, VerticalDatum to, cons
 | `StationTable::make` | `TableError` |
 | HWM | §3 |
 
-`describe(const X&) -> std::string` is defined for each type. A CI grep allows callers
-only in `src/app`, `src/cli` and `tests`.
+Errors carry no text. `describe(const X&) -> std::string` for each of them belongs to
+the edge (`src/app`, `src/cli`) and is written with the first of those; `core` and `io`
+have none.
 
 ---
 
@@ -832,7 +833,7 @@ struct ParseError { ParseErrc code; std::size_t line; std::optional<std::size_t>
 // ParseErrc: empty_input, missing_header, wrong_field_count, bad_integer, bad_number, bad_date, bad_time_units,
 //            time_out_of_range, out_of_range, count_mismatch, corrupt_record, trailing_text
 struct FileError { FileOp op; std::filesystem::path path; std::error_code ec; };   // FileOp: open, size, read, write, fsync, rename, remove; too big → errc::file_too_large
-struct Cancelled {};
+using core::Cancelled;   // mov/core/cancelled.hpp: one alternative for io and the core's long computations
 struct FormatError { FormatErrc code; std::string subject; std::optional<std::size_t> station; std::optional<std::size_t> index; };
 // FormatErrc: not_this_format, missing_variable, missing_dimension, missing_attribute, partner_variable_missing,
 //   station_count_mismatch, cold_start_required, time_missing, time_out_of_range, time_not_increasing,
@@ -845,7 +846,7 @@ using Error = std::variant<FileError, ParseError, NcError, FormatError, Cancelle
 // (duplicate_station_id, no_station_id ← empty_station_id, bad_encoding ← embedded_nul/invalid_utf8,
 // time_not_increasing, time_out_of_range, duplicate_quantity, dimension_mismatch ← column_*), keeping station/index.
 
-enum class WarningCode : std::uint8_t {
+enum class WarningCode : std::uint8_t {   // abridged: warning.hpp lists every code and what its subject holds
   times_reordered, duplicate_times_dropped, conflicting_duplicate_times,          // normalize report
   legacy_sentinel_masked, nonfinite_masked, unrecognized_unit,                   // value-level
   partial_record_dropped, fewer_snapshots_than_header, epoch_used,               // model text
@@ -854,6 +855,8 @@ enum class WarningCode : std::uint8_t {
   minor_newer, unknown_provider, unknown_quantity, legacy_dialect,
 };
 struct Warning { WarningCode code; std::string subject; std::size_t count{1}; };   // == defaulted
+void append(std::vector<Warning>& warnings, std::vector<Warning> more);   // the one way stages' warnings are joined
+void append_if_counted(std::vector<Warning>& warnings, Warning w);        // only when w.count > 0
 
 template <class T> struct Read {                         // writer monad over warnings
   T value;
@@ -894,6 +897,11 @@ Text helpers (`src/io/detail/`, private):
 - `parse_model_number`: also maps `NaN`/`Inf`/`Infinity`/`****` to `Missing`, counted.
 - `simplified`, `cut_at_nul`, `uniquify_ids` (`#2` suffixes).
 - `reserve_capped(n, input_bytes / min_row_bytes)`.
+- `reporting.hpp`: `format_error`, `fail` (every failure is `fail(format_error(...))`),
+  `subject_of` (file text cut to 120 bytes), and `parsed_unit`, the one unit rule:
+  `parse_unit`, plus `unrecognized_unit` whose subject is the unit text as found.
+- ASCII and UTF-8 helpers are core's public `ascii.hpp` and `utf8.hpp`; io names nothing in
+  `core::detail` (the `core_detail_fence` test).
 
 ### 5.1 CF time — `cf_time.hpp` (C13)
 
@@ -1002,8 +1010,11 @@ std::expected<Read<StationTable>, Error> read_adcirc_netcdf(const std::filesyste
 - **Chunk-aware reads.** Read time blocks `[t0, t0+B) × [min_sel, max_sel]`, with `B`
   chosen so a block is at most `slab_elements`, then gather the selected columns. Check
   `stop` between blocks.
-  - Measurement owed in WP9: per-column strided reads vs blocks, for 1, 10 and 1000
-    selected stations of a 10,000-station synthetic file, recorded in the test README.
+  - Measured (`tests/io/measure_adcirc_netcdf.cpp`, hidden): on the layout ADCIRC writes
+    (one chunk per time step, every station in it) 1000 stations take 85 s read one by one
+    and 0.5 s as one block; on chunks of one station a block over ten stations a hundred
+    apart takes 0.7 s against 7 ms one by one. So stations share a read when they share a
+    chunk column (`grouping_for`), and within 1024 of each other in unchunked storage.
 
 ### 5.5 DFlow-FM his — `dflow.hpp` (D26: synthetic fixtures only)
 
@@ -1013,14 +1024,15 @@ using DflowSource = std::variant<nc::NcName, DflowDerived>;
 struct Flat    { DflowSource source; std::string long_name; };
 struct Layered { DflowSource source; std::string long_name; std::size_t layers; };
 using DflowVariable = std::variant<Flat, Layered>;                 // catalog entries; derived from layered inputs are Layered
-class Layer {                                                      // 1-based, validated against one Layered variable
+struct FlatChoice { DflowSource source; };
+class AtLayer {                                                    // a layered variable at one layer
  public:
-  static std::expected<Layer, FormatError> make(const Layered& v, std::size_t one_based);   // layer_out_of_range (N16)
+  static std::expected<AtLayer, FormatError> make(const Layered& v, std::size_t one_based);   // layer_out_of_range (N16)
+  const DflowSource& source() const&;
   std::size_t zero_based() const noexcept;
 };
-struct AtLayer { Layered variable; Layer layer; };
-using DflowChoice = std::variant<Flat, AtLayer>;
-struct DflowCatalog { std::vector<FileStation> stations; std::vector<DflowVariable> variables; CfTimeUnits time_units; CfCalendar calendar; };
+using DflowChoice = std::variant<FlatChoice, AtLayer>;
+struct DflowCatalog { std::vector<FileStation> stations; std::vector<DflowVariable> variables; std::size_t times; CfTimeUnits time_units; CfCalendar calendar; };
 struct DflowRequest { DflowChoice choice; StationSelection stations; Epsg crs; };
 std::expected<Read<DflowCatalog>, Error> inspect_dflow(const std::filesystem::path& p, Epsg crs, const ReadContext& ctx);   // B2
 std::expected<Read<StationTable>, Error> read_dflow(const std::filesystem::path& p, const DflowRequest& req, const ReadContext& ctx);
@@ -1036,35 +1048,55 @@ std::expected<Read<StationTable>, Error> read_dflow(const std::filesystem::path&
 ### 5.6 Station netCDF — `station_netcdf.hpp`
 
 ```cpp
-enum class StationNcLayout : std::uint8_t { orthogonal, incomplete, contiguous_ragged, single_station };
-struct V5StationFile     { StationNcLayout layout; std::string version; StationTable table; };
-struct ForeignCfFile     { StationNcLayout layout; StationTable table; };
-struct LegacyStationFile { StationTable table; };
-using StationFile = std::variant<V5StationFile, ForeignCfFile, LegacyStationFile>;
-std::expected<Read<StationFile>, Error> read_station_netcdf(const std::filesystem::path& p, const ReadContext& ctx);
+enum class StationNcLayout : std::uint8_t { orthogonal, incomplete };   // what v5 writes (SN 2.2)
+StationNcLayout choose_layout(const StationTable& t) noexcept;          // single_axis() ? orthogonal : incomplete
+std::optional<StationNcVersion> parse_station_nc_version(std::string_view) noexcept;
+std::optional<CfVersion> parse_cf_conventions(std::string_view) noexcept;
 
 struct StationNcWriteOptions { std::string title{"MetOceanViewer station time series"}; std::optional<std::string> institution, source, references, comment; };
-constexpr StationNcLayout choose_layout(const StationTable& t) noexcept;   // single_axis() ? orthogonal : incomplete
-std::expected<StationNcLayout, Error> write_station_netcdf(const std::filesystem::path& p, const StationTable& t,
-                                                            const StationNcWriteOptions& opt, Time now);   // now injected (determinism)
+std::expected<std::vector<Warning>, Error> validate_station_netcdf(const StationTable& t, const StationNcWriteOptions& opt);   // no I/O
+std::expected<std::vector<Warning>, Error> write_station_netcdf(const std::filesystem::path& p, const StationTable& t,
+                                                                const StationNcWriteOptions& opt, std::chrono::sys_seconds now);   // now injected
+
+struct AllStations {};
+using StationNcSelection = std::variant<AllStations, StationSelection>;   // explicit, never defaulted (C12)
+enum class PaddingCheck : std::uint8_t { boundary, whole };
+struct StationNcReadOptions { PaddingCheck padding{PaddingCheck::boundary}; };
+enum class CfDsgLayout : std::uint8_t { orthogonal, incomplete, contiguous_ragged, indexed_ragged, single_station };
+struct V5Origin        { StationNcVersion version; StationNcLayout layout; };
+struct ForeignCfOrigin { CfDsgLayout layout; CfVersion version; };
+struct LegacyOrigin    { std::optional<std::string> fileformat; bool has_station_ids; StationNumberWidth width; };
+using StationFileOrigin = std::variant<V5Origin, ForeignCfOrigin, LegacyOrigin>;
+struct StationFile      { StationTable table; StationFileOrigin origin; };
+struct StationNcCatalog { StationFileOrigin origin; std::vector<CatalogStation> stations; std::vector<SeriesMeta> schema; };
+std::expected<Read<StationNcCatalog>, Error> inspect_station_netcdf(const std::filesystem::path& p, const ReadContext& ctx);
+std::expected<Read<StationFile>, Error> read_station_netcdf(const std::filesystem::path& p, const StationNcSelection& which,
+                                                            const ReadContext& ctx, const StationNcReadOptions& options = {});
 ```
 
-- The writer's own errors are only `empty_collection` (0 stations or 0 samples),
-  `noncanonical_unit` (unit unknown or not convertible to the SN canonical unit; conversion
-  uses `convert`), and I/O failures.
+- The writer's errors are `validate_station_netcdf`'s (`empty_collection`, `no_data_variables`,
+  `no_samples`, `too_many_samples`, `noncanonical_unit`, `invalid_variable_name`,
+  `bad_option`) and then I/O failures; its warnings say what is written differently from the
+  table (`unit_converted`, `station_name_substituted`, `native_position_dropped`,
+  `value_reads_as_missing`).
 - Every other SN §12.8 precondition is guaranteed by `StationTable`, `Location`, `Sample`
   or `TableErrc`.
 - `<q>_status` is written iff any sample of the column is `Dry` (Dry → 0, value → 1,
   Missing → −128).
 - `vertical_datum` is written whenever the meta datum is engaged (§9.2).
-- Reader per source:
+- Reader per source (the rules: SN §11 and §12; the errors and the warning order of each:
+  SN §12.9):
   - **v5:** SN §12.1–12.6.
-  - **Foreign:** SN *Foreign* column, L3 and scalar station (WP10b), `NC_STRING` ids,
-    packing via `Masking`, `_Unsigned` → `skipped_variable`.
+  - **Foreign:** SN *Foreign* column, all four CF layouts and scalar station, `NC_STRING`
+    ids, packing via `Masking`, `_Unsigned` → `skipped_variable`.
   - **Legacy A/B:** SN §11 + C14; `time_station_{:04}` looked up through `NcName::make`;
     legacy int64 times via `checked_time(int64 …)`; a missing `referenceDate` →
     `epoch_used` warning naming 1970-01-01; projection at the boundary.
   - **CRMS:** `not_this_format`.
+- Files: `station_netcdf_dispatch.cpp` (entry points, version parsers), `_write.cpp`, the
+  v5 reader (`station_netcdf_v5.hpp`: `_open.cpp`, `_samples.cpp`), the foreign and legacy
+  readers (`station_netcdf_dialects.hpp`), and what the readers share
+  (`station_netcdf_shared.hpp` / `.cpp`).
 
 ### 5.7 HWM file — `hwm_file.hpp`
 
@@ -1085,14 +1117,23 @@ std::string format_csv(const StationTable& t);
 std::expected<void, Error> write_csv(const std::filesystem::path& p, const StationTable& t);
 ```
 
-### 5.9 Detection and projection — `file_kind.hpp`, `projection.hpp`
+### 5.9 Detection and projection — `file_type.hpp`, `projection.hpp`
 
 ```cpp
-enum class FileKind : std::uint8_t { imeds, adcirc_ascii, adcirc_netcdf, dflow_netcdf, station_netcdf };
-std::expected<FileKind, Error> detect_file_kind(const std::filesystem::path& p);   // netCDF content first, then suffix
-struct ProjectionError { ProjectionErrc code; Epsg crs; };                          // unknown_crs, transform_failed
+enum class FileType : std::uint8_t { station_netcdf, foreign_cf_netcdf, legacy_station_netcdf, adcirc_netcdf, dflow_netcdf,
+                                     imeds, adcirc_ascii, hwm_csv, unrecognized_text, unsupported_netcdf, other_format_netcdf };
+using FileDetection = std::variant<FileType, AdcircAsciiDetected, OtherFormatDetected>;   // the header found; the other format's name
+std::expected<FileDetection, Error> detect_file(const std::filesystem::path& p, const ReadLimits& limits = {});
+std::expected<FileType, Error> detect_file_type(const std::filesystem::path& p, const ReadLimits& limits = {});
+constexpr FileType file_type_of(const FileDetection&) noexcept;       // also of a StationFileOrigin
+struct ProjectionError { ProjectionErrc code; Epsg crs; };              // unknown_crs, transform_failed, database_unavailable
+class Projector;                                                        // one CRS, many points; approximation_warning()
 std::expected<Location, std::variant<ProjectionError, LocationError>> to_location(const NativePoint& p);
 ```
+
+- Detection is by content only, never by file name (v4 went by suffix, and a renamed file was
+  read as the wrong kind): netCDF by its magic bytes and then its attributes and variables
+  (SN §12.1), text by its first lines (at most 64 KiB).
 
 ---
 
@@ -1104,12 +1145,13 @@ src/core/include/mov/core/
   meta.hpp timeseries.hpp station.hpp station_table.hpp vector_series.hpp ← vocabulary II (WP2)
   series_ops.hpp datum_shift.hpp                                       ← operations     (WP3)
   hwm.hpp hwm_stats.hpp                                                ← HWM            (WP4)
-  describe.hpp                                                         ← edge only
+  ascii.hpp utf8.hpp overloaded.hpp cancelled.hpp                      ← helpers other layers use
 src/io/include/mov/io/
   error.hpp warning.hpp read.hpp text_file.hpp cf_time.hpp projection.hpp   (WP5)
   netcdf/file.hpp                                                           (WP6)
-  imeds.hpp csv_export.hpp | adcirc_ascii.hpp hwm_file.hpp | adcirc_netcdf.hpp dflow.hpp | station_netcdf.hpp file_kind.hpp
-src/io/detail/          text helpers, Matrix, uniquify (private)
+  imeds.hpp csv_export.hpp | adcirc_ascii.hpp hwm_file.hpp | adcirc_netcdf.hpp dflow.hpp | station_netcdf.hpp file_type.hpp
+src/io/include/mov/io/detail/   text helpers, reporting, uniquify (private; public only for the tests)
+src/io/*.hpp            the netCDF readers' shared parts (model_netcdf.hpp, station_netcdf_*.hpp; private)
 src/io/netcdf/          file.cpp, nc_call.hpp — the ONLY place that includes <netcdf.h>
 ```
 
@@ -1170,7 +1212,7 @@ Conventions:
 | station_netcdf | SN §14.1 rows 1:1; `choose_layout`; status iff Dry; canonical conversion (ft → m, mH2O → hPa, ft3/s → m3 s-1); `noncanonical_unit`; `empty_collection`; injected `now` determinism; legacy names cut at NUL with a junk-padding fixture; legacy duplicate ids; legacy EPSG wrong type (B10); `epoch_used`; CRMS → `not_this_format`; `vertical_datum` on a generic `value` column round-trips |
 | hwm_file | header only if all fields non-numeric (+ warning); `1,2,abc,…` first line → `ParseError`, not a header; blank lines (N20); 5/6/4 columns; range; Dry |
 | csv_export | golden; quoting; `=SUM(A1)` station name → `'=SUM(A1)`; `-1.5` value **not** prefixed; Missing/Dry; ms timestamps; multi-column table |
-| file_kind | each fixture; suffix rules; v5/foreign; CRMS-like |
+| file_type | each fixture, by content only (a renamed file is still found); v5/foreign; CRMS-like |
 | projection | 4326 passthrough; 26915 point (1e-7°); unknown code |
 | read chain | `test_read_chain.cpp` compile-time type check plus one runtime run (§5.0) |
 
@@ -1261,7 +1303,7 @@ nightly runs 10 min.
 | WP8 | ADCIRC ASCII + station file, HWM file | WP2, WP4, WP5 | Sonnet | M |
 | WP9 | ADCIRC netCDF, DFlow, block-read measurement | WP2, WP6 | Sonnet, Opus review | L |
 | WP10a | SN writer and v5 reader (L1/L2, wet/dry, versioning, validation), `format-compliance` job | WP3, WP6 | Opus | L |
-| WP10b | Legacy A/B + foreign CF (L3, scalar, packing), `detect_file_kind`, hostile set + structure fuzzer | WP10a | Sonnet, Opus review | L |
+| WP10b | Legacy A/B + foreign CF (L3, scalar, packing), `detect_file`, hostile set + structure fuzzer | WP10a | Sonnet, Opus review | L |
 
 Waves:
 1. WP1.

@@ -8,9 +8,8 @@
 // over the observation dimension for the indexed ragged layout. Every value is
 // masked in the variable's own type (nc::Masking: _FillValue, missing_value,
 // valid_*, the library's default fill, NaN; packing applied after). Samples a
-// known quality scheme calls bad become Missing (owner decision 30.1); a
-// series whose times are not strictly increasing is put in order, as IMEDS
-// does (30.3).
+// known quality scheme calls bad become Missing; a series whose times are not
+// strictly increasing is put in order, as IMEDS does.
 
 #include <algorithm>
 #include <array>

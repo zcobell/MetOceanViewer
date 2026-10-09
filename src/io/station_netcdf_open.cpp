@@ -89,7 +89,7 @@ std::expected<Read<StationNcVersion>, Error> read_version(
 }
 
 /// `Conventions` names CF 1.6 or a later 1.x (CF 2 would be another
-/// convention: refused, N4).
+/// convention: refused).
 std::expected<void, Error> check_conventions(const nc::File& file) {
   auto conventions = optional_text(file, nc::global, "Conventions");
   if (not conventions) {
@@ -714,13 +714,15 @@ std::expected<Read<core::SeriesMeta>, Error> meta_of(const nc::File& file,
   if (not unit) {
     return std::unexpected{std::move(unit).error()};
   }
-  return std::move(*unit).and_then([&](std::optional<core::Unit> u) {
-    return with_datum(
-        core::SeriesMeta::make({.quantity = *std::move(quantity),
-                                .label = long_name.value_or(std::string{token}),
-                                .unit = std::move(u)}),
-        datum, token);
-  });
+  // The unit's warnings come before the datum's.
+  Read<core::SeriesMeta> meta = with_datum(
+      core::SeriesMeta::make({.quantity = *std::move(quantity),
+                              .label = long_name.value_or(std::string{token}),
+                              .unit = std::move(unit->value)}),
+      datum, token);
+  append(unit->warnings, std::move(meta.warnings));
+  meta.warnings = std::move(unit->warnings);
+  return meta;
 }
 
 std::expected<Read<std::vector<core::SeriesMeta>>, Error> read_schema(

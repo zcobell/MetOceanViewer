@@ -125,7 +125,7 @@ TEST_CASE("fixtures: the BOM and CRLF file reads like the plain one",
   CHECK(bom == plain);
 }
 
-// ---- blank lines and the header (N20) ----
+// ---- blank lines and the header ----
 
 TEST_CASE("blank lines are skipped, not zero marks (N20)",
           "[io][hwm][regression][N20]") {
@@ -314,8 +314,9 @@ TEST_CASE("the dry rule is in the file's unit, before any conversion",
   CHECK(marks[1].modeled == mov::core::WetDry{Dry{}});
 }
 
-TEST_CASE("an elevation beyond 1e4 m is out_of_range (the WP4 contract)",
-          "[io][hwm]") {
+TEST_CASE("an elevation beyond 1e4 m is out_of_range", "[io][hwm]") {
+  // The statistics take |elevation| <= 1e4 m (max_elevation_m), so no sum
+  // of squares overflows.
   const auto observed = parse(fixture_text("io/hwm/hwm_out_of_range.csv"));
   const auto& error = parse_error_of(observed);
   CHECK(error.code() == ParseErrc::out_of_range);

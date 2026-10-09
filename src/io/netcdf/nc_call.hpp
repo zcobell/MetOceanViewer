@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The single choke point through which mov::io calls netCDF-C (C11): every
+// The single choke point through which mov::io calls netCDF-C: every
 // nc_* call, nc_free_string, nc_abort and the destructor's nc_close included,
 // is a lambda handed to nc_status or nc_call. Private to src/io/netcdf/.
 //
@@ -46,7 +46,7 @@ class EntryCheck {
     const bool busy = nc_busy.test_and_set(std::memory_order_relaxed);
     assert(not busy and
            "netCDF-C entered concurrently or re-entrantly: callers must "
-           "serialize all mov::io netCDF calls (C11)");
+           "serialize all mov::io netCDF calls");
   }
   EntryCheck(const EntryCheck&) = delete;
   EntryCheck& operator=(const EntryCheck&) = delete;

@@ -134,7 +134,7 @@ TEST_CASE("The main window renders its map with MapLibre") {
   // schedules 250 ms after the map is fully loaded leaves the map area blank
   // (Map's #e6e6e6 background); the OpenFreeMap basemap does not do this.
   // Seen with MapLibre Native Qt c3485f3a; to investigate (and report
-  // upstream) with the Phase 4 map work. Polling catches the drawn frames.
+  // upstream) with the map-shell work. Polling catches the drawn frames.
   const bool rendered = QTest::qWaitFor(
       [&window] {
         return same_colour(map_area_pixel(window), fixture_background);

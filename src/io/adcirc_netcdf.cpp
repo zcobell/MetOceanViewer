@@ -347,7 +347,7 @@ double unpacked(const nc::Masking<T>& mask, T raw) {
   return mask.offset ? scaled + *mask.offset : scaled;
 }
 
-// C9: elevation at or below -999 is Dry (ADCIRC's fill is -99999), whatever
+// Elevation at or below -999 is Dry (ADCIRC's fill is -99999), whatever
 // the _FillValue attribute says; for every other output it is fill, so
 // Missing. Anything else the attributes mask is Missing; NaN and infinities
 // too, but they are counted.
@@ -374,7 +374,8 @@ Cell classify(AdcircKind kind, const nc::Masking<T>& mask, T raw,
 // -------------------------------------------------
 
 // The columns of one data variable for the selected stations, and which of
-// their cells were fill (flat, [position * times + time]; N7 needs it).
+// their cells were fill (flat, [position * times + time];
+// combine_partner_fill needs it).
 struct Gathered {
   std::vector<core::Column> columns;  // [selected position]
   std::vector<bool> fill;
@@ -431,9 +432,9 @@ std::expected<Gathered, Error> read_component(const ValueSource& source,
   return out;
 }
 
-// N7: a fill in either component of a vector makes both Missing. (A NaN is
-// not fill: it empties its own component only, and the magnitude is Missing
-// either way.)
+// A fill in either component of a vector makes both Missing (v4 tested the
+// first component only). (A NaN is not fill: it empties its own component
+// only, and the magnitude is Missing either way.)
 void combine_partner_fill(Gathered& first, Gathered& second) {
   for (std::size_t position = 0; position < first.columns.size(); ++position) {
     for (std::size_t t = 0; t < first.times; ++t) {

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// format_csv / write_csv (docs/core-design.md section 5.8, C18, D27, 9.1).
+// format_csv / write_csv (docs/core-design.md sections 5.8 and 9.1): long
+// format, one row per sample, and text that could start a formula quoted.
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>

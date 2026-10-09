@@ -167,7 +167,7 @@ std::expected<Read<ImedsHeader>, ParseError> parse_header(
 // ---- values
 // ------------------------------------------------------------------
 
-// v4 printed its null, -DBL_MAX, as "%10.4e" (N18).
+// v4 printed its null, -DBL_MAX, as "%10.4e".
 constexpr std::string_view printed_dbl_max{"-1.7977e+308"};
 
 constexpr std::array<double, 3> legacy_sentinels{

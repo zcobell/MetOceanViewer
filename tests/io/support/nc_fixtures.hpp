@@ -32,7 +32,8 @@ namespace mov::test::ncgen {
 ///   cube(a = 2, b = 3, c = 4) int, a * 100 + b * 10 + c
 void make_typed(const std::filesystem::path& path);
 
-/// Dimension n = 6; the missing-data cases (B4, B9, B12):
+/// Dimension n = 6; the missing-data cases (float fills, default fills, a
+/// fill that is not -999):
 ///   d_fill    double, _FillValue -99999: {1, -99999, 2, NaN, 3, 4}
 ///   f_fill    float,  _FillValue -99999f: {1, -99999, 2, NaN, 3, 4}
 ///   d_default double, no _FillValue, only [0, 3) written: {1, 2, 3, fill...}
@@ -76,7 +77,8 @@ void make_char_rows(const std::filesystem::path& path, std::size_t name_len,
 ///   s_pair = {"a", "b"} (NC_STRING, two)           (global)
 ///   doubles = {1.5, 2.5, 3.5} (double)             (global)
 ///   flags = {1, 2} (ubyte)                         (global)
-/// and variable `y`(n) with HorizontalProjectionEPSG = "4326" (char, B10).
+/// and variable `y`(n) with HorizontalProjectionEPSG = "4326" (char, as v4
+/// sometimes wrote it).
 void make_attributes(const std::filesystem::path& path, std::size_t bytes);
 
 /// char one(n = 5) "hello"; three(a = 2, b = 3, c = 2) "abcdefghijkl";
@@ -87,7 +89,7 @@ void make_char_shapes(const std::filesystem::path& path);
 void make_matrix(const std::filesystem::path& path, std::size_t rows,
                  std::size_t cols);
 
-/// The hostile-structure set (design review S11). Each file holds what its
+/// The hostile-structure set (core-design.md 7.3). Each file holds what its
 /// name says; the tests check each gives a specific error and no oversized
 /// allocation.
 enum class Hostile {

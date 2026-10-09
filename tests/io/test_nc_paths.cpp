@@ -51,7 +51,7 @@ void round_trip(const std::filesystem::path& path,
   const auto written = write_netcdf_atomic(path, ReadLimits{}, one_variable);
 #if defined(_WIN32)
   // netCDF-C reads paths in the active code page; a path it cannot express
-  // must be refused cleanly (docs/wp-notes/WP6.md: not verified on Windows).
+  // must be refused cleanly (not yet verified on Windows).
   if (not written) {
     const auto* nc = std::get_if<mov::io::NcError>(&written.error());
     REQUIRE(nc != nullptr);

@@ -55,7 +55,7 @@ TEST_CASE("sample types are regular and cheap to move",
   STATIC_REQUIRE(std::regular<Sample>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Sample>);
   STATIC_REQUIRE(std::is_nothrow_move_assignable_v<Sample>);
-  STATIC_REQUIRE(sizeof(Sample) == 16);  // C1
+  STATIC_REQUIRE(sizeof(Sample) == 16);  // a double and a tag
   STATIC_REQUIRE(std::is_trivially_copyable_v<Sample>);
   // A raw double is not a Sample: the finite check cannot be skipped.
   STATIC_REQUIRE_FALSE(std::is_convertible_v<double, Sample>);

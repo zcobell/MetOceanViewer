@@ -137,7 +137,7 @@ TEST_CASE("is_dry: <= -999 and nothing above", "[core][hwm][constexpr]") {
   STATIC_REQUIRE(is_dry(-99999.0));  // ADCIRC's fill
   STATIC_REQUIRE(is_dry(-9999.0));
   STATIC_REQUIRE(is_dry(-999.5));
-  STATIC_REQUIRE(is_dry(-999.0));  // on the threshold: dry (N2)
+  STATIC_REQUIRE(is_dry(-999.0));  // on the threshold: dry
   STATIC_REQUIRE_FALSE(is_dry(-998.999999));
   STATIC_REQUIRE_FALSE(is_dry(-998.0));
   STATIC_REQUIRE_FALSE(is_dry(-900.0));  // v4's map and axes called this dry

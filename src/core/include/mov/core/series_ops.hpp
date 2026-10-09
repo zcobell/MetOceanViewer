@@ -140,7 +140,7 @@ class ValueSummary {
 };
 
 /// What a run of consecutive samples contains: how many are Missing or Dry,
-/// and, if there is a value, its ValueSummary. quick_stats and Phase 5
+/// and, if there is a value, its ValueSummary. quick_stats and the chart
 /// decimation (one Bucket per pixel column) share it.
 ///
 /// A monoid under `+` with the default Bucket as identity (exactly). `+` is
@@ -226,8 +226,8 @@ class Bucket {
 };
 
 /// The Bucket of parallel spans of times and samples (equal lengths, a
-/// precondition): an ordered left fold. Phase 5 summarizes the sub-spans
-/// between pixel-column edges with this.
+/// precondition): an ordered left fold. The chart decimation summarizes the
+/// sub-spans between pixel-column edges with this.
 [[nodiscard]] Bucket summarize(std::span<const Time> times,
                                std::span<const Sample> samples);
 
@@ -244,7 +244,8 @@ struct ValueRange {
   friend constexpr bool operator==(ValueRange, ValueRange) = default;
 };
 
-/// The span of a series in time and, if it has a value, in value (B13, B14).
+/// The span of a series in time and, if it has a value, in value (v4 began
+/// with min and max inverted and dereferenced end() of an empty series).
 struct Extent {
   Time first;
   Time last;
@@ -360,7 +361,7 @@ struct Window {
 };
 
 /// The indices of the times in [r.begin(), r.end()): two binary searches over
-/// strictly increasing times. Phase 5 decimation uses this and summarize to
+/// strictly increasing times. The chart decimation uses this and summarize to
 /// summarize pixel columns without copying.
 [[nodiscard]] Window index_window(std::span<const Time> times, TimeRange r);
 

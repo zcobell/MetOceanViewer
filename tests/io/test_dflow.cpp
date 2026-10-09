@@ -231,7 +231,7 @@ TEST_CASE("inspect: a 3-D file offers layered variables, not those on laydimw",
   CHECK(std::get<Layered>(v[1]).layers == 3);  // laydim's length, not laydimw's
   CHECK(std::holds_alternative<Layered>(v[6]));  // derived from layered inputs
   CHECK(std::holds_alternative<Layered>(v[7]));
-  CHECK(std::holds_alternative<Flat>(v[9]));  // the wind has no layers (N16)
+  CHECK(std::holds_alternative<Flat>(v[9]));  // the wind has no layers
 }
 
 TEST_CASE("laydim and laydimw are told apart (B12)",
@@ -775,7 +775,8 @@ TEST_CASE("derived: wind, and the 3-D speed at a layer", "[io][dflow]") {
   CHECK(number(samples_of(speed3b.value, 0, 0)[0]) ==
         Catch::Approx(70.0).epsilon(1e-12));
 
-  // N16: the wind of a 3-D file is flat, and is read without a layer.
+  // The wind of a 3-D file is flat, and is read without a layer (v4 asked
+  // for layer 0 and so a start of size_t(-1)).
   const auto wind =
       read_ok(path, derived_request(DflowDerived::wind_speed, everything(3)));
   CHECK(number(samples_of(wind.value, 1, 0)[0]) ==
@@ -1067,8 +1068,7 @@ TEST_CASE("the readers close their file: it can be opened again at once",
   }
 }
 
-// ---- design decision 28: the grid decides what the vector components are
-// --------
+// ---- the grid's CRS decides what the vector components are ---------------
 
 namespace {
 

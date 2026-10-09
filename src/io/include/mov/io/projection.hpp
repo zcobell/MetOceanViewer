@@ -16,7 +16,7 @@
 
 namespace mov::io {
 
-// Projection runs at the read boundary (C5, C19): a reader turns the points
+// Projection runs at the read boundary: a reader turns the points
 // of a file's own CRS into WGS84 Locations once, and the core never sees
 // another CRS. PROJ is a private dependency of mov_io; no PROJ header is
 // public.
@@ -30,7 +30,8 @@ enum class ProjectionErrc : std::uint8_t {
 /// What the coordinates of a CRS are: angles on the ellipsoid (a PROJ
 /// geographic 2D or 3D CRS, whatever the datum: EPSG:4326, 4269, ...) or
 /// distances on a map projection. Vector components of a model on a projected
-/// grid point along the grid's axes, not east and north (design decision 28).
+/// grid point along the grid's axes, not east and north (rotating them by the
+/// meridian convergence is deferred).
 enum class CrsKind : std::uint8_t { geographic, projected };
 
 struct ProjectionError {

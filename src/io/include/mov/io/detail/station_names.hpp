@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// Cleaning and uniquifying the station names of lenient text sources (C14).
+// Cleaning and uniquifying the station names of lenient text sources.
 // Private to mov::io (public only because tests and fuzz targets include it).
 
 #pragma once

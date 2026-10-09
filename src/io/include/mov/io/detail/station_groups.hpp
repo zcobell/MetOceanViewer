@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// How a netCDF model reader cuts a station selection into reads (design 5.4,
-// the chunk-aware reads of review finding S7). Private to mov::io (public
-// only because the tests include it).
+// How a netCDF reader cuts a station selection into reads, so a few
+// stations of a large file cost a few columns and a block of neighbours one
+// read (core-design.md 5.4). Private to mov::io (public only because the
+// tests include it).
 
 #pragma once
 
@@ -48,7 +49,8 @@ struct StationGroup {
 ///  - chunks of one station: a read per station reads only that station, and
 ///    one read of the span reads all stations in between (7 ms against
 ///    0.7 s for ten stations a hundred apart).
-/// docs/wp-notes/WP9.md has the measurements.
+/// Measured on 1000 stations x 10000 steps of doubles (80 MB), warm page
+/// cache, one ext4 host; read the figures as orders of magnitude.
 ///
 /// `stride` is the largest difference of two neighbouring selected station
 /// indices that is bridged by one read: 0 never groups (a read per station,
@@ -69,11 +71,12 @@ struct GroupingPolicy {
 /// chunked (contiguous HDF5 storage, or a classic file), are read one at a
 /// time: the rows are then more than about 8 KiB apart (for doubles), and
 /// reading all the rows in between costs more than seeking for each station's
-/// value. Measured on 10000 stations (docs/wp-notes/WP9.md): in a classic file
-/// two stations 9999 apart read 4 times faster separately, two stations 1000
-/// apart about the same either way. Contiguous netCDF-4 storage shows the
-/// reverse, by less (a block read 1.5 times faster), so this is an order of
-/// magnitude, not a constant to tune.
+/// value. Measured on 10000 stations x 2000 steps of doubles: in a classic
+/// file two stations 9999 apart read 4 times faster separately (24 ms against
+/// 92 ms), two stations 1000 apart about the same either way. Contiguous
+/// netCDF-4 storage shows the reverse, by less (a block read 1.5 times faster:
+/// 38 ms against 58 ms for the far pair), so this is an order of magnitude,
+/// not a constant to tune.
 inline constexpr std::size_t contiguous_stride = 1024;
 
 /// The grouping a reader uses for a variable whose chunk sizes are

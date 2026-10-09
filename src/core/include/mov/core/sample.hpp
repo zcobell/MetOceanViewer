@@ -94,6 +94,7 @@ template <class Op>
   return (a.is_missing() or b.is_missing()) ? Sample{Missing{}} : Sample{Dry{}};
 }
 
-static_assert(sizeof(Sample) == 16, "C1: a Sample is 16 bytes");
+static_assert(sizeof(Sample) == 16,
+              "a Sample is 16 bytes: Missing, Dry or a finite double");
 
 }  // namespace mov::core

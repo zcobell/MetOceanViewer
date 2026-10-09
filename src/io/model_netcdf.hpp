@@ -82,7 +82,8 @@ template <class F>
 
 /// `dimension_mismatch` (subject: the variable) unless `var` is over exactly
 /// the dimensions with these ids, in this order. Identity, never position: a
-/// dimension is what find_dim found by name (B12).
+/// dimension is what find_dim found by name (v4 took id 0 for a missing
+/// name).
 [[nodiscard]] std::expected<void, Error> require_shape(
     const nc::VarInfo& var, std::initializer_list<int> dim_ids);
 
@@ -124,7 +125,8 @@ struct StationVariables {
 /// replaced), empty when nothing is left or the file has no names; position
 /// projected from `crs` to WGS84, with the native point kept when `crs` is
 /// not EPSG:4326. The coordinates are read with their own type converted to
-/// double only if no value changes (B4); 64-bit integers are refused.
+/// double only if no value changes (v4 read float variables untyped into
+/// doubles); 64-bit integers are refused.
 /// Errors: those of require_var / require_shape for the variables;
 /// `unsupported_crs`, `projection_unavailable`, `bad_coordinates` (with the
 /// station); NcError; Cancelled. Warnings: `invalid_utf8_replaced` (count:

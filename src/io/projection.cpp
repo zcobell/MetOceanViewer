@@ -31,8 +31,8 @@ namespace {
 
 // Set once (set_projection_data_dir), then only read: the first call stores
 // the directory and publishes a pointer to it; a reader loads the pointer.
-// No lock in io (C11): call_once runs the store once, the atomic pointer
-// makes it visible.
+// No lock in io (its callers serialize): call_once runs the store once, the
+// atomic pointer makes it visible.
 std::once_flag data_dir_once;
 std::atomic<const std::string*> data_dir{nullptr};  // UTF-8
 

@@ -94,7 +94,7 @@ static_assert(rows_in_enumerator_order());
 enum class StationTextError : std::uint8_t { embedded_nul, invalid_utf8 };
 
 /// Text a station file can store (SN 12.4): well-formed UTF-8 without NUL.
-/// May be empty. Readers of lenient sources clean the bytes first (C14).
+/// May be empty. Readers of lenient sources clean the bytes first.
 class StationText {
  public:
   constexpr StationText() = default;
@@ -218,8 +218,8 @@ struct Ndbc {
   }
 };
 
-/// A station of a tidal harmonics file (docs/harmonics-engine.md; plan
-/// decision 31 replaced XTide with it). Non-empty well-formed UTF-8, at most
+/// A station of a tidal harmonics file (docs/harmonics-engine.md; v5's own
+/// engine replaces XTide). Non-empty well-formed UTF-8, at most
 /// 255 bytes, no control characters (bytes below 0x20 and 0x7F); the
 /// harmonics reader narrows this to its `<source>:<local>` ids.
 struct Harmonics {
@@ -302,7 +302,7 @@ struct GaugeStation {
   friend bool operator==(const GaugeStation&, const GaugeStation&) = default;
 };
 
-/// A station as files store it (C5, C14): its id and name, a WGS84 location
+/// A station as files store it: its id and name, a WGS84 location
 /// projected at the read boundary, and the file's own point when its CRS is
 /// not WGS84. The name is the file's and may be empty: no reader makes one
 /// up. A display shows the id instead; the station netCDF writer, whose

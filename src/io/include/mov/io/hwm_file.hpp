@@ -23,7 +23,7 @@ namespace mov::io {
 /// modeled columns (the file does not say; nothing is converted until the
 /// statistics ask).
 ///
-///  - Blank lines are skipped (v4 made a zero mark of each, N20).
+///  - Blank lines are skipped (v4 made a zero mark of each).
 ///  - The first non-blank line is a header, skipped with a
 ///    `header_line_skipped` warning, when it has five or six fields, something
 ///    in them, and none that looks like a number. A first line with any

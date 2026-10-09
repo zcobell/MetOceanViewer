@@ -42,7 +42,7 @@ constexpr std::array all_datums{VerticalDatum::mhhw,   VerticalDatum::mhw,
 
 }  // namespace
 
-TEST_CASE("F12: NOAA and XTide rows give the legacy offsets",
+TEST_CASE("the NOAA and XTide fixture rows give the legacy offsets",
           "[core][datum][fixture]") {
   const auto stations = read_offsets_fixture();
   REQUIRE(stations.size() == 3);
@@ -64,7 +64,7 @@ TEST_CASE("F12: NOAA and XTide rows give the legacy offsets",
   }
 }
 
-TEST_CASE("F12: a station with no usable offsets has no table",
+TEST_CASE("a fixture station with no usable offsets has no table",
           "[core][datum][fixture]") {
   const auto stations = read_offsets_fixture();
   const Station& bare = stations.at("xtide:0002");
@@ -74,7 +74,7 @@ TEST_CASE("F12: a station with no usable offsets has no table",
   CHECK(std::holds_alternative<MissingMsl>(table.error()));
 }
 
-TEST_CASE("F12: NOAA legacy offsets are the negated heights",
+TEST_CASE("NOAA legacy offsets are the negated heights",
           "[core][datum][fixture]") {
   // noaa_stations.csv row 8518750, MLLW column: MSL data + 0.77527 = MLLW data.
   const auto stations = read_offsets_fixture();

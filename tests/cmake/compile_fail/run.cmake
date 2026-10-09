@@ -15,7 +15,7 @@
 # The harness first checks that the compiler diagnoses a minimal probe of that
 # kind. On Apple Clang a probe that compiles skips the case (reported as
 # skipped, e.g. Apple Clang 16 has no -Wmissing-designated-field-initializers,
-# docs/wp-notes/portability.md); on any other compiler it fails the test, so
+# which is Clang 19+); on any other compiler it fails the test, so
 # the gate cannot silently weaken GCC or Clang.
 
 # CXX_FLAGS: the build's own flags that select the standard library and SDK.

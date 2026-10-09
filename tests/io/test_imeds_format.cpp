@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// format_imeds / write_imeds (docs/core-design.md section 5.2, D15; N18).
+// format_imeds / write_imeds (docs/core-design.md section 5.2): fixed,
+// column-aligned precision, and no -DBL_MAX for missing values.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
@@ -74,8 +75,8 @@ core::StationTable synthetic() {
 
 }  // namespace
 
-TEST_CASE("format_imeds writes the pinned layout (D15)",
-          "[io][imeds][format]") {
+TEST_CASE("format_imeds writes the pinned layout", "[io][imeds][format]") {
+  // Fixed, column-aligned precision: not shortest round-trip, not v4's.
   const auto text = io::format_imeds(synthetic());
   REQUIRE(text.has_value());
   CHECK(text->value ==

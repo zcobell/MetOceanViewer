@@ -3,10 +3,10 @@
 
 // The legacy v4 station netCDF (docs/legacy-formats.md section 5, docs/
 // station-netcdf.md section 11): dialects A and B read through
-// read_station_netcdf, with the v4 defects (plan 1.2) as regressions: B6
-// (open failure), B7 (name stride), B8 (referenceDate length), B9 (default
-// fill), B10 (the EPSG getter), and the heap junk after the NUL of a name
-// (Nate S1).
+// read_station_netcdf, with v4's defects as regressions: closing an id that
+// never opened, a name stride of 200, a fixed referenceDate length, the
+// default fill read as data, an EPSG getter that returned error codes, and
+// heap junk after the NUL of a name.
 
 #include <netcdf.h>
 
@@ -225,7 +225,7 @@ TEST_CASE("legacy inspect agrees with read", "[io][station_nc][legacy]") {
   CHECK(catalog->warnings == read.warnings);
 }
 
-// ---- B7: the row stride is the file's, not 200 ------------------------------
+// ---- the row stride is the file's, not 200 ----------------------------------
 
 TEST_CASE("legacy B7: stationNameLen 50 and 300 and 7 give the right names",
           "[io][station_nc][legacy][regression]") {
@@ -277,7 +277,7 @@ TEST_CASE("legacy S1: heap junk after the NUL of a name is cut",
   CHECK(count_of(read.warnings, WarningCode::invalid_utf8_replaced) == 0);
 }
 
-TEST_CASE("legacy A8: names collapse internal white space (parity with v4)",
+TEST_CASE("legacy: names collapse internal white space (parity with v4)",
           "[io][station_nc][legacy]") {
   auto spec = three_stations();
   spec.stations[0].name = "  Grand   Isle \t LA ";
@@ -357,7 +357,7 @@ TEST_CASE("legacy: duplicate ids are made unique", "[io][station_nc][legacy]") {
   CHECK(w.count == 2);
 }
 
-// ---- B4, B9: float data and the fill ----------------------------------------
+// ---- float data and the fill ------------------------------------------------
 
 TEST_CASE("legacy B4: a float data variable reads exactly",
           "[io][station_nc][legacy][regression]") {
@@ -411,7 +411,7 @@ TEST_CASE("legacy: a float _FillValue is compared in float",
   CHECK(at(read.value.table, 0, 0, 1) == v(1.0));
 }
 
-// ---- B10: the EPSG ----------------------------------------------------------
+// ---- the EPSG ---------------------------------------------------------------
 
 TEST_CASE("legacy B10: a missing EPSG is assumed to be 4326 with a warning",
           "[io][station_nc][legacy][regression]") {
@@ -502,7 +502,7 @@ TEST_CASE("legacy: coordinates that are not places are bad_coordinates",
   CHECK(e2.station == 2);
 }
 
-// ---- B8: referenceDate ------------------------------------------------------
+// ---- referenceDate ----------------------------------------------------------
 
 TEST_CASE("legacy B8: referenceDate of 19, 20 and 120 bytes",
           "[io][station_nc][legacy][regression]") {
@@ -530,7 +530,7 @@ TEST_CASE("legacy: a T between date and time is accepted",
   CHECK(read.value.table.times(core::StationIndex{0})[0] == ms(946684810000));
 }
 
-TEST_CASE("legacy A10: no referenceDate means 1970-01-01 with epoch_used",
+TEST_CASE("legacy: no referenceDate means 1970-01-01 with epoch_used",
           "[io][station_nc][legacy]") {
   auto spec = three_stations();
   spec.reference_date = std::nullopt;
@@ -643,7 +643,7 @@ TEST_CASE("legacy: units and datum come from the data variables",
   auto spec = three_stations();
   for (auto& s : spec.stations) {
     s.units = "ft";
-    s.datum = "mhw";  // N8: v4 could not name MHW
+    s.datum = "mhw";  // v4 could not name MHW
   }
   auto read = read_spec(spec);
   CHECK(read.value.table.schema()[0] == meta(core::GenericQuantity::value(), "",
@@ -706,7 +706,7 @@ TEST_CASE("legacy: a station without samples has an empty series",
   CHECK(read.value.table.times(core::StationIndex{2}).size() == 1);
 }
 
-TEST_CASE("legacy A9: six-digit station numbers are accepted",
+TEST_CASE("legacy: six-digit station numbers are accepted",
           "[io][station_nc][legacy]") {
   auto spec = three_stations();
   spec.width = 6;
@@ -772,7 +772,7 @@ TEST_CASE("legacy: a time variable on another station's dimension is refused",
   CHECK(e.subject == "time_station_0001");
 }
 
-// ---- B6, B5: opening --------------------------------------------------------
+// ---- opening ----------------------------------------------------------------
 
 TEST_CASE("legacy B6: a missing file is an error, not a crash",
           "[io][station_nc][legacy][regression]") {

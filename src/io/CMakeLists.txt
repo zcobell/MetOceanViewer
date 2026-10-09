@@ -4,7 +4,8 @@
 # mov_io: Qt-free file readers/writers on top of mov_core, netCDF-C and PROJ.
 
 find_package(netCDF CONFIG REQUIRED)
-# PROJ is a private dependency (core-design.md C19): no PROJ header is public.
+# PROJ is a private dependency: no PROJ header is public, and core never
+# sees another CRS (readers project to WGS 84 at the read boundary).
 # vcpkg builds it without network (curl) and TIFF-grid support. No path of the
 # build is compiled in: the application tells mov::io where proj.db is
 # (set_projection_data_dir), or $MOV_PROJ_DATA does.

@@ -506,8 +506,7 @@ std::string datum_text(std::string_view text) {
   return std::string{core::ascii::trim(text)};
 }
 
-// ---- series whose times are not strictly increasing (decision 30.3)
-// -----------
+// ---- series whose times are not strictly increasing -------------------------
 
 core::NormalizeReport normalize_columns(
     core::TimeAxis& times, std::span<core::Column* const> columns) {

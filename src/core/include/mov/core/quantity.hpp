@@ -56,7 +56,7 @@ enum class Quantity : std::uint8_t {
 /// operator== compares the token and the standard name, so the type is
 /// regular. Two quantities with the same token but different standard names
 /// are different values yet name the same variable; anything that must be
-/// unique per variable (a StationTable schema, WP2) keys on token(), not on
+/// unique per variable (a StationTable schema) keys on token(), not on
 /// ==.
 class GenericQuantity {
  public:
@@ -270,7 +270,7 @@ static_assert(std::variant_size_v<QuantityId> == 2,
 }
 std::string_view token(QuantityId&&) = delete;
 
-/// THE datum predicate (C3): only water_level, water_level_prediction and
+/// THE datum predicate: only water_level, water_level_prediction and
 /// generic quantities (legacy files put a datum on `value`) can carry a
 /// vertical datum.
 [[nodiscard]] constexpr bool datum_applicable(const QuantityId& q) noexcept {

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The schema of a foreign CF file (docs/station-netcdf.md 12 "Foreign", owner
-// decision 30): the quantity, label, unit and datum of each data variable, and
-// what its quality-flag variables say about its samples.
+// The schema of a foreign CF file (docs/station-netcdf.md 12 "Foreign"): the
+// quantity, label, unit and datum of each data variable, and what its
+// quality-flag variables say about its samples.
 //
 // A standard name that is exactly a registry quantity's (and whose units
 // convert to its canonical unit) gives that quantity; anything else is a
 // generic quantity named after the variable, with a deterministic substitute
-// when the name cannot be a column (decision F4). Tokens are made in two passes
+// when the name cannot be a column. Tokens are made in two passes
 // so that a substitute never takes the name a later variable has itself.
 
 #include <algorithm>
@@ -95,8 +95,7 @@ std::expected<Raw, Error> raw_of(const nc::File& file,
              .unit = parsed_unit(f.units)};
 }
 
-// ---- the quantity (decision F4, owner decision 30.4)
-// -------------------------
+// ---- the quantity -----------------------------------------------------------
 
 /// The name or long_name of the variable says its values are predicted.
 bool hints_prediction(const Raw& r) {
@@ -227,8 +226,7 @@ std::expected<std::vector<core::QuantityId>, Error> quantities_of(
   return out;
 }
 
-// ---- quality flags (owner decision 30.1)
-// -------------------------------------
+// ---- quality flags ----------------------------------------------------------
 
 /// The values of the IOOS QARTOD scheme (1 pass, 2 not evaluated, 3 suspect or
 /// of high interest, 4 fail, 9 missing data), for a flag variable that gives

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The WP10b review round (owner decision 30): how a foreign CF file's time
+// Foreign and legacy reader details: how a foreign CF file's time
 // variable is chosen, how its samples are bounded, the name variables, the
 // token rules shared with the writer, quality flags, datums, observed and
 // predicted water levels, the padding options, the order of the warnings. The
@@ -102,8 +102,7 @@ struct MiniFile {
   std::filesystem::path path;
 };
 
-// ---- the time variable (B1)
-// ----------------------------------------------------
+// ---- the time variable ------------------------------------------------------
 
 }  // namespace
 
@@ -192,8 +191,7 @@ TEST_CASE("two labelled time variables of an incomplete layout are a tie",
   CHECK(e.subject == "time, time_b");
 }
 
-// ---- bounded reads (B2)
-// ----------------------------------------------------------
+// ---- bounded reads ----------------------------------------------------------
 
 TEST_CASE("probe: a time-major incomplete layout is read as far as its samples",
           "[io][station_nc][foreign][review]") {
@@ -250,8 +248,7 @@ TEST_CASE("probe: a time-major incomplete layout is read as far as its samples",
   CHECK(nc->status == io::NcStatus{io::WrapperFault::too_large});
 }
 
-// ---- padding options (S4)
-// -------------------------------------------------------
+// ---- padding options --------------------------------------------------------
 
 namespace {
 
@@ -338,8 +335,7 @@ TEST_CASE("foreign incomplete without obs_count counts the leading times",
   CHECK(e.index == 4);
 }
 
-// ---- name variables (S2)
-// ---------------------------------------------------------
+// ---- name variables ---------------------------------------------------------
 
 TEST_CASE("probe: a platform_name over the characters alone is not the names",
           "[io][station_nc][foreign][review]") {
@@ -457,8 +453,7 @@ TEST_CASE("a float station id is bad_encoding",
   CHECK(format_error_of(read_all(path)).code == FormatErrc::bad_encoding);
 }
 
-// ---- tokens shared with the writer (S3)
-// --------------------------------------------
+// ---- tokens shared with the writer ------------------------------------------
 
 TEST_CASE(
     "probe: a variable and its _status twin are two columns the writer "
@@ -548,8 +543,7 @@ TEST_CASE("a column's name leaves room for its _status twin (249 bytes)",
   }
 }
 
-// ---- observed and predicted water levels (owner decision 30.4)
-// -------------------
+// ---- observed and predicted water levels ------------------------------------
 
 namespace {
 
@@ -629,8 +623,7 @@ TEST_CASE("water levels: the hints in the name pick observed or predicted",
   }
 }
 
-// ---- datums (owner decision 30.2)
-// -------------------------------------------------
+// ---- datums -----------------------------------------------------------------
 
 namespace {
 
@@ -711,8 +704,7 @@ TEST_CASE("datums: geopotential_datum_name and vertical_datum name one",
   }
 }
 
-// ---- quality flags (owner decision 30.1)
-// --------------------------------------------
+// ---- quality flags ----------------------------------------------------------
 
 namespace {
 
@@ -969,8 +961,7 @@ TEST_CASE("quality flags: a flag variable of two data variables warns once",
   CHECK(count_of(read.warnings, WarningCode::quality_flags_ignored) == 1);
 }
 
-// ---- the order of the warnings (N9)
-// ----------------------------------------------------
+// ---- the order of the warnings ----------------------------------------------
 
 TEST_CASE("foreign: the warnings come in the order SN 12 documents",
           "[io][station_nc][foreign][review]") {

@@ -17,7 +17,7 @@
 
 namespace mov::io {
 
-/// The units of a CF time variable (B11: v4 cut the attribute at a fixed
+/// The units of a CF time variable (v4 cut the attribute at a fixed
 /// offset and assumed seconds). Stored as an enumerator, so the factor to
 /// milliseconds is an integer.
 enum class CfTimeUnit : std::uint8_t { millisecond, second, minute, hour, day };

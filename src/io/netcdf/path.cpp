@@ -14,7 +14,8 @@
 // path is converted to the ACP; when the ACP cannot represent it, the 8.3
 // short name (pure ASCII) is used instead, of the file or, for a file not yet
 // created, of its directory. With neither, the path is
-// `unrepresentable_path`. NOT VERIFIED on Windows (docs/wp-notes/WP6.md).
+// `unrepresentable_path`. NOT VERIFIED on Windows: worked out from the
+// netCDF-C source above, not yet run there.
 
 #include <expected>
 #include <filesystem>

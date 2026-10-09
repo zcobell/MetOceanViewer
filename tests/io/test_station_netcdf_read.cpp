@@ -577,8 +577,7 @@ TEST_CASE("parse_station_nc_version", "[io][station_nc]") {
   }
 }
 
-// ---- what an incomplete read costs (review blocker B1)
-// ---------------------------
+// ---- what an incomplete read costs ------------------------------------------
 
 /// One long station among many short ones: obs is 10000, every other station
 /// has one sample, so a read of the short ones that reads whole rows would
@@ -657,8 +656,7 @@ TEST_CASE("PaddingCheck::whole sees padding the boundary check does not read",
           .code == FormatErrc::padding_not_missing);
 }
 
-// ---- the idempotence law (F16)
-// ----------------------------------------------------
+// ---- the idempotence law ----------------------------------------------------
 
 TEST_CASE("re-writing a read-back table gives no writer warnings",
           "[io][station_nc][read][roundtrip]") {

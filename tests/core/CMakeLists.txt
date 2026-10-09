@@ -54,8 +54,8 @@ mov_add_fuzz_test(
 mov_add_fuzz_test(fuzz_checked_time SOURCES fuzz_checked_time.cpp LIBRARIES mov::core CORPUS core/checked_time)
 mov_add_fuzz_test(fuzz_normalize SOURCES fuzz_normalize.cpp LIBRARIES mov::core CORPUS core/normalize)
 
-# HWM (WP4). A separate executable keeps this package's edit to the file a pure
-# append; it can be folded into mov_core_tests above.
+# HWM statistics. A separate executable only because it was added as a pure
+# append to this file; it can be folded into mov_core_tests above.
 mov_add_test(
     mov_core_hwm_tests
     SOURCES test_hwm.cpp test_hwm_stats.cpp
@@ -63,10 +63,11 @@ mov_add_test(
     LIBRARIES mov::core
 )
 
-# golden.txt is what golden.py prints; the F8 tests read it. This keeps the two
-# from drifting. golden.py needs Python 3.11 (statistics.linear_regression with
-# proportional=True). CI presets set MOV_REQUIRE_GOLDEN_CHECKS so a runner
-# without Python cannot skip the check silently.
+# golden.txt is what golden.py prints; the HWM golden tests read it. This
+# keeps the two from drifting. golden.py needs Python 3.11
+# (statistics.linear_regression with proportional=True). CI presets set
+# MOV_REQUIRE_GOLDEN_CHECKS so a runner without Python cannot skip the check
+# silently.
 option(MOV_REQUIRE_GOLDEN_CHECKS "Fail configuration if Python >= 3.11 is missing (the golden checks need it)" OFF)
 find_package(Python3 3.11 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
@@ -82,8 +83,8 @@ else()
     message(STATUS "Python >= 3.11 not found: hwm_golden_is_current is not registered")
 endif()
 
-# Series operations and the datum shift (WP3). A separate executable keeps this
-# package's edit to the file a pure append; it can be folded into
+# Series operations and the datum shift. A separate executable only because
+# it was added as a pure append to this file; it can be folded into
 # mov_core_tests above.
 mov_add_test(
     mov_core_ops_tests

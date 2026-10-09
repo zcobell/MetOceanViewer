@@ -52,7 +52,7 @@ struct AdcircAsciiHeader {
 };
 
 /// Line 1 is a free-text run description and is not read (it may be blank).
-/// A probe, not a reader (WP7's convention that a `parse_*` takes a
+/// A probe, not a reader (the convention that a `parse_*` takes a
 /// `ReadContext` and returns `expected<Read<T>, Error>` is for the readers
 /// below): it looks at two lines, so it needs no limits, cannot be cancelled
 /// and has no warnings.
@@ -115,7 +115,7 @@ struct AdcircAsciiRequest {
 /// `current_v` (m s-1); `air_pressure` (m of water); `wind_u`, `wind_v`
 /// (m s-1). No datum is stated, none is assumed.
 ///
-/// Values (design C9):
+/// Values:
 ///  - elevation: a value at or below -999 (ADCIRC writes -99999) is `Dry`;
 ///  - every other output: a value at or below -999 is fill, so `Missing`, and
 ///    a fill in either component of a vector makes both `Missing`;

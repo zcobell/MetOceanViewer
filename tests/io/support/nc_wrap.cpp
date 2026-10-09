@@ -2,8 +2,9 @@
 // Copyright (c) 2026 Zach Cobell
 
 // The `--wrap` shims (GNU ld, lld) that count every netCDF-C open and close
-// in the test executable, mov::io's included (B5), and a Catch2 listener that
-// fails the run when a test case ends with a netCDF id still open.
+// in the test executable, mov::io's included, and a Catch2 listener that
+// fails the run when a test case ends with a netCDF id still open (v4 leaked
+// ids on its error paths).
 
 #include <netcdf.h>
 

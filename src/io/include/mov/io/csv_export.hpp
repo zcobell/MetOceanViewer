@@ -12,7 +12,7 @@
 
 namespace mov::io {
 
-/// A station table as CSV in long format (D27): RFC 4180, UTF-8 without a byte
+/// A station table as CSV in long format: RFC 4180, UTF-8 without a byte
 /// order mark, rows ended by CRLF, one row per sample, ordered by station,
 /// then schema column, then time.
 ///
@@ -31,7 +31,7 @@ namespace mov::io {
 ///   unset.
 /// - A text cell (id, name, quantity, unit, datum) that starts with one of
 ///   `= + - @`, a tab or a CR gets a leading `'`, so a spreadsheet does not
-///   run it as a formula (C18). The cells the writer formats itself (time and
+///   run it as a formula. The cells the writer formats itself (time and
 ///   value) are exempt: `-1.5` stays a number. A cell with a comma, a double
 ///   quote, CR or LF is quoted, and a quote inside doubled.
 ///

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// The mechanism of an atomic file replacement (core-design.md C16, section
-// 4.4), shared by the text writer here and the netCDF writer of WP6:
+// The mechanism of an atomic file replacement (core-design.md section 4.4),
+// shared by the text writer here and the netCDF writer (netcdf/write.cpp):
 //
 //   0. check   an existing target must be writable (check_target_replaceable)
 //   1. create  a unique temporary file next to the target, exclusively

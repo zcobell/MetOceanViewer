@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Zach Cobell
 
 // Standard-library gaps that the tests must tolerate (macOS libc++, MSVC STL).
-// See docs/wp-notes/portability.md for the library versions behind each gate.
+// Each gate below names the library versions behind it.
 // A check that a library cannot constant-evaluate runs at run time there
 // instead, so coverage of the behaviour stays; every other toolchain keeps the
 // compile-time check.

@@ -110,7 +110,7 @@ struct AdcircNcRequest {
 /// axis and the schema of `adcirc_schema(kind, grid)`: `water_level` (m);
 /// `current_u`, `current_v` (m s-1); `air_pressure` (m of water); `wind_u`,
 /// `wind_v` (m s-1). If `crs` is projected the vector components are along the
-/// grid's axes, not east and north (design decision 28), and are the generic
+/// grid's axes, not east and north, and are the generic
 /// `sea_water_x_velocity`, `sea_water_y_velocity` and `x_wind`, `y_wind`
 /// (labels "grid-relative ..."; pair them with
 /// VectorSeries::assume_components). The stations follow the order of the
@@ -121,18 +121,19 @@ struct AdcircNcRequest {
 /// default fill, missing_value, valid_min/max/range and scale_factor/add_offset
 /// honoured (Masking):
 ///  - elevation (`zeta`): an (unpacked) value at or below -999 is `Dry`
-///    (ADCIRC writes -99999; design C9, D16), whatever the _FillValue says,
+///    (ADCIRC writes -99999 for a dry node), whatever the _FillValue says,
 ///    so the fill is Dry and not Missing; any other masked value is `Missing`;
 ///  - every other output: a value at or below -999 is fill, so `Missing`, and
-///    a fill in either component of a vector makes both `Missing` (N7);
+///    a fill in either component of a vector makes both `Missing` (v4 tested
+///    only the first);
 ///  - NaN and infinities are `Missing` and counted in `nonfinite_masked`
 ///    (subject: the first variable that had one).
 ///
 /// The data is read in blocks of whole time steps (File::read_blocks) over
 /// the stations of a group, and gathered. Selected stations in the same chunk
 /// column of the file share a read; stations in different columns do not
-/// (detail::station_groups, GroupingPolicy; the measurement is in
-/// docs/wp-notes/WP9.md).
+/// (detail::station_groups, GroupingPolicy): on the layout ADCIRC writes,
+/// 1000 stations read as one block in 0.5 s against 85 s read one by one.
 ///
 /// Errors (those of inspect_adcirc_netcdf, and): FormatError
 /// `station_count_mismatch` (the selection was made for another count),
@@ -150,9 +151,9 @@ struct AdcircNcRequest {
 namespace detail {
 
 /// read_adcirc_netcdf with the grouping of the selected stations into reads
-/// chosen by the caller (the measurement of docs/wp-notes/WP9.md and the
-/// tests); nullopt is what read_adcirc_netcdf does: grouping_for the chunk
-/// shape of the data variable.
+/// chosen by the caller (tests/io/measure_adcirc_netcdf.cpp, which compares
+/// the groupings, and the tests); nullopt is what read_adcirc_netcdf does:
+/// grouping_for the chunk shape of the data variable.
 [[nodiscard]] std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
     const std::filesystem::path& path, const AdcircNcRequest& request,
     const ReadContext& ctx, std::optional<GroupingPolicy> policy);

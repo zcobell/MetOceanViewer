@@ -3,8 +3,9 @@
 
 // libFuzzer target: parse_hwm_csv must never crash, and the marks it returns
 // are what the statistics need:
-//  - every elevation is finite and at most 1e4 m in magnitude (the WP4
-//    contract), and a wet modeled value is above the dry threshold;
+//  - every elevation is finite and at most 1e4 m in magnitude
+//    (max_elevation_m, so no sum of squares overflows), and a wet modeled
+//    value is above the dry threshold;
 //  - hwm_stats on them never reports NonFiniteMoments, in either mode;
 //  - the same text with CRLF line endings, or behind a byte order mark, gives
 //    the same marks and warnings (or the same error code).

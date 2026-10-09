@@ -69,7 +69,8 @@ class Location {
 enum class EpsgError : std::uint8_t { not_positive };
 
 /// An EPSG coordinate reference system code. There is no default: a CRS is
-/// always stated (B10: v4 read the code with the wrong netCDF type).
+/// always stated (v4 took a netCDF error code for an EPSG code when the
+/// attribute had another type).
 class Epsg {
  public:
   [[nodiscard]] static constexpr std::expected<Epsg, EpsgError> make(

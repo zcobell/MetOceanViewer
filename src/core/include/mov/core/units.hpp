@@ -42,8 +42,8 @@ enum class DischargeUnit : std::uint8_t {
   cubic_meter_per_second,
   cubic_foot_per_second
 };
-/// A unit option only: the affine Temperature value type is deferred to
-/// Phase 3, so there is no Measure over it.
+/// A unit option only: the affine Temperature value type is deferred until
+/// the providers need it, so there is no Measure over it.
 enum class TemperatureUnit : std::uint8_t { celsius, fahrenheit, kelvin };
 
 namespace detail {

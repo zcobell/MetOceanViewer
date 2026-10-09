@@ -82,7 +82,7 @@ struct UnknownDatum {
 /// aliases NAVD, NGVD and IGLD (the NOAA names without the year). "" and
 /// "none" mean there is no datum: an engaged expected holding nullopt.
 /// Anything else is not guessed and is an UnknownDatum. MHW is a token (v4
-/// could not parse it, N8).
+/// could not parse it).
 [[nodiscard]] constexpr std::expected<std::optional<VerticalDatum>,
                                       UnknownDatum>
 parse_vertical_datum(std::string_view s) noexcept {
