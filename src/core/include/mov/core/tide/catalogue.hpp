@@ -7,9 +7,11 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -74,22 +76,34 @@ namespace mov::core::detail {
 }
 
 /// A catalogue entry for a compound; a bad name or term does not compile.
+// A table coefficient as a Term's int8_t; out of range does not compile
+// (std::abort is not a constant expression). The table spells coefficients as
+// int: building a pair<string_view, int8_t> from the literal would narrow
+// inside std::pair, which MSVC reports as C4242.
+[[nodiscard]] consteval std::int8_t coefficient_of(int c) {
+  if (c < std::numeric_limits<std::int8_t>::min() or
+      c > std::numeric_limits<std::int8_t>::max()) {
+    std::abort();
+  }
+  return static_cast<std::int8_t>(c);
+}
+
 [[nodiscard]] consteval tide::CatalogueEntry compound_entry(
     std::string_view name,
-    std::initializer_list<std::pair<std::string_view, std::int8_t>> terms,
+    std::initializer_list<std::pair<std::string_view, int>> terms,
     std::optional<std::string_view> note = std::nullopt) {
   // No std::vector: its allocator machinery costs constexpr steps, and the
   // catalogue's initializer is evaluated in every TU that includes it. More
   // than max_terms terms index past the array, which does not compile.
   using Term = tide::CompoundTerms::Term;
   const Term first{.base = tide::constituent_name(terms.begin()->first),
-                   .coefficient = terms.begin()->second};
+                   .coefficient = coefficient_of(terms.begin()->second)};
   std::array<Term, tide::CompoundTerms::max_terms> parsed{
       first, first, first, first, first, first, first, first};
   std::size_t count = 0;
   for (const auto& [base, coefficient] : terms) {
-    parsed[count] =
-        Term{.base = tide::constituent_name(base), .coefficient = coefficient};
+    parsed[count] = Term{.base = tide::constituent_name(base),
+                         .coefficient = coefficient_of(coefficient)};
     ++count;
   }
   return tide::CatalogueEntry{
