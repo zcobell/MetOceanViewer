@@ -519,6 +519,10 @@ predict(const ReferenceView& station, TimeRange range, Interval step, NodalMode 
 }
 ```
 
+> **Open for H3:** `std::stop_token` here and in §4 is ruled out by CD §1.1 (Apple libc++ ships it
+> only as experimental), and `io::StopToken` sits above core. H3 chooses core's stop token, for
+> example by moving `StopToken` into core as `Cancelled` was.
+
 ### 3.1 Algorithm
 
 1. **Grid.** `k₀ = ceil_div(begin_ms, step_ms)` and `k₁ = ceil_div(end_ms, step_ms)`, where
@@ -727,7 +731,7 @@ using JsonError = std::variant<SyntaxError, LocatedError>;
 
 /// Stops at the first error, in the order of HJ §10.4. The fuzz entry point.
 std::expected<Read<core::tide::HarmonicsFile>, JsonError>
-parse_harmonics(std::span<const std::byte> bytes, const HarmonicsLimits& limits = {}, std::stop_token stop = {});
+parse_harmonics(std::span<const std::byte> bytes, const HarmonicsLimits& limits = {}, StopToken stop = {});
 
 /// Accumulates every error it can reach (all of them after a syntax error is impossible), plus warnings and a summary.
 struct HarmonicsSummary { std::size_t references, subordinates, sources, constituents; std::vector<std::pair<std::string, std::size_t>> licences; };
@@ -736,7 +740,7 @@ struct ValidationReport { std::vector<JsonError> errors; std::vector<Warning> wa
 ValidationReport validate_harmonics(std::span<const std::byte> bytes, const HarmonicsLimits& limits = {});
 
 std::expected<Read<core::tide::HarmonicsFile>, Error>
-read_harmonics(const std::filesystem::path& p, const HarmonicsLimits& limits = {}, std::stop_token stop = {});
+read_harmonics(const std::filesystem::path& p, const HarmonicsLimits& limits = {}, StopToken stop = {});
 
 struct HarmonicsWriteOptions { bool gzip = false; };
 std::string format_harmonics(const core::tide::HarmonicsFile& f, Time now);                 // HJ §3 layout, deterministic
@@ -745,7 +749,8 @@ std::expected<void, Error> write_harmonics(const std::filesystem::path& p, const
 }
 ```
 
-Bytes are `std::span<const std::byte>` throughout. They are reinterpreted as `char` only at the
+`StopToken` is `io::StopToken` (`read_limits.hpp`), not `std::stop_token`, which CD §1.1 rules
+out. Bytes are `std::span<const std::byte>` throughout. They are reinterpreted as `char` only at the
 nlohmann call. `std::basic_string<std::byte>` is not used, because the standard provides no
 `char_traits<std::byte>`.
 
@@ -773,7 +778,11 @@ reaching it as a bug.
 3. **UTF-8.** Strip a leading BOM (warning), then validate the whole text with core's
    `detail::is_valid_utf8` → `SyntaxError{encoding, offset}` with the exact first bad byte. Doing
    it here rather than through nlohmann's lexer gives a precise offset for every case.
-4. **Parse with the callback.** The callback keeps:
+4. **Parse with the callback.** First the depth pre-scan of `docs/providers-design.md` §4.2: one
+   pass counts `[`/`{` nesting outside strings, and text deeper than `max_depth` fails with
+   `limit` before nlohmann sees it. Checked only in the callback, the limit would come after the
+   lexer had descended, and nlohmann's DOM is recursive to destroy. How that error is located
+   (byte offset or pointer) is settled in H5. The callback then keeps:
    - a path stack of tokens, holding indices and member ids, not strings;
    - per-object member sets, held as small sorted vectors (`duplicate_member`);
    - depth, string, array and per-station value counts (`limit`);
@@ -839,14 +848,17 @@ through nlohmann's iterator input adapter; this is not planned.
 
 ### 6.5 gzip and build changes
 
-- `io/detail/gzip.hpp`: `std::expected<std::string, SyntaxError> gunzip(std::span<const std::byte>,
-  std::uintmax_t max_out, std::stop_token)`.
+- `io/gzip.hpp`, public because the NDBC bodies use it too (`docs/providers-design.md` §4):
+  `std::expected<std::string, SyntaxError> gunzip(std::span<const std::byte>, std::uintmax_t max_out,
+  StopToken)`.
   - zlib `inflateInit2(…, 16 + MAX_WBITS)`, inflating in 1 MiB chunks;
   - the output cap is checked before each append (bomb guard), and `stop` between chunks;
   - a truncated stream, CRC failure, second member or trailing bytes is `gzip`.
-- `vcpkg.json` gains `nlohmann-json` and `zlib`. zlib is already in the closure through HDF5 and is
-  now a direct dependency. `target_link_libraries(mov_io PRIVATE nlohmann_json::nlohmann_json
-  ZLIB::ZLIB)`; neither appears in public headers (include gate as for netCDF, CD §4.1).
+- `vcpkg.json` lists `nlohmann-json` and `zlib` (added in H0). zlib was already in the closure
+  through HDF5 and is now a direct dependency. `target_link_libraries(mov_io PRIVATE
+  nlohmann_json::nlohmann_json ZLIB::ZLIB)` (H0); neither appears in public headers. The
+  `third_party_include_gate` test allows `<nlohmann/…>` only under `src/io/json/` and `<zlib.h>`
+  only in `src/io/gzip.cpp`, as the netCDF gate does for netCDF-C (CD §4.1).
 - **Threading.** No global state, so the reader may run on any worker. It does not use the netCDF
   serial queue (CD C11).
 
@@ -990,12 +1002,15 @@ for 6,700 stations single-threaded. The command parallelises over stations with 
 
 ### 7.8 Validation gate and CLI (WP H8)
 
+`tides predict` runs through the tides provider of §9.2, like every other fetch of the CLI
+(`docs/providers-design.md` §6.10), so it lands after H9; the `harmonics` commands do not wait.
+
 ```
 metocean-data harmonics validate FILE              # validate_harmonics: every error and warning (code, pointer, value); exit 0/1
 metocean-data harmonics info FILE                  # counts, sources, licences, version
 metocean-data harmonics subset FILE (--ids … | --bbox …) --out OUT
 metocean-data harmonics add-computed-datums IN OUT --period START/END [--only-sources …]
-metocean-data tides predict --file FILE --station ID --start … --end … (--interval 6m | --hilo)
+metocean-data tides predict --file FILE --station ID --start … --end … (--interval 6m | --hilo)   # through the tides provider (H9)
                     [--datum MLLW] [--units m|ft] [--format csv|imeds|netcdf]
 ```
 
@@ -1151,10 +1166,12 @@ struct TideRequest {
 using TideResult = std::variant<core::TimeSeries, core::tide::Events>;   // mirrors TideSampling
 struct TideResponse { TideResult result; std::vector<io::Warning> warnings; };   // e.g. dropped inverted pairs
 
-class TidesProvider {
+class TidesProvider {   // a providers::Fetcher (docs/providers-design.md §6.1, §6.10)
  public:
+  using Request = TideRequest;
+  using Value = core::AtStation<core::StationId<core::provider::Harmonics>, TideResponse>;
   explicit TidesProvider(std::shared_ptr<const core::tide::HarmonicsFile> file);   // immutable, shared
-  QFuture<std::expected<TideResponse, ProviderError>> fetch(const TideRequest& r);  // QtConcurrent::run; stop_token from the QPromise
+  QFuture<std::expected<fetch::Fetched<Value>, fetch::Failure>> fetch(Request r);
 };
 ```
 
@@ -1169,9 +1186,12 @@ class TidesProvider {
 - **Details panel.** Name, id, source, effective licence, attribution (all as plain text),
   `record`, flags, and "Predictions, not observations. Not for navigation."
 - **Datum selector.** Exactly the datums §5 can deliver, with "(computed)" on computed ones.
-- **Concurrency.** Prediction is pure CPU on `QtConcurrent::run`. A new selection cancels the
-  previous `stop_token`. The file is immutable and shared through `std::shared_ptr<const …>`, and
-  views never outlive the task that holds the pointer.
+- **Concurrency.** Prediction is pure CPU, run as
+  `QtConcurrent::run(pool, [file, req](QPromise<Result>& p){ … })`: the promise is the task's own,
+  and `p.isCanceled()` is the stop token the reader and the engine poll. There is no `Network` and
+  no origin gate. A new selection cancels the previous fetch with `cancelChain()` on the future it
+  holds (`docs/providers-design.md` §6.4). The file is immutable and shared through
+  `std::shared_ptr<const …>`, and views never outlive the task that holds the pointer.
 - **Export.** SN `water_level_prediction` with `station_provider = "harmonics"` (SN minor bump);
   IMEDS; CSV. Events export as CSV rows with a `kind` column.
 
@@ -1181,7 +1201,7 @@ class TidesProvider {
 
 | WP | Scope | Depends on | Agent | Size |
 |---|---|---|---|---|
-| H0 | Config and doc sync: provider-apis §5 marked superseded; SN registry tokens (`harmonics`, HAT/LAT/DTL); `vcpkg.json` (+`nlohmann-json`, +`zlib`); CLAUDE.md build notes. Plan decision 31 is already JSON (e99c8abe). | — | coordinator | S (0.5 d) |
+| H0 | Config and doc sync: provider-apis §5 marked superseded; SN registry tokens (`harmonics`, HAT/LAT/DTL); `vcpkg.json` (+`nlohmann-json`, +`zlib`); CLAUDE.md build notes. Plan decision 31 is already JSON (e99c8abe). **Done** with the providers' H0 (`docs/providers-design.md` §12), which also linked both into `mov_io` and added their include gate. | — | coordinator | S (0.5 d) |
 | H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table | H0 | Opus | L (4 d) |
 | H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3; the `provider::Harmonics` id grammar; `DataSource::harmonics` and `Cancelled` in core are done) | H1 | Opus | M (3 d) |
 | H3 | `predict`, `height_at`, `diagnostic::`, `extremes` (Lipschitz isolation, separation filter); fixture recorder; goldens §8.2 (reference stations, full-year hilo, New Year windows); self round trip | H2 | Opus (engine), Sonnet (fixtures) | L (4 d) |
@@ -1189,11 +1209,12 @@ class TidesProvider {
 | H5 | io: callback parser, raw records, version gate and skip cascade, `validate_harmonics`, errors with pointers and values, gzip, writer, fixtures + manifest (3 categories), `format-compliance` schema step, fuzz targets | H2, H0 | Sonnet, Opus review | L (5 d) |
 | H6 | Optional `harmonics-crosscheck` CI job (UTide recovery), non-blocking | H3 | Sonnet | S (1 d) |
 | H7 | `tools/harmonics` builder: hardened fetch, parsers, clustering, licence allow-list, report, unittest | H1 (catalogue JSON), H5 (validator) | Sonnet, Opus review of §7.5–7.6 | L (5–6 d) |
-| H8 | CLI: `harmonics validate/info/subset/add-computed-datums`, `tides predict` | H4, H5 | Sonnet | M (2–3 d) |
-| H9 | Phase 3 `tides` provider + settings key; Phase 4 layer and Details hooks follow the GUI plan | H4, H5, Phase 3 provider scaffolding | Sonnet | M (2–3 d) |
+| H8 | CLI: `harmonics validate/info/subset/add-computed-datums` (after the CLI skeleton, P9a), then `tides predict` (after H9) | H4, H5, P9a, H9 | Sonnet | M (2–3 d) |
+| H9 | Phase 3 `tides` provider + settings key; Phase 4 layer and Details hooks follow the GUI plan | H4, H5, P7 (`docs/providers-design.md` §6.10) | Sonnet | M (2–3 d) |
 
-Waves: 1 (H0 ∥ H1), 2 (H2), 3 (H3 ∥ H5), 4 (H4 ∥ H6 ∥ H7), 5 (H8), 6 in Phase 3 (H9). About
-30–34 working days in total.
+Waves: 1 (H0 ∥ H1), 2 (H2), 3 (H3 ∥ H5), 4 (H4 ∥ H6 ∥ H7), 5 in Phase 3 (H9), 6 (H8: its
+`tides predict` needs H9). `docs/providers-design.md` §12 interleaves these with the provider
+packages. About 30–34 working days in total.
 
 - H1–H6 are headless core/io work with Phase 2 standing: ≥ 90 % line coverage (decision 22),
   warnings as errors, fuzzing.

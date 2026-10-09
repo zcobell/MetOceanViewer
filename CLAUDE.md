@@ -130,12 +130,12 @@ tools/check_station_netcdf.sh
 tools/dev/run.sh pre-commit run --all-files
 ```
 
-- Layers: `cmake/Layering.cmake` declares the order (core, io, providers, app,
-  ui; cli beside them) once. Add a library layer with
+- Layers: `cmake/Layering.cmake` declares the order (core, io, fetch, providers,
+  app, ui; cli beside them) once. Add a library layer with
   `mov_add_module(<layer> SOURCES ... PUBLIC_LINK ... PRIVATE_LINK ...)` in
   `src/<layer>/CMakeLists.txt`; headers go in `src/<layer>/include/mov/<layer>/`.
-  The configure fails if a layer links upward or a Qt-free layer (core, io)
-  links Qt; the `qt_free_sources` test fails on a Qt `#include` there.
+  The configure fails if a layer links upward or a Qt-free layer (core, io,
+  fetch) links Qt; the `qt_free_sources` test fails on a Qt `#include` there.
 - Tests: one Catch2 executable per module under `tests/<module>/`, added with
   `mov_add_test(<name> SOURCES ... CONSTEXPR_SOURCES ... LIBRARIES ...)`;
   `CONSTEXPR_SOURCES` hold `STATIC_REQUIRE` tests (build-time, plus a

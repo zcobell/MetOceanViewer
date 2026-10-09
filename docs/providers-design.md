@@ -2,9 +2,9 @@
 
 Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's answers
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
-neckbeard-nate); Appendix A maps each finding to its resolution. Nothing here is built.
-Phase 2 (`core`, `io`) is as built; the tide engine work packages H0–H8 of
-`docs/harmonics-engine.md` have not started. Where a header written later disagrees with
+neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
+layers, gates and build plumbing); nothing from P1 on. Phase 2 (`core`, `io`) is as built;
+the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
 Inputs:
@@ -132,28 +132,51 @@ machine has time, retries and multi-request state); the parsers in `fetch` (io's
 `detail` helpers would have to become public); the vocabulary in `providers` (untestable
 without Qt, and io could not name a product).
 
-### 2.2 CMake and gates (H0)
+### 2.2 CMake and gates (H0, built)
 
 - `cmake/Layering.cmake`: `MOV_LAYERS core io fetch providers app ui`;
   `MOV_QT_FREE_LAYERS core io fetch`; `MOV_LAYER_cli_MAY_LINK core io fetch providers`.
-  The coverage gate and `qt_free_sources` follow `mov_qt_free_source_dirs`.
-- `vcpkg.json`: `nlohmann-json`, `zlib` (HE's H0; done once).
-- `find_package(Qt6 COMPONENTS Core Network Concurrent)` under `MOV_ENABLE_QT`; the CLI
-  and providers build in the Qt presets; `dev` keeps building core, io and fetch.
-- `coverage` gains a Qt variant so `providers` and `cli` count toward the 80 % overall.
+  The coverage gate and `qt_free_sources` follow `mov_qt_free_source_dirs`. A layer
+  declared without `SOURCES` is header-only (an `INTERFACE` library): `fetch` is one until
+  P6 adds its first source file; H0 gave it `TransportErrc`, `Verdict` and
+  `classify(TransportErrc)` (§5.1, §5.3) in `mov/fetch/policy.hpp`. `tests/cmake/layering`
+  covers the new edges.
+- `vcpkg.json`: `nlohmann-json`, `zlib` (HE's H0; done once), linked `PRIVATE` into
+  `mov_io`.
+- `find_package(Qt6 COMPONENTS Core Concurrent Network …)` under `MOV_ENABLE_QT`;
+  `providers` builds in the Qt presets (`PUBLIC` Qt Core, `PRIVATE` Qt Network and Qt
+  Concurrent), the CLI joins it in P9a; `dev` keeps building core, io and fetch.
+- `coverage-qt` (configure, build, test and workflow presets) is `coverage` with the Qt
+  layers, so `providers` and `cli` count toward the 80 % overall; the CI coverage job
+  still runs `coverage` (switching it is P7's, when providers has code to measure).
 - **`no_blocking_calls` gate** (`cmake/CheckBlockingCalls.cmake`, with a
-  `_rejects_violations` twin) over `src/` and `tests/`, except
-  `tests/support/include/mov/test/qt_drive.hpp`: `QEventLoop`, `processEvents`,
-  `sendPostedEvents`, `waitForFinished`, `waitForDone`, `waitForReadyRead`,
-  `waitForBytesWritten`, `waitForConnected`, `QTest::qWait`, `QTest::qWaitFor`,
-  `QThread::sleep`/`msleep`/`usleep`, `std::this_thread::sleep_for`/`sleep_until`,
-  `.result()`, `.results()`, `.resultAt(`, `.takeResult()`, `QFutureSynchronizer`,
-  `QSemaphore`, and `.exec()` outside `src/*/main.cpp`.
-- **`no_ignore_ssl_errors` gate:** `ignoreSslErrors` and `QSslSocket::VerifyNone`
-  anywhere under `src/` and `tests/` fail the build (the local-server tests use plain
-  HTTP on loopback).
-- Include gates for `<nlohmann/` and `<zlib.h>` in io (only `src/io/json/` and
-  `src/io/gzip.cpp`).
+  `_rejects_violations` twin over `tests/cmake/blocking_calls/`) over `src/` and `tests/`,
+  comments ignored: `QEventLoop`, `processEvents`, `sendPostedEvents`; `waitFor[A-Z]…`
+  (`waitForFinished`, `waitForDone`, `waitForReadyRead`, `waitForBytesWritten`,
+  `waitForConnected`, …) and `qWait…` (`QTest::qWait`, `qWaitFor`,
+  `qWaitForWindowExposed`); `QThread::sleep`/`msleep`/`usleep`,
+  `std::this_thread::sleep_for`/`sleep_until`, POSIX and Win32 sleeps; `.result()`,
+  `.results()`, `.resultAt(`, `.takeResult()`; `.wait(` (`QThread::wait`, condition
+  variables, latches); `QFutureSynchronizer`, `QSemaphore`, `QtConcurrent::blocking…`;
+  `std::future`, `std::shared_future`, `std::async`, `std::promise`,
+  `std::packaged_task`; and `exec(` outside `src/<layer>/main.cpp`. Allowed everywhere in
+  `tests/support/include/mov/test/qt_drive.hpp`, the one test driver; also the bounded
+  pause of io's Windows atomic rename (`src/io/atomic_file.cpp`, CD §4.4). The driver holds
+  `drive_until(predicate, timeout)` from H0 (the GUI render test uses it instead of
+  `QTest::qWait…`); P7 adds `drive(QFuture<T>, timeout)` (§10.2).
+- **`no_ignore_ssl_errors` gate** (`cmake/CheckIgnoreSslErrors.cmake`, with a twin):
+  `ignoreSslErrors` and `VerifyNone` anywhere under `src/` and `tests/`, no exception (the
+  local-server tests use plain HTTP on loopback).
+- **`third_party_include_gate`** (`cmake/CheckThirdPartyIncludes.cmake`, with a twin):
+  `<nlohmann/…>` only under `src/io/json/`, `<zlib.h>`/`<zconf.h>` only in
+  `src/io/gzip.cpp`. Tests may include them. Unlike the netCDF gate it does not require a
+  use, since none exists before H5 and P4.
+- **`live` label:** `mov_add_test(<name> LIVE [QT] …)` registers one ctest test labelled
+  `live` with Catch2's skip exit code (4); every test preset and the coverage run exclude
+  the label; `mov::test::require_live_api()` (`mov/test/live.hpp`) skips a test case
+  unless `MOV_LIVE_API=1`. `tests/live/` holds the opt-in check
+  (`live_tests_skip_without_opt_in`, `live_tests_run_with_opt_in`); the provider checks
+  and `live-api.yml` are P8's (§10.5).
 
 ---
 
@@ -1258,7 +1281,7 @@ when both are done.
 None open. The daily CSV column question was decided on 2026-10-09: a daily file names
 its column `date`, so a reader cannot take a local day for a UTC instant (D34).
 
-### 13.3 Sync items for other documents (H0 applies them; not edited here)
+### 13.3 Sync items for other documents (applied in H0)
 
 | Document | Change |
 |---|---|

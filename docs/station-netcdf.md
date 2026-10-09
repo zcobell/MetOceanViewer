@@ -441,7 +441,8 @@ coordinates. xarray promotes the byte status flag to float32 because of its `_Fi
 ### 10.2 Vertical datum
 
 `vertical_datum` (variable attribute, `water_level*` and generic `value` quantities) holds the `VerticalDatum` enum token, upper case:
-`MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `IGLD85`, `STND` (station/gauge datum). The enum in `core` (`VerticalDatum`) is authoritative; no datum is
+`MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `IGLD85`, `STND` (station/gauge datum); the tide engine adds `HAT`, `LAT` and `DTL`
+(`docs/harmonics-engine.md` §2.5, WP H2). The enum in `core` (`VerticalDatum`) is authoritative; no datum is
 represented by **omitting** the attribute, never by `"none"`. Unknown token on read => warning `W-DATUM-UNKNOWN`, datum treated as unspecified (no guessing; the text is kept in
 diagnostics). Datum shifts are applied in `core` (decision 18), never in the reader/writer. The attribute is not CF; CF's own channel for a vertical datum is a compound `crs_wkt`
 or `geopotential_datum_name` (App. F), which cannot express tidal datums and would imply a geoid relation; we keep one explicit attribute instead.
@@ -682,6 +683,14 @@ empty one in every kind; only the v5 writer substitutes `"Station <id>"`.
 | Add an optional attribute or variable, a registry token, a layout the reader already must accept (L3 output) | minor | `elevation` becoming written, new quantity token, new flag meaning |
 | Change meaning/units/dtype/name/dimension order of an existing item, make an optional item required, change layout rules, change time encoding | major | |
 | Move to a newer CF version | minor if the new CF only adds | e.g. `Conventions="CF-1.12"` |
+
+Planned minor versions (not specified yet; each is written here by the work package that
+implements it):
+- **1.1**, daily series (plan decision 34, `docs/providers-design.md` §4.7, WP P5b): a USGS
+  daily value belongs to a local calendar day, not an instant. `time` holds 00:00 of each
+  date with `time:time_basis = "local_calendar_day"`, and the data variable carries
+  `cell_methods = "time: <mean|minimum|maximum|point> (interval: 1 day)"`; the reader
+  returns such a file as a `DailySeries`, never as instants.
 
 Reader policy: same major, any minor => read; minor newer than the reader => `W-MINOR-NEWER` and unknown attributes/variables are ignored; major newer => `UnsupportedVersion{found, supported}`;
 missing/unparsable version in a file that has `metoceanviewer_format` => `BadVersion`. Writers always write the newest version they implement. A major bump keeps reading all earlier majors for as long as the project

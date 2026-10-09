@@ -1551,14 +1551,22 @@ trigger is "iff any sample of the column is Dry" (§8.2); `VerticalDatum` includ
 
 ### 9.3 Deferred
 
-- The affine `Temperature` value type (Phase 3, first consumer).
-- USGS daily cadence in `SeriesMeta` (Phase 3).
-- `TimeRange::split` and chunk merging (Phase 3).
-- A `DatumTable` that carries its station (Phase 3; the caller pairs them today).
+- The affine `Temperature` value type (no single-temperature consumer in Phase 3 either,
+  `docs/providers-design.md` §3.6).
+- A `DatumTable` that carries its station (plan OI 12; Phase 6, where model-vs-observed
+  may need it; Phase 3 shifts no provider series client-side).
 - Rotating grid-relative vector components by the meridian convergence (D28).
 - A column-wise vector derivation in core (§5.5).
 - The `.mvs` importer (Phase 6).
 - Fuzzing netCDF from memory bytes (v5.x; the structure fuzzer covers schemas).
+
+Resolved by the Phase 3 design (`docs/providers-design.md`, built from WP P1 on):
+- `TimeRange::split` and chunk merging: `core::split` and `aligned` (§3.1), and `fetch`'s
+  `Part` with its left-biased `combine` (§5.4).
+- The USGS daily cadence: not a `SeriesMeta` field but its own type, `core::DailySeries`
+  (decision 34, §3.4).
+- `GaugeStation<P>::datums` is removed: the CO-OPS datum table moves to
+  `Capabilities<Coops>` as an `optional` (§3.3).
 
 Owner-facing questions Phase 2 left open are collected in `docs/rearchitecture-plan.md`
 §6, "Open items from Phase 2".
