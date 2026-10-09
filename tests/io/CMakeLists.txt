@@ -105,9 +105,19 @@ mov_add_fuzz_test(fuzz_parse_imeds SOURCES fuzz_parse_imeds.cpp LIBRARIES mov::i
 # Other linkers have no --wrap; there the counting tests skip.
 find_package(netCDF CONFIG REQUIRED)
 
+# The fixtures also call HDF5 directly (sabotage_hdf5_dataset), so they link
+# it themselves: with static libraries netCDF brings it along, with the
+# shared ones (vcpkg's x64-windows) it does not.
+find_package(hdf5 CONFIG REQUIRED)
+if(TARGET hdf5::hdf5-shared)
+    set(mov_hdf5_target hdf5::hdf5-shared)
+else()
+    set(mov_hdf5_target hdf5::hdf5-static)
+endif()
+
 add_library(mov_nc_fixtures STATIC support/nc_fixtures.cpp support/nc_counts.cpp)
 target_include_directories(mov_nc_fixtures PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/support")
-target_link_libraries(mov_nc_fixtures PUBLIC netCDF::netcdf PRIVATE mov::options mov::warnings)
+target_link_libraries(mov_nc_fixtures PUBLIC netCDF::netcdf PRIVATE ${mov_hdf5_target} mov::options mov::warnings)
 target_compile_features(mov_nc_fixtures PUBLIC cxx_std_23)
 mov_enable_static_analysis(mov_nc_fixtures)
 
