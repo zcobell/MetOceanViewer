@@ -487,17 +487,17 @@ std::expected<void, Error> define_text_var(nc::NewFile& file,
 std::expected<void, Error> define_station_vars(nc::NewFile& file,
                                                const Dims& d) {
   const std::array<TextAtt, 4> id{
-      {{.name = "long_name", .value = "station identifier"},
-       {.name = "standard_name", .value = "platform_id"},
-       {.name = "cf_role", .value = "timeseries_id"},
-       {.name = "_Encoding", .value = "utf-8"}}};
+      {{.name = nc::literal("long_name"), .value = "station identifier"},
+       {.name = nc::literal("standard_name"), .value = "platform_id"},
+       {.name = nc::literal("cf_role"), .value = "timeseries_id"},
+       {.name = nc::literal("_Encoding"), .value = "utf-8"}}};
   const std::array<TextAtt, 3> name{
-      {{.name = "long_name", .value = "station name"},
-       {.name = "standard_name", .value = "platform_name"},
-       {.name = "_Encoding", .value = "utf-8"}}};
+      {{.name = nc::literal("long_name"), .value = "station name"},
+       {.name = nc::literal("standard_name"), .value = "platform_name"},
+       {.name = nc::literal("_Encoding"), .value = "utf-8"}}};
   const std::array<TextAtt, 2> provider{
-      {{.name = "long_name", .value = "data provider"},
-       {.name = "_Encoding", .value = "utf-8"}}};
+      {{.name = nc::literal("long_name"), .value = "data provider"},
+       {.name = nc::literal("_Encoding"), .value = "utf-8"}}};
   return in_order(
       [&] {
         return define_text_var(file, sn::station_id, d.station, d.id_len, id);
@@ -533,10 +533,11 @@ std::expected<void, Error> define_crs(nc::NewFile& file) {
     };
   };
   const std::array<TextAtt, 1> mapping{
-      {{.name = "grid_mapping_name", .value = "latitude_longitude"}}};
+      {{.name = nc::literal("grid_mapping_name"),
+        .value = "latitude_longitude"}}};
   const std::array<TextAtt, 2> wkt{
-      {{.name = "crs_wkt", .value = sn::wgs84_wkt},
-       {.name = "epsg_code", .value = sn::epsg_4326}}};
+      {{.name = nc::literal("crs_wkt"), .value = sn::wgs84_wkt},
+       {.name = nc::literal("epsg_code"), .value = sn::epsg_4326}}};
   return in_order(
       [&] {
         return as_io_error(file.define_var<std::int32_t>(sn::crs, {}, {}));
@@ -559,11 +560,11 @@ std::vector<std::size_t> sample_chunks(const Dims& d) {
 std::expected<void, Error> define_time(nc::NewFile& file, const Plan& plan,
                                        const Dims& d) {
   const std::array<TextAtt, 5> atts{
-      {{.name = "standard_name", .value = "time"},
-       {.name = "long_name", .value = "time"},
-       {.name = "units", .value = sn::time_units},
-       {.name = "calendar", .value = sn::calendar},
-       {.name = "axis", .value = "T"}}};
+      {{.name = nc::literal("standard_name"), .value = "time"},
+       {.name = nc::literal("long_name"), .value = "time"},
+       {.name = nc::literal("units"), .value = sn::time_units},
+       {.name = nc::literal("calendar"), .value = sn::calendar},
+       {.name = nc::literal("axis"), .value = "T"}}};
   if (plan.layout == StationNcLayout::orthogonal) {
     const std::array<nc::DimInfo, 1> dims{d.sample};
     return as_io_error(file.define_var<double>(sn::time, dims, {}))
@@ -571,7 +572,7 @@ std::expected<void, Error> define_time(nc::NewFile& file, const Plan& plan,
   }
   const std::array<nc::DimInfo, 2> dims{d.station, d.sample};
   const std::array<TextAtt, 1> count{
-      {{.name = "long_name",
+      {{.name = nc::literal("long_name"),
         .value = "number of valid samples in this station time series"}}};
   const std::array<nc::DimInfo, 1> station{d.station};
   return in_order(
@@ -596,10 +597,10 @@ std::expected<void, Error> define_status(nc::NewFile& file, const ColumnPlan& c,
   const std::array<nc::DimInfo, 2> dims{d.station, d.sample};
   const std::string long_name = c.long_name + " wet/dry status";
   const std::array<TextAtt, 2> names{
-      {{.name = "standard_name", .value = "status_flag"},
-       {.name = "long_name", .value = long_name}}};
+      {{.name = nc::literal("standard_name"), .value = "status_flag"},
+       {.name = nc::literal("long_name"), .value = long_name}}};
   const std::array<TextAtt, 1> meanings{
-      {{.name = "flag_meanings", .value = sn::flag_meanings}}};
+      {{.name = nc::literal("flag_meanings"), .value = sn::flag_meanings}}};
   const std::array<std::int8_t, 2> flags{sn::status_dry, sn::status_wet};
   return in_order(
       [&] {
@@ -618,23 +619,27 @@ std::expected<void, Error> define_status(nc::NewFile& file, const ColumnPlan& c,
 std::expected<void, Error> define_column(nc::NewFile& file, const ColumnPlan& c,
                                          const Dims& d) {
   const std::array<nc::DimInfo, 2> dims{d.station, d.sample};
-  std::vector<TextAtt> atts{{.name = "coordinates", .value = sn::coordinates},
-                            {.name = "grid_mapping", .value = "crs"}};
+  std::vector<TextAtt> atts{
+      {.name = nc::literal("coordinates"), .value = sn::coordinates},
+      {.name = nc::literal("grid_mapping"), .value = "crs"}};
   if (c.standard_name) {
-    atts.push_back({.name = "standard_name", .value = *c.standard_name});
+    atts.push_back(
+        {.name = nc::literal("standard_name"), .value = *c.standard_name});
   }
-  atts.push_back({.name = "long_name", .value = c.long_name});
+  atts.push_back({.name = nc::literal("long_name"), .value = c.long_name});
   if (c.units) {
-    atts.push_back({.name = "units", .value = *c.units});
+    atts.push_back({.name = nc::literal("units"), .value = *c.units});
   }
   if (c.units_metadata) {
-    atts.push_back({.name = "units_metadata", .value = *c.units_metadata});
+    atts.push_back(
+        {.name = nc::literal("units_metadata"), .value = *c.units_metadata});
   }
   if (c.datum) {
-    atts.push_back({.name = "vertical_datum", .value = *c.datum});
+    atts.push_back({.name = nc::literal("vertical_datum"), .value = *c.datum});
   }
   if (c.status) {
-    atts.push_back({.name = "ancillary_variables", .value = c.status->view()});
+    atts.push_back({.name = nc::literal("ancillary_variables"),
+                    .value = c.status->view()});
   }
   return in_order(
       [&] {
@@ -662,9 +667,10 @@ std::expected<void, Error> define_globals(nc::NewFile& file,
   const std::string history =
       std::format("{}: created by MetOceanViewer {} ({} {})", created,
                   core::version(), station_nc_format, version);
-  std::vector<TextAtt> atts{{.name = "Conventions", .value = sn::conventions},
-                            {.name = "featureType", .value = sn::feature_type},
-                            {.name = "title", .value = options.title}};
+  std::vector<TextAtt> atts{
+      {.name = nc::literal("Conventions"), .value = sn::conventions},
+      {.name = nc::literal("featureType"), .value = sn::feature_type},
+      {.name = nc::literal("title"), .value = options.title}};
   const auto optional = [&atts](nc::NcNameRef name,
                                 const std::optional<std::string>& value) {
     if (value and not value->empty()) {  // empty is absent
@@ -675,10 +681,12 @@ std::expected<void, Error> define_globals(nc::NewFile& file,
   optional("source", options.source);
   optional("references", options.references);
   optional("comment", options.comment);
-  atts.push_back({.name = "history", .value = history});
-  atts.push_back({.name = "date_created", .value = created});
-  atts.push_back({.name = "metoceanviewer_format", .value = station_nc_format});
-  atts.push_back({.name = "metoceanviewer_format_version", .value = version});
+  atts.push_back({.name = nc::literal("history"), .value = history});
+  atts.push_back({.name = nc::literal("date_created"), .value = created});
+  atts.push_back({.name = nc::literal("metoceanviewer_format"),
+                  .value = station_nc_format});
+  atts.push_back(
+      {.name = nc::literal("metoceanviewer_format_version"), .value = version});
   return put_texts(file, nc::global, atts);
 }
 
@@ -687,15 +695,15 @@ std::expected<void, Error> define_all(nc::NewFile& file, const Plan& plan,
                                       const StationNcWriteOptions& options,
                                       std::chrono::sys_seconds now) {
   const std::array<TextAtt, 4> lat{
-      {{.name = "standard_name", .value = "latitude"},
-       {.name = "long_name", .value = "station latitude"},
-       {.name = "units", .value = "degrees_north"},
-       {.name = "axis", .value = "Y"}}};
+      {{.name = nc::literal("standard_name"), .value = "latitude"},
+       {.name = nc::literal("long_name"), .value = "station latitude"},
+       {.name = nc::literal("units"), .value = "degrees_north"},
+       {.name = nc::literal("axis"), .value = "Y"}}};
   const std::array<TextAtt, 4> lon{
-      {{.name = "standard_name", .value = "longitude"},
-       {.name = "long_name", .value = "station longitude"},
-       {.name = "units", .value = "degrees_east"},
-       {.name = "axis", .value = "X"}}};
+      {{.name = nc::literal("standard_name"), .value = "longitude"},
+       {.name = nc::literal("long_name"), .value = "station longitude"},
+       {.name = nc::literal("units"), .value = "degrees_east"},
+       {.name = nc::literal("axis"), .value = "X"}}};
   auto done =
       in_order([&] { return define_station_vars(file, d); },
                [&] { return define_coordinate(file, sn::lat, d.station, lat); },

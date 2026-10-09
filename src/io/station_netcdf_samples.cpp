@@ -55,21 +55,21 @@ struct Rows {
 /// The axes: one shared (orthogonal) or one per selected station.
 std::expected<std::vector<core::TimeAxis>, Error> read_axes(
     const nc::File& file, const Rows& rows, const CfClock& clock) {
-  const nc::VarInfo& time = rows.s.timing.time;
+  const nc::VarInfo& time_var = rows.s.timing.time;
   if (rows.s.timing.layout == StationNcLayout::orthogonal) {
-    return read_time_axis(file, time, clock, rows.spec.stop)
+    return read_time_axis(file, time_var, clock, rows.spec.stop)
         .transform([](core::TimeAxis axis) {
           return std::vector<core::TimeAxis>{std::move(axis)};
         });
   }
   std::vector<core::TimeAxis> axes(rows.spec.selected.size());
   auto done = sample_rows(
-      file, time, rows.spec, RowRole::times,
+      file, time_var, rows.spec, RowRole::times,
       [&](const SelectedStation& m,
           std::span<const core::Sample> kept) -> std::expected<void, Error> {
-        return times_of(kept, clock, time.name.view(), m.station)
+        return times_of(kept, clock, time_var.name.view(), m.station)
             .and_then([&](core::TimeAxis times) {
-              return strictly_increasing(std::move(times), time.name.view(),
+              return strictly_increasing(std::move(times), time_var.name.view(),
                                          m.station);
             })
             .transform([&](core::TimeAxis axis) {

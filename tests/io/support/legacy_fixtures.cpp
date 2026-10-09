@@ -173,7 +173,10 @@ void make_legacy_nc(const std::filesystem::path& path, const LegacyNc& spec) {
       if (spec.time_type == LegacyTime::int64) {
         f.put_i64(time_name, s.seconds);
       } else {
-        const std::vector<double> t(s.seconds.begin(), s.seconds.end());
+        std::vector<double> t(s.seconds.size());
+        std::ranges::transform(s.seconds, t.begin(), [](std::int64_t v) {
+          return static_cast<double>(v);
+        });
         f.put(time_name, t);
       }
     }

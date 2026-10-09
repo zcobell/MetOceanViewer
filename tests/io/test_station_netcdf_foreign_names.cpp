@@ -254,11 +254,10 @@ TEST_CASE("foreign: a geographic epsg_code keeps the native point",
     f.text("crs", "epsg_code", "EPSG:4269");
   }));
   const core::FileStation& s = read.value.table.station(core::StationIndex{0});
-  if (not s.native) {
-    FAIL("no native point");
-    return;
+  REQUIRE(s.native.has_value());
+  if (s.native) {
+    CHECK(s.native->crs().code() == 4269);
   }
-  CHECK(s.native->crs().code() == 4269);
   CHECK(count_of(read.warnings, WarningCode::crs_assumed) == 0);
 }
 

@@ -8,6 +8,7 @@
 
 #include <netcdf.h>
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstddef>
@@ -215,13 +216,10 @@ template <class T>
 /// The first warning of `code`; the test fails if there is none.
 [[nodiscard]] inline io::Warning warning_of(const std::vector<io::Warning>& ws,
                                             io::WarningCode code) {
-  for (const io::Warning& w : ws) {
-    if (w.code == code) {
-      return w;
-    }
-  }
-  FAIL("no warning " << static_cast<int>(code));
-  return {};
+  const auto found = std::ranges::find(ws, code, &io::Warning::code);
+  INFO("no warning " << static_cast<int>(code));
+  REQUIRE(found != ws.end());
+  return *found;
 }
 
 // ---- raw inspection (netCDF-C, independent of mov::io)

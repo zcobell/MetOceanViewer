@@ -464,13 +464,12 @@ TEST_CASE(
   const core::FileStation& s = read.value.table.station(core::StationIndex{0});
   CHECK(s.location.lon() == Catch::Approx(-93.0).margin(1e-6));
   CHECK(s.location.lat() == Catch::Approx(29.3792).margin(1e-3));
-  if (not s.native) {
-    FAIL("no native point");
-    return;
+  REQUIRE(s.native.has_value());
+  if (s.native) {
+    CHECK(s.native->x() == 500000.0);
+    CHECK(s.native->y() == 3250000.0);
+    CHECK(s.native->crs().code() == 26915);
   }
-  CHECK(s.native->x() == 500000.0);
-  CHECK(s.native->y() == 3250000.0);
-  CHECK(s.native->crs().code() == 26915);
   CHECK(count_of(read.warnings, WarningCode::crs_assumed) == 0);
 }
 
@@ -480,11 +479,10 @@ TEST_CASE("legacy: a geographic EPSG other than 4326 keeps the native point",
   spec.epsg = 4269;  // NAD83
   const auto read = read_spec(spec);
   const core::FileStation& s = read.value.table.station(core::StationIndex{0});
-  if (not s.native) {
-    FAIL("no native point");
-    return;
+  REQUIRE(s.native.has_value());
+  if (s.native) {
+    CHECK(s.native->crs().code() == 4269);
   }
-  CHECK(s.native->crs().code() == 4269);
   CHECK(s.location.lon() == Catch::Approx(-89.9567).margin(1e-4));
 }
 

@@ -406,9 +406,9 @@ struct StationVars {
 std::expected<StationVars, Error> station_vars(const nc::File& file,
                                                std::size_t i,
                                                StationNumberWidth width) {
-  auto time = station_var(file, time_prefix, i, width);
-  if (not time) {
-    return std::unexpected{std::move(time).error()};
+  auto time_var = station_var(file, time_prefix, i, width);
+  if (not time_var) {
+    return std::unexpected{std::move(time_var).error()};
   }
   auto data = station_var(file, data_prefix, i, width);
   if (not data) {
@@ -416,15 +416,15 @@ std::expected<StationVars, Error> station_vars(const nc::File& file,
   }
   const std::string length =
       legacy_variable_name(length_prefix, i + 1, digits_of(width));
-  if (time->dims.size() != 1 or time->dims[0].name != length) {
+  if (time_var->dims.size() != 1 or time_var->dims[0].name != length) {
     return fail(format_error(FormatErrc::dimension_mismatch,
-                             subject_of(time->name.view()), i));
+                             subject_of(time_var->name.view()), i));
   }
-  if (data->dims.size() != 1 or data->dims[0].id != time->dims[0].id) {
+  if (data->dims.size() != 1 or data->dims[0].id != time_var->dims[0].id) {
     return fail(format_error(FormatErrc::dimension_mismatch,
                              subject_of(data->name.view()), i));
   }
-  return StationVars{.time = *std::move(time), .data = *std::move(data)};
+  return StationVars{.time = *std::move(time_var), .data = *std::move(data)};
 }
 
 // ---- time -------------------------------------------------------------------
@@ -483,11 +483,11 @@ void note_zone(TimeNotes& notes, std::string_view text) {
 }
 
 std::expected<void, Error> note_time(const nc::File& file,
-                                     const nc::VarInfo& time,
+                                     const nc::VarInfo& time_var,
                                      TimeNotes& notes) {
-  auto parts =
-      collect([&] { return optional_text(file, time.name, "referenceDate"); },
-              [&] { return optional_text(file, time.name, "timezone"); });
+  auto parts = collect(
+      [&] { return optional_text(file, time_var.name, "referenceDate"); },
+      [&] { return optional_text(file, time_var.name, "timezone"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
@@ -654,12 +654,12 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
-  auto& [width, crs] = *parts;
+  auto& [width, crs_text] = *parts;
   auto origin = origin_of(file, *base, width);
   if (not origin) {
     return std::unexpected{std::move(origin).error()};
   }
-  auto stations = stations_of(file, *base, crs.value, stop);
+  auto stations = stations_of(file, *base, crs_text.value, stop);
   if (not stations) {
     return std::unexpected{std::move(stations).error()};
   }
@@ -675,7 +675,7 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
   // The order of SN 11: a legacy file, the CRS, the clock (zones, then an
   // epoch that was not given), the stations, the column.
   std::vector<Warning> warnings{{.code = WarningCode::legacy_dialect}};
-  append(warnings, std::move(crs.warnings));
+  append(warnings, std::move(crs_text.warnings));
   append(warnings, std::move(sweep->time.time_zones));
   append_if_counted(warnings, {.code = WarningCode::epoch_used,
                                .subject = std::string{default_reference},

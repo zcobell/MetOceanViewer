@@ -128,4 +128,14 @@ class NcName {
 inline NcNameRef::NcNameRef(const NcName& name) noexcept
     : data_{name.c_str()}, size_{name.view().size()} {}
 
+/// A literal name, checked at compile time like the converting constructor.
+/// Use it where a literal initializes an aggregate member
+/// (`{.name = nc::literal("units")}`): MSVC 19.44 rejects the consteval
+/// constructor there (C7595) but accepts a call to a consteval function.
+template <std::size_t N>
+// NOLINTNEXTLINE(modernize-avoid-c-arrays): a string literal is the input
+[[nodiscard]] consteval NcNameRef literal(const char (&name)[N]) {
+  return NcNameRef{name};
+}
+
 }  // namespace mov::io::nc

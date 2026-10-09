@@ -266,33 +266,37 @@ struct Positions {
 std::expected<Positions, Error> find_positions(std::span<const Facts> all,
                                                const StationAxis& axis,
                                                const Names& coordinate_set) {
-  const Facts* lat = pick(positions(all, is_latitude, axis), coordinate_set);
-  const Facts* lon = pick(positions(all, is_longitude, axis), coordinate_set);
-  if (lat == nullptr) {
+  const Facts* lat_facts =
+      pick(positions(all, is_latitude, axis), coordinate_set);
+  const Facts* lon_facts =
+      pick(positions(all, is_longitude, axis), coordinate_set);
+  if (lat_facts == nullptr) {
     return fail(format_error(FormatErrc::missing_variable, "latitude"));
   }
-  if (lon == nullptr) {
+  if (lon_facts == nullptr) {
     return fail(format_error(FormatErrc::missing_variable, "longitude"));
   }
   if (const auto* dim = std::get_if<nc::DimInfo>(&axis)) {
-    return Positions{.lat = lat, .lon = lon, .station = *dim};
+    return Positions{.lat = lat_facts, .lon = lon_facts, .station = *dim};
   }
   if (std::holds_alternative<OneStation>(axis)) {
-    return Positions{.lat = lat, .lon = lon, .station = std::nullopt};
+    return Positions{
+        .lat = lat_facts, .lon = lon_facts, .station = std::nullopt};
   }
   // No id variable: the positions say whether there are several stations.
   const bool same_shape =
-      lat->var.dims.size() == lon->var.dims.size() and
-      (lat->var.dims.empty() or lat->var.dims[0].id == lon->var.dims[0].id);
+      lat_facts->var.dims.size() == lon_facts->var.dims.size() and
+      (lat_facts->var.dims.empty() or
+       lat_facts->var.dims[0].id == lon_facts->var.dims[0].id);
   if (not same_shape) {
     return fail(format_error(FormatErrc::dimension_mismatch,
-                             subject_of(lon->var.name.view())));
+                             subject_of(lon_facts->var.name.view())));
   }
-  return Positions{.lat = lat,
-                   .lon = lon,
-                   .station = lat->var.dims.empty()
+  return Positions{.lat = lat_facts,
+                   .lon = lon_facts,
+                   .station = lat_facts->var.dims.empty()
                                   ? std::nullopt
-                                  : std::optional{lat->var.dims.front()}};
+                                  : std::optional{lat_facts->var.dims.front()}};
 }
 
 // ---- the time variable
@@ -419,27 +423,27 @@ std::expected<nc::DimInfo, Error> same_station(
 
 /// `time(station, obs)` or `time(obs, station)` (CF 9.3.2).
 std::expected<Located, Error> locate_incomplete(
-    std::span<const Facts> all, const nc::VarInfo& time,
+    std::span<const Facts> all, const nc::VarInfo& time_var,
     const std::optional<nc::DimInfo>& station) {
   if (not station) {
     return fail(format_error(FormatErrc::unsupported_layout,
-                             subject_of(time.name.view())));
+                             subject_of(time_var.name.view())));
   }
-  const bool station_first = time.dims[0].id == station->id;
-  const bool station_second = time.dims[1].id == station->id;
+  const bool station_first = time_var.dims[0].id == station->id;
+  const bool station_second = time_var.dims[1].id == station->id;
   if (station_first == station_second) {
     return fail(format_error(FormatErrc::unsupported_layout,
-                             subject_of(time.name.view())));
+                             subject_of(time_var.name.view())));
   }
-  std::optional<nc::VarInfo> obs_count;
+  std::optional<nc::VarInfo> counts;
   for (const Facts& f : all) {
     if (f.var.name.view() == "obs_count" and over(f.var, {station->id})) {
-      obs_count = f.var;
+      counts = f.var;
     }
   }
   return Located{
-      .sampling = Incomplete{.station = *station, .obs_count = obs_count},
-      .sample = time.dims[station_first ? 1 : 0]};
+      .sampling = Incomplete{.station = *station, .obs_count = counts},
+      .sample = time_var.dims[station_first ? 1 : 0]};
 }
 
 /// The ragged layouts (CF 9.3.3, 9.3.4) when the file has the variable that
@@ -475,9 +479,9 @@ std::expected<std::optional<ForeignSampling>, Error> locate_ragged(
 
 /// `time(time)`: orthogonal, ragged, or a single station.
 std::expected<Located, Error> locate_coordinate(
-    const nc::File& file, std::span<const Facts> all, const nc::VarInfo& time,
-    const std::optional<nc::DimInfo>& station) {
-  const nc::DimInfo sample = time.dims.front();
+    const nc::File& file, std::span<const Facts> all,
+    const nc::VarInfo& time_var, const std::optional<nc::DimInfo>& station) {
+  const nc::DimInfo sample = time_var.dims.front();
   auto ragged = locate_ragged(file, all, sample, station);
   if (not ragged) {
     return std::unexpected{std::move(ragged).error()};
@@ -490,7 +494,7 @@ std::expected<Located, Error> locate_coordinate(
   }
   if (station->id == sample.id) {
     return fail(format_error(FormatErrc::unsupported_layout,
-                             subject_of(time.name.view())));
+                             subject_of(time_var.name.view())));
   }
   return Located{.sampling = Orthogonal{.station = *station}, .sample = sample};
 }
@@ -498,16 +502,16 @@ std::expected<Located, Error> locate_coordinate(
 /// How the time variable lays out the samples (CF 9.3); `station` is the
 /// station dimension, nullopt for one station.
 std::expected<Located, Error> locate(
-    const nc::File& file, std::span<const Facts> all, const nc::VarInfo& time,
-    const std::optional<nc::DimInfo>& station) {
-  switch (time.dims.size()) {
+    const nc::File& file, std::span<const Facts> all,
+    const nc::VarInfo& time_var, const std::optional<nc::DimInfo>& station) {
+  switch (time_var.dims.size()) {
     case 1:
-      return locate_coordinate(file, all, time, station);
+      return locate_coordinate(file, all, time_var, station);
     case 2:
-      return locate_incomplete(all, time, station);
+      return locate_incomplete(all, time_var, station);
     default:
       return fail(format_error(FormatErrc::unsupported_layout,
-                               subject_of(time.name.view())));
+                               subject_of(time_var.name.view())));
   }
 }
 
@@ -551,11 +555,11 @@ std::expected<Roles, Error> identify(const nc::File& file,
   if (not where) {
     return std::unexpected{std::move(where).error()};
   }
-  auto time = find_time(all, coordinate_set, where->station);
-  if (not time) {
-    return std::unexpected{std::move(time).error()};
+  auto time_var = find_time(all, coordinate_set, where->station);
+  if (not time_var) {
+    return std::unexpected{std::move(time_var).error()};
   }
-  auto located = locate(file, all, (*time)->var, where->station);
+  auto located = locate(file, all, (*time_var)->var, where->station);
   if (not located) {
     return std::unexpected{std::move(located).error()};
   }
@@ -572,7 +576,7 @@ std::expected<Roles, Error> identify(const nc::File& file,
   return Roles{.id = *id,
                .lat = where->lat,
                .lon = where->lon,
-               .time = *time,
+               .time = *time_var,
                .located = *std::move(located)};
 }
 
@@ -945,13 +949,13 @@ std::expected<Owners, Error> owners_of(const nc::File& file,
 /// times of each station; a time after a missing one is padding_not_missing.
 template <nc::Numeric T>
 std::expected<std::vector<std::size_t>, Error> leading_counts(
-    const nc::File& file, const nc::VarInfo& time, const nc::DimInfo& station,
-    std::size_t length, const StopToken& stop) {
-  auto mask = file.masking<T>(time.name);
+    const nc::File& file, const nc::VarInfo& time_var,
+    const nc::DimInfo& station, std::size_t length, const StopToken& stop) {
+  auto mask = file.masking<T>(time_var.name);
   if (not mask) {
     return fail(std::move(mask).error());
   }
-  const bool station_major = time.dims.front().id == station.id;
+  const bool station_major = time_var.dims.front().id == station.id;
   std::vector<std::size_t> counts(station.length, 0);
   std::vector<bool> ended(station.length, false);
   const auto step = [&](std::size_t s, std::size_t j,
@@ -960,14 +964,14 @@ std::expected<std::vector<std::size_t>, Error> leading_counts(
       ended[s] = true;
     } else if (ended[s]) {
       return fail(format_error(FormatErrc::padding_not_missing,
-                               subject_of(time.name.view()), s, j));
+                               subject_of(time_var.name.view()), s, j));
     } else {
       ++counts[s];
     }
     return {};
   };
   auto done = file.read_blocks<T>(
-      time.name, nc::whole(time),
+      time_var.name, nc::whole(time_var),
       [&](std::span<const T> block,
           nc::DimRange outer) -> std::expected<void, Error> {
         const std::size_t width = station_major ? length : station.length;
@@ -991,9 +995,9 @@ std::expected<std::vector<std::size_t>, Error> leading_counts(
 }
 
 std::expected<std::vector<std::size_t>, Error> counts_from_obs_count(
-    const nc::File& file, const nc::VarInfo& obs_count, std::size_t length,
+    const nc::File& file, const nc::VarInfo& counts_var, std::size_t length,
     const StopToken& stop) {
-  auto raw = read_ints(file, obs_count, stop);
+  auto raw = read_ints(file, counts_var, stop);
   if (not raw) {
     return std::unexpected{std::move(raw).error()};
   }
@@ -1003,7 +1007,7 @@ std::expected<std::vector<std::size_t>, Error> counts_from_obs_count(
     const std::int64_t n = raw->values[i];
     if (n < 0 or raw->masked[i] or std::cmp_greater(n, length)) {
       return fail(format_error(FormatErrc::bad_obs_count,
-                               subject_of(obs_count.name.view()), i));
+                               subject_of(counts_var.name.view()), i));
     }
     counts.push_back(static_cast<std::size_t>(n));
   }
@@ -1011,21 +1015,22 @@ std::expected<std::vector<std::size_t>, Error> counts_from_obs_count(
 }
 
 std::expected<std::vector<std::size_t>, Error> incomplete_counts(
-    const nc::File& file, const Incomplete& layout, const nc::VarInfo& time,
+    const nc::File& file, const Incomplete& layout, const nc::VarInfo& time_var,
     std::size_t length, const StopToken& stop) {
   if (layout.obs_count) {
     return counts_from_obs_count(file, *layout.obs_count, length, stop);
   }
-  if (auto fits = check_result_size(file, time.name.view(),
+  if (auto fits = check_result_size(file, time_var.name.view(),
                                     layout.station.length, length, 1);
       not fits) {
     return std::unexpected{std::move(fits).error()};
   }
   std::vector<std::size_t> counts;
   auto done = dispatch_role_numeric(
-      RowRole::times, file, time, [&]<class T>() -> std::expected<void, Error> {
+      RowRole::times, file, time_var,
+      [&]<class T>() -> std::expected<void, Error> {
         auto leading =
-            leading_counts<T>(file, time, layout.station, length, stop);
+            leading_counts<T>(file, time_var, layout.station, length, stop);
         if (not leading) {
           return std::unexpected{std::move(leading).error()};
         }
@@ -1046,7 +1051,7 @@ struct Counted {
 
 std::expected<Counted, Error> count_samples(const nc::File& file,
                                             const Located& l,
-                                            const nc::VarInfo& time,
+                                            const nc::VarInfo& time_var,
                                             const StopToken& stop) {
   const std::size_t samples = l.sample.length;
   return std::visit(
@@ -1061,7 +1066,7 @@ std::expected<Counted, Error> count_samples(const nc::File& file,
                            .placement = RunStarts{.starts = {0}}};
           },
           [&](const Incomplete& layout) -> std::expected<Counted, Error> {
-            return incomplete_counts(file, layout, time, samples, stop)
+            return incomplete_counts(file, layout, time_var, samples, stop)
                 .transform([&layout](std::vector<std::size_t> counts) {
                   return Counted{
                       .counts = std::move(counts),

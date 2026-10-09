@@ -91,14 +91,14 @@ std::expected<Read<StationNcVersion>, Error> read_version(
 /// `Conventions` names CF 1.6 or a later 1.x (CF 2 would be another
 /// convention: refused).
 std::expected<void, Error> check_conventions(const nc::File& file) {
-  auto conventions = optional_text(file, nc::global, "Conventions");
-  if (not conventions) {
-    return std::unexpected{std::move(conventions).error()};
+  auto conventions_att = optional_text(file, nc::global, "Conventions");
+  if (not conventions_att) {
+    return std::unexpected{std::move(conventions_att).error()};
   }
-  if (not *conventions) {
+  if (not *conventions_att) {
     return fail(format_error(FormatErrc::missing_attribute, ":Conventions"));
   }
-  const auto cf = parse_cf_conventions(**conventions);
+  const auto cf = parse_cf_conventions(**conventions_att);
   if (not cf or cf->major != 1 or cf->minor < 6) {
     return fail(format_error(FormatErrc::unsupported_version, ":Conventions"));
   }
@@ -211,19 +211,20 @@ std::expected<nc::VarInfo, Error> find_station_id(const nc::File& file,
 }
 
 /// L1: `time(time)`; L2: `time(station, obs)` with `obs_count(station)`.
-std::expected<Timing, Error> timing_of(const Vars& vars, nc::VarInfo time,
+std::expected<Timing, Error> timing_of(const Vars& vars, nc::VarInfo time_var,
                                        const nc::DimInfo& station) {
-  if (time.dims.size() == 1 and time.dims[0].name == sn::time_dim.view()) {
-    nc::DimInfo sample = time.dims[0];
-    return Timing{.time = std::move(time),
+  if (time_var.dims.size() == 1 and
+      time_var.dims[0].name == sn::time_dim.view()) {
+    nc::DimInfo sample = time_var.dims[0];
+    return Timing{.time = std::move(time_var),
                   .layout = StationNcLayout::orthogonal,
                   .sample = std::move(sample),
                   .obs_count = std::nullopt};
   }
-  if (time.dims.size() != 2 or time.dims[0].id != station.id or
-      time.dims[1].name != sn::obs_dim.view()) {
+  if (time_var.dims.size() != 2 or time_var.dims[0].id != station.id or
+      time_var.dims[1].name != sn::obs_dim.view()) {
     return fail(format_error(FormatErrc::unsupported_layout,
-                             std::string{time.name.view()}));
+                             std::string{time_var.name.view()}));
   }
   auto count =
       require_named(vars, sn::obs_count.view()).and_then([&](nc::VarInfo v) {
@@ -232,8 +233,8 @@ std::expected<Timing, Error> timing_of(const Vars& vars, nc::VarInfo time,
   if (not count) {
     return std::unexpected{std::move(count).error()};
   }
-  nc::DimInfo sample = time.dims[1];
-  return Timing{.time = std::move(time),
+  nc::DimInfo sample = time_var.dims[1];
+  return Timing{.time = std::move(time_var),
                 .layout = StationNcLayout::incomplete,
                 .sample = std::move(sample),
                 .obs_count = *std::move(count)};
@@ -420,10 +421,10 @@ std::expected<Instances, Error> find_instances(const Vars& vars,
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
-  auto& [name, lat, lon, provider] = *parts;
+  auto& [name, lat_var, lon_var, provider] = *parts;
   return Instances{.name = std::move(name),
-                   .lat = std::move(lat),
-                   .lon = std::move(lon),
+                   .lat = std::move(lat_var),
+                   .lon = std::move(lon_var),
                    .provider = std::move(provider)};
 }
 
