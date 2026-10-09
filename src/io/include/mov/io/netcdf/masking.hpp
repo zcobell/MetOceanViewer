@@ -54,14 +54,20 @@ template <Numeric T>
   if constexpr (std::same_as<T, double>) {
     return v;
   } else if constexpr (std::same_as<T, float>) {
+    // NaN and the infinities are returned as float constants, never cast: a
+    // cast of a constant infinity is C4756 (overflow in constant arithmetic)
+    // under MSVC's /O2.
+    using F = std::numeric_limits<float>;
     constexpr double inf = std::numeric_limits<double>::infinity();
-    constexpr auto most =
-        static_cast<double>(std::numeric_limits<float>::max());
-    if (v != v or v == inf or v == -inf) {
-      return static_cast<float>(v);
+    constexpr auto most = static_cast<double>(F::max());
+    if (v != v) {
+      return F::quiet_NaN();
     }
-    if (v > most or v < -most) {
-      return std::nullopt;  // the cast would be undefined
+    if (v > most) {
+      return v == inf ? std::optional{F::infinity()} : std::nullopt;
+    }
+    if (v < -most) {
+      return v == -inf ? std::optional{-F::infinity()} : std::nullopt;
     }
     const auto f = static_cast<float>(v);
     return static_cast<double>(f) == v ? std::optional{f} : std::nullopt;
