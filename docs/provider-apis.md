@@ -578,6 +578,10 @@ a short file with no trailing newline, a file with CRLF, and a row spanning the 
 
 ## 5. XTide
 
+> **Superseded (2026-10-08, plan decision 31).** v5 drops XTide. Tide predictions come from
+> our own engine and the `metoceanviewer-harmonics` JSON format: see `docs/harmonics-json.md`
+> and `docs/harmonics-engine.md`. This section is kept as a record of the v4 dependency.
+
 ### 5.1 What is vendored
 
 `thirdparty/xtide-2.15.1/` (2016-02-23) and `thirdparty/libtcd-2.2.7/`; harmonics file

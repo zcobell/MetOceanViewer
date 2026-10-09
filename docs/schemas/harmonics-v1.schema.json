@@ -1,0 +1,740 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/zcobell/MetOceanViewer/master/docs/schemas/harmonics-v1.schema.json",
+  "title": "Tidal harmonics file, format metoceanviewer-harmonics 1.0",
+  "description": "Normative structure of docs/harmonics-json.md, version 1.x (this schema describes 1.0 in full; its version pattern accepts every 1.x so that a newer minor is distinguishable from a wrong major). Semantic rules the schema cannot express (unique ids, resolvable references, speed checksums, case-insensitive name uniqueness, compound terms, licence parsing) are in that document, section 10. The enums marked 'drift-tested' are checked against the core enums by a CI test.",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "created",
+    "generator",
+    "licence_summary",
+    "conventions",
+    "sources",
+    "constituents",
+    "stations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "metoceanviewer-harmonics"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "created": {
+      "$ref": "#/$defs/utc_timestamp"
+    },
+    "generator": {
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "version": {
+          "$ref": "#/$defs/text"
+        },
+        "command": {
+          "$ref": "#/$defs/long_text"
+        }
+      }
+    },
+    "title": {
+      "$ref": "#/$defs/text"
+    },
+    "description": {
+      "$ref": "#/$defs/long_text"
+    },
+    "licence_summary": {
+      "$ref": "#/$defs/long_text"
+    },
+    "conventions": {
+      "type": "object",
+      "required": [
+        "amplitude_unit",
+        "phase",
+        "time_standard",
+        "astronomy",
+        "nodal_evaluation",
+        "reference_level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "amplitude_unit": {
+          "const": "m"
+        },
+        "phase": {
+          "const": "greenwich_phase_lag_deg"
+        },
+        "time_standard": {
+          "const": "UTC"
+        },
+        "astronomy": {
+          "const": "sp98"
+        },
+        "nodal_evaluation": {
+          "const": "nos_yearly"
+        },
+        "reference_level": {
+          "const": "MSL"
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "constituents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/constituent"
+      }
+    },
+    "stations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/station"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[^\\u0000-\\u001F\\u007F]*$"
+    },
+    "token": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    },
+    "flag": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "utc_timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "licence": {
+      "description": "SPDX licence expression; LicenseRef-* identifiers for licences SPDX does not list.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9.+() -]+$"
+    },
+    "station_id": {
+      "type": "string",
+      "maxLength": 255,
+      "pattern": "^[a-z][a-z0-9-]{0,31}:[^\\u0000-\\u001F\\u007F]+$"
+    },
+    "constituent_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9()_.+-]{0,31}$"
+    },
+    "datum_token": {
+      "enum": [
+        "HAT",
+        "MHHW",
+        "MHW",
+        "DTL",
+        "MTL",
+        "MLW",
+        "MLLW",
+        "LAT",
+        "NAVD88",
+        "NGVD29",
+        "IGLD85",
+        "STND"
+      ],
+      "$comment": "drift-tested against core VerticalDatum (tide tokens)"
+    },
+    "node_factor": {
+      "enum": [
+        "unity",
+        "sp98-73",
+        "sp98-74",
+        "sp98-75",
+        "sp98-76",
+        "sp98-77",
+        "sp98-78",
+        "sp98-79",
+        "sp98-144",
+        "sp98-149",
+        "sp98-206",
+        "sp98-215",
+        "sp98-227",
+        "sp98-235"
+      ],
+      "$comment": "drift-tested against core tide::NodeFactor"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "licence",
+        "attribution",
+        "retrieved"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/token"
+        },
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "url": {
+          "$ref": "#/$defs/long_text"
+        },
+        "licence": {
+          "$ref": "#/$defs/licence"
+        },
+        "attribution": {
+          "$ref": "#/$defs/long_text"
+        },
+        "retrieved": {
+          "$ref": "#/$defs/date"
+        },
+        "version": {
+          "$ref": "#/$defs/text"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "notes": {
+          "$ref": "#/$defs/long_text"
+        }
+      }
+    },
+    "darwin": {
+      "type": "object",
+      "required": [
+        "V",
+        "u",
+        "f"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "V": {
+          "description": "Coefficients of T, s, h, p, p1 and the constant c (degrees).",
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            {
+              "type": "integer",
+              "minimum": -64,
+              "maximum": 64
+            },
+            {
+              "type": "integer",
+              "minimum": -64,
+              "maximum": 64
+            },
+            {
+              "type": "integer",
+              "minimum": -64,
+              "maximum": 64
+            },
+            {
+              "type": "integer",
+              "minimum": -64,
+              "maximum": 64
+            },
+            {
+              "type": "integer",
+              "minimum": -360,
+              "maximum": 360
+            }
+          ],
+          "minItems": 6,
+          "maxItems": 6,
+          "items": false
+        },
+        "u": {
+          "description": "Coefficients of xi, nu, nu', 2nu'', Q, R, Qu.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -64,
+            "maximum": 64
+          },
+          "minItems": 7,
+          "maxItems": 7
+        },
+        "f": {
+          "$ref": "#/$defs/node_factor"
+        }
+      }
+    },
+    "compound": {
+      "description": "Integer multiples of darwin constituents of the same dictionary.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 8,
+      "propertyNames": {
+        "$ref": "#/$defs/constituent_name"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": -16,
+        "maximum": 16,
+        "not": {
+          "const": 0
+        }
+      }
+    },
+    "constituent": {
+      "type": "object",
+      "required": [
+        "name",
+        "speed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/constituent_name"
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "darwin": {
+          "$ref": "#/$defs/darwin"
+        },
+        "compound": {
+          "$ref": "#/$defs/compound"
+        },
+        "description": {
+          "$ref": "#/$defs/long_text"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "darwin"
+          ]
+        },
+        {
+          "required": [
+            "compound"
+          ]
+        }
+      ]
+    },
+    "constituent_row": {
+      "description": "[name, amplitude m, Greenwich phase lag deg] or the same plus [amplitude sd m, phase sd deg].",
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/constituent_name"
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
+        },
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 5,
+      "items": false,
+      "not": {
+        "minItems": 4,
+        "maxItems": 4
+      }
+    },
+    "datums": {
+      "description": "Heights of tidal and geodetic datums above the station's MSL, metres.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/datum_token"
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": -1000,
+        "maximum": 1000
+      }
+    },
+    "height_ratio": {
+      "type": "object",
+      "required": [
+        "type",
+        "high",
+        "low"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "ratio"
+        },
+        "high": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "low": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "height_offset": {
+      "type": "object",
+      "required": [
+        "type",
+        "high",
+        "low"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "offset"
+        },
+        "high": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "low": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100
+        }
+      }
+    },
+    "offsets": {
+      "type": "object",
+      "required": [
+        "reference",
+        "time_min",
+        "height",
+        "datum"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/station_id"
+        },
+        "time_min": {
+          "$ref": "#/$defs/high_low_minutes"
+        },
+        "height": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/height_ratio"
+            },
+            {
+              "$ref": "#/$defs/height_offset"
+            }
+          ]
+        },
+        "datum": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/datum_token"
+            },
+            {
+              "const": "MSL"
+            }
+          ]
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/date"
+        },
+        "end": {
+          "$ref": "#/$defs/date"
+        },
+        "years": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_record": {
+          "$ref": "#/$defs/text"
+        },
+        "also_in": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "dropped_constituents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/constituent_name"
+          }
+        },
+        "notes": {
+          "$ref": "#/$defs/long_text"
+        }
+      }
+    },
+    "station": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "lat",
+        "lon",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/station_id"
+        },
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "exclusiveMinimum": -180,
+          "maximum": 180
+        },
+        "licence": {
+          "$ref": "#/$defs/licence"
+        },
+        "kind": {
+          "enum": [
+            "reference",
+            "subordinate"
+          ]
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "time_zone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "constituents": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 512,
+          "items": {
+            "$ref": "#/$defs/constituent_row"
+          }
+        },
+        "z0": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "offsets": {
+          "$ref": "#/$defs/offsets"
+        },
+        "datums": {
+          "$ref": "#/$defs/datums"
+        },
+        "datum_epoch": {
+          "$ref": "#/$defs/text"
+        },
+        "computed_datums": {
+          "$ref": "#/$defs/computed_datums"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        },
+        "analysis": {
+          "$comment": "drift-tested against core tide::Analysis; absent means unknown",
+          "enum": [
+            "nos",
+            "utide",
+            "ttide",
+            "least_squares",
+            "published"
+          ]
+        },
+        "flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/flag"
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "reference"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "constituents"
+            ],
+            "not": {
+              "required": [
+                "offsets"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "subordinate"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "offsets"
+            ],
+            "properties": {
+              "constituents": false,
+              "z0": false,
+              "analysis": false,
+              "computed_datums": false
+            }
+          }
+        }
+      ]
+    },
+    "long_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^[^\\u0000-\\u001F\\u007F]*$"
+    },
+    "computed_datum_token": {
+      "$comment": "drift-tested against the builder's computed set (docs/harmonics-json.md 8.5)",
+      "enum": [
+        "HAT",
+        "MHHW",
+        "MHW",
+        "DTL",
+        "MTL",
+        "MLW",
+        "MLLW",
+        "LAT"
+      ]
+    },
+    "high_low_minutes": {
+      "type": "object",
+      "required": [
+        "high",
+        "low"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "high": {
+          "type": "number",
+          "minimum": -1440,
+          "maximum": 1440
+        },
+        "low": {
+          "type": "number",
+          "minimum": -1440,
+          "maximum": 1440
+        }
+      }
+    },
+    "computed_datums": {
+      "type": "object",
+      "required": [
+        "period",
+        "heights"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "period": {
+          "type": "object",
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/date"
+            },
+            "end": {
+              "$ref": "#/$defs/date"
+            }
+          }
+        },
+        "heights": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/computed_datum_token"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "minimum": -1000,
+            "maximum": 1000
+          }
+        }
+      }
+    }
+  }
+}
