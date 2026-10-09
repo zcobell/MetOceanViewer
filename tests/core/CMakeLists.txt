@@ -93,3 +93,17 @@ mov_add_test(
     CONSTEXPR_SOURCES test_series_ops_constexpr.cpp
     LIBRARIES mov::core
 )
+
+# Provider request vocabulary: windows, days, CO-OPS, USGS and NDBC requests,
+# capabilities and offered(), the daily series.
+mov_add_test(
+    mov_core_provider_tests
+    SOURCES test_windows.cpp test_usgs.cpp test_capabilities.cpp test_daily_series.cpp
+    CONSTEXPR_SOURCES
+        test_windows_constexpr.cpp
+        test_coops_constexpr.cpp
+        test_usgs_constexpr.cpp
+        test_capabilities_constexpr.cpp
+    LIBRARIES mov::core
+)
+mov_add_fuzz_test(fuzz_split SOURCES fuzz_split.cpp LIBRARIES mov::core CORPUS core/split)

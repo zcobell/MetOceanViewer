@@ -17,7 +17,6 @@
 #include <utility>
 
 #include "mov/core/ascii.hpp"
-#include "mov/core/datum.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/utf8.hpp"
@@ -291,14 +290,16 @@ class StationId {
   StationKey key_;
 };
 
-/// A provider's station as its station list describes it.
+/// A provider's station as its station list describes it. What the station
+/// can serve, a CO-OPS datum table included, is its Capabilities<P>
+/// (mov/core/provider/capabilities.hpp): a USGS or NDBC station has no datum
+/// table.
 template <Provider P>
 struct GaugeStation {
   StationId<P> id;
   StationText name;
   Location location;
   ValidRange validity;
-  DatumTable datums;
   friend bool operator==(const GaugeStation&, const GaugeStation&) = default;
 };
 

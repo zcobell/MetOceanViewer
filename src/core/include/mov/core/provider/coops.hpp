@@ -1,0 +1,294 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Zach Cobell
+
+#pragma once
+
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <variant>
+
+#include "mov/core/datum.hpp"
+#include "mov/core/enum_set.hpp"
+#include "mov/core/overloaded.hpp"
+#include "mov/core/station.hpp"
+#include "mov/core/time.hpp"
+
+/// The request vocabulary of NOAA CO-OPS (docs/providers-design.md section
+/// 3.2): what can be asked of the data API, with every illegal combination
+/// left unrepresentable. A datum exists only on water level, an interval only
+/// where the API takes one, and the paired product only on its two grids.
+namespace mov::core::coops {
+
+/// The datums the data API accepts that the core can name (decision 32: only
+/// these are offered, and nothing is shifted client-side). CRD and LWD
+/// (rivers) are not offered, as in v4; IGLD is IGLD85.
+enum class Datum : std::uint8_t {
+  mhhw,
+  mhw,
+  mtl,
+  msl,
+  mlw,
+  mllw,
+  navd88,
+  stnd,
+  igld85
+};
+inline constexpr std::array every_datum{
+    Datum::mhhw, Datum::mhw,    Datum::mtl,  Datum::msl,   Datum::mlw,
+    Datum::mllw, Datum::navd88, Datum::stnd, Datum::igld85};
+static_assert(every_datum.size() ==
+              static_cast<std::size_t>(Datum::igld85) + 1);
+using DatumSet = EnumSet<Datum, every_datum.size()>;
+
+/// An observed water-level series. The comments name the API products.
+enum class Observed : std::uint8_t {
+  six_minute,  // water_level
+  one_minute,  // one_minute_water_level (takes no interval)
+  hourly,      // hourly_height
+};
+inline constexpr std::array every_observed{
+    Observed::six_minute, Observed::one_minute, Observed::hourly};
+static_assert(every_observed.size() ==
+              static_cast<std::size_t>(Observed::hourly) + 1);
+using ObservedSet = EnumSet<Observed, every_observed.size()>;
+
+/// The interval of tide predictions, in minutes. `hilo` (high and low
+/// waters) is not one: it is a v5.x addition (v5-extras #7).
+enum class PredictionInterval : std::uint8_t {
+  one,
+  five,
+  six,
+  ten,
+  fifteen,
+  thirty,
+  sixty
+};
+
+/// The common grid of observed and predicted levels fetched as a pair.
+enum class PairedGrid : std::uint8_t { six_minute, hourly };
+
+struct ObservedLevel {
+  Observed series;
+  friend constexpr bool operator==(ObservedLevel, ObservedLevel) = default;
+};
+struct PredictedLevel {
+  PredictionInterval interval;
+  friend constexpr bool operator==(PredictedLevel, PredictedLevel) = default;
+};
+/// Observed and predicted levels on one grid: one request, two exchanges.
+struct ObservedVsPredicted {
+  PairedGrid grid;
+  friend constexpr bool operator==(ObservedVsPredicted,
+                                   ObservedVsPredicted) = default;
+};
+using LevelKind =
+    std::variant<ObservedLevel, PredictedLevel, ObservedVsPredicted>;
+
+/// Water level of any kind. The API requires a datum for every kind and has
+/// no neutral default, so the datum is mandatory.
+struct WaterLevel {
+  LevelKind kind;
+  Datum datum;
+  friend constexpr bool operator==(const WaterLevel&,
+                                   const WaterLevel&) = default;
+};
+
+/// The meteorological and water-quality products. The first five are v4's;
+/// the rest are v5-extras #1 and may be dropped before they ship (P2 checks
+/// air_gap's datum handling and salinity's JSON against recorded fixtures).
+enum class Met : std::uint8_t {
+  air_temperature,
+  water_temperature,
+  wind,
+  air_pressure,
+  humidity,
+  conductivity,
+  salinity,
+  visibility,
+  air_gap
+};
+inline constexpr std::array every_met{
+    Met::air_temperature, Met::water_temperature, Met::wind,
+    Met::air_pressure,    Met::humidity,          Met::conductivity,
+    Met::salinity,        Met::visibility,        Met::air_gap};
+static_assert(every_met.size() == static_cast<std::size_t>(Met::air_gap) + 1);
+using MetSet = EnumSet<Met, every_met.size()>;
+
+/// The API's 6-minute default or `interval=h`.
+enum class MetInterval : std::uint8_t { six_minute, hourly };
+
+/// A met product: no datum.
+struct Meteorological {
+  Met product;
+  MetInterval interval;
+  friend constexpr bool operator==(Meteorological, Meteorological) = default;
+};
+
+using Product = std::variant<WaterLevel, Meteorological>;
+
+/// One station, one time range, one product.
+struct Request {
+  StationId<provider::Coops> station;
+  TimeRange range;
+  Product product;
+  friend constexpr bool operator==(const Request&, const Request&) = default;
+};
+
+namespace detail {
+
+struct DatumRow {
+  Datum datum;
+  VerticalDatum vertical;
+  std::string_view wire;  // the data API's `datum=` value
+};
+
+// One row per enumerator, in enumerator order (checked below).
+inline constexpr std::array<DatumRow, every_datum.size()> datum_rows{{
+    {.datum = Datum::mhhw, .vertical = VerticalDatum::mhhw, .wire = "MHHW"},
+    {.datum = Datum::mhw, .vertical = VerticalDatum::mhw, .wire = "MHW"},
+    {.datum = Datum::mtl, .vertical = VerticalDatum::mtl, .wire = "MTL"},
+    {.datum = Datum::msl, .vertical = VerticalDatum::msl, .wire = "MSL"},
+    {.datum = Datum::mlw, .vertical = VerticalDatum::mlw, .wire = "MLW"},
+    {.datum = Datum::mllw, .vertical = VerticalDatum::mllw, .wire = "MLLW"},
+    {.datum = Datum::navd88, .vertical = VerticalDatum::navd88, .wire = "NAVD"},
+    {.datum = Datum::stnd, .vertical = VerticalDatum::stnd, .wire = "STND"},
+    {.datum = Datum::igld85, .vertical = VerticalDatum::igld85, .wire = "IGLD"},
+}};
+
+[[nodiscard]] constexpr bool datum_rows_in_order() noexcept {
+  return std::ranges::equal(datum_rows, every_datum, {}, &DatumRow::datum);
+}
+static_assert(datum_rows_in_order());
+
+[[nodiscard]] constexpr const DatumRow& row_of(Datum d) noexcept {
+  return datum_rows[static_cast<std::size_t>(d)];
+}
+
+}  // namespace detail
+
+/// The core datum a CO-OPS datum is.
+[[nodiscard]] constexpr VerticalDatum to_vertical(Datum d) noexcept {
+  return detail::row_of(d).vertical;
+}
+
+/// The CO-OPS datum of a core datum; nullopt for NGVD29, which the data API
+/// does not serve (decision 32).
+[[nodiscard]] constexpr std::optional<Datum> from_vertical(
+    VerticalDatum v) noexcept {
+  const auto row =
+      std::ranges::find(detail::datum_rows, v, &detail::DatumRow::vertical);
+  if (row == detail::datum_rows.end()) {
+    return std::nullopt;
+  }
+  return row->datum;
+}
+
+/// The data API's `datum=` value: "NAVD" for NAVD88, "IGLD" for IGLD85, else
+/// the core token.
+[[nodiscard]] constexpr std::string_view wire_token(Datum d) noexcept {
+  return detail::row_of(d).wire;
+}
+
+/// The observed series of a paired grid.
+[[nodiscard]] constexpr Observed observed(PairedGrid g) noexcept {
+  switch (g) {
+    case PairedGrid::six_minute:
+      return Observed::six_minute;
+    case PairedGrid::hourly:
+      break;
+  }
+  return Observed::hourly;
+}
+
+/// The prediction interval of a paired grid.
+[[nodiscard]] constexpr PredictionInterval predicted(PairedGrid g) noexcept {
+  switch (g) {
+    case PairedGrid::six_minute:
+      return PredictionInterval::six;
+    case PairedGrid::hourly:
+      break;
+  }
+  return PredictionInterval::sixty;
+}
+
+/// The longest window the API serves for one observed series: 4 days at one
+/// minute, 31 days at six (the live error text, provider-apis.md 2.1; the
+/// documentation says "1 month"), a year hourly.
+[[nodiscard]] constexpr std::chrono::days max_window(Observed s) noexcept {
+  switch (s) {
+    case Observed::one_minute:
+      return std::chrono::days{4};
+    case Observed::six_minute:
+      return std::chrono::days{31};
+    case Observed::hourly:
+      break;
+  }
+  return std::chrono::days{365};
+}
+
+/// Predictions at any interval but `hilo`: a year.
+[[nodiscard]] constexpr std::chrono::days max_window(
+    PredictionInterval /*interval*/) noexcept {
+  return std::chrono::days{365};
+}
+
+/// Met products follow the observed limits of their interval.
+[[nodiscard]] constexpr std::chrono::days max_window(MetInterval i) noexcept {
+  switch (i) {
+    case MetInterval::six_minute:
+      return max_window(Observed::six_minute);
+    case MetInterval::hourly:
+      break;
+  }
+  return max_window(Observed::hourly);
+}
+
+/// The longest window one request of the product may span; a paired product
+/// takes the smaller of its two halves.
+[[nodiscard]] constexpr std::chrono::days max_window(
+    const Product& product) noexcept {
+  return std::visit(
+      Overloaded{
+          [](const WaterLevel& w) {
+            return std::visit(
+                Overloaded{
+                    [](ObservedLevel o) { return max_window(o.series); },
+                    [](PredictedLevel p) { return max_window(p.interval); },
+                    [](ObservedVsPredicted p) {
+                      return std::min(max_window(observed(p.grid)),
+                                      max_window(predicted(p.grid)));
+                    }},
+                w.kind);
+          },
+          [](Meteorological m) { return max_window(m.interval); }},
+      product);
+}
+
+/// The grain windows are aligned to: whole minutes, for every product (the
+/// API's begin_date and end_date have minutes).
+inline constexpr std::chrono::minutes grain{1};
+
+/// What a product's result is made of: one series, an observed and a
+/// predicted series, or the wind columns (speed, direction, gust).
+enum class Shape : std::uint8_t { series, observed_vs_predicted, wind };
+
+[[nodiscard]] constexpr Shape shape(const Product& product) noexcept {
+  return std::visit(
+      Overloaded{[](const WaterLevel& w) {
+                   return std::holds_alternative<ObservedVsPredicted>(w.kind)
+                              ? Shape::observed_vs_predicted
+                              : Shape::series;
+                 },
+                 [](Meteorological m) {
+                   return m.product == Met::wind ? Shape::wind : Shape::series;
+                 }},
+      product);
+}
+
+}  // namespace mov::core::coops

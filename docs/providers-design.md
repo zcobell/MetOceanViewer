@@ -3,7 +3,8 @@
 Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's answers
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
-layers, gates and build plumbing); nothing from P1 on. Phase 2 (`core`, `io`) is as built;
+layers, gates and build plumbing) and P1 (§3, the core vocabulary; its deviations from
+revision 2 are in §3.7); nothing from P2 on. Phase 2 (`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
@@ -202,27 +203,31 @@ without Qt, and io could not name a product).
 
 ## 3. core: provider vocabulary
 
-New headers in `src/core/include/mov/core/provider/` (`coops.hpp`, `usgs.hpp`,
+Built in P1. Headers in `src/core/include/mov/core/provider/` (`coops.hpp`, `usgs.hpp`,
 `ndbc.hpp`, `capabilities.hpp`) and `src/core/include/mov/core/` (`windows.hpp`,
-`daily_series.hpp`). Constexpr where the types allow, regular, designated initializers.
+`daily_series.hpp`, `enum_set.hpp`). Constexpr where the types allow, regular,
+designated initializers. The sketches below follow the headers, which are the contract;
+the reasons are in CD §2.13.
 
 ### 3.1 Windows and days
 
 ```cpp
 namespace mov::core {
 /// Consecutive half-open windows [b, b+span), ..., the last cut at r.end(). Precondition
-/// (asserted): span >= 1 ms. Result non-empty, disjoint, ordered, covering r exactly.
-[[nodiscard]] std::vector<TimeRange> split(TimeRange r, std::chrono::milliseconds span);
+/// (asserted): span >= 1 ms; a release build returns r whole for a smaller span.
+/// Result non-empty, disjoint, ordered, covering r exactly.
+[[nodiscard]] constexpr std::vector<TimeRange> split(TimeRange r, std::chrono::milliseconds span);
 
 /// r widened outward to whole multiples of `grain` (floor the begin, ceil the end), so
 /// windows split from it by a span that is a multiple of `grain` start and end on the
-/// grain. nullopt only on overflow.
+/// grain. nullopt for a grain below 1 ms or on overflow.
 [[nodiscard]] constexpr std::optional<TimeRange> aligned(TimeRange r, std::chrono::milliseconds grain) noexcept;
 
+enum class DayRangeError : std::uint8_t { empty_or_inverted, not_whole_days, out_of_range };
 /// Half-open calendar days [first, end): first < end; no default (Bd SF13).
 class DayRange {
  public:
-  [[nodiscard]] static constexpr std::expected<DayRange, TimeRangeError> make(
+  [[nodiscard]] static constexpr std::expected<DayRange, DayRangeError> make(
       std::chrono::sys_days first, std::chrono::sys_days end) noexcept;
   /// The days of r, only when both bounds are midnights; otherwise not_whole_days.
   [[nodiscard]] static constexpr std::expected<DayRange, DayRangeError> covering(TimeRange r) noexcept;
@@ -231,7 +236,6 @@ class DayRange {
   [[nodiscard]] constexpr std::chrono::days size() const noexcept;
   friend constexpr bool operator==(const DayRange&, const DayRange&) = default;
 };
-enum class DayRangeError : std::uint8_t { empty_or_inverted, not_whole_days };
 }
 ```
 
@@ -246,6 +250,7 @@ namespace mov::core::coops {
 /// Datums the data API accepts that core can name (D32: only these are offered).
 /// CRD and LWD (rivers) are not offered (v4 never did); IGLD is IGLD85.
 enum class Datum : std::uint8_t { mhhw, mhw, mtl, msl, mlw, mllw, navd88, stnd, igld85 };
+using DatumSet = EnumSet<Datum, every_datum.size()>;   // likewise ObservedSet, MetSet
 [[nodiscard]] constexpr VerticalDatum to_vertical(Datum) noexcept;
 [[nodiscard]] constexpr std::optional<Datum> from_vertical(VerticalDatum) noexcept;
 [[nodiscard]] constexpr std::string_view wire_token(Datum) noexcept;          // "NAVD", "IGLD", ...
@@ -254,6 +259,8 @@ enum class Observed : std::uint8_t { six_minute /*water_level*/, one_minute /*on
                                      hourly /*hourly_height*/ };
 enum class PredictionInterval : std::uint8_t { one, five, six, ten, fifteen, thirty, sixty };  // hilo: v5.x (EX #7)
 enum class PairedGrid : std::uint8_t { six_minute, hourly };   // observed with predictions at 6 or "h"
+[[nodiscard]] constexpr Observed observed(PairedGrid) noexcept;               // the grid's two halves
+[[nodiscard]] constexpr PredictionInterval predicted(PairedGrid) noexcept;
 
 struct ObservedLevel { Observed series; };
 struct PredictedLevel { PredictionInterval interval; };
@@ -293,24 +300,27 @@ namespace mov::core {
 template <Provider P> struct Capabilities;
 
 template <> struct Capabilities<provider::Coops> {
-  std::vector<coops::Observed> observed;           // from the water-level sensor
-  std::vector<coops::Met> met;                     // from sensors with status 1
-  bool predictions;                                // the station's `tidal` member
+  coops::ObservedSet observed;                     // from the water-level sensor
+  coops::MetSet met;                               // from sensors with status 1
+  bool predictions = false;                        // the station's `tidal` member
   std::optional<DatumTable> datums;                // nullopt: datums.json failed or had no MSL
-  std::vector<coops::Datum> datums_offered;        // datums.json names ∩ coops::Datum, plus STND
+  coops::DatumSet datums_offered;                  // datums.json names ∩ coops::Datum, plus STND
 };
 template <> struct Capabilities<provider::Usgs> {
-  std::vector<usgs::SeriesInfo> series;            // the map filter's series (D33)
+  std::vector<usgs::SeriesInfo> series;            // catalog: the map filter's series (D33)
 };
 template <> struct Capabilities<provider::Ndbc> {
-  std::string owner, program, platform_type;
+  StationText owner, program, platform_type;
   std::optional<Length> elevation;
 };
 
-enum class NotOffered : std::uint8_t { product, interval, datum, predictions, parameter };
+enum class NotOffered : std::uint8_t { product, interval, predictions, datum,   // CO-OPS
+                                       parameter, statistic, series };          // USGS
 /// Whether the station's catalog entry offers the request: one check for the CLI and
-/// the app's picker.
-[[nodiscard]] std::expected<void, NotOffered> offered(const Capabilities<provider::Coops>&, const coops::Product&);
+/// the app's picker. CO-OPS: the level kind (product, interval, predictions), then the
+/// datum; met needs the sensor. USGS: by parameter, parameter then statistic (00011 for
+/// continuous); by id, series then the collection of its statistic.
+[[nodiscard]] constexpr std::expected<void, NotOffered> offered(const Capabilities<provider::Coops>&, const coops::Product&) noexcept;
 [[nodiscard]] std::expected<void, NotOffered> offered(const Capabilities<provider::Usgs>&, const usgs::Request&);
 }
 ```
@@ -325,6 +335,7 @@ enum class NotOffered : std::uint8_t { product, interval, datum, predictions, pa
 
 ```cpp
 namespace mov::core::usgs {
+enum class CodeError : std::uint8_t { wrong_length, invalid_character };
 class ParameterCode { /* 5 ASCII digits, make(); view(); <=> */ };
 class StatisticId   { /* 5 ASCII digits; static constexpr instantaneous(), mean(), minimum(), maximum() */ };
 class TimeSeriesId  { /* 32 lower-case hex */ };
@@ -339,10 +350,11 @@ using Request = std::variant<Continuous, Daily>;
 
 /// What resolution (stage 1, §5.2) proves about the series: it exists at the station,
 /// belongs to the request's collection, and is the Primary one when chosen by parameter.
+/// Its quantity is a function of the parameter (registry_quantity, else quantity_of),
+/// not a stored field.
 struct ResolvedSeries {
   TimeSeriesId id; ParameterCode parameter; StatisticId statistic;
   std::string parameter_name; std::optional<Unit> unit;
-  std::optional<QuantityMapping> quantity;      // registry_quantity(parameter)
 };
 /// Catalog row (Capabilities<Usgs>) and picker row.
 struct SeriesInfo { TimeSeriesId id; ParameterCode parameter; StatisticId statistic; bool primary;
@@ -357,6 +369,8 @@ inline constexpr std::chrono::seconds grain{1};
 /// (00010, 00020, 00035, 00036) only after P3 checks them against parameter-codes.
 struct QuantityMapping { Quantity quantity; std::optional<VerticalDatum> datum; };
 [[nodiscard]] constexpr std::optional<QuantityMapping> registry_quantity(const ParameterCode&) noexcept;
+/// The registry quantity, else the generic "usgs_<code>".
+[[nodiscard]] QuantityId quantity_of(const ParameterCode&);
 }
 
 namespace mov::core {
@@ -404,6 +418,27 @@ inline constexpr std::chrono::minutes grain{1};
 - **OI 12** (a `DatumTable` that carries its station) **stays open for Phase 6**:
   Phase 3 shifts no provider series client-side, and the model-vs-observed work is
   where a station-bound table may be needed.
+
+### 3.7 As built (P1): deviations from revision 2
+
+| Revision 2 | Built | Why |
+|---|---|---|
+| `DayRange::make` returns `TimeRangeError` | `DayRangeError` for both factories, plus `out_of_range` | One error enum per type, as elsewhere in core. `std::chrono::days::rep` is 32 bits on MSVC and libc++, so a far `Time` has no `sys_days`, and `size()` of the extreme ranges overflows any rep. |
+| `split` not constexpr; precondition only asserted | constexpr; a release build given a span below 1 ms returns the range whole | The laws become `STATIC_REQUIRE`s; a zero span must not loop forever in a release build. |
+| `aligned`: nullopt only on overflow | also for a grain below 1 ms | Total, so no precondition. |
+| `std::vector` of observed series, met products and offered datums | `EnumSet<E, N>` (`enum_set.hpp`) | A vector admits duplicates and makes `==` depend on the order the parser met the sensors. |
+| `ResolvedSeries::quantity` | removed; `registry_quantity(parameter)` or `quantity_of(parameter)` | A stored copy of a function of `parameter` could disagree with it. |
+| — | `usgs::quantity_of` | The `usgs_<code>` generic quantity is named next to the registry, so P3's parsers do not spell it. |
+| `Capabilities<Ndbc>` strings | `StationText` | The station's own text type (valid UTF-8, no NUL), which the catalog writes as JSON. |
+| `NotOffered {product, interval, datum, predictions, parameter}` | adds `statistic` and `series` | A USGS request can name a parameter the site has but not with that statistic, or a series id the site lacks. |
+| `offered(Capabilities<Coops>, …)` | constexpr, noexcept | Its inputs are constexpr; the truth table is a `STATIC_REQUIRE`. |
+| `Capabilities<Coops>::predictions` without a default | `= false` | A default-initialized capability would hold an indeterminate `bool`. |
+| the `(name, interval) → Product` rule table and `WindComponent` | not in core | The CLI's spelling (§9.1); P9b builds them in `to_command`. |
+
+The USGS `offered` answers over the series list it is given. The station catalog holds
+only the D33 map series, so the CLI's `--station` check for any other parameter, or for
+any daily series, needs the site metadata of §6.6 rather than the catalog; P9b decides
+how.
 
 ---
 
@@ -1255,7 +1290,7 @@ prose-editor.
 | WP | Scope | Depends on | Size | Reviewers |
 |---|---|---|---|---|
 | **H0** | HE §10's H0 plus: the `fetch` layer, Qt Network/Concurrent, the `no_blocking_calls` and `no_ignore_ssl_errors` gates, JSON/zlib include gates, the `live` label, the Qt coverage variant, the doc sync items of §13.3 | — | S (2) | jason-turner, neckbeard-nate, architecture-clarity-reviewer |
-| P1 | core: `split`, `aligned`, `DayRange`, `coops`, `usgs` (selectors, `ResolvedSeries`, `SeriesInfo`), `ndbc`, `Capabilities`, `offered`, `DailySeries`, `registry_quantity`, `GaugeStation::datums` removed | H0 | M (4) | ben-deane (lead), sean-parent, jason-turner |
+| P1 (built) | core: `split`, `aligned`, `DayRange`, `coops`, `usgs` (selectors, `ResolvedSeries`, `SeriesInfo`), `ndbc`, `Capabilities`, `offered`, `DailySeries`, `registry_quantity`, `GaugeStation::datums` removed | H0 | M (4) | ben-deane (lead), sean-parent, jason-turner |
 | P2 | io CO-OPS: targets, body checks, `classify_body`, data/predictions/stations/datums parsers, fuzz | P1 | M (3) | neckbeard-nate (lead), sean-parent, conor-hoekstra |
 | P3 | io USGS: targets, `Verbatim`, `parse_rfc3339`, page/series/catalog parsers, unit aliases, error shapes, fuzz (incl. paging); measures the catalog size | P1 | M (3.5) | same |
 | P4 | io NDBC: stdmet parser, sentinel table, XML subset scanner, public `gunzip`, gzip sniff, fuzz | P1 | M (3) | same |

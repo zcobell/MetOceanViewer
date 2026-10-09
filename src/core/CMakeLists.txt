@@ -21,3 +21,7 @@ target_sources(mov_core PRIVATE hwm_stats.cpp)
 
 # Series operations and the datum shift.
 target_sources(mov_core PRIVATE series_ops.cpp datum_shift.cpp)
+
+# Provider request vocabulary (docs/providers-design.md section 3) and the
+# daily series.
+target_sources(mov_core PRIVATE daily_series.cpp provider_usgs.cpp)

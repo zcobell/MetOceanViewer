@@ -1,6 +1,7 @@
 # MetOceanViewer v5 — Phase 2 design: `mov::core` and `mov::io`
 
-Status: **as built** (Phase 2 end, 2026-10-09). The public headers under
+Status: **as built** (Phase 2 end, 2026-10-09; §2.13, the provider vocabulary, is
+Phase 3's WP P1). The public headers under
 `src/core/include/mov/core/` and `src/io/include/mov/io/` are the contract: every
 declaration documents its own preconditions, errors, ownership and threading. This page
 holds what a header cannot: the decisions and their reasons, the measured numbers, the
@@ -474,10 +475,94 @@ from one fact. A `DatumTable` that carries its station is deferred (§9.3).
 | `checked_elevation`, `model_value` | `ElevationError` |
 | `ErrorClasses::make` | `ClassBreaksError` |
 | `hwm_stats` | `HwmStatsError` |
+| `DayRange::make` / `covering` | `DayRangeError` |
+| `usgs::ParameterCode`, `StatisticId`, `TimeSeriesId` `make` | `usgs::CodeError` |
+| `offered` | `NotOffered` |
+| `DailySeries::make` | `ConstructionError` |
 
 Errors carry no text. `describe(const X&) -> std::string` for each of them belongs to
 the edge (`src/app`, `src/cli`) and is written with the first of those; `core` and `io`
 have none.
+
+### 2.13 Provider vocabulary — `windows.hpp`, `enum_set.hpp`, `provider/`, `daily_series.hpp` (Phase 3 P1)
+
+What a provider request can say, as core values, so io's targets and parsers and fetch's
+planner can name it below Qt (`docs/providers-design.md` §3, PD below). Every
+combination the APIs refuse is unrepresentable rather than checked.
+
+- **Windows.** `split(r, span)` returns the consecutive windows of `r`, each `span`
+  long but the last, which is cut at `r.end()`. Lengths are computed in unsigned
+  arithmetic, so the whole time line (`[INT64_MIN, INT64_MAX)` ms) splits without
+  overflow, and the vector is reserved up front: an absurd plan fails at once instead
+  of growing. `span >= 1 ms` is an asserted precondition; release builds return `r`
+  as one window rather than loop. `aligned(r, grain)` floors the begin and ceils the
+  end toward minus and plus infinity; nullopt for a grain below 1 ms or a bound with no
+  multiple of the grain on the time line. The S8 law
+  (`split(aligned(r, 1 min), 31 d)` windows begin and end on minutes) is a
+  `STATIC_REQUIRE`; the laws of both functions are also checked over seeded random
+  ranges and by `fuzz_split`.
+- **`DayRange`** is half-open `[first, end)` with `first < end` and no default. One
+  error enum serves the type (PD wrote `TimeRangeError` for `make`):
+  `empty_or_inverted` from `make`, `not_whole_days` from `covering` when a bound is not
+  a UTC midnight, and `out_of_range`, which both return when a count does not fit
+  `std::chrono::days::rep`. That rep is 32 bits on MSVC and libc++, so `size()` (and a
+  `Time` beyond about 5.8 million years) would otherwise overflow; on libstdc++ the
+  64-bit rep still overflows `size()` for the extreme days, which the
+  `STATIC_REQUIRE`s use.
+- **`EnumSet<E, N>`** replaces the `std::vector`s of PD §3.3 in
+  `Capabilities<Coops>`: a vector admits duplicates, and its `==` depends on the order
+  in which a parser met the sensors. A 64-bit mask is regular, constexpr and
+  order-free. Each enum used with it declares its `every_*` array next to the enum,
+  `static_assert`ed against the last enumerator, and N is that array's size.
+- **CO-OPS** (`provider/coops.hpp`). `Product = variant<WaterLevel, Meteorological>`;
+  only `WaterLevel` has a datum, and it is mandatory (the API requires one and has no
+  neutral default). `LevelKind` is observed (`Observed`: 6-minute, 1-minute, hourly),
+  predicted (`PredictionInterval`, no `hilo` until EX #7) or `ObservedVsPredicted` on a
+  `PairedGrid` of 6 minutes or an hour; `observed(grid)` and `predicted(grid)` name the
+  two halves. `coops::Datum` is the nine datums the data API accepts that core can
+  name; one table gives `to_vertical`, `from_vertical` (nullopt for NGVD29, D32) and
+  the wire token (`NAVD`, `IGLD`). `max_window` is constexpr per alternative (1-minute
+  4 d, 6-minute 31 d, hourly and every prediction interval 365 d, a paired product the
+  smaller half, met by its interval); `shape` names the result's form. The
+  `(name, interval) → Product` rule table and `WindComponent` are the CLI's spelling
+  (PD §9.1) and stay in P9b.
+- **USGS** (`provider/usgs.hpp`). `ParameterCode`, `StatisticId` (5 digits) and
+  `TimeSeriesId` (32 lower-case hex) are distinct types over a `std::array<char, N>`:
+  trivially copyable, ordered, built only by `make` with the one `CodeError`
+  (`wrong_length`, `invalid_character`; no trimming, the server's text is exact).
+  `StatisticId` has the constants `instantaneous` (00011), `mean`, `minimum` and
+  `maximum` as static functions, not namespace constants (a namespace-scope name that a
+  local could hide is MSVC's C4459). `Continuous` selects `ByParameter` (no statistic:
+  00011 by construction) or `ByTimeSeries` over a `TimeRange`; `Daily` selects
+  `DailyByParameter` (with the statistic) or `ByTimeSeries` over a `DayRange`.
+  `ResolvedSeries` does not store the quantity PD §3.4 listed: it is a function of the
+  parameter (`registry_quantity`, else `quantity_of`, which gives the generic
+  `usgs_<code>`), and a stored copy could disagree with it. `registry_quantity` has the
+  four D33 rows only.
+- **NDBC** (`provider/ndbc.hpp`): `StdMet{station, range}`, `FileKind` in precedence
+  order, a 1-minute grain.
+- **Capabilities and `offered`** (`provider/capabilities.hpp`). `GaugeStation<P>` lost
+  its `datums` member: a USGS or NDBC station has no datum table, and the default table
+  ("knows only MSL") claimed knowledge it did not have. The CO-OPS table is
+  `Capabilities<Coops>::datums` (`optional`), beside `datums_offered`, which can differ
+  from the table's rows (datums.json may name datums without an MSL row, and STND is
+  always offered). `Capabilities<Ndbc>` holds its catalog text as `StationText`, like
+  the station's name. `NotOffered` gained `statistic` and `series` for USGS. The CO-OPS
+  `offered` is constexpr and checks the level kind (`product` when the station has no
+  water level, `interval` when it lacks the series, `predictions`), then the datum; met
+  needs the sensor. The USGS `offered` checks the parameter, then the statistic
+  (00011 for continuous), or by id the series and then its collection (00011 is
+  continuous, anything else daily). It answers for whatever series list it is given:
+  the station catalog holds only the D33 map series, the site metadata every series.
+  Primary-ness is resolution's question (`NoData`, `AmbiguousSeries`), not this one.
+- **`DailySeries`** (D34): days strictly increasing, one sample per day, metadata and
+  the statistic; `make` reuses `ConstructionError` (`LengthMismatch`, then
+  `TimeNotIncreasing{index}` of the first day not after its predecessor). No default
+  (a statistic has none). The `const&` views delete their `&&` overloads, as
+  `TimeSeries` does.
+- **Compile-fail cases** (`tests/cmake/compile_fail/`): a datum on a met product, a
+  `TimeRange` as a daily request's days, a daily selector in a continuous request, each
+  with the accepting twin `accept_provider_requests.cpp`.
 
 ---
 
@@ -1312,7 +1397,10 @@ src/core/include/mov/core/
   series_ops.hpp datum_shift.hpp                                       operations
   hwm.hpp hwm_stats.hpp                                                HWM
   ascii.hpp utf8.hpp overloaded.hpp cancelled.hpp stop_token.hpp      helpers other layers use
+  enum_set.hpp
   version.hpp
+  windows.hpp daily_series.hpp                                         provider vocabulary (§2.13)
+  provider/{coops,usgs,ndbc,capabilities}.hpp
   detail/core_key.hpp detail/numeric.hpp                              not API (core_detail_fence)
 src/core/core_access.hpp series_rebuild.hpp                            private to the core sources
 src/io/include/mov/io/
@@ -1341,7 +1429,8 @@ Conventions:
 - **Every value type** gets `STATIC_REQUIRE(std::regular<T> and
   std::is_nothrow_move_constructible_v<T>)`; types without a default constructor use
   `std::copyable<T> and std::equality_comparable<T>`.
-- Executables: `mov_core_tests`, `mov_core_hwm_tests`, `mov_core_ops_tests` (core);
+- Executables: `mov_core_tests`, `mov_core_hwm_tests`, `mov_core_ops_tests`,
+  `mov_core_provider_tests` (core);
   `mov_io_tests`, `mov_io_model_text_tests`, `mov_io_alloc_tests`,
   `mov_io_text_formats_tests`, `mov_io_netcdf_tests` (with the `--wrap` shims),
   `mov_io_model_netcdf_tests`, `mov_io_station_netcdf_tests` (io), each with its
@@ -1386,6 +1475,7 @@ Conventions:
 | datum_shift | pinned check order; nulls / Dry kept; result datum; input unchanged on error; The Battery +0.77527 m | — |
 | hwm | `is_dry` edges; `checked_elevation` / `model_value` bounds; `classify` at every break, decimal ties in metres and feet (`hwm_ties.csv`, `hwm_ties_ft.csv`: `1.8,2.3`, `11.00,12.50`, `-9.94,-6.44`, `12.49999` / `12.50001`); defaults; invalid breaks (NaN first) | all |
 | hwm_stats | `Moments` identity exact, `of(Dry)` = identity, fold halves ≈ whole; `wet_moments` bit-identical to the explicit left fold and different from the reversed one; golden free and origin (F8, `golden.py`); `fit` alternative matches mode (N1); σ n−1 (D17); threshold rows (N2); legacy closed forms agree (free); every `HwmStatsError`; R² nullopt rules; 1e-12 relative | `Moments` small |
+| provider vocabulary (§2.13) | `split` exact multiples, remainders, a span past the range, the whole time line, the laws on a grid and on 2,000 seeded random ranges; `aligned` floor and ceiling for negative times, the grain below 1 ms, refusal only at the ends of the time line (5,000 random ranges); the S8 minute law, also for a CO-OPS month (L1); `DayRange` `make`, `covering`, `out_of_range` at the rep's limits; `EnumSet` order and repeats; CO-OPS datum table round trip and pinned wire tokens, `max_window` and `shape` for every product; USGS code grammars, the statistic constants, `registry_quantity` rows and `quantity_of`, `max_window`; `offered` truth tables for both providers with their check order; `DailySeries::make` errors and their order; `GaugeStation` has no `datums` | all but USGS `offered`, `quantity_of`, `DailySeries` |
 
 Mutations tried by hand and caught (series_ops): tie rule `<` to `<=`, `slice` end
 inclusive, datum offset sign flipped, `units_differ` check removed, `first` taking the
@@ -1501,6 +1591,7 @@ is no nightly run.
 | `fuzz_parse_quantity_token` | registry token xor generic |
 | `fuzz_parse_version` | round trip / no UB |
 | `fuzz_checked_time` | result within ±2^53 ms for every value type; a separate epoch field; the double-versus-integer law; under UBSan also the double-to-int casts (16-byte header: a double, an int64) |
+| `fuzz_split` (four int64: begin, end, span, grain) | `split`'s windows are consecutive, `span` long but the last, cover the range and number `ceil(length / span)` (plans over 4096 windows are skipped); `aligned` contains the range, sits on the grain, widens each side by less than a grain and refuses only when a bound has no multiple of the grain on the time line, and always for a grain below 1 ms; `DayRange::covering` succeeds only for midnights; no overflow under UBSan |
 | `fuzz_normalize` (3 bytes per row) | the output passes `make` and equals "first sample per time"; all three counts exact; `clean()` iff nothing changed, and then output == input; re-normalizing is clean and identical |
 | `fuzz_parse_double` | both implementations agree bit for bit; the verdict equals a `std::regex` of the grammar (tokens up to 128 bytes); an integer token of up to 15 digits has exactly the integer's value; the shortest `to_chars` text of the result parses back to the same bits |
 | `fuzz_line_cursor` | `LineCursor` against a model (`split_on('\n')`, BOM skipped, empty last field dropped, one CR chomped); `split_ws` complete, maximal and equal to `split_ws_into`; `split_on` rejoins; `truncate_utf8` never cuts inside a sequence |
@@ -1561,7 +1652,8 @@ trigger is "iff any sample of the column is Dry" (§8.2); `VerticalDatum` includ
 - The `.mvs` importer (Phase 6).
 - Fuzzing netCDF from memory bytes (v5.x; the structure fuzzer covers schemas).
 
-Resolved by the Phase 3 design (`docs/providers-design.md`, built from WP P1 on):
+Resolved by the Phase 3 design (`docs/providers-design.md`; the core parts built in WP
+P1, §2.13):
 - `TimeRange::split` and chunk merging: `core::split` and `aligned` (§3.1), and `fetch`'s
   `Part` with its left-biased `combine` (§5.4).
 - The USGS daily cadence: not a `SeriesMeta` field but its own type, `core::DailySeries`
