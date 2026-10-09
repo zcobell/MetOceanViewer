@@ -478,11 +478,13 @@ class HarmonicsFile {
 Vocabulary changes outside `tide/`:
 - `VerticalDatum` gains `hat`, `lat`, `dtl` (tokens `HAT`, `LAT`, `DTL`; SN §10.2 says the core enum
   is authoritative), and `DatumTable` grows to 12 slots.
-- `DataSource` gains `harmonics` (SN `station_provider` token `"harmonics"`, SN minor bump; `"xtide"`
-  stays readable).
-- `provider::Xtide` becomes `provider::Harmonics` with HJ's `<source>:<local>` grammar.
-- `Cancelled` moves from io to core (`mov::core::Cancelled`), and `io::Error` keeps it through a
-  using-declaration, so core prediction and io share one alternative.
+- `DataSource::xtide` became `DataSource::harmonics` (SN `station_provider` token `"harmonics"`),
+  done at the end of Phase 2: SN 1.0 was not released, so the token changed in place, without a
+  version bump, and `"xtide"` is not a token.
+- `provider::Xtide` became `provider::Harmonics` at the same time, with XTide's id rule; H2 narrows
+  it to HJ's `<source>:<local>` grammar.
+- `Cancelled` moved from io to core (`mov::core::Cancelled`, `cancelled.hpp`) at the same time, and
+  `io::Error` keeps it through a using-declaration, so core prediction and io share one alternative.
 
 ---
 
@@ -1181,7 +1183,7 @@ class TidesProvider {
 |---|---|---|---|---|
 | H0 | Config and doc sync: provider-apis §5 marked superseded; SN registry tokens (`harmonics`, HAT/LAT/DTL); `vcpkg.json` (+`nlohmann-json`, +`zlib`); CLAUDE.md build notes. Plan decision 31 is already JSON (e99c8abe). | — | coordinator | S (0.5 d) |
 | H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table | H0 | Opus | L (4 d) |
-| H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3, `DataSource::harmonics`, `provider::Harmonics`, `Cancelled` to core) | H1 | Opus | M (3 d) |
+| H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3; the `provider::Harmonics` id grammar; `DataSource::harmonics` and `Cancelled` in core are done) | H1 | Opus | M (3 d) |
 | H3 | `predict`, `height_at`, `diagnostic::`, `extremes` (Lipschitz isolation, separation filter); fixture recorder; goldens §8.2 (reference stations, full-year hilo, New Year windows); self round trip | H2 | Opus (engine), Sonnet (fixtures) | L (4 d) |
 | H4 | `subordinate_extremes`, `subordinate_predict` (clamped warp), `Events` and `shift`; subordinate goldens; property test | H3 | Opus | M (3 d) |
 | H5 | io: callback parser, raw records, version gate and skip cascade, `validate_harmonics`, errors with pointers and values, gzip, writer, fixtures + manifest (3 categories), `format-compliance` schema step, fuzz targets | H2, H0 | Sonnet, Opus review | L (5 d) |

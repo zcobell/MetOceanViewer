@@ -30,7 +30,7 @@ enum class DataSource : std::uint8_t {
   noaa_coops,
   usgs,
   ndbc,
-  xtide,
+  harmonics,
   adcirc,
   dflowfm,
   user
@@ -48,7 +48,7 @@ inline constexpr std::array<DataSourceToken, 7> data_source_tokens{{
     {.source = DataSource::noaa_coops, .token = "noaa_coops"},
     {.source = DataSource::usgs, .token = "usgs"},
     {.source = DataSource::ndbc, .token = "ndbc"},
-    {.source = DataSource::xtide, .token = "xtide"},
+    {.source = DataSource::harmonics, .token = "harmonics"},
     {.source = DataSource::adcirc, .token = "adcirc"},
     {.source = DataSource::dflowfm, .token = "dflowfm"},
     {.source = DataSource::user, .token = "user"},
@@ -218,10 +218,12 @@ struct Ndbc {
   }
 };
 
-/// XTide: the station name. Non-empty well-formed UTF-8, at most 255 bytes,
-/// no control characters (bytes below 0x20 and 0x7F).
-struct Xtide {
-  static constexpr DataSource source = DataSource::xtide;
+/// A station of a tidal harmonics file (docs/harmonics-engine.md; plan
+/// decision 31 replaced XTide with it). Non-empty well-formed UTF-8, at most
+/// 255 bytes, no control characters (bytes below 0x20 and 0x7F); the
+/// harmonics reader narrows this to its `<source>:<local>` ids.
+struct Harmonics {
+  static constexpr DataSource source = DataSource::harmonics;
   static constexpr std::size_t max_id_bytes = 255;
   [[nodiscard]] static constexpr std::string canonical(std::string_view id) {
     return std::string{id};

@@ -14,6 +14,7 @@
 #include <string_view>
 #include <variant>
 
+#include "mov/core/overloaded.hpp"
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read_limits.hpp"
@@ -59,18 +60,13 @@ enum class FileType : std::uint8_t {
 /// kind is named.
 [[nodiscard]] constexpr FileType file_type_of(
     const StationFileOrigin& origin) noexcept {
-  switch (origin.index()) {
-    case 0:  // V5Origin
-      return FileType::station_netcdf;
-    case 1:  // ForeignCfOrigin
-      return FileType::foreign_cf_netcdf;
-    default:  // LegacyOrigin
-      return FileType::legacy_station_netcdf;
-  }
+  return std::visit(
+      core::Overloaded{
+          [](const V5Origin&) { return FileType::station_netcdf; },
+          [](const ForeignCfOrigin&) { return FileType::foreign_cf_netcdf; },
+          [](const LegacyOrigin&) { return FileType::legacy_station_netcdf; }},
+      origin);
 }
-
-static_assert(std::variant_size_v<StationFileOrigin> == 3,
-              "file_type_of names the kind of each origin");
 
 /// ADCIRC ASCII output, with the header the file has (so the caller knows the
 /// shape of the data and offers only the kinds that fit).
@@ -95,21 +91,18 @@ struct OtherFormatDetected {
 using FileDetection =
     std::variant<FileType, AdcircAsciiDetected, OtherFormatDetected>;
 
-/// The FileType of a detection.
+/// The FileType of a detection: total, like the one above.
 [[nodiscard]] constexpr FileType file_type_of(
     const FileDetection& detection) noexcept {
-  switch (detection.index()) {
-    case 0:
-      return *std::get_if<FileType>(&detection);
-    case 1:
-      return FileType::adcirc_ascii;
-    default:
-      return FileType::other_format_netcdf;
-  }
+  return std::visit(core::Overloaded{[](FileType type) { return type; },
+                                     [](const AdcircAsciiDetected&) {
+                                       return FileType::adcirc_ascii;
+                                     },
+                                     [](const OtherFormatDetected&) {
+                                       return FileType::other_format_netcdf;
+                                     }},
+                    detection);
 }
-
-static_assert(std::variant_size_v<FileDetection> == 3,
-              "file_type_of names the kind of each alternative");
 
 /// The kind of file at `path`, by looking inside it.
 ///

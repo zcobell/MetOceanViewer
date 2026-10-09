@@ -46,7 +46,7 @@ Contents: 1 decisions, 2 representation, 3 file format, 4 structure, 5 attribute
 
 v4 data fall in three workloads:
 
-1. one fetched station (NOAA/USGS/NDBC/XTide): trivially orthogonal;
+1. one fetched or predicted station (NOAA/USGS/NDBC/harmonics): trivially orthogonal;
 2. model station output (ADCIRC, D-Flow FM; hundreds to thousands of stations, 1e4-1e6 shared times): orthogonal is
    mandatory here. Incomplete storage would add a full `time` copy per station (8 B x stations x times), and xarray
    would materialize it as `datetime64[ns]` (another 8 B/sample) when loaded;
@@ -114,7 +114,7 @@ Naming follows CF §2.3 (ASCII letters, digits, underscore; leading letter).
 |---|---|---|---|---|
 | `station_id` | char | `(S, station_id_len)` | yes | `cf_role="timeseries_id"` (CF §9.5), `standard_name="platform_id"`, `long_name="station identifier"`, `_Encoding="utf-8"`. Unique, non-empty. Provider-native id (`"8761724"`, `"USGS-07374000"`). |
 | `station_name` | char | `(S, station_name_len)` | yes | `standard_name="platform_name"`, `long_name="station name"`, `_Encoding`. Non-empty (writer substitutes `"Station <id>"` if the source has none). Not required unique. |
-| `station_provider` | char | `(S, station_provider_len)` | no | `long_name="data provider"`, `_Encoding`. Tokens: `noaa_coops`, `usgs`, `ndbc`, `xtide`, `adcirc`, `dflowfm`, `user` (the core `Provider` enum is authoritative). |
+| `station_provider` | char | `(S, station_provider_len)` | no | `long_name="data provider"`, `_Encoding`. Tokens: `noaa_coops`, `usgs`, `ndbc`, `harmonics`, `adcirc`, `dflowfm`, `user` (the core `DataSource` enum is authoritative; `harmonics`, the tidal harmonics engine of plan decision 31, replaced `xtide` before 1.0 was released, so 1.0 has never had `xtide`). |
 | `lat` | double | `(S)` | yes | `standard_name="latitude"`, `long_name="station latitude"`, `units="degrees_north"`, `axis="Y"` (CF §4.1, §9.5). No missing values. |
 | `lon` | double | `(S)` | yes | `standard_name="longitude"`, `long_name="station longitude"`, `units="degrees_east"`, `axis="X"` (CF §4.2). Written in [-180, 180]. No missing values. |
 | `elevation` | double | `(S)` | no | `standard_name="altitude"`, `long_name="station elevation above the geoid"`, `units="m"`, `positive="up"`, `axis="Z"`, `_FillValue`. Reserved; v5.0 writes it only if the domain model carries an elevation (CF §4.3). When present it is appended to every `coordinates`. |
@@ -181,7 +181,7 @@ series it was computed from; it is never a water level, so it carries no datum.
 | Token | `standard_name` (all verified present in table v95) | `units` | Source (v4 / provider) |
 |---|---|---|---|
 | `water_level` | `water_surface_height_above_reference_datum` | `m` | CO-OPS water_level, hourly_height; USGS gage height 00065 (datum `STND`) and tidal elevation 62620; ADCIRC `zeta`, D-Flow `waterlevel` |
-| `water_level_prediction` | `water_surface_height_above_reference_datum` | `m` | CO-OPS and XTide predictions |
+| `water_level_prediction` | `water_surface_height_above_reference_datum` | `m` | CO-OPS and harmonics predictions |
 | `air_temperature` | `air_temperature` | `degC` | CO-OPS, NDBC ATMP |
 | `water_temperature` | `sea_water_temperature` | `degC` | CO-OPS, NDBC WTMP |
 | `dew_point` | `dew_point_temperature` | `degC` | NDBC DEWP |

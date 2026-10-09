@@ -349,7 +349,7 @@ There is no builder. netCDF readers build the vectors and call `make`.
 ### 2.8 Stations and the station table — `station.hpp`, `station_table.hpp` (shared vocabulary)
 
 ```cpp
-enum class DataSource : std::uint8_t { noaa_coops, usgs, ndbc, xtide, adcirc, dflowfm, user };   // SN tokens
+enum class DataSource : std::uint8_t { noaa_coops, usgs, ndbc, harmonics, adcirc, dflowfm, user };   // SN tokens
 constexpr std::string_view to_token(DataSource s) noexcept;
 constexpr std::optional<DataSource> parse_data_source(std::string_view token) noexcept;
 
@@ -357,7 +357,7 @@ namespace provider {   // valid_id is the parser predicate; StationId::make is t
 struct Coops { static constexpr DataSource source = DataSource::noaa_coops; static constexpr bool valid_id(std::string_view) noexcept; }; // ^[0-9]{7}$
 struct Usgs  { static constexpr DataSource source = DataSource::usgs;       static constexpr bool valid_id(std::string_view) noexcept; }; // ^[A-Za-z0-9]+-[A-Za-z0-9]+$
 struct Ndbc  { static constexpr DataSource source = DataSource::ndbc;       static constexpr bool valid_id(std::string_view) noexcept; }; // ^[A-Z0-9]{5}$ (after upper-casing)
-struct Xtide { static constexpr DataSource source = DataSource::xtide;      static constexpr bool valid_id(std::string_view) noexcept; }; // non-empty, no control chars, ≤ 255 B
+struct Harmonics { static constexpr DataSource source = DataSource::harmonics; static constexpr bool valid_id(std::string_view) noexcept; }; // non-empty, no control chars, ≤ 255 B (HJ narrows it)
 }
 template <class P> concept Provider = requires(std::string_view s) { { P::source } -> std::convertible_to<DataSource>; { P::valid_id(s) } -> std::same_as<bool>; };
 

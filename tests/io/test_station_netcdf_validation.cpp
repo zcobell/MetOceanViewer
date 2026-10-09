@@ -370,6 +370,27 @@ TEST_CASE("station_provider: unknown tokens are dropped with a warning",
         core::DataSource::noaa_coops);
 }
 
+TEST_CASE("station_provider: harmonics is a token, xtide is not",
+          "[io][station_nc][validation][stations]") {
+  // Plan decision 31 replaced XTide with the harmonics engine; the format was
+  // not released, so the token changed in place.
+  const Broken harmonics{station_nc::orthogonal()};
+  harmonics.edit().put_chars("station_provider", 1,
+                             std::string_view{"harmonics\0", 10});
+  const auto read = harmonics.read();
+  CHECK(read.value.table.station(core::StationIndex{1}).source ==
+        core::DataSource::harmonics);
+  CHECK(count_of(read.warnings, WarningCode::unknown_provider) == 0);
+
+  const Broken xtide{station_nc::orthogonal()};
+  xtide.edit().put_chars("station_provider", 1,
+                         std::string_view{"xtide\0\0\0\0\0", 10});
+  const auto old = xtide.read();
+  CHECK(warning_of(old.warnings, WarningCode::unknown_provider).subject ==
+        "xtide");
+  CHECK(not old.value.table.station(core::StationIndex{1}).source);
+}
+
 TEST_CASE("station_provider must be UTF-8 without NUL (N3)",
           "[io][station_nc][validation][stations]") {
   const Broken f{station_nc::orthogonal()};

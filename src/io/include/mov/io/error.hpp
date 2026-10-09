@@ -14,6 +14,8 @@
 #include <utility>
 #include <variant>
 
+#include "mov/core/cancelled.hpp"
+
 namespace mov::io {
 
 // Errors are narrow inside core: each function returns its own small type.
@@ -235,10 +237,9 @@ struct FormatError {
   friend bool operator==(const FormatError&, const FormatError&) = default;
 };
 
-/// The caller asked to stop (`ReadContext::stop`).
-struct Cancelled {
-  friend constexpr bool operator==(Cancelled, Cancelled) = default;
-};
+/// The caller asked to stop (`ReadContext::stop`): the core's Cancelled, so
+/// io and the core's long computations share one alternative.
+using core::Cancelled;
 
 /// The one error type of the io layer.
 using Error =
