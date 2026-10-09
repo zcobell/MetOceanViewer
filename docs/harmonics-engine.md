@@ -66,8 +66,10 @@ The comparison uses CO-OPS `predictions` (datum MSL, GMT, 6-minute) over three w
   all 120 rows defined: raw max 25.5 mm, mean-removed max 25.8 mm, RMS 11.0 mm, bias 0.28 mm (was
   44.2, 43.8, 17.0 and 0.36 mm). `RP1` as congen's `PSI1` beats congen's own `RP1` (38.6 mm), and
   3KM5 = K1 + M2 + K2 beats 3 K1 + M2 (52.2 mm). Flipping any single remaining constituent by 180°
-  changes the RMS by at most 0.3 mm, so no further phase convention is wrong; the rest is likely
-  NOAA's rounding of 120 constants to 1 mm and 0.1°.
+  changes the RMS by at most 0.3 mm, so any further phase convention is not determinable at 9455920
+  (≤ 0.3 mm RMS sensitivity); the rest is likely NOAA's rounding of 120 constants to 1 mm and 0.1°.
+  This was a one-off comparison (`tools/tide/vet_anchorage.py`); the RP1 and KJ2 readings stay
+  provisional until the H3 Anchorage golden exists.
 - **Speeds.** The 37 SP 98 speeds match CO-OPS's published `speed` to ≤ 7.4e-6 °/h, which is
   NOAA's rounding.
 
@@ -224,8 +226,9 @@ class ConstituentName {
   detail::FixedString<32> s_;
 };
 
-/// Terms of a compound: a map name → non-zero coefficient, sorted by name, no duplicates
-/// (a JSON object cannot express the duplicates, and make() refuses them from any other source).
+/// Terms of a compound: a map name → non-zero coefficient, sorted by name, no duplicates.
+/// A JSON object can repeat a member (RFC 8259 §4 only says SHOULD), so make() refuses duplicates
+/// and the reader hands it every member (§6.4). As built (§2.6): inline storage, constexpr make.
 class CompoundTerms {
  public:
   struct Term { ConstituentName base; std::int8_t coefficient; };
@@ -342,7 +345,8 @@ std::expected<YearArguments, YearOutOfRange> year_arguments(const ConstituentSet
 `nos_catalogue` by a test executable. A CI test fails if the committed file differs. The builder
 reads it, so core is the single source of truth. To rewrite it after a catalogue change, run
 `MOV_UPDATE_CONSTITUENTS_JSON=1 build/dev/tests/core/tide/mov_core_tide_tests
-"constituents-nos.json is current"` (§2.6).
+"constituents-nos.json is current"`. That run fails by design, so no run can pass by rewriting the
+file; rerun without the variable, review the diff and commit it.
 
 ### 2.4 Licences: `licence.hpp`
 
@@ -496,38 +500,67 @@ Vocabulary changes outside `tide/`:
 - `Cancelled` moved from io to core (`mov::core::Cancelled`, `cancelled.hpp`) at the same time, and
   `io::Error` keeps it through a using-declaration, so core prediction and io share one alternative.
 
-### 2.6 As built in H1 (2026-10-09)
+### 2.6 As built in H1 (2026-10-09, revised after the H1 review)
 
 Headers: `src/core/include/mov/core/tide/{phase,node_factor,constituent,astronomy,catalogue,
 year_arguments}.hpp`; sources `src/core/tide/`; tests `tests/core/tide/` (`mov_core_tide_tests`
-and its constexpr pair). The headers are the contract. Where they differ from §2.1–2.3:
+and its constexpr pair, `fuzz_constituent_name`) and two compile-fail pairs in
+`tests/cmake/compile_fail/`; the oracles that produced the pinned numbers in `tools/tide/`
+(not built in CI; its README says how to rerun them). The headers are the contract. Where they
+differ from §2.1–2.3:
 
 | Item | Design | As built, and why |
 |---|---|---|
-| `Phase::wrap` in constant expressions | `constexpr std::fmod` behind the probe | `std::fmod` is not constexpr on Clang 20 + libstdc++ (CD §1.1). Constant evaluation uses `detail::exact_fmod` (binary long division, exact by Sterbenz), run time `std::fmod`; a test shows the two agree bit for bit on 20,000 values from 1e-3 to 1e301. |
-| `Argument` storage | V `int16`, c `int32`, u `int16`, exponents `uint8` | V, c, u `int32`, exponents `uint16`: flattening any `Definition` (≤ 8 terms × \|127\| × \|127\|) is exact for every value the types admit, not only the schema's. Observers `v()`, `c_deg()`, `u()`, `exponent(f)`, `species()`; `UTerm` names the u indices. |
-| `Argument::v0_deg` | V at the year start | `v_deg(Elements)`: V at whatever instant the elements are for (the year start in the yearly scheme, t in the diagnostic one). `u_deg` is constexpr. |
-| `elements` | `elements(double centuries)`, not reduced | `elements(Time)`, each element reduced into [0°, 360°) so that V keeps its precision; T comes from the exact millisecond of the day (180° at 00:00 UTC), not from the centuries. `rates_1900` is an `inline constexpr Elements`. |
+| `Phase::wrap` in constant expressions | `constexpr std::fmod` behind the probe | `std::fmod` is not constexpr on Clang 20 + libstdc++ (CD §1.1). `if consteval` uses `detail::exact_fmod` (binary long division, exact by Sterbenz), run time `std::fmod`; a test shows they agree bit for bit on 20,000 values up to 1e301. That test compares with glibc on Linux, with Wine's `ucrtbase` (not Microsoft's) in the xwin preset, and with Apple's libm on macOS CI; real Windows is unchecked. |
+| Error enums | `ConstituentNameError`, `CompoundErrc` | `ConstituentNameError`, `CompoundTermsError`: a value type's `make()` reports `<Type>Error`, as core's `TimeRangeError` and `StationKeyError` do. |
+| `ConstituentName` | as designed | Trivially copyable, inline. `constituent_name("M2")` is a `consteval` factory function for literals (a bad literal does not compile). The private constructor takes the checked text: MSVC 19.44 cannot call a private defaulted default constructor from the class's own static member (C2248). |
+| `CompoundTerms` | `std::vector`, run-time `make` | Inline storage (8 terms), `constexpr make(std::span<const Term>)`, trivially copyable. Not default-constructible: no empty compound exists, so it is copyable and equality-comparable, CD §7's convention for such types. |
+| One flattening | per user | `flatten(const Definition&, definition_of) -> expected<Argument, TermError>` serves the catalogue and H2's dictionary. `definition_of` is any `DefinitionLookup` (name → `optional<reference_wrapper<const Definition>>`). `TermError = variant<UnknownTerm, TermNotDarwin>` names the term; H2's `DictionaryError` adds the entry index, which `flatten` does not know. |
+| `Argument` storage | V `int16`, c `int32`, u `int16`, exponents `uint8` | V, c, u `int32`, exponents `uint32`; `+` and `scale` check every result, so an overflow does not compile in constant evaluation and asserts at run time (a compile-fail pair shows it). The worst case under the schema's bounds (8 terms × 16 × 64, c 8 × 16 × 360, exponents 128) and under the types' own bounds are `static_assert`ed. Observers `v()`, `c_deg()`, `u()`, `exponent(f)`, `species()`; `UTerm` names the u indices. |
+| `Argument::v0_deg` | V at the year start | `v_deg(Elements)`: V at whatever instant the elements are for. `u_deg` is constexpr. |
+| Elements | `Elements` for positions and rates; `elements(double centuries)` | `Elements` holds six `Phase`s (positions, reduced, so V keeps its precision); `ElementRates` holds °/h, a separate type. `elements(Time)` takes T from the exact millisecond of the day. `rates_at(Time)`, with `rates_1900 = rates_at(nos_speed_epoch)`. `julian_centuries` asserts \|t\| ≤ 2⁵³ ms. |
 | `nodal_terms` | `(double N_deg, double p_deg)` | `(const Elements&)`: no two swappable doubles. ξ, Qᵤ are in (−180°, 180°], P in [0°, 360°). |
-| `CatalogueEntry` | aggregate of a variant of `Darwin` or `array<pair<…>, 4>` plus a count | a class built from `(name, Darwin)` or `(name, CatalogueTerm…)` (1–4 terms, checked by a constraint), so no entry can carry a bad count. Notes (`catalogue_notes`, the JSON `description`) and aliases (`catalogue_aliases`) are separate tables. Lookups: `catalogue_index`, `catalogue_argument`, `canonical_name`, `catalogue_note`. |
-| Catalogue invariants | `static_assert` in the header | `detail::` predicates over any catalogue span, `static_assert`ed once in `src/core/tide/constituent.cpp` (not in every includer) and shown in the tests to reject a catalogue that breaks each one. NOAA's published speeds are test data, not catalogue data: `STATIC_REQUIRE` within 1e-5 °/h for the NOS 37 and 2e-5 °/h for the other 83 (NOAA rounds those to fewer decimals; 3MNK9 is off by 1.08e-5). |
-| `YearArguments`, `ConstituentYear` | H1/H2 | `year_arguments.hpp` holds the per-year astronomy, `YearAstronomy::make(year)` (`YearOutOfRange` outside [1700, 2200]), `year_start`, `mid_year`, and `yearly_equilibrium(argument, year)`. The pair (V₀+u, f) is `Equilibrium`, since `diagnostic::instantaneous_equilibrium(argument, t)` returns it too. The per-set `YearArguments` needs `ConstituentSet` and stays in H2. |
-| congen golden table | `congen -b 1900 -e 2100`, NOS 37, 1e-4° and 1e-6 | congen's text output has 2 decimals, so a small driver calls libcongen 1.7 at full precision: all 120 entries × 19 years from 1700 to 2200 (`tests/fixtures/core/tide/congen_golden.csv`, provenance in its header). Agreement: speeds 5.0e-11 °/h, (V₀+u) 8.1e-8°, f 8.7e-13 relative; asserted to 1e-9 °/h, 1e-6° (libcongen keeps T unreduced, about 1e-7° of its own rounding by 2200) and 1e-9. |
+| `NodeFactor` tokens | table | `to_token` is a switch with no default (each enumerator beside its token); `parse_node_factor` searches `all_node_factors`, whose order is `static_assert`ed. |
+| Catalogue | aggregate of a variant of `Darwin` or `array<pair<…>, 4>` plus a count | `CatalogueEntry{ConstituentName, Definition, optional<note>}` built by `consteval` factory functions (`detail::darwin_entry`, `detail::compound_entry`) that call `value()` on every `make()`: a bad name or compound does not compile. Aliases are a side table of `ConstituentName` pairs. Lookups: `catalogue_index`, `catalogue_definition` (the catalogue as a `DefinitionLookup`), `catalogue_argument`, `canonical_name`, `catalogue_note`. |
+| Catalogue invariants | `static_assert` in the header | `detail::` predicates over any catalogue span, `static_assert`ed once in `src/core/tide/constituent.cpp` and shown in the tests to reject a catalogue that breaks each one. Species and term resolution are checked by lookups alone, without building Arguments. NOAA's published speeds are run-time test data (1e-5 °/h for the NOS 37, 2e-5 for the other 83; 3MNK9 is off by 1.08e-5). |
+| Doodson number | integer | six digit characters, so SA keeps its leading zero (`"056555"`). |
+| Year scheme | `YearArguments`, `ConstituentYear` | `YearAstronomy::make(year)` and `equilibrium(argument, YearAstronomy)`; the diagnostic scheme mirrors it: `diagnostic::InstantAstronomy::make(Time)` (same 1700–2200 range, by the instant's UTC year) and `diagnostic::equilibrium(argument, InstantAstronomy)`. The pair is `Equilibrium`. The per-set `YearArguments` needs `ConstituentSet` and stays in H2. |
+| congen golden table | `congen -b 1900 -e 2100`, NOS 37, 1e-4° and 1e-6 | congen's text output has 2 decimals, so `tools/tide/congen_golden.cpp` calls libcongen 1.7 at full precision: all 120 entries × 19 years from 1700 to 2200 (`tests/fixtures/core/tide/congen_golden.csv`). Agreement: speeds 5.0e-11 °/h, (V₀+u) 8.1e-8°, f 8.7e-13 relative; asserted to 1e-9 °/h, 1e-6° (libcongen keeps T unreduced, about 1e-7° of its own rounding by 2200) and 1e-11. |
+
+**Constexpr budget.** Microsoft documents a default of 100,000 steps for `/constexpr:steps`.
+Measured with Clang's step counter (a proxy; cl counts differently), the catalogue's initializer
+takes 85,000–100,000 steps in every TU that includes `catalogue.hpp`, and each whole-catalogue
+invariant 100,000–200,000. The code is written for that budget (plain loops, no `std::vector` or
+`std::ranges` in the builders and lookups, four arguments in the cubic monoid-law test), and the
+TUs that include the catalogue get `/constexpr:steps2000000` on cl only (`src/core/CMakeLists.txt`,
+`tests/core/tide/CMakeLists.txt`). A future includer of `catalogue.hpp` needs the same.
 
 The catalogue is NOAA's 37 plus the 83 further constituents NOAA publishes for 9455920, in NOAA's
 spelling and order, with SP 98 Table 2 definitions as `congen_input.txt` codes them. Vetting
 against CO-OPS's Anchorage series (§1.1) fixed three readings: `M2KS2`, `2SNMK2`, `2KMSN2` are
 congen's parenthesised compounds; `KJ2` is the IHO phase (congen `KJ2-IHO`); `RP1` is congen's
-`PSI1`. Aliases record spellings with identical definitions only (congen's, XTide's and TICON-4's:
-`LDA2`, `LAMBDA2`, `RHO1`, `SIG1`, `SGM`, `THE1`, `OQ2-HORN`, the parenthesised compounds,
-`KJ2-IHO`, `PSI1`).
+`PSI1`. The RP1 and KJ2 notes say *provisional* until the H3 Anchorage golden exists. Aliases
+record spellings with identical definitions only (congen's, XTide's and TICON-4's: `LDA2`,
+`LAMBDA2`, `RHO1`, `SIG1`, `SGM`, `THE1`, `OQ2-HORN`, the parenthesised compounds, `KJ2-IHO`,
+`PSI1`).
 
 Other H1 test results: HJ §13.2's elements and 12 constituents' (V₀+u, f) for 2026 agree with the
 prototype to 1e-9° and 1e-11; the compound laws hold exactly every 25 years from 1700 to 2200
-(f(MS4) = f(MSF) = f(M2), f(M4) = f(M2)², u(MSF) = −u(M2)); at mid-year the instantaneous and
-yearly schemes agree exactly in f and u, and in V to 1e-8° of the analytic drift (M1: 20.33°).
+(f(MS4) = f(MSF) = f(M2), f(M4) = f(M2)², u(MSF) = −u(M2)); `scale` distributes over `+` and
+composes, `scale(j, scale(k, a)) == scale(jk, a)`; at mid-year the instantaneous and yearly
+schemes agree exactly in f and u, and in V to 1e-8° of the analytic drift (M1: 20.33°); every byte
+at the first two positions of a name, and the lengths 32 and 33, are tested exhaustively.
 `fuzz_constituent_name` checks `ConstituentName::make` against a plain reimplementation of the
 grammar and `parse_node_factor` against `to_token`.
+
+**For H2 and H3 (not built in H1).**
+- H2: `YearArguments` should compute the 14 node-factor values once per `YearAstronomy` and take
+  each constituent's f as a product of those, instead of `Argument::f` re-evaluating the
+  formulas per constituent.
+- H3: measure `Phase::wrap` in the prediction loop and add a fast path for arguments already in
+  [0°, 360°) if it shows.
+- H3: the Anchorage golden (§8.2) replaces the one-off vetting; then the RP1 and KJ2 notes lose
+  *provisional*.
 
 ---
 
@@ -887,6 +920,15 @@ through nlohmann's iterator input adapter; this is not planned.
   `SubordinateOffsets::make`.
 - **Text.** Strings with control characters are `schema` (HJ §3). The app renders every string from
   the file as plain text (`Text.PlainText` in QML).
+- **Compound members.** A JSON object can repeat a member, and nlohmann's DOM keeps only one of
+  them. The callback reports a repeated member as `duplicate_member` (HJ §3) before the DOM can
+  collapse it, and the decoder passes every member of `compound` to `CompoundTerms::make`, which
+  refuses a repeated base (`CompoundTermsError::duplicate_base`) as a second line of defence. An H5
+  test feeds `{"M2": 1, "M2": 2}` and expects the error, not `{"M2": 2}`.
+- **`W-CONSTITUENT-REDEFINED`** (decided in H1) compares meaning, not text: an entry is
+  redefined when its flattened `Argument` (V, c, u coefficients and node-factor exponents) differs
+  from the built-in entry's. Writing `M4` as `{"M2": 2}` or as the equivalent Darwin entry is not a
+  redefinition; giving it another node factor is.
 
 ### 6.5 gzip and build changes
 
@@ -1244,7 +1286,7 @@ class TidesProvider {   // a providers::Fetcher (docs/providers-design.md §6.1,
 | WP | Scope | Depends on | Agent | Size |
 |---|---|---|---|---|
 | H0 | Config and doc sync: provider-apis §5 marked superseded; SN registry tokens (`harmonics`, HAT/LAT/DTL); `vcpkg.json` (+`nlohmann-json`, +`zlib`); CLAUDE.md build notes. Plan decision 31 is already JSON (e99c8abe). **Done** with the providers' H0 (`docs/providers-design.md` §12), which also linked both into `mov_io` and added their include gate. | — | coordinator | S (0.5 d) |
-| H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table. **Done** (2026-10-09; §2.6), with the per-year astronomy (`YearAstronomy`, `yearly_equilibrium`, `diagnostic::instantaneous_equilibrium`); the drift tests of the datum and analysis enums come with H2's vocabulary | H0 | Opus | L (4 d) |
+| H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table. **Done** (2026-10-09, revised after review; §2.6), with the per-year astronomy (`YearAstronomy`, `equilibrium`, `diagnostic::InstantAstronomy`), one `flatten` for the catalogue and H2, and the oracles in `tools/tide/`; the drift tests of the datum and analysis enums come with H2's vocabulary | H0 | Opus | L (4 d) |
 | H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3; the `provider::Harmonics` id grammar; `DataSource::harmonics` and `Cancelled` in core are done) | H1 | Opus | M (3 d) |
 | H3 | `predict`, `height_at`, `diagnostic::`, `extremes` (Lipschitz isolation, separation filter); fixture recorder; goldens §8.2 (reference stations, full-year hilo, New Year windows); self round trip | H2 | Opus (engine), Sonnet (fixtures) | L (4 d) |
 | H4 | `subordinate_extremes`, `subordinate_predict` (clamped warp), `Events` and `shift`; subordinate goldens; property test | H3 | Opus | M (3 d) |

@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -33,8 +34,8 @@ using mov::core::tide::all_node_factors;
 using mov::core::tide::Argument;
 using mov::core::tide::catalogue_argument;
 using mov::core::tide::catalogue_note;
-using mov::core::tide::CatalogueCompound;
 using mov::core::tide::CatalogueEntry;
+using mov::core::tide::CompoundTerms;
 using mov::core::tide::ConstituentName;
 using mov::core::tide::Darwin;
 using mov::core::tide::nos_catalogue;
@@ -53,6 +54,16 @@ std::string read_text(const std::filesystem::path& p) {
   return {std::istreambuf_iterator<char>{in}, std::istreambuf_iterator<char>{}};
 }
 
+/// The flattened Argument of a catalogue name; an unknown name fails the
+/// test.
+Argument argument_of(std::string_view name) {
+  auto a = catalogue_argument(name);
+  if (not a) {
+    FAIL("not a catalogue name: " << name);
+  }
+  return *std::move(a);
+}
+
 std::string join(const auto& values) {
   std::string out;
   for (const auto& v : values) {
@@ -62,17 +73,18 @@ std::string join(const auto& values) {
 }
 
 std::string definition_json(const CatalogueEntry& e) {
-  if (const auto* d = std::get_if<Darwin>(&e.definition())) {
-    std::vector<int> v(d->v.begin(), d->v.end());
-    v.push_back(d->c_deg);
-    const std::vector<int> u(d->u.begin(), d->u.end());
+  if (std::holds_alternative<Darwin>(e.definition)) {
+    const auto& d = std::get<Darwin>(e.definition);
+    std::vector<int> v(d.v.begin(), d.v.end());
+    v.push_back(d.c_deg);
+    const std::vector<int> u(d.u.begin(), d.u.end());
     return std::format(R"("darwin": {{"V": [{}], "u": [{}], "f": "{}"}})",
-                       join(v), join(u), tide::to_token(d->f));
+                       join(v), join(u), tide::to_token(d.f));
   }
   std::string terms;
-  for (const auto& t : std::get<CatalogueCompound>(e.definition()).terms()) {
-    terms += std::format(R"({}"{}": {})", terms.empty() ? "" : ", ", t.base(),
-                         static_cast<int>(t.coefficient()));
+  for (const auto& t : std::get<CompoundTerms>(e.definition).terms()) {
+    terms += std::format(R"({}"{}": {})", terms.empty() ? "" : ", ",
+                         t.base.view(), static_cast<int>(t.coefficient));
   }
   return std::format(R"("compound": {{{}}})", terms);
 }
@@ -88,10 +100,10 @@ std::string catalogue_json() {
   };
   std::vector<Row> rows;
   for (const CatalogueEntry& e : nos_catalogue) {
-    const Argument a = catalogue_argument(e.name()).value_or(Argument{});
+    const Argument a = argument_of(e.name.view());
     rows.push_back(Row{.species = a.species(),
                        .speed = a.speed_deg_per_hour(),
-                       .name = e.name(),
+                       .name = e.name.view(),
                        .entry = &e});
   }
   std::ranges::sort(rows, {}, [](const Row& r) {
@@ -130,7 +142,10 @@ TEST_CASE("constituents-nos.json is current", "[core][tide][drift]") {
   const std::string generated = catalogue_json();
   if (mov::test::env("MOV_UPDATE_CONSTITUENTS_JSON")) {
     std::ofstream{path, std::ios::binary} << generated;
-    WARN("rewrote " << path.string());
+    // Fail even so: a run that rewrites the file is never green, so no run
+    // can pass by regenerating it.
+    FAIL("rewrote " << path.string()
+                    << "; rerun without MOV_UPDATE_CONSTITUENTS_JSON");
   }
   INFO("rerun with MOV_UPDATE_CONSTITUENTS_JSON=1 to rewrite "
        << path.string());
@@ -172,7 +187,7 @@ TEST_CASE("the generated dictionary is a valid format dictionary",
     INFO(name);
     CHECK(ConstituentName::make(name).has_value());
     const double speed = e.at("speed").get<double>();
-    const Argument a = catalogue_argument(name).value_or(Argument{});
+    const Argument a = argument_of(name);
     CHECK(speed == a.speed_deg_per_hour());  // shortest round trip is exact
     const std::tuple key{a.species(), speed, name};
     CHECK((not previous or *previous < key));

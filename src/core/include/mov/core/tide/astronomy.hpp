@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <chrono>
 #include <cstdint>
 
@@ -11,9 +12,10 @@
 #include "mov/core/time.hpp"
 
 // SP 98 astronomy (docs/harmonics-json.md Appendix A): the mean longitudes of
-// Table 1 and the nodal terms derived from them. Everything that is
-// polynomial arithmetic is constexpr; the nodal terms and node factors need
-// trigonometry, which is constexpr only from C++26, so they are run time.
+// Table 1, their rates, and the nodal terms derived from them. Everything
+// that is polynomial arithmetic is constexpr; the nodal terms and node
+// factors need trigonometry, which is constexpr only from C++26, so they are
+// run time.
 
 namespace mov::core::tide {
 
@@ -22,28 +24,45 @@ inline constexpr Time sp98_epoch =
     std::chrono::sys_days{std::chrono::year{1899} / 12 / 31} +
     std::chrono::hours{12};
 
-/// Julian centuries (36,525 days) from sp98_epoch to `t`: one division of the
-/// exact millisecond count, so the only rounding is that division's.
-/// Precondition: |t| <= max_abs_time_ms (the count difference stays exact).
+/// Julian centuries (36,525 days) from sp98_epoch to `t`. The millisecond
+/// difference is exact as an integer, but it can exceed 2^53 by up to the
+/// epoch's own offset (2.2e12 ms), so its conversion to double may round
+/// (2^-53 relative), and the division rounds once more.
+/// Precondition (asserted): |t| <= max_abs_time_ms.
 [[nodiscard]] constexpr double julian_centuries(Time t) noexcept {
+  assert(t.time_since_epoch().count() <= max_abs_time_ms and
+         t.time_since_epoch().count() >= -max_abs_time_ms);
   constexpr double ms_per_century = 36525.0 * 86'400'000.0;
   return static_cast<double>((t - sp98_epoch).count()) / ms_per_century;
 }
 
 /// The astronomical arguments of V (SP 98 Table 1) and the longitude of the
-/// moon's node, in degrees: T, the hour angle of the mean sun; s, h, p, p1,
-/// the mean longitudes of the moon, the sun, the lunar perigee and the solar
-/// perigee; N, the lunar node. As returned by elements(), each is reduced
-/// into [0, 360), so that V, a small integer combination of them, keeps its
-/// precision; as rates (rates_1900) they are degrees per hour.
+/// moon's node at one instant, as angles: T, the hour angle of the mean sun;
+/// s, h, p, p1, the mean longitudes of the moon, the sun, the lunar perigee
+/// and the solar perigee; N, the lunar node. Each is a Phase, so reduced into
+/// [0, 360), and V, a small integer combination of them, keeps its
+/// precision.
 struct Elements {
+  Phase T;
+  Phase s;
+  Phase h;
+  Phase p;
+  Phase p1;
+  Phase N;
+  friend constexpr bool operator==(const Elements&, const Elements&) = default;
+};
+
+/// The rates of the same elements, in degrees per hour. Not angles: a
+/// separate type, so a rate cannot be passed where a position is meant.
+struct ElementRates {
   double T;
   double s;
   double h;
   double p;
   double p1;
   double N;
-  friend constexpr bool operator==(const Elements&, const Elements&) = default;
+  friend constexpr bool operator==(const ElementRates&,
+                                   const ElementRates&) = default;
 };
 
 }  // namespace mov::core::tide
@@ -99,49 +118,52 @@ inline constexpr Sp98Polynomial lunar_node_N{
 
 /// T = 360 degrees per day since sp98_epoch (noon), so 180 at 00:00 UTC.
 /// Taken from the exact millisecond of the day, not from the centuries.
-[[nodiscard]] constexpr double mean_sun_hour_angle(Time t) noexcept {
+[[nodiscard]] constexpr tide::Phase mean_sun_hour_angle(Time t) noexcept {
   constexpr std::int64_t ms_per_day = 86'400'000;
   const std::int64_t ms = t.time_since_epoch().count();
   const std::int64_t of_day = ((ms % ms_per_day) + ms_per_day) % ms_per_day;
   return tide::Phase::wrap(180.0 + (360.0 * static_cast<double>(of_day) /
-                                    static_cast<double>(ms_per_day)))
-      .degrees();
+                                    static_cast<double>(ms_per_day)));
 }
 
 }  // namespace mov::core::detail
 
 namespace mov::core::tide {
 
-/// The elements at `t`, each reduced into [0, 360). Precondition as
-/// julian_centuries.
+/// The elements at `t`. Precondition as julian_centuries.
 [[nodiscard]] constexpr Elements elements(Time t) noexcept {
   const double c = julian_centuries(t);
-  const auto reduced = [c](const detail::Sp98Polynomial& poly) {
-    return Phase::wrap(poly.value(c)).degrees();
+  const auto at = [c](const detail::Sp98Polynomial& poly) {
+    return Phase::wrap(poly.value(c));
   };
   return Elements{.T = detail::mean_sun_hour_angle(t),
-                  .s = reduced(detail::moon_s),
-                  .h = reduced(detail::sun_h),
-                  .p = reduced(detail::lunar_perigee_p),
-                  .p1 = reduced(detail::solar_perigee_p1),
-                  .N = reduced(detail::lunar_node_N)};
+                  .s = at(detail::moon_s),
+                  .h = at(detail::sun_h),
+                  .p = at(detail::lunar_perigee_p),
+                  .p1 = at(detail::solar_perigee_p1),
+                  .N = at(detail::lunar_node_N)};
 }
 
-/// The rates of the elements at 1900-01-01T00:00Z in degrees per hour: the
-/// NOS speed epoch (docs/harmonics-json.md section 5.2). T is exactly 15.
-inline constexpr Elements rates_1900 = [] {
-  const double c = julian_centuries(std::chrono::sys_days{
-      std::chrono::year{1900} / std::chrono::January / 1});
+/// The rates of the elements at `t`, degrees per hour. T is exactly 15.
+/// Precondition as julian_centuries.
+[[nodiscard]] constexpr ElementRates rates_at(Time t) noexcept {
+  const double c = julian_centuries(t);
   const auto per_hour = [c](const detail::Sp98Polynomial& poly) {
     return poly.rate(c) / detail::hours_per_century;
   };
-  return Elements{.T = 36525.0 * 360.0 / detail::hours_per_century,
-                  .s = per_hour(detail::moon_s),
-                  .h = per_hour(detail::sun_h),
-                  .p = per_hour(detail::lunar_perigee_p),
-                  .p1 = per_hour(detail::solar_perigee_p1),
-                  .N = per_hour(detail::lunar_node_N)};
-}();
+  return ElementRates{.T = 36525.0 * 360.0 / detail::hours_per_century,
+                      .s = per_hour(detail::moon_s),
+                      .h = per_hour(detail::sun_h),
+                      .p = per_hour(detail::lunar_perigee_p),
+                      .p1 = per_hour(detail::solar_perigee_p1),
+                      .N = per_hour(detail::lunar_node_N)};
+}
+
+/// The NOS speed epoch, 1900-01-01T00:00Z (docs/harmonics-json.md 5.2), and
+/// the rates there, from which every constituent speed is derived.
+inline constexpr Time nos_speed_epoch =
+    std::chrono::sys_days{std::chrono::year{1900} / std::chrono::January / 1};
+inline constexpr ElementRates rates_1900 = rates_at(nos_speed_epoch);
 
 /// The terms of u and of the node factors (docs/harmonics-json.md A.2), in
 /// degrees except the two amplitude terms Qa and Ra: I, the inclination of

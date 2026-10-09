@@ -7,6 +7,7 @@
 // implementation), an accepted name views the input unchanged, and a
 // node-factor token is accepted exactly when to_token gives it back.
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -32,13 +33,10 @@ bool matches_grammar(std::string_view s) {
   if (s.empty() or s.size() > 32 or not alnum(s[0])) {
     return false;
   }
-  for (const char c : s.substr(1)) {
-    if (not alnum(c) and
-        std::string_view{"()_.+-"}.find(c) == std::string_view::npos) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(s.substr(1), [](char c) {
+    return alnum(c) or
+           std::string_view{"()_.+-"}.find(c) != std::string_view::npos;
+  });
 }
 
 }  // namespace

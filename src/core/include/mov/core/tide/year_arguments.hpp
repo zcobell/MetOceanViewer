@@ -40,6 +40,12 @@ struct YearOutOfRange {
   return start + ((year_start(y + std::chrono::years{1}) - start) / 2);
 }
 
+/// The UTC calendar year of `t`.
+[[nodiscard]] constexpr std::chrono::year year_of(Time t) noexcept {
+  return std::chrono::year_month_day{std::chrono::floor<std::chrono::days>(t)}
+      .year();
+}
+
 /// The astronomy of one year in the yearly scheme: the elements at its start
 /// (for V0) and the nodal terms at its middle (for u and f).
 class YearAstronomy {
@@ -77,17 +83,43 @@ struct Equilibrium {
 /// (V0 + u) and f of `a` for the year of `y`: V0 at the year's start, u and f
 /// at its middle. Prediction within the year uses
 /// argument + speed * (hours since the start).
-[[nodiscard]] Equilibrium yearly_equilibrium(const Argument& a,
-                                             const YearAstronomy& y) noexcept;
+[[nodiscard]] Equilibrium equilibrium(const Argument& a,
+                                      const YearAstronomy& y) noexcept;
 
 namespace diagnostic {
 
-/// (V + u) and f of `a` with V, u and f all evaluated at `t`. For tests and
-/// investigations only; never conforming output (docs/harmonics-json.md
-/// 5.2). At mid-year it agrees with the yearly scheme in u and f but not in
-/// V (docs/harmonics-engine.md section 1.3).
-[[nodiscard]] Equilibrium instantaneous_equilibrium(const Argument& a,
-                                                    Time t) noexcept;
+/// The astronomy of one instant, for the instantaneous scheme: V, u and f
+/// all at `time()`. For tests and investigations only; never conforming
+/// output (docs/harmonics-json.md 5.2). Mirrors YearAstronomy, with the same
+/// year range.
+class InstantAstronomy {
+ public:
+  /// YearOutOfRange when the UTC year of `t` is outside
+  /// [first_year, last_year].
+  [[nodiscard]] static std::expected<InstantAstronomy, YearOutOfRange> make(
+      Time t) noexcept;
+
+  [[nodiscard]] Time time() const noexcept { return time_; }
+  [[nodiscard]] Elements at_instant() const noexcept { return at_; }
+  [[nodiscard]] NodalTerms nodal_at_instant() const noexcept { return nodal_; }
+
+  friend bool operator==(const InstantAstronomy&,
+                         const InstantAstronomy&) = default;
+
+ private:
+  InstantAstronomy(Time t, Elements e, NodalTerms n) noexcept
+      : time_{t}, at_{e}, nodal_{n} {}
+
+  Time time_;
+  Elements at_;
+  NodalTerms nodal_;
+};
+
+/// (V + u) and f of `a` with V, u and f all at the instant. At mid-year it
+/// agrees with the yearly scheme in u and f but not in V
+/// (docs/harmonics-engine.md section 1.3).
+[[nodiscard]] Equilibrium equilibrium(const Argument& a,
+                                      const InstantAstronomy& now) noexcept;
 
 }  // namespace diagnostic
 

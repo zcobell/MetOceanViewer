@@ -13,17 +13,24 @@
 
 namespace mov::core::tide {
 
+namespace {
+
+bool in_range(std::chrono::year y) noexcept {
+  return y >= first_year and y <= last_year;
+}
+
+}  // namespace
+
 std::expected<YearAstronomy, YearOutOfRange> YearAstronomy::make(
     std::chrono::year y) noexcept {
-  if (y < first_year or y > last_year) {
+  if (not in_range(y)) {
     return std::unexpected(YearOutOfRange{.year = y});
   }
   return YearAstronomy{y, elements(year_start(y)),
                        nodal_terms(elements(mid_year(y)))};
 }
 
-Equilibrium yearly_equilibrium(const Argument& a,
-                               const YearAstronomy& y) noexcept {
+Equilibrium equilibrium(const Argument& a, const YearAstronomy& y) noexcept {
   const NodalTerms mid = y.at_mid_year();
   return Equilibrium{
       .argument = Phase::wrap(a.v_deg(y.at_start()) + a.u_deg(mid)),
@@ -32,11 +39,22 @@ Equilibrium yearly_equilibrium(const Argument& a,
 
 namespace diagnostic {
 
-Equilibrium instantaneous_equilibrium(const Argument& a, Time t) noexcept {
-  const Elements now = elements(t);
-  const NodalTerms terms = nodal_terms(now);
-  return Equilibrium{.argument = Phase::wrap(a.v_deg(now) + a.u_deg(terms)),
-                     .node_factor = a.f(terms)};
+std::expected<InstantAstronomy, YearOutOfRange> InstantAstronomy::make(
+    Time t) noexcept {
+  const std::chrono::year y = year_of(t);
+  if (not in_range(y)) {
+    return std::unexpected(YearOutOfRange{.year = y});
+  }
+  const Elements e = elements(t);
+  return InstantAstronomy{t, e, nodal_terms(e)};
+}
+
+Equilibrium equilibrium(const Argument& a,
+                        const InstantAstronomy& now) noexcept {
+  const NodalTerms n = now.nodal_at_instant();
+  return Equilibrium{
+      .argument = Phase::wrap(a.v_deg(now.at_instant()) + a.u_deg(n)),
+      .node_factor = a.f(n)};
 }
 
 }  // namespace diagnostic

@@ -38,3 +38,9 @@ ignore = [
   "D212",    # multi-line summary on first line (conflicts with D213)
   "ISC001",  # conflicts with ruff format
 ]
+
+[lint.per-file-ignores]
+# The tide design prototype, kept as the reference that produced pinned test
+# values (tools/tide/README.md): annotations and restructuring would only
+# risk changing what it computes.
+"tools/tide/proto_predict.py" = ["ANN", "B905", "C408", "E741", "PLR0911", "PLR0912", "RUF005", "SIM115"]

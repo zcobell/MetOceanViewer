@@ -463,7 +463,7 @@ text is parsed (size, gzip, syntax, encoding) carry a byte offset instead.
 |---|---|
 | `W-BOM` | A leading BOM was ignored. |
 | `W-MINOR-NEWER` | The file's minor version is newer than the reader's. Unknown members are ignored and unusable items are skipped transitively (§11); the warning carries the count per reason. |
-| `W-CONSTITUENT-REDEFINED` | The definition differs from the reader's built-in catalogue entry of the same name. The file wins. |
+| `W-CONSTITUENT-REDEFINED` | The definition means something different from the reader's built-in catalogue entry of the same name: its flattened argument (V, c and u coefficients) or its node factor differs. An equivalent spelling (a compound versus the same Darwin entry) is not a redefinition. The file wins. |
 | `W-DATUM-UNSUPPORTED` | A valid datum token that the reader's datum model cannot represent. |
 | `W-UNUSED-CONSTITUENT`, `W-UNUSED-SOURCE` | A dictionary entry or source that no station references. |
 

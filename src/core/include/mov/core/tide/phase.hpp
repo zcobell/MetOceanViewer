@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <numbers>
 #include <optional>
-#include <type_traits>
 
 #include "mov/core/detail/numeric.hpp"
 
@@ -65,8 +64,12 @@ class Phase {
   [[nodiscard]] static constexpr Phase wrap(double deg) noexcept {
     assert(detail::is_finite(deg));
     // Both paths are exact, so they agree bit for bit.
-    double r = std::is_constant_evaluated() ? detail::exact_fmod(deg, full_turn)
-                                            : std::fmod(deg, full_turn);
+    double r = 0.0;
+    if consteval {
+      r = detail::exact_fmod(deg, full_turn);
+    } else {
+      r = std::fmod(deg, full_turn);
+    }
     if (r < 0.0) {
       r += full_turn;
     }
