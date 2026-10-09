@@ -36,7 +36,7 @@
 #include "mov/io/warning.hpp"
 #include "station_netcdf_foreign_facts.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 

@@ -48,7 +48,7 @@
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_dialects.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 

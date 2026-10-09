@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Zach Cobell
 
 // STATIC_REQUIRE checks for mov/core/station_table.hpp and the UTF-8 check
-// it uses (mov/core/detail/utf8.hpp).
+// it uses (mov/core/utf8.hpp).
 
 #include <catch2/catch_test_macros.hpp>
 #include <concepts>

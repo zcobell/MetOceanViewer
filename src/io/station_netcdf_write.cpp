@@ -825,6 +825,11 @@ std::expected<void, Error> write_body(nc::NewFile& file, const Plan& plan,
 
 }  // namespace
 
+StationNcLayout choose_layout(const core::StationTable& table) noexcept {
+  return table.single_axis() ? StationNcLayout::orthogonal
+                             : StationNcLayout::incomplete;
+}
+
 namespace detail {
 
 std::expected<std::vector<Warning>, Error> validate_station_netcdf(

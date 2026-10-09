@@ -602,10 +602,6 @@ std::expected<Read<ImedsFile>, Error> ImedsParser::finish(
                          .warnings = std::move(warnings)};
 }
 
-}  // namespace
-
-namespace {
-
 // The one driver loop: header lines, then the non-blank lines, with the stop
 // token asked every stop_poll_interval lines. Callers ask once before they
 // start.

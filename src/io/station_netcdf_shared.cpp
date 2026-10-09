@@ -6,6 +6,8 @@
 // stations, the datum spellings, and the rule for series whose times are not
 // strictly increasing. Private to src/io/.
 
+#include "station_netcdf_shared.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -37,11 +39,276 @@
 #include "mov/io/read.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
 
 namespace mov::io::detail::station_nc {
 
 namespace sn = ::mov::io::detail::station_nc;
+
+namespace {
+
+// ---- row-wise reads ---------------------------------------------------------
+
+/// How far into the sample dimension a group reads: its longest station's
+/// samples and the first padding element (boundary), or all of it (whole).
+std::size_t read_length(const RowSpec& rows, const StationGroup& group) {
+  const std::size_t obs = rows.sample_length;
+  if (rows.padding == PaddingCheck::whole) {
+    return obs;
+  }
+  std::size_t longest = 0;
+  for (const SelectedStation& m : group.members) {
+    longest = std::max(longest, rows.counts[m.station]);
+  }
+  // Without a padding check nothing past the samples is read.
+  return std::min(obs, rows.padding ? longest + 1 : longest);
+}
+
+/// Calls sink(member, row) for each selected station with its row of `var`
+/// (station, sample) as raw values of type T, read_length(group) long.
+template <nc::Numeric T, class Sink>
+std::expected<void, Error> raw_rows(const nc::File& file, nc::NcNameRef var,
+                                    std::span<const StationGroup> groups,
+                                    const RowSpec& rows, const Sink& sink) {
+  for (const StationGroup& group : groups) {
+    const std::size_t length = read_length(rows, group);
+    const nc::Slab slab{{.start = group.first, .count = group.width()},
+                        {.start = 0, .count = length}};
+    auto done = file.read_blocks<T>(
+        var, slab,
+        [&](std::span<const T> block,
+            nc::DimRange outer) -> std::expected<void, Error> {
+          for (const SelectedStation& m : group.members) {
+            if (m.station < outer.start or
+                m.station >= outer.start + outer.count) {
+              continue;
+            }
+            const std::size_t row = m.station - outer.start;
+            if (auto r = sink(m, block.subspan(row * length, length)); not r) {
+              return r;
+            }
+          }
+          return {};
+        },
+        rows.stop);
+    if (not done) {
+      return done;
+    }
+  }
+  return {};
+}
+
+/// padding_not_missing at the first element of `tail` (the padding after the
+/// station's `count` samples) for which `present` holds.
+template <class T, class Present>
+std::expected<void, Error> check_padding(std::span<const T> tail,
+                                         std::size_t count,
+                                         std::string_view var,
+                                         std::size_t station,
+                                         const Present& present) {
+  const auto it = std::ranges::find_if(tail, present);
+  if (it != tail.end()) {
+    return fail(
+        format_error(FormatErrc::padding_not_missing, std::string{var}, station,
+                     count + static_cast<std::size_t>(it - tail.begin())));
+  }
+  return {};
+}
+
+/// The kept samples of each selected station of `var` as a T, masked in T;
+/// the padding read is checked for fill when `rows.padding` says so.
+template <nc::Numeric T>
+std::expected<void, Error> rows_as(const nc::File& file, const nc::VarInfo& var,
+                                   std::span<const StationGroup> groups,
+                                   const RowSpec& rows, const RowSink& sink) {
+  auto mask = file.masking<T>(var.name);
+  if (not mask) {
+    return fail(std::move(mask).error());
+  }
+  std::vector<core::Sample> kept;
+  return raw_rows<T>(
+      file, var.name, groups, rows,
+      [&](const SelectedStation& m,
+          std::span<const T> raw) -> std::expected<void, Error> {
+        const std::size_t n = rows.counts[m.station];
+        if (rows.padding) {
+          auto padding = check_padding(
+              raw.subspan(n), n, var.name.view(), m.station,
+              [&](T x) { return not mask->apply(x).is_missing(); });
+          if (not padding) {
+            return padding;
+          }
+        }
+        kept.resize(n);
+        std::ranges::transform(raw.first(n), kept.begin(),
+                               [&](T x) { return mask->apply(x); });
+        return sink(m, std::span<const core::Sample>{kept});
+      });
+}
+
+// ---- CRS -------------------------------------------------------------------
+
+/// The CRS of a grid mapping variable without `epsg_code`:
+/// latitude_longitude on the WGS 84 ellipsoid; without ellipsoid parameters,
+/// assumed to be WGS 84 (warning).
+std::expected<Read<core::Epsg>, Error> crs_from_parameters(
+    const nc::File& file, const nc::VarInfo& var) {
+  auto parts = collect(
+      [&] { return optional_text(file, var.name, "grid_mapping_name"); },
+      [&] { return double_att(file, var.name, "semi_major_axis"); },
+      [&] { return double_att(file, var.name, "inverse_flattening"); });
+  if (not parts) {
+    return std::unexpected{std::move(parts).error()};
+  }
+  const auto& [mapping, axis, flattening] = *parts;
+  const std::string subject{var.name.view()};
+  if (mapping.transform(core::ascii::trim) != "latitude_longitude" or
+      axis.value_or(sn::wgs84_semi_major_axis) != sn::wgs84_semi_major_axis or
+      flattening.value_or(sn::wgs84_inverse_flattening) !=
+          sn::wgs84_inverse_flattening) {
+    return fail(format_error(FormatErrc::unsupported_crs, subject));
+  }
+  Read<core::Epsg> out{.value = core::Epsg::wgs84(), .warnings = {}};
+  if (not axis or not flattening) {
+    out.warnings.push_back(
+        {.code = WarningCode::crs_assumed, .subject = subject});
+  }
+  return out;
+}
+
+// ---- datum spellings --------------------------------------------------------
+
+struct DatumSpelling {
+  std::string_view words;  // lower case, single spaces
+  std::string_view token;
+};
+
+// The names a CF file (geopotential_datum_name, a vertical_datum) gives the
+// datums core knows, by the words of their long names. The tokens and the
+// aliases NAVD, NGVD, IGLD are parse_vertical_datum's own.
+constexpr std::array<DatumSpelling, 22> datum_spellings{{
+    {.words = "north american vertical datum of 1988", .token = "NAVD88"},
+    {.words = "north american vertical datum 1988", .token = "NAVD88"},
+    {.words = "navd 88", .token = "NAVD88"},
+    {.words = "national geodetic vertical datum of 1929", .token = "NGVD29"},
+    {.words = "national geodetic vertical datum 1929", .token = "NGVD29"},
+    {.words = "sea level datum of 1929", .token = "NGVD29"},
+    {.words = "ngvd 29", .token = "NGVD29"},
+    {.words = "mean lower low water", .token = "MLLW"},
+    {.words = "mean low water", .token = "MLW"},
+    {.words = "mean higher high water", .token = "MHHW"},
+    {.words = "mean high water", .token = "MHW"},
+    {.words = "mean tide level", .token = "MTL"},
+    {.words = "mean sea level", .token = "MSL"},
+    {.words = "international great lakes datum of 1985", .token = "IGLD85"},
+    {.words = "international great lakes datum 1985", .token = "IGLD85"},
+    {.words = "igld 85", .token = "IGLD85"},
+    {.words = "station datum", .token = "STND"},
+    {.words = "gage datum", .token = "STND"},
+    {.words = "gauge datum", .token = "STND"},
+    {.words = "navd88", .token = "NAVD88"},
+    {.words = "ngvd29", .token = "NGVD29"},
+    {.words = "igld85", .token = "IGLD85"},
+}};
+
+/// `text` in lower case with every run of characters that are not letters or
+/// digits one space.
+std::string datum_words(std::string_view text) {
+  std::string out;
+  bool gap = false;
+  for (const char c : text) {
+    if (core::ascii::is_alnum(c)) {
+      if (gap and not out.empty()) {
+        out.push_back(' ');
+      }
+      gap = false;
+      out.push_back(core::ascii::to_lower(c));
+    } else {
+      gap = true;
+    }
+  }
+  return out;
+}
+
+}  // namespace
+
+// ---- row-wise reads ---------------------------------------------------------
+
+std::expected<void, Error> sample_rows(const nc::File& file,
+                                       const nc::VarInfo& var,
+                                       const RowSpec& rows, RowRole role,
+                                       const RowSink& sink) {
+  auto groups =
+      plan_groups(file, var, rows.station_dim, rows.selected, std::nullopt);
+  if (not groups) {
+    return std::unexpected{std::move(groups).error()};
+  }
+  if (role == RowRole::times and var.type == nc::Type::int64) {
+    // A 64-bit time is read as integers (masked in its own type); checked_time
+    // bounds it, so the widening to a Sample cannot hide an out-of-range time.
+    return rows_as<std::int64_t>(file, var, *groups, rows, sink);
+  }
+  return dispatch_model_numeric(
+      file, var, [&]<class T>() -> std::expected<void, Error> {
+        return rows_as<T>(file, var, *groups, rows, sink);
+      });
+}
+
+std::expected<std::vector<core::Sample>, Error> read_masked(
+    const nc::File& file, const nc::VarInfo& var, const nc::Slab& slab,
+    RowRole role, const StopToken& stop) {
+  if (role == RowRole::times) {
+    return read_time_samples(file, var, slab, stop);
+  }
+  return file.read_samples(var.name, slab, stop);
+}
+
+std::optional<std::size_t> sum_selected(std::span<const std::size_t> counts,
+                                        std::span<const std::size_t> selected) {
+  std::size_t total = 0;
+  for (const std::size_t i : selected) {
+    if (counts[i] > std::numeric_limits<std::size_t>::max() - total) {
+      return std::nullopt;
+    }
+    total += counts[i];
+  }
+  return total;
+}
+
+std::expected<void, Error> check_rows_size(const nc::File& file,
+                                           std::string_view variable,
+                                           std::optional<std::size_t> samples,
+                                           std::size_t columns) {
+  if (not samples) {
+    return fail(
+        nc_fault(file, WrapperFault::too_large, NcOp::get_var, variable));
+  }
+  return check_result_size(file, variable, 1, *samples, columns);
+}
+
+std::expected<void, Error> flag_rows(const nc::File& file,
+                                     const nc::VarInfo& var,
+                                     const RowSpec& rows,
+                                     std::optional<std::int8_t> fill,
+                                     const FlagSink& sink) {
+  auto groups =
+      plan_groups(file, var, rows.station_dim, rows.selected, std::nullopt);
+  if (not groups) {
+    return std::unexpected{std::move(groups).error()};
+  }
+  return raw_rows<std::int8_t>(
+      file, var.name, *groups, rows,
+      [&](const SelectedStation& m,
+          std::span<const std::int8_t> raw) -> std::expected<void, Error> {
+        const std::size_t n = rows.counts[m.station];
+        auto padding =
+            check_padding(raw.subspan(n), n, var.name.view(), m.station,
+                          [&](std::int8_t f) { return f != fill; });
+        if (not padding) {
+          return padding;
+        }
+        return sink(m, raw.first(n));
+      });
+}
 
 std::expected<std::optional<std::vector<std::int64_t>>, Error> int_att(
     const nc::File& file, nc::AttTarget on, nc::NcNameRef att,
@@ -119,38 +386,6 @@ std::expected<std::optional<double>, Error> double_att(const nc::File& file,
   }
   return values->transform([](const std::vector<double>& v) { return v[0]; });
 }
-
-namespace {
-
-/// The CRS of a grid mapping variable without `epsg_code`:
-/// latitude_longitude on the WGS 84 ellipsoid; without ellipsoid parameters,
-/// assumed to be WGS 84 (warning).
-std::expected<Read<core::Epsg>, Error> crs_from_parameters(
-    const nc::File& file, const nc::VarInfo& var) {
-  auto parts = collect(
-      [&] { return optional_text(file, var.name, "grid_mapping_name"); },
-      [&] { return double_att(file, var.name, "semi_major_axis"); },
-      [&] { return double_att(file, var.name, "inverse_flattening"); });
-  if (not parts) {
-    return std::unexpected{std::move(parts).error()};
-  }
-  const auto& [mapping, axis, flattening] = *parts;
-  const std::string subject{var.name.view()};
-  if (mapping.transform(core::ascii::trim) != "latitude_longitude" or
-      axis.value_or(sn::wgs84_semi_major_axis) != sn::wgs84_semi_major_axis or
-      flattening.value_or(sn::wgs84_inverse_flattening) !=
-          sn::wgs84_inverse_flattening) {
-    return fail(format_error(FormatErrc::unsupported_crs, subject));
-  }
-  Read<core::Epsg> out{.value = core::Epsg::wgs84(), .warnings = {}};
-  if (not axis or not flattening) {
-    out.warnings.push_back(
-        {.code = WarningCode::crs_assumed, .subject = subject});
-  }
-  return out;
-}
-
-}  // namespace
 
 /// The grid mapping variable's CRS: `epsg_code`, else its parameters. A
 /// prime meridian other than Greenwich is refused either way.
@@ -260,65 +495,6 @@ Read<core::SeriesMeta> with_datum(core::SeriesMeta meta,
   out.value = *std::move(assumed);
   return out;
 }
-
-// ---- datum spellings
-// ----------------------------------------------------------
-
-namespace {
-
-struct DatumSpelling {
-  std::string_view words;  // lower case, single spaces
-  std::string_view token;
-};
-
-// The names a CF file (geopotential_datum_name, a vertical_datum) gives the
-// datums core knows, by the words of their long names. The tokens and the
-// aliases NAVD, NGVD, IGLD are parse_vertical_datum's own.
-constexpr std::array<DatumSpelling, 22> datum_spellings{{
-    {.words = "north american vertical datum of 1988", .token = "NAVD88"},
-    {.words = "north american vertical datum 1988", .token = "NAVD88"},
-    {.words = "navd 88", .token = "NAVD88"},
-    {.words = "national geodetic vertical datum of 1929", .token = "NGVD29"},
-    {.words = "national geodetic vertical datum 1929", .token = "NGVD29"},
-    {.words = "sea level datum of 1929", .token = "NGVD29"},
-    {.words = "ngvd 29", .token = "NGVD29"},
-    {.words = "mean lower low water", .token = "MLLW"},
-    {.words = "mean low water", .token = "MLW"},
-    {.words = "mean higher high water", .token = "MHHW"},
-    {.words = "mean high water", .token = "MHW"},
-    {.words = "mean tide level", .token = "MTL"},
-    {.words = "mean sea level", .token = "MSL"},
-    {.words = "international great lakes datum of 1985", .token = "IGLD85"},
-    {.words = "international great lakes datum 1985", .token = "IGLD85"},
-    {.words = "igld 85", .token = "IGLD85"},
-    {.words = "station datum", .token = "STND"},
-    {.words = "gage datum", .token = "STND"},
-    {.words = "gauge datum", .token = "STND"},
-    {.words = "navd88", .token = "NAVD88"},
-    {.words = "ngvd29", .token = "NGVD29"},
-    {.words = "igld85", .token = "IGLD85"},
-}};
-
-/// `text` in lower case with every run of characters that are not letters or
-/// digits one space.
-std::string datum_words(std::string_view text) {
-  std::string out;
-  bool gap = false;
-  for (const char c : text) {
-    if (core::ascii::is_alnum(c)) {
-      if (gap and not out.empty()) {
-        out.push_back(' ');
-      }
-      gap = false;
-      out.push_back(core::ascii::to_lower(c));
-    } else {
-      gap = true;
-    }
-  }
-  return out;
-}
-
-}  // namespace
 
 std::string datum_text(std::string_view text) {
   const std::string words = datum_words(text);

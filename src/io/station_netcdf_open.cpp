@@ -39,17 +39,13 @@
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "station_netcdf_format.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_v5.hpp"
 
 namespace mov::io::detail::station_nc {
 
 namespace {
 
 namespace sn = ::mov::io::detail::station_nc;
-
-}  // namespace
-
-namespace {
 
 // ---- the header (SN 12.1, 13)
 // ----------------------------------------------------
@@ -136,10 +132,6 @@ std::expected<Read<StationNcVersion>, Error> read_header(const nc::File& file) {
 
 // ---- the structure (SN 12.2, 12.3)
 // -------------------------------------------------
-
-}  // namespace
-
-namespace {
 
 std::expected<nc::VarInfo, Error> require_named(const Vars& vars,
                                                 std::string_view name) {
@@ -496,10 +488,6 @@ std::expected<std::vector<std::string>, Error> grid_mappings(
   return names;
 }
 
-}  // namespace
-
-namespace {
-
 std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file,
                                               const Structure& s) {
   auto names = grid_mappings(file, s.data);
@@ -542,10 +530,6 @@ std::expected<std::optional<Projector>, Error> projector_for(core::Epsg epsg) {
 
 // ---- the stations (SN 12.4)
 // ---------------------------------------------------------
-
-}  // namespace
-
-namespace {
 
 std::expected<std::vector<core::StationKey>, Error> station_ids(
     const nc::File& file, const nc::VarInfo& var, const StopToken& stop) {
@@ -635,10 +619,6 @@ station_sources(const nc::File& file, const Structure& s,
   return out;
 }
 
-}  // namespace
-
-namespace {
-
 std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     const nc::File& file, const Structure& s, core::Epsg epsg,
     const StopToken& stop) {
@@ -713,10 +693,6 @@ std::expected<Read<std::optional<core::Unit>>, Error> unit_of(
   }
   return out;
 }
-
-}  // namespace
-
-namespace {
 
 std::expected<Read<core::SeriesMeta>, Error> meta_of(const nc::File& file,
                                                      const nc::VarInfo& var) {

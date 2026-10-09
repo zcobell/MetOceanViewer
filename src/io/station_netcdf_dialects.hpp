@@ -26,7 +26,7 @@
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/station_netcdf.hpp"
-#include "station_netcdf_reader.hpp"
+#include "station_netcdf_shared.hpp"
 
 namespace mov::io::detail::station_nc {
 
