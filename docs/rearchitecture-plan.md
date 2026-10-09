@@ -549,8 +549,10 @@ open. Do not guess; ask before proceeding past the phase that needs them.
 31. **Tide predictions (decided 2026-10-08, supersedes decision 9 and the earlier
     form of this item):** v5 drops XTide. It has its own harmonic prediction engine
     in `core` (reference stations, and subordinate stations from published time and
-    height offsets) and its own **published netCDF harmonics format** with a written
-    spec, so anyone can produce or consume it. A `tools/` builder assembles a
+    height offsets) and its own **published JSON harmonics format** with a written
+    spec and a JSON Schema, so anyone can produce or consume it. `io` parses it
+    with nlohmann/json (vcpkg); Qt's JSON classes are not used, because `io` is
+    Qt-free and the CLI and builder read the file too. A `tools/` builder assembles a
     harmonics file from William Pringle's global compilation, NOAA CO-OPS (harmonic
     constants, datums, subordinate offsets via the metadata API), TICON-4 and
     similar sources. The owner uses the file the builder produces; it is **not
