@@ -477,7 +477,7 @@ open. Do not guess; ask before proceeding past the phase that needs them.
    revisit; the recorded time-zone finding (CST, UTC-6 year-round) still applies.
 8. **NDBC:** cover the current year using `realtime2` (45 days) plus the monthly files,
    in addition to the yearly historical files.
-9. **XTide:** upgrade to XTide 2.16, libtcd 2.2.7-r3 and the
+9. **XTide** (see also decision 31 — the free file is US-only): upgrade to XTide 2.16, libtcd 2.2.7-r3 and the
    `harmonics-dwf-20251228-free` constants. Ship only the "free" harmonics file.
 10. **Scope:** v4 feature parity is the baseline for v5.0. Cheap additions the new
     APIs make available may be proposed, but must not delay parity.
@@ -545,6 +545,17 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     Native Qt and its submodules at the pinned commit, Qt's source for the
     shipped version or the exact upstream URL and checksum where redistribution
     of a copy is impractical). Built by the package workflow.
+
+31. **Tide predictions (decided 2026-10-08):** XTide stays the prediction engine,
+    but its free harmonics file is US-only, so v5 adds a global harmonics file
+    (TCD) built by a `tools/` script and bundled in the packages. **Primary source:
+    William Pringle's global tide-gauge compilation** (Notre Dame; published as a
+    Google My Map, exportable as KML). It carries no licence, so using it **requires
+    Pringle's written permission and terms** (owner action); ask also whether a newer,
+    GESLA-4-based version exists. **Fallback:** TICON-4 (CC BY 4.0). Either way:
+    per-station licences are kept, CC BY-NC stations are excluded, NOAA's own
+    constants come from the CO-OPS-derived XTide file, and predictions are
+    validated against NOAA CO-OPS. Research: `docs/research/tides-global-harmonics.md`.
 
 ## 7. Engineering rules for v5
 
