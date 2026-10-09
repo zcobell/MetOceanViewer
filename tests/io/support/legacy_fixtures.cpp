@@ -65,7 +65,7 @@ void define_coordinate(Cdf& f, const LegacyNc& spec, const std::string& name,
 }  // namespace
 
 void make_legacy_nc(const std::filesystem::path& path, const LegacyNc& spec) {
-  Cdf f{path};
+  Cdf f{path, spec.cmode};
   const std::size_t n = spec.stations.size();
   const int stations =
       spec.omit_num_stations ? f.dim("other", n) : f.dim("numStations", n);

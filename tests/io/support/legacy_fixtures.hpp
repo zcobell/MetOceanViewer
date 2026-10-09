@@ -14,6 +14,8 @@
 // and a 20-byte `referenceDate`.
 #pragma once
 
+#include <netcdf.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -71,7 +73,10 @@ struct LegacyNc {
   /// The external type of the integer EPSG code.
   int epsg_type{4};  // NC_INT
   LegacyData data_type{LegacyData::float64};
+  /// int64 needs netCDF-4: a classic file (`cmode`) takes int32 or float64.
   LegacyTime time_type{LegacyTime::int64};
+  /// NC_NETCDF4, or 0 for a classic (CDF-1) file.
+  int cmode{NC_NETCDF4};
   /// Leave out what the names say.
   bool omit_num_stations{false};
   bool omit_x{false};
