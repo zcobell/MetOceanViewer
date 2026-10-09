@@ -54,22 +54,24 @@ template <Numeric T>
   if constexpr (std::same_as<T, double>) {
     return v;
   } else if constexpr (std::same_as<T, float>) {
-    // NaN and the infinities are returned as float constants, never cast: a
-    // cast of a constant infinity is C4756 (overflow in constant arithmetic)
-    // under MSVC's /O2.
+    // NaN and the infinities are returned as float constants, and the cast
+    // only ever sees a value clamped into float's range: MSVC's /O2 folds the
+    // cast on paths that are never taken, and a constant out of range there
+    // is C4756 (overflow in constant arithmetic). A clamped value that differs
+    // from v fails the exactness test below.
     using F = std::numeric_limits<float>;
     constexpr double inf = std::numeric_limits<double>::infinity();
     constexpr auto most = static_cast<double>(F::max());
     if (v != v) {
       return F::quiet_NaN();
     }
-    if (v > most) {
-      return v == inf ? std::optional{F::infinity()} : std::nullopt;
+    if (v == inf) {
+      return F::infinity();
     }
-    if (v < -most) {
-      return v == -inf ? std::optional{-F::infinity()} : std::nullopt;
+    if (v == -inf) {
+      return -F::infinity();
     }
-    const auto f = static_cast<float>(v);
+    const auto f = static_cast<float>(std::clamp(v, -most, most));
     return static_cast<double>(f) == v ? std::optional{f} : std::nullopt;
   } else {
     // [-2^(n-1), 2^(n-1)): both ends are exact doubles; NaN fails here.
