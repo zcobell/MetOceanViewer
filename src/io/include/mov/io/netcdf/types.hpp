@@ -241,26 +241,36 @@ inline constexpr Global global{};
 class AttTarget {
  public:
   constexpr AttTarget(Global /*unused*/) noexcept {}
-  constexpr AttTarget(NcNameRef variable) noexcept : variable_{variable} {}
+  constexpr AttTarget(NcNameRef variable) noexcept
+      : data_{variable.c_str()}, size_{variable.view().size()} {}
   template <std::size_t N>
   // NOLINTNEXTLINE(modernize-avoid-c-arrays): a string literal is the input
   consteval AttTarget(const char (&variable)[N])
-      : variable_{NcNameRef{variable, N - 1}} {
+      : data_{variable}, size_{N - 1} {
     NcNameRef::check_literal(variable);
   }
-  AttTarget(const NcName& variable) noexcept : variable_{variable} {}
+  AttTarget(const NcName& variable) noexcept : AttTarget{NcNameRef{variable}} {}
   AttTarget(const NcName&&) = delete;
 
   /// The variable, or nullopt for a global attribute.
   [[nodiscard]] constexpr std::optional<NcNameRef> variable() const noexcept {
-    return variable_;
+    if (data_ == nullptr) {
+      return std::nullopt;
+    }
+    return NcNameRef{data_, size_};
   }
 
-  friend constexpr bool operator==(const AttTarget&,
-                                   const AttTarget&) = default;
+  /// Compares the names, not where they are stored.
+  friend constexpr bool operator==(const AttTarget& a,
+                                   const AttTarget& b) noexcept {
+    return a.variable() == b.variable();
+  }
 
  private:
-  std::optional<NcNameRef> variable_{};
+  // The view of an NcNameRef, not a std::optional<NcNameRef>: MSVC 19.44
+  // rejects the consteval constructor when it initializes an optional member.
+  const char* data_{nullptr};  // null: a global attribute
+  std::size_t size_{0};
 };
 
 /// How define_var sets a new variable up. `fill` becomes its _FillValue;

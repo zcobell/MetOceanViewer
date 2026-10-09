@@ -57,12 +57,22 @@ function(mov_add_test name)
     endif()
 endfunction()
 
+# Catch2's SKIP and FAIL throw, so MSVC reports the rest of a test that skips
+# on a platform (`if constexpr (not available) { SKIP(...); }`) as unreachable
+# code (C4702). Tests only; src keeps the warning.
+function(_mov_test_warning_exceptions name)
+    if(MSVC)
+        target_compile_options(${name} PRIVATE /wd4702)
+    endif()
+endfunction()
+
 function(_mov_add_test_executable name sources libraries)
     add_executable(${name} ${sources})
     target_link_libraries(
         ${name}
         PRIVATE ${libraries} mov::test_support Catch2::Catch2WithMain mov::options mov::warnings
     )
+    _mov_test_warning_exceptions(${name})
     mov_enable_static_analysis(${name})
     set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
     # PRE_TEST: list tests when ctest runs, not at build time, so discovery
@@ -83,6 +93,7 @@ function(_mov_add_qt_test_executable name label sources libraries)
         ${name}
         PRIVATE ${libraries} mov::test_support Catch2::Catch2 mov::options mov::warnings
     )
+    _mov_test_warning_exceptions(${name})
     mov_enable_static_analysis(${name})
     set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
     add_test(NAME ${name} COMMAND ${name} --warn NoAssertions)

@@ -156,10 +156,12 @@ std::expected<void, Error> typed_file(NewFile& f) {
                            .deflate_level = 1,
                            .chunks = std::vector<std::size_t>{2}})
               .has_value());
-  for (const NcNameRef name :
-       {NcNameRef{"range"}, NcNameRef{"badrange"}, NcNameRef{"badmin"},
-        NcNameRef{"badmax"}, NcNameRef{"badmissing"}, NcNameRef{"okmin"},
-        NcNameRef{"badscale"}, NcNameRef{"badoffset"}, NcNameRef{"unsigned"}}) {
+  // constexpr: MSVC 19.44 rejects the consteval constructor in a braced list
+  // that is not a constant expression.
+  static constexpr std::array<NcNameRef, 9> names{
+      "range", "badrange", "badmin",    "badmax",  "badmissing",
+      "okmin", "badscale", "badoffset", "unsigned"};
+  for (const NcNameRef name : names) {
     REQUIRE(f.define_var<T>(name, dims, VarOptions<T>{}).has_value());
   }
   REQUIRE(f.define_var<Other<T>>("other", dims, {}).has_value());
