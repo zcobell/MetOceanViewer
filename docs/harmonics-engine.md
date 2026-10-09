@@ -1,6 +1,6 @@
 # Tide prediction engine, harmonics reader and builder (design)
 
-Status: **proposed, revision 2** (2026-10-08). Revision 2 applies the type review, the
+Status: **proposed, revision 2** (2026-10-08); WP H1 built (2026-10-09, §2.6). Revision 2 applies the type review, the
 numerics/IO review and the owner's answers; Appendix A maps each finding to its resolution.
 Implements plan §6 decision 31: v5 drops XTide and gets its own harmonic engine in `core`, a
 reader for the published harmonics format in `io`, a builder in `tools/`, and (in Phase 3) a
@@ -60,6 +60,14 @@ The comparison uses CO-OPS `predictions` (datum MSL, GMT, 6-minute) over three w
   `OO2→OQ2-HORN`, `2MS8→2(MS)8`, `2MN8→2(MN)8` and `2MLNS6→2MNLS6` cut the maximum from 167 to
   43 mm. `M2KS2`, `2SNMK2` and `2KMSN2` (≤ 7 mm amplitude) remain undefined. This station is the
   stress test for the extended catalogue (WP H1).
+- **Anchorage after the H1 vetting** (2026-10-09, every point of the three windows, 4,320): the three
+  "undefined" names are congen's `M2(KS)2`, `2SN(MK)2` and `2KM(SN)2` (their speeds match NOAA's
+  to 1e-6 °/h), and NOAA's `KJ2` is the IHO phase (congen `KJ2-IHO`, c = 180°), not SP 98's. With
+  all 120 rows defined: raw max 25.5 mm, mean-removed max 25.8 mm, RMS 11.0 mm, bias 0.28 mm (was
+  44.2, 43.8, 17.0 and 0.36 mm). `RP1` as congen's `PSI1` beats congen's own `RP1` (38.6 mm), and
+  3KM5 = K1 + M2 + K2 beats 3 K1 + M2 (52.2 mm). Flipping any single remaining constituent by 180°
+  changes the RMS by at most 0.3 mm, so no further phase convention is wrong; the rest is likely
+  NOAA's rounding of 120 constants to 1 mm and 0.1°.
 - **Speeds.** The 37 SP 98 speeds match CO-OPS's published `speed` to ≤ 7.4e-6 °/h, which is
   NOAA's rounding.
 
@@ -332,7 +340,9 @@ std::expected<YearArguments, YearOutOfRange> year_arguments(const ConstituentSet
 
 `docs/schemas/constituents-nos.json`, the NOS dictionary in file syntax, is **generated** from
 `nos_catalogue` by a test executable. A CI test fails if the committed file differs. The builder
-reads it, so core is the single source of truth.
+reads it, so core is the single source of truth. To rewrite it after a catalogue change, run
+`MOV_UPDATE_CONSTITUENTS_JSON=1 build/dev/tests/core/tide/mov_core_tide_tests
+"constituents-nos.json is current"` (§2.6).
 
 ### 2.4 Licences: `licence.hpp`
 
@@ -485,6 +495,39 @@ Vocabulary changes outside `tide/`:
   it to HJ's `<source>:<local>` grammar.
 - `Cancelled` moved from io to core (`mov::core::Cancelled`, `cancelled.hpp`) at the same time, and
   `io::Error` keeps it through a using-declaration, so core prediction and io share one alternative.
+
+### 2.6 As built in H1 (2026-10-09)
+
+Headers: `src/core/include/mov/core/tide/{phase,node_factor,constituent,astronomy,catalogue,
+year_arguments}.hpp`; sources `src/core/tide/`; tests `tests/core/tide/` (`mov_core_tide_tests`
+and its constexpr pair). The headers are the contract. Where they differ from §2.1–2.3:
+
+| Item | Design | As built, and why |
+|---|---|---|
+| `Phase::wrap` in constant expressions | `constexpr std::fmod` behind the probe | `std::fmod` is not constexpr on Clang 20 + libstdc++ (CD §1.1). Constant evaluation uses `detail::exact_fmod` (binary long division, exact by Sterbenz), run time `std::fmod`; a test shows the two agree bit for bit on 20,000 values from 1e-3 to 1e301. |
+| `Argument` storage | V `int16`, c `int32`, u `int16`, exponents `uint8` | V, c, u `int32`, exponents `uint16`: flattening any `Definition` (≤ 8 terms × \|127\| × \|127\|) is exact for every value the types admit, not only the schema's. Observers `v()`, `c_deg()`, `u()`, `exponent(f)`, `species()`; `UTerm` names the u indices. |
+| `Argument::v0_deg` | V at the year start | `v_deg(Elements)`: V at whatever instant the elements are for (the year start in the yearly scheme, t in the diagnostic one). `u_deg` is constexpr. |
+| `elements` | `elements(double centuries)`, not reduced | `elements(Time)`, each element reduced into [0°, 360°) so that V keeps its precision; T comes from the exact millisecond of the day (180° at 00:00 UTC), not from the centuries. `rates_1900` is an `inline constexpr Elements`. |
+| `nodal_terms` | `(double N_deg, double p_deg)` | `(const Elements&)`: no two swappable doubles. ξ, Qᵤ are in (−180°, 180°], P in [0°, 360°). |
+| `CatalogueEntry` | aggregate of a variant of `Darwin` or `array<pair<…>, 4>` plus a count | a class built from `(name, Darwin)` or `(name, CatalogueTerm…)` (1–4 terms, checked by a constraint), so no entry can carry a bad count. Notes (`catalogue_notes`, the JSON `description`) and aliases (`catalogue_aliases`) are separate tables. Lookups: `catalogue_index`, `catalogue_argument`, `canonical_name`, `catalogue_note`. |
+| Catalogue invariants | `static_assert` in the header | `detail::` predicates over any catalogue span, `static_assert`ed once in `src/core/tide/constituent.cpp` (not in every includer) and shown in the tests to reject a catalogue that breaks each one. NOAA's published speeds are test data, not catalogue data: `STATIC_REQUIRE` within 1e-5 °/h for the NOS 37 and 2e-5 °/h for the other 83 (NOAA rounds those to fewer decimals; 3MNK9 is off by 1.08e-5). |
+| `YearArguments`, `ConstituentYear` | H1/H2 | `year_arguments.hpp` holds the per-year astronomy, `YearAstronomy::make(year)` (`YearOutOfRange` outside [1700, 2200]), `year_start`, `mid_year`, and `yearly_equilibrium(argument, year)`. The pair (V₀+u, f) is `Equilibrium`, since `diagnostic::instantaneous_equilibrium(argument, t)` returns it too. The per-set `YearArguments` needs `ConstituentSet` and stays in H2. |
+| congen golden table | `congen -b 1900 -e 2100`, NOS 37, 1e-4° and 1e-6 | congen's text output has 2 decimals, so a small driver calls libcongen 1.7 at full precision: all 120 entries × 19 years from 1700 to 2200 (`tests/fixtures/core/tide/congen_golden.csv`, provenance in its header). Agreement: speeds 5.0e-11 °/h, (V₀+u) 8.1e-8°, f 8.7e-13 relative; asserted to 1e-9 °/h, 1e-6° (libcongen keeps T unreduced, about 1e-7° of its own rounding by 2200) and 1e-9. |
+
+The catalogue is NOAA's 37 plus the 83 further constituents NOAA publishes for 9455920, in NOAA's
+spelling and order, with SP 98 Table 2 definitions as `congen_input.txt` codes them. Vetting
+against CO-OPS's Anchorage series (§1.1) fixed three readings: `M2KS2`, `2SNMK2`, `2KMSN2` are
+congen's parenthesised compounds; `KJ2` is the IHO phase (congen `KJ2-IHO`); `RP1` is congen's
+`PSI1`. Aliases record spellings with identical definitions only (congen's, XTide's and TICON-4's:
+`LDA2`, `LAMBDA2`, `RHO1`, `SIG1`, `SGM`, `THE1`, `OQ2-HORN`, the parenthesised compounds,
+`KJ2-IHO`, `PSI1`).
+
+Other H1 test results: HJ §13.2's elements and 12 constituents' (V₀+u, f) for 2026 agree with the
+prototype to 1e-9° and 1e-11; the compound laws hold exactly every 25 years from 1700 to 2200
+(f(MS4) = f(MSF) = f(M2), f(M4) = f(M2)², u(MSF) = −u(M2)); at mid-year the instantaneous and
+yearly schemes agree exactly in f and u, and in V to 1e-8° of the analytic drift (M1: 20.33°).
+`fuzz_constituent_name` checks `ConstituentName::make` against a plain reimplementation of the
+grammar and `parse_node_factor` against `to_token`.
 
 ---
 
@@ -1030,9 +1073,9 @@ Catch2 tags: `[core][tide]`, `[io][harmonics]`, `[constexpr]`, `[golden]`, `[pro
 | Doodson | Darwin→Doodson mapping gives M2 255.555, K1 165.555, O1 145.555, Sa 056.555 |
 | `Argument` monoid | identity and associativity exact; commutativity; `scale(1,a) == a`; `scale(2,a) == a + a`; `scale(−1,a) + a` has zero V/c/u and doubled exponents (documents the non-linearity) |
 | `Phase` | `wrap` of −0.0, −1e-14 (must give 0, not 360), 360, 720.5, −359.9; `of(NaN)` → nullopt |
-| Elements and arguments | 2026 values equal HJ §13.2 to 1e-6. A congen golden table (1900–2100 × NOS 37: (V₀+u), f), generated once with `congen -b 1900 -e 2100` in the dev image and committed as CSV with its command, agrees to 1e-4° and 1e-6 |
+| Elements and arguments | 2026 values equal HJ §13.2 to 1e-6. A libcongen golden table, committed as CSV with its provenance, agrees to 1e-6° and 1e-9 (as built: all 120 entries × 19 years 1700–2200, measured 8.1e-8° and 8.7e-13; §2.6) |
 | Compound laws | f(MS4) = f(M2); u(MSF) = −u(M2); (V₀+u)(2MK3) = 2(V₀+u)(M2) − (V₀+u)(K1) mod 360; f(M4) = f(M2)² |
-| Mid-year identity (corrected, §1.3) | at t_M, `diagnostic::` instantaneous and yearly f and u are equal to 1e-12; V differs by Σ a_k(ṙ_k(t) − ṙ_k(1900))Δ, compared with the analytic value to 1e-9°; M1 differs by b_Q·ṗ·Δ to 1e-9° |
+| Mid-year identity (corrected, §1.3) | at t_M, `diagnostic::` instantaneous and yearly f and u are equal (as built: exactly); V differs by Σ a_k(ṙ_k(t) − ṙ_k(1900))Δ, compared with the analytic value; M1 differs by b_Q·ṗ·Δ (as built: 1e-8°, the rounding of the reduced elements) |
 | Grid | pre-1970 and straddling ranges give samples at exact multiples of the step; `ceil_div` table (−7/3, −6/3, 0, 6/3, 7/3) |
 | Budget | `TooMuchWork` before any work for series and for extremes; the extremes runtime counter trips on a pathological constant set |
 | Cancellation | stop requested mid-segment → `Cancelled` |
@@ -1064,7 +1107,7 @@ and `hilo` (MSL and MLLW) for each window.
 | Extremes: event sets equal (outside ±30 min of New Year) | equal for a full year at 5 stations (with the 2 h filter) | equal |
 | Extremes: time, height | 0.67 min, 0.64 mm | ≤ 1 min, ≤ 3 mm |
 | Subordinate hilo | exact by hand | ≤ 1 min, ≤ 5 mm, same count |
-| Anchorage series raw max | 42.8 mm (3 constituents undefined) | ≤ 50 mm, tightened as the catalogue is vetted |
+| Anchorage series raw max | 42.8 mm (3 constituents undefined); 25.5 mm with the H1 catalogue (§1.1) | ≤ 50 mm, tightened as the catalogue is vetted (H3 may assert ≤ 30 mm) |
 | New Year windows | §1.2 | our per-segment events match the own-year curve; no event at 23:59/00:00; documented divergence from CO-OPS asserted (so a CO-OPS change is noticed) |
 
 ### 8.3 Synthetic and cross-implementation checks
@@ -1201,7 +1244,7 @@ class TidesProvider {   // a providers::Fetcher (docs/providers-design.md §6.1,
 | WP | Scope | Depends on | Agent | Size |
 |---|---|---|---|---|
 | H0 | Config and doc sync: provider-apis §5 marked superseded; SN registry tokens (`harmonics`, HAT/LAT/DTL); `vcpkg.json` (+`nlohmann-json`, +`zlib`); CLAUDE.md build notes. Plan decision 31 is already JSON (e99c8abe). **Done** with the providers' H0 (`docs/providers-design.md` §12), which also linked both into `mov_io` and added their include gate. | — | coordinator | S (0.5 d) |
-| H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table | H0 | Opus | L (4 d) |
+| H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table. **Done** (2026-10-09; §2.6), with the per-year astronomy (`YearAstronomy`, `yearly_equilibrium`, `diagnostic::instantaneous_equilibrium`); the drift tests of the datum and analysis enums come with H2's vocabulary | H0 | Opus | L (4 d) |
 | H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3; the `provider::Harmonics` id grammar; `DataSource::harmonics` and `Cancelled` in core are done) | H1 | Opus | M (3 d) |
 | H3 | `predict`, `height_at`, `diagnostic::`, `extremes` (Lipschitz isolation, separation filter); fixture recorder; goldens §8.2 (reference stations, full-year hilo, New Year windows); self round trip | H2 | Opus (engine), Sonnet (fixtures) | L (4 d) |
 | H4 | `subordinate_extremes`, `subordinate_predict` (clamped warp), `Events` and `shift`; subordinate goldens; property test | H3 | Opus | M (3 d) |

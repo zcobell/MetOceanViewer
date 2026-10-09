@@ -107,3 +107,6 @@ mov_add_test(
     LIBRARIES mov::core
 )
 mov_add_fuzz_test(fuzz_split SOURCES fuzz_split.cpp LIBRARIES mov::core CORPUS core/split)
+
+# The tide engine: constituents, catalogue, astronomy (mov_core_tide_tests).
+add_subdirectory(tide)

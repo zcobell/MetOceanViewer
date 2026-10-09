@@ -886,5 +886,7 @@ derived per §7.2, and NOAA's published speeds agree to ≤ 7.4e-6 °/h (verifie
 9455920, 114 published) need further definitions: SP 98 Table 2 and libcongen's
 `congen_input.txt` have about 175. NOAA spellings must be aliased to them, for example
 `SIGMA1`↔`SIG1`, `THETA1`↔`THE1`, `2MS8`↔`2(MS)8`, `2MN8`↔`2(MN)8`, `2MLNS6`↔`2MNLS6`, `OO2`↔`OQ2-HORN`
-and `RP1`→`PSI1` (phase-flipped). Three NOAA names (`M2KS2`, `2SNMK2`, `2KMSN2`) have no counterpart
-there yet. HE §1 quantifies the effect.
+and `RP1`→`PSI1` (phase-flipped). The three NOAA names `M2KS2`, `2SNMK2`, `2KMSN2` are congen's
+`M2(KS)2`, `2SN(MK)2`, `2KM(SN)2`, and NOAA's `KJ2` is congen's `KJ2-IHO` (the IHO phase, c = 180°).
+HE §1 quantifies the effect. `docs/schemas/constituents-nos.json` holds all 120 constituents NOAA
+publishes for Anchorage, in NOAA's spelling, generated from the core catalogue (HE §2.6).

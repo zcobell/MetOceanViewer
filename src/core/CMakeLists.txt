@@ -25,3 +25,7 @@ target_sources(mov_core PRIVATE series_ops.cpp datum_shift.cpp)
 # Provider request vocabulary (docs/providers-design.md section 3) and the
 # daily series.
 target_sources(mov_core PRIVATE daily_series.cpp provider_usgs.cpp)
+
+# Tide engine (docs/harmonics-engine.md section 2): constituents, the
+# built-in catalogue, SP 98 astronomy and the yearly nodal scheme.
+target_sources(mov_core PRIVATE tide/astronomy.cpp tide/constituent.cpp tide/year_arguments.cpp)
