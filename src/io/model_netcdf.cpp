@@ -35,25 +35,12 @@ namespace mov::io::detail {
 
 // ---- errors ----------------------------------------------------------------
 
-FormatError format_error(FormatErrc code, std::string subject,
-                         std::optional<std::size_t> station,
-                         std::optional<std::size_t> index) {
-  return FormatError{.code = code,
-                     .subject = std::move(subject),
-                     .station = station,
-                     .index = index};
-}
-
 NcError nc_fault(const nc::File& file, WrapperFault fault, NcOp op,
                  std::string_view object) {
   return NcError{.status = fault,
                  .op = op,
                  .object = std::string{object},
                  .file = file.path()};
-}
-
-void append(std::vector<Warning>& warnings, std::vector<Warning> more) {
-  std::ranges::move(more, std::back_inserter(warnings));
 }
 
 // ---- structure -------------------------------------------------------------
@@ -109,6 +96,9 @@ std::expected<std::optional<std::string>, Error> optional_text(
     const nc::File& file, nc::AttTarget on, nc::NcNameRef att) {
   auto text = file.text_att(on, att);
   if (text) {
+    if (*text) {
+      (*text)->resize(cut_at_nul(**text).size());
+    }
     return *std::move(text);
   }
   // An attribute of another type or with several strings is not a label.
@@ -344,9 +334,7 @@ std::expected<CfCalendar, Error> read_calendar(const nc::File& file,
   if (not text) {
     return std::unexpected{std::move(text.error())};
   }
-  const auto calendar = parse_cf_calendar(
-      *text ? std::optional<std::string_view>{cut_at_nul(**text)}
-            : std::nullopt);
+  const auto calendar = parse_cf_calendar(*text);
   if (not calendar) {
     return fail(format_error(FormatErrc::unsupported_calendar,
                              std::string{time.name.view()} + ":calendar"));

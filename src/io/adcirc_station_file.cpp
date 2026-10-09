@@ -17,6 +17,7 @@
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/station_names.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
@@ -31,17 +32,13 @@ namespace mov::io {
 namespace {
 
 using Line = detail::LineCursor::Line;
+using detail::fail;
 
 // The smallest station line ("1 2\n") and so the most lines a text can hold.
 constexpr std::size_t min_line_bytes = 4;
 
 constexpr bool is_separator(char c) noexcept {
   return c == ',' or core::ascii::is_space(c);
-}
-
-template <class E>
-auto fail(E&& e) {
-  return std::unexpected{lift<Error>(std::forward<E>(e))};
 }
 
 // One line of the station file: lon, lat, then the name's words.

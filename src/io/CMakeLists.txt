@@ -30,6 +30,7 @@ mov_add_module(
         netcdf/read.cpp
         netcdf/write.cpp
         projection.cpp
+        reporting.cpp
         text.cpp
         text_file.cpp
         warning.cpp

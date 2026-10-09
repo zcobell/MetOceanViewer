@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -78,6 +79,13 @@ struct Warning {
   std::size_t count{1};
   friend bool operator==(const Warning&, const Warning&) = default;
 };
+
+/// Appends `more` to `warnings`, in order: how the warnings of a later stage
+/// follow those of an earlier one (Read::and_then, every reader).
+inline void append(std::vector<Warning>& warnings, std::vector<Warning> more) {
+  warnings.insert(warnings.end(), std::make_move_iterator(more.begin()),
+                  std::make_move_iterator(more.end()));
+}
 
 /// Appends `w` when it counts something (`w.count > 0`): a reader tallies and
 /// reports once, without an `if` per code.

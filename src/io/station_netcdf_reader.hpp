@@ -90,16 +90,6 @@ struct Opened {
     std::span<const std::size_t> selected, PaddingCheck padding,
     const StopToken& stop);
 
-/// `code` about `subject`, as an io::Error result.
-[[nodiscard]] std::unexpected<Error> invalid(
-    FormatErrc code, std::string subject,
-    std::optional<std::size_t> station = std::nullopt,
-    std::optional<std::size_t> index = std::nullopt);
-
-/// Text from a file as a warning or error subject: at most
-/// ParseError::max_context_bytes, cut on a UTF-8 boundary.
-[[nodiscard]] std::string subject_of(std::string_view text);
-
 // ---- row-wise reads of (station, sample) variables
 // (station_netcdf_samples.cpp)
 // ---------------------------------------------------------------------------
@@ -182,11 +172,6 @@ template <class Run>
 
 // ---- helpers the foreign and legacy readers share with the v5 reader
 // (station_netcdf_open.cpp) --------------------------------------------------
-
-/// A text attribute of `on`, cut at its first NUL; nullopt when absent or not
-/// text.
-[[nodiscard]] std::expected<std::optional<std::string>, Error> text_of(
-    const nc::File& file, nc::AttTarget on, nc::NcNameRef att);
 
 /// A signed integer attribute of any width (byte, short, int, int64) as
 /// int64: nullopt when absent; one inquiry of the type, then the read in

@@ -43,28 +43,6 @@ namespace mov::io::detail::station_nc {
 
 namespace sn = ::mov::io::detail::station_nc;
 
-std::unexpected<Error> invalid(FormatErrc code, std::string subject,
-                               std::optional<std::size_t> station,
-                               std::optional<std::size_t> index) {
-  return fail(format_error(code, std::move(subject), station, index));
-}
-
-std::string subject_of(std::string_view text) {
-  return std::string{truncate_utf8(text, ParseError::max_context_bytes)};
-}
-
-/// A text attribute of `on`, cut at its first NUL; nullopt when absent or not
-/// text.
-std::expected<std::optional<std::string>, Error> text_of(const nc::File& file,
-                                                         nc::AttTarget on,
-                                                         nc::NcNameRef att) {
-  return optional_text(file, on, att)
-      .transform([](std::optional<std::string> text) {
-        return text.transform(
-            [](const std::string& t) { return std::string{cut_at_nul(t)}; });
-      });
-}
-
 std::expected<std::optional<std::vector<std::int64_t>>, Error> int_att(
     const nc::File& file, nc::AttTarget on, nc::NcNameRef att,
     std::string_view object) {
@@ -149,10 +127,10 @@ namespace {
 /// assumed to be WGS 84 (warning).
 std::expected<Read<core::Epsg>, Error> crs_from_parameters(
     const nc::File& file, const nc::VarInfo& var) {
-  auto parts =
-      collect([&] { return text_of(file, var.name, "grid_mapping_name"); },
-              [&] { return double_att(file, var.name, "semi_major_axis"); },
-              [&] { return double_att(file, var.name, "inverse_flattening"); });
+  auto parts = collect(
+      [&] { return optional_text(file, var.name, "grid_mapping_name"); },
+      [&] { return double_att(file, var.name, "semi_major_axis"); },
+      [&] { return double_att(file, var.name, "inverse_flattening"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
@@ -162,7 +140,7 @@ std::expected<Read<core::Epsg>, Error> crs_from_parameters(
       axis.value_or(sn::wgs84_semi_major_axis) != sn::wgs84_semi_major_axis or
       flattening.value_or(sn::wgs84_inverse_flattening) !=
           sn::wgs84_inverse_flattening) {
-    return invalid(FormatErrc::unsupported_crs, subject);
+    return fail(format_error(FormatErrc::unsupported_crs, subject));
   }
   Read<core::Epsg> out{.value = core::Epsg::wgs84(), .warnings = {}};
   if (not axis or not flattening) {
@@ -178,24 +156,26 @@ std::expected<Read<core::Epsg>, Error> crs_from_parameters(
 /// prime meridian other than Greenwich is refused either way.
 std::expected<Read<core::Epsg>, Error> crs_of_mapping(const nc::File& file,
                                                       const nc::VarInfo& var) {
-  auto parts = collect([&] { return text_of(file, var.name, "epsg_code"); },
-                       [&] {
-                         return double_att(file, var.name,
-                                           "longitude_of_prime_meridian");
-                       });
+  auto parts = collect(
+      [&] { return optional_text(file, var.name, "epsg_code"); },
+      [&] {
+        return double_att(file, var.name, "longitude_of_prime_meridian");
+      });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
   const auto& [code, meridian] = *parts;
   if (meridian.value_or(0.0) != 0.0) {
-    return invalid(FormatErrc::unsupported_crs, std::string{var.name.view()});
+    return fail(format_error(FormatErrc::unsupported_crs,
+                             std::string{var.name.view()}));
   }
   if (not code) {
     return crs_from_parameters(file, var);
   }
   const auto epsg = parse_epsg(core::ascii::trim(*code));
   if (not epsg) {
-    return invalid(FormatErrc::unsupported_crs, std::string{var.name.view()});
+    return fail(format_error(FormatErrc::unsupported_crs,
+                             std::string{var.name.view()}));
   }
   return Read<core::Epsg>{.value = *epsg, .warnings = {}};
 }
@@ -220,8 +200,8 @@ std::expected<std::vector<double>, Error> coordinate(const nc::File& file,
   for (std::size_t i = 0; i < samples->size(); ++i) {
     const std::optional<double> x = (*samples)[i].value();
     if (not x) {
-      return invalid(FormatErrc::bad_coordinates, std::string{var.name.view()},
-                     i);
+      return fail(format_error(FormatErrc::bad_coordinates,
+                               std::string{var.name.view()}, i));
     }
     values.push_back(*x);
   }
@@ -236,11 +216,11 @@ std::expected<Position, Error> place(double latitude, double longitude,
     const auto where =
         core::Location::make({.lat = latitude, .lon = longitude});
     if (not where) {
-      return invalid(
+      return fail(format_error(
           FormatErrc::bad_coordinates,
           where.error() == core::LocationError::longitude_out_of_range ? "lon"
                                                                        : "lat",
-          i);
+          i));
     }
     return Position{.location = *where, .native = std::nullopt};
   }
@@ -248,7 +228,7 @@ std::expected<Position, Error> place(double latitude, double longitude,
                                               projector->crs());
   const auto where = projector->to_location({.x = longitude, .y = latitude});
   if (not native or not where) {
-    return invalid(FormatErrc::bad_coordinates, "lon, lat", i);
+    return fail(format_error(FormatErrc::bad_coordinates, "lon, lat", i));
   }
   return Position{.location = *where, .native = *native};
 }

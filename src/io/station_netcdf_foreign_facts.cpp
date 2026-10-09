@@ -24,17 +24,17 @@ namespace mov::io::detail::station_nc {
 namespace {
 
 std::expected<Facts, Error> facts_of(const nc::File& file, nc::VarInfo var) {
-  auto texts =
-      collect([&] { return text_of(file, var.name, "cf_role"); },
-              [&] { return text_of(file, var.name, "standard_name"); },
-              [&] { return text_of(file, var.name, "units"); },
-              [&] { return text_of(file, var.name, "axis"); },
-              [&] { return text_of(file, var.name, "sample_dimension"); },
-              [&] { return text_of(file, var.name, "instance_dimension"); },
-              [&] { return text_of(file, var.name, "coordinates"); },
-              [&] { return text_of(file, var.name, "ancillary_variables"); },
-              [&] { return text_of(file, var.name, "bounds"); },
-              [&] { return text_of(file, var.name, "grid_mapping"); });
+  auto texts = collect(
+      [&] { return optional_text(file, var.name, "cf_role"); },
+      [&] { return optional_text(file, var.name, "standard_name"); },
+      [&] { return optional_text(file, var.name, "units"); },
+      [&] { return optional_text(file, var.name, "axis"); },
+      [&] { return optional_text(file, var.name, "sample_dimension"); },
+      [&] { return optional_text(file, var.name, "instance_dimension"); },
+      [&] { return optional_text(file, var.name, "coordinates"); },
+      [&] { return optional_text(file, var.name, "ancillary_variables"); },
+      [&] { return optional_text(file, var.name, "bounds"); },
+      [&] { return optional_text(file, var.name, "grid_mapping"); });
   if (not texts) {
     return std::unexpected{std::move(texts).error()};
   }

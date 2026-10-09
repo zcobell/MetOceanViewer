@@ -36,6 +36,8 @@ namespace {
 namespace sn = detail::station_nc;
 using core::Overloaded;
 using detail::classify_netcdf;
+using detail::fail;
+using detail::format_error;
 using detail::NetcdfKind;
 
 /// Opens `path`, runs `read` on it and closes it, on every path.
@@ -45,11 +47,11 @@ auto with_file(const std::filesystem::path& path, const ReadContext& ctx,
     -> std::invoke_result_t<const F&, const nc::File&> {
   auto file = nc::File::open(path, ctx.limits);
   if (not file) {
-    return detail::fail(std::move(file).error());
+    return fail(std::move(file).error());
   }
   auto result = read(std::as_const(*file));
   if (auto closed = std::move(*file).close(); not closed and result) {
-    return detail::fail(std::move(closed).error());
+    return fail(std::move(closed).error());
   }
   return result;
 }
@@ -90,11 +92,10 @@ std::expected<Read<StationFile>, Error> with_table(
   if (not table) {
     return std::unexpected{std::move(table).error()};
   }
-  return Read<StationFile>{
-      .value = {.table = std::move(table->value),
-                .origin = opened.value.catalog.origin},
-      .warnings = detail::concatenated(std::move(opened.warnings),
-                                       std::move(table->warnings))};
+  append(opened.warnings, std::move(table->warnings));
+  return Read<StationFile>{.value = {.table = std::move(table->value),
+                                     .origin = opened.value.catalog.origin},
+                           .warnings = std::move(opened.warnings)};
 }
 
 std::expected<Read<StationFile>, Error> read_v5(
@@ -143,24 +144,25 @@ std::expected<Read<StationFile>, Error> read_legacy_file(
 /// says so.
 std::unexpected<Error> not_a_station_file(const NetcdfKind& kind) {
   return std::visit(
-      Overloaded{[](const detail::kind::Adcirc&) {
-                   return sn::invalid(FormatErrc::not_this_format, "model");
-                 },
-                 [](const detail::kind::Dflow&) {
-                   return sn::invalid(FormatErrc::not_this_format,
-                                      "station_x_coordinate");
-                 },
-                 [](const detail::kind::OtherFormat&) {
-                   return sn::invalid(FormatErrc::not_this_format,
-                                      ":metoceanviewer_format");
-                 },
-                 [](const detail::kind::Unrecognized& u) {
-                   return sn::invalid(FormatErrc::not_this_format, u.subject);
-                 },
-                 // The kinds the station reader reads are never refused here.
-                 [](const auto&) {
-                   return sn::invalid(FormatErrc::not_this_format, "");
-                 }},
+      Overloaded{
+          [](const detail::kind::Adcirc&) {
+            return fail(format_error(FormatErrc::not_this_format, "model"));
+          },
+          [](const detail::kind::Dflow&) {
+            return fail(format_error(FormatErrc::not_this_format,
+                                     "station_x_coordinate"));
+          },
+          [](const detail::kind::OtherFormat&) {
+            return fail(format_error(FormatErrc::not_this_format,
+                                     ":metoceanviewer_format"));
+          },
+          [](const detail::kind::Unrecognized& u) {
+            return fail(format_error(FormatErrc::not_this_format, u.subject));
+          },
+          // The kinds the station reader reads are never refused here.
+          [](const auto&) {
+            return fail(format_error(FormatErrc::not_this_format, ""));
+          }},
       kind);
 }
 

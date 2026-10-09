@@ -162,8 +162,9 @@ std::expected<std::vector<core::Column>, Error> time_major_columns(
     return std::unexpected{std::move(done).error()};
   }
   if (misplaced) {
-    return invalid(FormatErrc::padding_not_missing, subject_of(var.name.view()),
-                   r.selected[misplaced->position], misplaced->step);
+    return fail(format_error(FormatErrc::padding_not_missing,
+                             subject_of(var.name.view()),
+                             r.selected[misplaced->position], misplaced->step));
   }
   return columns;
 }

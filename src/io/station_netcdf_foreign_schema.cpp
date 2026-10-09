@@ -67,15 +67,17 @@ std::expected<std::optional<std::string>, Error> mapping_datum(
   if (mapping == nullptr) {
     return std::optional<std::string>{};
   }
-  return text_of(file, mapping->var.name, "geopotential_datum_name");
+  return optional_text(file, mapping->var.name, "geopotential_datum_name");
 }
 
 std::expected<Raw, Error> raw_of(const nc::File& file,
                                  std::span<const Facts> all, const Facts& f) {
   auto texts = collect(
-      [&] { return text_of(file, f.var.name, "long_name"); },
-      [&] { return text_of(file, f.var.name, "vertical_datum"); },
-      [&] { return text_of(file, f.var.name, "geopotential_datum_name"); },
+      [&] { return optional_text(file, f.var.name, "long_name"); },
+      [&] { return optional_text(file, f.var.name, "vertical_datum"); },
+      [&] {
+        return optional_text(file, f.var.name, "geopotential_datum_name");
+      },
       [&] { return mapping_datum(file, all, f); });
   if (not texts) {
     return std::unexpected{std::move(texts).error()};
@@ -175,7 +177,8 @@ std::expected<core::QuantityId, Error> generic_quantity(
                             ? standard
                             : std::string_view{}});
   if (not generic) {
-    return invalid(FormatErrc::invalid_variable_name, subject_of(token));
+    return fail(
+        format_error(FormatErrc::invalid_variable_name, subject_of(token)));
   }
   return core::QuantityId{*std::move(generic)};
 }
@@ -296,7 +299,7 @@ std::expected<std::optional<QualityRules>, Error> quality_rules(
         }
         return int_att(file, var.name, "flag_values", var.name.view());
       },
-      [&] { return text_of(file, var.name, "flag_meanings"); });
+      [&] { return optional_text(file, var.name, "flag_meanings"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }

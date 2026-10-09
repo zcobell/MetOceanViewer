@@ -78,11 +78,12 @@ struct Base {
 std::expected<nc::VarInfo, Error> char_rows(nc::VarInfo var,
                                             const nc::DimInfo& stations) {
   if (var.type != nc::Type::char_) {
-    return invalid(FormatErrc::bad_encoding, std::string{var.name.view()});
+    return fail(
+        format_error(FormatErrc::bad_encoding, std::string{var.name.view()}));
   }
   if (var.dims.size() != 2 or var.dims[0].id != stations.id) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   std::string{var.name.view()});
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             std::string{var.name.view()}));
   }
   return var;
 }
@@ -180,9 +181,9 @@ std::expected<StationNumberWidth, Error> number_width(const nc::File& file) {
       return width;
     }
   }
-  return invalid(
+  return fail(format_error(
       FormatErrc::missing_variable,
-      legacy_variable_name(time_prefix, 1, digits_of(widths.front())), 0);
+      legacy_variable_name(time_prefix, 1, digits_of(widths.front())), 0));
 }
 
 /// What the file says about itself: v4's writer puts a global `fileformat` and
@@ -190,7 +191,7 @@ std::expected<StationNumberWidth, Error> number_width(const nc::File& file) {
 std::expected<LegacyOrigin, Error> origin_of(const nc::File& file,
                                              const Base& base,
                                              StationNumberWidth width) {
-  return text_of(file, nc::global, "fileformat")
+  return optional_text(file, nc::global, "fileformat")
       .transform([&](std::optional<std::string> format) {
         return LegacyOrigin{.fileformat = std::move(format),
                             .has_station_ids = base.id.has_value(),
@@ -238,11 +239,11 @@ std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file) {
   const std::string subject = "EPSG:" + std::to_string(**code);
   constexpr std::int64_t largest = 999'999'999;  // nine digits, as v5 reads
   if (**code <= 0 or **code > largest) {
-    return invalid(FormatErrc::unsupported_crs, subject);
+    return fail(format_error(FormatErrc::unsupported_crs, subject));
   }
   const auto epsg = core::Epsg::make(static_cast<int>(**code));
   if (not epsg) {
-    return invalid(FormatErrc::unsupported_crs, subject);
+    return fail(format_error(FormatErrc::unsupported_crs, subject));
   }
   return Read<core::Epsg>{.value = *epsg, .warnings = {}};
 }
@@ -384,14 +385,15 @@ std::expected<nc::VarInfo, Error> station_var(const nc::File& file,
       legacy_variable_name(prefix, i + 1, digits_of(width));
   const auto ref = nc::NcName::make(name);
   if (not ref) {
-    return invalid(FormatErrc::missing_variable, subject_of(name), i);
+    return fail(
+        format_error(FormatErrc::missing_variable, subject_of(name), i));
   }
   auto found = file.find_var(*ref);
   if (not found) {
     return fail(std::move(found).error());
   }
   if (not *found) {
-    return invalid(FormatErrc::missing_variable, name, i);
+    return fail(format_error(FormatErrc::missing_variable, name, i));
   }
   return **std::move(found);
 }
@@ -417,12 +419,12 @@ std::expected<StationVars, Error> station_vars(const nc::File& file,
   const std::string length =
       legacy_variable_name(length_prefix, i + 1, digits_of(width));
   if (time->dims.size() != 1 or time->dims[0].name != length) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(time->name.view()), i);
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(time->name.view()), i));
   }
   if (data->dims.size() != 1 or data->dims[0].id != time->dims[0].id) {
-    return invalid(FormatErrc::dimension_mismatch,
-                   subject_of(data->name.view()), i);
+    return fail(format_error(FormatErrc::dimension_mismatch,
+                             subject_of(data->name.view()), i));
   }
   return StationVars{.time = *std::move(time), .data = *std::move(data)};
 }
@@ -441,7 +443,7 @@ struct Reference {
 /// (B8: whatever the attribute's length, and a `T` is accepted). ParseError
 /// `bad_date` when they are not a date.
 std::expected<Reference, Error> parse_reference(std::string_view text) {
-  const std::string_view whole = core::ascii::trim(cut_at_nul(text));
+  const std::string_view whole = core::ascii::trim(text);
   const auto parsed =
       core::parse_utc_datetime(whole.substr(0, reference_date_chars));
   if (not parsed) {
@@ -486,8 +488,8 @@ std::expected<void, Error> note_time(const nc::File& file,
                                      const nc::VarInfo& time,
                                      TimeNotes& notes) {
   auto parts =
-      collect([&] { return text_of(file, time.name, "referenceDate"); },
-              [&] { return text_of(file, time.name, "timezone"); });
+      collect([&] { return optional_text(file, time.name, "referenceDate"); },
+              [&] { return optional_text(file, time.name, "timezone"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
@@ -516,8 +518,8 @@ struct MetaNotes {
 
 std::expected<MetaNotes, Error> meta_notes_of(const nc::File& file,
                                               const nc::VarInfo& data) {
-  auto parts = collect([&] { return text_of(file, data.name, "units"); },
-                       [&] { return text_of(file, data.name, "datum"); });
+  auto parts = collect([&] { return optional_text(file, data.name, "units"); },
+                       [&] { return optional_text(file, data.name, "datum"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
@@ -540,10 +542,10 @@ std::expected<void, Error> note_meta(const nc::File& file,
     return {};
   }
   if (current->units != notes->units) {
-    return invalid(FormatErrc::inconsistent_metadata, "units", i);
+    return fail(format_error(FormatErrc::inconsistent_metadata, "units", i));
   }
   if (current->datum != notes->datum) {
-    return invalid(FormatErrc::inconsistent_metadata, "datum", i);
+    return fail(format_error(FormatErrc::inconsistent_metadata, "datum", i));
   }
   return {};
 }
@@ -551,14 +553,14 @@ std::expected<void, Error> note_meta(const nc::File& file,
 Read<core::SeriesMeta> meta_of(const MetaNotes& notes) {
   Read<std::optional<core::Unit>> unit = parsed_unit(
       notes.units.empty() ? std::nullopt : std::optional{notes.units});
-  Read<core::SeriesMeta> out = with_datum(
-      core::SeriesMeta::make({.quantity = core::GenericQuantity::value(),
-                              .label = {},
-                              .unit = std::move(unit.value)}),
-      notes.datum.empty() ? std::nullopt : std::optional{notes.datum}, "value");
-  out.warnings =
-      concatenated(std::move(unit.warnings), std::move(out.warnings));
-  return out;
+  return std::move(unit).and_then([&](std::optional<core::Unit> u) {
+    return with_datum(
+        core::SeriesMeta::make({.quantity = core::GenericQuantity::value(),
+                                .label = {},
+                                .unit = std::move(u)}),
+        notes.datum.empty() ? std::nullopt : std::optional{notes.datum},
+        "value");
+  });
 }
 
 /// Everything per station that a catalog holds besides the position.
@@ -647,7 +649,7 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
     return std::unexpected{std::move(count).error()};
   }
   if (base->stations.length == 0) {
-    return invalid(FormatErrc::empty_collection, "numStations");
+    return fail(format_error(FormatErrc::empty_collection, "numStations"));
   }
   auto parts =
       collect([&] { return number_width(file); }, [&] { return crs_of(file); });
@@ -668,7 +670,7 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
     return std::unexpected{std::move(sweep).error()};
   }
   if (not sweep->meta) {
-    return invalid(FormatErrc::empty_collection, "numStations");
+    return fail(format_error(FormatErrc::empty_collection, "numStations"));
   }
   Read<core::SeriesMeta> meta = meta_of(*sweep->meta);
 

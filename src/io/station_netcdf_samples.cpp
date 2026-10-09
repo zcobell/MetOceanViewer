@@ -111,8 +111,9 @@ std::expected<void, Error> check_padding(std::span<const T> tail,
                                          const Present& present) {
   const auto it = std::ranges::find_if(tail, present);
   if (it != tail.end()) {
-    return invalid(FormatErrc::padding_not_missing, std::string{var}, station,
-                   count + static_cast<std::size_t>(it - tail.begin()));
+    return fail(
+        format_error(FormatErrc::padding_not_missing, std::string{var}, station,
+                     count + static_cast<std::size_t>(it - tail.begin())));
   }
   return {};
 }
@@ -198,12 +199,13 @@ std::expected<core::TimeAxis, Error> times_of(
   for (std::size_t j = 0; j < row.size(); ++j) {
     const std::optional<double> x = row[j].value();
     if (not x) {
-      return invalid(FormatErrc::time_missing, std::string{var}, station, j);
+      return fail(
+          format_error(FormatErrc::time_missing, std::string{var}, station, j));
     }
     const auto instant = clock.at(*x);
     if (not instant) {
-      return invalid(FormatErrc::time_out_of_range, std::string{var}, station,
-                     j);
+      return fail(format_error(FormatErrc::time_out_of_range, std::string{var},
+                               station, j));
     }
     times.push_back(*instant);
   }
@@ -244,8 +246,9 @@ std::expected<core::TimeAxis, Error> axis_of(std::span<const core::Sample> row,
   const auto descent = std::ranges::adjacent_find(
       *times, [](core::Time a, core::Time b) { return not(a < b); });
   if (descent != times->end()) {
-    return invalid(FormatErrc::time_not_increasing, std::string{var}, station,
-                   static_cast<std::size_t>(descent - times->begin()) + 1);
+    return fail(
+        format_error(FormatErrc::time_not_increasing, std::string{var}, station,
+                     static_cast<std::size_t>(descent - times->begin()) + 1));
   }
   return times;
 }
@@ -257,10 +260,10 @@ std::expected<Read<CfClock>, Error> clock_of(const nc::File& file,
     return std::unexpected{std::move(units).error()};
   }
   if (not *units) {
-    return invalid(FormatErrc::missing_attribute,
-                   std::string{time_var.name.view()} + ":units");
+    return fail(format_error(FormatErrc::missing_attribute,
+                             std::string{time_var.name.view()} + ":units"));
   }
-  auto parsed = parse_cf_time_units(cut_at_nul(**units));
+  auto parsed = parse_cf_time_units(**units);
   if (not parsed) {
     return fail(std::move(parsed).error());
   }
@@ -378,12 +381,12 @@ std::expected<void, Error> apply_flags(core::Column& column,
       continue;  // unclassified
     }
     if (f != sn::status_dry and f != sn::status_wet) {
-      return invalid(FormatErrc::bad_flag, std::string{status.name.view()},
-                     station, j);
+      return fail(format_error(FormatErrc::bad_flag,
+                               std::string{status.name.view()}, station, j));
     }
     if ((f == sn::status_dry) == column[j].is_value()) {
-      return invalid(FormatErrc::wet_dry_inconsistent,
-                     std::string{data.name.view()}, station, j);
+      return fail(format_error(FormatErrc::wet_dry_inconsistent,
+                               std::string{data.name.view()}, station, j));
     }
     if (f == sn::status_dry) {
       column[j] = core::Sample{core::Dry{}};

@@ -34,6 +34,7 @@
 #include "mov/io/detail/civil_time.hpp"
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/station_names.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/text_file.hpp"
@@ -43,6 +44,7 @@ namespace mov::io {
 namespace {
 
 using detail::LineCursor;
+using detail::subject_of;
 
 // A data row has at most 7 words and a station line 3; one slot more makes
 // split_ws_into report a longer line.
@@ -63,12 +65,6 @@ ParseError too_large(std::size_t line, std::size_t used, std::size_t limit,
                      std::string_view unit) {
   return ParseError::make(ParseErrc::too_large, {.line = line},
                           std::format("{} {}, limit {}", used, unit, limit));
-}
-
-// A warning subject is a piece of input: keep it as short as an error's.
-std::string subject_of(std::string_view token) {
-  return std::string{
-      detail::truncate_utf8(token, ParseError::max_context_bytes)};
 }
 
 // ---- header
@@ -147,8 +143,7 @@ Read<DatumAndUnit> datum_and_unit(std::optional<std::string_view> third,
       .warnings = {}};
   read.warnings.push_back(
       {.code = WarningCode::datum_unknown, .subject = subject_of(*third)});
-  read.warnings =
-      detail::concatenated(std::move(read.warnings), std::move(unit.warnings));
+  append(read.warnings, std::move(unit.warnings));
   return read;
 }
 
@@ -171,13 +166,13 @@ std::expected<Read<ImedsHeader>, ParseError> parse_header(
   Read<std::string> time_zone = zone_of(zone);
   Read<DatumAndUnit> rest_of_line =
       datum_and_unit(third, core::ascii::trim(rest));
+  append(time_zone.warnings, std::move(rest_of_line.warnings));
   return Read<ImedsHeader>{
       .value = {.source = std::string{*source},
                 .time_zone = std::move(time_zone.value),
                 .datum = rest_of_line.value.datum,
                 .unit = std::move(rest_of_line.value.unit)},
-      .warnings = detail::concatenated(std::move(time_zone.warnings),
-                                       std::move(rest_of_line.warnings))};
+      .warnings = std::move(time_zone.warnings)};
 }
 
 // ---- values
@@ -597,8 +592,8 @@ std::expected<Read<ImedsFile>, Error> ImedsParser::finish(
   if (not table) {
     return std::unexpected{std::move(table).error()};
   }
-  std::vector<Warning> warnings = detail::concatenated(
-      std::move(header_->warnings), std::move(table->warnings));
+  std::vector<Warning> warnings = std::move(header_->warnings);
+  append(warnings, std::move(table->warnings));
   append_if_counted(warnings, {.code = WarningCode::invalid_utf8_replaced,
                                .subject = {},
                                .count = names_cleaned_});

@@ -42,7 +42,6 @@ namespace mov::io {
 
 namespace {
 
-using detail::cut_at_nul;
 using detail::fail;
 using detail::format_error;
 using detail::simplified;
@@ -188,7 +187,7 @@ std::expected<TimeSetup, Error> time_of(const nc::File& file,
     return fail(
         format_error(FormatErrc::missing_attribute, variable + ":units"));
   }
-  auto parsed = parse_cf_time_units(cut_at_nul(**text));
+  auto parsed = parse_cf_time_units(**text);
   if (not parsed) {
     return fail(std::move(parsed.error()));
   }
@@ -332,8 +331,8 @@ std::expected<std::vector<DflowVariable>, Error> variables_of(
     if (not label) {
       return std::unexpected{std::move(label.error())};
     }
-    std::string long_name = *label and not cut_at_nul(**label).empty()
-                                ? simplified(cut_at_nul(**label))
+    std::string long_name = *label and not(*label)->empty()
+                                ? simplified(**label)
                                 : std::string{l.info.name.view()};
     out.push_back(entry_for(l.info.name, std::move(long_name), l.shape));
   }
@@ -416,7 +415,7 @@ std::optional<core::Unit> unit_of(const std::optional<std::string>& units,
                                   std::vector<Warning>& warnings) {
   std::optional<core::Unit> unit;
   if (units) {
-    unit = core::parse_unit(cut_at_nul(*units));
+    unit = core::parse_unit(*units);
   }
   if (not unit) {
     if (const auto* registry = std::get_if<core::Quantity>(&quantity)) {
@@ -450,17 +449,16 @@ std::expected<Described, Error> describe_variable(const nc::File& file,
     return std::unexpected{std::move(units.error())};
   }
   Described out{.meta = {}, .warnings = {}};
-  core::QuantityId quantity =
-      quantity_of(name, *standard ? cut_at_nul(**standard) : std::string_view{},
-                  grid, out.warnings);
+  core::QuantityId quantity = quantity_of(
+      name, *standard ? std::string_view{**standard} : std::string_view{}, grid,
+      out.warnings);
   std::optional<core::Unit> unit =
       unit_of(*units, quantity, name, out.warnings);
-  out.meta = core::SeriesMeta::make(
-      {.quantity = std::move(quantity),
-       .label = *label and not cut_at_nul(**label).empty()
-                    ? simplified(cut_at_nul(**label))
-                    : std::string{name},
-       .unit = std::move(unit)});
+  out.meta = core::SeriesMeta::make({.quantity = std::move(quantity),
+                                     .label = *label and not(*label)->empty()
+                                                  ? simplified(**label)
+                                                  : std::string{name},
+                                     .unit = std::move(unit)});
   return out;
 }
 
@@ -720,8 +718,8 @@ std::expected<Read<DflowCatalog>, Error> inspect_dflow(
     return std::unexpected{std::move(stations.error())};
   }
   std::vector<Warning> warnings = std::move(time->warnings);
-  detail::append(warnings, std::move(stations->warnings));
-  detail::append(warnings, std::move(listing->warnings));
+  append(warnings, std::move(stations->warnings));
+  append(warnings, std::move(listing->warnings));
   return Read<DflowCatalog>{.value = {.stations = std::move(stations->value),
                                       .variables = *std::move(variables),
                                       .times = structure->time_dim.length,
@@ -850,7 +848,7 @@ std::expected<Values, Error> read_values(const Setup& setup,
       out.nonfinite_in = component->name;
     }
     out.nonfinite += component->nonfinite;
-    detail::append(out.warnings, std::move(component->warnings));
+    append(out.warnings, std::move(component->warnings));
     out.components.push_back(*std::move(component));
   }
   return out;
@@ -913,7 +911,7 @@ std::expected<Read<core::StationTable>, Error> read_dflow(
     return std::unexpected{std::move(variable.error())};
   }
   std::vector<Warning> warnings = std::move(time->warnings);
-  detail::append(warnings, std::move(values->warnings));
+  append(warnings, std::move(values->warnings));
   append_if_counted(warnings, {.code = WarningCode::nonfinite_masked,
                                .subject = std::move(values->nonfinite_in),
                                .count = values->nonfinite});

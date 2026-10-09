@@ -22,6 +22,7 @@
 #include "mov/io/detail/line_cursor.hpp"
 #include "mov/io/detail/model_number.hpp"
 #include "mov/io/detail/parse_at.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read.hpp"
@@ -34,6 +35,7 @@ namespace {
 
 using Line = detail::LineCursor::Line;
 using Mark = core::HighWaterMark;
+using detail::fail;
 
 constexpr std::size_t rows_per_stop_poll = 1024;
 constexpr std::size_t header_subject_bytes = 60;
@@ -41,11 +43,6 @@ constexpr std::size_t header_subject_bytes = 60;
 // A row has this many fields; the last, the difference, may be left out.
 constexpr std::size_t value_fields = 5;
 constexpr std::size_t max_fields = 6;
-
-template <class E>
-auto fail(E&& e) {
-  return std::unexpected{lift<Error>(std::forward<E>(e))};
-}
 
 // The text of the five columns of a row; the views are into its line.
 struct RowText {

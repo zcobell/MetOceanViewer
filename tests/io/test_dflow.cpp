@@ -916,6 +916,36 @@ TEST_CASE("quantities: a name that is a registry token is that quantity",
         std::optional<mov::core::Unit>{mov::core::PressureUnit::hectopascal});
 }
 
+TEST_CASE("text attributes end at their first NUL", "[io][dflow]") {
+  // Fixed-width writers pad attributes with NULs and leave junk after them;
+  // every text attribute a reader gets is cut there, whoever reads it.
+  const mov::test::ScratchDir dir;
+  DflowNc spec = basic();
+  DflowVar level = variable("waterlevel", 0, "m"s + '\0' + "junk");
+  level.long_name = "Water level"s + '\0' + "\xFFjunk";
+  DflowVar salinity = variable("salinity", 0, "S m-1"s + '\0' + "xx");
+  salinity.standard_name = "sea_water_salinity"s + '\0' + "_junk";
+  spec.vars = {level, salinity};
+  spec.time_units = "seconds since 2010-01-01 00:00:00"s + '\0' + "junk";
+  make_dflow_nc(dir / "his.nc", spec);
+
+  const auto read =
+      read_ok(dir / "his.nc", flat_request("waterlevel", everything(3)));
+  CHECK(read.value.schema()[0].unit() ==
+        std::optional<mov::core::Unit>{mov::core::LengthUnit::meter});
+  CHECK(read.value.schema()[0].label() == "Water level");
+  CHECK(read.warnings.empty());
+
+  const auto sal =
+      read_ok(dir / "his.nc", flat_request("salinity", everything(3)));
+  const auto* generic = std::get_if<mov::core::GenericQuantity>(
+      &sal.value.schema()[0].quantity());
+  REQUIRE(generic != nullptr);
+  CHECK(generic->standard_name() == "sea_water_salinity");
+  CHECK(sal.value.schema()[0].unit() == mov::core::parse_unit("S m-1"));
+  CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 0);
+}
+
 TEST_CASE("attributes that are not text are not labels or units",
           "[io][dflow]") {
   const mov::test::ScratchDir dir;

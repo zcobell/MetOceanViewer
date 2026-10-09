@@ -41,7 +41,6 @@ namespace mov::io {
 
 namespace {
 
-using detail::cut_at_nul;
 using detail::fail;
 using detail::format_error;
 
@@ -93,8 +92,7 @@ std::expected<void, Error> require_model(const nc::File& file) {
   if (not model) {
     return std::unexpected{std::move(model.error())};
   }
-  const bool adcirc =
-      *model and core::ascii::trim(cut_at_nul(**model)) == "ADCIRC";
+  const bool adcirc = *model and core::ascii::trim(**model) == "ADCIRC";
   if (not adcirc) {
     return fail(format_error(FormatErrc::not_this_format, "model"));
   }
@@ -273,7 +271,7 @@ std::expected<UnitsOfTime, Error> read_units(const nc::File& file,
   }
   UnitsOfTime out{.text = std::nullopt, .parsed = std::nullopt};
   if (*text) {
-    out.text = std::string{cut_at_nul(**text)};
+    out.text = **text;
     if (auto parsed = parse_cf_time_units(*out.text)) {
       out.parsed = *std::move(parsed);
     }
@@ -596,14 +594,14 @@ std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
                           .times = structure->time_dim.length,
                           .time_units = std::nullopt};
   std::vector<Warning> warnings = std::move(stations->warnings);
-  detail::append(warnings, *std::move(mismatch));
+  append(warnings, *std::move(mismatch));
   if (units->text) {
     catalog.time_units = TimeUnitsAttr{
         .text = *units->text,
         .parsed =
             units->parsed ? std::optional{units->parsed->value} : std::nullopt};
     if (units->parsed) {
-      detail::append(warnings, std::move(units->parsed->warnings));
+      append(warnings, std::move(units->parsed->warnings));
     }
   }
   return Read<AdcircNcCatalog>{.value = std::move(catalog),

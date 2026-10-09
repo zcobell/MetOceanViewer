@@ -26,6 +26,7 @@
 #include "mov/core/timeseries.hpp"
 #include "mov/io/cf_time.hpp"
 #include "mov/io/detail/checked_product.hpp"
+#include "mov/io/detail/reporting.hpp"
 #include "mov/io/detail/station_groups.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -36,24 +37,10 @@ namespace mov::io::detail {
 
 // ---- errors ----------------------------------------------------------------
 
-[[nodiscard]] FormatError format_error(
-    FormatErrc code, std::string subject,
-    std::optional<std::size_t> station = std::nullopt,
-    std::optional<std::size_t> index = std::nullopt);
-
-template <class E>
-[[nodiscard]] auto fail(E&& e) {
-  return std::unexpected{lift<Error>(std::forward<E>(e))};
-}
-
 /// An NcError the reader itself raises (a limit, a type it refuses), naming
 /// the variable and the file.
 [[nodiscard]] NcError nc_fault(const nc::File& file, WrapperFault fault,
                                NcOp op, std::string_view object);
-
-/// `warnings` followed by `more`: the one way a reader joins the warnings of
-/// its stages.
-void append(std::vector<Warning>& warnings, std::vector<Warning> more);
 
 // ---- structure -------------------------------------------------------------
 
@@ -76,8 +63,11 @@ void append(std::vector<Warning>& warnings, std::vector<Warning> more);
 [[nodiscard]] std::expected<void, Error> require_selection(
     const core::StationSelection& selection, std::size_t station_count);
 
-/// The text attribute `att` of `on`, or nullopt when it is absent or not a
-/// text of one string (a numeric attribute is no label, no unit).
+/// The text attribute `att` of `on` up to its first NUL, or nullopt when it
+/// is absent or not a text of one string (a numeric attribute is no label, no
+/// unit). Every reader gets its attribute text here: fixed-width writers pad
+/// with NULs and may leave junk after them, so the cut is this rule's, not each
+/// caller's.
 [[nodiscard]] std::expected<std::optional<std::string>, Error> optional_text(
     const nc::File& file, nc::AttTarget on, nc::NcNameRef att);
 
