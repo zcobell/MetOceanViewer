@@ -108,6 +108,18 @@ class AttStrings {
 
 }  // namespace
 
+std::expected<std::optional<Type>, NcError> File::att_type(
+    AttTarget on, NcNameRef name) const {
+  const auto owner = att_owner(on, name, NcOp::get_att);
+  if (not owner) {
+    return std::unexpected{owner.error()};
+  }
+  return att_shape(*owner, on, name).transform([](const auto& shape) {
+    return shape.transform(
+        [](const AttShape& found) -> Type { return found.type; });
+  });
+}
+
 std::expected<std::optional<std::string>, NcError> File::text_att(
     AttTarget on, NcNameRef name) const {
   using Result = std::expected<std::optional<std::string>, NcError>;

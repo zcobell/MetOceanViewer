@@ -11,6 +11,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <set>
+#include <string>
 #include <string_view>
 
 #include "mov/io/netcdf/name.hpp"
@@ -60,6 +62,31 @@ inline constexpr std::array<nc::NcNameRef, 14> reserved_names{
 
 /// The suffix of a data variable's wet/dry status variable (SN 8.2).
 inline constexpr std::string_view status_suffix = "_status";
+
+/// The tokens of the columns of a table so far.
+using TokenSet = std::set<std::string, std::less<>>;
+
+/// Whether `token` can name a column next to the columns whose tokens are
+/// `others` (SN 4.2, 6, 8.2): the one rule of the writer and of every reader
+/// that makes a schema. It is not a name the format uses itself; it and its
+/// status variable `<token>_status` (reserved for every column whether or not
+/// it has Dry samples) are netCDF names (at most NC_MAX_NAME bytes, so the
+/// token at most 249); no other column has this token; none has this token's
+/// status name; and this is not the status name of another column.
+[[nodiscard]] inline bool writable_token(std::string_view token,
+                                         const TokenSet& others) {
+  if (is_reserved(token) or others.contains(token)) {
+    return false;
+  }
+  const std::string status = std::string{token} + std::string{status_suffix};
+  if (not nc::NcName::make(token) or not nc::NcName::make(status) or
+      others.contains(status)) {
+    return false;
+  }
+  return not(
+      token.ends_with(status_suffix) and
+      others.contains(token.substr(0, token.size() - status_suffix.size())));
+}
 
 // ---- values (SN 3, 5, 7, 8, 10)
 // -----------------------------------------------------

@@ -230,6 +230,27 @@ static_assert(quantity_registry.size() ==
   return static_cast<Quantity>(it - detail::quantity_registry.begin());
 }
 
+/// The registry quantity whose CF standard name is exactly `standard_name`,
+/// searching the registry in its order after `after` (from the start without
+/// it); nullopt when there is none. Two quantities share a standard name
+/// (`water_level` and `water_level_prediction`): the first search finds the
+/// first, the search after it the second. `difference` has none.
+[[nodiscard]] constexpr std::optional<Quantity> quantity_for_standard_name(
+    std::string_view standard_name,
+    std::optional<Quantity> after = std::nullopt) noexcept {
+  if (standard_name.empty()) {
+    return std::nullopt;
+  }
+  const std::size_t first =
+      after ? static_cast<std::size_t>(*after) + 1 : std::size_t{0};
+  for (std::size_t i = first; i < detail::quantity_registry.size(); ++i) {
+    if (detail::quantity_registry[i].standard_name == standard_name) {
+      return static_cast<Quantity>(i);
+    }
+  }
+  return std::nullopt;
+}
+
 /// The token of a registry quantity.
 [[nodiscard]] constexpr std::string_view token(Quantity q) noexcept {
   return info(q).token;

@@ -49,7 +49,8 @@ constexpr std::array all_pressures{
 constexpr std::array all_discharges{DischargeUnit::cubic_meter_per_second,
                                     DischargeUnit::cubic_foot_per_second};
 constexpr std::array all_temperatures{TemperatureUnit::celsius,
-                                      TemperatureUnit::fahrenheit};
+                                      TemperatureUnit::fahrenheit,
+                                      TemperatureUnit::kelvin};
 
 constexpr std::array sample_values{1.0, -3.7, 1234.5678, 0.0, 1.0e-9, 2.5e7};
 // No tiny values: an affine temperature conversion adds 32, which swamps them.
@@ -290,10 +291,31 @@ TEST_CASE("temperature conversion is affine", "[core][units][constexpr]") {
   STATIC_REQUIRE(c_to_f.offset == 32.0);
 }
 
+TEST_CASE("kelvin converts through Celsius", "[core][units][constexpr]") {
+  constexpr Affine k_to_c =
+      conversion(TemperatureUnit::kelvin, TemperatureUnit::celsius);
+  constexpr Affine c_to_k =
+      conversion(TemperatureUnit::celsius, TemperatureUnit::kelvin);
+  constexpr Affine k_to_f =
+      conversion(TemperatureUnit::kelvin, TemperatureUnit::fahrenheit);
+  constexpr Affine f_to_k =
+      conversion(TemperatureUnit::fahrenheit, TemperatureUnit::kelvin);
+  STATIC_REQUIRE(near(k_to_c(273.15), 0.0, 1e-12));
+  STATIC_REQUIRE(near(k_to_c(0.0), -273.15, 1e-12));
+  STATIC_REQUIRE(near(c_to_k(100.0), 373.15, 1e-12));
+  STATIC_REQUIRE(near(k_to_f(373.15), 212.0, 1e-9));
+  STATIC_REQUIRE(near(f_to_k(32.0), 273.15, 1e-9));
+  // The Fahrenheit/Celsius constants are unchanged by the third unit.
+  STATIC_REQUIRE(
+      conversion(TemperatureUnit::celsius, TemperatureUnit::fahrenheit) ==
+      Affine{.scale = 1.8, .offset = 32.0});
+}
+
 TEST_CASE("is_temperature classifies the Unit variant",
           "[core][units][constexpr]") {
   MOV_STATIC_REQUIRE_VARIANT(is_temperature(Unit{TemperatureUnit::celsius}));
   MOV_STATIC_REQUIRE_VARIANT(is_temperature(Unit{TemperatureUnit::fahrenheit}));
+  MOV_STATIC_REQUIRE_VARIANT(is_temperature(Unit{TemperatureUnit::kelvin}));
   MOV_STATIC_REQUIRE_FALSE_VARIANT(is_temperature(Unit{LengthUnit::foot}));
   MOV_STATIC_REQUIRE_FALSE_VARIANT(is_temperature(Unit{SpeedUnit::knot}));
   MOV_STATIC_REQUIRE_FALSE_VARIANT(is_temperature(Unit{PressureUnit::pascal}));

@@ -4,6 +4,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstddef>
 #include <expected>
 #include <filesystem>
 #include <functional>
@@ -32,6 +33,22 @@ namespace mov::io {
 /// Blocking I/O: call it from a worker, not the GUI thread.
 [[nodiscard]] std::expected<std::string, FileError> read_text_file(
     const std::filesystem::path& path, const ReadLimits& limits);
+
+/// The start of a file: its first bytes, and whether they are all of it.
+struct FilePrefix {
+  std::string bytes;
+  /// The file has no more bytes than `bytes` (it is not cut).
+  bool whole_file;
+  friend bool operator==(const FilePrefix&, const FilePrefix&) = default;
+};
+
+/// The first `max_bytes` bytes of the file (all of it if it is shorter), for a
+/// reader that only sniffs what kind of file it has. Opened and checked like
+/// read_text_file (a missing file, a directory or any other kind of file is a
+/// FileError), but whatever the size of the file: no `max_text_bytes` applies,
+/// because no more than `max_bytes` are read.
+[[nodiscard]] std::expected<FilePrefix, FileError> read_file_prefix(
+    const std::filesystem::path& path, std::size_t max_bytes);
 
 namespace detail {
 

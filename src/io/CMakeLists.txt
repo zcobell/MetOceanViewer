@@ -58,3 +58,20 @@ target_sources(
         station_netcdf_samples.cpp
         station_netcdf_write.cpp
 )
+
+# Foreign CF and legacy v4 station netCDF readers, file-type detection (WP10b).
+target_sources(
+    mov_io
+    PRIVATE
+        file_type.cpp
+        netcdf_kind.cpp
+        station_netcdf_foreign_open.cpp
+        station_netcdf_foreign_read.cpp
+        station_netcdf_legacy.cpp
+)
+
+# Helpers the v5, foreign and legacy station netCDF readers share (WP10b review).
+target_sources(mov_io PRIVATE station_netcdf_shared.cpp)
+
+# The foreign CF reader: what each variable says, and the schema (WP10b review).
+target_sources(mov_io PRIVATE station_netcdf_foreign_facts.cpp station_netcdf_foreign_schema.cpp)

@@ -44,7 +44,7 @@ enum class DischargeUnit : std::uint8_t {
 };
 /// A unit option only: the affine Temperature value type is deferred to
 /// Phase 3, so there is no Measure over it.
-enum class TemperatureUnit : std::uint8_t { celsius, fahrenheit };
+enum class TemperatureUnit : std::uint8_t { celsius, fahrenheit, kelvin };
 
 namespace detail {
 
@@ -233,7 +233,7 @@ struct NameTable {
   Names<5> speed;
   Names<4> pressure;
   Names<2> discharge;
-  Names<2> temperature;
+  Names<3> temperature;
 };
 
 // Each table has one entry per enumerator: a new enumerator breaks the build
@@ -248,7 +248,7 @@ static_assert(std::tuple_size_v<decltype(NameTable::discharge)> ==
               static_cast<std::size_t>(DischargeUnit::cubic_foot_per_second) +
                   1);
 static_assert(std::tuple_size_v<decltype(NameTable::temperature)> ==
-              static_cast<std::size_t>(TemperatureUnit::fahrenheit) + 1);
+              static_cast<std::size_t>(TemperatureUnit::kelvin) + 1);
 
 // The degree sign is spelled as its UTF-8 bytes: the source encoding is not
 // assumed. The literals are split so the hex escape ends before the letter.
@@ -260,14 +260,15 @@ inline constexpr NameTable symbol_names{
     .temperature = {"\xC2\xB0"
                     "C",
                     "\xC2\xB0"
-                    "F"}};
+                    "F",
+                    "K"}};
 
 inline constexpr NameTable udunits_names{
     .length = {"m", "ft", "in", "km", "mile", "nautical_mile"},
     .speed = {"m s-1", "ft s-1", "knot", "mile hour-1", "km hour-1"},
     .pressure = {"Pa", "hPa", "millibar", "m H2O"},
     .discharge = {"m3 s-1", "ft3 s-1"},
-    .temperature = {"degC", "degF"}};
+    .temperature = {"degC", "degF", "K"}};
 
 [[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
                                                  LengthUnit u) noexcept {
@@ -381,14 +382,52 @@ using UnitError = std::variant<IncompatibleUnits, UnknownUnit>;
 
 namespace detail {
 
+/// y = second(first(x)).
+[[nodiscard]] constexpr Affine then(Affine first, Affine second) noexcept {
+  return Affine{.scale = second.scale * first.scale,
+                .offset = (second.scale * first.offset) + second.offset};
+}
+
+/// The affine map from a temperature in `u` to degrees Celsius.
+[[nodiscard]] constexpr Affine to_celsius(TemperatureUnit u) noexcept {
+  switch (u) {
+    case TemperatureUnit::celsius:
+      break;
+    case TemperatureUnit::fahrenheit:
+      return Affine{.scale = 5.0 / 9.0, .offset = -160.0 / 9.0};
+    case TemperatureUnit::kelvin:
+      return Affine{.scale = 1.0, .offset = -273.15};
+  }
+  return Affine{};
+}
+
+/// The affine map from degrees Celsius to a temperature in `u`.
+[[nodiscard]] constexpr Affine from_celsius(TemperatureUnit u) noexcept {
+  switch (u) {
+    case TemperatureUnit::celsius:
+      break;
+    case TemperatureUnit::fahrenheit:
+      return Affine{.scale = 1.8, .offset = 32.0};
+    case TemperatureUnit::kelvin:
+      return Affine{.scale = 1.0, .offset = 273.15};
+  }
+  return Affine{};
+}
+
 [[nodiscard]] constexpr Affine temperature_conversion(
     TemperatureUnit from, TemperatureUnit to) noexcept {
   if (from == to) {
     return Affine{};
   }
-  return from == TemperatureUnit::celsius
-             ? Affine{.scale = 1.8, .offset = 32.0}
-             : Affine{.scale = 5.0 / 9.0, .offset = -160.0 / 9.0};
+  // Celsius is the hub: its two direct maps are the exact constants, and no
+  // composition is applied to them.
+  if (from == TemperatureUnit::celsius) {
+    return from_celsius(to);
+  }
+  if (to == TemperatureUnit::celsius) {
+    return to_celsius(from);
+  }
+  return then(to_celsius(from), from_celsius(to));
 }
 
 }  // namespace detail

@@ -197,6 +197,11 @@ class File : private detail::Dataset {
   // ---- attributes ----------------------------------------------------------
   // An absent attribute is nullopt; an absent variable is an error.
 
+  /// The external type of the attribute, nullopt when there is none: one
+  /// inquiry, for a reader that accepts several types of a number.
+  [[nodiscard]] std::expected<std::optional<Type>, NcError> att_type(
+      AttTarget on, NcNameRef name) const;
+
   /// An NC_CHAR attribute (all attlen bytes, NULs included, B8) or a
   /// one-element NC_STRING attribute (a NULL string is ""). Longer than
   /// max_att_bytes is `too_large`; any other type is `type_mismatch`, an

@@ -43,33 +43,13 @@
 
 namespace mov::io::detail::station_nc {
 
-std::unexpected<Error> invalid(FormatErrc code, std::string subject,
-                               std::optional<std::size_t> station,
-                               std::optional<std::size_t> index) {
-  return fail(format_error(code, std::move(subject), station, index));
-}
-
-std::string subject_of(std::string_view text) {
-  return std::string{truncate_utf8(text, ParseError::max_context_bytes)};
-}
-
 namespace {
 
 namespace sn = ::mov::io::detail::station_nc;
 
-using Vars = std::vector<nc::VarInfo>;
+}  // namespace
 
-/// A text attribute of `on`, cut at its first NUL; nullopt when absent or not
-/// text.
-std::expected<std::optional<std::string>, Error> text_of(const nc::File& file,
-                                                         nc::AttTarget on,
-                                                         nc::NcNameRef att) {
-  return optional_text(file, on, att)
-      .transform([](std::optional<std::string> text) {
-        return text.transform(
-            [](const std::string& t) { return std::string{cut_at_nul(t)}; });
-      });
-}
+namespace {
 
 // ---- the header (SN 12.1, 13)
 // ----------------------------------------------------
@@ -155,11 +135,9 @@ std::expected<Read<StationNcVersion>, Error> read_header(const nc::File& file) {
 // ---- the structure (SN 12.2, 12.3)
 // -------------------------------------------------
 
-std::optional<nc::VarInfo> named(const Vars& vars, std::string_view name) {
-  const auto it = std::ranges::find_if(
-      vars, [name](const nc::VarInfo& v) { return v.name == name; });
-  return it == vars.end() ? std::nullopt : std::optional{*it};
-}
+}  // namespace
+
+namespace {
 
 std::expected<nc::VarInfo, Error> require_named(const Vars& vars,
                                                 std::string_view name) {
@@ -514,95 +492,9 @@ std::expected<std::vector<std::string>, Error> grid_mappings(
   return names;
 }
 
-/// "EPSG:<digits>" (at most 9 digits), positive.
-std::optional<core::Epsg> parse_epsg(std::string_view text) {
-  constexpr std::string_view prefix = "EPSG:";
-  constexpr std::size_t max_digits = 9;
-  if (not text.starts_with(prefix)) {
-    return std::nullopt;
-  }
-  const std::string_view digits = text.substr(prefix.size());
-  if (digits.empty() or digits.size() > max_digits or
-      not std::ranges::all_of(digits,
-                              [](char c) { return c >= '0' and c <= '9'; })) {
-    return std::nullopt;
-  }
-  int code = 0;
-  for (const char c : digits) {
-    code = (code * 10) + (c - '0');
-  }
-  const auto epsg = core::Epsg::make(code);
-  return epsg ? std::optional{*epsg} : std::nullopt;
-}
+}  // namespace
 
-/// A one-value double attribute: nullopt when absent.
-std::expected<std::optional<double>, Error> double_att(const nc::File& file,
-                                                       nc::NcNameRef var,
-                                                       nc::NcNameRef att) {
-  auto values = file.numeric_att<double>(var, att);
-  if (not values) {
-    return fail(std::move(values).error());
-  }
-  if (*values and (*values)->size() != 1) {
-    return fail(nc_fault(file, WrapperFault::count_mismatch, NcOp::get_att,
-                         att.view()));
-  }
-  return values->transform([](const std::vector<double>& v) { return v[0]; });
-}
-
-/// The CRS of a grid mapping variable without `epsg_code`:
-/// latitude_longitude on the WGS 84 ellipsoid; without ellipsoid parameters,
-/// assumed to be WGS 84 (warning).
-std::expected<Read<core::Epsg>, Error> crs_from_parameters(
-    const nc::File& file, const nc::VarInfo& var) {
-  auto parts =
-      collect([&] { return text_of(file, var.name, "grid_mapping_name"); },
-              [&] { return double_att(file, var.name, "semi_major_axis"); },
-              [&] { return double_att(file, var.name, "inverse_flattening"); });
-  if (not parts) {
-    return std::unexpected{std::move(parts).error()};
-  }
-  const auto& [mapping, axis, flattening] = *parts;
-  const std::string subject{var.name.view()};
-  if (mapping.transform(core::detail::trim) != "latitude_longitude" or
-      axis.value_or(sn::wgs84_semi_major_axis) != sn::wgs84_semi_major_axis or
-      flattening.value_or(sn::wgs84_inverse_flattening) !=
-          sn::wgs84_inverse_flattening) {
-    return invalid(FormatErrc::unsupported_crs, subject);
-  }
-  Read<core::Epsg> out{.value = core::Epsg::wgs84(), .warnings = {}};
-  if (not axis or not flattening) {
-    out.warnings.push_back(
-        {.code = WarningCode::crs_assumed, .subject = subject});
-  }
-  return out;
-}
-
-/// The grid mapping variable's CRS: `epsg_code`, else its parameters. A
-/// prime meridian other than Greenwich is refused either way.
-std::expected<Read<core::Epsg>, Error> crs_of_mapping(const nc::File& file,
-                                                      const nc::VarInfo& var) {
-  auto parts = collect([&] { return text_of(file, var.name, "epsg_code"); },
-                       [&] {
-                         return double_att(file, var.name,
-                                           "longitude_of_prime_meridian");
-                       });
-  if (not parts) {
-    return std::unexpected{std::move(parts).error()};
-  }
-  const auto& [code, meridian] = *parts;
-  if (meridian.value_or(0.0) != 0.0) {
-    return invalid(FormatErrc::unsupported_crs, std::string{var.name.view()});
-  }
-  if (not code) {
-    return crs_from_parameters(file, var);
-  }
-  const auto epsg = parse_epsg(core::detail::trim(*code));
-  if (not epsg) {
-    return invalid(FormatErrc::unsupported_crs, std::string{var.name.view()});
-  }
-  return Read<core::Epsg>{.value = *epsg, .warnings = {}};
-}
+namespace {
 
 std::expected<Read<core::Epsg>, Error> crs_of(const nc::File& file,
                                               const Structure& s) {
@@ -645,13 +537,9 @@ std::expected<std::optional<Projector>, Error> projector_for(core::Epsg epsg) {
 // ---- the stations (SN 12.4)
 // ---------------------------------------------------------
 
-/// The bytes of a char row without its trailing NUL padding.
-std::string trimmed(std::string row) {
-  while (not row.empty() and row.back() == '\0') {
-    row.pop_back();
-  }
-  return row;
-}
+}  // namespace
+
+namespace {
 
 std::expected<std::vector<core::StationKey>, Error> station_ids(
     const nc::File& file, const nc::VarInfo& var, const StopToken& stop) {
@@ -738,56 +626,9 @@ station_sources(const nc::File& file, const Structure& s,
   return out;
 }
 
-std::expected<std::vector<double>, Error> coordinate(const nc::File& file,
-                                                     const nc::VarInfo& var,
-                                                     const StopToken& stop) {
-  auto samples = file.read_samples(var.name, nc::whole(var), stop);
-  if (not samples) {
-    return std::unexpected{std::move(samples).error()};
-  }
-  std::vector<double> values;
-  values.reserve(samples->size());
-  for (std::size_t i = 0; i < samples->size(); ++i) {
-    const std::optional<double> x = (*samples)[i].value();
-    if (not x) {
-      return invalid(FormatErrc::bad_coordinates, std::string{var.name.view()},
-                     i);
-    }
-    values.push_back(*x);
-  }
-  return values;
-}
+}  // namespace
 
-/// Where a station is: its WGS 84 Location and, when the file's CRS is
-/// another geographic one, its point in that CRS.
-struct Position {
-  core::Location location;
-  std::optional<core::NativePoint> native;
-};
-
-/// The position of station i from lon/lat in `projector`'s CRS, or WGS 84.
-std::expected<Position, Error> place(double lat, double lon,
-                                     std::optional<Projector>& projector,
-                                     std::size_t i) {
-  if (not projector) {
-    const auto where = core::Location::make({.lat = lat, .lon = lon});
-    if (not where) {
-      return invalid(
-          FormatErrc::bad_coordinates,
-          where.error() == core::LocationError::longitude_out_of_range ? "lon"
-                                                                       : "lat",
-          i);
-    }
-    return Position{.location = *where, .native = std::nullopt};
-  }
-  const auto native =
-      core::NativePoint::make({.x = lon, .y = lat}, projector->crs());
-  const auto where = projector->to_location({.x = lon, .y = lat});
-  if (not native or not where) {
-    return invalid(FormatErrc::bad_coordinates, "lon, lat", i);
-  }
-  return Position{.location = *where, .native = *native};
-}
+namespace {
 
 std::expected<Read<std::vector<core::FileStation>>, Error> read_stations(
     const nc::File& file, const Structure& s, core::Epsg epsg,
@@ -871,33 +712,9 @@ std::expected<Read<std::optional<core::Unit>>, Error> unit_of(
   return out;
 }
 
-/// `meta` with the datum of `vertical_datum`, when it has one it can carry.
-Read<core::SeriesMeta> with_datum(core::SeriesMeta meta,
-                                  const std::optional<std::string>& text,
-                                  std::string_view variable) {
-  Read<core::SeriesMeta> out{.value = std::move(meta), .warnings = {}};
-  if (not text) {
-    return out;
-  }
-  const auto datum = core::parse_vertical_datum(*text);
-  if (not datum) {
-    out.warnings.push_back({.code = WarningCode::datum_unknown,
-                            .subject = subject_of(datum.error().text)});
-    return out;
-  }
-  if (not *datum) {
-    return out;  // "none"
-  }
-  auto assumed = out.value.assume_datum(**datum);
-  if (not assumed) {
-    out.warnings.push_back(
-        {.code = WarningCode::datum_unknown,
-         .subject = std::string{variable} + ":vertical_datum"});
-    return out;
-  }
-  out.value = *std::move(assumed);
-  return out;
-}
+}  // namespace
+
+namespace {
 
 std::expected<Read<core::SeriesMeta>, Error> meta_of(const nc::File& file,
                                                      const nc::VarInfo& var) {
@@ -933,16 +750,22 @@ std::expected<Read<std::vector<core::SeriesMeta>>, Error> read_schema(
     const nc::File& file, std::span<const DataVar> data) {
   Read<std::vector<core::SeriesMeta>> out{.value = {}, .warnings = {}};
   out.value.reserve(data.size());
-  std::set<std::string, std::less<>> tokens;
+  TokenSet tokens;
   for (const DataVar& d : data) {
     auto meta = meta_of(file, d.var);
     if (not meta) {
       return std::unexpected{std::move(meta).error()};
     }
     const std::string token{core::token(meta->value.quantity())};
-    if (not tokens.insert(token).second) {
+    if (tokens.contains(token)) {
       return invalid(FormatErrc::duplicate_quantity, subject_of(token));
     }
+    // The writer's own rule (writable_token): next to the columns before it,
+    // the token is not another's status name nor has a status name taken.
+    if (not writable_token(token, tokens)) {
+      return invalid(FormatErrc::invalid_variable_name, subject_of(token));
+    }
+    tokens.insert(token);
     out.value.push_back(std::move(meta->value));
     append(out.warnings, std::move(meta->warnings));
   }
@@ -1019,7 +842,6 @@ std::expected<Read<Opened>, Error> open_v5(const nc::File& file,
         {.station = std::move(stations[i]), .samples = counts[i]});
   }
   return Read<Opened>{.value = {.structure = *std::move(structure),
-                                .origin = origin,
                                 .catalog = std::move(catalog)},
                       .warnings = concatenated(std::move(header->warnings),
                                                std::move(parts->warnings))};

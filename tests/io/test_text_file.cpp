@@ -142,6 +142,48 @@ TEST_CASE("read_text_file checks the size limit before reading",
             .has_value());
 }
 
+TEST_CASE("read_file_prefix reads at most the bytes asked for",
+          "[io][text_file]") {
+  const mov::test::ScratchDir dir;
+  const std::filesystem::path file = dir / "twenty.txt";
+  mov::test::write_bytes(file, "0123456789abcdefghij");
+
+  const auto head = mov::io::read_file_prefix(file, 5);
+  REQUIRE(head.has_value());
+  CHECK(head->bytes == "01234");
+  CHECK_FALSE(head->whole_file);
+  // A file shorter than the prefix, or exactly as long, is read whole; an
+  // empty prefix of a file that has bytes is not the whole file.
+  const auto all = mov::io::read_file_prefix(file, 100);
+  REQUIRE(all.has_value());
+  CHECK(all->bytes == "0123456789abcdefghij");
+  CHECK(all->whole_file);
+  const auto exact = mov::io::read_file_prefix(file, 20);
+  REQUIRE(exact.has_value());
+  CHECK(exact->whole_file);
+  const auto none = mov::io::read_file_prefix(file, 0);
+  REQUIRE(none.has_value());
+  CHECK(none->bytes.empty());
+  CHECK_FALSE(none->whole_file);
+  // No size limit applies: the file may be far over max_text_bytes.
+  mov::test::write_bytes(dir / "big.txt", std::string(100000, 'q'));
+  const auto big = mov::io::read_file_prefix(dir / "big.txt", 16);
+  REQUIRE(big.has_value());
+  CHECK(big->bytes.size() == 16);
+  CHECK_FALSE(big->whole_file);
+}
+
+TEST_CASE("read_file_prefix refuses what read_text_file refuses",
+          "[io][text_file]") {
+  const mov::test::ScratchDir dir;
+  const auto missing = mov::io::read_file_prefix(dir / "nope", 10);
+  REQUIRE(not missing.has_value());
+  CHECK(missing.error().op == FileOp::open);
+  const auto directory = mov::io::read_file_prefix(dir.path(), 10);
+  REQUIRE(not directory.has_value());
+  CHECK(directory.error().ec == std::errc::is_a_directory);
+}
+
 // B3: v4 opened the file with std::fstream (read and write), so a read-only
 // file failed to open and the reader returned "no stations" as a success.
 TEST_CASE("read_text_file reads a read-only file",

@@ -280,7 +280,7 @@ TEST_CASE("is_canonical_other is derived from the registry",
     REQUIRE(other != nullptr);
     CHECK(is_canonical_other(*other));
   }
-  for (const char* text : {"furlong", "Mb", "m s-2", "kelvin"}) {
+  for (const char* text : {"furlong", "Mb", "m s-2", "rankine"}) {
     INFO("unit: " << text);
     const auto unit = parse_unit(text);
     const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr;

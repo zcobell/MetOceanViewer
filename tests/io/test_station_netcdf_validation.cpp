@@ -184,9 +184,14 @@ TEST_CASE("the format attribute decides what the file is",
         expect(f, FormatErrc::not_this_format, ":metoceanviewer_format").code ==
         f.inspect_error().code);
   };
-  SECTION("absent") {
+  SECTION("absent: a CF timeSeries file all the same (WP10b)") {
     f.edit().remove_att("", "metoceanviewer_format");
-    refused();
+    const auto read = f.read();
+    CHECK(std::holds_alternative<io::ForeignCfOrigin>(read.value.origin));
+    CHECK(count_of(read.warnings, WarningCode::foreign_cf) == 1);
+    const auto catalog = io::inspect_station_netcdf(f.path(), {});
+    REQUIRE(catalog.has_value());
+    CHECK(std::holds_alternative<io::ForeignCfOrigin>(catalog->value.origin));
   }
   SECTION("another format") {
     f.edit().text("", "metoceanviewer_format", "station-profile");

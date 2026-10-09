@@ -63,7 +63,7 @@ maintainer's decisions on it (table at the end).
   options choose `PaddingCheck::boundary` (default) or `whole`.
 - **`StationFile { core::StationTable table; StationFileOrigin origin; }`**,
   `StationFileOrigin = variant<V5Origin{StationNcVersion, StationNcLayout}>`; WP10b adds
-  `ForeignCfOrigin{CfDsgLayout, CfVersion}` and `LegacyOrigin{dialect}`.
+  `ForeignCfOrigin{CfDsgLayout, CfVersion}` and `LegacyOrigin` (WP10b: the facts of the file, no dialect label).
   `StationNcLayout` stays the two v5 layouts; foreign layouts get WP10b's own `CfDsgLayout`.
 - **`inspect_station_netcdf(path, ctx) -> Read<StationNcCatalog>`**: origin,
   `CatalogStation{station, samples}` per station, schema; the same validation as a read up

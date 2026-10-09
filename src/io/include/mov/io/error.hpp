@@ -217,6 +217,13 @@ enum class FormatErrc : std::uint8_t {
   no_samples,             // no station has a sample
   too_many_samples,       // more samples than the format can count
   bad_option,             // a writer option the format cannot store
+  // foreign and legacy station netCDF
+  bad_row_size,      // a contiguous ragged count that is negative, missing or
+                     // does not add up to the sample dimension
+  bad_ragged_index,  // an indexed ragged instance index outside the stations
+  inconsistent_metadata,  // stations of a legacy file that disagree on the
+                          // units or datum of their one shared column
+  ambiguous_station_id,   // several variables claim to be the station id
 };
 
 /// A file that parses but does not mean what its format requires.
