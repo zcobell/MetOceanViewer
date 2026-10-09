@@ -403,7 +403,8 @@ before Phase 3 is done.
      bugs 4 and 9.
    - Every bug in §1.2 that falls in scope gets a regression test.
 3. **Providers and CLI**
-   - Async NOAA CO-OPS, USGS (**new Water Data API**), NDBC and XTide.
+   - Async NOAA CO-OPS, USGS (**new Water Data API**), NDBC and the tide harmonics
+     provider (decision 31).
    - Recorded-response fixture tests, plus a separate opt-in live-API test job
      (nightly, non-blocking).
    - Rebuild `metocean-data` on top of the providers: fully flag-driven with no
@@ -593,7 +594,7 @@ open. Do not guess; ask before proceeding past the phase that needs them.
 ### Open items from Phase 2 (owner; undecided, collected 2026-10-09)
 
 What the Phase 2 work packages left for the owner. None is decided; ask before
-acting on one. The code's current behaviour is stated so a decision can be
+acting on one. The code's current behavior is stated so a decision can be
 "keep it".
 
 1. **Foreign station netCDF positions.** Whenever the grid mapping is not a

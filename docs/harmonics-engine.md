@@ -12,7 +12,7 @@ Inputs:
 - `docs/core-design.md` (CD): house rules and core/io types.
 - `docs/research/tides-global-harmonics.md` (RS): data sources and licences.
 - `docs/provider-apis.md` §2, §5 (PA).
-- The legacy v4 XTide code, used for behaviour only (§9.1).
+- The legacy v4 XTide code, used for behavior only (§9.1).
 
 URLs were accessed on 2026-10-08. "Verified" means checked that day against the live CO-OPS API,
 or by running the prototype of §1.
@@ -67,7 +67,7 @@ The comparison uses CO-OPS `predictions` (datum MSL, GMT, 6-minute) over three w
 
 - **Reference events, 2026-10-01 to 10-08** (17–31 per station, 10 s brute-force scan): times agree
   to ≤ 0.67 min and heights to ≤ 0.64 mm at the four stations. That is CO-OPS's rounding to the
-  minute and the millimetre.
+  minute and the millimeter.
 - **A full year (2026)** of CO-OPS `hilo` against every sign change of the prototype at 8443970,
   8761724, 8771450, 8771341 and 9455920:
   - Every CO-OPS event was found.
@@ -84,7 +84,7 @@ The comparison uses CO-OPS `predictions` (datum MSL, GMT, 6-minute) over three w
     extremes (§4.1) cannot.
 - **CO-OPS's own New Year events (informative).** CO-OPS evaluates events up to at least 13 minutes
   after 1 January with the previous year's arguments, but not an event 37 minutes after. It
-  sometimes lists a step artefact at 23:59. The evidence:
+  sometimes lists a step artifact at 23:59. The evidence:
 
   | Station, event | CO-OPS | Previous-year curve | Own-year curve |
   |---|---|---|---|
@@ -642,7 +642,7 @@ subordinate_predict(const SubordinateView& station, TimeRange range, Interval st
 ```
 
 This is XTide's warp, restated from `thirdparty/xtide-2.15.1/libxtide/SubordinateStation.cc:209-218`
-(behaviour only, not copied). For t in [Eᵢ, Eᵢ₊₁) between consecutive subordinate events, with
+(behavior only, not copied). For t in [Eᵢ, Eᵢ₊₁) between consecutive subordinate events, with
 uncorrected reference times τᵢ, τᵢ₊₁, reference heights ρᵢ, ρᵢ₊₁ (relative to D) and corrected
 heights ηᵢ, ηᵢ₊₁:
 
@@ -813,7 +813,7 @@ reaching it as a bug.
 measured). Recording unknown members costs nothing for conforming files, and one pass also keeps
 the error order deterministic (HJ §10.4).
 
-**Memory, honestly.** Peak is approximately:
+**Peak memory.** Approximately:
 - the input bytes;
 - plus the decompressed text (≤ 64 MiB);
 - plus one station's DOM, bounded by `max_values_per_station` (worst case about 6.5 MB);
@@ -830,7 +830,7 @@ through nlohmann's iterator input adapter; this is not planned.
   the schema says integer. Ranges are checked before narrowing.
 - **Locale.** nlohmann's lexer handles `localeconv()`. A test runs the reader under `de_DE.UTF-8`
   (CD §7.2).
-- **Positions.** `lon == −180` is `schema` (HJ §8.1: reject, not normalise); other positions go
+- **Positions.** `lon == −180` is `schema` (HJ §8.1: reject, not normalize); other positions go
   through `Location::make`.
 - **Time offsets.** Minutes become `llround(min × 60000)` ms, and −0 becomes 0, inside
   `SubordinateOffsets::make`.
@@ -854,12 +854,12 @@ through nlohmann's iterator input adapter; this is not planned.
 
 Deterministic per HJ §3: sorted stations and dictionary, one station per line, numbers rounded per
 HJ §9 and printed with `std::format("{}")`. Atomic via `write_file_atomic` (CD §4.4), gzip if
-`o.gzip`. The writer is used by round-trip tests, the fuzz oracle and the CLI (`harmonics subset`,
+`o.gzip`. The writer is used by round-trip tests, the fuzz target's round-trip law (§6.7) and the CLI (`harmonics subset`,
 `harmonics add-computed-datums`, §7.7).
 
 ### 6.7 Fuzzing (decision 21)
 
-| Target | Limits | Oracle |
+| Target | Limits | Reference law |
 |---|---|---|
 | `fuzz_harmonics_json` (bytes → `parse_harmonics`) | `max_file_bytes = 1 MiB`, `max_json_bytes = 4 MiB`, `max_values_per_station = 4,096` | No crash, UB or leak; the internal-error catch is never reached; if ok, `parse(format(x)) == x`; `validate_harmonics` reports `ok()` iff `parse_harmonics` succeeds, and its first error equals parse's |
 | `fuzz_gunzip` | `max_out = 4 MiB` | Output ≤ cap; only `size` or `gzip` errors |
@@ -911,7 +911,7 @@ build/dev/src/cli/metocean-data harmonics validate harmonics-2026-10-08.json.gz 
 python -I tools/check_harmonics_schema.py harmonics-2026-10-08.json.gz                   # gate: jsonschema, pinned
 ```
 
-### 7.3 Fetch robustness
+### 7.3 Fetch hardening
 
 | Concern | Rule |
 |---|---|
@@ -964,7 +964,7 @@ python -I tools/check_harmonics_schema.py harmonics-2026-10-08.json.gz          
     `CC-BY-4.0`, `LicenseRef-unknown-pringle` (owner decision 2026-10-08) and `CC0-1.0`;
   - per-source defaults;
   - a **complete** `gesla_source → expression` map for TICON-4.
-- An expression is allowed only if it is on the list, after parsing and normalising with the same
+- An expression is allowed only if it is on the list, after parsing and normalizing with the same
   SPDX-subset grammar as core's `Licence` (Python port, tested against the same token cases).
 - Anything else is excluded and counted, including every expression that carries a non-commercial
   term, which never appears on the list (decision 31).
@@ -1035,7 +1035,7 @@ and `hilo` (MSL and MLLW) for each window.
 | 9414290 San Francisco | mixed | year boundary; mid-year; New Year 2034-12-31 to 2035-01-02 |
 | 8761724 Grand Isle | diurnal, small, wiggles | all of 2026 hilo (separation filter) |
 | 8771450 Galveston Pier 21, 8771341 Galveston Bay Entrance | mixed, many wiggles | all of 2026 hilo (separation filter: 50 and 76 wiggle extrema) |
-| 8720030 Fernandina Beach | shallow compounds; reference for 8720001 | 2026-10-01 to 10-08; New Year 2036-12-31 to 2037-01-02 (CO-OPS artefact) |
+| 8720030 Fernandina Beach | shallow compounds; reference for 8720001 | 2026-10-01 to 10-08; New Year 2036-12-31 to 2037-01-02 (CO-OPS artifact) |
 | 9455920 Anchorage | 114 constituents | 2026-10-01 to 10-08; all of 2026 hilo |
 | 8720001 Kings Ferry (subordinate, ratio) | +245/+249 min | 2026-10-01 to 10-08, hilo |
 | 8518989 Castleton (subordinate, additive) | negative offsets | same |
@@ -1088,7 +1088,7 @@ and `hilo` (MSL and MLLW) for each window.
   3-placemark KML (one per field-naming variant), and a 100-row TICON CSV including a CMEMS gauge,
   a `wsv` gauge and an unmapped `gesla_source`.
 - Assertions:
-  - unit conversions; phase normalisation; alias mapping; dropped-constituent reporting;
+  - unit conversions; phase normalization; alias mapping; dropped-constituent reporting;
   - clustering decisions (id match, radius + M2 match, M2 mismatch kept);
   - order independence (shuffles) and `PYTHONHASHSEED` determinism;
   - fetch hardening against a local test server: timeout, 503 then success, 429, body over the cap,
@@ -1101,7 +1101,7 @@ and `hilo` (MSL and MLLW) for each window.
 
 ## 9. App and provider integration (Phase 3, then Phase 4/5 UI)
 
-### 9.1 v4 behaviour (reference only, do not port)
+### 9.1 v4 behavior (reference only, do not port)
 
 v4 never offered current predictions. Its XTide station list included current stations only
 incidentally (bug 4 below).
@@ -1250,13 +1250,13 @@ Decided by the owner on 2026-10-08:
 | Type | NIT version pattern accepting newer minors; third manifest category | R | schema `version`; HJ §11, §16 |
 | Type | NIT reuse `ValidRange` | R (`record`, `computed_period`) | §2.5 |
 | Type | Q(a) id namespace vs source | R: the namespace **is** the source; the `source` member is removed. Mismatch is impossible; an unknown namespace is `E-UNKNOWN-SOURCE`. | HJ §8.1, H8 |
-| Type | Q(b) lon −180 | R: canonical (−180, 180]; files with −180 are **rejected** (`schema`), not normalised | HJ §8.1, schema |
+| Type | Q(b) lon −180 | R: canonical (−180, 180]; files with −180 are **rejected** (`schema`), not normalized | HJ §8.1, schema |
 | Numerics/IO | B1 false "instantaneous == yearly at t_M" | R: analytic difference stated (≤ 4.3e-4°; M1 ≈ 20.3°). pytides tolerance derived from measured astronomy and definition differences (3.5 mm at Boston, restricted set). Installability checked: no PyPI pytides installs on Python ≥ 3.12; the fork runs from source. | §1.3, §8.3, HJ §5.2 |
 | Numerics/IO | B2 extremes: epoch grid, Lipschitz isolation, direction classification, half-open cells | R | §4.1 |
-| Numerics/IO | S1 per-segment extremes, none at the discontinuity; New Year golden window; CO-OPS behaviour recorded | R: CO-OPS fetched at Boston and four other New Years; its quirks documented and excluded from comparison | §1.2, §4.1, §8.2, HJ §5.5 |
+| Numerics/IO | S1 per-segment extremes, none at the discontinuity; New Year golden window; CO-OPS behavior recorded | R: CO-OPS fetched at Boston and four other New Years; its quirks documented and excluded from comparison | §1.2, §4.1, §8.2, HJ §5.5 |
 | Numerics/IO | S2 inverted pairs as a unit; clamp; relative threshold; property test | R | §4.2, §4.3 |
 | Numerics/IO | S3 honest memory; lower `max_json_bytes`; fuzz `rss_limit`; callback path considered | R: measured DOM 108 MB vs callback 22.5 MB; callback chosen as plainer; 64 MiB limits; per-station value cap; fuzz limits derived | §1.4, §6.2, §6.3, §6.7 |
-| Numerics/IO | S5 licence allow-list failing closed; unmapped `gesla_source` fails; SPDX tokenised | R | §7.6, §2.4, HJ §6.1 |
+| Numerics/IO | S5 licence allow-list failing closed; unmapped `gesla_source` fails; SPDX tokenized | R | §7.6, §2.4, HJ §6.1 |
 | Numerics/IO | S6 fetch timeouts/retries/body cap/HTML; manifest completeness; `--accept-new-hash`; `PYTHONHASHSEED`; order-independent clustering | R | §7.3, §7.5, §8.5 |
 | Numerics/IO | S7 floor-division alignment before 1970 | R | §3.1, §8.1 |
 | Numerics/IO | S8 one cost limit (samples × rows) covering extremes | R (`max_term_evaluations`; estimate up front plus runtime counter) | §3, §4.1 |

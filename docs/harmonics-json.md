@@ -149,7 +149,7 @@ h(t) = z0 + Σₖ fₖ(Y) · Hₖ · cos( σₖ · (t − t_Y) + (V₀+u)ₖ(Y) 
   prediction (datum MSL) at 8443970, 9414290, 8761724 and 8720030 over three windows (2025-12-30 to
   2026-01-02 across the year boundary, 2026-06-29 to 07-04, 2026-10-01 to 10-08; 17,280 points).
   The bias is at most 0.04 mm in magnitude and the raw maximum difference is 1.81 mm (RMS ≤ 0.90 mm),
-  which is CO-OPS's millimetre rounding plus its millimetre-rounded constants. Evaluating V, u and f
+  which is CO-OPS's millimeter rounding plus its millimeter-rounded constants. Evaluating V, u and f
   instantaneously instead misses by up to 31.5 mm (HE §1). The zero bias means CO-OPS MSL
   predictions use `z0 = 0`.
 - **Instantaneous evaluation is not the yearly model at mid-year.** At t_M, f and u coincide, but V
@@ -189,7 +189,7 @@ Let R be the reference station and D the subordinate's `offsets.datum` (§8.3).
 
    CO-OPS serves subordinate predictions only as `interval=hilo` and only for `datum=MLLW`.
    `interval=6` and `datum=MSL` both return "No Predictions data was found" (verified).
-4. **The curve between extremes** is not part of NOAA's product, and this spec does not standardise
+4. **The curve between extremes** is not part of NOAA's product, and this spec does not standardize
    it. MetOceanViewer uses XTide's warp interpolation (HE §4.3) and labels the curve as
    interpolated.
 
@@ -250,7 +250,7 @@ A licence is an SPDX licence expression restricted to:
 - the operators `AND`, `OR` and `WITH`;
 - parentheses.
 
-Consumers tokenise the expression rather than search it as text (`E-LICENCE` if it does not parse).
+Consumers tokenize the expression rather than search it as text (`E-LICENCE` if it does not parse).
 An expression **carries a non-commercial term** if any identifier has a `-NC` component (for
 example `CC-BY-NC-4.0`, `CC-BY-NC-SA-4.0`). An unknown licence is written as an explicit
 `LicenseRef-unknown-<source>`, never by omission, so that tools can allow or refuse it by name.
@@ -318,7 +318,7 @@ catalogue (HE §2.3) and committed as `docs/schemas/constituents-nos.json` (HE W
 |---|---|---|---|
 | `id` | `<source>:<local>`, ≤ 255 B | yes | Unique within the file (`E-DUPLICATE-STATION`). The namespace MUST be a `sources[].id` (`E-UNKNOWN-SOURCE`), and that source is the station's source. The local part is any UTF-8 without control characters, for example `noaa-coops:8761724` or `ticon-4:a121tg-a12-nld-cmems`. An id is stable across builds while the gauge's winning source (HE §7.5) stays the same. |
 | `name` | string 1–255 | yes | Display name. |
-| `lat`, `lon` | number | yes | WGS 84 degrees. `lat ∈ [−90, 90]`, `lon ∈ (−180, 180]`. The canonical range excludes −180: writers write 180, and readers **reject** −180 (`E-SCHEMA`) rather than normalising it, so each position has one spelling. |
+| `lat`, `lon` | number | yes | WGS 84 degrees. `lat ∈ [−90, 90]`, `lon ∈ (−180, 180]`. The canonical range excludes −180: writers write 180, and readers **reject** −180 (`E-SCHEMA`) rather than normalizing it, so each position has one spelling. |
 | `licence` | SPDX expression | no | Overrides the source licence for this station. The **effective licence** is `licence` if present, else the source's. |
 | `kind` | `"reference"` \| `"subordinate"` | yes | Selects §8.2 or §8.3. |
 | `country` | ISO 3166-1 alpha-3 | no | |
@@ -326,7 +326,7 @@ catalogue (HE §2.3) and committed as `docs/schemas/constituents-nos.json` (HE W
 | `datums` | object | no | Datum heights published by the source (§8.4). |
 | `datum_epoch` | string | no | Epoch of `datums`, for example `"1983-2001"` (NTDE) or `"2012-2016"` (a modified epoch). |
 | `computed_datums` | object | no | Reference stations only: `{"period": {"start", "end"}, "heights": {token: m}}`, datum heights computed from the harmonics (§8.5). |
-| `record` | object | no | `start`, `end` (dates) and `years` (effective length) of the analysed record. |
+| `record` | object | no | `start`, `end` (dates) and `years` (effective length) of the analyzed record. |
 | `flags` | array of tokens | no | Open vocabulary, unique items. 1.0 defines `hilo_only` (the source publishes only extremes), `possible_datum_issues`, `possible_qc_issues` (from TICON-4 `record_quality`) and `local_time_suspected`. Readers keep unknown flags unchanged. |
 | `provenance` | object | no | `source_record` (the id in the source), `also_in` (ids or `source:record` strings of duplicates merged into this station), `dropped_constituents` (names the builder could not define), `notes`. |
 
@@ -336,7 +336,7 @@ catalogue (HE §2.3) and committed as `docs/schemas/constituents-nos.json` (HE W
 |---|---|---|---|
 | `constituents` | array 1–512 of rows | yes | `[name, H, G]` or `[name, H, G, H_sd, G_sd]`. `name` must be in the dictionary (`E-UNKNOWN-CONSTITUENT`) and appear at most once per station (`E-DUPLICATE-ROW`). `H ≥ 0` m, `0 ≤ G < 360`, standard deviations ≥ 0. Rows with H = 0 are allowed; writers SHOULD omit them. |
 | `z0` | number | no | Height of the analysis mean above the station's MSL, in metres. Default 0. |
-| `analysis` | enum | no | How the source derived the constants: `nos`, `utide`, `ttide`, `least_squares` or `published`; absent means unknown. Informative only in 1.0: the engine always applies §5.2. Differences between nodal conventions (for example Foreman's in UTide versus SP 98) are typically below a few millimetres for major constituents, well inside these sources' uncertainty. |
+| `analysis` | enum | no | How the source derived the constants: `nos`, `utide`, `ttide`, `least_squares` or `published`; absent means unknown. Informative only in 1.0: the engine always applies §5.2. Differences between nodal conventions (for example Foreman's in UTide versus SP 98) are typically below a few millimeters for major constituents, well inside these sources' uncertainty. |
 | `offsets` | — | forbidden | |
 
 ### 8.3 Subordinate station (`kind: "subordinate"`)
@@ -401,7 +401,7 @@ Definitions, over the high/low events of §5.5 in the period (heights include `z
 
 These are astronomical-tide statistics, not NOAA's tabulated datums (which come from observations
 over a National Tidal Datum Epoch). For a NOAA station the two typically agree to a few
-centimetres; the builder never computes datums for a station that publishes them.
+centimeters; the builder never computes datums for a station that publishes them.
 
 ---
 
@@ -410,7 +410,7 @@ centimetres; the builder never computes datums for a station that publishes them
 | Quantity | Unit | Range (schema) | Writer precision (SHOULD) | Notes |
 |---|---|---|---|---|
 | amplitude H, sd | m | 0–100 | round to 1e-5 m (0.01 mm) | NOAA publishes mm; TICON-4 cm with 6 decimals |
-| phase G, sd | ° | [0, 360) | round to 1e-3°, then normalise into [0, 360) | Normalise after rounding, so 359.9996 → 0 |
+| phase G, sd | ° | [0, 360) | round to 1e-3°, then normalize into [0, 360) | Normalize after rounding, so 359.9996 → 0 |
 | `z0`, datum heights, additive offsets | m | ±100 / ±1000 | 1e-4 m | |
 | ratios | — | (0, 100] | as published | NOAA 2 decimals |
 | time offsets | min | ±1440 | as published | Consumers convert to integer milliseconds by rounding half away from zero |
@@ -515,7 +515,7 @@ the test manifest treats such files as a third category (§16).
 
 Reader policy:
 
-| File | Reader behaviour |
+| File | Reader behavior |
 |---|---|
 | Same major, minor ≤ reader's | Read strictly: unknown members are `E-SCHEMA`. |
 | Same major, newer minor | Warn `W-MINOR-NEWER`. Ignore unknown members. Skip, transitively: dictionary entries with an unknown definition kind or node-factor token; reference stations with a row naming a skipped entry; stations of an unknown `kind`; subordinates whose reference was skipped. Count each skip by reason in the warning. |
@@ -684,8 +684,8 @@ Verified on the CSV header and the first 50 rows:
 - Long format, one row per gauge and constituent. Columns `lat, lon, con, amp, pha, amp_std,
   pha_std, missing_obs, no_of_obs, years_of_obs, start_date, end_date, gesla_source,
   tide_gauge_name, type, country, record_quality, datum_information`.
-- **`amp` is in centimetres** (North Sea M2 = 27.38). Divide by 100.
-- `pha` is in (−180, 180]. Normalise into [0, 360).
+- **`amp` is in centimeters** (North Sea M2 = 27.38). Divide by 100.
+- `pha` is in (−180, 180]. Normalize into [0, 360).
 - Dates are `dd/mm/yyyy`.
 - Station key: `tide_gauge_name`. `gesla_source` (for example `gesla4.CMEMS`) drives the licence
   override.

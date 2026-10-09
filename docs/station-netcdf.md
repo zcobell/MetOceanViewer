@@ -159,7 +159,7 @@ Data variables MUST NOT use `scale_factor`/`add_offset`/`valid_*`/`missing_value
 | `date_created` | ISO 8601 UTC, `"YYYY-MM-DDThh:mm:ssZ"` | yes | ACDD-style, not a CF attribute |
 | `metoceanviewer_format` | `"station-timeseries"` | yes | file-kind detection key (checked before any legacy dialect, §12.1) |
 | `metoceanviewer_format_version` | `"1.0"` (string `major.minor`) | yes | §13 |
-| `institution` | creator/provider organisation | no | CF §2.6.2 |
+| `institution` | creator/provider organization | no | CF §2.6.2 |
 | `source` | data origin, e.g. `"NOAA CO-OPS API"`, `"ADCIRC 55.02"`, `"user IMEDS file"` | no | CF §2.6.2 |
 | `references` | URLs of provider documentation/terms | no | CF §2.6.2 |
 | `comment` | free text | no | CF §2.6.2 |
@@ -377,7 +377,7 @@ data:
 }
 ```
 
-Note: `crs:crs_wkt` is a single line in the file. The header above is what `ncdump -h` (netCDF-C 4.9.2) prints for the v5
+`crs:crs_wkt` is a single line in the file. The header above is what `ncdump -h` (netCDF-C 4.9.2) prints for the v5
 writer's file of this table (WP10a, 2026-10-07); ncdump prints double attributes with 15 significant digits, so the fill
 value `9.969209968386869e+36` appears as `9.96920996838687e+36`. The full headers of both files are committed as
 `tests/fixtures/io/station_netcdf/*.cdl` and checked by the golden tests and the `format-compliance` job (§14).

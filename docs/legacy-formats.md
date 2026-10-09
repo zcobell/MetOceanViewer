@@ -209,7 +209,7 @@ All dialects: one pair of variables per station, per-station length dim, plus co
 - Time read as int64 seconds; data via typed read (**float or double var** [B4-class]).
 - Fill [B9]: mask value == `_FillValue` attr (typed compare) **or** default fill of the var type if no attr, and NaN; **no** magic `-99999`.
 - EPSG getter [B10]: `getEpsg(file)` returns netCDF error codes as EPSG values; intended `expected<int, Error>`.
-- Coordinates in file CRS; legacy GUI reprojects to 4326 via ezproj when epsg != 4326 (`usertimeseries.cpp:696`). the io reader projects to WGS 84 at the boundary and keeps the native point (PROJ is a private dependency of `mov_io`; `core` has no PROJ).
+- Coordinates in file CRS; legacy GUI reprojects to 4326 via ezproj when epsg != 4326 (`usertimeseries.cpp:696`). The io reader projects to WGS 84 at the boundary and keeps the native point (PROJ is a private dependency of `mov_io`; `core` has no PROJ).
 - `nc_open` failure macro **[B6]**: `NCCHECK` calls `nc_close(ncid)` on an uninitialised ncid when `nc_open` fails (`netcdftimeseries.cpp:58`, `hmdf.cpp:265`). RAII fixes; test: nonexistent file, unwritable output dir for the writer.
 
 ### 5.2 Writer — intended
