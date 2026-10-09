@@ -23,29 +23,29 @@ using coops::Datum;
 using coops::Met;
 using coops::Meteorological;
 using coops::MetInterval;
+using coops::NotOffered;
 using coops::Observed;
 using coops::ObservedLevel;
 using coops::ObservedVsPredicted;
 using coops::PairedGrid;
 using coops::PredictedLevel;
 using coops::PredictionInterval;
+using coops::Predictions;
 using coops::Product;
 using coops::WaterLevel;
-using mov::core::NotOffered;
 using mov::core::offered;
 using CoopsCaps = mov::core::Capabilities<mov::core::provider::Coops>;
 
 namespace {
 
 /// A tidal station: 6-minute and hourly water level, predictions, two met
-/// sensors, the tidal datums and STND.
+/// sensors, three datums (and STND, which every station has).
 constexpr CoopsCaps tidal() {
-  return {
-      .observed = {Observed::six_minute, Observed::hourly},
-      .met = {Met::wind, Met::air_pressure},
-      .predictions = true,
-      .datums = mov::core::DatumTable{},
-      .datums_offered = {Datum::mllw, Datum::msl, Datum::navd88, Datum::stnd}};
+  return {.observed = {Observed::six_minute, Observed::hourly},
+          .met = {Met::wind, Met::air_pressure},
+          .predictions = Predictions::any_interval,
+          .datums = mov::core::DatumTable{},
+          .datums_offered = {Datum::mllw, Datum::msl, Datum::navd88}};
 }
 
 /// A Great Lakes station: water level against IGLD85, no predictions.
@@ -53,18 +53,28 @@ constexpr CoopsCaps great_lakes() {
   return {.observed = {Observed::six_minute, Observed::hourly,
                        Observed::one_minute},
           .met = {},
-          .predictions = false,
+          .predictions = Predictions::none,
           .datums = std::nullopt,
-          .datums_offered = {Datum::igld85, Datum::stnd}};
+          .datums_offered = {Datum::igld85}};
 }
 
 /// A met-only station.
 constexpr CoopsCaps met_only() {
   return {.observed = {},
           .met = {Met::air_temperature},
-          .predictions = false,
+          .predictions = Predictions::none,
           .datums = std::nullopt,
-          .datums_offered = {Datum::stnd}};
+          .datums_offered = {}};
+}
+
+/// A met station that is a subordinate tide prediction station: high and
+/// low waters only (e.g. 8578240 Piney Point on 2026-10-09).
+constexpr CoopsCaps subordinate() {
+  return {.observed = {},
+          .met = {Met::wind},
+          .predictions = Predictions::hilo_only,
+          .datums = std::nullopt,
+          .datums_offered = {Datum::mllw}};
 }
 
 constexpr Product level(coops::LevelKind kind, Datum d) {
@@ -113,11 +123,17 @@ TEST_CASE("NDBC vocabulary types are values", "[core][ndbc][constexpr]") {
   STATIC_REQUIRE(std::equality_comparable<StdMet>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<StdMet>);
   STATIC_REQUIRE_FALSE(std::is_default_constructible_v<StdMet>);
-  // Precedence order: the quality-controlled file first.
-  STATIC_REQUIRE(FileKind::historical < FileKind::monthly);
-  STATIC_REQUIRE(FileKind::monthly < FileKind::monthly_latest);
-  STATIC_REQUIRE(FileKind::monthly_latest < FileKind::realtime);
-  STATIC_REQUIRE(mov::core::ndbc::grain == std::chrono::minutes{1});
+  STATIC_REQUIRE(mov::core::ndbc::grain.duration() == std::chrono::minutes{1});
+}
+
+TEST_CASE("NDBC files rank quality-controlled first",
+          "[core][ndbc][constexpr]") {
+  using mov::core::ndbc::FileKind;
+  using mov::core::ndbc::precedence;
+  STATIC_REQUIRE(precedence(FileKind::historical) == 0);
+  STATIC_REQUIRE(precedence(FileKind::monthly) == 1);
+  STATIC_REQUIRE(precedence(FileKind::monthly_latest) == 2);
+  STATIC_REQUIRE(precedence(FileKind::realtime) == 3);
 }
 
 TEST_CASE("observed water level needs the series and the datum",
@@ -133,6 +149,10 @@ TEST_CASE("observed water level needs the series and the datum",
   // A datum the station does not serve.
   STATIC_REQUIRE(offered(tidal(), observed(Observed::hourly, Datum::igld85)) ==
                  refused(NotOffered::datum));
+  // Every station serves its station datum, listed or not.
+  STATIC_REQUIRE(is_offered(tidal(), observed(Observed::hourly, Datum::stnd)));
+  STATIC_REQUIRE(
+      is_offered(great_lakes(), observed(Observed::one_minute, Datum::stnd)));
   STATIC_REQUIRE(
       is_offered(great_lakes(), observed(Observed::one_minute, Datum::igld85)));
   STATIC_REQUIRE(offered(great_lakes(), observed(Observed::one_minute)) ==
@@ -153,6 +173,29 @@ TEST_CASE("predictions need the station's predictions and the datum",
   // Predictions are checked before the datum.
   STATIC_REQUIRE(offered(great_lakes(), predicted(Datum::mllw)) ==
                  refused(NotOffered::predictions));
+  STATIC_REQUIRE(is_offered(tidal(), predicted(Datum::stnd)));
+}
+
+TEST_CASE("a subordinate station has no prediction interval v5.0 offers",
+          "[core][capabilities][constexpr]") {
+  // Subordinate stations serve only high and low waters (hilo, v5-extras
+  // #7); every PredictionInterval is refused, as an interval.
+  STATIC_REQUIRE(offered(subordinate(), predicted()) ==
+                 refused(NotOffered::interval));
+  STATIC_REQUIRE(offered(subordinate(), predicted(Datum::mhhw)) ==
+                 refused(NotOffered::interval));
+  STATIC_REQUIRE(offered(subordinate(), paired(PairedGrid::hourly)) ==
+                 refused(NotOffered::product));
+  STATIC_REQUIRE(is_offered(subordinate(), met(Met::wind)));
+  constexpr auto with_water_level = [] {
+    CoopsCaps caps = subordinate();
+    caps.observed = {Observed::six_minute};
+    return caps;
+  };
+  STATIC_REQUIRE(offered(with_water_level(), paired(PairedGrid::six_minute)) ==
+                 refused(NotOffered::interval));
+  STATIC_REQUIRE(
+      is_offered(with_water_level(), observed(Observed::six_minute)));
 }
 
 TEST_CASE("a paired product needs both halves",

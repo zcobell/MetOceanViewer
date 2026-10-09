@@ -7,17 +7,20 @@
 #include <array>
 #include <chrono>
 #include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
+#include <vector>
 
 #include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
-#include "mov/core/overloaded.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
@@ -199,50 +202,141 @@ struct Daily {
 
 using Request = std::variant<Continuous, Daily>;
 
-/// What resolution (the first stage of a USGS fetch) proves about the series
-/// a request selects: it exists at the station, belongs to the request's
-/// collection, and is the Primary one when chosen by parameter. Its quantity
-/// is not stored: it is registry_quantity(parameter), or quantity_of for a
-/// parameter outside the registry.
-struct ResolvedSeries {
-  TimeSeriesId id;
-  ParameterCode parameter;
-  StatisticId statistic;
-  std::string parameter_name;
-  std::optional<Unit> unit;
-  friend bool operator==(const ResolvedSeries&,
-                         const ResolvedSeries&) = default;
-};
+/// The collection a statistic's series belong to: 00011 (instantaneous) is
+/// the `continuous` collection, any other statistic the `daily` one.
+enum class Collection : std::uint8_t { continuous, daily };
 
-/// One series of a site: a row of Capabilities<Usgs> (the station catalog)
-/// and of the series picker.
+[[nodiscard]] constexpr Collection collection_of(
+    const StatisticId& statistic) noexcept {
+  return statistic == StatisticId::instantaneous() ? Collection::continuous
+                                                   : Collection::daily;
+}
+
+/// One series of a site, as `combined-metadata` describes it: a row of the
+/// station catalog (Capabilities<Usgs>), of the series picker, and the input
+/// of resolution.
 struct SeriesInfo {
   TimeSeriesId id;
   ParameterCode parameter;
   StatisticId statistic;
+  std::string parameter_name;
   bool primary;
   std::optional<Unit> unit;
   ValidRange validity;
   friend bool operator==(const SeriesInfo&, const SeriesInfo&) = default;
 };
 
-/// The longest window one request may span: 1000 days for continuous values
-/// (the server refuses more than 1100), none for daily values (36 years came
-/// back on one page).
-[[nodiscard]] constexpr std::optional<std::chrono::days> max_window(
-    const Request& request) noexcept {
-  return std::visit(Overloaded{[](const Continuous&) {
-                                 return std::optional{std::chrono::days{1000}};
-                               },
-                               [](const Daily&) {
-                                 return std::optional<std::chrono::days>{};
-                               }},
-                    request);
+/// Two rows with one id.
+struct DuplicateSeriesId {
+  TimeSeriesId id;
+  friend constexpr bool operator==(const DuplicateSeriesId&,
+                                   const DuplicateSeriesId&) = default;
+};
+/// Two rows are the Primary series of one parameter and statistic.
+struct SeveralPrimary {
+  ParameterCode parameter;
+  StatisticId statistic;
+  friend constexpr bool operator==(const SeveralPrimary&,
+                                   const SeveralPrimary&) = default;
+};
+using SeriesSetError = std::variant<DuplicateSeriesId, SeveralPrimary>;
+
+/// The series of one site: unique ids, sorted by id, and at most one Primary
+/// series per (parameter, statistic). Built only by make; empty by default.
+class SeriesSet {
+ public:
+  SeriesSet() = default;
+
+  /// Sorts by id; then DuplicateSeriesId for the smallest repeated id, then
+  /// SeveralPrimary for the first such pair in id order.
+  [[nodiscard]] static std::expected<SeriesSet, SeriesSetError> make(
+      std::vector<SeriesInfo> series);
+
+  [[nodiscard]] std::span<const SeriesInfo> items() const& noexcept {
+    return series_;
+  }
+  std::span<const SeriesInfo> items() const&& = delete;
+  [[nodiscard]] std::size_t size() const noexcept { return series_.size(); }
+  [[nodiscard]] bool empty() const noexcept { return series_.empty(); }
+
+  /// The series with this id (a binary search), or nullptr. Points into the
+  /// set.
+  [[nodiscard]] const SeriesInfo* find(const TimeSeriesId& id) const& noexcept;
+  const SeriesInfo* find(const TimeSeriesId& id) const&& = delete;
+
+  /// The Primary series of the parameter and statistic, or nullptr. Points
+  /// into the set.
+  [[nodiscard]] const SeriesInfo* primary(
+      const ParameterCode& parameter,
+      const StatisticId& statistic) const& noexcept;
+  const SeriesInfo* primary(const ParameterCode& parameter,
+                            const StatisticId& statistic) const&& = delete;
+
+  friend bool operator==(const SeriesSet&, const SeriesSet&) = default;
+
+ private:
+  explicit SeriesSet(std::vector<SeriesInfo> sorted)
+      : series_{std::move(sorted)} {}
+
+  std::vector<SeriesInfo> series_;
+};
+
+/// Why no series answers a request: none does (a missing id, or no Primary
+/// series of the parameter and statistic: the fetch's NoData), or the
+/// request names a series or statistic of the other collection.
+enum class ResolveError : std::uint8_t { no_series, wrong_collection };
+
+template <class C>
+  requires std::same_as<C, Continuous> or std::same_as<C, Daily>
+class Resolved;
+
+/// Resolution, the first stage of a USGS fetch, over the series of the
+/// request's site (`combined-metadata` by monitoring location). By
+/// parameter: the Primary series of the parameter with statistic 00011
+/// (continuous) or with the request's statistic, which must be a daily one.
+/// By id: the series, which must belong to the request's collection.
+[[nodiscard]] std::expected<Resolved<Continuous>, ResolveError> resolve(
+    const Continuous& request, const SeriesSet& site);
+[[nodiscard]] std::expected<Resolved<Daily>, ResolveError> resolve(
+    const Daily& request, const SeriesSet& site);
+
+/// The series a request of collection C resolved to. Resolution proves that
+/// it exists at the station, belongs to C, and is the Primary one when chosen
+/// by parameter. Only resolve() makes one, so it cannot be forged, and the
+/// data stage takes a (C, Resolved<C>) pair, so a continuous request cannot
+/// be paired with a daily series. Its quantity is a function of the
+/// parameter (registry_quantity, else quantity_of), not a field.
+template <class C>
+  requires std::same_as<C, Continuous> or std::same_as<C, Daily>
+class Resolved {
+ public:
+  [[nodiscard]] const SeriesInfo& series() const& noexcept { return series_; }
+  const SeriesInfo& series() const&& = delete;
+
+  friend bool operator==(const Resolved&, const Resolved&) = default;
+
+ private:
+  friend std::expected<Resolved<Continuous>, ResolveError> resolve(
+      const Continuous& request, const SeriesSet& site);
+  friend std::expected<Resolved<Daily>, ResolveError> resolve(
+      const Daily& request, const SeriesSet& site);
+
+  explicit Resolved(SeriesInfo series) : series_{std::move(series)} {}
+
+  SeriesInfo series_;
+};
+
+/// The longest window one continuous request may span: 1000 days (the
+/// server refuses more than 1100). Daily values have no limit (36 years came
+/// back on one page), so there is no Daily overload.
+[[nodiscard]] constexpr WindowSpan max_window(
+    const Continuous& /*request*/) noexcept {
+  return WindowSpan::of<1000, std::chrono::days>();
 }
 
 /// The grain continuous windows are aligned to: whole seconds (the API's
 /// `datetime` has seconds).
-inline constexpr std::chrono::seconds grain{1};
+inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::seconds>();
 
 /// A parameter's place in the quantity registry, with the datum its values
 /// are relative to when the parameter implies one.
@@ -266,7 +360,8 @@ inline constexpr std::array parameter_rows{
     ParameterRow{
         .code = "00060",
         .mapping = {.quantity = Quantity::discharge, .datum = std::nullopt}},
-    // Gage height: relative to the gage datum, which the core calls STND.
+    // Gage height: relative to the site's gage datum. STND is a station's
+    // own local zero, whatever the agency calls it (datum.hpp).
     ParameterRow{.code = "00065",
                  .mapping = {.quantity = Quantity::water_level,
                              .datum = VerticalDatum::stnd}},
@@ -296,6 +391,14 @@ static_assert(std::ranges::all_of(parameter_rows, [](const ParameterRow& row) {
   }
   return row->mapping;
 }
+
+// quantity_of builds "usgs_<code>" without GenericQuantity::parse: the token
+// is a valid name (a letter, then letters, digits and '_'), and no registry
+// token starts with the prefix, so it never names a registry quantity.
+static_assert(std::ranges::none_of(core::detail::quantity_registry,
+                                   [](const QuantityInfo& row) {
+                                     return row.token.starts_with("usgs_");
+                                   }));
 
 /// The quantity of a parameter's series: the registry quantity, or else the
 /// generic quantity "usgs_<code>" (no standard name).

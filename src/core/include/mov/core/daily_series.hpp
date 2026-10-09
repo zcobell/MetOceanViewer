@@ -3,10 +3,12 @@
 
 #pragma once
 
+#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <expected>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "mov/core/meta.hpp"
@@ -26,15 +28,16 @@ class DailySeries {
   /// LengthMismatch if the sizes differ, then the first TimeNotIncreasing
   /// (the index of the first day not after its predecessor).
   [[nodiscard]] static std::expected<DailySeries, ConstructionError> make(
-      SeriesMeta meta, std::vector<std::chrono::sys_days> days,
+      SeriesMeta meta, std::vector<std::chrono::local_days> days,
       std::vector<Sample> samples, usgs::StatisticId statistic);
 
   [[nodiscard]] const SeriesMeta& meta() const& noexcept { return meta_; }
   const SeriesMeta& meta() const&& = delete;
-  [[nodiscard]] std::span<const std::chrono::sys_days> days() const& noexcept {
+  [[nodiscard]] std::span<const std::chrono::local_days> days()
+      const& noexcept {
     return days_;
   }
-  std::span<const std::chrono::sys_days> days() const&& = delete;
+  std::span<const std::chrono::local_days> days() const&& = delete;
   [[nodiscard]] std::span<const Sample> samples() const& noexcept {
     return samples_;
   }
@@ -49,15 +52,19 @@ class DailySeries {
   friend bool operator==(const DailySeries&, const DailySeries&) = default;
 
  private:
-  DailySeries(SeriesMeta meta, std::vector<std::chrono::sys_days> days,
+  // make checked the invariant; asserted in debug builds, as TimeSeries does.
+  DailySeries(SeriesMeta meta, std::vector<std::chrono::local_days> days,
               std::vector<Sample> samples, usgs::StatisticId statistic)
       : meta_{std::move(meta)},
         days_{std::move(days)},
         samples_{std::move(samples)},
-        statistic_{statistic} {}
+        statistic_{statistic} {
+    assert(days_.size() == samples_.size());
+    assert(not detail::first_not_increasing(days_));
+  }
 
   SeriesMeta meta_;
-  std::vector<std::chrono::sys_days> days_;
+  std::vector<std::chrono::local_days> days_;
   std::vector<Sample> samples_;
   usgs::StatisticId statistic_;
 };

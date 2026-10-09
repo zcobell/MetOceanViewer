@@ -10,7 +10,9 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
+#include <vector>
 
 #include "mov/core/provider/capabilities.hpp"
 #include "mov/core/provider/usgs.hpp"
@@ -20,8 +22,8 @@
 
 namespace usgs = mov::core::usgs;
 
-using mov::core::NotOffered;
 using mov::core::offered;
+using usgs::NotOffered;
 using usgs::ParameterCode;
 using usgs::StatisticId;
 using usgs::TimeSeriesId;
@@ -45,6 +47,7 @@ usgs::SeriesInfo series(char id, std::string_view code, StatisticId stat) {
   return {.id = series_id(id),
           .parameter = parameter(code),
           .statistic = stat,
+          .parameter_name = std::string{code},
           .primary = true,
           .unit = std::nullopt,
           .validity = mov::core::ValidRange{}};
@@ -52,10 +55,16 @@ usgs::SeriesInfo series(char id, std::string_view code, StatisticId stat) {
 
 /// A river site: instantaneous discharge and gage height, and the daily mean
 /// of discharge.
+UsgsCaps caps_of(std::vector<usgs::SeriesInfo> rows) {
+  auto set = usgs::SeriesSet::make(std::move(rows));
+  REQUIRE(set.has_value());
+  return {.series = std::move(set).value_or(usgs::SeriesSet{})};
+}
+
 UsgsCaps river() {
-  return {.series = {series('a', "00060", StatisticId::instantaneous()),
-                     series('b', "00065", StatisticId::instantaneous()),
-                     series('c', "00060", StatisticId::mean())}};
+  return caps_of({series('a', "00060", StatisticId::instantaneous()),
+                  series('b', "00065", StatisticId::instantaneous()),
+                  series('c', "00060", StatisticId::mean())});
 }
 
 mov::core::StationId<mov::core::provider::Usgs> site() {
@@ -77,9 +86,9 @@ usgs::Request continuous(
 usgs::Request daily(
     std::variant<usgs::DailyByParameter, usgs::ByTimeSeries> s) {
   using std::chrono::days;
-  using std::chrono::sys_days;
+  using std::chrono::local_days;
   const auto range =
-      mov::core::DayRange::make(sys_days{days{0}}, sys_days{days{7}});
+      mov::core::DayRange::make(local_days{days{0}}, local_days{days{7}});
   REQUIRE(range.has_value());
   return usgs::Daily{.station = site(), .series = s, .days = *range};
 }
@@ -107,8 +116,8 @@ TEST_CASE("continuous values by parameter need an instantaneous series",
   CHECK(offered(river(), continuous(by_parameter("62620"))) ==
         refused(NotOffered::parameter));
   // Only a daily series of the parameter.
-  const UsgsCaps daily_only{
-      .series = {series('d', "00010", StatisticId::maximum())}};
+  const UsgsCaps daily_only =
+      caps_of({series('d', "00010", StatisticId::maximum())});
   CHECK(offered(daily_only, continuous(by_parameter("00010"))) ==
         refused(NotOffered::statistic));
   CHECK(offered(UsgsCaps{}, continuous(by_parameter("00060"))) ==
@@ -126,6 +135,10 @@ TEST_CASE("daily values by parameter need the statistic",
         refused(NotOffered::statistic));
   CHECK(offered(river(), daily(daily_by("00045", StatisticId::mean()))) ==
         refused(NotOffered::parameter));
+  // 00011 is no daily statistic, whatever the site has.
+  CHECK(offered(river(),
+                daily(daily_by("00060", StatisticId::instantaneous()))) ==
+        refused(NotOffered::statistic));
 }
 
 TEST_CASE("a series by id must exist and belong to the collection",

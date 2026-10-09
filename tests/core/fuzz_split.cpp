@@ -3,11 +3,13 @@
 
 // libFuzzer target: split and aligned, fed a raw begin, end, span and grain,
 // must never overflow (UBSan in the fuzz preset), and their laws hold:
-// split's windows are consecutive, cover the range and are `span` long but
-// the last; aligned contains the range, sits on the grain and widens each
-// side by less than one grain, and refuses only when a bound has no multiple
-// of the grain on the time line. DayRange::covering agrees with the
-// midnight test.
+// split's view has ceil(length / span) windows, the first begins and the last
+// ends with the range, and they are consecutive and `span` long but the last
+// (checked window by window for views of up to 4096 windows, and around the
+// ends and at random indices for larger ones); aligned contains the range,
+// sits on the grain and widens each side by less than one grain, and refuses
+// only when a bound has no multiple of the grain on the time line. A span
+// or grain below 1 ms is no WindowSpan.
 
 #include <chrono>
 #include <cstddef>
@@ -15,7 +17,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <vector>
 
 #include "mov/core/time.hpp"
 #include "mov/core/windows.hpp"
@@ -27,45 +28,58 @@ namespace {
 
 using mov::core::Time;
 using mov::core::TimeRange;
+using mov::core::Windows;
+using mov::core::WindowSpan;
 using std::chrono::milliseconds;
 
 constexpr std::size_t input_size = 4 * sizeof(std::int64_t);
-// Larger plans are legal but slow to check; a plan of windows is bounded
-// by its caller (a user's range over a product's maximum window).
-constexpr std::uint64_t max_windows = 4096;
+constexpr std::uint64_t checked_windows = 4096;
 constexpr std::int64_t int64_max = std::numeric_limits<std::int64_t>::max();
 constexpr std::int64_t int64_min = std::numeric_limits<std::int64_t>::min();
 
 std::int64_t count(Time t) { return t.time_since_epoch().count(); }
 
-void check_split(TimeRange r, milliseconds span) {
-  const std::uint64_t length = static_cast<std::uint64_t>(count(r.end())) -
-                               static_cast<std::uint64_t>(count(r.begin()));
-  const auto step = static_cast<std::uint64_t>(span.count());
-  if ((length - 1) / step >= max_windows) {
-    return;
-  }
-  const std::vector<TimeRange> w = mov::core::split(r, span);
-  if (w.empty() or w.size() != ((length - 1) / step) + 1 or
-      w.front().begin() != r.begin() or w.back().end() != r.end()) {
+std::uint64_t length_of(TimeRange r) {
+  return static_cast<std::uint64_t>(count(r.end())) -
+         static_cast<std::uint64_t>(count(r.begin()));
+}
+
+/// Window i is `step` long (or at most `step` when last) and meets window
+/// i + 1.
+void check_window(const Windows& w, std::uint64_t i, std::uint64_t step) {
+  const TimeRange x = w[i];
+  const bool last = i + 1 == w.size();
+  if ((last and length_of(x) > step) or (not last and length_of(x) != step) or
+      (not last and x.end() != w[i + 1].begin())) {
     std::abort();
-  }
-  for (std::size_t i = 0; i < w.size(); ++i) {
-    const std::uint64_t window_length =
-        static_cast<std::uint64_t>(count(w[i].end())) -
-        static_cast<std::uint64_t>(count(w[i].begin()));
-    const bool last = i + 1 == w.size();
-    if ((last and window_length > step) or
-        (not last and window_length != step) or
-        (not last and w[i].end() != w[i + 1].begin())) {
-      std::abort();
-    }
   }
 }
 
-void check_aligned(TimeRange r, milliseconds grain) {
+void check_split(TimeRange r, WindowSpan span) {
+  const auto step = static_cast<std::uint64_t>(span.duration().count());
+  const Windows w = mov::core::split(r, span);
+  if (w.size() != ((length_of(r) - 1) / step) + 1 or
+      w.front().begin() != r.begin() or w.back().end() != r.end()) {
+    std::abort();
+  }
+  if (w.size() <= checked_windows) {
+    for (std::uint64_t i = 0; i < w.size(); ++i) {
+      check_window(w, i, step);
+    }
+    return;
+  }
+  for (std::uint64_t i = 0; i < 64; ++i) {
+    check_window(w, i, step);
+    check_window(w, w.size() - 1 - i, step);
+    // A spread of indices, from the input.
+    check_window(w, (length_of(r) ^ (i * 0x9e3779b97f4a7c15ULL)) % w.size(),
+                 step);
+  }
+}
+
+void check_aligned(TimeRange r, WindowSpan grain) {
   const auto a = mov::core::aligned(r, grain);
-  const std::int64_t g = grain.count();
+  const std::int64_t g = grain.duration().count();
   if (not a) {
     const bool low = count(r.begin()) < int64_min + g;
     const bool high = count(r.end()) > int64_max - g;
@@ -84,21 +98,6 @@ void check_aligned(TimeRange r, milliseconds grain) {
                              static_cast<std::uint64_t>(count(r.end())) <
                          static_cast<std::uint64_t>(g);
   if (not(on_grain and contains and tight)) {
-    std::abort();
-  }
-}
-
-void check_covering(TimeRange r) {
-  constexpr std::int64_t ms_per_day = 86'400'000;
-  const auto days = mov::core::DayRange::covering(r);
-  const bool midnights =
-      count(r.begin()) % ms_per_day == 0 and count(r.end()) % ms_per_day == 0;
-  if (days.has_value() and not midnights) {
-    std::abort();
-  }
-  if (days and
-      (days->first() != std::chrono::floor<std::chrono::days>(r.begin()) or
-       days->size().count() < 1)) {
     std::abort();
   }
 }
@@ -123,14 +122,15 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   if (not r) {
     return 0;
   }
-  if (span >= 1) {
-    check_split(*r, milliseconds{span});
+  const auto split_span = WindowSpan::make(milliseconds{span});
+  if (split_span.has_value() != (span >= 1)) {
+    std::abort();
   }
-  if (grain >= 1) {
-    check_aligned(*r, milliseconds{grain});
-  } else if (mov::core::aligned(*r, milliseconds{grain})) {
-    std::abort();  // a grain below 1 ms aligns nothing
+  if (split_span) {
+    check_split(*r, *split_span);
   }
-  check_covering(*r);
+  if (const auto align_grain = WindowSpan::make(milliseconds{grain})) {
+    check_aligned(*r, *align_grain);
+  }
   return 0;
 }

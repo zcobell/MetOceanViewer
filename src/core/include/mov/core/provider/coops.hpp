@@ -10,14 +10,16 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
-#include <utility>
+#include <type_traits>
 #include <variant>
 
 #include "mov/core/datum.hpp"
 #include "mov/core/enum_set.hpp"
 #include "mov/core/overloaded.hpp"
+#include "mov/core/required.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
+#include "mov/core/windows.hpp"
 
 /// The request vocabulary of NOAA CO-OPS (docs/providers-design.md section
 /// 3.2): what can be asked of the data API, with every illegal combination
@@ -42,9 +44,6 @@ enum class Datum : std::uint8_t {
 inline constexpr std::array every_datum{
     Datum::mhhw, Datum::mhw,    Datum::mtl,  Datum::msl,   Datum::mlw,
     Datum::mllw, Datum::navd88, Datum::stnd, Datum::igld85};
-static_assert(every_datum.size() ==
-              static_cast<std::size_t>(Datum::igld85) + 1);
-using DatumSet = EnumSet<Datum, every_datum.size()>;
 
 /// An observed water-level series. The comments name the API products.
 enum class Observed : std::uint8_t {
@@ -54,9 +53,51 @@ enum class Observed : std::uint8_t {
 };
 inline constexpr std::array every_observed{
     Observed::six_minute, Observed::one_minute, Observed::hourly};
-static_assert(every_observed.size() ==
-              static_cast<std::size_t>(Observed::hourly) + 1);
-using ObservedSet = EnumSet<Observed, every_observed.size()>;
+
+/// The meteorological and water-quality products. The first five are v4's;
+/// the rest are v5-extras #1 and may be dropped before they ship (P2 checks
+/// air_gap's datum handling and salinity's JSON against recorded fixtures).
+enum class Met : std::uint8_t {
+  air_temperature,
+  water_temperature,
+  wind,
+  air_pressure,
+  humidity,
+  conductivity,
+  salinity,
+  visibility,
+  air_gap
+};
+inline constexpr std::array every_met{
+    Met::air_temperature, Met::water_temperature, Met::wind,
+    Met::air_pressure,    Met::humidity,          Met::conductivity,
+    Met::salinity,        Met::visibility,        Met::air_gap};
+
+}  // namespace mov::core::coops
+
+namespace mov::core {
+
+// EnumSet checks that each array lists 0, 1, ..., N - 1 in order.
+template <>
+struct Enumerators<coops::Datum> {
+  static constexpr const auto& values = coops::every_datum;
+};
+template <>
+struct Enumerators<coops::Observed> {
+  static constexpr const auto& values = coops::every_observed;
+};
+template <>
+struct Enumerators<coops::Met> {
+  static constexpr const auto& values = coops::every_met;
+};
+
+}  // namespace mov::core
+
+namespace mov::core::coops {
+
+using DatumSet = EnumSet<Datum>;
+using ObservedSet = EnumSet<Observed>;
+using MetSet = EnumSet<Met>;
 
 /// The interval of tide predictions, in minutes. `hilo` (high and low
 /// waters) is not one: it is a v5.x addition (v5-extras #7).
@@ -91,46 +132,31 @@ using LevelKind =
     std::variant<ObservedLevel, PredictedLevel, ObservedVsPredicted>;
 
 /// Water level of any kind. The API requires a datum for every kind and has
-/// no neutral default, so the datum is mandatory.
+/// no neutral default, so the datum is Required: leaving it out does not
+/// compile.
 struct WaterLevel {
   LevelKind kind;
-  Datum datum;
+  Required<Datum> datum;
   friend constexpr bool operator==(const WaterLevel&,
                                    const WaterLevel&) = default;
 };
 
-/// The meteorological and water-quality products. The first five are v4's;
-/// the rest are v5-extras #1 and may be dropped before they ship (P2 checks
-/// air_gap's datum handling and salinity's JSON against recorded fixtures).
-enum class Met : std::uint8_t {
-  air_temperature,
-  water_temperature,
-  wind,
-  air_pressure,
-  humidity,
-  conductivity,
-  salinity,
-  visibility,
-  air_gap
-};
-inline constexpr std::array every_met{
-    Met::air_temperature, Met::water_temperature, Met::wind,
-    Met::air_pressure,    Met::humidity,          Met::conductivity,
-    Met::salinity,        Met::visibility,        Met::air_gap};
-static_assert(every_met.size() == static_cast<std::size_t>(Met::air_gap) + 1);
-using MetSet = EnumSet<Met, every_met.size()>;
-
 /// The API's 6-minute default or `interval=h`.
 enum class MetInterval : std::uint8_t { six_minute, hourly };
 
-/// A met product: no datum.
+/// A met product: no datum, and an interval that must be named.
 struct Meteorological {
   Met product;
-  MetInterval interval;
+  Required<MetInterval> interval;
   friend constexpr bool operator==(Meteorological, Meteorological) = default;
 };
 
+/// Not default-constructible: a default would be some water level against
+/// some datum.
 using Product = std::variant<WaterLevel, Meteorological>;
+static_assert(not std::is_default_constructible_v<WaterLevel> and
+              not std::is_default_constructible_v<Meteorological> and
+              not std::is_default_constructible_v<Product>);
 
 /// One station, one time range, one product.
 struct Request {
@@ -148,7 +174,7 @@ struct DatumRow {
   std::string_view wire;  // the data API's `datum=` value
 };
 
-// One row per enumerator, in enumerator order (checked below).
+// One row per enumerator, indexed by the enumerator (checked below).
 inline constexpr std::array<DatumRow, every_datum.size()> datum_rows{{
     {.datum = Datum::mhhw, .vertical = VerticalDatum::mhhw, .wire = "MHHW"},
     {.datum = Datum::mhw, .vertical = VerticalDatum::mhw, .wire = "MHW"},
@@ -161,14 +187,16 @@ inline constexpr std::array<DatumRow, every_datum.size()> datum_rows{{
     {.datum = Datum::igld85, .vertical = VerticalDatum::igld85, .wire = "IGLD"},
 }};
 
-[[nodiscard]] constexpr bool datum_rows_in_order() noexcept {
-  return std::ranges::equal(datum_rows, every_datum, {}, &DatumRow::datum);
-}
-static_assert(datum_rows_in_order());
-
 [[nodiscard]] constexpr const DatumRow& row_of(Datum d) noexcept {
   return datum_rows[static_cast<std::size_t>(d)];
 }
+
+// Every datum finds its own row, and no two rows name one core datum.
+static_assert(std::ranges::all_of(every_datum, [](Datum d) {
+  return row_of(d).datum == d and
+         std::ranges::count(datum_rows, row_of(d).vertical,
+                            &DatumRow::vertical) == 1;
+}));
 
 }  // namespace detail
 
@@ -220,26 +248,26 @@ static_assert(datum_rows_in_order());
 /// The longest window the API serves for one observed series: 4 days at one
 /// minute, 31 days at six (the live error text, provider-apis.md 2.1; the
 /// documentation says "1 month"), a year hourly.
-[[nodiscard]] constexpr std::chrono::days max_window(Observed s) noexcept {
+[[nodiscard]] constexpr WindowSpan max_window(Observed s) noexcept {
   switch (s) {
     case Observed::one_minute:
-      return std::chrono::days{4};
+      return WindowSpan::of<4, std::chrono::days>();
     case Observed::six_minute:
-      return std::chrono::days{31};
+      return WindowSpan::of<31, std::chrono::days>();
     case Observed::hourly:
       break;
   }
-  return std::chrono::days{365};
+  return WindowSpan::of<365, std::chrono::days>();
 }
 
 /// Predictions at any interval but `hilo`: a year.
-[[nodiscard]] constexpr std::chrono::days max_window(
+[[nodiscard]] constexpr WindowSpan max_window(
     PredictionInterval /*interval*/) noexcept {
-  return std::chrono::days{365};
+  return WindowSpan::of<365, std::chrono::days>();
 }
 
 /// Met products follow the observed limits of their interval.
-[[nodiscard]] constexpr std::chrono::days max_window(MetInterval i) noexcept {
+[[nodiscard]] constexpr WindowSpan max_window(MetInterval i) noexcept {
   switch (i) {
     case MetInterval::six_minute:
       return max_window(Observed::six_minute);
@@ -251,8 +279,7 @@ static_assert(datum_rows_in_order());
 
 /// The longest window one request of the product may span; a paired product
 /// takes the smaller of its two halves.
-[[nodiscard]] constexpr std::chrono::days max_window(
-    const Product& product) noexcept {
+[[nodiscard]] constexpr WindowSpan max_window(const Product& product) noexcept {
   return std::visit(
       Overloaded{
           [](const WaterLevel& w) {
@@ -266,13 +293,13 @@ static_assert(datum_rows_in_order());
                     }},
                 w.kind);
           },
-          [](Meteorological m) { return max_window(m.interval); }},
+          [](Meteorological m) { return max_window(m.interval.get()); }},
       product);
 }
 
 /// The grain windows are aligned to: whole minutes, for every product (the
 /// API's begin_date and end_date have minutes).
-inline constexpr std::chrono::minutes grain{1};
+inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::minutes>();
 
 /// What a product's result is made of: one series, an observed and a
 /// predicted series, or the wind columns (speed, direction, gust).

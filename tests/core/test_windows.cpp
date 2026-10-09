@@ -12,6 +12,7 @@
 #include <limits>
 #include <optional>
 #include <random>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -20,11 +21,11 @@
 #include "test_helpers.hpp"
 
 using mov::core::aligned;
-using mov::core::DayRange;
-using mov::core::DayRangeError;
 using mov::core::split;
 using mov::core::Time;
 using mov::core::TimeRange;
+using mov::core::Windows;
+using mov::core::WindowSpan;
 using mov::test::at_ms;
 
 namespace {
@@ -70,7 +71,12 @@ TEST_CASE("split laws hold on random ranges", "[core][windows]") {
   for (int i = 0; i < 2'000; ++i) {
     const milliseconds span{span_dist(rng)};
     const TimeRange r = random_range(rng, span.count() * 50);
-    const std::vector<TimeRange> w = split(r, span);
+    const auto step = WindowSpan::make(span);
+    REQUIRE(step.has_value());
+    const Windows view = split(r, step.value_or(WindowSpan::of<1>()));
+    // The view and a vector built from it agree.
+    const std::vector<TimeRange> w(view.begin(), view.end());
+    REQUIRE(w.size() == view.size());
     REQUIRE(not w.empty());
     CHECK(w.front().begin() == r.begin());
     CHECK(w.back().end() == r.end());
@@ -89,7 +95,9 @@ TEST_CASE("aligned laws hold on random ranges", "[core][windows]") {
   for (int i = 0; i < 5'000; ++i) {
     const milliseconds grain{grain_dist(rng)};
     const TimeRange r = random_range(rng, int64_max);
-    const auto a = aligned(r, grain);
+    const auto step = WindowSpan::make(grain);
+    REQUIRE(step.has_value());
+    const auto a = aligned(r, step.value_or(WindowSpan::of<1>()));
     if (not a) {
       // Only when a bound has no multiple of the grain inside the time line.
       const bool low = count(r.begin()) < int64_min + grain.count();
@@ -119,10 +127,10 @@ TEST_CASE("CO-OPS windows of a month split at minutes, not at the request",
       std::chrono::sys_days{std::chrono::year{2026} / 3 / 15} + 12h + 10s;
   const auto r = TimeRange::make(begin, end);
   REQUIRE(r.has_value());
-  const auto widened = aligned(*r, std::chrono::minutes{1});
+  const auto widened = aligned(*r, WindowSpan::of<1, std::chrono::minutes>());
   REQUIRE(widened.has_value());
-  const std::vector<TimeRange> w =
-      split(widened.value_or(*r), std::chrono::days{31});
+  const Windows w =
+      split(widened.value_or(*r), WindowSpan::of<31, std::chrono::days>());
   REQUIRE(w.size() == 3);
   CHECK(w[0].begin() == std::chrono::sys_days{std::chrono::year{2026} / 1 / 1});
   CHECK(w[1].begin() == std::chrono::sys_days{std::chrono::year{2026} / 2 / 1});
@@ -131,21 +139,15 @@ TEST_CASE("CO-OPS windows of a month split at minutes, not at the request",
         std::chrono::sys_days{std::chrono::year{2026} / 3 / 15} + 12h + 1min);
 }
 
-TEST_CASE("DayRange::covering refuses days std::chrono::days cannot hold",
-          "[core][windows]") {
-  using Rep = std::chrono::days::rep;
-  constexpr std::int64_t ms_per_day = 86'400'000;
-  // The furthest whole day a Time can hold.
-  const std::int64_t last_day = int64_max / ms_per_day;
-  const auto r = TimeRange::make(at_ms(0), at_ms(last_day * ms_per_day));
+#if defined(__cpp_lib_ranges_to_container)
+TEST_CASE("std::ranges::to collects the windows", "[core][windows]") {
+  const auto r = TimeRange::make(at_ms(0), at_ms(25));
   REQUIRE(r.has_value());
-  const auto covered = DayRange::covering(*r);
-  if (std::in_range<Rep>(last_day)) {
-    // libstdc++: a 64-bit rep holds every day a Time can name.
-    CHECK(covered.transform(&DayRange::size) ==
-          std::chrono::days{static_cast<Rep>(last_day)});
-  } else {
-    // MSVC and libc++: 32 bits.
-    CHECK(covered == std::unexpected{DayRangeError::out_of_range});
-  }
+  // The call form: Clang 20 with libstdc++ 14 rejects the pipe form of
+  // ranges::to for any range (forward_like used before it is defined).
+  const auto w =
+      std::ranges::to<std::vector<TimeRange>>(split(*r, WindowSpan::of<10>()));
+  REQUIRE(w.size() == 3);
+  CHECK(w.back() == TimeRange::make(at_ms(20), at_ms(25)));
 }
+#endif

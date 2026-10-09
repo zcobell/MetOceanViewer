@@ -69,14 +69,16 @@ constexpr bool every_prediction_interval_is_a_year() {
       PredictionInterval::fifteen, PredictionInterval::thirty,
       PredictionInterval::sixty};
   return std::ranges::all_of(intervals, [](PredictionInterval i) {
-    return coops::max_window(predicted_level(i)) == days{365};
+    return coops::max_window(predicted_level(i)).duration() == days{365};
   });
 }
 
 constexpr bool met_windows_follow_interval() {
   return std::ranges::all_of(coops::every_met, [](Met m) {
-    return coops::max_window(met(m, MetInterval::six_minute)) == days{31} and
-           coops::max_window(met(m, MetInterval::hourly)) == days{365};
+    return coops::max_window(met(m, MetInterval::six_minute)).duration() ==
+               days{31} and
+           coops::max_window(met(m, MetInterval::hourly)).duration() ==
+               days{365};
   });
 }
 
@@ -105,6 +107,18 @@ TEST_CASE("CO-OPS vocabulary types are values", "[core][coops][constexpr]") {
   STATIC_REQUIRE_FALSE(std::is_default_constructible_v<coops::Request>);
   // A met product has no datum, and a datum is not a product.
   STATIC_REQUIRE_FALSE(std::is_constructible_v<Product, Datum>);
+  // No default product, water level or met product: each would name some
+  // datum or interval nobody chose.
+  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<Product>);
+  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<WaterLevel>);
+  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<Meteorological>);
+  STATIC_REQUIRE_FALSE(
+      std::is_default_constructible_v<mov::core::Required<Datum>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<mov::core::Required<Datum>>);
+  // The enumerator lists are whole and in order.
+  STATIC_REQUIRE(mov::core::DenseEnum<Datum>);
+  STATIC_REQUIRE(mov::core::DenseEnum<Observed>);
+  STATIC_REQUIRE(mov::core::DenseEnum<Met>);
   STATIC_REQUIRE(std::variant_size_v<Product> == 2);
   STATIC_REQUIRE(std::variant_size_v<coops::LevelKind> == 3);
 }
@@ -142,18 +156,43 @@ TEST_CASE("CO-OPS paired grids name their halves", "[core][coops][constexpr]") {
 }
 
 TEST_CASE("CO-OPS maximum windows per product", "[core][coops][constexpr]") {
-  STATIC_REQUIRE(coops::max_window(observed_level(Observed::one_minute)) ==
-                 days{4});
-  STATIC_REQUIRE(coops::max_window(observed_level(Observed::six_minute)) ==
-                 days{31});
-  STATIC_REQUIRE(coops::max_window(observed_level(Observed::hourly)) ==
-                 days{365});
+  STATIC_REQUIRE(
+      coops::max_window(observed_level(Observed::one_minute)).duration() ==
+      days{4});
+  STATIC_REQUIRE(
+      coops::max_window(observed_level(Observed::six_minute)).duration() ==
+      days{31});
+  STATIC_REQUIRE(
+      coops::max_window(observed_level(Observed::hourly)).duration() ==
+      days{365});
   STATIC_REQUIRE(every_prediction_interval_is_a_year());
   // A paired product takes the smaller of its halves.
-  STATIC_REQUIRE(coops::max_window(paired(PairedGrid::six_minute)) == days{31});
-  STATIC_REQUIRE(coops::max_window(paired(PairedGrid::hourly)) == days{365});
+  STATIC_REQUIRE(coops::max_window(paired(PairedGrid::six_minute)).duration() ==
+                 days{31});
+  STATIC_REQUIRE(coops::max_window(paired(PairedGrid::hourly)).duration() ==
+                 days{365});
   STATIC_REQUIRE(met_windows_follow_interval());
-  STATIC_REQUIRE(coops::grain == std::chrono::minutes{1});
+  STATIC_REQUIRE(coops::grain.duration() == std::chrono::minutes{1});
+}
+
+TEST_CASE("CO-OPS products compare by value", "[core][coops][constexpr]") {
+  STATIC_REQUIRE(observed_level(Observed::hourly) ==
+                 observed_level(Observed::hourly));
+  STATIC_REQUIRE(WaterLevel{.kind = ObservedLevel{.series = Observed::hourly},
+                            .datum = Datum::mllw} !=
+                 WaterLevel{.kind = ObservedLevel{.series = Observed::hourly},
+                            .datum = Datum::msl});
+  STATIC_REQUIRE(met(Met::wind, MetInterval::hourly) !=
+                 met(Met::wind, MetInterval::six_minute));
+  // Required reads as its value.
+  STATIC_REQUIRE(WaterLevel{.kind = ObservedLevel{.series = Observed::hourly},
+                            .datum = Datum::stnd}
+                     .datum.get() == Datum::stnd);
+  STATIC_REQUIRE(
+      coops::wire_token(WaterLevel{
+          .kind = PredictedLevel{.interval = PredictionInterval::one},
+          .datum = Datum::navd88}
+                            .datum) == "NAVD");
 }
 
 TEST_CASE("CO-OPS product shapes", "[core][coops][constexpr]") {

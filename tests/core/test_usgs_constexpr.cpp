@@ -138,5 +138,16 @@ TEST_CASE("USGS parameters in the quantity registry",
   // Rows wait for P3's check against the parameter-codes collection.
   STATIC_REQUIRE_FALSE(mapping("00010").has_value());
   STATIC_REQUIRE_FALSE(mapping("00045").has_value());
-  STATIC_REQUIRE(usgs::grain == std::chrono::seconds{1});
+  STATIC_REQUIRE(usgs::grain.duration() == std::chrono::seconds{1});
+}
+
+TEST_CASE("USGS statistics name their collection", "[core][usgs][constexpr]") {
+  using usgs::Collection;
+  STATIC_REQUIRE(usgs::collection_of(StatisticId::instantaneous()) ==
+                 Collection::continuous);
+  STATIC_REQUIRE(usgs::collection_of(StatisticId::mean()) == Collection::daily);
+  STATIC_REQUIRE(usgs::collection_of(StatisticId::maximum()) ==
+                 Collection::daily);
+  STATIC_REQUIRE(usgs::collection_of(*StatisticId::make("00021")) ==
+                 Collection::daily);
 }

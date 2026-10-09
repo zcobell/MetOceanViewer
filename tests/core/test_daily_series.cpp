@@ -30,11 +30,11 @@ using mov::core::usgs::StatisticId;
 
 namespace {
 
-using std::chrono::sys_days;
+using std::chrono::local_days;
 
-constexpr sys_days on(int y, unsigned m, unsigned d) {
-  return sys_days{std::chrono::year{y} / std::chrono::month{m} /
-                  std::chrono::day{d}};
+constexpr local_days on(int y, unsigned m, unsigned d) {
+  return local_days{std::chrono::year{y} / std::chrono::month{m} /
+                    std::chrono::day{d}};
 }
 
 Sample value(double v) { return Sample::of(v).value_or(Sample{Missing{}}); }
@@ -67,8 +67,8 @@ TEST_CASE("DailySeries is a value", "[core][daily_series]") {
 
 TEST_CASE("DailySeries::make keeps days, samples, metadata and statistic",
           "[core][daily_series]") {
-  const std::vector<sys_days> days{on(2026, 1, 1), on(2026, 1, 2),
-                                   on(2026, 1, 5)};
+  const std::vector<local_days> days{on(2026, 1, 1), on(2026, 1, 2),
+                                     on(2026, 1, 5)};
   const std::vector<Sample> samples{value(1.5), Sample{Missing{}}, value(-2.0)};
   const auto series =
       DailySeries::make(discharge_meta(), days, samples, StatisticId::mean());

@@ -14,6 +14,7 @@
 #include <variant>
 
 #include "mov/core/ascii.hpp"
+#include "mov/core/detail/core_key.hpp"
 #include "mov/core/units.hpp"
 
 namespace mov::core {
@@ -68,6 +69,11 @@ class GenericQuantity {
   };
 
   GenericQuantity() : GenericQuantity{"value", ""} {}
+
+  /// Core only (detail/core_key.hpp): a token the caller has proven valid
+  /// and not a registry token, with no standard name (usgs::quantity_of).
+  GenericQuantity(const detail::CoreKey& /*key*/, std::string token)
+      : GenericQuantity{std::move(token), ""} {}
 
   /// Token "value", no standard name; the same as a default GenericQuantity.
   [[nodiscard]] static GenericQuantity value() { return GenericQuantity{}; }
