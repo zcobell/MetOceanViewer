@@ -209,3 +209,27 @@ TEST_CASE("token() of a registry quantity is constexpr",
   MOV_STATIC_REQUIRE_VARIANT(token(id) == token(Quantity::wind_v));
   STATIC_REQUIRE(TokenCallable<Quantity>);
 }
+
+TEST_CASE("quantity_for_standard_name finds the registry quantities of a name",
+          "[core][quantity][constexpr]") {
+  using mov::core::quantity_for_standard_name;
+  // Two quantities share this name: the first search finds the observed one,
+  // the next the prediction.
+  constexpr auto level =
+      quantity_for_standard_name("water_surface_height_above_reference_datum");
+  STATIC_REQUIRE(level == Quantity::water_level);
+  STATIC_REQUIRE(quantity_for_standard_name(
+                     "water_surface_height_above_reference_datum", level) ==
+                 Quantity::water_level_prediction);
+  STATIC_REQUIRE_FALSE(
+      quantity_for_standard_name("water_surface_height_above_reference_datum",
+                                 Quantity::water_level_prediction)
+          .has_value());
+  STATIC_REQUIRE(quantity_for_standard_name("eastward_wind") ==
+                 Quantity::wind_u);
+  STATIC_REQUIRE_FALSE(quantity_for_standard_name("").has_value());
+  STATIC_REQUIRE_FALSE(quantity_for_standard_name("no_such_name").has_value());
+  // `difference` has no standard name, so the empty name never finds it.
+  STATIC_REQUIRE_FALSE(
+      quantity_for_standard_name("", std::nullopt).has_value());
+}

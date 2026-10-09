@@ -135,6 +135,10 @@ constexpr std::array temperature_spellings{
     symbol_spelling("\xC2\xB0"
                     "F",
                     TemperatureUnit::fahrenheit),
+    symbol_spelling("K", TemperatureUnit::kelvin),
+    word_spelling("kelvin", TemperatureUnit::kelvin),
+    symbol_spelling("degK", TemperatureUnit::kelvin),
+    symbol_spelling("degree_K", TemperatureUnit::kelvin),
 };
 
 template <class U, std::size_t N>

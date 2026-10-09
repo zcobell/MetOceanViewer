@@ -3,6 +3,7 @@
 
 #include <array>
 #include <bit>
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <compare>
 #include <cstdint>
@@ -111,6 +112,7 @@ std::vector<Unit> all_units() {
       DischargeUnit::cubic_foot_per_second,
       TemperatureUnit::celsius,
       TemperatureUnit::fahrenheit,
+      TemperatureUnit::kelvin,
   };
 }
 
@@ -396,4 +398,19 @@ TEST_CASE("Affine conversion at run time equals the compile-time result",
             std::bit_cast<std::uint64_t>(at_compile_time(c, i)));
     }
   }
+}
+
+TEST_CASE("kelvin is a temperature unit with its spellings", "[core][units]") {
+  for (const char* text : {"K", "kelvin", "Kelvin", "degK", "degree_K"}) {
+    CAPTURE(text);
+    CHECK(parse_unit(text) == std::optional<Unit>{TemperatureUnit::kelvin});
+  }
+  CHECK(udunits(TemperatureUnit::kelvin) == "K");
+  CHECK(symbol(TemperatureUnit::kelvin) == "K");
+  // k is not K: the symbol is case-sensitive.
+  CHECK(parse_unit("k") != std::optional<Unit>{TemperatureUnit::kelvin});
+  const auto to_c =
+      conversion(Unit{TemperatureUnit::kelvin}, Unit{TemperatureUnit::celsius});
+  REQUIRE(to_c.has_value());
+  CHECK((*to_c)(300.0) == Catch::Approx(26.85));
 }
