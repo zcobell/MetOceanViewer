@@ -140,18 +140,6 @@ template <class Run>
   return dispatch_model_numeric(file, var, std::forward<Run>(run));
 }
 
-/// One station's times (nullopt: the one axis of every station): present and
-/// on the clock (`time_missing`, `time_out_of_range`, with the station and
-/// index), in file order.
-[[nodiscard]] std::expected<core::TimeAxis, Error> times_of(
-    std::span<const core::Sample> row, const CfClock& clock,
-    std::string_view var, std::optional<std::size_t> station);
-
-/// times_of, and strictly increasing (`time_not_increasing`): a v5 file's rule.
-[[nodiscard]] std::expected<core::TimeAxis, Error> axis_of(
-    std::span<const core::Sample> row, const CfClock& clock,
-    std::string_view var, std::size_t station);
-
 /// The samples of the `selected` stations (`counts` per file station), or
 /// nullopt when the sum does not fit in std::size_t.
 [[nodiscard]] std::optional<std::size_t> sum_selected(
@@ -163,12 +151,6 @@ template <class Run>
 [[nodiscard]] std::expected<void, Error> check_rows_size(
     const nc::File& file, std::string_view variable,
     std::optional<std::size_t> samples, std::size_t columns);
-
-/// The clock of a time variable: its `units` (missing_attribute without; a
-/// ParseError if they do not parse) and `calendar`, with the warnings of
-/// parse_cf_time_units.
-[[nodiscard]] std::expected<Read<CfClock>, Error> clock_of(
-    const nc::File& file, const nc::VarInfo& time_var);
 
 // ---- helpers the foreign and legacy readers share with the v5 reader
 // (station_netcdf_open.cpp) --------------------------------------------------

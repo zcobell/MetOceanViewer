@@ -174,42 +174,10 @@ std::expected<void, Error> sample_rows(const nc::File& file,
 std::expected<std::vector<core::Sample>, Error> read_masked(
     const nc::File& file, const nc::VarInfo& var, const nc::Slab& slab,
     RowRole role, const StopToken& stop) {
-  if (role != RowRole::times or var.type != nc::Type::int64) {
-    return file.read_samples(var.name, slab, stop);
+  if (role == RowRole::times) {
+    return read_time_samples(file, var, slab, stop);
   }
-  auto mask = file.masking<std::int64_t>(var.name);
-  if (not mask) {
-    return fail(std::move(mask).error());
-  }
-  auto raw = file.read<std::int64_t>(var.name, slab, stop);
-  if (not raw) {
-    return std::unexpected{std::move(raw).error()};
-  }
-  std::vector<core::Sample> out(raw->size());
-  std::ranges::transform(*raw, out.begin(),
-                         [&mask](std::int64_t x) { return mask->apply(x); });
-  return out;
-}
-
-std::expected<core::TimeAxis, Error> times_of(
-    std::span<const core::Sample> row, const CfClock& clock,
-    std::string_view var, std::optional<std::size_t> station) {
-  core::TimeAxis times;
-  times.reserve(row.size());
-  for (std::size_t j = 0; j < row.size(); ++j) {
-    const std::optional<double> x = row[j].value();
-    if (not x) {
-      return fail(
-          format_error(FormatErrc::time_missing, std::string{var}, station, j));
-    }
-    const auto instant = clock.at(*x);
-    if (not instant) {
-      return fail(format_error(FormatErrc::time_out_of_range, std::string{var},
-                               station, j));
-    }
-    times.push_back(*instant);
-  }
-  return times;
+  return file.read_samples(var.name, slab, stop);
 }
 
 std::optional<std::size_t> sum_selected(std::span<const std::size_t> counts,
@@ -235,48 +203,6 @@ std::expected<void, Error> check_rows_size(const nc::File& file,
   return check_result_size(file, variable, 1, *samples, columns);
 }
 
-std::expected<core::TimeAxis, Error> axis_of(std::span<const core::Sample> row,
-                                             const CfClock& clock,
-                                             std::string_view var,
-                                             std::size_t station) {
-  auto times = times_of(row, clock, var, station);
-  if (not times) {
-    return times;
-  }
-  const auto descent = std::ranges::adjacent_find(
-      *times, [](core::Time a, core::Time b) { return not(a < b); });
-  if (descent != times->end()) {
-    return fail(
-        format_error(FormatErrc::time_not_increasing, std::string{var}, station,
-                     static_cast<std::size_t>(descent - times->begin()) + 1));
-  }
-  return times;
-}
-
-std::expected<Read<CfClock>, Error> clock_of(const nc::File& file,
-                                             const nc::VarInfo& time_var) {
-  auto units = optional_text(file, time_var.name, "units");
-  if (not units) {
-    return std::unexpected{std::move(units).error()};
-  }
-  if (not *units) {
-    return fail(format_error(FormatErrc::missing_attribute,
-                             std::string{time_var.name.view()} + ":units"));
-  }
-  auto parsed = parse_cf_time_units(**units);
-  if (not parsed) {
-    return fail(std::move(parsed).error());
-  }
-  return read_calendar(file, time_var)
-      .and_then([&](CfCalendar cal) {
-        return make_clock(parsed->value, cal, time_var.name.view());
-      })
-      .transform([&](CfClock clock) {
-        return Read<CfClock>{.value = clock,
-                             .warnings = std::move(parsed->warnings)};
-      });
-}
-
 namespace {
 
 /// The axes: one shared (orthogonal) or one per selected station.
@@ -294,7 +220,11 @@ std::expected<std::vector<core::TimeAxis>, Error> read_axes(
       file, time, rows.spec, RowRole::times,
       [&](const SelectedStation& m,
           std::span<const core::Sample> kept) -> std::expected<void, Error> {
-        return axis_of(kept, clock, time.name.view(), m.station)
+        return times_of(kept, clock, time.name.view(), m.station)
+            .and_then([&](core::TimeAxis times) {
+              return strictly_increasing(std::move(times), time.name.view(),
+                                         m.station);
+            })
             .transform([&](core::TimeAxis axis) {
               axes[m.position] = std::move(axis);
             });

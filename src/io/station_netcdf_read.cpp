@@ -40,22 +40,6 @@ using detail::fail;
 using detail::format_error;
 using detail::NetcdfKind;
 
-/// Opens `path`, runs `read` on it and closes it, on every path.
-template <class F>
-auto with_file(const std::filesystem::path& path, const ReadContext& ctx,
-               const F& read)
-    -> std::invoke_result_t<const F&, const nc::File&> {
-  auto file = nc::File::open(path, ctx.limits);
-  if (not file) {
-    return fail(std::move(file).error());
-  }
-  auto result = read(std::as_const(*file));
-  if (auto closed = std::move(*file).close(); not closed and result) {
-    return fail(std::move(closed).error());
-  }
-  return result;
-}
-
 /// The file indices `which` names, after checking that a selection was made
 /// for this file.
 std::expected<std::vector<std::size_t>, Error> selected_indices(
@@ -239,7 +223,7 @@ std::expected<Read<StationNcCatalog>, Error> inspect_any(
 
 std::expected<Read<StationNcCatalog>, Error> inspect_station_netcdf(
     const std::filesystem::path& path, const ReadContext& ctx) {
-  return with_file(path, ctx, [&](const nc::File& file) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
     return inspect_any(file, ctx.stop);
   });
 }
@@ -247,7 +231,7 @@ std::expected<Read<StationNcCatalog>, Error> inspect_station_netcdf(
 std::expected<Read<StationFile>, Error> read_station_netcdf(
     const std::filesystem::path& path, const StationNcSelection& which,
     const ReadContext& ctx, const StationNcReadOptions& options) {
-  return with_file(path, ctx, [&](const nc::File& file) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
     return read_any(file, which, options, ctx.stop);
   });
 }

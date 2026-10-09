@@ -15,6 +15,7 @@
 #include <variant>
 #include <vector>
 
+#include "model_netcdf.hpp"
 #include "mov/core/ascii.hpp"
 #include "mov/core/overloaded.hpp"
 #include "mov/core/units.hpp"
@@ -68,14 +69,9 @@ bool is_netcdf_magic(std::string_view bytes) {
 
 std::expected<FileDetection, Error> netcdf_detection(
     const std::filesystem::path& path, const ReadLimits& limits) {
-  auto file = nc::File::open(path, limits);
-  if (not file) {
-    return std::unexpected{Error{std::move(file).error()}};
-  }
-  auto kind = detail::classify_netcdf(*file);
-  if (auto closed = std::move(*file).close(); not closed and kind) {
-    return std::unexpected{Error{std::move(closed).error()}};
-  }
+  auto kind = detail::with_file(path, limits, [](const nc::File& file) {
+    return detail::classify_netcdf(file);
+  });
   if (not kind) {
     return std::unexpected{std::move(kind).error()};
   }

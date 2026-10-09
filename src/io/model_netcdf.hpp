@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// What the netCDF model-output readers (ADCIRC, D-Flow FM) share: finding
-// dimensions and variables by name, the station list, the time axis, and the
-// block-wise gather of the selected stations' columns. Private to src/io/.
+// What the netCDF readers share: opening and closing a file, finding
+// dimensions and variables by name, attribute text, the clock and the times
+// of a time variable, and, for the model-output readers (ADCIRC, D-Flow FM),
+// the station list and the block-wise gather of the selected stations'
+// columns. Private to src/io/.
 
 #pragma once
 
@@ -11,11 +13,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <filesystem>
 #include <initializer_list>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -34,6 +38,30 @@
 #include "mov/io/read_limits.hpp"
 
 namespace mov::io::detail {
+
+// ---- the file
+// ----------------------------------------------------------------
+
+/// Opens `path`, runs `read` on the open file and closes it, on every path:
+/// the one way a netCDF entry point holds a file. A failed open is the result;
+/// a failed close after a successful `read` is too (the read may have seen
+/// data the library never managed to finish), and after a failed one the
+/// read's error is kept.
+template <class F>
+  requires std::invocable<const F&, const nc::File&>
+[[nodiscard]] auto with_file(const std::filesystem::path& path,
+                             const ReadLimits& limits, const F& read)
+    -> std::invoke_result_t<const F&, const nc::File&> {
+  auto file = nc::File::open(path, limits);
+  if (not file) {
+    return fail(std::move(file).error());
+  }
+  auto result = read(std::as_const(*file));
+  if (auto closed = std::move(*file).close(); not closed and result) {
+    return fail(std::move(closed).error());
+  }
+  return result;
+}
 
 // ---- errors ----------------------------------------------------------------
 
@@ -118,13 +146,43 @@ read_stations(const nc::File& file, const StationVariables& vars,
 [[nodiscard]] std::expected<CfClock, Error> make_clock(
     const CfTimeUnits& units, CfCalendar calendar, std::string_view variable);
 
+/// The clock of a time variable: its `units` (`missing_attribute`, subject
+/// `<variable>:units`, without; the ParseError of parse_cf_time_units if they
+/// do not parse) and its `calendar` (read_calendar, make_clock), with the
+/// warnings of parse_cf_time_units. The ADCIRC reader puts its cold-start
+/// rule on top of this.
+[[nodiscard]] std::expected<Read<CfClock>, Error> clock_of(
+    const nc::File& file, const nc::VarInfo& time_var);
+
+/// The samples of `slab` of the time variable `time`, masked in its own type
+/// (nc::File::read_samples). A 64-bit integer time is read as integers, masked
+/// and only then widened: every time a clock accepts is below 2^53 in
+/// magnitude, so the widening is exact for those and a larger value stays out
+/// of range.
+[[nodiscard]] std::expected<std::vector<core::Sample>, Error> read_time_samples(
+    const nc::File& file, const nc::VarInfo& time, const nc::Slab& slab,
+    const StopToken& stop);
+
+/// The time of each of `values` (samples of the time variable `var`) on
+/// `clock`, in file order: a Missing one is `time_missing` and one the clock
+/// refuses `time_out_of_range`, each with `station` (nullopt: a time axis
+/// every station shares) and its index.
+[[nodiscard]] std::expected<core::TimeAxis, Error> times_of(
+    std::span<const core::Sample> values, const CfClock& clock,
+    std::string_view var, std::optional<std::size_t> station);
+
+/// `times` if each is above the one before it; else `time_not_increasing`
+/// about `var`, with `station` and the index of the first that is not. The
+/// rule of every time axis a file must hold in order (CF coordinate variables,
+/// v5 station files); the readers of lenient files put theirs in order
+/// instead.
+[[nodiscard]] std::expected<core::TimeAxis, Error> strictly_increasing(
+    core::TimeAxis times, std::string_view var,
+    std::optional<std::size_t> station);
+
 /// Every value of the time variable (over exactly the time dimension) as a
-/// time on `clock`. A masked value is `time_missing` (an integer time is
-/// masked by its attributes too) and one the clock refuses is
-/// `time_out_of_range`, both with its index; the axis must be strictly
-/// increasing (`time_not_increasing`, with the index of the first element
-/// that is not above its predecessor). Integer (64-bit) times are read as
-/// integers, all others masked in their own type.
+/// time on `clock`: read_time_samples, times_of and strictly_increasing, with
+/// no station.
 [[nodiscard]] std::expected<core::TimeAxis, Error> read_time_axis(
     const nc::File& file, const nc::VarInfo& time, const CfClock& clock,
     const StopToken& stop);

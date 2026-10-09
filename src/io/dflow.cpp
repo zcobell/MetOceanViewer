@@ -166,45 +166,6 @@ detail::StationVariables station_variables(const Structure& structure) {
           .source = core::DataSource::dflowfm};
 }
 
-// ---- the clock
-// ------------------------------------------------------------------
-
-struct TimeSetup {
-  CfTimeUnits units;
-  CfCalendar calendar;
-  CfClock clock;
-  std::vector<Warning> warnings;
-};
-
-std::expected<TimeSetup, Error> time_of(const nc::File& file,
-                                        const Structure& structure) {
-  const std::string variable{structure.time_var.name.view()};
-  auto text = detail::optional_text(file, structure.time_var.name, "units");
-  if (not text) {
-    return std::unexpected{std::move(text.error())};
-  }
-  if (not *text) {
-    return fail(
-        format_error(FormatErrc::missing_attribute, variable + ":units"));
-  }
-  auto parsed = parse_cf_time_units(**text);
-  if (not parsed) {
-    return fail(std::move(parsed.error()));
-  }
-  const auto calendar = detail::read_calendar(file, structure.time_var);
-  if (not calendar) {
-    return std::unexpected{calendar.error()};
-  }
-  auto clock = detail::make_clock(parsed->value, *calendar, variable);
-  if (not clock) {
-    return std::unexpected{std::move(clock.error())};
-  }
-  return TimeSetup{.units = parsed->value,
-                   .calendar = *calendar,
-                   .clock = *clock,
-                   .warnings = std::move(parsed->warnings)};
-}
-
 // ---- the variables of the file
 // ---------------------------------------------------
 
@@ -684,36 +645,35 @@ std::expected<AtLayer, FormatError> AtLayer::make(const Layered& v,
 // ---- inspect
 // ------------------------------------------------------------------------
 
-std::expected<Read<DflowCatalog>, Error> inspect_dflow(
-    const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
-  auto file = nc::File::open(path, ctx.limits);
-  if (not file) {
-    return fail(std::move(file.error()));
-  }
-  auto structure = structure_of(*file);
+namespace {
+
+std::expected<Read<DflowCatalog>, Error> inspect_file(const nc::File& file,
+                                                      core::Epsg crs,
+                                                      const StopToken& stop) {
+  auto structure = structure_of(file);
   if (not structure) {
     return std::unexpected{std::move(structure.error())};
   }
-  auto time = time_of(*file, *structure);
+  auto time = detail::clock_of(file, structure->time_var);
   if (not time) {
     return std::unexpected{std::move(time.error())};
   }
-  auto listing = list_variables(*file, *structure);
+  auto listing = list_variables(file, *structure);
   if (not listing) {
     return std::unexpected{std::move(listing.error())};
   }
-  auto variables = variables_of(*file, listing->variables);
+  auto variables = variables_of(file, listing->variables);
   if (not variables) {
     return std::unexpected{std::move(variables.error())};
   }
-  if (auto size = detail::check_station_count(*file, structure->stations_dim);
+  if (auto size = detail::check_station_count(file, structure->stations_dim);
       not size) {
     return std::unexpected{std::move(size.error())};
   }
   const core::StationSelection all =
       core::StationSelection::all(structure->stations_dim.length);
-  auto stations = detail::read_stations(*file, station_variables(*structure),
-                                        crs, all.indices(), ctx.stop);
+  auto stations = detail::read_stations(file, station_variables(*structure),
+                                        crs, all.indices(), stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
@@ -723,9 +683,18 @@ std::expected<Read<DflowCatalog>, Error> inspect_dflow(
   return Read<DflowCatalog>{.value = {.stations = std::move(stations->value),
                                       .variables = *std::move(variables),
                                       .times = structure->time_dim.length,
-                                      .time_units = time->units,
-                                      .calendar = time->calendar},
+                                      .time_units = time->value.units(),
+                                      .calendar = time->value.calendar()},
                             .warnings = std::move(warnings)};
+}
+
+}  // namespace
+
+std::expected<Read<DflowCatalog>, Error> inspect_dflow(
+    const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
+    return inspect_file(file, crs, ctx.stop);
+  });
 }
 
 // ---- read
@@ -781,23 +750,17 @@ std::expected<std::vector<Listed>, Error> resolve(
   return out;
 }
 
-// What a read finds out before it reads values: the open file, its structure
-// and the variables the request needs.
+// What a read finds out before it reads values: the file's structure and the
+// variables the request needs.
 struct Setup {
-  nc::File file;
   Structure structure;
   Target target;
   std::vector<Listed> inputs;
 };
 
-std::expected<Setup, Error> set_up(const std::filesystem::path& path,
-                                   const DflowRequest& request,
-                                   const ReadContext& ctx) {
-  auto file = nc::File::open(path, ctx.limits);
-  if (not file) {
-    return fail(std::move(file.error()));
-  }
-  auto structure = structure_of(*file);
+std::expected<Setup, Error> set_up(const nc::File& file,
+                                   const DflowRequest& request) {
+  auto structure = structure_of(file);
   if (not structure) {
     return std::unexpected{std::move(structure.error())};
   }
@@ -806,7 +769,7 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
       not ok) {
     return std::unexpected{std::move(ok.error())};
   }
-  auto listing = list_variables(*file, *structure);
+  auto listing = list_variables(file, *structure);
   if (not listing) {
     return std::unexpected{std::move(listing.error())};
   }
@@ -816,14 +779,13 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
     return std::unexpected{std::move(inputs.error())};
   }
   if (auto size =
-          detail::check_result_size(*file, inputs->front().info.name.view(),
+          detail::check_result_size(file, inputs->front().info.name.view(),
                                     request.stations.indices().size(),
                                     structure->time_dim.length, inputs->size());
       not size) {
     return std::unexpected{std::move(size.error())};
   }
-  return Setup{.file = *std::move(file),
-               .structure = *std::move(structure),
+  return Setup{.structure = *std::move(structure),
                .target = std::move(target),
                .inputs = *std::move(inputs)};
 }
@@ -865,12 +827,9 @@ std::expected<core::Variable, Error> variable_of(
                         .per_station = std::move(components[0].columns)};
 }
 
-}  // namespace
-
-std::expected<Read<core::StationTable>, Error> read_dflow(
-    const std::filesystem::path& path, const DflowRequest& request,
-    const ReadContext& ctx) {
-  auto setup = set_up(path, request, ctx);
+std::expected<Read<core::StationTable>, Error> read_file(
+    const nc::File& file, const DflowRequest& request, const StopToken& stop) {
+  auto setup = set_up(file, request);
   if (not setup) {
     return std::unexpected{std::move(setup.error())};
   }
@@ -879,29 +838,28 @@ std::expected<Read<core::StationTable>, Error> read_dflow(
   if (not grid) {
     return fail(detail::to_format_error(grid.error(), std::nullopt));
   }
-  auto time = time_of(setup->file, setup->structure);
+  auto time = detail::clock_of(file, setup->structure.time_var);
   if (not time) {
     return std::unexpected{std::move(time.error())};
   }
-  auto axis = detail::read_time_axis(setup->file, setup->structure.time_var,
-                                     time->clock, ctx.stop);
+  auto axis = detail::read_time_axis(file, setup->structure.time_var,
+                                     time->value, stop);
   if (not axis) {
     return std::unexpected{std::move(axis.error())};
   }
-  auto stations =
-      detail::read_stations(setup->file, station_variables(setup->structure),
-                            request.crs, selection, ctx.stop);
+  auto stations = detail::read_stations(
+      file, station_variables(setup->structure), request.crs, selection, stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
   auto values =
-      read_values(*setup, {.file = setup->file,
+      read_values(*setup, {.file = file,
                            .grid = *grid,
                            .times = setup->structure.time_dim.length,
                            .station_dim = setup->structure.stations_dim.id,
                            .layer = setup->target.layer,
                            .selection = selection,
-                           .stop = ctx.stop});
+                           .stop = stop});
   if (not values) {
     return std::unexpected{std::move(values.error())};
   }
@@ -919,6 +877,16 @@ std::expected<Read<core::StationTable>, Error> read_dflow(
   variables.push_back(*std::move(variable));
   return detail::assemble_table(std::move(variables), *std::move(axis),
                                 *std::move(stations), std::move(warnings));
+}
+
+}  // namespace
+
+std::expected<Read<core::StationTable>, Error> read_dflow(
+    const std::filesystem::path& path, const DflowRequest& request,
+    const ReadContext& ctx) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
+    return read_file(file, request, ctx.stop);
+  });
 }
 
 }  // namespace mov::io

@@ -252,11 +252,6 @@ std::expected<std::vector<Warning>, Error> ics_warnings(const nc::File& file,
 // ---- the clock
 // ----------------------------------------------------------------
 
-struct Clock {
-  CfClock clock;
-  std::vector<Warning> warnings;
-};
-
 // The `units` of `time`, as text, and what it says if it is a CF time unit.
 struct UnitsOfTime {
   std::optional<std::string> text;
@@ -281,16 +276,15 @@ std::expected<UnitsOfTime, Error> read_units(const nc::File& file,
 
 // ADCIRC counts seconds from its cold start. A given one wins; the epoch of
 // `units` is then only checked against it.
-std::expected<Clock, Error> clock_from_cold_start(const Structure& structure,
-                                                  const UnitsOfTime& units,
-                                                  core::Time given) {
+std::expected<Read<CfClock>, Error> clock_from_cold_start(
+    const Structure& structure, const UnitsOfTime& units, core::Time given) {
   auto clock = detail::make_clock({.unit = CfTimeUnit::second, .epoch = given},
                                   CfCalendar::proleptic_gregorian,
                                   structure.time_var.name.view());
   if (not clock) {
     return std::unexpected{std::move(clock.error())};
   }
-  Clock out{.clock = *clock, .warnings = {}};
+  Read<CfClock> out{.value = *clock, .warnings = {}};
   if (units.text and units.parsed and
       std::chrono::abs(units.parsed->value.epoch - given) >
           std::chrono::seconds{1}) {
@@ -301,36 +295,31 @@ std::expected<Clock, Error> clock_from_cold_start(const Structure& structure,
   return out;
 }
 
-// No cold start: the unit and epoch of `units`, if they are a CF time unit and
-// not the placeholder NCDATE leaves.
-std::expected<Clock, Error> clock_from_units(const nc::File& file,
-                                             const Structure& structure,
-                                             UnitsOfTime units) {
-  const std::string variable{structure.time_var.name.view()};
+// No cold start: the clock of `units` (clock_of), which must then be a CF time
+// unit and not the placeholder NCDATE leaves; the epoch it gives is said.
+std::expected<Read<CfClock>, Error> clock_from_units(const nc::File& file,
+                                                     const Structure& structure,
+                                                     const UnitsOfTime& units) {
   if (not units.text) {
     return fail(
-        format_error(FormatErrc::cold_start_required, variable + ":units"));
+        format_error(FormatErrc::cold_start_required,
+                     std::string{structure.time_var.name.view()} + ":units"));
   }
   if (not units.parsed) {
     return fail(format_error(FormatErrc::cold_start_required, *units.text));
   }
-  const auto calendar = detail::read_calendar(file, structure.time_var);
-  if (not calendar) {
-    return std::unexpected{calendar.error()};
-  }
-  auto clock = detail::make_clock(units.parsed->value, *calendar, variable);
-  if (not clock) {
-    return std::unexpected{std::move(clock.error())};
-  }
-  Clock out{.clock = *clock, .warnings = std::move(units.parsed->warnings)};
-  out.warnings.push_back(
-      {.code = WarningCode::epoch_used, .subject = *units.text, .count = 1});
-  return out;
+  return detail::clock_of(file, structure.time_var)
+      .transform([&](Read<CfClock> clock) {
+        clock.warnings.push_back({.code = WarningCode::epoch_used,
+                                  .subject = *units.text,
+                                  .count = 1});
+        return clock;
+      });
 }
 
-std::expected<Clock, Error> clock_of(const nc::File& file,
-                                     const Structure& structure,
-                                     const std::optional<core::Time>& given) {
+std::expected<Read<CfClock>, Error> clock_of(
+    const nc::File& file, const Structure& structure,
+    const std::optional<core::Time>& given) {
   auto units = read_units(file, structure.time_var);
   if (not units) {
     return std::unexpected{std::move(units.error())};
@@ -338,7 +327,7 @@ std::expected<Clock, Error> clock_of(const nc::File& file,
   if (given) {
     return clock_from_cold_start(structure, *units, *given);
   }
-  return clock_from_units(file, structure, *std::move(units));
+  return clock_from_units(file, structure, *units);
 }
 
 // ---- classifying values
@@ -492,22 +481,16 @@ std::expected<Values, Error> read_values(const ValueSource source,
   return out;
 }
 
-// What a read finds out before it reads values: the open file, its structure,
-// and the data variables of the kind asked for.
+// What a read finds out before it reads values: the file's structure and the
+// data variables of the kind asked for.
 struct Setup {
-  nc::File file;
   Structure structure;
   std::vector<nc::VarInfo> vars;
 };
 
-std::expected<Setup, Error> set_up(const std::filesystem::path& path,
-                                   const AdcircNcRequest& request,
-                                   const ReadContext& ctx) {
-  auto file = nc::File::open(path, ctx.limits);
-  if (not file) {
-    return fail(std::move(file.error()));
-  }
-  auto structure = structure_of(*file);
+std::expected<Setup, Error> set_up(const nc::File& file,
+                                   const AdcircNcRequest& request) {
+  auto structure = structure_of(file);
   if (not structure) {
     return std::unexpected{std::move(structure.error())};
   }
@@ -516,68 +499,52 @@ std::expected<Setup, Error> set_up(const std::filesystem::path& path,
       not ok) {
     return std::unexpected{std::move(ok.error())};
   }
-  auto vars = data_variables(*file, *structure, request.kind);
+  auto vars = data_variables(file, *structure, request.kind);
   if (not vars) {
     return std::unexpected{std::move(vars.error())};
   }
   if (auto size = detail::check_result_size(
-          *file, vars->front().name.view(), request.stations.indices().size(),
+          file, vars->front().name.view(), request.stations.indices().size(),
           structure->time_dim.length, vars->size());
       not size) {
     return std::unexpected{std::move(size.error())};
   }
-  return Setup{.file = *std::move(file),
-               .structure = *std::move(structure),
-               .vars = *std::move(vars)};
-}
-
-}  // namespace
-
-std::vector<std::string> adcirc_variables(AdcircKind kind) {
-  std::vector<std::string> names;
-  for (const nc::NcNameRef name : names_of(kind)) {
-    names.emplace_back(name.view());
-  }
-  return names;
+  return Setup{.structure = *std::move(structure), .vars = *std::move(vars)};
 }
 
 // ---- inspect
 // ---------------------------------------------------------------------
 
-std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
-    const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
-  auto file = nc::File::open(path, ctx.limits);
-  if (not file) {
-    return fail(std::move(file.error()));
-  }
-  auto structure = structure_of(*file);
+std::expected<Read<AdcircNcCatalog>, Error> inspect_file(
+    const nc::File& file, core::Epsg crs, const StopToken& stop) {
+  auto structure = structure_of(file);
   if (not structure) {
     return std::unexpected{std::move(structure.error())};
   }
-  auto kind = detect_kind(*file);
+  auto kind = detect_kind(file);
   if (not kind) {
     return std::unexpected{std::move(kind.error())};
   }
-  if (auto vars = data_variables(*file, *structure, *kind); not vars) {
+  if (auto vars = data_variables(file, *structure, *kind); not vars) {
     return std::unexpected{std::move(vars.error())};
   }
-  const auto names = has_names(*file);
+  const auto names = has_names(file);
   if (not names) {
     return std::unexpected{names.error()};
   }
-  if (auto size = detail::check_station_count(*file, structure->station_dim);
+  if (auto size = detail::check_station_count(file, structure->station_dim);
       not size) {
     return std::unexpected{std::move(size.error())};
   }
   const core::StationSelection all =
       core::StationSelection::all(structure->station_dim.length);
   auto stations = detail::read_stations(
-      *file, station_variables(structure->station_dim, *names), crs,
-      all.indices(), ctx.stop);
+      file, station_variables(structure->station_dim, *names), crs,
+      all.indices(), stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
-  auto units = read_units(*file, structure->time_var);
+  auto units = read_units(file, structure->time_var);
   if (not units) {
     return std::unexpected{std::move(units.error())};
   }
@@ -585,7 +552,7 @@ std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
   if (not grid) {
     return fail(detail::to_format_error(grid.error(), std::nullopt));
   }
-  auto mismatch = ics_warnings(*file, crs, *grid);
+  auto mismatch = ics_warnings(file, crs, *grid);
   if (not mismatch) {
     return std::unexpected{std::move(mismatch.error())};
   }
@@ -611,26 +578,25 @@ std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
 // ---- read
 // ------------------------------------------------------------------------
 
-namespace detail {
-
-std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
-    const std::filesystem::path& path, const AdcircNcRequest& request,
-    const ReadContext& ctx, std::optional<GroupingPolicy> policy) {
-  auto setup = set_up(path, request, ctx);
+std::expected<Read<core::StationTable>, Error> read_file(
+    const nc::File& file, const AdcircNcRequest& request,
+    const std::optional<detail::GroupingPolicy>& policy,
+    const StopToken& stop) {
+  auto setup = set_up(file, request);
   if (not setup) {
     return std::unexpected{std::move(setup.error())};
   }
-  const nc::File& file = setup->file;
   const Structure& structure = setup->structure;
   const auto grid = crs_kind(request.crs);
   if (not grid) {
-    return fail(to_format_error(grid.error(), std::nullopt));
+    return fail(detail::to_format_error(grid.error(), std::nullopt));
   }
   auto clock = clock_of(file, structure, request.cold_start);
   if (not clock) {
     return std::unexpected{std::move(clock.error())};
   }
-  auto axis = read_time_axis(file, structure.time_var, clock->clock, ctx.stop);
+  auto axis =
+      detail::read_time_axis(file, structure.time_var, clock->value, stop);
   if (not axis) {
     return std::unexpected{std::move(axis.error())};
   }
@@ -639,9 +605,9 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
     return std::unexpected{names.error()};
   }
   const std::span<const std::size_t> selection = request.stations.indices();
-  auto stations =
-      read_stations(file, station_variables(structure.station_dim, *names),
-                    request.crs, selection, ctx.stop);
+  auto stations = detail::read_stations(
+      file, station_variables(structure.station_dim, *names), request.crs,
+      selection, stop);
   if (not stations) {
     return std::unexpected{std::move(stations.error())};
   }
@@ -656,7 +622,7 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
                              .station_dim = structure.station_dim.id,
                              .selection = selection,
                              .policy = policy,
-                             .stop = ctx.stop},
+                             .stop = stop},
                             setup->vars);
   if (not values) {
     return std::unexpected{std::move(values.error())};
@@ -666,8 +632,35 @@ std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
   append_if_counted(warnings, {.code = WarningCode::nonfinite_masked,
                                .subject = std::move(values->nonfinite_in),
                                .count = values->nonfinite});
-  return assemble_table(std::move(values->variables), *std::move(axis),
-                        *std::move(stations), std::move(warnings));
+  return detail::assemble_table(std::move(values->variables), *std::move(axis),
+                                *std::move(stations), std::move(warnings));
+}
+
+}  // namespace
+
+std::vector<std::string> adcirc_variables(AdcircKind kind) {
+  std::vector<std::string> names;
+  for (const nc::NcNameRef name : names_of(kind)) {
+    names.emplace_back(name.view());
+  }
+  return names;
+}
+
+std::expected<Read<AdcircNcCatalog>, Error> inspect_adcirc_netcdf(
+    const std::filesystem::path& path, core::Epsg crs, const ReadContext& ctx) {
+  return detail::with_file(path, ctx.limits, [&](const nc::File& file) {
+    return inspect_file(file, crs, ctx.stop);
+  });
+}
+
+namespace detail {
+
+std::expected<Read<core::StationTable>, Error> read_adcirc_netcdf(
+    const std::filesystem::path& path, const AdcircNcRequest& request,
+    const ReadContext& ctx, std::optional<GroupingPolicy> policy) {
+  return with_file(path, ctx.limits, [&](const nc::File& file) {
+    return read_file(file, request, policy, ctx.stop);
+  });
 }
 
 }  // namespace detail
