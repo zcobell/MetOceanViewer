@@ -234,8 +234,7 @@ class Bucket {
 /// The Bucket of the whole series.
 [[nodiscard]] Bucket summarize(const TimeSeries& s);
 
-// ---- Extent
-// ------------------------------------------------------------------
+// ---- Extent -----------------------------------------------------------------
 
 /// The smallest and largest value of a series.
 struct ValueRange {
@@ -286,8 +285,7 @@ namespace detail {
 /// (or there are none).
 [[nodiscard]] std::optional<Extent> extent(std::span<const TimeSeries> all);
 
-// ---- Quick statistics
-// ------------------------------------------------------------
+// ---- Quick statistics -------------------------------------------------------
 
 struct ValueStats {
   std::size_t count;  // at least 1
@@ -317,8 +315,7 @@ struct QuickStats {
 /// is finite for any finite values.
 [[nodiscard]] QuickStats quick_stats(const TimeSeries& s);
 
-// ---- Residual
-// -----------------------------------------------------------------------
+// ---- Residual ---------------------------------------------------------------
 
 /// Why observed - predicted is not defined, in the order the checks run.
 enum class ResidualErrc : std::uint8_t {
@@ -350,8 +347,7 @@ enum class ResidualErrc : std::uint8_t {
 [[nodiscard]] std::expected<TimeSeries, ResidualErrc> residual(
     const ObsVsPred& pair);
 
-// ---- Changing a series
-// -----------------------------------------------------------------
+// ---- Changing a series ------------------------------------------------------
 
 /// A half-open window [lo, hi) of indices.
 struct Window {

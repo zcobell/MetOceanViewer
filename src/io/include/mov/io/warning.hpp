@@ -29,8 +29,7 @@ enum class WarningCode : std::uint8_t {
   /// Dropped rows whose values differed from the row kept; subject as above.
   conflicting_duplicate_times,
 
-  // ---- values
-  // -----------------------------------------------------------------
+  // ---- values ---------------------------------------------------------------
   /// Exact legacy sentinels (-99999, -9999, -DBL_MAX) that became Missing.
   /// Subject: empty.
   legacy_sentinel_masked,
@@ -43,8 +42,7 @@ enum class WarningCode : std::uint8_t {
   /// spelling parse_unit made of it).
   unrecognized_unit,
 
-  // ---- model text
-  // -------------------------------------------------------------
+  // ---- model text -----------------------------------------------------------
   /// A record cut short at the end of the file. Subject: "record <n>".
   partial_record_dropped,
   /// Fewer records than the header's NSnaps. Subject: "NSnaps <n>, read <m>".
@@ -68,8 +66,7 @@ enum class WarningCode : std::uint8_t {
   /// empty; the count is the stations.
   invalid_utf8_replaced,
 
-  // ---- station netCDF (docs/station-netcdf.md section 12.7)
-  // --------------------
+  // ---- station netCDF (docs/station-netcdf.md section 12.7) -----------------
   /// A CF file not written by v5. Subject: its `Conventions`.
   foreign_cf,
   /// No usable CRS: WGS 84 assumed. Subject: "EPSG:<n>" or the grid mapping
@@ -98,8 +95,7 @@ enum class WarningCode : std::uint8_t {
   /// A legacy v4 station file. Subject: empty.
   legacy_dialect,
 
-  // ---- line-oriented text formats (IMEDS)
-  // ---------------------------------------
+  // ---- line-oriented text formats (IMEDS) -----------------------------------
   /// A station's rows switched between 6 and 7 words. Subject: the station.
   row_shape_changed,
   /// A station block without rows. Subject: the station.
@@ -112,8 +108,7 @@ enum class WarningCode : std::uint8_t {
   /// Missing and Dry samples the format cannot hold. Subject: empty.
   rows_omitted,
 
-  // ---- netCDF model output
-  // ----------------------------------------------------
+  // ---- netCDF model output --------------------------------------------------
   /// The CRS the caller gave is not the kind the file's `ics` says. Subject:
   /// "ics <n> but EPSG:<code> is <geographic|projected>".
   crs_mismatch,
@@ -123,8 +118,7 @@ enum class WarningCode : std::uint8_t {
   /// x coordinate variable.
   coordinates_from_first_step,
 
-  // ---- station netCDF writer: what is written differs from the table
-  // ----------
+  // ---- station netCDF writer: what is written differs from the table --------
   /// A column stored in its canonical unit. Subject: the column token.
   unit_converted,
   /// Stations with an empty name, written as "Station <id>". Subject: empty.
@@ -133,8 +127,7 @@ enum class WarningCode : std::uint8_t {
   /// empty.
   native_position_dropped,
 
-  // ---- foreign and legacy station netCDF
-  // -------------------------------------
+  // ---- foreign and legacy station netCDF ------------------------------------
   /// A variable name that is no quantity token was given one. Subject: the
   /// variable's name.
   variable_renamed,

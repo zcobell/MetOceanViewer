@@ -255,8 +255,8 @@ legacy dialects; the writer emits only the new one.
 - Use **Qt Graphs** (`GraphsView`, `LineSeries`, `DateTimeAxis`). Qt Charts is being
   phased out in favor of Qt Graphs.
 - Add C++-side **M4 decimation** (first/min/max/last per pixel column, which is
-  pixel-exact for line rasterization; refined from min/max on 2026-10-07, see
-  `docs/wp-notes/WP3.md`), so multi-year USGS or NDBC
+  pixel-exact for line rasterization; refined from min/max on 2026-10-07; the
+  recipe is in `docs/core-design.md` §2.10), so multi-year USGS or NDBC
   series stay smooth when zooming.
 - Hide the chart behind a thin `ChartModel` boundary. If Qt Graphs is inadequate for
   crosshair, tooltip or performance, a custom `QQuickItem` line renderer
@@ -366,7 +366,7 @@ Implemented in Phase 1: see `docs/packaging.md` (macOS and Windows not yet run).
   - Ship an application manifest with `activeCodePage=UTF-8` and
     `longPathAware=true`: netCDF-C 4.9.3 treats Windows paths as text in the
     active code page, so non-ASCII and long paths need both (see
-    `docs/wp-notes/WP6.md`).
+    `docs/core-design.md` §4.1, Paths).
   - Code signing: **Azure Artifact Signing** (formerly Trusted Signing), once the account
     exists (§6.1).
   - The installer registers the session file association.
@@ -589,6 +589,52 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     bundled** in the packages, so no third-party data is redistributed by the
     project. The app reads any file in the format. Predictions are validated
     against NOAA CO-OPS. Research: `docs/research/tides-global-harmonics.md`.
+
+### Open items from Phase 2 (owner; undecided, collected 2026-10-09)
+
+What the Phase 2 work packages left for the owner. None is decided; ask before
+acting on one. The code's current behaviour is stated so a decision can be
+"keep it".
+
+1. **Foreign station netCDF positions.** Whenever the grid mapping is not a
+   geographic `epsg_code`, positions are assumed WGS 84 with `crs_assumed`
+   (NAD83 and WGS 84 differ by about a metre). Keep, or project by the
+   ellipsoid parameters?
+2. **Foreign 3-D data.** Profile, trajectory and `z`-dependent variables are
+   skipped and a station altitude is dropped.
+3. **Foreign incomplete layout without `obs_count`** reads the whole time
+   matrix to count samples; a very large padded matrix is `too_large`.
+4. **Legacy station netCDF** refuses stations whose `units` or `datum` differ
+   (`inconsistent_metadata`). v4 never wrote such a file; a hand-edited one could
+   exist.
+5. **Text detection** cannot tell a header-only HWM CSV from any CSV
+   (`unrecognized_text`), and recognizes an IMEDS file without the `% IMEDS`
+   banner by its structure only.
+6. **Quality-flag meanings** are matched by substring (`bad`, `fail`, `missing`,
+   `suspect`, decision 30.1): a scheme whose words contain them for another
+   reason is masked wrongly.
+7. **Atomic writes** treat a directory fsync the file system does not support
+   (`EINVAL`, `ENOTSUP`, `EOPNOTSUPP`) as success and report no durability flag.
+8. **IMEDS export** reports `rows_omitted` (Missing and Dry samples the format
+   cannot hold); whether the UI shows it is open.
+9. **`udunits(PressureUnit::meter_of_water)`** is written as `m H2O`; it was not
+   checked against a UDUNITS table (`mH2O` is accepted on read as well).
+10. **Library defects** in netCDF-C 4.9.3 with HDF5 2.1.1 (`docs/core-design.md`
+    §4.6: a segfault with two handles on a file whose `NC_STRING` data is read,
+    and a variable rename that corrupts the file) are worked around, not
+    reported upstream.
+11. **Vector derivation in core.** A column-wise `magnitude(span u, span v)` plus
+    a derived-meta function would remove the per-station axis copy of the D-Flow
+    derived series; it is a change to `vector_series`.
+12. **A `DatumTable` that carries its station** (Phase 3; today the caller pairs
+    the table with the right series).
+13. **`format-compliance` as a required check on `v5`** is a branch-protection
+    setting, not in the tree. Panoply, ncview and NCO have not been tried on the
+    v5 files (`docs/station-netcdf.md` §14.2).
+14. **No real file** of these kinds has been read; every fixture is built from
+    documentation and the legacy source: a D-Flow FM `_his.nc` (decision 26), a
+    foreign CF station file (NOAA, IOOS, GLOS), a v4 `Hmdf::writeNetcdf` output,
+    an ADCIRC netCDF file with a real NCDATE. Try each before release.
 
 ## 7. Engineering rules for v5
 

@@ -6,7 +6,7 @@
   the embedded manifest (which adds the asInvoker execution level).
   - activeCodePage UTF-8 (Windows 10 1903+): netCDF-C 4.9.3 reads paths in
     the active code page, so non-ASCII paths need it to be UTF-8
-    (docs/wp-notes/WP6.md).
+    (docs/core-design.md §4.1, Paths).
   - longPathAware: paths over MAX_PATH; also needs the system's
     LongPathsEnabled policy.
   - dpiAwareness PerMonitorV2: what Qt 6 sets at startup anyway; declaring it

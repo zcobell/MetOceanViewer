@@ -87,7 +87,7 @@ station sets that grow by appending, multiple CRSs in a file.
 | Compression | `nc_def_var_deflate(shuffle=1, deflate=1, level=2)` on every variable with >= 2 dimensions that holds samples (`time` in L2, data, status). Instance variables and the L1 `time` coordinate are contiguous. |
 | Chunking | Explicit `nc_def_var_chunking` for sample variables, `(r, c)` with `c = min(n_cols, 65536)`, `r = clamp(65536 / c, 1, n_station)` (about 512 KiB for `double`). L1 and L2 use the same rule on `(station, time)` / `(station, obs)`. Readers MUST NOT depend on chunk shape. |
 | Fill mode | `nc_set_fill(NC_FILL)` (default) so unwritten padding reads back as `_FillValue`. |
-| Atomic write | Write to `<name>.nc.tmp` in the same directory, `nc_close`, then rename over the target; on any error remove the temp file and leave the old file intact (same rule as session save, legacy-formats.md §10.3, [B19]). Never modify a file in place. |
+| Atomic write | Write to a unique temporary file (`.mov-<16 hex>.tmp`) in the same directory, sync and `nc_close`, fsync, then rename over the target; on any error remove the temporary file and leave the old file intact (core-design.md §4.4; the same rule as session save, legacy-formats.md §10.3, [B19]). Never modify a file in place. |
 | String encoding | UTF-8 bytes, trailing `NUL` padding, `_Encoding = "utf-8"` (xarray/netCDF4-python convention, harmless to others). Lengths come from `strlen` of the UTF-8 bytes, never `QString::length()` [B15]. |
 | Endianness | native; readers use the library's conversion. |
 
@@ -220,7 +220,7 @@ reader keeps `standard_name`/`long_name`/`units` and treats the quantity as gene
 | Type | `double`. Every integer millisecond with abs(t) < 2^53 is exact; 2^53 ms is year ~287396, and the CF checker/xarray decode `double` universally, while `int64` is unsupported by older ncview/NCO builds (not verified). |
 | Units | `"milliseconds since 1970-01-01 00:00:00"`. CF §4.4: the reference time is required; with the zone omitted it defaults to UTC, so no zone suffix is written (`Z`/`T` forms are UDUNITS extensions CF does not promise). CF §4.4 notes `since` is the recommended keyword. |
 | Calendar | `proleptic_gregorian` (CF §4.4.1) = the `std::chrono` civil calendar; no ambiguity for pre-1582 dates (v4 valid-date lower bound is 1900). CF §4.4.1 ignores leap seconds in all calendars, which equals `sys_time` semantics. |
-| Writer | Writes `static_cast<double>(ms_since_epoch)`. Times MUST be strictly increasing within each station (CF Table 9.1: "strict monotonically increasing"). The writer returns `NonMonotonicTime{station, index}` otherwise; de-duplication/sorting is done upstream (provider layer). |
+| Writer | Writes `static_cast<double>(ms_since_epoch)`. Times MUST be strictly increasing within each station (CF Table 9.1: "strict monotonically increasing"). The writer cannot see anything else: a `core::StationTable` holds strictly increasing axes by construction, so de-duplication and sorting happen upstream (`core::normalize` in the readers, the provider layer). |
 | L1 | `time(time)` is a coordinate variable: no missing values (CF §2.5.1), strictly increasing, the same for all stations. |
 | L2 | `time(station, obs)`: valid samples are the first `obs_count[s]` entries and strictly increasing; the remaining entries are `_FillValue` (CF §9.6: unused elements of data and auxiliary coordinates must be missing). |
 | Reader | Accept any CF time `units` of the form `<seconds, minutes, hours or days> since <date>[ T<time>][ zone]` (parser spec: legacy-formats.md §4 "Intended parser"), calendars `standard`, `gregorian`, `proleptic_gregorian` (and absent = `standard`); other calendars => `UnsupportedCalendar`. Convert with `ref + llround(value * unit_ms)`; non-finite times are errors. A pre-1582 date in `standard`/`gregorian` => error (mixed calendar is not reproduced). |
@@ -247,7 +247,7 @@ those to an explicit `Dry` state; the file stores it as a CF status flag, not as
 
 | Item | Spec |
 |---|---|
-| When | Written for a data variable iff its series type carries the wet/dry state (model water levels: `water_level` from ADCIRC/D-Flow model output). Absent => no sample is dry. |
+| When | Written for a data variable iff at least one of its samples is `Dry` (model water levels from the ADCIRC readers, or any column a user built that way: `Dry` is allowed on any quantity). Absent => no sample is dry. |
 | Variable | `byte <quantity>_status(station, T)` e.g. `water_level_status` |
 | Attributes | `_FillValue=-128b`, `standard_name="status_flag"`, `long_name="<label> wet/dry status"`, `flag_values=0b,1b`, `flag_meanings="dry wet"`, `valid_range=0b,1b`. The data variable gets `ancillary_variables="<quantity>_status"`. |
 | Sample states | status 0 (dry): data MUST be `_FillValue`. status 1 (wet): data MUST be a valid value. status missing (`-128`): unclassified; data is a value or missing. L2 padding: status is `-128` (CF §9.6). |
@@ -441,7 +441,7 @@ coordinates. xarray promotes the byte status flag to float32 because of its `_Fi
 ### 10.2 Vertical datum
 
 `vertical_datum` (variable attribute, `water_level*` and generic `value` quantities) holds the `VerticalDatum` enum token, upper case:
-`MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `STND` (station/gauge datum). The enum in `core` is authoritative; `NullDatum` is
+`MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `IGLD85`, `STND` (station/gauge datum). The enum in `core` (`VerticalDatum`) is authoritative; no datum is
 represented by **omitting** the attribute, never by `"none"`. Unknown token on read => warning `W-DATUM-UNKNOWN`, datum treated as unspecified (no guessing; the text is kept in
 diagnostics). Datum shifts are applied in `core` (decision 18), never in the reader/writer. The attribute is not CF; CF's own channel for a vertical datum is a compound `crs_wkt`
 or `geopotential_datum_name` (App. F), which cannot express tidal datums and would imply a geoid relation; we keep one explicit attribute instead.
@@ -594,9 +594,13 @@ the order SN 11 documents`).
 
 ### 12.8 Writer preconditions (all return `expected` errors, never throw, never write a partial file)
 
-`EmptyCollection` (0 stations, or zero samples in total, because a dimension of length 0 cannot be defined); `DuplicateStationId`; `EmptyStationId`; `NonMonotonicTime`; `NonFiniteValue`; `TimeOutOfRange` (|ms| >= 2^53); `BadLatLon`;
-`InconsistentAxis` (a data variable whose per-station sample count differs from the station's time vector); `NameTooLong`/`EmbeddedNul`; I/O errors (`nc_*` code and variable). A single station with zero samples in a
-multi-station set is legal (L2, `obs_count = 0`, an all-fill row).
+Most of this list is ruled out by the types the writer takes: a `core::StationTable` has unique non-empty UTF-8 ids, strictly increasing axes within +/-(2^53 - 1) ms, finite
+samples, valid `Location`s and columns as long as their axis (core-design.md §2.8). What remains is checked by `validate_station_netcdf` before any file is created, as `FormatErrc`
+values: `empty_collection` (0 stations), `no_data_variables` (no columns), `no_samples` (no station has a sample, because a dimension of length 0 cannot be defined),
+`too_many_samples` (a station with more samples than the `int` `obs_count` can hold), `noncanonical_unit` (a registry quantity other than `difference` without a unit, or with one
+that does not convert to its canonical unit), `invalid_variable_name` (a generic token that is a name the format uses, `<token>_status` of any column, or longer than 249 bytes),
+`bad_option` (a global attribute text that is not UTF-8, holds a NUL, is longer than 64 KiB, or an empty `title`); then the I/O errors of the atomic write (`FileError`, `NcError`
+with the library status and the variable). A single station with zero samples in a multi-station set is legal (L2, `obs_count = 0`, an all-fill row).
 
 ### 12.9 The reader's errors and warnings, kind by kind
 
@@ -700,7 +704,7 @@ supports them (decided at bump time). Files written by 1.x are valid CF-1.11 at 
 | Foreign files | CF H.2.1 / H.2.2 / H.2.3 / H.2.4 (contiguous ragged) / H.2.5 (rejected) examples as committed CDL; float32 data with `missing_value`; `scale_factor`/`add_offset`; `NC_STRING` ids; `days since` and `seconds since 2000-01-01 00:00:00 +00:00` time units; transposed `(time, station)`; no `grid_mapping` |
 | Legacy dialects | writer-independent fixtures for A (generated by a small C tool that reproduces `Hmdf::writeNetcdf` semantics), B (`stationNameLen` 50 and 300 [B7], float data [B4], default fill [B9], `referenceDate` of 19/20/120 bytes [B8], EPSG 4326/26915/absent), C (`-9999f`); each mapped per §11; > 9999 stations |
 | Versioning | 1.0 read; 1.7 read with `W-MINOR-NEWER`; 2.0 => `UnsupportedVersion`; missing version with format attribute => `BadVersion`; `CF-1.6`, `CF-1.12`, `"CF-1.8 ACDD-1.3"`, `"CF-1.11,ACDD-1.3"` Conventions parse |
-| Property/fuzz | libFuzzer target feeding mutated netCDF bytes to the reader (decision 21); random `TimeSeriesSet` generator -> write -> read equality |
+| Property/fuzz | the structure fuzzer (core-design.md §7.5): bytes -> a bounded netCDF schema written with netCDF-C -> `detect_file`, `inspect_*` and `read_*`; an unspoiled template must read back as written (decision 21). Fuzzing the reader from raw netCDF bytes is deferred (core-design.md §9.3) |
 | Cross-tool smoke (Linux CI) | `xarray.open_dataset(decode_cf=True)` on writer output: values, times, strings, fill-to-NaN equal to the C++ model; `ncdump -h` of the two canonical fixtures equals the committed CDL (the blocks in §9) |
 
 ### 14.2 CF compliance in CI

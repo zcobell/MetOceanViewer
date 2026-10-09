@@ -374,7 +374,7 @@ documentation; not yet run.*
 - **Executable metadata** (`packaging/windows/`): `VERSIONINFO` and the icon
   (`metoceanviewer.rc.in`), and an application manifest that MSVC merges into
   the embedded one. The manifest sets `activeCodePage` UTF-8, which netCDF-C
-  4.9.3 needs for non-ASCII paths (`docs/wp-notes/WP6.md`; the self-test
+  4.9.3 needs for non-ASCII paths (`docs/core-design.md` §4.1, Paths; the self-test
   checks it), `longPathAware` (it also needs the system's
   `LongPathsEnabled` policy), `dpiAwareness` PerMonitorV2, and `supportedOS`
   Windows 10/11.

@@ -75,7 +75,7 @@ Apple Clang. It reproduces the standard-library gaps of the macOS job
 and CI runs it as the `libcxx` job. C++ vcpkg ports are built with libc++ too
 (overlay triplet `x64-linux-libcxx`), because libstdc++ and libc++ `std::string`
 are different types. Findings and the per-version feature table are in
-`docs/wp-notes/portability.md`.
+`docs/core-design.md` §1.
 
 ## Windows/MSVC cross-check (clang-cl + xwin)
 
@@ -306,7 +306,7 @@ Any machine with a C++23 toolchain works the same way the CI jobs do:
 
 1. A compiler with `<format>` and `<expected>`: GCC 14+, Clang 19+ with
    libstdc++ 14 or libc++ 18+, Xcode 16+, or Visual Studio 2022 17.10+. Nothing may
-   rely on more than libc++ 18 provides (`docs/wp-notes/portability.md`).
+   rely on more than libc++ 18 provides (`docs/core-design.md` §1).
 2. CMake `CMAKE_VERSION` or newer and Ninja (e.g. `pip install cmake ninja`).
 3. vcpkg checked out at the baseline commit and bootstrapped, with `VCPKG_ROOT`
    pointing at it:
