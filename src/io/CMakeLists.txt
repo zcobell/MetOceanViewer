@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 
-# mov_io: Qt-free file readers/writers on top of mov_core, netCDF-C and PROJ.
+# mov_io: Qt-free file readers/writers and wire formats on top of mov_core,
+# netCDF-C, PROJ, nlohmann/json and zlib.
 
 find_package(netCDF CONFIG REQUIRED)
 # PROJ is a private dependency: no PROJ header is public, and core never
@@ -10,6 +11,11 @@ find_package(netCDF CONFIG REQUIRED)
 # build is compiled in: the application tells mov::io where proj.db is
 # (set_projection_data_dir), or $MOV_PROJ_DATA does.
 find_package(PROJ CONFIG REQUIRED)
+# nlohmann/json (the harmonics file, the provider bodies) and zlib (gunzip):
+# private too, included only by src/io/json/ and src/io/gzip.cpp
+# (the third_party_include_gate test checks it).
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
 # proj.db in that PROJ install (vcpkg: share/proj), which the application
 # ships (cmake/Packaging.cmake) and the projection tests point mov::io at.
 find_file(MOV_PROJ_DB proj.db PATHS "${PROJ_DIR}" "${PROJ_DIR}/.." NO_DEFAULT_PATH)
@@ -36,8 +42,13 @@ mov_add_module(
         text_file.cpp
         warning.cpp
     PUBLIC_LINK mov::core
-    PRIVATE_LINK netCDF::netcdf PROJ::proj
+    PRIVATE_LINK netCDF::netcdf PROJ::proj nlohmann_json::nlohmann_json ZLIB::ZLIB
 )
+# No implicit json -> T conversions: a value is read only through the
+# non-throwing is_*/get_ptr accessors (docs/harmonics-engine.md §6.2), and
+# an implicit conversion would throw on the wrong type and hide such reads
+# from review. Private: no public io header names nlohmann.
+target_compile_definitions(mov_io PRIVATE JSON_USE_IMPLICIT_CONVERSIONS=0)
 
 # ADCIRC ASCII output and the HWM file.
 target_sources(

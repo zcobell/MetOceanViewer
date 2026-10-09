@@ -13,15 +13,15 @@ macro(mov_declare_options)
     )
     option(MOV_ENABLE_SANITIZER_ADDRESS "Enable AddressSanitizer" OFF)
     option(MOV_ENABLE_SANITIZER_UNDEFINED "Enable UndefinedBehaviorSanitizer" OFF)
-    # For the providers and the app (QFuture/QtConcurrent); core and io are
-    # single-threaded.
+    # For the providers and the app (QFuture/QtConcurrent); core, io and fetch
+    # are single-threaded.
     option(MOV_ENABLE_SANITIZER_THREAD "Enable ThreadSanitizer" OFF)
     option(MOV_ENABLE_COVERAGE "Instrument first-party code for gcov-based coverage" OFF)
     set(MOV_COVERAGE_FAIL_UNDER "0" CACHE STRING "Minimum overall line coverage (percent) of src/; 0 disables")
     set(MOV_COVERAGE_LAYER_FAIL_UNDER
         "0"
         CACHE STRING
-        "Minimum line coverage (percent) of each Qt-free layer (src/core, src/io); 0 disables"
+        "Minimum line coverage (percent) of each Qt-free layer (src/core, src/io, src/fetch); 0 disables"
     )
     option(MOV_BUILD_FUZZ_TESTS "Build the libFuzzer targets (Clang only) and register bounded fuzz runs" OFF)
     set(MOV_FUZZ_SECONDS "10" CACHE STRING "Wall-clock seconds each registered fuzz test runs")

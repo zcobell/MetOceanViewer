@@ -21,12 +21,23 @@ include("${MOV_REPO}/cmake/Layering.cmake")
 # A fake Qt that looks like the real imported targets.
 add_library(Qt6::Core INTERFACE IMPORTED)
 set_target_properties(Qt6::Core PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "/opt/qt/include/QtCore")
+# One the clean case may link (from providers up): no path to check.
+add_library(Qt6::Network INTERFACE IMPORTED)
 
 mov_add_module(core SOURCES stub.cpp)
 mov_add_module(io SOURCES stub.cpp PUBLIC_LINK mov::core)
+# A header-only layer is an INTERFACE library, checked the same way.
+mov_add_module(fetch PUBLIC_LINK mov::io)
+mov_add_module(providers SOURCES stub.cpp PUBLIC_LINK mov::fetch PRIVATE_LINK Qt6::Network)
 
 if(CASE STREQUAL "clean")
     # No violation: configure must succeed.
+elseif(CASE STREQUAL "fetch_links_qt")
+    target_link_libraries(mov_fetch INTERFACE $<LINK_ONLY:Qt6::Core>)
+elseif(CASE STREQUAL "io_links_fetch")
+    target_link_libraries(mov_io PRIVATE mov::fetch)
+elseif(CASE STREQUAL "fetch_links_providers")
+    target_link_libraries(mov_fetch INTERFACE mov_providers)
 elseif(CASE STREQUAL "genex_link")
     target_link_libraries(mov_core PRIVATE $<$<CONFIG:Debug>:$<LINK_ONLY:Qt6::Core>>)
 elseif(CASE STREQUAL "versionless_target")

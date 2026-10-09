@@ -6,6 +6,8 @@
   "license": "GPL-3.0-or-later",
   "dependencies": [
     "catch2",
+    "nlohmann-json",
+    "zlib",
     {
       "name": "proj",
       "default-features": false

@@ -2,9 +2,9 @@
 
 Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's answers
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
-neckbeard-nate); Appendix A maps each finding to its resolution. Nothing here is built.
-Phase 2 (`core`, `io`) is as built; the tide engine work packages H0–H8 of
-`docs/harmonics-engine.md` have not started. Where a header written later disagrees with
+neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
+layers, gates and build plumbing); nothing from P1 on. Phase 2 (`core`, `io`) is as built;
+the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
 Inputs:
@@ -34,7 +34,7 @@ ben-deane, `N#` neckbeard-nate (Appendix A).
 | P6 | Stages and units | A fetch is one or two **stages** composed in one job (USGS: resolve the series, then fetch it). Within a stage each **unit** (window, NDBC year) is a chain advanced by `next(unit, outcome)`: the next page, the next NDBC fallback, or done. §5.2. |
 | P7 | Merging | A unit's parsed result is a `Part`: a map from column key to points, with the empty part as identity and a left-biased union as the combine, folded in plan order. Units differing within a column are converted exactly to the first part's unit or the merge fails. §5.4. |
 | P8 | Async | `fetch(Request) -> QFuture<expected<Fetched<Value>, Failure>>`; one `QPromise` per fetch, owned by a `Job` on the one `Network`'s thread. `QFuture::then` with a context and `QPromise` only (D12). One continuation per future; a future is never shared between consumers. §6. |
-| P9 | Cancellation | `cancelChain()` on the future a caller holds reaches the job (verified on Qt 6.11.3, §1.5); the job aborts its exchanges, and parse and merge tasks stop through `io::StopToken`. A per-fetch deadline lives in the machine. §6.4. |
+| P9 | Cancellation | `cancelChain()` on the future a caller holds reaches the job (verified on Qt 6.11.3, §1.5); the job aborts its exchanges, and parse and merge tasks stop through `core::StopToken`. A per-fetch deadline lives in the machine. §6.4. |
 | P10 | Transport | Exchanges are move-only handles owned by the job; destroying one aborts it; each attempt has a fresh id; completions are always delivered queued, never re-entrantly and never after an abort. Redirects only to the same `https` origin, at most 3. §6.2. |
 | P11 | Retries and limits | Retry idempotent GETs on 429, 500, 502, 503, 504, inactivity or throughput timeout, refused or closed connections; 4 attempts; `Retry-After` honored; full-jitter backoff. Per-origin concurrency and spacing, a shared cool-down after a 429, interactive work before background work. §5.5. |
 | P12 | Partial failure | Strict by default. Lenient (CLI `--partial`, background catalog refresh): a failed unit, a parse error included, becomes a gap and a `UnitFailed` warning. `NoData` is decided only at the end, when no unit failed; a lenient run in which every unit failed is a failure. §5.6. |
@@ -43,7 +43,7 @@ ben-deane, `N#` neckbeard-nate (Appendix A).
 | P15 | Secrets | `ApiKey` has no format or stream operator. `Network` holds it and attaches it as `X-Api-Key` to USGS-origin requests only. App: QtKeychain, or a plain-text file in app-local data where no keychain backend exists (D35). CLI: `--api-key-file` or `MOV_USGS_API_KEY`. §8. |
 | P16 | CLI | Flag-driven, names not indices, ISO 8601 UTC with exclusive end. Exit code from an exhaustive join: 130 > 1 > 4 > 3 > 0. Output is committed only on success. §9. |
 | P17 | Tests | Pure tiers driven by events with virtual time; a Qt tier with a `FakeTransport` replaying cassettes (no timing assertions); the real stack against a local server; one allowed top-level loop, `mov::test::drive`. §10. |
-| P18 | Tides | H9 is HE §9.2 with `io::StopToken`, `QtConcurrent::run(QPromise&)` and `fetch::Failure`; `tides predict` goes through it, so H8's `tides predict` lands after H9. §6.10. |
+| P18 | Tides | H9 is HE §9.2 with `core::StopToken`, `QtConcurrent::run(QPromise&)` and `fetch::Failure`; `tides predict` goes through it, so H8's `tides predict` lands after H9. §6.10. |
 
 ---
 
@@ -132,28 +132,71 @@ machine has time, retries and multi-request state); the parsers in `fetch` (io's
 `detail` helpers would have to become public); the vocabulary in `providers` (untestable
 without Qt, and io could not name a product).
 
-### 2.2 CMake and gates (H0)
+### 2.2 CMake and gates (H0, built)
 
 - `cmake/Layering.cmake`: `MOV_LAYERS core io fetch providers app ui`;
   `MOV_QT_FREE_LAYERS core io fetch`; `MOV_LAYER_cli_MAY_LINK core io fetch providers`.
-  The coverage gate and `qt_free_sources` follow `mov_qt_free_source_dirs`.
-- `vcpkg.json`: `nlohmann-json`, `zlib` (HE's H0; done once).
-- `find_package(Qt6 COMPONENTS Core Network Concurrent)` under `MOV_ENABLE_QT`; the CLI
-  and providers build in the Qt presets; `dev` keeps building core, io and fetch.
-- `coverage` gains a Qt variant so `providers` and `cli` count toward the 80 % overall.
+  The coverage gate and `qt_free_sources` follow `mov_qt_free_source_dirs`. A layer
+  declared without `SOURCES` is header-only (an `INTERFACE` library): `fetch` is one until
+  P6 adds its first source file; H0 gave it `TransportErrc`, `Verdict` and
+  `classify(TransportErrc)` (§5.1, §5.3) in `mov/fetch/policy.hpp`. `tests/cmake/layering`
+  covers the new edges.
+- `vcpkg.json`: `nlohmann-json`, `zlib` (HE's H0; done once), linked `PRIVATE` into
+  `mov_io`.
+- `find_package(Qt6 COMPONENTS Core Concurrent Network …)` under `MOV_ENABLE_QT`;
+  `providers` builds in the Qt presets (`PUBLIC` Qt Core, `PRIVATE` Qt Network and Qt
+  Concurrent), the CLI joins it in P9a; `dev` keeps building core, io and fetch.
+- `coverage-qt` (configure, build, test and workflow presets) is `coverage` with the Qt
+  layers, so `providers` and `cli` count toward the 80 % overall; the CI coverage job
+  still runs `coverage` (switching it is P7's, when providers has code to measure).
 - **`no_blocking_calls` gate** (`cmake/CheckBlockingCalls.cmake`, with a
-  `_rejects_violations` twin) over `src/` and `tests/`, except
-  `tests/support/include/mov/test/qt_drive.hpp`: `QEventLoop`, `processEvents`,
-  `sendPostedEvents`, `waitForFinished`, `waitForDone`, `waitForReadyRead`,
-  `waitForBytesWritten`, `waitForConnected`, `QTest::qWait`, `QTest::qWaitFor`,
-  `QThread::sleep`/`msleep`/`usleep`, `std::this_thread::sleep_for`/`sleep_until`,
-  `.result()`, `.results()`, `.resultAt(`, `.takeResult()`, `QFutureSynchronizer`,
-  `QSemaphore`, and `.exec()` outside `src/*/main.cpp`.
-- **`no_ignore_ssl_errors` gate:** `ignoreSslErrors` and `QSslSocket::VerifyNone`
-  anywhere under `src/` and `tests/` fail the build (the local-server tests use plain
-  HTTP on loopback).
-- Include gates for `<nlohmann/` and `<zlib.h>` in io (only `src/io/json/` and
-  `src/io/gzip.cpp`).
+  `_rejects_violations` twin over `tests/cmake/blocking_calls/`) over `src/` and
+  `tests/`, every layer, comments ignored:
+  - nested event loops: `QEventLoop`, `processEvents`, `sendPostedEvents`;
+  - synchronous waits: `waitFor[A-Z]…` (`waitForFinished`, `waitForDone`,
+    `waitForReadyRead`, `waitForBytesWritten`, `waitForConnected`, …), QTest's `qWait…`,
+    `qSleep` and `QTRY_…`; `.wait(`, `.wait_for(`, `.wait_until(`, `.arrive_and_wait(`,
+    `.acquire(`, `.try_acquire_for(`, `.try_acquire_until(`;
+  - sleeps: `QThread::sleep`/`msleep`/`usleep`, `std::this_thread::sleep_for`/
+    `sleep_until`, POSIX and Win32 sleeps;
+  - future reads: `.result()`, `.results()`, `.resultAt(`, `.takeResult()`;
+  - `QFutureSynchronizer`, `QSemaphore`, `QtConcurrent::blocking…`,
+    `QNetworkRequest::SynchronousRequestAttribute`, `Qt::BlockingQueuedConnection`;
+  - the std types: `std::future`, `shared_future`, `async`, `promise`, `packaged_task`,
+    and as types `std::thread`, `jthread`, `latch`, `barrier`, the semaphores and the
+    condition variables;
+  - `exec(` outside `src/<layer>/main.cpp` (it also hits `QSqlQuery::exec`).
+
+  Allowed: everything in `tests/support/include/mov/test/qt_drive.hpp`, the one test
+  driver (`mov::test::drive_until(predicate, timeout)`, which rethrows the predicate's
+  exceptions after the loop and refuses to nest; §10.2 adds a future-driven variant
+  beside it); the line of io's Windows atomic rename marked `// gate: bounded-retry`
+  (CD §4.4); `std::thread` in io's projection test. The GUI render test uses
+  `drive_until` instead of `QTest::qWait…`.
+- **`no_ignore_ssl_errors` gate** (`cmake/CheckIgnoreSslErrors.cmake`, with a twin):
+  `ignoreSslErrors`, `VerifyNone` and `QueryPeer` anywhere under `src/` and `tests/`, no
+  exception (the local-server tests use plain HTTP on loopback).
+- **`third_party_include_gate`** (`cmake/CheckThirdPartyIncludes.cmake`, with a twin):
+  `#include` or `#include_next` of `<nlohmann/…>` only under `src/io/json/`, of
+  `<zlib.h>`/`<zconf.h>` only in `src/io/gzip.cpp`. Tests may include them. Unlike the
+  netCDF gate it does not require a use, since none exists before the readers of §4.2
+  and HE §6.3. `mov_io` compiles with `JSON_USE_IMPLICIT_CONVERSIONS=0`.
+- The three gates take `-DMOV_REPO=<root>` and share one line scanner
+  (`cmake/SourceScan.cmake`): it masks string and character literals before it removes
+  comments, and keeps `;`, brackets and backslashes from joining or splitting lines.
+- **`live` label:** `mov_add_test(<name> LIVE [QT] …)` registers one ctest test labelled
+  `live` with Catch2's skip exit code (4); every test preset and the coverage run exclude
+  the label; `mov::test::require_live_api()` (`mov/test/live.hpp`) skips a test case
+  unless `MOV_LIVE_API=1`. A preset's label filter also applies to `-L`, so the live
+  tests run by build directory: `MOV_LIVE_API=1 ctest --test-dir build/<preset> -L live`.
+  The label's guard test, `live_api_opt_in_guard`, fails without the opt-in, so a run
+  that forgot it is red. `tests/live/` checks the plumbing in every preset on the
+  `[live-plumbing]` test case only (`live_tests_skip_without_opt_in`: exit code 4 and
+  the reason; `live_tests_run_with_opt_in`); the provider checks and `live-api.yml` are
+  §10.5's.
+- **`StopToken`** moved from io to core (`mov/core/stop_token.hpp`, as `Cancelled` did),
+  so the tide engine's prediction can take it; io keeps the name through a
+  using-declaration.
 
 ---
 
@@ -368,7 +411,7 @@ inline constexpr std::chrono::minutes grain{1};
 
 New headers in `src/io/include/mov/io/wire/` (`origin.hpp`, `coops.hpp`, `usgs.hpp`,
 `ndbc.hpp`, `github.hpp`); `station_catalog.hpp`, `series_json.hpp` and `gzip.hpp`
-(HE §6.5's `gunzip`, public, taking `io::StopToken`) beside the other formats.
+(HE §6.5's `gunzip`, public, taking a `StopToken`) beside the other formats.
 
 ### 4.1 Origins and targets
 
@@ -830,7 +873,7 @@ fetch(req) [Network thread]
 - **Result rule:** the job calls `addResult` before `finish()` unless the promise is
   cancelled (asserted): a finished promise without a result crashes its continuation
   (§1.5).
-- **Stop token:** `io::StopToken{[f]{ return f.isCanceled() or f.isFinished(); }}`
+- **Stop token:** `core::StopToken{[f]{ return f.isCanceled() or f.isFinished(); }}`
   (Br nit): a task that outlives its job's `Finish` stops too.
 - **Threads:** gate, machine, transport callbacks, timers on `Network`'s thread; HTTP in
   Qt's internal thread; parse, gunzip, merge on the global pool; delivery through the
@@ -889,7 +932,7 @@ lowest layer both edges link. English only. It escapes control characters in ser
 
 ### 6.10 Tides provider (H9)
 
-HE §9.2 with: `io::StopToken` instead of `std::stop_token`; `fetch::Failure` instead of
+HE §9.2 with: `core::StopToken` instead of `std::stop_token`; `fetch::Failure` instead of
 `ProviderError`; `Value = AtStation<StationId<Harmonics>, TideResponse>`; the work runs
 as `QtConcurrent::run(pool, [file, req](QPromise<Result>& p){ … })`, so the promise is
 the task's own and `p.isCanceled()` is the stop token; no `Network`, no gate. The file is
@@ -1258,11 +1301,11 @@ when both are done.
 None open. The daily CSV column question was decided on 2026-10-09: a daily file names
 its column `date`, so a reader cannot take a local day for a UTC instant (D34).
 
-### 13.3 Sync items for other documents (H0 applies them; not edited here)
+### 13.3 Sync items for other documents (applied in H0)
 
 | Document | Change |
 |---|---|
-| `docs/harmonics-engine.md` §6.1, §6.5, §9.2 | `std::stop_token` → `io::StopToken` (CD §1.1 rules `std::stop_token` out); `ProviderError` → `fetch::Failure`; `gunzip` is public `io/gzip.hpp`; the tides provider uses `QtConcurrent::run(QPromise&)` (§6.10) |
+| `docs/harmonics-engine.md` §3, §4, §6.1, §6.5, §9.2 | `std::stop_token` → `core::StopToken`, moved from io in H0 (CD §1.1 rules `std::stop_token` out); `ProviderError` → `fetch::Failure`; `gunzip` is public `io/gzip.hpp`; the tides provider uses `QtConcurrent::run(QPromise&)` (§6.10) |
 | `docs/harmonics-engine.md` §6.3 | the JSON depth pre-scan of §4.2 before nlohmann (its `max_depth = 16` is otherwise only checked in the callback, after the lexer descended) |
 | `docs/harmonics-engine.md` §7.8, §10 | `tides predict` goes through the tides provider: H8's `tides predict` after H9 |
 | `docs/core-design.md` §9.3 | `TimeRange::split` and chunk merging, the USGS daily cadence: resolved here (`split`, `Part`, `DailySeries`); `Temperature` stays deferred; OI 12 deferred to Phase 6; `GaugeStation::datums` removed (§3.3) |

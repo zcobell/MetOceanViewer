@@ -32,7 +32,7 @@ Bug tags: `B#` = plan §1.2, `N#` = LF §14, `A#` = LF §13 ambiguity, `D#` = pl
 | C8 | Errors | Errors are narrow per function inside core. io and each layer above have **one** error variant (`io::Error`). Provided: a generic `lift<V>` and `Read<T>` (value plus warnings) as a writer monad (`transform`, `and_then`, `and_then_read`, and the applicative `collect` / `collect_read`). `describe()` is called only at the edge. |
 | C9 | Dry and sentinel rules | D16 (`raw <= -999` → `Dry`) applies **only to model-output readers**: ADCIRC elevation (ASCII and nc) and HWM modeled values. IMEDS masks only the **exact** legacy sentinels −99999, −9999, −DBL_MAX and −1.7977e+308 (v4's printed −DBL_MAX, N18), giving `Missing` plus a count warning. ADCIRC non-elevation outputs: `raw <= -999` → `Missing` (fill, N7 partner rule). D-Flow: no dry rule (SN §8.2). Fortran `NaN`/`Inf`/`****` tokens in model text → `Missing` plus a count warning. |
 | C10 | HWM | Moments monoid with private state, folded left in order. σ uses `n−1` (D17). R² through the origin is **uncentred**, `1 − SSres/Σy²` (D25). `LinearFit = variant<ThroughOrigin, Free>`. |
-| C11 | Threading | **No mutex in io.** io's netCDF functions are documented as not thread-safe. The **caller serializes**: providers and app own one serial queue (`QThreadPool` with `maxThreadCount(1)` plus `QtConcurrent::run(&pool, …)`). Every `nc_*` call goes through one choke point, which asserts against concurrent or re-entrant entry in debug builds. Reads go in bounded blocks and poll an `io::StopToken` (a predicate wrapper, not `std::stop_token`) between them. |
+| C11 | Threading | **No mutex in io.** io's netCDF functions are documented as not thread-safe. The **caller serializes**: providers and app own one serial queue (`QThreadPool` with `maxThreadCount(1)` plus `QtConcurrent::run(&pool, …)`). Every `nc_*` call goes through one choke point, which asserts against concurrent or re-entrant entry in debug builds. Reads go in bounded blocks and poll a `core::StopToken` (`stop_token.hpp`, a predicate wrapper, not `std::stop_token`; io names it `io::StopToken`) between them. |
 | C12 | Sizes and names | Every count is computed with `checked_product`. `ReadLimits` (elements, attribute bytes, text bytes, elements per block, result bytes) is enforced before allocation, and exceeding it gives `too_large`. Selection is required (`StationSelection`), never defaulted to all. Every netCDF name parameter is an `NcNameRef` (non-empty, NUL-terminated, at most `NC_MAX_NAME` bytes, no embedded NUL; literals are checked `consteval`). |
 | C13 | Time arithmetic | Every file time goes through `checked_time` (a floating-point and an integral overload, both taking the unit as `std::chrono::milliseconds`). It rejects non-finite values, offsets beyond 2^53 ms and overflow. `CfTimeUnits` stores an integer unit in milliseconds; `CfClock` checks the (units, calendar) pair once per variable. |
 | C14 | Ids and names | ADCIRC and D-Flow ids are the 0-based index. A station without a name keeps an empty one: no reader makes one up, a display shows the id, and only the station netCDF writer substitutes `"Station <id>"`. ADCIRC netCDF reads `station_name`. Legacy sources cut names at the first NUL, then collapse white space; bytes that are not UTF-8 become U+FFFD with a warning. v5 CF files keep names exactly; an embedded NUL there is `bad_encoding`. Duplicate ids in lenient sources (IMEDS, foreign and legacy netCDF) get `#2`, `#3` suffixes plus a warning. |
@@ -53,7 +53,7 @@ Bug tags: `B#` = plan §1.2, `N#` = LF §14, `A#` = LF §13 ambiguity, `D#` = pl
 | Floating `from_chars` (Apple libc++ lacks it through LLVM 20) | Only through `io::detail::parse_double`. Gate `__cpp_lib_to_chars >= 201611L`; the fallback is `strtod_l` / `_strtod_l` with an owned C locale object. Both implementations are always compiled and tested, and macOS runs the `strtod_l` path in production. |
 | `std::chrono::parse`, `std::chrono::tzdb`, `zoned_time`, `std::print` | Not used (missing or inline-only on Apple targets for LLVM 18–19). Dates are parsed by hand (`core::parse_utc_datetime`, `io::parse_cf_time_units`, `io::detail/civil_time.hpp`), all on `sys_time`. |
 | `views::zip`, `chunk_by`, `pairwise`, `enumerate`, `fold_left`, `join_with`, `ranges::to`, `ranges::iota` | Not used. Ordered folds use `std::accumulate` (and `transform_reduce` only where the join is exact); `TimeSeries::points()` is `iota \| transform`; runs of equal times are found with `find_if`. |
-| `std::stop_token` | Not used (Apple libc++ ships it only with `-fexperimental-library`). `io::StopToken` wraps a predicate, which also lets the app pass `QPromise::isCanceled`. |
+| `std::stop_token` | Not used (Apple libc++ ships it only with `-fexperimental-library`). `core::StopToken` (`stop_token.hpp`; `io::StopToken` in io) wraps a predicate, which also lets the app pass `QPromise::isCanceled`. It moved from io to core in Phase 3, as `Cancelled` did, so the tide engine can take it. |
 | `constexpr` `<cmath>` (`fabs`, `llround`; P0533) | Not used in constant expressions (Clang 20 with libstdc++ 14 refuses). `core/detail/numeric.hpp` works on the bit pattern. `constexpr std::isfinite` is detected by the probe, not required (MSVC STL). |
 | `constexpr` `variant` holding a `std::string` (`Unit`, `QuantityId`) | Production code never constant-evaluates one. Tests that do are gated by `MOV_TEST_CONSTEXPR_VARIANT` (`__cpp_lib_variant >= 202106L`; `tests/support/include/mov/test/toolchain.hpp`) and run the same check at run time on libc++ 18 and 19. |
 | `std::function_ref` (C++26) | Not used; constrained template parameters instead. |
@@ -1311,7 +1311,8 @@ src/core/include/mov/core/
   meta.hpp timeseries.hpp station.hpp station_table.hpp vector_series.hpp  vocabulary II
   series_ops.hpp datum_shift.hpp                                       operations
   hwm.hpp hwm_stats.hpp                                                HWM
-  ascii.hpp utf8.hpp overloaded.hpp cancelled.hpp version.hpp          helpers other layers use
+  ascii.hpp utf8.hpp overloaded.hpp cancelled.hpp stop_token.hpp      helpers other layers use
+  version.hpp
   detail/core_key.hpp detail/numeric.hpp                              not API (core_detail_fence)
 src/core/core_access.hpp series_rebuild.hpp                            private to the core sources
 src/io/include/mov/io/
@@ -1551,14 +1552,22 @@ trigger is "iff any sample of the column is Dry" (§8.2); `VerticalDatum` includ
 
 ### 9.3 Deferred
 
-- The affine `Temperature` value type (Phase 3, first consumer).
-- USGS daily cadence in `SeriesMeta` (Phase 3).
-- `TimeRange::split` and chunk merging (Phase 3).
-- A `DatumTable` that carries its station (Phase 3; the caller pairs them today).
+- The affine `Temperature` value type (no single-temperature consumer in Phase 3 either,
+  `docs/providers-design.md` §3.6).
+- A `DatumTable` that carries its station (plan OI 12; Phase 6, where model-vs-observed
+  may need it; Phase 3 shifts no provider series client-side).
 - Rotating grid-relative vector components by the meridian convergence (D28).
 - A column-wise vector derivation in core (§5.5).
 - The `.mvs` importer (Phase 6).
 - Fuzzing netCDF from memory bytes (v5.x; the structure fuzzer covers schemas).
+
+Resolved by the Phase 3 design (`docs/providers-design.md`, built from WP P1 on):
+- `TimeRange::split` and chunk merging: `core::split` and `aligned` (§3.1), and `fetch`'s
+  `Part` with its left-biased `combine` (§5.4).
+- The USGS daily cadence: not a `SeriesMeta` field but its own type, `core::DailySeries`
+  (decision 34, §3.4).
+- `GaugeStation<P>::datums` is removed: the CO-OPS datum table moves to
+  `Capabilities<Coops>` as an `optional` (§3.3).
 
 Owner-facing questions Phase 2 left open are collected in `docs/rearchitecture-plan.md`
 §6, "Open items from Phase 2".

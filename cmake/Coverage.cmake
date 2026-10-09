@@ -41,8 +41,8 @@ endfunction()
 #   coverage-report/coverage.json gcovr JSON (input to the per-layer gates)
 #   coverage-report/summary.txt   text summary (also printed)
 # and fail if line coverage of src/ is below MOV_COVERAGE_FAIL_UNDER, or that of
-# any Qt-free layer (src/core, src/io) below MOV_COVERAGE_LAYER_FAIL_UNDER.
-# Fuzz tests are not part of the run.
+# any Qt-free layer (src/core, src/io, src/fetch) below
+# MOV_COVERAGE_LAYER_FAIL_UNDER. Fuzz and live tests are not part of the run.
 function(mov_add_coverage_target)
     find_program(MOV_GCOVR gcovr REQUIRED)
     mov_find_gcov_command(gcov_command)
@@ -80,7 +80,8 @@ function(mov_add_coverage_target)
         COMMAND
             ${CMAKE_COMMAND} -D "MOV_COVERAGE_DIR=${PROJECT_BINARY_DIR}" -P
             "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/ZeroCoverageCounters.cmake"
-        COMMAND ${CMAKE_CTEST_COMMAND} --test-dir "${PROJECT_BINARY_DIR}" --output-on-failure --label-exclude fuzz
+        COMMAND
+            ${CMAKE_CTEST_COMMAND} --test-dir "${PROJECT_BINARY_DIR}" --output-on-failure --label-exclude "fuzz|live"
         COMMAND
             ${MOV_GCOVR} ${gcovr_common} --object-directory "${PROJECT_BINARY_DIR}" --filter
             "${PROJECT_SOURCE_DIR}/src/" --gcov-executable "${gcov_command}" --print-summary --html-details

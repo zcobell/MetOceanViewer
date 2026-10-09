@@ -101,7 +101,7 @@ Microsoft's live VS 17 channel manifest, so if Microsoft retires 14.44 the image
 build fails until `XWIN_CRT_VERSION` moves.
 
 **Level reached: full build and test.** `dev-msvc-xwin` is Qt-free (`src/core`,
-`src/io`, `tests/`, no `MOV_ENABLE_QT`). Nothing is compile-only:
+`src/io`, `src/fetch`, `tests/`, no `MOV_ENABLE_QT`). Nothing is compile-only:
 
 - `cmake/toolchains/clang-cl-xwin.cmake` selects `clang-cl --target=x86_64-pc-windows-msvc`
   with the MSVC and SDK headers as system headers (`/imsvc`), `/MD`, `lld-link` and `llvm-rc`.

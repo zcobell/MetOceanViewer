@@ -169,8 +169,12 @@ The first three bugs were verified by reading the source directly.
 CMakeLists.txt  CMakePresets.json  vcpkg.json
 cmake/
 src/core/        # C++23, NO Qt: domain types, units, datums, stats, time series
-src/io/          # NO Qt: RAII netCDF wrapper; IMEDS, ADCIRC (ascii/nc), DFlow, CSV, HWM, generic nc
-src/providers/   # NOAA CO-OPS, USGS, NDBC, XTide; Qt Network only at the edge
+src/io/          # NO Qt: RAII netCDF wrapper; IMEDS, ADCIRC (ascii/nc), DFlow, CSV, HWM, generic nc;
+                 #   provider wire formats, JSON (nlohmann/json), gzip (docs/providers-design.md §4)
+src/fetch/       # NO Qt: fetch orchestration: stages, merging, retry and origin policies, the
+                 #   sans-IO machine, the provider error type (docs/providers-design.md §5)
+src/providers/   # Qt (Core public; Network, Concurrent private), built only with MOV_ENABLE_QT:
+                 #   NOAA CO-OPS, USGS, NDBC, tide harmonics; the network edge
 src/app/         # view-models (QObject / QML_ELEMENT), AppState, commands, settings (arrives in Phase 4)
 src/ui/          # startup code (mov_ui), main.cpp and the metoceanviewer executable
 src/ui/qml/      # QML module MetOceanViewer: map shell, panels, chart, theme
@@ -181,8 +185,8 @@ packaging/       # macos/, windows/, linux/ — CPack config, icons, DMG backgro
 docs/
 ```
 
-Dependencies may only point in one direction: `core ← io ← providers ← app ← ui`.
-Enforce this with CMake target dependencies, so that `core` and `io` cannot link Qt.
+Dependencies may only point in one direction: `core ← io ← fetch ← providers ← app ← ui`.
+Enforce this with CMake target dependencies, so that `core`, `io` and `fetch` cannot link Qt.
 The CLI depends on `providers` and below, never on `app` or `ui`.
 
 ### 2.2 Type-driven domain model (Ben Deane style: make illegal states unrepresentable)
@@ -659,10 +663,11 @@ acting on one. The code's current behavior is stated so a decision can be
 
 ## 7. Engineering rules for v5
 
-- `core` and `io` never include Qt headers.
+- `core`, `io` and `fetch` never include Qt headers.
 - No raw owning pointers. No `new` outside Qt parent/child UI object creation.
 - No sentinel values in domain types; use `optional`, `variant` or `expected`.
-- No blocking calls on the GUI thread. No nested event loops. No `processEvents`.
+- No blocking calls on the GUI thread. No nested event loops. No `processEvents`. The
+  `no_blocking_calls` test enforces it (`docs/providers-design.md` §2.2).
 - Every parser and reader has fixture tests. Every fixed bug gets a regression test.
 - Warnings as errors in CI for first-party code (`-Wall -Wextra -Wpedantic` / `/W4`),
   with sanitizers (ASan/UBSan) in a Linux debug job. Run clang-tidy with

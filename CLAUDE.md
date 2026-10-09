@@ -87,14 +87,18 @@ pinned in `vcpkg-configuration.json`); each preset builds into
 ```sh
 tools/dev/run.sh cmake --workflow --preset dev        # GCC 14 debug: configure, build, test
 tools/dev/run.sh cmake --workflow --preset dev-clang  # same with Clang 20
-tools/dev/run.sh cmake --workflow --preset dev-qt     # dev + Qt app + GUI test (installs Qt 6.11.3 into
-                                                      # ~/Qt on first use; vcpkg builds MapLibre once, then caches it)
+tools/dev/run.sh cmake --workflow --preset dev-qt     # dev + providers + Qt app + Qt/GUI tests (installs Qt 6.11.3
+                                                      # into ~/Qt on first use; vcpkg builds MapLibre once, then caches it)
 tools/dev/run.sh cmake --workflow --preset asan       # ASan + UBSan
 tools/dev/run.sh cmake --workflow --preset fuzz       # Clang libFuzzer targets, MOV_FUZZ_SECONDS each
 tools/dev/run.sh cmake --workflow --preset release    # as shipped (no stdlib hardening)
 tools/dev/run.sh cmake --workflow --preset coverage   # report in build/coverage/coverage-report/;
-                                                      # fails < 80% lines overall or < 90% in src/core, src/io
+                                                      # fails < 80% lines overall or < 90% in src/core, src/io, src/fetch
+tools/dev/run.sh cmake --workflow --preset coverage-qt  # the same with the Qt layers (providers) measured too
 tools/dev/run.sh ctest --preset dev -R <regex>        # rerun selected tests
+# Live provider APIs (label live, excluded by every preset; a preset's filter also applies
+# to -L, so run by build directory):
+MOV_LIVE_API=1 tools/dev/run.sh ctest --test-dir build/dev -L live
 # Windows/MSVC cross-check without pushing (clang-cl + MSVC STL/CRT from xwin, tests under Wine;
 # not MSVC's front end, see "Windows/MSVC cross-check" in tools/dev/README.md):
 MOV_DEV_IMAGE=msvc tools/dev/run.sh cmake --workflow --preset dev-msvc-xwin
@@ -110,7 +114,7 @@ tools/dev/run.sh cmake --build --preset dev-qt --target all_qmllint   # QML type
 # 22.04 image (glibc 2.35 floor); the DMG and the Windows installer natively (package-macos,
 # package-windows) or in CI (.github/workflows/package.yml: tags v*, manual runs, packaging
 # PRs, weekly; signing gated on secrets in the `release` environment). Each package preset
-# builds RelWithDebInfo, runs ctest -LE gui, then cpack.
+# builds RelWithDebInfo, runs ctest without the gui and live labels, then cpack.
 MOV_DEV_IMAGE=appimage tools/dev/run.sh cmake --workflow --preset package-linux
 tools/dev/run.sh packaging/smoke-test.sh build/package-linux/packages/<name>.AppImage
 #   runs metoceanviewer --self-test and --self-test=render from the package
@@ -130,21 +134,31 @@ tools/check_station_netcdf.sh
 tools/dev/run.sh pre-commit run --all-files
 ```
 
-- Layers: `cmake/Layering.cmake` declares the order (core, io, providers, app,
-  ui; cli beside them) once. Add a library layer with
+- Layers: `cmake/Layering.cmake` declares the order (core, io, fetch, providers,
+  app, ui; cli beside them) once. Add a library layer with
   `mov_add_module(<layer> SOURCES ... PUBLIC_LINK ... PRIVATE_LINK ...)` in
   `src/<layer>/CMakeLists.txt`; headers go in `src/<layer>/include/mov/<layer>/`.
-  The configure fails if a layer links upward or a Qt-free layer (core, io)
-  links Qt; the `qt_free_sources` test fails on a Qt `#include` there.
+  The configure fails if a layer links upward or a Qt-free layer (core, io,
+  fetch) links Qt; the `qt_free_sources` test fails on a Qt `#include` there.
 - Tests: one Catch2 executable per module under `tests/<module>/`, added with
   `mov_add_test(<name> SOURCES ... CONSTEXPR_SOURCES ... LIBRARIES ...)`;
   `CONSTEXPR_SOURCES` hold `STATIC_REQUIRE` tests (build-time, plus a
   `_relaxed_constexpr` runtime twin). Fixtures: `tests/fixtures/<module>/`, via
   `mov::test::fixture("<module>/...")`. Parsers get a libFuzzer target with
   `mov_add_fuzz_test(<name> SOURCES ... LIBRARIES ... CORPUS <module>/<dir>)`.
+  Tests of the real provider APIs use `mov_add_test(<name> LIVE ...)` (label
+  `live`) and start each case with `mov::test::require_live_api()`: they skip
+  unless `MOV_LIVE_API=1`. Qt tests run the event loop only through
+  `mov::test::drive_until` (`mov/test/qt_drive.hpp`).
+- Source gates (ctest, each with a `_rejects_violations` twin over
+  `tests/cmake/`): `no_blocking_calls` (no nested event loop or blocking
+  wait), `no_ignore_ssl_errors`, `third_party_include_gate` (nlohmann/json and
+  zlib only in `src/io/json/` and `src/io/gzip.cpp`); see
+  `docs/providers-design.md` §2.2.
 - `MOV_ENABLE_QT` (the `-qt` presets and `tidy`) finds Qt, selects the vcpkg
   feature `gui` (MapLibre Native Qt, overlay port `cmake/vcpkg-ports/`) and adds
-  `src/ui` (QML module, `metoceanviewer` executable) and `tests/ui`. Qt tests use
+  `src/providers`, `src/ui` (QML module, `metoceanviewer` executable) and their
+  tests. Qt tests use
   `mov_add_test(<name> QT ...)` (label `qt`, offscreen, every CI OS) or
   `mov_add_test(<name> GUI ...)` (label `gui`, renders; `xvfb-run` on Linux).
 - New files need the two-line `SPDX-License-Identifier: GPL-3.0-or-later` /

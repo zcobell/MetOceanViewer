@@ -5,7 +5,6 @@
 // Linux they run under xvfb-run with Mesa (tests/CMakeLists.txt).
 
 #include <QColor>
-#include <QDeadlineTimer>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QImage>
@@ -16,7 +15,6 @@
 #include <QQmlError>
 #include <QQuickWindow>
 #include <QString>
-#include <QTest>
 #include <QUrl>
 #include <QVariantMap>
 #include <catch2/catch_test_macros.hpp>
@@ -26,6 +24,7 @@
 
 #include "maplibre_provider.hpp"
 #include "mov/test/fixture.hpp"
+#include "mov/test/qt_drive.hpp"
 #include "mov/ui/startup.hpp"
 
 using namespace std::chrono_literals;
@@ -49,7 +48,7 @@ QQuickWindow& load_main_window(QQmlApplicationEngine& engine) {
   auto* const window =
       qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
   REQUIRE(window != nullptr);
-  REQUIRE(QTest::qWaitForWindowExposed(window));
+  REQUIRE(mov::test::drive_until([window] { return window->isExposed(); }, 5s));
   return *window;
 }
 
@@ -61,8 +60,8 @@ void wait_for_map(const QQuickWindow& window) {
   REQUIRE(map_view != nullptr);
   const auto* const map = map_view->property("map").value<QObject*>();
   REQUIRE(map != nullptr);
-  REQUIRE(QTest::qWaitFor([map] { return map->property("mapReady").toBool(); },
-                          QDeadlineTimer(30s)));
+  REQUIRE(mov::test::drive_until(
+      [map] { return map->property("mapReady").toBool(); }, 30s));
 }
 
 // A pixel of the map area: the top bar and the attribution sit at the edges.
@@ -80,7 +79,7 @@ bool wait_for_settled_frames(QQuickWindow& window,
   QImage last;
   QElapsedTimer unchanged;
   unchanged.start();
-  return QTest::qWaitFor(
+  return mov::test::drive_until(
       [&] {
         QImage frame = window.grabWindow();
         if (frame != last) {
@@ -90,7 +89,7 @@ bool wait_for_settled_frames(QQuickWindow& window,
         }
         return unchanged.durationElapsed() >= quiet;
       },
-      QDeadlineTimer(timeout));
+      timeout);
 }
 
 // Saves the window's current frame as MOV_SCREENSHOT_DIR/<name> and returns
@@ -135,11 +134,11 @@ TEST_CASE("The main window renders its map with MapLibre") {
   // (Map's #e6e6e6 background); the OpenFreeMap basemap does not do this.
   // Seen with MapLibre Native Qt c3485f3a; to investigate (and report
   // upstream) with the map-shell work. Polling catches the drawn frames.
-  const bool rendered = QTest::qWaitFor(
+  const bool rendered = mov::test::drive_until(
       [&window] {
         return same_colour(map_area_pixel(window), fixture_background);
       },
-      QDeadlineTimer(30s));
+      30s);
   INFO("map-area pixel: " << map_area_pixel(window).name().toStdString()
                           << ", expected "
                           << fixture_background.name().toStdString());

@@ -90,7 +90,7 @@ std::error_code replace_file(const std::filesystem::path& from,
     if (error != ERROR_ACCESS_DENIED and error != ERROR_SHARING_VIOLATION) {
       break;
     }
-    ::Sleep(pause_ms);
+    ::Sleep(pause_ms);  // gate: bounded-retry
   }
   return ec;
 }
