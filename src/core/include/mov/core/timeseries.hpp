@@ -58,15 +58,21 @@ using ConstructionError = std::variant<LengthMismatch, TimeNotIncreasing>;
 namespace detail {
 
 /// The first index i >= 1 with not (t[i-1] < t[i]); nullopt if t is strictly
-/// increasing. Every strictly-increasing check of the core goes through here.
+/// increasing. Every strictly-increasing check of the core goes through here
+/// (times, and the days of a DailySeries).
+template <std::ranges::forward_range R>
+  requires std::totally_ordered<std::ranges::range_value_t<R>>
 [[nodiscard]] constexpr std::optional<std::size_t> first_not_increasing(
-    std::span<const Time> t) noexcept {
+    const R& t) noexcept {
+  using Value = std::ranges::range_value_t<R>;
   const auto it = std::ranges::adjacent_find(
-      t, [](Time a, Time b) noexcept { return not(a < b); });
-  if (it == t.end()) {
+      t, [](const Value& a, const Value& b) noexcept { return not(a < b); });
+  if (it == std::ranges::end(t)) {
     return std::nullopt;
   }
-  return static_cast<std::size_t>(it - t.begin()) + 1;
+  return static_cast<std::size_t>(
+             std::ranges::distance(std::ranges::begin(t), it)) +
+         1;
 }
 
 /// Element i of TimeSeries::points(). (A transform over iota rather than

@@ -3,7 +3,8 @@
 Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's answers
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
-layers, gates and build plumbing); nothing from P1 on. Phase 2 (`core`, `io`) is as built;
+layers, gates and build plumbing) and P1 (§3, the core vocabulary; its deviations from
+revision 2 are in §3.7); nothing from P2 on. Phase 2 (`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
@@ -60,6 +61,8 @@ program of §1.5 built against the pinned Qt 6.11.3.
 | Data length per request: 1-minute 4 days; 6-minute 1 month; hourly 1 year; high/low 1 year; daily means and daily max/min 10 years; monthly means 200 years. Predictions: `hilo` 10 years, any other interval 1 year. | https://api.tidesandcurrents.noaa.gov/api/prod/ |
 | Datums `CRD, IGLD, LWD, MHHW, MHW, MTL, MSL, MLW, MLLW, NAVD, STND`; tide prediction intervals `h, 1, 5, 6, 10, 15, 30, 60, hilo`; met `h` or the 6-minute default; throttling exists, no number published. | same |
 | Live: `hourly_height` over 13 months fails "Range Limit Exceeded"; 6-minute predictions over 2 months, hourly over 2 years and `hilo` over 6 years succeed; `predictions` with `datum=NAVD` succeeds. The planner uses the documented limits. | live |
+| Predictions: "Harmonic tide prediction stations can provide tide predictions on any available interval. Subordinate tide prediction stations can only provide tide predictions on a high / low interval"; "Subordinate tide prediction stations must use datum=MLLW". | https://api.tidesandcurrents.noaa.gov/api/prod/ (2026-10-09) |
+| Live (2026-10-09): `stations.json?type=tidepredictions` lists 3,502 stations, `type` R (harmonic, 1,260) or S (subordinate, 2,242, with `reference_id`). Subordinate 1610367 and 8578240: `interval=6` and `interval=h` give "No Predictions data was found…", `interval=hilo` gives data. Every water-level station with `tidal` true (238) is type R. Of the 315 met stations, 5 are type S and **56 have `tidal` true but are not in the predictions list at all** (8444069: no predictions at any interval). So `tidal` does not say whether predictions exist: the catalog takes the prediction type from the `tidepredictions` list (§3.3). | live |
 | `stations.json?type=waterlevels&expand=details,sensors`: 302 stations, `details.established`/`removed`, sensors (`name`, `status`, `sensorID`), 1.3 MB. `type=met`: 315. `expand=datums` does not expand; `products` are website links. `datums.json` values are relative to `STND`; it names `NAVD88`, `DTL`, `GT`, `MN`, `DHQ`, `DLQ` besides the tidal datums; `LAT`/`HAT` are top-level members. | live |
 
 ### 1.2 USGS Water Data
@@ -202,42 +205,51 @@ without Qt, and io could not name a product).
 
 ## 3. core: provider vocabulary
 
-New headers in `src/core/include/mov/core/provider/` (`coops.hpp`, `usgs.hpp`,
+Built in P1. Headers in `src/core/include/mov/core/provider/` (`coops.hpp`, `usgs.hpp`,
 `ndbc.hpp`, `capabilities.hpp`) and `src/core/include/mov/core/` (`windows.hpp`,
-`daily_series.hpp`). Constexpr where the types allow, regular, designated initializers.
+`daily_series.hpp`, `enum_set.hpp`). Constexpr where the types allow, regular,
+designated initializers. The sketches below follow the headers, which are the contract;
+the reasons are in CD §2.13.
 
 ### 3.1 Windows and days
 
 ```cpp
 namespace mov::core {
-/// Consecutive half-open windows [b, b+span), ..., the last cut at r.end(). Precondition
-/// (asserted): span >= 1 ms. Result non-empty, disjoint, ordered, covering r exactly.
-[[nodiscard]] std::vector<TimeRange> split(TimeRange r, std::chrono::milliseconds span);
+/// A positive duration: make(ms) -> optional (nullopt below 1 ms), or of<Count, Duration>()
+/// for a constant, which does not compile unless 1 <= Count and it fits int64 ms.
+class WindowSpan { /* duration(); <=> */ };
+
+/// The windows of r: [b, b+span), ..., the last cut at r.end(); non-empty, disjoint,
+/// ordered, covering r exactly. A constexpr, trivially copyable, random-access view
+/// computed on demand (size() in uint64, operator[], iterators; std::ranges::to works).
+class Windows;
+[[nodiscard]] constexpr Windows split(TimeRange r, WindowSpan span) noexcept;
 
 /// r widened outward to whole multiples of `grain` (floor the begin, ceil the end), so
 /// windows split from it by a span that is a multiple of `grain` start and end on the
 /// grain. nullopt only on overflow.
-[[nodiscard]] constexpr std::optional<TimeRange> aligned(TimeRange r, std::chrono::milliseconds grain) noexcept;
+[[nodiscard]] constexpr std::optional<TimeRange> aligned(TimeRange r, WindowSpan grain) noexcept;
 
-/// Half-open calendar days [first, end): first < end; no default (Bd SF13).
+enum class DayRangeError : std::uint8_t { empty_or_inverted, out_of_range };
+/// Half-open local calendar days [first, end): first < end, every day within
+/// [earliest_day, latest_day] (year::min() Jan 1 .. year::max() Dec 31); no default
+/// (Bd SF13). No instant converts to a day in core (D34).
 class DayRange {
  public:
-  [[nodiscard]] static constexpr std::expected<DayRange, TimeRangeError> make(
-      std::chrono::sys_days first, std::chrono::sys_days end) noexcept;
-  /// The days of r, only when both bounds are midnights; otherwise not_whole_days.
-  [[nodiscard]] static constexpr std::expected<DayRange, DayRangeError> covering(TimeRange r) noexcept;
-  [[nodiscard]] constexpr std::chrono::sys_days first() const noexcept;
-  [[nodiscard]] constexpr std::chrono::sys_days end() const noexcept;
+  static constexpr std::chrono::local_days earliest_day, latest_day;
+  [[nodiscard]] static constexpr std::expected<DayRange, DayRangeError> make(
+      std::chrono::local_days first, std::chrono::local_days end) noexcept;
+  [[nodiscard]] constexpr std::chrono::local_days first() const noexcept;
+  [[nodiscard]] constexpr std::chrono::local_days end() const noexcept;
   [[nodiscard]] constexpr std::chrono::days size() const noexcept;
   friend constexpr bool operator==(const DayRange&, const DayRange&) = default;
 };
-enum class DayRangeError : std::uint8_t { empty_or_inverted, not_whole_days };
 }
 ```
 
-Laws (tested): the windows concatenate to `r`; all but the last have length `span`;
-`split(aligned(r, 1 min), 31 d)` windows begin and end on minutes; `covering` round-trips
-`[first 00:00, end 00:00)` and refuses any other instant.
+Laws (tested and fuzzed): the windows concatenate to `r`, number `ceil(length / span)`,
+and all but the last have length `span`; `split(aligned(r, 1 min), 31 d)` windows begin
+and end on minutes; `aligned` refuses only at the ends of the int64 time line.
 
 ### 3.2 CO-OPS — `coops.hpp`
 
@@ -246,6 +258,7 @@ namespace mov::core::coops {
 /// Datums the data API accepts that core can name (D32: only these are offered).
 /// CRD and LWD (rivers) are not offered (v4 never did); IGLD is IGLD85.
 enum class Datum : std::uint8_t { mhhw, mhw, mtl, msl, mlw, mllw, navd88, stnd, igld85 };
+using DatumSet = EnumSet<Datum>;                // likewise ObservedSet, MetSet
 [[nodiscard]] constexpr VerticalDatum to_vertical(Datum) noexcept;
 [[nodiscard]] constexpr std::optional<Datum> from_vertical(VerticalDatum) noexcept;
 [[nodiscard]] constexpr std::string_view wire_token(Datum) noexcept;          // "NAVD", "IGLD", ...
@@ -254,28 +267,30 @@ enum class Observed : std::uint8_t { six_minute /*water_level*/, one_minute /*on
                                      hourly /*hourly_height*/ };
 enum class PredictionInterval : std::uint8_t { one, five, six, ten, fifteen, thirty, sixty };  // hilo: v5.x (EX #7)
 enum class PairedGrid : std::uint8_t { six_minute, hourly };   // observed with predictions at 6 or "h"
+[[nodiscard]] constexpr Observed observed(PairedGrid) noexcept;               // the grid's two halves
+[[nodiscard]] constexpr PredictionInterval predicted(PairedGrid) noexcept;
 
 struct ObservedLevel { Observed series; };
 struct PredictedLevel { PredictionInterval interval; };
 struct ObservedVsPredicted { PairedGrid grid; };
 using LevelKind = std::variant<ObservedLevel, PredictedLevel, ObservedVsPredicted>;
-struct WaterLevel { LevelKind kind; Datum datum; };          // datum mandatory (verified)
+struct WaterLevel { LevelKind kind; Required<Datum> datum; };   // no default: leaving it out does not compile
 
 enum class Met : std::uint8_t {
   air_temperature, water_temperature, wind, air_pressure, humidity,   // v4 parity
   conductivity, salinity, visibility, air_gap                          // EX #1, droppable
 };
 enum class MetInterval : std::uint8_t { six_minute, hourly };
-struct Meteorological { Met product; MetInterval interval; };
-using Product = std::variant<WaterLevel, Meteorological>;
+struct Meteorological { Met product; Required<MetInterval> interval; };
+using Product = std::variant<WaterLevel, Meteorological>;   // not default-constructible
 
 struct Request { StationId<provider::Coops> station; TimeRange range; Product product; /* == */ };
 
 /// Documented maxima (§1.1); a paired product takes the smaller: 1-minute 4 d;
 /// 6-minute 31 d (the live error text, PA §2.1); hourly and non-hilo predictions 365 d.
-[[nodiscard]] constexpr std::chrono::days max_window(const Product&) noexcept;
+[[nodiscard]] constexpr WindowSpan max_window(const Product&) noexcept;
 /// The grain windows are aligned to: 1 min for every product (S8).
-inline constexpr std::chrono::minutes grain{1};
+inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::minutes>();
 
 enum class Shape : std::uint8_t { series, observed_vs_predicted, wind };
 [[nodiscard]] constexpr Shape shape(const Product&) noexcept;
@@ -285,33 +300,45 @@ enum class Shape : std::uint8_t { series, observed_vs_predicted, wind };
 `air_gap`'s datum handling and `salinity` in JSON are confirmed with recorded fixtures in
 P2 before those alternatives ship. `daily_mean`, `monthly_mean`, `high_low` and `hilo`
 are not alternatives (EX #7); each would be one enumerator, one span row and a fixture.
+`hilo` also needs `datum=MLLW` at subordinate stations (the API page, §1.1).
 
 ### 3.3 Capabilities and `offered` (Bd SF12, SF14)
 
 ```cpp
 namespace mov::core {
+namespace coops {
+/// From the type=tidepredictions list: R (harmonic) any_interval, S (subordinate)
+/// hilo_only, absent none. Not the station's `tidal` flag (§1.1).
+enum class Predictions : std::uint8_t { none, hilo_only, any_interval };
+enum class NotOffered : std::uint8_t { product, interval, predictions, datum };
+}
+namespace usgs {
+enum class NotOffered : std::uint8_t { parameter, statistic, series };
+}
 template <Provider P> struct Capabilities;
 
 template <> struct Capabilities<provider::Coops> {
-  std::vector<coops::Observed> observed;           // from the water-level sensor
-  std::vector<coops::Met> met;                     // from sensors with status 1
-  bool predictions;                                // the station's `tidal` member
+  coops::ObservedSet observed;                     // from the water-level sensor
+  coops::MetSet met;                               // from sensors with status 1
+  coops::Predictions predictions = coops::Predictions::none;
   std::optional<DatumTable> datums;                // nullopt: datums.json failed or had no MSL
-  std::vector<coops::Datum> datums_offered;        // datums.json names ∩ coops::Datum, plus STND
+  coops::DatumSet datums_offered;                  // datums.json names ∩ coops::Datum
 };
 template <> struct Capabilities<provider::Usgs> {
-  std::vector<usgs::SeriesInfo> series;            // the map filter's series (D33)
+  usgs::SeriesSet series;                          // catalog: the map filter's series (D33)
 };
 template <> struct Capabilities<provider::Ndbc> {
-  std::string owner, program, platform_type;
+  StationText owner, program, platform_type;
   std::optional<Length> elevation;
 };
 
-enum class NotOffered : std::uint8_t { product, interval, datum, predictions, parameter };
 /// Whether the station's catalog entry offers the request: one check for the CLI and
-/// the app's picker.
-[[nodiscard]] std::expected<void, NotOffered> offered(const Capabilities<provider::Coops>&, const coops::Product&);
-[[nodiscard]] std::expected<void, NotOffered> offered(const Capabilities<provider::Usgs>&, const usgs::Request&);
+/// the app's picker. CO-OPS: the level kind (product, interval, predictions; hilo_only
+/// is `interval`), then the datum (STND is always offered); met needs the sensor. USGS:
+/// by parameter, parameter then statistic (00011 for continuous, a daily one for
+/// daily); by id, series then the collection of its statistic.
+[[nodiscard]] constexpr std::expected<void, coops::NotOffered> offered(const Capabilities<provider::Coops>&, const coops::Product&) noexcept;
+[[nodiscard]] std::expected<void, usgs::NotOffered> offered(const Capabilities<provider::Usgs>&, const usgs::Request&);
 }
 ```
 
@@ -320,14 +347,20 @@ enum class NotOffered : std::uint8_t { product, interval, datum, predictions, pa
 - `GaugeStation<P>` loses its `datums` member (P1): a USGS or NDBC station has no datum
   table, and the default table ("knows only MSL") claimed knowledge it did not have. The
   CO-OPS table lives in `Capabilities<Coops>` as an `optional`.
+- The CO-OPS catalog step therefore also reads `stations.json?type=tidepredictions`
+  (§7) for each station's prediction type; P2 parses it, P5a stores `predictions` as
+  its token.
 
 ### 3.4 USGS — `usgs.hpp`, `daily_series.hpp`
 
 ```cpp
 namespace mov::core::usgs {
+enum class CodeError : std::uint8_t { wrong_length, invalid_character };
 class ParameterCode { /* 5 ASCII digits, make(); view(); <=> */ };
 class StatisticId   { /* 5 ASCII digits; static constexpr instantaneous(), mean(), minimum(), maximum() */ };
 class TimeSeriesId  { /* 32 lower-case hex */ };
+enum class Collection : std::uint8_t { continuous, daily };
+[[nodiscard]] constexpr Collection collection_of(const StatisticId&) noexcept;   // 00011: continuous
 
 struct ByParameter      { ParameterCode parameter; };                        // continuous: statistic 00011
 struct DailyByParameter { ParameterCode parameter; StatisticId statistic; };
@@ -337,26 +370,34 @@ struct Continuous { StationId<provider::Usgs> station; std::variant<ByParameter,
 struct Daily      { StationId<provider::Usgs> station; std::variant<DailyByParameter, ByTimeSeries> series; DayRange days; };
 using Request = std::variant<Continuous, Daily>;
 
-/// What resolution (stage 1, §5.2) proves about the series: it exists at the station,
-/// belongs to the request's collection, and is the Primary one when chosen by parameter.
-struct ResolvedSeries {
-  TimeSeriesId id; ParameterCode parameter; StatisticId statistic;
-  std::string parameter_name; std::optional<Unit> unit;
-  std::optional<QuantityMapping> quantity;      // registry_quantity(parameter)
-};
-/// Catalog row (Capabilities<Usgs>) and picker row.
-struct SeriesInfo { TimeSeriesId id; ParameterCode parameter; StatisticId statistic; bool primary;
-                    std::optional<Unit> unit; ValidRange validity; };
+/// One series of a site: catalog row (Capabilities<Usgs>), picker row, resolution input.
+struct SeriesInfo { TimeSeriesId id; ParameterCode parameter; StatisticId statistic;
+                    std::string parameter_name; bool primary; std::optional<Unit> unit;
+                    ValidRange validity; };
+/// A site's series: sorted, unique by id, at most one Primary per (parameter,
+/// statistic). make -> expected<SeriesSet, variant<DuplicateSeriesId, SeveralPrimary>>;
+/// find(id) by binary search; primary(parameter, statistic).
+class SeriesSet;
 
-/// continuous: 1000 d (the server refuses > 1100 d); daily: nullopt (36 years seen).
-[[nodiscard]] constexpr std::optional<std::chrono::days> max_window(const Request&) noexcept;
-inline constexpr std::chrono::seconds grain{1};
+/// Resolution (stage 1, §5.2) over the site's series. Resolved<C> is made only by
+/// resolve and proves the series exists at the station, belongs to collection C, and is
+/// the Primary one when chosen by parameter; series() is its SeriesInfo.
+enum class ResolveError : std::uint8_t { no_series, wrong_collection };
+template <class C> class Resolved;   // C: Continuous or Daily
+[[nodiscard]] std::expected<Resolved<Continuous>, ResolveError> resolve(const Continuous&, const SeriesSet&);
+[[nodiscard]] std::expected<Resolved<Daily>, ResolveError> resolve(const Daily&, const SeriesSet&);
 
-/// 00060 discharge; 00065 water_level, datum stnd (the gage datum); 62620 water_level
-/// navd88; 62619 water_level ngvd29. Others: GenericQuantity "usgs_<code>". Further rows
-/// (00010, 00020, 00035, 00036) only after P3 checks them against parameter-codes.
+/// 1000 d (the server refuses > 1100 d); daily values have no limit (36 years seen).
+[[nodiscard]] constexpr WindowSpan max_window(const Continuous&) noexcept;
+inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::seconds>();
+
+/// 00060 discharge; 00065 water_level, datum stnd (the site's gage datum); 62620
+/// water_level navd88; 62619 water_level ngvd29. Further rows (00010, 00020, 00035,
+/// 00036) only after P3 checks them against parameter-codes.
 struct QuantityMapping { Quantity quantity; std::optional<VerticalDatum> datum; };
 [[nodiscard]] constexpr std::optional<QuantityMapping> registry_quantity(const ParameterCode&) noexcept;
+/// The registry quantity, else the generic "usgs_<code>".
+[[nodiscard]] QuantityId quantity_of(const ParameterCode&);
 }
 
 namespace mov::core {
@@ -365,7 +406,7 @@ namespace mov::core {
 class DailySeries {
  public:
   [[nodiscard]] static std::expected<DailySeries, ConstructionError> make(
-      SeriesMeta meta, std::vector<std::chrono::sys_days> days, std::vector<Sample> samples,
+      SeriesMeta meta, std::vector<std::chrono::local_days> days, std::vector<Sample> samples,
       usgs::StatisticId statistic);
   // meta(), days(), samples(), statistic() — const& views, && deleted; ==
 };
@@ -373,19 +414,24 @@ class DailySeries {
 ```
 
 - Resolution **always** runs (Bd B2), also for `ByTimeSeries`: it supplies the unit,
-  name and statistic, and proves the id belongs to the station and the collection.
-  `ByParameter` with no Primary series is `NoData`, with several `AmbiguousSeries`.
+  name and statistic, and proves the id belongs to the collection; the station is
+  proved by the query (`monitoring_location_id`). `ByParameter` with no Primary series
+  is `no_series` (the fetch's `NoData`). Several Primary series of one parameter and
+  statistic are refused when the site's `SeriesSet` is built (`SeveralPrimary`), which
+  the fetch reports as `AmbiguousSeries`.
 - The statistic of a continuous request is `00011` by construction; a daily request by
-  parameter must name its statistic.
+  parameter must name a daily statistic (00011 is `wrong_collection`).
 
 ### 3.5 NDBC — `ndbc.hpp`
 
 ```cpp
 namespace mov::core::ndbc {
 struct StdMet { StationId<provider::Ndbc> station; TimeRange range; };   // every column; the caller picks
-/// Which file a series came from, in precedence order (§5.4).
 enum class FileKind : std::uint8_t { historical, monthly, monthly_latest, realtime };
-inline constexpr std::chrono::minutes grain{1};
+/// The rank on equal times (§5.4): historical 0, monthly 1, monthly_latest 2, realtime 3;
+/// the lower rank's row wins. Explicit, not the enumerator order.
+[[nodiscard]] constexpr std::uint8_t precedence(FileKind) noexcept;
+inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::minutes>();
 }
 ```
 
@@ -404,6 +450,49 @@ inline constexpr std::chrono::minutes grain{1};
 - **OI 12** (a `DatumTable` that carries its station) **stays open for Phase 6**:
   Phase 3 shifts no provider series client-side, and the model-vs-observed work is
   where a station-bound table may be needed.
+
+### 3.7 As built (P1): deviations from revision 2
+
+After the P1 review (ben-deane, sean-parent, jason-turner):
+
+| Revision 2 | Built | Why |
+|---|---|---|
+| `DayRange` over `sys_days`, with `covering(TimeRange)` | over `local_days`, bounded by `earliest_day`/`latest_day`; no `covering`; `DayRangeError {empty_or_inverted, out_of_range}` | A day is the station's calendar day, not an instant (D34): core has no instant→day conversion. The bounds (the days `std::chrono::year` names) make `out_of_range` mean the same on every standard library and keep `size()` within a 32-bit `days::rep`. The CLI parses `YYYY-MM-DD` straight to days (§9.1). |
+| `split -> std::vector<TimeRange>`, span `milliseconds`, asserted precondition | `split -> Windows`, a non-allocating constexpr random-access view; span `WindowSpan` | Nothing to allocate or throw; the count is exact for the whole int64 line; a span below 1 ms cannot be passed (no assert, no fallback). |
+| `aligned(r, milliseconds)` | `aligned(r, WindowSpan)` | Its nullopt now means overflow only. |
+| `max_window` returns `days` (CO-OPS) or `optional<days>` over `usgs::Request` | `WindowSpan`; USGS only `max_window(const Continuous&)` | Fed straight to `split`; daily values have no window, so no overload claims one. |
+| `std::vector` of observed series, met products and offered datums | `EnumSet<E>` over a `DenseEnum` (`Enumerators<E>::values` checked whole and in order), with `|`, `&` | A vector admits duplicates and makes `==` depend on the order the parser met the sensors. |
+| `WaterLevel::datum` a plain `Datum` | `Required<Datum>` (also `Meteorological::interval`) | Leaving the datum out is a compile error on every compiler, not a warning on some; `Product` is not default-constructible. |
+| `bool predictions` from the `tidal` member | `coops::Predictions {none, hilo_only, any_interval}` from the `type=tidepredictions` list | Subordinate stations serve only `hilo`, and `tidal` is true at stations with no predictions (§1.1). |
+| `datums_offered` "plus STND" | STND always offered by `offered()` | The rule is code, not a comment. |
+| one `NotOffered` | `coops::NotOffered {product, interval, predictions, datum}`, `usgs::NotOffered {parameter, statistic, series}` | Narrow per function: neither provider can return the other's reasons. |
+| `ResolvedSeries` aggregate (with a `quantity`) and `SeriesInfo` | `Resolved<Continuous|Daily>` holding a `SeriesInfo` (now with `parameter_name`), made only by `resolve`; quantity derived | A resolution cannot be forged or paired with the wrong collection; one struct holds the series fields (no overlap). Resolution's pure decision (exists, collection, Primary) moved into core, so io parses rows and fetch calls `resolve`. |
+| `Capabilities<Usgs>::series` a vector | `usgs::SeriesSet` (sorted, unique ids, at most one Primary per parameter and statistic) | `find` by binary search; ambiguity is caught once, where the rows enter. |
+| — | `usgs::collection_of`, `usgs::quantity_of` (built through a core passkey, `static_assert` that no registry token starts with `usgs_`) | One rule for "00011 is continuous"; the generic quantity is named next to the registry with no runtime fallback. |
+| `ndbc::FileKind` "in precedence order" | `ndbc::precedence(FileKind)` | The precedence is a tested function, not the enumerator order. |
+| `Capabilities<Ndbc>` strings | `StationText` | The station's own text type (valid UTF-8, no NUL), which the catalog writes as JSON. |
+| `offered(Capabilities<Coops>, …)` | constexpr, noexcept | Its inputs are constexpr; the truth table is a `STATIC_REQUIRE`. |
+| the `(name, interval) → Product` rule table and `WindComponent` | not in core | The CLI's spelling (§9.1); P9b builds them in `to_command`. |
+
+Kept: `VerticalDatum::stnd` for the USGS gage datum. STND is defined (datum.hpp, SN
+§10.2 "station/gauge datum", io's CF reader mapping "gage datum" to it) as a station's
+own local zero whatever the agency calls it; it means something only with its station,
+and core never compares or shifts STND across stations (a `DatumTable` is one station's).
+A separate token would split one concept by agency and change the SN vocabulary for no
+operation core performs; the display name ("station datum", "gage datum") is the edge's,
+from the provider.
+
+The USGS `offered` answers over the series set it is given. The station catalog holds
+only the D33 map series, so the CLI's `--station` check for any other parameter, or for
+any daily series, needs the site metadata of §6.6 rather than the catalog; P9b decides
+how.
+
+**For P5b (N5):** the SN writer needs a total mapping from `StatisticId` to the CF
+`cell_methods` of a daily series: 00001 `maximum`, 00002 `minimum`, 00003 `mean`, the
+other codes of USGS's statistic table where CF has a method (`sum`, `median`,
+`standard_deviation`, …), and a fallback rule for the rest. `point` is not a valid
+fallback (a daily statistic is not a point value); P5b decides the rule (for example,
+no `cell_methods` and the code kept in an attribute) and documents it in SN.
 
 ---
 
@@ -439,7 +528,7 @@ using Target = std::variant<Composed, Verbatim>;
 | Function | Output |
 |---|---|
 | `coops::targets(request, window)` | `datagetter`: `product`, `application=MetOceanViewer`, `station`, `begin_date`/`end_date` as `yyyyMMdd HH:mm` (`window` is minute-aligned; end sent as `window.end() − 1 min`), `time_zone=gmt`, `units=metric`, `format=json`, `datum` only for `WaterLevel`, `interval` only when not the default. Two targets for `ObservedVsPredicted`. |
-| `coops::catalog_targets()`, `coops::datums_target(id)` | `stations.json?type=waterlevels&expand=details,sensors`, `type=met&…`; `stations/{id}/datums.json?units=metric` |
+| `coops::catalog_targets()`, `coops::datums_target(id)` | `stations.json?type=waterlevels&expand=details,sensors`, `type=met&…`, `type=tidepredictions` (the prediction type, §3.3); `stations/{id}/datums.json?units=metric` |
 | `usgs::resolve_target(request)` | `combined-metadata/items?monitoring_location_id&(parameter_code&statistic_id | id)&properties=id,primary,parameter_code,parameter_name,statistic_id,unit_of_measure,computation_identifier,begin,end&skipGeometry=true&f=json` |
 | `usgs::data_target(resolved, window)` | `continuous` or `daily` items: `time_series_id`, `datetime=a/b` (continuous: second-aligned instants, `b` = window end − 1 s; daily: dates, `b` = end − 1 day), `properties=time,value,approval_status,qualifier`, `skipGeometry=true`, `sortby=time` (confirmed for `daily` in P3; else the parser reverses a strictly decreasing page), `limit=50000`, `f=json`. Pinned path for `next`: the same collection's `/items`. |
 | `usgs::catalog_target(parameters)` | `combined-metadata/items?parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=…&limit=50000&f=json` (geometry kept) |
@@ -516,7 +605,7 @@ test runs `QXmlStreamReader` over the fuzz corpus as the reference (§10.4).
  "generated":"2026-10-09T07:00:00Z",
  "sources":[{"url":"https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=waterlevels&expand=details,sensors","retrieved":"2026-10-09T07:00:01Z"}],
  "stations":[
-{"id":"8729840","name":"Pensacola","lon":-87.2112,"lat":30.4044,"first":"1923-04-30","coops":{"observed":["six_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure"],"predictions":true,"datums":{"reference":"STND","heights_m":{"MHHW":2.952,"MSL":2.757,"MLLW":2.569,"NAVD88":2.667}}}},
+{"id":"8729840","name":"Pensacola","lon":-87.2112,"lat":30.4044,"first":"1923-04-30","coops":{"observed":["six_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure"],"predictions":"any_interval","datums":{"reference":"STND","heights_m":{"MHHW":2.952,"MSL":2.757,"MLLW":2.569,"NAVD88":2.667}}}},
 …]}
 ```
 
@@ -609,8 +698,9 @@ template <class T> struct Fetched { T value; std::vector<Warning> warnings; Stat
 A **plan is not a list**: what to fetch next depends on what came back. Two
 compositions, each used for one kind of dependency:
 
-- **Between stages, a bind:** USGS runs stage 1 (resolve: `Request → ResolvedSeries`)
-  and then stage 2 (data: `(Request, ResolvedSeries) → DailySeries | TimeSeries`), two
+- **Between stages, a bind:** USGS runs stage 1 (resolve: the site's rows →
+  `SeriesSet` → `core::usgs::resolve(C, set) → Resolved<C>`) and then stage 2 (data:
+  `(C, Resolved<C>) → DailySeries | TimeSeries`), two
   one-stage machines composed in one `Job` (`Job` constructs the second from the first's
   value). Stage 1's value is a different type that the second stage's plan needs as a
   whole, which is exactly `and_then`; folding it into the unit chain would make every
@@ -944,7 +1034,7 @@ a `std::shared_ptr<const core::tide::HarmonicsFile>`, immutable.
 
 | Provider | Source | Kept | Count (2026-10-09) |
 |---|---|---|---|
-| NOAA CO-OPS | `type=waterlevels` ∪ `type=met` with `expand=details,sensors`, then `datums.json` per station | active only (D6) | 302 and 315, overlapping |
+| NOAA CO-OPS | `type=waterlevels` ∪ `type=met` with `expand=details,sensors`, `type=tidepredictions` for the prediction type, then `datums.json` per station | active only (D6) | 302 and 315, overlapping |
 | USGS | `combined-metadata`, `statistic_id=00011`, `parameter_code=00060,00065,62620,62619` (D33), paged | sites with ≥ 1 such series, ended series included | measured in P3 (v4: 10,503 sites) |
 | NDBC | `activestations.xml`, `met="y"` | active, with met data | 905 of 1,354 (v4: 357) |
 | Harmonics | the user's file | HE §9.2 | — |
@@ -1044,8 +1134,10 @@ with one summary warning; `--near` takes the nearest offering station; an empty
 selection is exit 3.
 
 - **Times:** `parse_utc_datetime` forms, end exclusive; v4's `yyyyMMddhhmmss` is refused
-  with a hint (v4 read it as local time). USGS `--daily` needs whole days
-  (`DayRange::covering`).
+  with a hint (v4 read it as local time). USGS `--daily` takes `--start`/`--end` as
+  `YYYY-MM-DD` dates, parsed straight to `local_days` for `DayRange::make` (end
+  exclusive); core has no instant→day conversion (D34), so a time of day there is a
+  usage error.
 - **Output formats:** from the extension or `--format`; a mismatch is a usage error;
   `-o -` for CSV, IMEDS and JSON. A daily series to IMEDS is `unsupported_cadence`
   (exit 2, checked before the network).
@@ -1124,7 +1216,7 @@ switch that replaces its transport.
 
 ### 10.1 Pure tiers (core, io, fetch)
 
-- **core:** `split`/`aligned` laws; `DayRange::make`/`covering`; every `coops::Product`'s
+- **core:** `split`/`aligned` laws; `DayRange::make` and its bounds; `resolve` and `SeriesSet`; every `coops::Product`'s
   `max_window`, `shape`, datum token in `STATIC_REQUIRE` tables; code and id grammars;
   `registry_quantity`; `offered` truth tables; `DailySeries::make`.
 - **io:** every parser against recorded fixtures (PA samples promoted to
@@ -1255,7 +1347,7 @@ prose-editor.
 | WP | Scope | Depends on | Size | Reviewers |
 |---|---|---|---|---|
 | **H0** | HE §10's H0 plus: the `fetch` layer, Qt Network/Concurrent, the `no_blocking_calls` and `no_ignore_ssl_errors` gates, JSON/zlib include gates, the `live` label, the Qt coverage variant, the doc sync items of §13.3 | — | S (2) | jason-turner, neckbeard-nate, architecture-clarity-reviewer |
-| P1 | core: `split`, `aligned`, `DayRange`, `coops`, `usgs` (selectors, `ResolvedSeries`, `SeriesInfo`), `ndbc`, `Capabilities`, `offered`, `DailySeries`, `registry_quantity`, `GaugeStation::datums` removed | H0 | M (4) | ben-deane (lead), sean-parent, jason-turner |
+| P1 (built) | core: `split`, `aligned`, `DayRange`, `coops`, `usgs` (selectors, `SeriesInfo`, `SeriesSet`, `resolve`), `ndbc`, `Capabilities`, `offered`, `DailySeries`, `registry_quantity`, `GaugeStation::datums` removed | H0 | M (4) | ben-deane (lead), sean-parent, jason-turner |
 | P2 | io CO-OPS: targets, body checks, `classify_body`, data/predictions/stations/datums parsers, fuzz | P1 | M (3) | neckbeard-nate (lead), sean-parent, conor-hoekstra |
 | P3 | io USGS: targets, `Verbatim`, `parse_rfc3339`, page/series/catalog parsers, unit aliases, error shapes, fuzz (incl. paging); measures the catalog size | P1 | M (3.5) | same |
 | P4 | io NDBC: stdmet parser, sentinel table, XML subset scanner, public `gunzip`, gzip sniff, fuzz | P1 | M (3) | same |
@@ -1339,7 +1431,7 @@ its column `date`, so a reader cannot take a local day for a UTC instant (D34).
 | Finding | Status | Where |
 |---|---|---|
 | B1 a plan is a bind | F: stages composed as a bind (USGS), units chained by `next(unit, outcome)` within a stage; reasons given | §5.2 |
-| B2 resolution always runs, `ResolvedSeries`, statistic in the daily by-parameter selector | F | §3.4, §5.2 |
+| B2 resolution always runs, `ResolvedSeries`, statistic in the daily by-parameter selector | F; built as `resolve` → `Resolved<C>` (§3.7) | §3.4, §5.2 |
 | B3 `DailySeries`; `UsgsProvider::Value = variant<TimeSeries, DailySeries>`; SN overload; no IMEDS overload | F | §3.4, §4.7, §6.1 |
 | SF4 `Part` monoid, left-biased union in plan order; `NoData` only at `Finish` without failures; all-failed lenient is a failure | F | §5.4, §5.6 |
 | SF5 unit rule and metas-agree law | F | §5.4, §10.1 |
@@ -1350,7 +1442,7 @@ its column `date`, so a reader cannot take a local day for a UTC instant (D34).
 | SF10 `Network` owns the key, USGS origin only | F | §6.1, §6.2 |
 | SF11 `RunOutcome` join, exhaustive `exit_code`, order reconciled with N (130 > 1 > 4 > 3 > 0; usage 2 first, before any network), mixed data/no-data is 0 | F | §9.3 |
 | SF12 rule table (name, interval) → `Product` + `WindComponent`; one spelling for observed; `--datum` default stated (required); shared `offered`; bbox behavior | F | §9.1, §3.3 |
-| SF13 half-open `DayRange`, `covering` refusing non-midnight | F | §3.1 |
+| SF13 half-open `DayRange`, `covering` refusing non-midnight | F; the P1 review replaced `covering` with `local_days` and no instant→day conversion (§3.7) | §3.1 |
 | SF14 optional table in capabilities; `great_lakes` replaced by the facts it gated | F | §3.3 |
 | Nits | F | throughout (designated aggregates, `Origin` naming, text-free warnings) |
 

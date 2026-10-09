@@ -11,13 +11,11 @@
 #include <utility>
 #include <vector>
 
-#include "mov/core/datum.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
 
 using mov::core::DataSource;
-using mov::core::DatumTable;
 using mov::core::Epsg;
 using mov::core::FileStation;
 using mov::core::GaugeStation;
@@ -110,8 +108,7 @@ TEST_CASE("to_file_station keeps id, name and location and tags the source",
       .location = location(29.2633, -89.9567),
       .validity = ValidRange::make(
                       {.first = sys_days{days{10'000}}, .last = std::nullopt})
-                      .value_or(ValidRange{}),
-      .datums = DatumTable{}};
+                      .value_or(ValidRange{})};
   const FileStation file = to_file_station(gauge);
   CHECK(file == FileStation{.id = key("8761724"),
                             .name = text("Grand Isle, LA"),
@@ -122,8 +119,7 @@ TEST_CASE("to_file_station keeps id, name and location and tags the source",
   const GaugeStation<Usgs> river{.id = id<Usgs>("USGS-07374000"),
                                  .name = text("Mississippi River at Vicksburg"),
                                  .location = location(30.4458, -91.1917),
-                                 .validity = ValidRange{},
-                                 .datums = DatumTable{}};
+                                 .validity = ValidRange{}};
   CHECK(to_file_station(river).source == DataSource::usgs);
   const FileStation file_river = to_file_station(river);
   CHECK(file_river.id.view() == "USGS-07374000");

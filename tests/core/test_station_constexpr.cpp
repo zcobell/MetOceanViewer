@@ -44,6 +44,11 @@ constexpr bool tokens_round_trip() {
 template <class T>
 concept HasValue = requires(T&& t) { std::forward<T>(t).value(); };
 
+// A gauge station carries no datum table: a USGS or NDBC station has none,
+// and the CO-OPS table lives in Capabilities<Coops>.
+template <class T>
+concept HasDatums = requires(const T& t) { t.datums; };
+
 /// make(raw) succeeds and holds exactly `expected`.
 template <Provider P>
 constexpr bool makes(std::string_view raw, std::string_view expected) {
@@ -117,6 +122,7 @@ TEST_CASE("station types are values", "[core][station][constexpr]") {
   STATIC_REQUIRE(std::copyable<GaugeStation<Usgs>>);
   STATIC_REQUIRE(std::equality_comparable<GaugeStation<Usgs>>);
   STATIC_REQUIRE(std::is_nothrow_move_constructible_v<GaugeStation<Usgs>>);
+  STATIC_REQUIRE_FALSE(HasDatums<GaugeStation<Coops>>);
   STATIC_REQUIRE(std::regular<mov::core::StationText>);
   STATIC_REQUIRE(std::totally_ordered<mov::core::StationText>);
   STATIC_REQUIRE(std::copyable<mov::core::StationKey>);

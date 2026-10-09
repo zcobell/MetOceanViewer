@@ -32,6 +32,11 @@ enum class VerticalDatum : std::uint8_t {
   navd88,
   ngvd29,
   igld85,
+  /// A station's own local zero, whatever its agency calls it: the CO-OPS
+  /// station datum, a USGS gage datum, the "station/gauge datum" of SN 10.2.
+  /// It means something only together with its station: heights against the
+  /// STND of two stations are not comparable, and a DatumTable is one
+  /// station's.
   stnd
 };
 
