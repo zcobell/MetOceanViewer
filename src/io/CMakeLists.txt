@@ -44,6 +44,11 @@ mov_add_module(
     PUBLIC_LINK mov::core
     PRIVATE_LINK netCDF::netcdf PROJ::proj nlohmann_json::nlohmann_json ZLIB::ZLIB
 )
+# No implicit json -> T conversions: a value is read only through the
+# non-throwing is_*/get_ptr accessors (docs/harmonics-engine.md §6.2), and
+# an implicit conversion would throw on the wrong type and hide such reads
+# from review. Private: no public io header names nlohmann.
+target_compile_definitions(mov_io PRIVATE JSON_USE_IMPLICIT_CONVERSIONS=0)
 
 # ADCIRC ASCII output and the HWM file.
 target_sources(

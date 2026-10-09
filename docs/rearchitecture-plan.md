@@ -173,7 +173,8 @@ src/io/          # NO Qt: RAII netCDF wrapper; IMEDS, ADCIRC (ascii/nc), DFlow, 
                  #   provider wire formats, JSON (nlohmann/json), gzip (docs/providers-design.md §4)
 src/fetch/       # NO Qt: fetch orchestration: stages, merging, retry and origin policies, the
                  #   sans-IO machine, the provider error type (docs/providers-design.md §5)
-src/providers/   # NOAA CO-OPS, USGS, NDBC, tide harmonics; Qt Network only at the edge
+src/providers/   # Qt (Core public; Network, Concurrent private), built only with MOV_ENABLE_QT:
+                 #   NOAA CO-OPS, USGS, NDBC, tide harmonics; the network edge
 src/app/         # view-models (QObject / QML_ELEMENT), AppState, commands, settings (arrives in Phase 4)
 src/ui/          # startup code (mov_ui), main.cpp and the metoceanviewer executable
 src/ui/qml/      # QML module MetOceanViewer: map shell, panels, chart, theme
@@ -662,7 +663,7 @@ acting on one. The code's current behavior is stated so a decision can be
 
 ## 7. Engineering rules for v5
 
-- `core` and `io` never include Qt headers.
+- `core`, `io` and `fetch` never include Qt headers.
 - No raw owning pointers. No `new` outside Qt parent/child UI object creation.
 - No sentinel values in domain types; use `optional`, `variant` or `expected`.
 - No blocking calls on the GUI thread. No nested event loops. No `processEvents`. The

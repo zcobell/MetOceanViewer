@@ -3,10 +3,11 @@
 #
 # cmake -DMOV_REPO=... -P run.cmake
 #
-# cmake/CheckIgnoreSslErrors.cmake must report both ways of turning TLS
+# cmake/CheckIgnoreSslErrors.cmake must report every way of turning TLS
 # certificate checks off, in src/ and in tests/ (the test driver included),
-# must not report comments or the tests/cmake fixtures, must accept the
-# clean tree and must fail on a missing directory.
+# must not report comments or the tests/cmake fixtures, must read lines
+# right (src/providers/lexing.cpp), must accept the clean tree and must fail
+# on a missing directory.
 
 set(scanner "${MOV_REPO}/cmake/CheckIgnoreSslErrors.cmake")
 
@@ -32,13 +33,16 @@ foreach(
     "src/providers/transport.cpp: [ignore_ssl_errors]"
     "src/providers/transport.cpp: [verify_none]"
     "tests/support/qt_drive.hpp: [ignore_ssl_errors]"
+    "src/providers/lexing.cpp: [ignore_ssl_errors] void unbalanced()"
+    "src/providers/lexing.cpp: [ignore_ssl_errors] void comment_in_string()"
+    "src/providers/lexing.cpp: [query_peer] void query_peer()"
 )
     string(FIND "${output}" "${reported}" position)
     if(position EQUAL -1)
         list(APPEND failures "not reported: ${reported}")
     endif()
 endforeach()
-foreach(silent "comments.cpp: [" "tests/cmake/")
+foreach(silent "comments.cpp: [" "tests/cmake/" "never ignoreSslErrors" "never VerifyNone")
     string(FIND "${output}" "${silent}" position)
     if(NOT position EQUAL -1)
         list(APPEND failures "reported, but allowed: ${silent}")

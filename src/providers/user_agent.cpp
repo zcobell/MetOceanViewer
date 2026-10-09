@@ -3,20 +3,17 @@
 
 #include "mov/providers/user_agent.hpp"
 
+#include <QByteArrayView>
 #include <QString>
-#include <QtTypes>
-#include <string_view>
 
 #include "mov/core/version.hpp"
 
 namespace mov::providers {
 
 QString default_user_agent() {
-  const std::string_view version = core::version();
   return QStringLiteral(
              "MetOceanViewer/%1 (+https://github.com/zcobell/MetOceanViewer)")
-      .arg(QString::fromUtf8(version.data(),
-                             static_cast<qsizetype>(version.size())));
+      .arg(QString::fromUtf8(QByteArrayView{core::version()}));
 }
 
 }  // namespace mov::providers

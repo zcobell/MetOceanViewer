@@ -14,7 +14,9 @@
 #   src/<layer>, with public headers in src/<layer>/include, and registers it
 #   for the check. Without SOURCES the layer is header-only: an INTERFACE
 #   library, whose PUBLIC_LINK becomes its interface (PRIVATE_LINK is an
-#   error). Executables (the cli, the app binary) call
+#   error); a static library needs at least one source file, and an empty
+#   one would only add a symbol-less object. The layering check walks its
+#   INTERFACE_LINK_LIBRARIES like any other target's. Executables (the cli, the app binary) call
 #   mov_enforce_layer(<target> <layer>) themselves.
 #
 # mov_check_layering(), called once at the end of the top-level CMakeLists.txt,

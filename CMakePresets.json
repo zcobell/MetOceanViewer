@@ -117,7 +117,7 @@
         "base"
       ],
       "displayName": "Developer: Windows MSVC cross-check (clang-cl + xwin)",
-      "description": "Qt-free (core, io, tests). Cross-compiles for x64 Windows with clang-cl against the MSVC STL/CRT and Windows SDK that xwin downloaded (MOV_DEV_IMAGE=msvc tools/dev/run.sh), /W4 /WX /permissive- /Zc:preprocessor as in the windows-2022 job; vcpkg ports through the x64-windows-xwin overlay triplet; tests run under Wine. Not MSVC's front end: see tools/dev/README.md.",
+      "description": "Qt-free (core, io, fetch, tests). Cross-compiles for x64 Windows with clang-cl against the MSVC STL/CRT and Windows SDK that xwin downloaded (MOV_DEV_IMAGE=msvc tools/dev/run.sh), /W4 /WX /permissive- /Zc:preprocessor as in the windows-2022 job; vcpkg ports through the x64-windows-xwin overlay triplet; tests run under Wine. Not MSVC's front end: see tools/dev/README.md.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "VCPKG_TARGET_TRIPLET": "x64-windows-xwin",
@@ -169,7 +169,7 @@
         "qt"
       ],
       "displayName": "GCC debug + coverage, Qt layers included",
-      "description": "coverage plus the Qt layers, so providers (and the cli, from P9a) count toward the 80% over src/; the Qt-free layers keep their 90% gates. The gui tests run under xvfb-run, as in dev-qt."
+      "description": "coverage plus the Qt layers, so providers (and the cli, once it exists) count toward the 80% over src/; the Qt-free layers keep their 90% gates. The gui tests run under xvfb-run, as in dev-qt."
     },
     {
       "name": "tidy",
@@ -399,7 +399,7 @@
     {
       "name": "test-base",
       "hidden": true,
-      "description": "Label live (the real provider APIs) is excluded here and in every preset that sets its own filter; the nightly live job runs ctest -L live with MOV_LIVE_API=1.",
+      "description": "Label live (the real provider APIs) is excluded here and in every preset that sets its own filter. A preset that overrides the filter must exclude live itself, and its exclusion must not be widened on the command line: CTest ANDs a --label-exclude with the preset's (a test is skipped only when it matches both), and -L live selects nothing under it. Live tests run by build directory: MOV_LIVE_API=1 ctest --test-dir build/<preset> -L live.",
       "output": {
         "outputOnFailure": true
       },
@@ -487,12 +487,24 @@
     {
       "name": "ci-macos",
       "inherits": "test-base",
-      "configurePreset": "ci-macos"
+      "configurePreset": "ci-macos",
+      "description": "Label gui needs OpenGL, which the macOS runner's job does not set up yet.",
+      "filter": {
+        "exclude": {
+          "label": "gui|live"
+        }
+      }
     },
     {
       "name": "ci-windows",
       "inherits": "test-base",
-      "configurePreset": "ci-windows"
+      "configurePreset": "ci-windows",
+      "description": "Label gui needs OpenGL, which the Windows runner's job does not set up yet.",
+      "filter": {
+        "exclude": {
+          "label": "gui|live"
+        }
+      }
     },
     {
       "name": "package-linux",

@@ -56,7 +56,7 @@ if(MOV_ENABLE_QT)
         Qt6
         ${MOV_QT_MINIMUM_VERSION}
         REQUIRED
-        COMPONENTS Core Concurrent Gui Network Sql Qml Quick QuickControls2 Location Positioning Test
+        COMPONENTS Core Concurrent Gui Network Sql Qml Quick QuickControls2 Location Positioning
     )
     qt_standard_project_setup(REQUIRES ${MOV_QT_MINIMUM_VERSION})
     include(cmake/MapLibre.cmake)

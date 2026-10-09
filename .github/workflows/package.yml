@@ -105,7 +105,7 @@ jobs:
             ${{ env.MOV_QT_ROOT }}
           key: package-linux-${{ hashFiles('tools/dev/appimage/Dockerfile', 'tools/versions.env', 'vcpkg.json', 'vcpkg-configuration.json', 'cmake/vcpkg-ports/**') }}
 
-      # Configure, build, test (ctest -LE gui) and package.
+      # Configure, build, test (the preset excludes labels gui and live) and package.
       - name: Build and package
         run: tools/dev/run.sh cmake --workflow --preset package-linux
 

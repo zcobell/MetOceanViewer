@@ -507,7 +507,7 @@ using PredictionError = std::variant<YearOutOfRange, TooMuchWork, Cancelled>;
 /// Heights above the station's MSL at t = k·step (k integer, counted from 1970-01-01T00:00Z with floor
 /// division, also before 1970) within [begin, end). Meta: water_level_prediction, metre, datum msl.
 std::expected<TimeSeries, PredictionError>
-predict(const ReferenceView& station, TimeRange range, Interval step, const PredictionLimits& limits = {}, std::stop_token stop = {});
+predict(const ReferenceView& station, TimeRange range, Interval step, const PredictionLimits& limits = {}, StopToken stop = {});
 
 std::expected<Length, PredictionError> height_at(const ReferenceView& station, Time t);
 
@@ -519,9 +519,8 @@ predict(const ReferenceView& station, TimeRange range, Interval step, NodalMode 
 }
 ```
 
-> **Open for H3:** `std::stop_token` here and in §4 is ruled out by CD §1.1 (Apple libc++ ships it
-> only as experimental), and `io::StopToken` sits above core. H3 chooses core's stop token, for
-> example by moving `StopToken` into core as `Cancelled` was.
+`StopToken` here and in §4 is `core::StopToken` (`stop_token.hpp`), the predicate wrapper io's
+readers poll too (io names it `io::StopToken`); CD §1.1 rules `std::stop_token` out.
 
 ### 3.1 Algorithm
 
@@ -574,7 +573,7 @@ struct ExtremaOptions {
 };
 /// Heights above MSL (datum msl).
 std::expected<Events, PredictionError>
-extremes(const ReferenceView& station, TimeRange range, const ExtremaOptions& o = {}, const PredictionLimits& l = {}, std::stop_token stop = {});
+extremes(const ReferenceView& station, TimeRange range, const ExtremaOptions& o = {}, const PredictionLimits& l = {}, StopToken stop = {});
 }
 ```
 
@@ -617,7 +616,7 @@ struct SubordinateEvents { VerticalDatum datum; std::vector<SubordinateEvent> ev
 
 std::expected<SubordinateEvents, PredictionError>
 subordinate_extremes(const SubordinateView& station, TimeRange range, const ExtremaOptions& o = {},
-                     const PredictionLimits& l = {}, std::stop_token stop = {});
+                     const PredictionLimits& l = {}, StopToken stop = {});
 }
 ```
 
@@ -641,7 +640,7 @@ Gulf reference.
 ```cpp
 std::expected<TimeSeries, PredictionError>
 subordinate_predict(const SubordinateView& station, TimeRange range, Interval step,
-                    const PredictionLimits& l = {}, std::stop_token stop = {});
+                    const PredictionLimits& l = {}, StopToken stop = {});
 // meta: water_level_prediction, metre, datum = offsets.datum, label suffix " (interpolated)"
 ```
 
@@ -749,8 +748,8 @@ std::expected<void, Error> write_harmonics(const std::filesystem::path& p, const
 }
 ```
 
-`StopToken` is `io::StopToken` (`read_limits.hpp`), not `std::stop_token`, which CD §1.1 rules
-out. Bytes are `std::span<const std::byte>` throughout. They are reinterpreted as `char` only at the
+`StopToken` is core's (`mov/core/stop_token.hpp`, `io::StopToken` by a using-declaration), not
+`std::stop_token`, which CD §1.1 rules out. Bytes are `std::span<const std::byte>` throughout. They are reinterpreted as `char` only at the
 nlohmann call. `std::basic_string<std::byte>` is not used, because the standard provides no
 `char_traits<std::byte>`.
 

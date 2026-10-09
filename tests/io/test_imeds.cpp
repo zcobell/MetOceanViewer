@@ -28,6 +28,7 @@
 #include "mov/core/station_table.hpp"
 #include "mov/core/units.hpp"
 #include "mov/io/imeds.hpp"
+#include "mov/test/env.hpp"
 #include "mov/test/fixture.hpp"
 #include "mov/test/scratch_dir.hpp"
 #include "table_helpers.hpp"
@@ -72,28 +73,10 @@ std::size_t rows_of(const core::StationTable& t, std::size_t i) {
   return t.times(core::StationIndex{i}).size();
 }
 
-// The value of an environment variable, if set. std::getenv is C4996 with
-// MSVC, which the warning level turns into an error.
-std::optional<std::string> get_env(const char* name) {
-#ifdef _WIN32
-  char* buffer = nullptr;
-  std::size_t size = 0;
-  if (_dupenv_s(&buffer, &size, name) != 0 or buffer == nullptr) {
-    return std::nullopt;
-  }
-  std::string value{buffer};
-  std::free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc)
-  return value;
-#else
-  const char* value = std::getenv(name);  // NOLINT(concurrency-mt-unsafe)
-  return value != nullptr ? std::optional<std::string>{value} : std::nullopt;
-#endif
-}
-
 // Sets TZ for the lifetime of the object and restores it afterwards.
 class ScopedTimeZone {
  public:
-  explicit ScopedTimeZone(const char* zone) : previous_{get_env("TZ")} {
+  explicit ScopedTimeZone(const char* zone) : previous_{mov::test::env("TZ")} {
     set(zone);
   }
   ScopedTimeZone(const ScopedTimeZone&) = delete;

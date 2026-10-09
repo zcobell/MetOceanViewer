@@ -3,9 +3,9 @@
 
 #pragma once
 
-// The retry rules of a fetch (docs/providers-design.md §5.3). H0 holds the
-// transport part; P6 adds the HTTP statuses, Retry-After, backoff and the
-// origin policies.
+// The retry rules of a fetch (docs/providers-design.md §5.3): so far the
+// transport part; the HTTP statuses, Retry-After, backoff and the origin
+// policies of that section join it.
 
 #include <cstdint>
 
@@ -14,7 +14,7 @@ namespace mov::fetch {
 /// How an exchange failed below HTTP. The Qt transport maps its network
 /// errors onto these; nothing in fetch sees Qt.
 enum class TransportErrc : std::uint8_t {
-  inactivity_timeout,  ///< no byte for ExchangeLimits::inactivity
+  inactivity_timeout,  ///< no byte for too long (§5.3, exchange limits)
   too_slow,            ///< under the throughput floor
   connection_refused,
   connection_closed,  ///< closed before the response was complete

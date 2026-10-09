@@ -5,15 +5,15 @@
 #
 # cmake/CheckThirdPartyIncludes.cmake must report nlohmann/json outside
 # io/json/ (a public io header, another layer) and zlib outside io/gzip.cpp
-# (another io source, another layer), must not report the allowed sources or
-# a commented-out include, must accept the clean tree and must fail on a
-# missing directory.
+# (another io source, another layer, through #include_next), must not
+# report the allowed sources or a commented-out include, must accept the
+# clean tree and must fail on a missing directory.
 
 set(scanner "${MOV_REPO}/cmake/CheckThirdPartyIncludes.cmake")
 
 function(run_scanner root out_result out_output)
     execute_process(
-        COMMAND "${CMAKE_COMMAND}" "-DMOV_SOURCE_ROOT=${root}" -P "${scanner}"
+        COMMAND "${CMAKE_COMMAND}" "-DMOV_REPO=${root}" -P "${scanner}"
         RESULT_VARIABLE result
         OUTPUT_VARIABLE output
         ERROR_VARIABLE output
@@ -24,16 +24,17 @@ endfunction()
 
 set(failures "")
 
-run_scanner("${CMAKE_CURRENT_LIST_DIR}/src" result output)
+run_scanner("${CMAKE_CURRENT_LIST_DIR}" result output)
 if(result EQUAL 0)
     list(APPEND failures "src/ with misplaced includes was accepted")
 endif()
 foreach(
     reported
-    "io/include/mov/io/series_json.hpp: [nlohmann_json]"
-    "io/json/zlib_elsewhere.cpp: [zlib]"
-    "providers/catalog.cpp: [nlohmann_json] #include <nlohmann/json.hpp>"
-    "providers/catalog.cpp: [zlib]"
+    "src/io/include/mov/io/series_json.hpp: [nlohmann_json]"
+    "src/io/json/zlib_elsewhere.cpp: [zlib]"
+    "src/providers/catalog.cpp: [nlohmann_json] #include <nlohmann/json.hpp>"
+    "src/providers/catalog.cpp: [zlib]"
+    "src/providers/next.cpp: [zlib] #include_next <zlib.h>"
 )
     string(FIND "${output}" "${reported}" position)
     if(position EQUAL -1)

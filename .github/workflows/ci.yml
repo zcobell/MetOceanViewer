@@ -51,9 +51,10 @@ jobs:
             qt-arch: win64_msvc2022_64
     env:
       # 'true': install Qt and configure with MOV_ENABLE_QT=ON, which adds the
-      # Qt Quick app (src/ui), its GUI test and the vcpkg feature "gui"
-      # (MapLibre Native Qt). The Qt-free path (core, io) stays covered by the
-      # sanitizer, fuzz and coverage jobs.
+      # providers (src/providers), the Qt Quick app (src/ui), their Qt and GUI
+      # tests and the vcpkg feature "gui" (MapLibre Native Qt). The Qt-free
+      # path (core, io, fetch) stays covered by the sanitizer, fuzz and
+      # coverage jobs.
       BUILD_QT: 'true'
     defaults:
       run:
@@ -153,15 +154,12 @@ jobs:
       # Label qt (offscreen, no GL: the maplibre plugin loads, app identity)
       # runs everywhere. Label gui needs OpenGL: on Linux it runs under
       # xvfb-run with Mesa (tests/CMakeLists.txt sets the launcher); the
-      # macOS and Windows jobs build it but do not run it yet.
+      # ci-macos and ci-windows test presets exclude it, with live. Not on
+      # the command line: CTest ANDs a --label-exclude with the preset's, so
+      # a test would be skipped only when it matched both.
       - name: Test
         id: test
-        run: |
-          if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            ctest --preset ${{ matrix.preset }}
-          else
-            ctest --preset ${{ matrix.preset }} --label-exclude gui
-          fi
+        run: ctest --preset ${{ matrix.preset }}
 
       # Failed tests as one annotation, readable through the public API.
       - name: Report failed tests

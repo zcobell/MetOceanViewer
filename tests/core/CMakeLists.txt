@@ -15,6 +15,7 @@ mov_add_test(
         test_station.cpp
         test_station_table.cpp
         test_vector_series.cpp
+        test_stop_token.cpp
     CONSTEXPR_SOURCES
         test_version_constexpr.cpp
         test_numeric_constexpr.cpp
