@@ -191,10 +191,14 @@ std::expected<bool, Error> has_names(const nc::File& file) {
 }
 
 detail::StationVariables station_variables(const nc::DimInfo& dim, bool names) {
+  // Named constants, not literals in the initializer: MSVC 19.44 rejects a
+  // consteval NcNameRef constructor called inside a designated initializer.
+  constexpr nc::NcNameRef x{"x"};
+  constexpr nc::NcNameRef y{"y"};
   return {
       .dim = dim,
-      .x = "x",
-      .y = "y",
+      .x = x,
+      .y = y,
       .names = names
                    ? std::optional<nc::NcNameRef>{nc::NcNameRef{"station_name"}}
                    : std::nullopt,

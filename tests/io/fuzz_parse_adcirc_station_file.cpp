@@ -4,8 +4,8 @@
 // libFuzzer target: parse_adcirc_station_file (EPSG:4326, which needs no
 // projection database) must never crash, and an accepted list
 //  - has exactly as many stations as the count on the first non-blank line;
-//  - numbers its stations 0, 1, 2, ... and names each one (the default name
-//    when the line has none);
+//  - numbers its stations 0, 1, 2, ... (a line without a name leaves the name
+//    empty: only the station netCDF writer substitutes one);
 //  - keeps its positions as the file wrote them (WGS84 Locations);
 //  - and warns only about names it repaired, never more times than stations.
 // A rejected text reports a ParseError or FormatError within the text.
@@ -81,7 +81,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   }
   for (std::size_t i = 0; i < stations.size(); ++i) {
     if (stations[i].id.view() != std::to_string(i) or
-        stations[i].name.view().empty() or stations[i].native.has_value()) {
+        stations[i].native.has_value()) {
       fail();
     }
   }

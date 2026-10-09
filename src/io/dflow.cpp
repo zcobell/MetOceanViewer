@@ -159,9 +159,13 @@ std::expected<Structure, Error> structure_of(const nc::File& file) {
 }
 
 detail::StationVariables station_variables(const Structure& structure) {
+  // Named constants, not literals in the initializer: MSVC 19.44 rejects a
+  // consteval NcNameRef constructor called inside a designated initializer.
+  constexpr nc::NcNameRef x{"station_x_coordinate"};
+  constexpr nc::NcNameRef y{"station_y_coordinate"};
   return {.dim = structure.stations_dim,
-          .x = "station_x_coordinate",
-          .y = "station_y_coordinate",
+          .x = x,
+          .y = y,
           .names = nc::NcNameRef{"station_name"},
           .time_dim = structure.time_dim.id,
           .source = core::DataSource::dflowfm};
