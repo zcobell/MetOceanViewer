@@ -1,8 +1,9 @@
 # Provider API reference (Phase 3)
 
 Status: **verified reference**, researched 2026-10-06 (all "accessed" dates below are
-2026-10-06; live requests were made against the real services that day, so the
-request/response examples are real). Legacy references are to commit `e5a4e0af`
+2026-10-06 unless marked otherwise; live requests were made against the real services that
+day, so the request/response examples are real). **Corrections of 2026-10-09** (re-checked
+for `docs/providers-design.md` §1) are marked "Corrected 2026-10-09" where they apply. Legacy references are to commit `e5a4e0af`
 (v4.5.1). Recorded samples live in `docs/provider-apis/` (every file < 6 KB) and are
 named in each section.
 
@@ -19,7 +20,7 @@ Contents: [1 USGS](#1-usgs-water-data-apis--highest-priority) |
 
 | Item | Status | Source |
 |---|---|---|
-| `waterservices.usgs.gov` (all of it: `iv`, `dv`, `site`, `stat`, ...) | **Scheduled for decommission 22 Feb 2027.** Intentional outages on 27 Jan 2027 and 16 Feb 2027; USGS also adds deliberate delays to legacy requests beforehand. | dataRetrieval issue #934 (quotes the USGS notice); USGS blog "WaterServices APIs will be decommissioned early 2027" |
+| `waterservices.usgs.gov` (all of it: `iv`, `dv`, `site`, `stat`, ...) | **Scheduled for decommission 22 Feb 2027.** Intentional outages on 27 Jan 2027 and 16 Feb 2027; USGS also adds deliberate delays to legacy requests beforehand. | dataRetrieval issue #934 (quotes the USGS notice); USGS blog "WaterServices APIs will be decommissioned early 2027". Corrected 2026-10-09: the official post (last updated 2026-10-02) says "the first quarter of 2027" and "we will not begin any intentional degradation of these services before August 2026"; it gives no exact outage dates (https://waterdata.usgs.gov/blog/api-waterservices-decom/). |
 | `nwis.waterdata.usgs.gov/.../uv` (the page v4 uses for "historic") | Listed in **NWISWeb Decommission Campaign 3**, running **Nov 2026 through Feb 2027**; after it "there will no longer be any access to legacy NWISWeb pages". RDB/tabular output is not being carried over. | USGS blog "NWISWeb Decommission Campaign 3" and "Campaign 2" |
 | Replacement | **USGS Water Data APIs**, OGC API - Features, `https://api.waterdata.usgs.gov/ogcapi/v1/` (V1 released; version header observed `api-version: 1.9.8`) | `https://api.waterdata.usgs.gov/docs/ogcapi/` |
 | Other retirements (not used by v4) | gwlevels API: errors since 2026-06-01. SensorThings API: errors since 2026-02-01. "Observations API" on labs.waterdata.usgs.gov: decommissioned **2026-10-19**. | USGS blog "api-decom-fall-2025", "api-observations-decom" |
@@ -49,6 +50,8 @@ Sources (accessed 2026-10-06):
   `/collections/{id}/schema?f=json`.
 - Output (`f=`): `json` (GeoJSON `FeatureCollection`, default), `jsonld`, `html`, `csv`.
   CSV has columns `x,y,<properties...>` (lon, lat first) and is the most compact option.
+  **Corrected 2026-10-09: CSV responses carry no `next` link** (none in the body, no `Link`
+  header), so any request that may need a second page must use `f=json`.
   Content type for JSON is `application/json; charset=utf-8` with
   `content-crs: <http://www.opengis.net/def/crs/OGC/1.3/CRS84>`; all coordinates are
   lon/lat WGS84 (EPSG:4326, x = longitude).
@@ -170,11 +173,11 @@ Query semantics (all verified):
   envelope for `continuous` must be <= 1100 days** (error
   `"The requested time envelope is too large, the query must be limited to 1100 day(s) or less for this collection."`,
   `usgs_error_time_envelope.json`). The migration guide states "three years". So v5 must
-  chunk long requests into <= ~1000-day windows (and `daily` has no tested cap; probe
-  before assuming).
+  chunk long requests into <= ~1000-day windows (`daily`: corrected 2026-10-09, a 36-year
+  request (1990-2026, 13,150 items) succeeded on one page; no envelope cap was hit).
 - Real-world size: 1 month of 5-minute discharge = 8,640 items in one page; 50,000
   items of full GeoJSON with geometry measured **35.9 MB**. Use `properties=` +
-  `skipGeometry=true` or `f=csv`, and stream-parse.
+  `skipGeometry=true` (not `f=csv`, which cannot page; see 1.2), and stream-parse.
 - **Pagination**: cursor based. Follow `links[rel=next].href` verbatim until no `next`
   link exists (that is the documented end condition). Do not construct cursors. Keep
   `limit` constant between pages. `numberMatched` is generally absent for time series
@@ -225,6 +228,13 @@ Two usable shapes:
    (`Discontinued`), `parent_time_series_id`, `data_gap_interval`.
    Join with (1) for coordinates. `end` close to now means "active"; this replaces the
    v4 hard-coded 10,503-row `usgs_stations.csv` (which had no validity dates).
+
+Corrected 2026-10-09: `combined-metadata` joins (1) and (2) in one collection: geometry,
+`id` (the 32-hex time series id), `monitoring_location_id`, `monitoring_location_name`,
+`parameter_code`, `parameter_name`, `statistic_id`, `computation_identifier`, `begin`,
+`end`, `primary`, `unit_of_measure`, `time_zone_abbreviation`, `uses_daylight_savings`.
+`properties=` there rejects `time_series_id` (select `id`). The CSV examples above cannot
+page (1.2); use `f=json` with `properties=`.
 
 Recommendation: the `tools/` station-list builder (plan §2.7) should run both queries
 (paged by `limit=50000`, key in header), keep only series v4 offers (discharge `00060`,
@@ -302,7 +312,10 @@ request returned a "31 days" error):
 | Product / interval | Max span |
 |---|---|
 | 1-minute data | 4 days |
-| 6-minute (water_level, met products, predictions at 6 min) | 31 days (docs say "1 month") |
+| 6-minute (water_level, met products) | 31 days (docs say "1 month") |
+| predictions, any interval but `hilo` (corrected 2026-10-09; was listed as 31 days at 6 minutes) | 1 year (docs; 6-minute predictions over 2 months succeeded live) |
+| predictions `hilo` (corrected 2026-10-09) | 10 years (docs; 6 years succeeded live) |
+| daily max/min (corrected 2026-10-09) | 10 years |
 | hourly (`hourly_height`, predictions `interval=h`) | 1 year |
 | `high_low` | 1 year |
 | `daily_mean` | 10 years |
@@ -367,6 +380,11 @@ unparsable values via `toDouble(&ok)`); keep that as "absent sample".
 
 ### 2.3 Metadata API (station list)
 
+- Corrected 2026-10-09: `stations.json?type=waterlevels&expand=details,sensors` returns,
+  in one 1.3 MB response, `details.established` / `details.removed` (validity) and each
+  station's sensors (`name`, `status`, `sensorID`). `expand=datums` does **not** expand
+  datums in the list (only the `self` link), and `expand=products` gives website links,
+  not datagetter product names. `type=tidepredictions` lists 3,502 stations.
 - All stations by capability: `GET .../mdapi/prod/webapi/stations.json?type=waterlevels`
   (302 stations on 2026-10-06), `type=met` (315), plus `tidepredictions`, `currents`,
   `harcon`, `benchmarks`. Station objects: `id`, `name`, `lat`, `lng`, `state`,
@@ -425,7 +443,7 @@ the site has no machine-readable terms; keep requests sequential and cache.
 | Historical standard met, one file per station-year | `https://www.ndbc.noaa.gov/data/historical/stdmet/{id}h{YYYY}.txt.gz` (e.g. `42040h2019.txt.gz`) | gzip; **404 for years that do not exist**; the current year's file does **not** exist (`42019h2026` is 404; the newest is last complete year) |
 | Same via CGI wrapper (what v4 uses) | `https://www.ndbc.noaa.gov/view_text_file.php?filename=42040h2019.txt.gz&dir=data/historical/stdmet/` | still works (200 `text/plain`, decompressed). **For a missing year it returns HTTP 200 with body `Unable to access data file`**, which v4 hid with `d.length() > 4`. Prefer the direct `.gz` file and treat 404 as "year absent" |
 | Real-time, last 45 days, newest first | `https://www.ndbc.noaa.gov/data/realtime2/{ID}.txt` | station ids are upper-case here (e.g. `32ST0.txt`); 404 if absent (`42040` and `42019` returned 404 today; not all stations have one). Files `.ocean`, `.srad`, `.spec` etc. are the other feeds |
-| Monthly (current-year gap fill) | `https://www.ndbc.noaa.gov/data/stdmet/{Mon}/{id}.txt.gz` directories exist (`.../stdmet/Sep/`) | the index lists per-station monthly files; the file name pattern in the listing must be checked at implementation time (a direct `Sep/42019.txt.gz` request was 404) |
+| Monthly (current-year gap fill) | Corrected 2026-10-09, two patterns: finalized months `https://www.ndbc.noaa.gov/data/stdmet/{Mon}/{id}{m}{yyyy}.txt.gz` (lower-case id, `m` the month digit: `Jan/4100212026.txt.gz`, seen Jan-Jul 2026); the latest month not yet finalized `.../stdmet/{Mon}/{id}.txt` (uncompressed, lower-case id: `Aug/41002.txt`, 2-line header with realtime units `nmi`, missing values 9-filled, not `MM`) | `Sep/` was empty on 2026-10-09 (covered by `realtime2`); `Oct/`-`Dec/` were empty (last year's months are in the yearly file). The month code for October-December (believed `a`/`b`/`c`) is unverified. Files seen are single-member gzip, compression ratio 4.5-6.2. |
 | Station metadata | `https://www.ndbc.noaa.gov/activestations.xml` | `<stations created=... count="1354"><station id lat lon elev name owner pgm type met currents waterquality dart/>` (`ndbc_activestations_head.xml`); active stations only, includes `met="y"` flag (905 stations) |
 
 Gap in v4: because v4 only builds `h{year}` URLs, the **current year (and the last
@@ -700,6 +718,9 @@ rate-limit headers, and a release with `tag_name` lacking `v`.
    `Last-Modified` of the CRMS bulk zip within 14 days, NDBC header tokens unchanged).
 
 ## 8. Open questions for the owner
+
+Status 2026-10-09: questions 1, 2, 3, 6, 7 and 8 are answered by plan §6 decisions 4,
+5/35, 6, 8, 31 and 10; 4 and 5 by decision 7 (CRMS removed).
 
 1. **v4 hotfix for USGS?** v4.5.1 stops getting data when `waterservices` is
    decommissioned (22 Feb 2027, with outages 27 Jan and 16 Feb). Do we ship a v4.5.2

@@ -591,6 +591,26 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     project. The app reads any file in the format. Predictions are validated
     against NOAA CO-OPS. Research: `docs/research/tides-global-harmonics.md`.
 
+### Phase 3 provider decisions (2026-10-09; see `docs/providers-design.md`)
+
+32. **NGVD29 at CO-OPS stations: dropped.** v4 offered it from VDatum offsets in its
+    embedded station CSV, applied client-side (`--vdatum`). The CO-OPS data API does
+    not accept NGVD29, so v5 offers exactly the datums CO-OPS serves for the station
+    (its `datums.json` names that the data API accepts) and shifts nothing client-side.
+33. **USGS map layer:** a site is on the map when it has an instantaneous (`00011`)
+    series of `00060` discharge, `00065` gage height, `62620` or `62619` estuary/ocean
+    elevation. Ended series are included with their end date. Every other parameter of
+    a site is offered once the site is selected.
+34. **USGS daily values:** a daily value belongs to the site's local calendar day, not
+    to an instant. In memory it is a `DailySeries` (days, samples, metadata, statistic),
+    not a `TimeSeries`. Station netCDF stores it with a `time_basis` attribute and
+    `cell_methods` (a minor version bump, specified in `docs/station-netcdf.md`). CSV
+    writes them in a `date` column (`YYYY-MM-DD`) in place of decision 27's `time_utc`,
+    which instantaneous files keep. IMEDS refuses daily data.
+35. **USGS API key storage** (amends decision 5): QtKeychain wherever a backend exists.
+    Where none does (Linux without a Secret Service), the key is stored in plain text
+    in the app's local data directory, as v4 did.
+
 ### Open items from Phase 2 (owner; undecided, collected 2026-10-09)
 
 What the Phase 2 work packages left for the owner. None is decided; ask before
