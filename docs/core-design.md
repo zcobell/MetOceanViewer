@@ -32,7 +32,7 @@ Bug tags: `B#` = plan §1.2, `N#` = LF §14, `A#` = LF §13 ambiguity, `D#` = pl
 | C11 | Threading | **No mutex in io.** io's netCDF functions are documented as not thread-safe. The **caller serializes**: providers and app own one serial queue (`QThreadPool` with `maxThreadCount(1)` plus `QtConcurrent::run(&pool, …)`). Every `nc_*` call goes through `detail::nc_call`, which asserts against concurrent or re-entrant entry in debug builds. Reads use bounded slabs and check a `std::stop_token` between slabs. |
 | C12 | Sizes and names | Every count is computed with `checked_product`. `ReadLimits` (elements, attribute bytes, text bytes) is enforced, and exceeding it gives `too_large`. Selection is required (`StationSelection`), never defaulted to all. Every netCDF name parameter is an `NcNameRef` (non-empty, NUL-terminated, at most `NC_MAX_NAME` bytes, no embedded NUL; literals are checked `consteval`). |
 | C13 | Time arithmetic | Every file time goes through `checked_time` (double and int64 overloads). It rejects non-finite values, offsets beyond 2^53 ms and overflow. `CfTimeUnits` stores an integer unit in milliseconds. |
-| C14 | Ids and names | ADCIRC and DFlow ids are the 0-based index. The default name is `"Station <id>"`. ADCIRC netCDF reads `station_name`. Legacy sources cut names at the first NUL, then apply `simplified()`. v5 CF files keep names exactly; an embedded NUL there is `bad_encoding`. Duplicate ids in lenient sources (IMEDS, legacy) get `#2`, `#3` suffixes plus a warning. |
+| C14 | Ids and names | ADCIRC and DFlow ids are the 0-based index. A station without a name keeps an empty one: no reader makes one up, a display shows the id, and only the station netCDF writer substitutes `"Station <id>"`. ADCIRC netCDF reads `station_name`. Legacy sources cut names at the first NUL, then apply `simplified()`. v5 CF files keep names exactly; an embedded NUL there is `bad_encoding`. Duplicate ids in lenient sources (IMEDS, legacy) get `#2`, `#3` suffixes plus a warning. |
 | C15 | Station netCDF | Reads v5 (L1/L2; L3 and scalar-station as SHOULD), foreign CF-DSG and legacy A/B. CRMS dialect C → `not_this_format`. Writes v5 only. The `<q>_status` variable is written iff at least one sample of that column is `Dry` (approved). `vertical_datum` is written whenever the meta datum is engaged (§9.2). |
 | C16 | Atomic writes | Unique temp file opened `NC_NOCLOBBER`/`O_EXCL` → body → close → fsync file → rename → fsync dir. A failed body calls `nc_abort` and removes the temp file. `File::create` is reachable only through `write_netcdf_atomic`. A fault can be injected at every stage. |
 | C17 | IMEDS write (D15) | Values `{:14.6f}`, coordinates `{:.6f}`, times floored to whole seconds, non-values omitted. |
@@ -952,7 +952,7 @@ Write format (D15), byte-pinned:
 ```cpp
 enum class AdcircKind : std::uint8_t { elevation /*61*/, velocity /*62*/, pressure /*71*/, wind /*72*/ };
 std::expected<Read<std::vector<FileStation>>, ParseError> parse_adcirc_station_file(std::string_view text, Epsg crs);
-// count, then "lon[,| ]lat[ name…]"; names simplified (N6); id = 0-based index; default "Station <id>"; projected (C5)
+// count, then "lon[,| ]lat[ name…]"; names simplified (N6); id = 0-based index; no name: empty; projected (C5)
 std::expected<Read<StationTable>, Error>
 parse_adcirc_ascii(std::string_view text, std::span<const FileStation> stations, AdcircKind kind, Time cold_start);
 std::expected<Read<StationTable>, Error> read_adcirc_ascii(const std::filesystem::path& output, const std::filesystem::path& station_file,

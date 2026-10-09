@@ -373,7 +373,7 @@ TEST_CASE("station names: junk after a NUL is dropped, bad UTF-8 replaced",
   const auto inspected = inspect_ok(dir / "his.nc");
   CHECK(inspected.value.stations[0].name.view() == "Alpha");
   CHECK(inspected.value.stations[1].name.view() == "ab\xEF\xBF\xBD");
-  CHECK(inspected.value.stations[2].name.view() == "Station 2");
+  CHECK(inspected.value.stations[2].name.empty());
   CHECK(warning_count(inspected.warnings, WarningCode::invalid_utf8_replaced) ==
         1);
 }
@@ -884,6 +884,11 @@ TEST_CASE("quantities: registry names, tokens, and the unknown",
   REQUIRE(generic != nullptr);
   CHECK(generic->standard_name() == "sea_water_salinity");
   CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 1);
+  // The subject is the unit text as the file has it, as in every reader.
+  const auto* unit_warning =
+      mov::test::find_warning(sal.warnings, WarningCode::unrecognized_unit);
+  REQUIRE(unit_warning != nullptr);
+  CHECK(unit_warning->subject == "ppt");
 
   const auto strange =
       read_ok(path, flat_request("sea-water temperature", everything(3)));

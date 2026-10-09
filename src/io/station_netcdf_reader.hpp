@@ -207,12 +207,6 @@ struct Position {
 [[nodiscard]] std::expected<Read<core::Epsg>, Error> crs_of_mapping(
     const nc::File& file, const nc::VarInfo& var);
 
-/// The unit of a `units` text (parse_unit), with `unrecognized_unit` when it
-/// is a spelling outside the unit table and the registry; nullopt without
-/// text.
-[[nodiscard]] Read<std::optional<core::Unit>> parsed_unit(
-    const std::optional<std::string>& text);
-
 /// `meta` with the datum of the `vertical_datum` text, when it has one it can
 /// carry; `datum_unknown` warnings otherwise.
 [[nodiscard]] Read<core::SeriesMeta> with_datum(

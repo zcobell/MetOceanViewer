@@ -302,8 +302,9 @@ struct GaugeStation {
 
 /// A station as files store it (C5, C14): its id and name, a WGS84 location
 /// projected at the read boundary, and the file's own point when its CRS is
-/// not WGS84. The name may be empty (the SN writer substitutes
-/// "Station <id>").
+/// not WGS84. The name is the file's and may be empty: no reader makes one
+/// up. A display shows the id instead; the station netCDF writer, whose
+/// format needs a name, writes "Station <id>".
 struct FileStation {
   StationKey id;
   StationText name;

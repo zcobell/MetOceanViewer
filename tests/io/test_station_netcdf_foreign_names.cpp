@@ -131,7 +131,7 @@ TEST_CASE("foreign: NC_STRING and integer station ids",
   spec.string_ids = true;
   auto read = read_spec(spec);
   CHECK(read.value.table.station(core::StationIndex{1}).id.view() == "B");
-  CHECK(read.value.table.station(core::StationIndex{1}).name.view() == "B");
+  CHECK(read.value.table.station(core::StationIndex{1}).name.empty());
 
   spec.string_ids = false;
   spec.integer_ids = true;
@@ -155,7 +155,7 @@ TEST_CASE("foreign: blanks around an id are trimmed, NUL padding is cut",
   CHECK(read.value.table.station(core::StationIndex{1}).id.view() == "B");
 }
 
-TEST_CASE("foreign: the platform name is the station name, the id otherwise",
+TEST_CASE("foreign: the platform name is the station name, else none",
           "[io][station_nc][foreign]") {
   const auto read = read_spec(with([](Cdf& f, int station, int /*sample*/) {
     const int wide = f.dim("name_width", 12);
@@ -166,7 +166,7 @@ TEST_CASE("foreign: the platform name is the station name, the id otherwise",
   CHECK(read.value.table.station(core::StationIndex{0}).name.view() ==
         "Alpha Pier");
   CHECK(read.value.table.station(core::StationIndex{2}).id.view() == "C");
-  CHECK(read.value.table.station(core::StationIndex{2}).name.view() == "C");
+  CHECK(read.value.table.station(core::StationIndex{2}).name.empty());
 }
 
 TEST_CASE("foreign: bytes that are not UTF-8 in an id are replaced",
@@ -196,8 +196,7 @@ TEST_CASE("foreign: duplicate ids are made unique, an empty one is the index",
   const auto substituted = read_spec(spec);
   CHECK(substituted.value.table.station(core::StationIndex{1}).id.view() ==
         "1");
-  CHECK(substituted.value.table.station(core::StationIndex{1}).name.view() ==
-        "1");
+  CHECK(substituted.value.table.station(core::StationIndex{1}).name.empty());
   const io::Warning s =
       warning_of(substituted.warnings, WarningCode::station_id_substituted);
   CHECK(s.count == 1);

@@ -645,6 +645,14 @@ TEST_CASE("quantities, units and datums of a data variable",
     CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit).subject ==
           "smoots");
   }
+  SECTION("the unit warning names the text as the file has it") {
+    // parse_unit collapses the blanks of the unit it keeps; the subject does
+    // not, so the user can find the text in the file.
+    f.edit().text("value", "units", "smoots  per  hour");
+    const auto read = f.read();
+    CHECK(warning_of(read.warnings, WarningCode::unrecognized_unit).subject ==
+          "smoots  per  hour");
+  }
   SECTION("generic quantities v5 wrote read back without a warning (F4)") {
     const auto read = f.read();
     CHECK(read.warnings.empty());

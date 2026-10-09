@@ -74,15 +74,10 @@ std::expected<Coordinate, Error> read_coordinate(const nc::File& file,
 }
 
 // One row of a char variable of names: cut at the first NUL, white space
-// simplified, bytes that are not UTF-8 replaced.
-CleanedText clean_name(std::string_view row, std::size_t station) {
-  auto cleaned = replace_invalid_utf8(simplified(cut_at_nul(row)));
-  if (cleaned.text.empty()) {
-    // Nothing readable: the default name (always valid text).
-    cleaned.text = core::StationText::make("Station " + std::to_string(station))
-                       .value_or(core::StationText{});
-  }
-  return cleaned;
+// simplified, bytes that are not UTF-8 replaced. Nothing left is an empty
+// name, which stays empty (core::FileStation).
+CleanedText clean_name(std::string_view row) {
+  return replace_invalid_utf8(simplified(cut_at_nul(row)));
 }
 
 FormatError position_error(const ToLocationError& why, std::size_t station) {
@@ -132,9 +127,8 @@ class StationMaker {
     if (not where) {
       return fail(position_error(where.error(), index));
     }
-    CleanedText name = clean_name(
-        names_ ? std::string_view{(*names_)[index]} : std::string_view{},
-        index);
+    CleanedText name = clean_name(names_ ? std::string_view{(*names_)[index]}
+                                         : std::string_view{});
     replaced_ += name.replaced ? 1U : 0U;
     auto key = core::StationKey::make(std::to_string(index));
     if (not key) {

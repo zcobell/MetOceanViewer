@@ -83,11 +83,12 @@ TEST_CASE("the legacy station file has three unnamed stations",
   CHECK(stations[0].location == where(29.987793, -90.0127));
   CHECK(stations[1].location == where(28.0, -90.5));
   CHECK(stations[2].location == where(25.0, -91.0));
-  // N6: ids are the 0-based index, the default name is "Station <id>" (v4
-  // said "Station_0" here and "Station 0" for netCDF).
+  // N6: ids are the 0-based index. A station without a name keeps an empty
+  // one (v4 made up "Station_0" here and "Station 0" for netCDF); only the
+  // station netCDF writer substitutes "Station <id>".
   for (std::size_t i = 0; i < stations.size(); ++i) {
     CHECK(stations[i].id.view() == std::to_string(i));
-    CHECK(stations[i].name.view() == "Station " + std::to_string(i));
+    CHECK(stations[i].name.empty());
     CHECK(stations[i].source == std::optional<DataSource>{DataSource::adcirc});
     CHECK(not(stations[i].native.has_value()));
   }
@@ -106,7 +107,7 @@ TEST_CASE("names are the remaining words joined by single spaces (N6)",
   CHECK(stations[1].name.view() == "Gulf Buoy");
   CHECK(stations[1].location == where(28.0, -90.5));
   // "lon , lat" with surrounding blanks, and no name.
-  CHECK(stations[2].name.view() == "Station 2");
+  CHECK(stations[2].name.empty());
   CHECK(stations[2].location == where(25.0, -91.0));
   // Tabs separate too.
   CHECK(stations[3].name.view() == "Tabbed Name");
@@ -146,11 +147,11 @@ TEST_CASE("a NUL ends the name (C14)", "[io][adcirc][stations]") {
   CHECK(stations[0].name.view() == "Name");
 }
 
-TEST_CASE("a name that is only a NUL and junk is the default name",
+TEST_CASE("a name that is only a NUL and junk is empty",
           "[io][adcirc][stations]") {
   const auto stations = parse_ok("1\n-90.0,29.0,\0junk\n"s);
   REQUIRE(stations.size() == 1);
-  CHECK(stations[0].name.view() == "Station 0");
+  CHECK(stations[0].name.empty());
 }
 
 // ---- line endings, BOM, blank lines ----
@@ -159,7 +160,7 @@ TEST_CASE("CRLF line endings are accepted", "[io][adcirc][stations]") {
   const auto stations = parse_ok(fixture_text("io/adcirc/stations_crlf.csv"));
   REQUIRE(stations.size() == 3);
   CHECK(stations[0].name.view() == "A");
-  CHECK(stations[1].name.view() == "Station 1");
+  CHECK(stations[1].name.empty());
   CHECK(stations[2].location == where(25.0, -91.0));
 }
 

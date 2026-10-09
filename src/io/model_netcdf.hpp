@@ -121,7 +121,7 @@ struct StationVariables {
 /// The stations `which` (indices into the station dimension, in the order
 /// wanted): id the 0-based index in decimal; name from the rows of `names`
 /// (cut at the first NUL, white space simplified, bytes that are not UTF-8
-/// replaced), or "Station <id>" if empty or the file has no names; position
+/// replaced), empty when nothing is left or the file has no names; position
 /// projected from `crs` to WGS84, with the native point kept when `crs` is
 /// not EPSG:4326. The coordinates are read with their own type converted to
 /// double only if no value changes (B4); 64-bit integers are refused.

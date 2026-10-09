@@ -97,24 +97,13 @@ bool is_family_unit(const core::Unit& unit) {
   return not std::holds_alternative<core::OtherUnit>(unit);
 }
 
-// The unit text is the rest of the line, so "S m-1" is one unit; "unknown" is
-// what the writer says for no unit.
+// The unit text is the rest of the line, so "S m-1" is one unit. "unknown" is
+// what the writer says for no unit: no unit, and no warning.
 Read<std::optional<core::Unit>> unit_of(std::string_view text) {
   if (core::ascii::equal_ignore_case(text, "unknown")) {
     return {.value = std::nullopt, .warnings = {}};
   }
-  std::optional<core::Unit> unit = core::parse_unit(text);
-  const auto* other = unit ? std::get_if<core::OtherUnit>(&*unit) : nullptr;
-  Read<std::optional<core::Unit>> read{.value = std::move(unit),
-                                       .warnings = {}};
-  append_if_counted(
-      read.warnings,
-      {.code = WarningCode::unrecognized_unit,
-       .subject = subject_of(text),
-       .count = other != nullptr and not core::is_canonical_other(*other)
-                    ? 1U
-                    : 0U});
-  return read;
+  return detail::parsed_unit(text);
 }
 
 // The third word is the datum, with the unit after it. A v4 header may leave

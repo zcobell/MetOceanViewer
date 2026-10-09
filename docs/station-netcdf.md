@@ -463,7 +463,7 @@ lookup, never by assuming a width). All legacy values become the v5 in-memory mo
 |---|---|---|---|---|
 | Detection | variable `time_station_0001` | same | `time_station_000001` | Order: `metoceanviewer_format` attribute (new) -> A/B -> C |
 | `station` dim | `numStations` | `numStations` (required) | `nstation` | station i = number NNNN minus 1 |
-| `station_id` | `stationId` char `(numStations, 200)` | not read | none (use NNNNNN) | trimmed (trailing NUL/space); missing => `station_name`; duplicates get `#2`, `#3` suffixes (legacy files are lenient, new files are not, §12.4) |
+| `station_id` | `stationId` char `(numStations, 200)` | not read | none (use NNNNNN) | trimmed (trailing NUL/space); missing => `station_name`, else the decimal index (`station_id_substituted` when the file has `stationId`); duplicates get `#2`, `#3` suffixes (legacy files are lenient, new files are not, §12.4) |
 | `station_name` | `stationName` char | `stationName` | attribute `station_name` on data/time var | row stride = actual `stationNameLen` [B7] (A hard-codes 200), trim NUL/space; B keeps legacy `simplified()` whitespace collapse (legacy-formats.md A8) |
 | `lat`, `lon` | `stationYCoordinate`, `stationXCoordinate` double `(numStations)` | same | none in file | in the file CRS; EPSG from attribute `HorizontalProjectionEPSG` on `stationXCoordinate` (A writes 4326), absent => 4326 + warning (A7); reprojected to 4326 by `core` |
 | `time` (per station) | `time_station_NNNN` int64 `(stationLength_NNNN)` seconds since `referenceDate` | same | same name, 6 digits, absolute epoch seconds (`reference` attribute ignored) | `ms = (ref_seconds + value) * 1000`; `referenceDate` sized from `nc_inq_attlen` (not 80 bytes) [B8], 19-char `yyyy-MM-dd hh:mm:ss`, UTC, absent => 1970-01-01; A truncates `ms/1000` toward zero, so sub-second parts are lost in legacy files |
@@ -480,7 +480,7 @@ A legacy file's origin (`LegacyOrigin`) records what the file has, not a label: 
 station numbers (four or six). The v4 writer and the v4 reader's files read the same way, so there is no A/B distinction in the reader. The `HorizontalProjectionEPSG` attribute
 is any signed integer type (byte, short, int, int64; v4 writes int); text, floating-point and unsigned types are `NcError type_mismatch`, never a code [B10]. A series whose times
 are not strictly increasing is put in order as in §12.5 (`times_reordered`, `duplicate_times_dropped`, `conflicting_duplicate_times`; decision 30.3). The warnings come in this
-order: `legacy_dialect`, `crs_assumed`, `tz_assumed_utc`, `epoch_used`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`, `crs_approximate`, `unrecognized_unit`,
+order: `legacy_dialect`, `crs_assumed`, `tz_assumed_utc`, `epoch_used`, `station_id_substituted`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`, `crs_approximate`, `unrecognized_unit`,
 `datum_unknown`, then those of the series.
 
 Dialect C has no coordinates (they came from the embedded CRMS station CSV, legacy-formats.md §8) and CRMS is removed (decision 7), so a
@@ -525,7 +525,7 @@ Warnings are returned alongside a successful result.
 | Exactly one variable has `cf_role="timeseries_id"`, values unique and non-empty | required (`NoStationId`, `DuplicateStationId{id}`) | two such variables: `AmbiguousStationId` naming both; duplicates uniquified with warning; an empty, NULL or masked id is the station's decimal index (`W-STATION-ID-SUBSTITUTED`); float ids are `BadEncoding` |
 | `lat`/`lon` identified by `units` string match (CF §4.1/§4.2) or `standard_name`, dim `(station)`, finite, in range | required (`BadCoordinates{station}`) | same |
 | `time` identified by units (CF §4.4); L1 = 1-D coordinate; L2 = 2-D `(station, obs)` | required | the best ranked variable with time units (neither a scalar nor a vector over the stations): the coordinate variable of its dimension (its name is its dimension's), then one named in a `coordinates` attribute, then one with `standard_name` `time` or `axis` T, then one with only time units; two of the same rank are `UnsupportedLayout` naming both |
-| `station_name` | required | a text variable over the station dimension with `standard_name="platform_name"`, else one called `station_name`, else the id; one that does not fit the station dimension is skipped (`W-SKIPPED-VARIABLE`) |
+| `station_name` | required | a text variable over the station dimension with `standard_name="platform_name"`, else one called `station_name`, else none (the names stay empty); one that does not fit the station dimension is skipped (`W-SKIPPED-VARIABLE`) |
 | `featureType`, `Conventions`, format attributes (§5) | required | `featureType` required, others optional |
 | >= 1 data variable: numeric, dims exactly `(station, T)` in that order (either order accepted from foreign files; a transposed variable is transposed on read) | required (`NoDataVariables`) | same; variables with other dims, and those whose masking attributes cannot be read (`W-SKIPPED-VARIABLE`, subject `<variable>:<attribute>`), are skipped; `NoDataVariables` when none is left |
 | every `ancillary_variables` target that exists has the same dims | required (`BadAncillary`) | same |

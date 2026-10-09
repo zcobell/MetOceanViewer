@@ -351,15 +351,15 @@ TEST_CASE("probe: a platform_name over the characters alone is not the names",
   };
   const MiniFile file{hooks};
   const auto read = file.read();
-  CHECK(read.value.table.station(core::StationIndex{0}).name.view() == "AAA");
-  CHECK(read.value.table.station(core::StationIndex{1}).name.view() == "BBB");
+  CHECK(read.value.table.station(core::StationIndex{0}).name.empty());
+  CHECK(read.value.table.station(core::StationIndex{1}).name.empty());
   CHECK(warning_of(read.warnings, WarningCode::skipped_variable).subject ==
         "platform");
 }
 
 TEST_CASE(
     "the station name is a platform_name, a variable called station_name, "
-    "or the id",
+    "or none",
     "[io][station_nc][foreign][review]") {
   const auto with_names = [](const char* name, bool platform) {
     MiniHooks hooks;
@@ -407,7 +407,8 @@ TEST_CASE(
     const MiniFile file{hooks};
     const auto read = file.read();
     CHECK(read.value.table.station(core::StationIndex{0}).id.view() == "AAA");
-    CHECK(read.value.table.station(core::StationIndex{0}).name.view() == "AAA");
+    // No other variable names the stations: the names stay empty.
+    CHECK(read.value.table.station(core::StationIndex{0}).name.empty());
     CHECK(count_of(read.warnings, WarningCode::skipped_variable) == 0);
   }
 }

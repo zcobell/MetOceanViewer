@@ -179,13 +179,6 @@ class StationFileReader {
     if (not key) {
       return fail(detail::to_format_error(key.error(), index));
     }
-    if (name.text.empty()) {
-      auto fallback = core::StationText::make("Station " + id);
-      if (not fallback) {
-        return fail(detail::to_format_error(fallback.error(), index));
-      }
-      name.text = *std::move(fallback);
-    }
     std::optional<core::NativePoint> native;
     if (projector_.crs() != core::Epsg::wgs84()) {
       // Finite by construction: double_at accepts no NaN or infinity.

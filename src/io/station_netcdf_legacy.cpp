@@ -263,32 +263,26 @@ std::expected<std::optional<Projector>, Error> projector_of(core::Epsg epsg) {
 
 // ---- the stations -----------------------------------------------------------
 
-struct Cleaned {
-  std::string text;
-  bool replaced;
-};
-
 /// A name: cut at the first NUL (the writer's junk follows it), white space
 /// collapsed (v4's `simplified()`, A8), bytes that are not UTF-8 replaced.
-Cleaned clean_name(std::string_view row) {
-  const std::string simple = simplified(cut_at_nul(row));
-  auto cleaned = replace_invalid_utf8(simple);
-  return {.text = std::string{cleaned.text.view()},
-          .replaced = cleaned.replaced};
+CleanedText clean_name(std::string_view row) {
+  return replace_invalid_utf8(simplified(cut_at_nul(row)));
 }
 
 /// An id: cut at the first NUL and trimmed.
-Cleaned clean_id(std::string_view row) {
-  const std::string_view trimmed_id = core::ascii::trim(cut_at_nul(row));
-  auto cleaned = replace_invalid_utf8(trimmed_id);
-  return {.text = std::string{cleaned.text.view()},
-          .replaced = cleaned.replaced};
+CleanedText clean_id(std::string_view row) {
+  return replace_invalid_utf8(core::ascii::trim(cut_at_nul(row)));
 }
 
+/// The ids and names of the stations. The id is the `stationId` row, else the
+/// name, else the decimal index; a name stays as the file has it, empty
+/// included.
 struct Names {
   std::vector<std::string> ids;
-  std::vector<std::string> names;
+  std::vector<core::StationText> names;
   std::size_t replaced{0};
+  /// Stations of a file with `stationId` whose row was empty.
+  std::size_t id_substituted{0};
 };
 
 std::expected<Names, Error> read_names(const nc::File& file, const Base& base,
@@ -309,16 +303,17 @@ std::expected<Names, Error> read_names(const nc::File& file, const Base& base,
   out.ids.reserve(name_rows.size());
   out.names.reserve(name_rows.size());
   for (std::size_t i = 0; i < name_rows.size(); ++i) {
-    const Cleaned name = clean_name(name_rows[i]);
-    Cleaned id =
-        base.id ? clean_id(id_rows[i]) : Cleaned{.text = "", .replaced = false};
+    CleanedText name = clean_name(name_rows[i]);
+    const CleanedText id = base.id ? clean_id(id_rows[i]) : CleanedText{};
     out.replaced += (name.replaced ? 1U : 0U) + (id.replaced ? 1U : 0U);
-    // The id is the stationId, else the name, else the decimal index.
-    if (id.text.empty()) {
-      id.text = name.text.empty() ? std::to_string(i) : name.text;
+    std::string id_text{id.text.view()};
+    if (id_text.empty()) {
+      id_text =
+          name.text.empty() ? std::to_string(i) : std::string{name.text.view()};
+      out.id_substituted += base.id ? 1U : 0U;
     }
-    out.names.push_back(name.text.empty() ? "Station " + id.text : name.text);
-    out.ids.push_back(std::move(id.text));
+    out.names.push_back(std::move(name.text));
+    out.ids.push_back(std::move(id_text));
   }
   return out;
 }
@@ -344,19 +339,20 @@ std::expected<Read<std::vector<core::FileStation>>, Error> stations_of(
       return std::unexpected{std::move(position).error()};
     }
     auto key = core::StationKey::make(unique.ids[i]);
-    auto text = core::StationText::make(names.names[i]);
     if (not key) {
       return fail(to_format_error(key.error(), i));
     }
-    if (not text) {
-      return fail(to_format_error(text.error(), i));
-    }
     out.value.push_back({.id = *std::move(key),
-                         .name = *std::move(text),
+                         .name = std::move(names.names[i]),
                          .location = position->location,
                          .native = position->native,
                          .source = std::nullopt});
   }
+  append_if_counted(
+      out.warnings,
+      {.code = WarningCode::station_id_substituted,
+       .subject = base.id ? subject_of(base.id->name.view()) : std::string{},
+       .count = names.id_substituted});
   append_if_counted(out.warnings, {.code = WarningCode::invalid_utf8_replaced,
                                    .subject = {},
                                    .count = names.replaced});

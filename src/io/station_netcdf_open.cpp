@@ -696,13 +696,12 @@ std::expected<core::QuantityId, Error> quantity_of(
   return *std::move(generic);
 }
 
-/// The unit of `units`: a registry quantity other than `difference` needs one
-/// that converts to its canonical unit (noncanonical_unit); an OtherUnit core
-/// does not know warns.
+/// The unit of `units` (parsed_unit): a registry quantity other than
+/// `difference` needs one that converts to its canonical unit
+/// (noncanonical_unit).
 std::expected<Read<std::optional<core::Unit>>, Error> unit_of(
     const core::QuantityId& q, const std::optional<std::string>& text) {
-  Read<std::optional<core::Unit>> out{
-      .value = text ? core::parse_unit(*text) : std::nullopt, .warnings = {}};
+  Read<std::optional<core::Unit>> out = parsed_unit(text);
   const auto* registry = std::get_if<core::Quantity>(&q);
   if (const auto canonical = registry != nullptr
                                  ? core::canonical_unit(*registry)
@@ -710,13 +709,6 @@ std::expected<Read<std::optional<core::Unit>>, Error> unit_of(
     if (not out.value or not core::conversion(*out.value, *canonical)) {
       return fail(format_error(FormatErrc::noncanonical_unit,
                                std::string{core::token(q)}));
-    }
-  }
-  if (out.value) {
-    const auto* other = std::get_if<core::OtherUnit>(&*out.value);
-    if (other != nullptr and not core::is_canonical_other(*other)) {
-      out.warnings.push_back({.code = WarningCode::unrecognized_unit,
-                              .subject = subject_of(other->symbol())});
     }
   }
   return out;

@@ -369,28 +369,20 @@ core::QuantityId quantity_of(std::string_view name,
   return core::GenericQuantity::value();
 }
 
-// The unit of the `units` attribute; absent, the registry quantity's own.
+// The unit of the `units` attribute (parsed_unit); absent, the registry
+// quantity's own.
 std::optional<core::Unit> unit_of(const std::optional<std::string>& units,
                                   const core::QuantityId& quantity,
-                                  std::string_view name,
                                   std::vector<Warning>& warnings) {
-  std::optional<core::Unit> unit;
-  if (units) {
-    unit = core::parse_unit(*units);
-  }
-  if (not unit) {
+  Read<std::optional<core::Unit>> unit = detail::parsed_unit(units);
+  if (not unit.value) {
     if (const auto* registry = std::get_if<core::Quantity>(&quantity)) {
       return core::canonical_unit(*registry);
     }
     return std::nullopt;
   }
-  if (const auto* other = std::get_if<core::OtherUnit>(&*unit);
-      other != nullptr and not core::is_canonical_other(*other)) {
-    warnings.push_back({.code = WarningCode::unrecognized_unit,
-                        .subject = std::string{name},
-                        .count = 1});
-  }
-  return unit;
+  append(warnings, std::move(unit.warnings));
+  return std::move(unit.value);
 }
 
 std::expected<Described, Error> describe_variable(const nc::File& file,
@@ -413,8 +405,7 @@ std::expected<Described, Error> describe_variable(const nc::File& file,
   core::QuantityId quantity = quantity_of(
       name, *standard ? std::string_view{**standard} : std::string_view{}, grid,
       out.warnings);
-  std::optional<core::Unit> unit =
-      unit_of(*units, quantity, name, out.warnings);
+  std::optional<core::Unit> unit = unit_of(*units, quantity, out.warnings);
   out.meta = core::SeriesMeta::make({.quantity = std::move(quantity),
                                      .label = *label and not(*label)->empty()
                                                   ? simplified(**label)

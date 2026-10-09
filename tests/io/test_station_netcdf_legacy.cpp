@@ -311,8 +311,35 @@ TEST_CASE("legacy: no name and no id gives the decimal index",
   spec.stations[1].id = "";
   const auto read = read_spec(spec);
   CHECK(read.value.table.station(core::StationIndex{1}).id.view() == "1");
-  CHECK(read.value.table.station(core::StationIndex{1}).name.view() ==
-        "Station 1");
+  // The name stays empty: only the station netCDF writer substitutes one.
+  CHECK(read.value.table.station(core::StationIndex{1}).name.empty());
+  const io::Warning w =
+      warning_of(read.warnings, WarningCode::station_id_substituted);
+  CHECK(w.subject == "stationId");
+  CHECK(w.count == 1);
+}
+
+TEST_CASE("legacy: an empty stationId is the name, and said so",
+          "[io][station_nc][legacy]") {
+  auto spec = three_stations();
+  spec.stations[0].id = "";
+  spec.stations[2].id = "";
+  const auto read = read_spec(spec);
+  const core::StationTable& t = read.value.table;
+  CHECK(t.station(core::StationIndex{0}).id.view() ==
+        t.station(core::StationIndex{0}).name.view());
+  CHECK(t.station(core::StationIndex{2}).id.view() ==
+        t.station(core::StationIndex{2}).name.view());
+  const io::Warning w =
+      warning_of(read.warnings, WarningCode::station_id_substituted);
+  CHECK(w.subject == "stationId");
+  CHECK(w.count == 2);
+
+  // Without a stationId variable the name is the id by the dialect's rule:
+  // nothing was substituted.
+  spec.write_station_id = false;
+  const auto bare = read_spec(spec);
+  CHECK(count_of(bare.warnings, WarningCode::station_id_substituted) == 0);
 }
 
 TEST_CASE("legacy: duplicate ids are made unique", "[io][station_nc][legacy]") {
@@ -893,6 +920,7 @@ TEST_CASE("legacy: the warnings come in the order SN 11 documents",
   spec.stations[1].name = "Gr\xe9";
   spec.stations[0].id = "X";
   spec.stations[1].id = "X";
+  spec.stations[2].id = "";
   spec.stations[0].units = "frobs";
   spec.stations[1].units = "frobs";
   spec.stations[2].units = "frobs";
@@ -909,6 +937,7 @@ TEST_CASE("legacy: the warnings come in the order SN 11 documents",
       WarningCode::crs_assumed,
       WarningCode::tz_assumed_utc,
       WarningCode::epoch_used,
+      WarningCode::station_id_substituted,
       WarningCode::invalid_utf8_replaced,
       WarningCode::duplicate_station_id_renamed,
       WarningCode::unrecognized_unit,

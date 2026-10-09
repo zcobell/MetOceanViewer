@@ -68,8 +68,8 @@ parse_adcirc_ascii_header(std::string_view text);
 /// and become WGS84 Locations here; a station in another CRS keeps its native
 /// point. The id of a station is its 0-based index in the file (the row order
 /// of the output); the name is the remaining words joined by single spaces (a
-/// NUL ends it; bytes that are not UTF-8 become U+FFFD with a warning), or
-/// "Station <id>" when there are none. `source` is `adcirc`.
+/// NUL ends it; bytes that are not UTF-8 become U+FFFD with a warning), empty
+/// when there are none. `source` is `adcirc`.
 ///
 /// Errors: `empty_input`; `bad_integer` / `out_of_range` for the count;
 /// `too_large` when the count is over `ctx.limits.max_elements`;

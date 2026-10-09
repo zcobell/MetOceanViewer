@@ -233,22 +233,6 @@ std::expected<Position, Error> place(double latitude, double longitude,
   return Position{.location = *where, .native = *native};
 }
 
-Read<std::optional<core::Unit>> parsed_unit(
-    const std::optional<std::string>& text) {
-  Read<std::optional<core::Unit>> out{.value = std::nullopt, .warnings = {}};
-  if (text) {
-    out.value = core::parse_unit(*text);
-  }
-  if (out.value) {
-    const auto* other = std::get_if<core::OtherUnit>(&*out.value);
-    if (other != nullptr and not core::is_canonical_other(*other)) {
-      out.warnings.push_back({.code = WarningCode::unrecognized_unit,
-                              .subject = subject_of(other->symbol())});
-    }
-  }
-  return out;
-}
-
 /// `meta` with the datum of `vertical_datum`, when it has one it can carry.
 Read<core::SeriesMeta> with_datum(core::SeriesMeta meta,
                                   const std::optional<std::string>& text,

@@ -55,7 +55,7 @@ struct AdcircNcCatalog {
   /// adcirc_variables(kind) names its data variables.
   AdcircKind kind;
   /// Every station, in file order: id the 0-based index, name from
-  /// `station_name` (or "Station <id>"), position projected to WGS84.
+  /// `station_name` (empty without one), position projected to WGS84.
   std::vector<core::FileStation> stations;
   /// The length of `time` (the unlimited dimension's current length).
   std::size_t times;
