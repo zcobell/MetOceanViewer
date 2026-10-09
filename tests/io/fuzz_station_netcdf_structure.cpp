@@ -30,7 +30,9 @@
 //    that fails on a good file, or reads it wrong, is as much a finding as one
 //    that crashes on a bad file). Input bytes that are all 1 (or all 5, which
 //    also makes the 2-D matrices transposed) after the template's byte spoil
-//    nothing.
+//    nothing. netCDF-C must take all of such a template: one it refuses in
+//    part (a type the classic formats lack) is the fuzzer's own bug, reported
+//    as that rather than as the readers disagreeing with the plan.
 
 #include <netcdf.h>
 #include <unistd.h>
@@ -727,7 +729,11 @@ class Builder {
       station_lengths_.push_back(good_length);
       const std::size_t len = dim("stationLength_" + suffix, good_length);
       if (keep()) {
-        Var& t = var("time_station_" + suffix, NC_INT64, {len}, Role::time);
+        // v4 wrote int64 seconds; the classic formats have no 64-bit integer,
+        // and the reader takes int seconds too (SN 11).
+        Var& t = var("time_station_" + suffix,
+                     plan_.cmode == NC_NETCDF4 ? NC_INT64 : NC_INT, {len},
+                     Role::time);
         if (in_.one_in(2)) {
           t.atts.push_back(
               text_att("referenceDate", text("1970-01-01 00:00:00")));
@@ -982,17 +988,18 @@ std::optional<std::size_t> elements_of(const Plan& plan, const Var& v) {
   return n;
 }
 
-void put_att(int ncid, int varid, const Att& a) {
+/// netCDF-C's status.
+int put_att(int ncid, int varid, const Att& a) {
   if (a.text) {
-    nc_put_att_text(ncid, varid, a.name.c_str(), a.value.size(),
-                    a.value.data());
-  } else if (a.type == NC_STRING) {
-    const char* s = "x";
-    nc_put_att_string(ncid, varid, a.name.c_str(), 1, &s);
-  } else {
-    nc_put_att_double(ncid, varid, a.name.c_str(), a.type, a.numbers.size(),
-                      a.numbers.data());
+    return nc_put_att_text(ncid, varid, a.name.c_str(), a.value.size(),
+                           a.value.data());
   }
+  if (a.type == NC_STRING) {
+    const char* s = "x";
+    return nc_put_att_string(ncid, varid, a.name.c_str(), 1, &s);
+  }
+  return nc_put_att_double(ncid, varid, a.name.c_str(), a.type,
+                           a.numbers.size(), a.numbers.data());
 }
 
 /// Data for a variable of `n` elements, shaped by its role.
@@ -1026,53 +1033,60 @@ std::vector<double> values_for(const Var& v, std::size_t n, Choices& in) {
   return out;
 }
 
-void put_data(int ncid, int varid, const Plan& plan, const Var& v,
-              Choices& in) {
+/// netCDF-C's status.
+int put_data(int ncid, int varid, const Plan& plan, const Var& v, Choices& in) {
   const auto n = elements_of(plan, v);
   if (not n or *n == 0) {
-    return;
+    return NC_NOERR;
   }
   if (v.type == NC_CHAR and v.exact_chars.size() == *n) {
-    nc_put_var_text(ncid, varid, v.exact_chars.data());
-  } else if (v.exact_numbers.size() == *n and v.type == NC_INT64) {
+    return nc_put_var_text(ncid, varid, v.exact_chars.data());
+  }
+  if (v.exact_numbers.size() == *n and v.type == NC_INT64) {
     const std::vector<long long> wide(v.exact_numbers.begin(),
                                       v.exact_numbers.end());
-    nc_put_var_longlong(ncid, varid, wide.data());
-  } else if (v.exact_numbers.size() == *n and v.type != NC_CHAR and
-             v.type != NC_STRING) {
-    nc_put_var_double(ncid, varid, v.exact_numbers.data());
-  } else if (v.type == NC_CHAR) {
+    return nc_put_var_longlong(ncid, varid, wide.data());
+  }
+  if (v.exact_numbers.size() == *n and v.type != NC_CHAR and
+      v.type != NC_STRING) {
+    return nc_put_var_double(ncid, varid, v.exact_numbers.data());
+  }
+  if (v.type == NC_CHAR) {
     std::string chars(*n, '\0');
     for (char& c : chars) {
       c = in.one_in(4) ? '\0' : static_cast<char>('A' + in.below(26));
     }
-    nc_put_var_text(ncid, varid, chars.data());
-  } else if (v.type == NC_STRING) {
+    return nc_put_var_text(ncid, varid, chars.data());
+  }
+  if (v.type == NC_STRING) {
     std::vector<std::string> owned(*n);
     std::vector<const char*> pointers(*n, nullptr);
     for (std::size_t i = 0; i < *n; ++i) {
       owned[i] = in.pick(texts);
       pointers[i] = in.one_in(5) ? nullptr : owned[i].c_str();
     }
-    nc_put_var_string(ncid, varid, pointers.data());
-  } else if (v.type == NC_INT64) {
-    const std::vector<double> d = values_for(v, *n, in);
+    return nc_put_var_string(ncid, varid, pointers.data());
+  }
+  const std::vector<double> d = values_for(v, *n, in);
+  if (v.type == NC_INT64) {
     std::vector<long long> wide;
     wide.reserve(d.size());
     for (const double x : d) {
       // (a double beyond the range of long long is undefined to convert)
       wide.push_back(x > -9e18 and x < 9e18 ? static_cast<long long>(x) : 0);
     }
-    nc_put_var_longlong(ncid, varid, wide.data());
-  } else {
-    const std::vector<double> d = values_for(v, *n, in);
-    nc_put_var_double(ncid, varid, d.data());
+    return nc_put_var_longlong(ncid, varid, wide.data());
   }
+  return nc_put_var_double(ncid, varid, d.data());
 }
 
 /// Writes `plan` to `path`; netCDF-C's refusals (a name used twice, a
-/// _FillValue of another type) leave that piece out.
-void write(const std::filesystem::path& path, const Plan& plan, Choices& in) {
+/// _FillValue of another type, a type the classic formats lack) leave that
+/// piece out. Returns whether the file has the plan's whole structure (every
+/// dimension, variable and attribute) and the exact data of an unspoiled
+/// template; the random data of the other variables may be out of their
+/// type's range, which does not count.
+bool write(const std::filesystem::path& path, const Plan& plan, Choices& in) {
   int ncid = -1;
   if (const int status =
           nc_create(path.c_str(), plan.cmode | NC_CLOBBER, &ncid);
@@ -1082,13 +1096,18 @@ void write(const std::filesystem::path& path, const Plan& plan, Choices& in) {
                  nc_strerror(status));
     fail();
   }
+  bool whole = true;
+  const auto took = [&whole](int status) {
+    whole = whole and status == NC_NOERR;
+    return status == NC_NOERR;
+  };
   std::vector<int> dim_ids(plan.dims.size(), -1);
   for (std::size_t i = 0; i < plan.dims.size(); ++i) {
-    nc_def_dim(ncid, plan.dims[i].name.c_str(), plan.dims[i].length,
-               &dim_ids[i]);
+    took(nc_def_dim(ncid, plan.dims[i].name.c_str(), plan.dims[i].length,
+                    &dim_ids[i]));
   }
   for (const Att& a : plan.global) {
-    put_att(ncid, NC_GLOBAL, a);
+    took(put_att(ncid, NC_GLOBAL, a));
   }
   std::vector<int> var_ids(plan.vars.size(), -1);
   for (std::size_t i = 0; i < plan.vars.size(); ++i) {
@@ -1098,8 +1117,9 @@ void write(const std::filesystem::path& path, const Plan& plan, Choices& in) {
     for (const std::size_t d : v.dims) {
       ids.push_back(dim_ids[d]);
     }
-    if (nc_def_var(ncid, v.name.c_str(), v.type, static_cast<int>(ids.size()),
-                   ids.data(), &var_ids[i]) != NC_NOERR) {
+    if (not took(nc_def_var(ncid, v.name.c_str(), v.type,
+                            static_cast<int>(ids.size()), ids.data(),
+                            &var_ids[i]))) {
       continue;
     }
     if (plan.cmode == NC_NETCDF4 and not v.dims.empty()) {
@@ -1112,17 +1132,23 @@ void write(const std::filesystem::path& path, const Plan& plan, Choices& in) {
       nc_def_var_chunking(ncid, var_ids[i], NC_CHUNKED, chunks.data());
     }
     for (const Att& a : v.atts) {
-      put_att(ncid, var_ids[i], a);
+      took(put_att(ncid, var_ids[i], a));
     }
   }
-  if (nc_enddef(ncid) == NC_NOERR) {
+  if (took(nc_enddef(ncid))) {
     for (std::size_t i = 0; i < plan.vars.size(); ++i) {
-      if (var_ids[i] >= 0) {
-        put_data(ncid, var_ids[i], plan, plan.vars[i], in);
+      if (var_ids[i] < 0) {
+        continue;
+      }
+      const Var& v = plan.vars[i];
+      const int status = put_data(ncid, var_ids[i], plan, v, in);
+      if (not v.exact_numbers.empty() or not v.exact_chars.empty()) {
+        took(status);
       }
     }
   }
   nc_close(ncid);
+  return whole;
 }
 
 // ---- the oracle
@@ -1347,7 +1373,13 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     }
   }
   const std::filesystem::path path = scratch_file();
-  write(path, plan, in);
+  if (not write(path, plan, in) and plan.expect) {
+    // The oracle holds for the file the template planned: an unspoiled
+    // template that netCDF-C refuses in part is the fuzzer's own bug, not a
+    // reader's.
+    std::println(stderr, "netCDF-C refused part of an unspoiled template");
+    fail();
+  }
 
   const io::ReadContext ctx = small_limits();
   std::optional<io::FileType> detected;

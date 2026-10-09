@@ -28,6 +28,7 @@
 #include "mov/core/station.hpp"
 #include "mov/io/detail/legacy_station_names.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/file_type.hpp"
 #include "mov/io/station_netcdf.hpp"
 #include "mov/io/warning.hpp"
 #include "mov/test/scratch_dir.hpp"
@@ -789,6 +790,38 @@ TEST_CASE("legacy: a CRMS file (dialect C) is not read",
   gen::make_crms_nc(path);
   CHECK(format_error_of(read_all(path)).code == FormatErrc::not_this_format);
   CHECK(format_error_of(io::inspect_station_netcdf(path, {})).code ==
+        FormatErrc::not_this_format);
+}
+
+// The structure fuzzer's legacy template in a classic file (its seed
+// legacy_classic_clean): netCDF-C refuses an int64 variable there, so the
+// template lost every time_station_N and the file is none of ours, as
+// detect_file and the reader agreed; the fuzzer expected a legacy file. A
+// classic legacy file has int (or double) seconds, and is read as one.
+TEST_CASE("legacy: a classic file with int seconds; none without its times",
+          "[io][station_nc][legacy][file_type][regression]") {
+  const ScratchDir dir;
+  gen::LegacyNc spec;
+  spec.cmode = 0;  // CDF-1
+  spec.time_type = gen::LegacyTime::int32;
+  spec.stations.push_back(st("A", "A", {0, 60}, {5.0, 6.0}));
+  spec.stations.push_back(st("B", "B", {0, 60}, {15.0, 16.0}));
+  const auto classic = dir / "classic.nc";
+  gen::make_legacy_nc(classic, spec);
+  CHECK(io::detect_file_type(classic) == io::FileType::legacy_station_netcdf);
+  const auto read = must_read(read_all(classic));
+  const core::StationTable& t = read.value.table;
+  REQUIRE(t.size() == 2);
+  CHECK(t.times(core::StationIndex{1})[1] == ms(60000));
+  CHECK(at(t, 1, 0, 1) == v(16.0));
+
+  // SN 12.1 recognizes a legacy file by time_station_0001.
+  spec.omit_time_of = 1;
+  const auto no_first_time = dir / "no_first_time.nc";
+  gen::make_legacy_nc(no_first_time, spec);
+  CHECK(io::detect_file_type(no_first_time) ==
+        io::FileType::unsupported_netcdf);
+  CHECK(format_error_of(read_all(no_first_time)).code ==
         FormatErrc::not_this_format);
 }
 
