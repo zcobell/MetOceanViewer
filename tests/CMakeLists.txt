@@ -30,8 +30,37 @@ add_subdirectory(support)
 #        and RESOURCE_LOCK xvfb keeps parallel ctest from racing xvfb-run's
 #        server-number pick. Jobs without a display exclude it with -LE gui.
 # On Windows, Qt's bin directory goes on the test's PATH.
+#
+# mov_add_test(<name> LIVE [QT] SOURCES ... LIBRARIES ...)
+#
+# A test of the real provider APIs (docs/providers-design.md §10.5): one
+# ctest test labelled `live` (with QT, a Qt executable as above, offscreen).
+# Every test preset excludes the label; the nightly live job runs
+# `ctest -L live` with MOV_LIVE_API=1. Each test case starts with
+# mov::test::require_live_api() (mov/test/live.hpp), so without the opt-in
+# it skips, and ctest reports the skip (Catch2's exit code 4).
 function(mov_add_test name)
-    cmake_parse_arguments(PARSE_ARGV 1 arg "QT;GUI" "" "SOURCES;CONSTEXPR_SOURCES;LIBRARIES")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "QT;GUI;LIVE" "" "SOURCES;CONSTEXPR_SOURCES;LIBRARIES")
+    if(arg_LIVE)
+        if(arg_GUI OR arg_CONSTEXPR_SOURCES)
+            message(FATAL_ERROR "mov_add_test(${name}): LIVE combines with QT only")
+        endif()
+        if(arg_QT)
+            _mov_add_qt_test_executable(${name} live "${arg_SOURCES}" "${arg_LIBRARIES}")
+        else()
+            add_executable(${name} ${arg_SOURCES})
+            target_link_libraries(
+                ${name}
+                PRIVATE ${arg_LIBRARIES} mov::test_support Catch2::Catch2WithMain mov::options mov::warnings
+            )
+            mov_enable_static_analysis(${name})
+            set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
+            add_test(NAME ${name} COMMAND ${name} --warn NoAssertions)
+            set_tests_properties(${name} PROPERTIES LABELS live)
+        endif()
+        set_tests_properties(${name} PROPERTIES SKIP_RETURN_CODE 4 TIMEOUT 300)
+        return()
+    endif()
     if(arg_QT OR arg_GUI)
         if(arg_QT AND arg_GUI)
             message(FATAL_ERROR "mov_add_test(${name}): QT and GUI are exclusive")
@@ -98,7 +127,7 @@ function(_mov_add_qt_test_executable name label sources libraries)
     set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
     add_test(NAME ${name} COMMAND ${name} --warn NoAssertions)
     set_tests_properties(${name} PROPERTIES LABELS ${label} TIMEOUT 120)
-    if(label STREQUAL "qt")
+    if(label STREQUAL "qt" OR label STREQUAL "live")
         set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT QT_QPA_PLATFORM=offscreen)
     else()
         set_tests_properties(${name} PROPERTIES RESOURCE_LOCK xvfb)
@@ -124,11 +153,14 @@ endfunction()
 
 add_subdirectory(core)
 add_subdirectory(io)
+add_subdirectory(fetch)
+add_subdirectory(live)
 if(MOV_ENABLE_QT)
+    add_subdirectory(providers)
     add_subdirectory(ui)
 endif()
 
-# core and io stay Qt-free at the source level too; cmake/Layering.cmake
+# core, io and fetch stay Qt-free at the source level too; cmake/Layering.cmake
 # guards the link level.
 mov_qt_free_source_dirs(qt_free_dirs)
 add_test(
@@ -200,6 +232,45 @@ if(NOT MSVC)
     )
     set_tests_properties(io_compile_fail_checks PROPERTIES TIMEOUT 300)
 endif()
+
+# No nested event loop and no blocking call (plan §2.3, providers-design.md
+# §2.2), no TLS certificate check turned off (§6.2), nlohmann/json and zlib
+# private to io (harmonics-engine.md §6.5); each gate rejects what it exists
+# to reject.
+add_test(
+    NAME no_blocking_calls
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P "${PROJECT_SOURCE_DIR}/cmake/CheckBlockingCalls.cmake"
+)
+add_test(
+    NAME no_blocking_calls_rejects_violations
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/blocking_calls/run.cmake"
+)
+add_test(
+    NAME no_ignore_ssl_errors
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P "${PROJECT_SOURCE_DIR}/cmake/CheckIgnoreSslErrors.cmake"
+)
+add_test(
+    NAME no_ignore_ssl_errors_rejects_violations
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ignore_ssl_errors/run.cmake"
+)
+add_test(
+    NAME third_party_include_gate
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_SOURCE_ROOT=${PROJECT_SOURCE_DIR}/src" -P
+        "${PROJECT_SOURCE_DIR}/cmake/CheckThirdPartyIncludes.cmake"
+)
+add_test(
+    NAME third_party_include_gate_rejects_violations
+    COMMAND
+        ${CMAKE_COMMAND} "-DMOV_REPO=${PROJECT_SOURCE_DIR}" -P
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/third_party_include/run.cmake"
+)
 
 # netCDF-C is included only by the wrapper's sources (core-design.md 4.1),
 # and the gate rejects what it exists to reject.

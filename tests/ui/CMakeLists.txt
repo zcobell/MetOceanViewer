@@ -58,12 +58,7 @@ if(WIN32)
 endif()
 
 # Label gui: rendering, and the screenshot for humans.
-mov_add_test(
-    mov_ui_tests
-    GUI
-    SOURCES main.cpp test_main_window.cpp
-    LIBRARIES mov::ui Qt6::Quick Qt6::Location Qt6::Test
-)
+mov_add_test(mov_ui_tests GUI SOURCES main.cpp test_main_window.cpp LIBRARIES mov::ui Qt6::Quick Qt6::Location)
 mov_stage_maplibre_runtime(mov_ui_tests)
 target_compile_definitions(mov_ui_tests PRIVATE "MOV_SCREENSHOT_DIR=\"${CMAKE_CURRENT_BINARY_DIR}/screenshots\"")
 

@@ -1,17 +1,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 #
-# The layer order of docs/rearchitecture-plan.md §2.1, declared once, and the
-# configure-time check that enforces it.
+# The layer order of docs/rearchitecture-plan.md §2.1 and
+# docs/providers-design.md §2, declared once, and the configure-time check
+# that enforces it.
 #
-#   core <- io <- providers <- app <- ui      (a layer links only layers below it)
-#   cli  -> providers, io, core               (never app or ui)
-#   core and io never link Qt
+#   core <- io <- fetch <- providers <- app <- ui   (a layer links only layers below it)
+#   cli  -> providers, fetch, io, core              (never app or ui)
+#   core, io and fetch never link Qt
 #
-# mov_add_module(<layer> SOURCES ... [PUBLIC_LINK ...] [PRIVATE_LINK ...])
+# mov_add_module(<layer> [SOURCES ...] [PUBLIC_LINK ...] [PRIVATE_LINK ...])
 #   creates the static library mov_<layer> (alias mov::<layer>) from
 #   src/<layer>, with public headers in src/<layer>/include, and registers it
-#   for the check. Executables (the cli, the app binary) call
+#   for the check. Without SOURCES the layer is header-only: an INTERFACE
+#   library, whose PUBLIC_LINK becomes its interface (PRIVATE_LINK is an
+#   error). Executables (the cli, the app binary) call
 #   mov_enforce_layer(<target> <layer>) themselves.
 #
 # mov_check_layering(), called once at the end of the top-level CMakeLists.txt,
@@ -31,14 +34,15 @@
 set(MOV_LAYERS
     core
     io
+    fetch
     providers
     app
     ui
 )
-set(MOV_QT_FREE_LAYERS core io)
+set(MOV_QT_FREE_LAYERS core io fetch)
 # Layers outside the stack, with the layers each may link.
 set(MOV_SIDE_LAYERS cli)
-set(MOV_LAYER_cli_MAY_LINK core io providers)
+set(MOV_LAYER_cli_MAY_LINK core io fetch providers)
 
 # A Qt target (Qt6::Core, versionless Qt::Core), a Qt library named as a flag
 # (-lQt6Core), a file (libQt6Core.so, Qt6Core.lib) or a bare name (Qt6Core),
@@ -81,6 +85,18 @@ function(mov_add_module layer)
     cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "SOURCES;PUBLIC_LINK;PRIVATE_LINK")
     _mov_layer_may_link(${layer} unused) # validates the layer name
     set(target mov_${layer})
+    if(NOT arg_SOURCES)
+        if(arg_PRIVATE_LINK)
+            message(FATAL_ERROR "mov_add_module(${layer}): a header-only layer has no PRIVATE_LINK")
+        endif()
+        add_library(${target} INTERFACE)
+        add_library(mov::${layer} ALIAS ${target})
+        target_include_directories(${target} INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+        target_compile_features(${target} INTERFACE cxx_std_23)
+        target_link_libraries(${target} INTERFACE ${arg_PUBLIC_LINK})
+        mov_enforce_layer(${target} ${layer})
+        return()
+    endif()
     add_library(${target} STATIC)
     add_library(mov::${layer} ALIAS ${target})
     target_sources(${target} PRIVATE ${arg_SOURCES})

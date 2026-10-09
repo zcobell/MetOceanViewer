@@ -5,7 +5,9 @@
 # mov_add_module() builds each one.
 add_subdirectory(core)
 add_subdirectory(io)
+add_subdirectory(fetch)
 
 if(MOV_ENABLE_QT)
+    add_subdirectory(providers)
     add_subdirectory(ui)
 endif()

@@ -16,6 +16,9 @@ set(violating_cases
     direct_link
     transitive
     upward_link
+    fetch_links_qt
+    io_links_fetch
+    fetch_links_providers
 )
 set(failures "")
 foreach(case IN ITEMS clean ${violating_cases})

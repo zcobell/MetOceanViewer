@@ -154,13 +154,22 @@
         "gcc"
       ],
       "displayName": "GCC debug + coverage",
-      "description": "gcov instrumentation; the coverage-report build preset writes the gcovr report and enforces >= 80% lines over src/ and >= 90% per Qt-free layer (src/core, src/io). Qt-free: the Qt layers (src/ui) are not measured yet.",
+      "description": "gcov instrumentation; the coverage-report build preset writes the gcovr report and enforces >= 80% lines over src/ and >= 90% per Qt-free layer (src/core, src/io, src/fetch). Qt-free; coverage-qt measures the Qt layers too.",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "MOV_ENABLE_COVERAGE": "ON",
         "MOV_COVERAGE_FAIL_UNDER": "80",
         "MOV_COVERAGE_LAYER_FAIL_UNDER": "90"
       }
+    },
+    {
+      "name": "coverage-qt",
+      "inherits": [
+        "coverage",
+        "qt"
+      ],
+      "displayName": "GCC debug + coverage, Qt layers included",
+      "description": "coverage plus the Qt layers, so providers (and the cli, from P9a) count toward the 80% over src/; the Qt-free layers keep their 90% gates. The gui tests run under xvfb-run, as in dev-qt."
     },
     {
       "name": "tidy",
@@ -354,6 +363,18 @@
       "configurePreset": "ci-windows"
     },
     {
+      "name": "coverage-qt",
+      "configurePreset": "coverage-qt"
+    },
+    {
+      "name": "coverage-qt-report",
+      "configurePreset": "coverage-qt",
+      "targets": [
+        "coverage"
+      ],
+      "description": "coverage-report for the coverage-qt build: build/coverage-qt/coverage-report/."
+    },
+    {
       "name": "coverage-report",
       "configurePreset": "coverage",
       "targets": [
@@ -378,12 +399,18 @@
     {
       "name": "test-base",
       "hidden": true,
+      "description": "Label live (the real provider APIs) is excluded here and in every preset that sets its own filter; the nightly live job runs ctest -L live with MOV_LIVE_API=1.",
       "output": {
         "outputOnFailure": true
       },
       "execution": {
         "noTestsAction": "error",
         "timeout": 300
+      },
+      "filter": {
+        "exclude": {
+          "label": "live"
+        }
       }
     },
     {
@@ -421,6 +448,7 @@
       },
       "filter": {
         "exclude": {
+          "label": "live",
           "name": "^layering_guard_rejects_violations$"
         }
       }
@@ -437,6 +465,11 @@
       "name": "coverage",
       "inherits": "test-base",
       "configurePreset": "coverage"
+    },
+    {
+      "name": "coverage-qt",
+      "inherits": "test-base",
+      "configurePreset": "coverage-qt"
     },
     {
       "name": "fuzz",
@@ -467,7 +500,7 @@
       "configurePreset": "package-linux",
       "filter": {
         "exclude": {
-          "label": "gui"
+          "label": "gui|live"
         }
       }
     },
@@ -477,7 +510,7 @@
       "configurePreset": "package-macos",
       "filter": {
         "exclude": {
-          "label": "gui"
+          "label": "gui|live"
         }
       }
     },
@@ -487,7 +520,7 @@
       "configurePreset": "package-windows",
       "filter": {
         "exclude": {
-          "label": "gui"
+          "label": "gui|live"
         }
       }
     }
@@ -657,6 +690,23 @@
         {
           "type": "build",
           "name": "coverage-report"
+        }
+      ]
+    },
+    {
+      "name": "coverage-qt",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "coverage-qt"
+        },
+        {
+          "type": "build",
+          "name": "coverage-qt"
+        },
+        {
+          "type": "build",
+          "name": "coverage-qt-report"
         }
       ]
     },
