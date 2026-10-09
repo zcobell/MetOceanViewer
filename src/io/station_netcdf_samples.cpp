@@ -10,9 +10,11 @@
 // all of it. Only the samples kept are turned into core::Samples.
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -25,6 +27,7 @@
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
 #include "mov/io/cf_time.hpp"
+#include "mov/io/detail/checked_product.hpp"
 #include "mov/io/detail/station_groups.hpp"
 #include "mov/io/detail/table_error.hpp"
 #include "mov/io/detail/text.hpp"
@@ -60,7 +63,8 @@ std::size_t read_length(const RowSpec& rows, const StationGroup& group) {
   for (const SelectedStation& m : group.members) {
     longest = std::max(longest, rows.counts[m.station]);
   }
-  return std::min(obs, longest + 1);
+  // Without a padding check nothing past the samples is read.
+  return std::min(obs, rows.padding ? longest + 1 : longest);
 }
 
 /// Calls sink(member, row) for each selected station with its row of `var`
@@ -114,7 +118,7 @@ std::expected<void, Error> check_padding(std::span<const T> tail,
 }
 
 /// The kept samples of each selected station of `var` as a T, masked in T;
-/// the padding read is checked for fill when `rows.check_padding`.
+/// the padding read is checked for fill when `rows.padding` says so.
 template <nc::Numeric T>
 std::expected<void, Error> rows_as(const nc::File& file, const nc::VarInfo& var,
                                    std::span<const StationGroup> groups,
@@ -129,7 +133,7 @@ std::expected<void, Error> rows_as(const nc::File& file, const nc::VarInfo& var,
       [&](const SelectedStation& m,
           std::span<const T> raw) -> std::expected<void, Error> {
         const std::size_t n = rows.counts[m.station];
-        if (rows.check_padding) {
+        if (rows.padding) {
           auto padding = check_padding(
               raw.subspan(n), n, var.name.view(), m.station,
               [&](T x) { return not mask->apply(x).is_missing(); });
@@ -186,13 +190,11 @@ std::expected<std::vector<core::Sample>, Error> read_masked(
   return out;
 }
 
-/// One station's times: present, on the clock, strictly increasing.
-std::expected<core::TimeAxis, Error> axis_of(std::span<const core::Sample> row,
-                                             const CfClock& clock,
-                                             std::string_view var,
-                                             std::size_t station) {
-  core::TimeAxis axis;
-  axis.reserve(row.size());
+std::expected<core::TimeAxis, Error> times_of(
+    std::span<const core::Sample> row, const CfClock& clock,
+    std::string_view var, std::optional<std::size_t> station) {
+  core::TimeAxis times;
+  times.reserve(row.size());
   for (std::size_t j = 0; j < row.size(); ++j) {
     const std::optional<double> x = row[j].value();
     if (not x) {
@@ -203,13 +205,49 @@ std::expected<core::TimeAxis, Error> axis_of(std::span<const core::Sample> row,
       return invalid(FormatErrc::time_out_of_range, std::string{var}, station,
                      j);
     }
-    if (not axis.empty() and not(axis.back() < *instant)) {
-      return invalid(FormatErrc::time_not_increasing, std::string{var}, station,
-                     j);
-    }
-    axis.push_back(*instant);
+    times.push_back(*instant);
   }
-  return axis;
+  return times;
+}
+
+std::optional<std::size_t> sum_selected(std::span<const std::size_t> counts,
+                                        std::span<const std::size_t> selected) {
+  std::size_t total = 0;
+  for (const std::size_t i : selected) {
+    if (counts[i] > std::numeric_limits<std::size_t>::max() - total) {
+      return std::nullopt;
+    }
+    total += counts[i];
+  }
+  return total;
+}
+
+std::expected<void, Error> check_rows_size(const nc::File& file,
+                                           std::string_view variable,
+                                           std::optional<std::size_t> samples,
+                                           std::size_t columns) {
+  if (not samples) {
+    return fail(
+        nc_fault(file, WrapperFault::too_large, NcOp::get_var, variable));
+  }
+  return check_result_size(file, variable, 1, *samples, columns);
+}
+
+std::expected<core::TimeAxis, Error> axis_of(std::span<const core::Sample> row,
+                                             const CfClock& clock,
+                                             std::string_view var,
+                                             std::size_t station) {
+  auto times = times_of(row, clock, var, station);
+  if (not times) {
+    return times;
+  }
+  const auto descent = std::ranges::adjacent_find(
+      *times, [](core::Time a, core::Time b) { return not(a < b); });
+  if (descent != times->end()) {
+    return invalid(FormatErrc::time_not_increasing, std::string{var}, station,
+                   static_cast<std::size_t>(descent - times->begin()) + 1);
+  }
+  return times;
 }
 
 std::expected<Read<CfClock>, Error> clock_of(const nc::File& file,
@@ -379,14 +417,14 @@ std::expected<std::vector<core::Column>, Error> read_data(const nc::File& file,
 /// `too_large` unless the samples a read holds fit ReadLimits: the kept
 /// samples (boundary), or every selected station's whole row (whole).
 std::expected<void, Error> check_size(const nc::File& file, const Rows& rows) {
-  std::size_t samples = 0;
-  for (const std::size_t i : rows.spec.selected) {
-    samples += rows.spec.padding == PaddingCheck::whole
-                   ? rows.spec.sample_length
-                   : rows.spec.counts[i];
-  }
-  return check_result_size(file, rows.s.data.front().var.name.view(), 1,
-                           samples, rows.s.data.size());
+  const std::array<std::size_t, 2> whole_rows{rows.spec.selected.size(),
+                                              rows.spec.sample_length};
+  const std::optional<std::size_t> samples =
+      rows.spec.padding == PaddingCheck::whole
+          ? checked_product(whole_rows)
+          : sum_selected(rows.spec.counts, rows.spec.selected);
+  return check_rows_size(file, rows.s.data.front().var.name.view(), samples,
+                         rows.s.data.size());
 }
 
 }  // namespace
@@ -407,7 +445,6 @@ std::expected<Read<core::StationTable>, Error> read_table(
                            .counts = counts,
                            .selected = selected,
                            .padding = padding,
-                           .check_padding = true,
                            .stop = stop}};
   auto timing = check_size(file, rows)
                     .and_then([&] { return clock_of(file, s.timing.time); })

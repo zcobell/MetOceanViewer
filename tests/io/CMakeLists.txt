@@ -222,3 +222,7 @@ if(TARGET fuzz_station_netcdf_structure)
         PRIVATE MOV_FUZZ_SCRATCH_DIR="${CMAKE_CURRENT_BINARY_DIR}/fuzz_station_netcdf_structure.scratch"
     )
 endif()
+
+# The WP10b review round: time ranking, bounded reads, padding options, names,
+# tokens, quality flags, datums, water-level hints, warning order.
+target_sources(mov_io_station_netcdf_tests PRIVATE test_station_netcdf_foreign_review.cpp)

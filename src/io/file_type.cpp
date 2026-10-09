@@ -8,12 +8,15 @@
 #include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/core/detail/ascii.hpp"
+#include "mov/core/detail/overloaded.hpp"
 #include "mov/core/units.hpp"
 #include "mov/io/adcirc_ascii.hpp"
 #include "mov/io/detail/text.hpp"
@@ -38,16 +41,33 @@ constexpr std::array<std::string_view, 3> classic_magic{
     std::string_view{"CDF\x01", 4}, std::string_view{"CDF\x02", 4},
     std::string_view{"CDF\x05", 4}};
 constexpr std::string_view hdf5_magic{"\x89HDF\r\n\x1a\n", 8};
+/// The HDF5 superblock is at byte 0, or after a user block, which is 512 * 2^k
+/// bytes (HDF5 file format specification, "Superblock": offsets 0, 512, 1024,
+/// 2048, ...).
+constexpr std::size_t first_user_block = 512;
+
+bool has_hdf5_signature(std::string_view bytes) {
+  if (bytes.starts_with(hdf5_magic)) {
+    return true;
+  }
+  for (std::size_t offset = first_user_block;
+       offset + hdf5_magic.size() <= bytes.size(); offset *= 2) {
+    if (bytes.substr(offset).starts_with(hdf5_magic)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 bool is_netcdf_magic(std::string_view bytes) {
-  return bytes.starts_with(hdf5_magic) or
+  return has_hdf5_signature(bytes) or
          std::ranges::any_of(classic_magic, [bytes](std::string_view magic) {
            return bytes.starts_with(magic);
          });
 }
 
-std::expected<FileType, Error> netcdf_type(const std::filesystem::path& path,
-                                           const ReadLimits& limits) {
+std::expected<FileDetection, Error> netcdf_detection(
+    const std::filesystem::path& path, const ReadLimits& limits) {
   auto file = nc::File::open(path, limits);
   if (not file) {
     return std::unexpected{Error{std::move(file).error()}};
@@ -59,21 +79,31 @@ std::expected<FileType, Error> netcdf_type(const std::filesystem::path& path,
   if (not kind) {
     return std::unexpected{std::move(kind).error()};
   }
-  switch (*kind) {
-    case detail::NetcdfKind::station_v5:
-      return FileType::station_netcdf;
-    case detail::NetcdfKind::foreign_cf:
-      return FileType::foreign_cf_netcdf;
-    case detail::NetcdfKind::legacy_station:
-      return FileType::legacy_station_netcdf;
-    case detail::NetcdfKind::adcirc:
-      return FileType::adcirc_netcdf;
-    case detail::NetcdfKind::dflow:
-      return FileType::dflow_netcdf;
-    case detail::NetcdfKind::other:
-      break;
-  }
-  return FileType::unknown;
+  using core::detail::Overloaded;
+  return std::visit(
+      Overloaded{[](const detail::kind::StationV5&) {
+                   return FileDetection{FileType::station_netcdf};
+                 },
+                 [](const detail::kind::ForeignCf&) {
+                   return FileDetection{FileType::foreign_cf_netcdf};
+                 },
+                 [](const detail::kind::LegacyStation&) {
+                   return FileDetection{FileType::legacy_station_netcdf};
+                 },
+                 [](const detail::kind::Adcirc&) {
+                   return FileDetection{FileType::adcirc_netcdf};
+                 },
+                 [](const detail::kind::Dflow&) {
+                   return FileDetection{FileType::dflow_netcdf};
+                 },
+                 [](detail::kind::OtherFormat& other) {
+                   return FileDetection{
+                       OtherFormatDetected{.name = std::move(other.name)}};
+                 },
+                 [](const detail::kind::Unrecognized&) {
+                   return FileDetection{FileType::unsupported_netcdf};
+                 }},
+      *kind);
 }
 
 // ---- text -------------------------------------------------------------------
@@ -86,7 +116,12 @@ std::vector<std::string_view> lines_of(std::string_view prefix,
     prefix.remove_prefix(3);
   }
   if (truncated) {
-    prefix = prefix.substr(0, prefix.rfind('\n') + 1);
+    // The last line of a cut prefix is cut too: drop it (all of it, if the
+    // prefix has no line end).
+    const std::size_t last_end = prefix.rfind('\n');
+    prefix = last_end == std::string_view::npos
+                 ? std::string_view{}
+                 : prefix.substr(0, last_end + 1);
   }
   std::vector<std::string_view> lines;
   while (not prefix.empty() and lines.size() < sniff_lines) {
@@ -151,11 +186,19 @@ std::size_t skip_blank(const std::vector<std::string_view>& lines,
   return from;
 }
 
+/// The IMEDS banner: a first line that is a comment (`%`) naming IMEDS, as
+/// v4 wrote "% IMEDS generic format". A first line that merely mentions the
+/// word (a description) is not one.
+bool is_imeds_banner(std::string_view line) {
+  const std::string_view text = core::detail::trim(line);
+  return text.starts_with('%') and mentions_imeds(text);
+}
+
 /// IMEDS: two free-text lines, a header, then blocks of a station line and its
-/// rows (docs/legacy-formats.md 2.1). v4 wrote "% IMEDS generic format" first;
-/// a file that does not is still IMEDS by the structure after the header.
+/// rows (docs/legacy-formats.md 2.1). A file without the banner is still IMEDS
+/// by the structure after the header.
 bool looks_like_imeds(const std::vector<std::string_view>& lines) {
-  if (not lines.empty() and mentions_imeds(lines.front())) {
+  if (not lines.empty() and is_imeds_banner(lines.front())) {
     return true;
   }
   const std::size_t station = skip_blank(lines, 3);
@@ -168,21 +211,27 @@ bool looks_like_imeds(const std::vector<std::string_view>& lines) {
 }
 
 /// ADCIRC ASCII output: a description line, the `NSnaps NStations DT NSPOOL
-/// NCOLS` line, and the first snapshot's `time step` line.
-bool looks_like_adcirc_ascii(const std::vector<std::string_view>& lines) {
+/// NCOLS` line (its header is returned), and the first snapshot's `time step`
+/// line.
+std::optional<AdcircAsciiHeader> adcirc_ascii_header(
+    const std::vector<std::string_view>& lines) {
   if (lines.size() < 3) {
-    return false;
+    return std::nullopt;
   }
   std::string head;
   for (const std::string_view line : {lines[0], lines[1]}) {
     head.append(line);
     head.push_back('\n');
   }
-  if (not parse_adcirc_ascii_header(head).has_value()) {
-    return false;
+  const auto header = parse_adcirc_ascii_header(head);
+  if (not header) {
+    return std::nullopt;
   }
   const auto words = detail::split_ws<2>(lines[2]);
-  return words and is_number((*words)[0]) and all_digits((*words)[1]);
+  if (not(words and is_number((*words)[0]) and all_digits((*words)[1]))) {
+    return std::nullopt;
+  }
+  return *header;
 }
 
 /// A high-water-mark CSV: its first rows parse.
@@ -197,14 +246,14 @@ bool looks_like_hwm(const std::vector<std::string_view>& lines) {
   return parsed.has_value() and not parsed->value.empty();
 }
 
-FileType text_type(std::string_view prefix, bool truncated) {
+FileDetection text_detection(std::string_view prefix, bool truncated) {
   if (prefix.find('\0') != std::string_view::npos) {
-    return FileType::unknown;  // binary
+    return FileType::unrecognized_text;  // binary
   }
   const std::vector<std::string_view> lines = lines_of(prefix, truncated);
   // ADCIRC first: its two-column rows look like IMEDS station lines.
-  if (looks_like_adcirc_ascii(lines)) {
-    return FileType::adcirc_ascii;
+  if (const auto header = adcirc_ascii_header(lines)) {
+    return AdcircAsciiDetected{.header = *header};
   }
   if (looks_like_imeds(lines)) {
     return FileType::imeds;
@@ -212,7 +261,7 @@ FileType text_type(std::string_view prefix, bool truncated) {
   if (looks_like_hwm(lines)) {
     return FileType::hwm_csv;
   }
-  return FileType::unknown;
+  return FileType::unrecognized_text;
 }
 
 }  // namespace
@@ -235,22 +284,33 @@ std::string_view to_token(FileType type) noexcept {
       return "adcirc_ascii";
     case FileType::hwm_csv:
       return "hwm_csv";
-    case FileType::unknown:
-      break;
+    case FileType::unrecognized_text:
+      return "unrecognized_text";
+    case FileType::unsupported_netcdf:
+      return "unsupported_netcdf";
+    case FileType::other_format_netcdf:
+      return "other_format_netcdf";
   }
-  return "unknown";
+  return "unrecognized_text";
+}
+
+std::expected<FileDetection, Error> detect_file(
+    const std::filesystem::path& path, const ReadLimits& limits) {
+  auto prefix = read_file_prefix(path, sniff_bytes);
+  if (not prefix) {
+    return std::unexpected{Error{std::move(prefix).error()}};
+  }
+  if (is_netcdf_magic(prefix->bytes)) {
+    return netcdf_detection(path, limits);
+  }
+  return text_detection(prefix->bytes, not prefix->whole_file);
 }
 
 std::expected<FileType, Error> detect_file_type(
     const std::filesystem::path& path, const ReadLimits& limits) {
-  auto prefix = read_text_prefix(path, sniff_bytes);
-  if (not prefix) {
-    return std::unexpected{Error{std::move(prefix).error()}};
-  }
-  if (is_netcdf_magic(*prefix)) {
-    return netcdf_type(path, limits);
-  }
-  return text_type(*prefix, prefix->size() == sniff_bytes);
+  return detect_file(path, limits).transform([](const FileDetection& d) {
+    return file_type_of(d);
+  });
 }
 
 }  // namespace mov::io

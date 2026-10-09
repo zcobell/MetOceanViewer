@@ -396,65 +396,117 @@ void rename_fill(const std::filesystem::path& path) {
 
 }  // namespace
 
-TEST_CASE("hostile: _FillValue of the wrong type or with several values",
-          "[io][station_nc][hostile]") {
-  const auto outcome = [](std::function<void(Cdf&)> attribute) {
-    const FixtureFile file{with_bad_fill(std::move(attribute))};
-    rename_fill(file.path());
-    return run(file.path());
+namespace {
+
+/// A file with the data variable `other` next to `temperature`, and whatever
+/// `customize` does.
+CfSpec with_other(std::function<void(Cdf&)> customize) {
+  CfSpec spec;
+  spec.customize = [customize = std::move(customize)](Cdf& f, int station,
+                                                      int sample) {
+    f.var("other", NC_DOUBLE, {station, sample});
+    f.put("other", std::vector<double>(12, 2.0));
+    customize(f);
   };
+  return spec;
+}
+
+/// The read and the catalog of `spec` succeed, `skipped` is the one variable
+/// the reader skipped for its masking attributes, and `kept` the number of
+/// series left.
+void expect_skipped(const CfSpec& spec, const std::string& skipped,
+                    std::size_t kept) {
+  const FixtureFile file{spec};
+  rename_fill(file.path());
+  INFO(skipped);
+  const auto read = must_read(read_all(file.path()));
+  CHECK(read.value.table.schema().size() == kept);
+  CHECK(warning_of(read.warnings, WarningCode::skipped_variable).subject ==
+        skipped);
+  const auto catalog = io::inspect_station_netcdf(file.path(), {});
+  REQUIRE(catalog.has_value());
+  CHECK(catalog->value.schema.size() == kept);
+  CHECK(warning_of(catalog->warnings, WarningCode::skipped_variable).subject ==
+        skipped);
+}
+
+}  // namespace
+
+TEST_CASE(
+    "hostile: a data variable whose masking attributes are bad is skipped",
+    "[io][station_nc][hostile]") {
   SECTION("a float _FillValue on a double variable") {
-    const Outcome out =
-        outcome([](Cdf& f) { f.num("bad", "_FillValuX", NC_FLOAT, {-1.0}); });
-    CHECK(nc_of(out.read).status ==
-          io::NcStatus{io::WrapperFault::type_mismatch});
-    CHECK(nc_of(out.read).object == "bad:_FillValue");
-    CHECK(nc_of(out.inspect).object == "bad:_FillValue");
+    expect_skipped(with_bad_fill([](Cdf& f) {
+                     f.num("bad", "_FillValuX", NC_FLOAT, {-1.0});
+                   }),
+                   "bad:_FillValue", 1);
   }
   SECTION("two values") {
-    const Outcome out = outcome(
-        [](Cdf& f) { f.num("bad", "_FillValuX", NC_DOUBLE, {-1.0, -2.0}); });
-    CHECK(nc_of(out.read).status ==
-          io::NcStatus{io::WrapperFault::count_mismatch});
+    expect_skipped(with_bad_fill([](Cdf& f) {
+                     f.num("bad", "_FillValuX", NC_DOUBLE, {-1.0, -2.0});
+                   }),
+                   "bad:_FillValue", 1);
   }
   SECTION("a text _FillValue") {
-    const Outcome out =
-        outcome([](Cdf& f) { f.text("bad", "_FillValuX", "x"); });
-    CHECK(nc_of(out.read).status ==
-          io::NcStatus{io::WrapperFault::type_mismatch});
+    expect_skipped(
+        with_bad_fill([](Cdf& f) { f.text("bad", "_FillValuX", "x"); }),
+        "bad:_FillValue", 1);
   }
   SECTION("a valid_range of one value") {
-    CfSpec spec;
-    spec.customize = [](Cdf& f, int /*station*/, int /*sample*/) {
-      f.num("temperature", "valid_range", NC_DOUBLE, {0.0});
-    };
-    const Outcome out = run(FixtureFile{spec}.path());
-    CHECK(nc_of(out.read).status ==
-          io::NcStatus{io::WrapperFault::count_mismatch});
+    expect_skipped(with_other([](Cdf& f) {
+                     f.num("temperature", "valid_range", NC_DOUBLE, {0.0});
+                   }),
+                   "temperature:valid_range", 1);
   }
   SECTION("a scale_factor that is text, an add_offset of two values") {
-    CfSpec text;
-    text.customize = [](Cdf& f, int /*station*/, int /*sample*/) {
-      f.text("temperature", "scale_factor", "2");
-    };
-    CHECK(nc_of(run(FixtureFile{text}.path()).read).status ==
-          io::NcStatus{io::WrapperFault::type_mismatch});
-    CfSpec two;
-    two.customize = [](Cdf& f, int /*station*/, int /*sample*/) {
-      f.num("temperature", "add_offset", NC_DOUBLE, {1.0, 2.0});
-    };
-    CHECK(nc_of(run(FixtureFile{two}.path()).read).status ==
-          io::NcStatus{io::WrapperFault::count_mismatch});
+    expect_skipped(
+        with_other([](Cdf& f) { f.text("temperature", "scale_factor", "2"); }),
+        "temperature:scale_factor", 1);
+    expect_skipped(with_other([](Cdf& f) {
+                     f.num("temperature", "add_offset", NC_DOUBLE, {1.0, 2.0});
+                   }),
+                   "temperature:add_offset", 1);
   }
   SECTION("missing_value that no value of the type can equal") {
-    CfSpec spec;
-    spec.customize = [](Cdf& f, int station, int sample) {
-      f.var("f", NC_FLOAT, {station, sample});
-      f.num("f", "missing_value", NC_DOUBLE, {0.1});
-      f.put("f", std::vector<double>(12, 1.0));
-    };
-    CHECK(nc_of(run(FixtureFile{spec}.path()).read).status ==
-          io::NcStatus{io::WrapperFault::type_mismatch});
+    expect_skipped(
+        [] {
+          CfSpec spec;
+          spec.customize = [](Cdf& f, int station, int sample) {
+            f.var("f", NC_FLOAT, {station, sample});
+            f.num("f", "missing_value", NC_DOUBLE, {0.1});
+            f.put("f", std::vector<double>(12, 1.0));
+          };
+          return spec;
+        }(),
+        "f:missing_value", 1);
+  }
+  SECTION("short data packed, with a valid_range in the unpacked type") {
+    // The reviewer's probe: a float valid_range on a short variable.
+    expect_skipped(
+        [] {
+          CfSpec spec;
+          spec.customize = [](Cdf& f, int station, int sample) {
+            f.var("good", NC_DOUBLE, {station, sample});
+            f.put("good", std::vector<double>(12, 1.0));
+            f.var("packed", NC_SHORT, {station, sample});
+            f.num("packed", "scale_factor", NC_FLOAT, {0.01});
+            f.num("packed", "valid_range", NC_FLOAT, {-5.5, 40.25});
+            f.put("packed", std::vector<double>(12, 100.0));
+          };
+          return spec;
+        }(),
+        "packed:valid_range", 2);
+  }
+  SECTION("none left: no data variables") {
+    const FixtureFile file{[] {
+      CfSpec spec;
+      spec.customize = [](Cdf& f, int /*station*/, int /*sample*/) {
+        f.num("temperature", "valid_range", NC_DOUBLE, {0.0});
+      };
+      return spec;
+    }()};
+    CHECK(file.error().code == FormatErrc::no_data_variables);
+    CHECK(file.inspect_error().code == FormatErrc::no_data_variables);
   }
   SECTION("_Unsigned data is skipped, not refused") {
     CfSpec spec;
@@ -467,6 +519,50 @@ TEST_CASE("hostile: _FillValue of the wrong type or with several values",
     CHECK(read.value.table.schema().size() == 1);
     CHECK(warning_of(read.warnings, WarningCode::skipped_variable).subject ==
           "u");
+  }
+}
+
+TEST_CASE(
+    "hostile: the masking attributes of the time and position variables "
+    "stay strict",
+    "[io][station_nc][hostile]") {
+  for (const char* variable : {"time", "lat"}) {
+    INFO(variable);
+    CfSpec spec;
+    spec.cmode = 0;
+    spec.customize = [variable](Cdf& f, int /*station*/, int /*sample*/) {
+      f.num(variable, "_FillValuX", NC_FLOAT, {-1.0});
+    };
+    const FixtureFile file{spec};
+    rename_fill(file.path());
+    const Outcome out = run(file.path());
+    CHECK(nc_of(out.read).status ==
+          io::NcStatus{io::WrapperFault::type_mismatch});
+    CHECK(nc_of(out.read).object == std::string{variable} + ":_FillValue");
+  }
+}
+
+TEST_CASE("hostile: a v5 file stays strict about the masking attributes",
+          "[io][station_nc][hostile]") {
+  SECTION("a float _FillValue on a double variable") {
+    const FixtureFile file{v5(with_bad_fill(
+        [](Cdf& f) { f.num("bad", "_FillValuX", NC_FLOAT, {-1.0}); }))};
+    rename_fill(file.path());
+    const Outcome out = run(file.path());
+    CHECK(nc_of(out.read).status ==
+          io::NcStatus{io::WrapperFault::type_mismatch});
+    CHECK(nc_of(out.read).object == "bad:_FillValue");
+    // Opening a v5 file does not look at the samples' attributes.
+    CHECK_FALSE(out.inspect.has_value());
+  }
+  SECTION("a valid_range of one value") {
+    CfSpec spec;
+    spec.customize = [](Cdf& f, int /*station*/, int /*sample*/) {
+      f.num("temperature", "valid_range", NC_DOUBLE, {0.0});
+    };
+    const Outcome out = run(FixtureFile{v5(spec)}.path());
+    CHECK(nc_of(out.read).status ==
+          io::NcStatus{io::WrapperFault::count_mismatch});
   }
 }
 
@@ -493,11 +589,14 @@ TEST_CASE("hostile: an id dimension of length 0", "[io][station_nc][hostile]") {
   CfSpec spec;
   spec.id_width = 0;  // the unlimited dimension, empty
   spec.ids = {"", "", ""};
-  const Outcome foreign = run(FixtureFile{spec}.path());
-  const io::FormatError& e = format_of(foreign.read);
-  CHECK(e.code == FormatErrc::no_station_id);
-  CHECK(e.station == 0);
-  CHECK(format_of(foreign.inspect).code == FormatErrc::no_station_id);
+  const FixtureFile foreign{spec};
+  // Three stations with an empty id: the indices, said once.
+  const auto foreign_read = foreign.read();
+  CHECK(foreign_read.value.table.station(core::StationIndex{2}).id.view() ==
+        "2");
+  CHECK(warning_of(foreign_read.warnings, WarningCode::station_id_substituted)
+            .count == 3);
+  CHECK(io::inspect_station_netcdf(foreign.path(), {}).has_value());
 
   // A v5 file has no unlimited dimension.
   const Outcome v5_out = run(FixtureFile{v5(spec)}.path());
@@ -649,10 +748,14 @@ TEST_CASE("hostile: NULL elements of an NC_STRING id variable",
   CfSpec spec;
   spec.string_ids = true;
   spec.null_ids = {false, true, false};
-  const Outcome out = run(FixtureFile{spec}.path());
-  const io::FormatError& e = format_of(out.read);
-  CHECK(e.code == FormatErrc::no_station_id);
-  CHECK(e.station == 1);
+  // A NULL string is no id: the station has its index for one, in a foreign
+  // file.
+  const FixtureFile file{spec};
+  const auto read = file.read();
+  CHECK(read.value.table.station(core::StationIndex{1}).id.view() == "1");
+  CHECK(warning_of(read.warnings, WarningCode::station_id_substituted).count ==
+        1);
+  CHECK(io::inspect_station_netcdf(file.path(), {}).has_value());
 }
 
 TEST_CASE("hostile: station ids with NULs, controls and invalid UTF-8",

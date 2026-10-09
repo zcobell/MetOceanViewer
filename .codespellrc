@@ -2,6 +2,7 @@
 # Legacy v4 sources and vendored code are not spell-checked (see
 # .pre-commit-config.yaml). Domain words that look like typos go here:
 # "gage" (USGS stream gage), "pres" (NDBC pressure column), "nd" (netCDF
-# ndims), "fpr" (gpg --with-colons fingerprint records).
-ignore-words-list = thirdparty,gage,pres,nd,fpr
+# ndims), "fpr" (gpg --with-colons fingerprint records), "degreee" (the CF unit
+# spelling degreeE, which codespell reads as a typo).
+ignore-words-list = thirdparty,gage,pres,nd,fpr,degreee
 skip = ./build*,./MetOceanViewer,./MetOceanData,./MetOceanHWMStats,./MetOceanInstaller,./ProcessCrmsDatabase,./libraries,./thirdparty,./.git,./.claude,./docs/provider-apis,./tests/fixtures,./packaging/licenses

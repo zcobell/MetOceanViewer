@@ -546,6 +546,36 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     shipped version or the exact upstream URL and checksum where redistribution
     of a copy is impractical). Built by the package workflow.
 
+30. **Foreign and legacy station netCDF files (decided after the WP10b review):**
+    (1) *Quality flags.* The integer `ancillary_variables` of a foreign data variable are
+    read as quality flags. A known scheme masks: IOOS QARTOD (flag 4 fail and 9 missing
+    data become Missing; 3 suspect or of high interest is kept and counted in a warning),
+    or any `flag_values` whose `flag_meanings` word contains "bad", "fail" or "missing"
+    (and "suspect" for kept-and-counted). An unknown scheme is ignored with a warning.
+    The counts are warnings (`flagged_samples_masked`, `suspect_samples_kept`,
+    `quality_flags_ignored`).
+    (2) *Datum.* A foreign data variable's datum is its `vertical_datum`, else its CF
+    `geopotential_datum_name`, else the `geopotential_datum_name` of its grid mapping
+    variable, when the text names a datum core knows (token, alias or long name:
+    `North American Vertical Datum of 1988`). Any other text is no datum, with
+    `datum_unknown`. Free-text attributes (`comment`) are never parsed for one.
+    (3) *Out-of-order and repeated times* in a foreign or legacy file are normalized as
+    IMEDS rows are (stable sort, the first of equal times kept) with the counted warnings
+    `times_reordered`, `duplicate_times_dropped`, `conflicting_duplicate_times`
+    (`core::normalizing_order`). v5 files keep the hard error `time_not_increasing`.
+    (4) *Observed and predicted water level* share a CF standard name. A variable whose
+    name or `long_name` has "predict", "tide", "astronomical" or "harmonic" in it is
+    `water_level_prediction`, any other is `water_level`; the first of each wins, further
+    ones are generic quantities with their own token and an `unknown_quantity` warning.
+    (5) Kelvin is a core temperature unit, so `air_temperature` in K maps to the registry
+    quantity. The station name of a foreign file is a text variable over the station
+    dimension with the standard name `platform_name`, else one called `station_name`,
+    else the `cf_role` variable's text. A missing, empty, NULL or masked station id is
+    its decimal index with a warning (`station_id_substituted`); float ids stay
+    `bad_encoding`. Positions are assumed WGS 84 when the grid mapping is not a geographic
+    EPSG code, 3-D and profile variables are skipped, a legacy file whose stations
+    disagree on units or datum is refused, as built.
+
 ## 7. Engineering rules for v5
 
 - `core` and `io` never include Qt headers.

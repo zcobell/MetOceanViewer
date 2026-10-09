@@ -129,14 +129,16 @@ TEST_CASE("legacy A: three stations read into one table",
 
   const auto* origin = std::get_if<io::LegacyOrigin>(&read.value.origin);
   REQUIRE(origin != nullptr);
-  CHECK(origin->dialect == io::LegacyDialect::a);
+  CHECK(origin->fileformat == "20180123");
+  CHECK(origin->has_station_ids);
+  CHECK(origin->width == io::StationNumberWidth::four);
   CHECK(count_of(read.warnings, WarningCode::legacy_dialect) == 1);
   CHECK(count_of(read.warnings, WarningCode::crs_assumed) == 0);
   CHECK(count_of(read.warnings, WarningCode::tz_assumed_utc) == 0);
   CHECK(count_of(read.warnings, WarningCode::epoch_used) == 0);
 }
 
-TEST_CASE("legacy: dialect B has neither stationId nor fileformat",
+TEST_CASE("legacy: a file with neither stationId nor fileformat",
           "[io][station_nc][legacy]") {
   auto spec = three_stations();
   spec.write_station_id = false;
@@ -144,7 +146,8 @@ TEST_CASE("legacy: dialect B has neither stationId nor fileformat",
   const auto read = read_spec(spec);
   const auto* origin = std::get_if<io::LegacyOrigin>(&read.value.origin);
   REQUIRE(origin != nullptr);
-  CHECK(origin->dialect == io::LegacyDialect::b);
+  CHECK_FALSE(origin->fileformat.has_value());
+  CHECK_FALSE(origin->has_station_ids);
   // The id is the name when the file has no stationId.
   CHECK(read.value.table.station(core::StationIndex{0}).id.view() ==
         "Grand Isle");
@@ -161,18 +164,24 @@ TEST_CASE("legacy: an empty stationId falls back to the name",
         "Pilots Station East");
 }
 
-TEST_CASE("legacy: the dialect marks are either one",
+TEST_CASE("legacy: the origin records what the file has, one fact each",
           "[io][station_nc][legacy]") {
   auto spec = three_stations();
-  spec.write_fileformat = false;  // stationId alone is A
+  spec.write_fileformat = false;
   auto read = read_spec(spec);
-  CHECK(std::get<io::LegacyOrigin>(read.value.origin).dialect ==
-        io::LegacyDialect::a);
+  auto origin = std::get<io::LegacyOrigin>(read.value.origin);
+  CHECK_FALSE(origin.fileformat.has_value());
+  CHECK(origin.has_station_ids);
   spec.write_station_id = false;
-  spec.write_fileformat = true;  // fileformat alone is A
+  spec.write_fileformat = true;
   read = read_spec(spec);
-  CHECK(std::get<io::LegacyOrigin>(read.value.origin).dialect ==
-        io::LegacyDialect::a);
+  origin = std::get<io::LegacyOrigin>(read.value.origin);
+  CHECK(origin.fileformat == "20180123");
+  CHECK_FALSE(origin.has_station_ids);
+  spec.width = 6;
+  read = read_spec(spec);
+  CHECK(std::get<io::LegacyOrigin>(read.value.origin).width ==
+        io::StationNumberWidth::six);
 }
 
 TEST_CASE("legacy: the selection picks and orders stations",
@@ -204,8 +213,7 @@ TEST_CASE("legacy inspect agrees with read", "[io][station_nc][legacy]") {
   gen::make_legacy_nc(path, three_stations());
   auto catalog = io::inspect_station_netcdf(path, {});
   REQUIRE(catalog.has_value());
-  CHECK(std::get<io::LegacyOrigin>(catalog->value.origin).dialect ==
-        io::LegacyDialect::a);
+  CHECK(std::get<io::LegacyOrigin>(catalog->value.origin).has_station_ids);
   REQUIRE(catalog->value.stations.size() == 3);
   CHECK(catalog->value.stations[0].samples == 3);
   CHECK(catalog->value.stations[1].samples == 2);
@@ -549,14 +557,36 @@ TEST_CASE("legacy: int and double time variables are read",
   CHECK(doubles.value.table.times(core::StationIndex{0})[2] == ms(720000));
 }
 
-TEST_CASE("legacy: times must increase, with the station and index",
+TEST_CASE("legacy: a repeated time keeps its first row, and says so",
           "[io][station_nc][legacy]") {
   auto spec = three_stations();
   spec.stations[1].seconds = {900, 900};
-  const auto e = error_of_spec(spec);
-  CHECK(e.code == FormatErrc::time_not_increasing);
-  CHECK(e.station == 1);
-  CHECK(e.index == 1);
+  spec.stations[1].values = {1.0, 2.0};
+  const auto read = read_spec(spec);
+  const core::StationTable& t = read.value.table;
+  REQUIRE(t.times(core::StationIndex{1}).size() == 1);
+  CHECK(at(t, 1, 0, 0) == v(1.0));
+  const io::Warning w =
+      warning_of(read.warnings, WarningCode::duplicate_times_dropped);
+  CHECK(w.count == 1);
+  CHECK(warning_of(read.warnings, WarningCode::conflicting_duplicate_times)
+            .count == 1);
+}
+
+TEST_CASE("legacy: times out of order are put in order, with their values",
+          "[io][station_nc][legacy]") {
+  auto spec = three_stations();
+  spec.stations[0].seconds = {720, 0, 360};
+  spec.stations[0].values = {3.0, 1.0, 2.0};
+  const auto read = read_spec(spec);
+  const core::StationTable& t = read.value.table;
+  const auto times = t.times(core::StationIndex{0});
+  REQUIRE(times.size() == 3);
+  CHECK(times[0] == ms(0));
+  CHECK(times[2] == ms(720000));
+  CHECK(at(t, 0, 0, 0) == v(1.0));
+  CHECK(at(t, 0, 0, 2) == v(3.0));
+  CHECK(warning_of(read.warnings, WarningCode::times_reordered).count == 1);
 }
 
 TEST_CASE("legacy: a time that is the fill value is time_missing",
@@ -797,4 +827,91 @@ TEST_CASE("legacy: the EPSG may be any integer type",
     const auto read = read_spec(spec);
     CHECK(read.value.table.station(core::StationIndex{0}).native.has_value());
   }
+}
+
+TEST_CASE("legacy: an unsigned EPSG is not a code",
+          "[io][station_nc][legacy]") {
+  for (const int type : {NC_UBYTE, NC_USHORT, NC_UINT}) {
+    auto spec = three_stations();
+    spec.epsg_type = type;
+    spec.epsg = type == NC_UBYTE ? 120 : 4326;
+    const ScratchDir dir;
+    gen::make_legacy_nc(dir / "legacy.nc", spec);
+    const auto result = read_all(dir / "legacy.nc");
+    INFO(type);
+    REQUIRE_FALSE(result.has_value());
+    const auto* nc = std::get_if<io::NcError>(&result.error());
+    REQUIRE(nc != nullptr);
+    CHECK(nc->status == io::NcStatus{io::WrapperFault::type_mismatch});
+    CHECK(nc->object == "stationXCoordinate:HorizontalProjectionEPSG");
+  }
+}
+
+TEST_CASE("legacy: text after the date of referenceDate is said",
+          "[io][station_nc][legacy]") {
+  const auto read_with = [](std::string reference) {
+    auto spec = three_stations();
+    spec.reference_date = std::move(reference);
+    return read_spec(spec);
+  };
+  SECTION("a zone letter, a UTC offset") {
+    const auto z = read_with("2000-01-01T00:00:00Z");
+    const io::Warning w = warning_of(z.warnings, WarningCode::tz_assumed_utc);
+    CHECK(w.subject == "Z");
+    // The date itself is read.
+    CHECK(z.value.table.times(core::StationIndex{0})[0] == ms(946684800000));
+    const auto offset = read_with("2000-01-01 00:00:00 +02:00");
+    CHECK(warning_of(offset.warnings, WarningCode::tz_assumed_utc).subject ==
+          "+02:00");
+  }
+  SECTION("blanks, NULs and UTC after the date say nothing") {
+    for (const char* reference :
+         {"2000-01-01 00:00:00   ", "2000-01-01 00:00:00 UTC",
+          "2000-01-01 00:00:00 gmt"}) {
+      INFO(reference);
+      CHECK(count_of(read_with(reference).warnings,
+                     WarningCode::tz_assumed_utc) == 0);
+    }
+    CHECK(count_of(
+              read_with(std::string{"2000-01-01 00:00:00\0junk", 24}).warnings,
+              WarningCode::tz_assumed_utc) == 0);
+  }
+  SECTION("the same text on every station is one warning, counted") {
+    const auto z = read_with("2000-01-01 00:00:00 local");
+    CHECK(count_of(z.warnings, WarningCode::tz_assumed_utc) == 1);
+    CHECK(warning_of(z.warnings, WarningCode::tz_assumed_utc).count == 3);
+  }
+}
+
+TEST_CASE("legacy: the warnings come in the order SN 11 documents",
+          "[io][station_nc][legacy]") {
+  auto spec = three_stations();
+  spec.epsg.reset();
+  spec.timezone = "EST";
+  spec.reference_date.reset();
+  spec.stations[0].name = "Gr\xe9";
+  spec.stations[1].name = "Gr\xe9";
+  spec.stations[0].id = "X";
+  spec.stations[1].id = "X";
+  spec.stations[0].units = "frobs";
+  spec.stations[1].units = "frobs";
+  spec.stations[2].units = "frobs";
+  spec.stations[0].seconds = {720, 0, 360};
+  const auto read = read_spec(spec);
+  std::vector<WarningCode> codes;
+  for (const io::Warning& w : read.warnings) {
+    if (codes.empty() or codes.back() != w.code) {
+      codes.push_back(w.code);
+    }
+  }
+  const std::vector<WarningCode> documented{
+      WarningCode::legacy_dialect,
+      WarningCode::crs_assumed,
+      WarningCode::tz_assumed_utc,
+      WarningCode::epoch_used,
+      WarningCode::invalid_utf8_replaced,
+      WarningCode::duplicate_station_id_renamed,
+      WarningCode::unrecognized_unit,
+      WarningCode::times_reordered};
+  CHECK(codes == documented);
 }

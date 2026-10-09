@@ -23,8 +23,14 @@
 //  - every reader returns a value or an Error, and the values are consistent:
 //    a table's columns are as long as its stations' times, which increase; an
 //    inspection and a read of the same file agree on origin, stations and
-//    schema; the file type detect_file_type names is the one the station
-//    reader's origin names.
+//    schema; the file type detect_file names is the one the station reader's
+//    origin names (io::file_type_of);
+//  - a template that no byte of the input spoiled is a valid file: it reads,
+//    and the table has the ids, times and values that were written (a reader
+//    that fails on a good file, or reads it wrong, is as much a finding as one
+//    that crashes on a bad file). Input bytes that are all 1 (or all 5, which
+//    also makes the 2-D matrices transposed) after the template's byte spoil
+//    nothing.
 
 #include <netcdf.h>
 #include <unistd.h>
@@ -37,8 +43,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <limits>
 #include <optional>
+#include <print>
+#include <source_location>
 #include <span>
 #include <string>
 #include <string_view>
@@ -76,7 +85,25 @@ namespace {
 namespace core = mov::core;
 namespace io = mov::io;
 
-[[noreturn]] void fail() { std::abort(); }
+/// The oracle failed: say where, then abort (libFuzzer saves the input).
+[[noreturn]] void fail(
+    std::source_location where = std::source_location::current()) {
+  std::println(stderr, "oracle failed at line {}", where.line());
+  std::abort();
+}
+
+/// What an Error is, for the message of a failed oracle.
+std::string describe(const io::Error& error) {
+  if (const auto* format = std::get_if<io::FormatError>(&error)) {
+    return std::format("FormatError {} '{}' station {} index {}",
+                       static_cast<int>(format->code), format->subject,
+                       format->station.value_or(0), format->index.value_or(0));
+  }
+  if (const auto* nc = std::get_if<io::NcError>(&error)) {
+    return std::format("NcError on '{}'", nc->object);
+  }
+  return std::format("error kind {}", error.index());
+}
 
 // ---- the input as a stream of choices ---------------------------------------
 
@@ -170,7 +197,9 @@ constexpr auto var_names = std::to_array<const char*>({"station_id",
                                                        "pressure",
                                                        "windx",
                                                        "windy",
-                                                       "salinity"});
+                                                       "salinity",
+                                                       "time_run",
+                                                       "sampling_start"});
 constexpr auto att_names =
     std::to_array<const char*>({"cf_role",
                                 "standard_name",
@@ -331,6 +360,20 @@ struct Var {
   std::vector<std::size_t> dims;  // indices into Plan::dims
   Role role{Role::generic};
   std::vector<Att> atts;
+  /// The data of a template nothing spoiled: written as is (numbers for a
+  /// numeric variable, characters for a char one).
+  std::vector<double> exact_numbers;
+  std::string exact_chars;
+};
+
+/// What a read of an unspoiled template must give: the stations' ids, and
+/// each station's times (milliseconds since 1970) and values of the one data
+/// variable.
+struct Expect {
+  io::FileType type;
+  std::vector<std::string> ids;
+  std::vector<std::vector<std::int64_t>> times_ms;
+  std::vector<std::vector<double>> values;
 };
 
 struct Plan {
@@ -338,6 +381,7 @@ struct Plan {
   std::vector<Dim> dims;
   std::vector<Att> global;
   std::vector<Var> vars;
+  std::optional<Expect> expect;
 };
 
 Att text_att(std::string name, std::string value) {
@@ -409,17 +453,25 @@ class Builder {
     single
   };
 
-  // ---- spoilers
-  bool keep() { return not in_.one_in(14); }
-  nc_type type(nc_type good) { return in_.one_in(10) ? in_.pick(types) : good; }
+  // ---- spoilers: each one that fires says so, and the template is no longer
+  // a valid file
+  bool spoil_if(bool fires) {
+    spoiled_ = spoiled_ or fires;
+    return fires;
+  }
+  bool keep() { return not spoil_if(in_.one_in(14)); }
+  nc_type type(nc_type good) {
+    return spoil_if(in_.one_in(10)) ? in_.pick(types) : good;
+  }
   std::string text(const char* good) {
-    return in_.one_in(8) ? std::string{in_.pick(texts)} : std::string{good};
+    return spoil_if(in_.one_in(8)) ? std::string{in_.pick(texts)}
+                                   : std::string{good};
   }
   std::size_t length(std::size_t good) {
-    if (in_.one_in(24)) {
+    if (spoil_if(in_.one_in(24))) {
       return in_.pick(huge_lengths);
     }
-    return in_.one_in(8) ? in_.pick(small_lengths) : good;
+    return spoil_if(in_.one_in(8)) ? in_.pick(small_lengths) : good;
   }
 
   std::size_t dim(std::string name, std::size_t good_length) {
@@ -434,7 +486,9 @@ class Builder {
                           .type = type(good),
                           .dims = std::move(dims),
                           .role = role,
-                          .atts = {}});
+                          .atts = {},
+                          .exact_numbers = {},
+                          .exact_chars = {}});
     return plan_.vars.back();
   }
 
@@ -453,6 +507,7 @@ class Builder {
   }
 
   Att random_att() {
+    spoiled_ = true;
     const char* name = in_.pick(att_names);
     if (in_.one_in(3)) {
       std::vector<double> values;
@@ -472,6 +527,19 @@ class Builder {
     }
   }
 
+  /// A time-like variable that is not the time: over the sample dimension, in
+  /// time units (the reviewer's probe 2).
+  void decoy_time(std::size_t sample) {
+    if (not spoil_if(in_.one_in(7))) {
+      return;
+    }
+    Var& d = var("time_run", NC_DOUBLE, {sample}, Role::time);
+    d.atts.push_back(text_att("units", text("days since 1990-01-01")));
+    if (in_.one_in(2)) {
+      d.atts.push_back(text_att("long_name", "run time"));
+    }
+  }
+
   void free_form() {
     plan_.cmode = in_.one_in(4) ? 0 : NC_NETCDF4;
     const unsigned dims = 1 + in_.below(8);
@@ -487,7 +555,9 @@ class Builder {
             .type = in_.pick(types),
             .dims = {},
             .role = Role::generic,
-            .atts = {}};
+            .atts = {},
+            .exact_numbers = {},
+            .exact_chars = {}};
       const unsigned rank = in_.below(4);
       for (unsigned r = 0; r < rank; ++r) {
         v.dims.push_back(in_.below(dims));
@@ -510,6 +580,9 @@ class Builder {
     header_attributes(v5);
     const std::size_t stations = 1 + in_.below(4);
     const std::size_t times = 1 + in_.below(4);
+    stations_ = stations;
+    times_ = times;
+    v5_ = v5;
     const bool single = layout == Layout::single;
     const bool ragged =
         layout == Layout::contiguous or layout == Layout::indexed;
@@ -557,6 +630,9 @@ class Builder {
         crs.atts.push_back(text_att("epsg_code", text("EPSG:4326")));
       }
     }
+    if (not spoiled_) {
+      exact_cf(v5, layout);
+    }
   }
 
   void cf_samples(Layout layout, std::size_t station, std::size_t sample,
@@ -564,6 +640,10 @@ class Builder {
     const bool matrix =
         layout == Layout::orthogonal or layout == Layout::incomplete;
     const bool transposed = in_.one_in(5);
+    transposed_ = transposed;
+    // A v5 file has every variable over (station, sample), in that order
+    // (SN 4.3): a transposed one is a foreign file only.
+    spoiled_ = spoiled_ or (v5_ and transposed);
     const auto shape = [&](bool two_d) {
       if (not two_d) {
         return std::vector<std::size_t>{sample};
@@ -586,7 +666,7 @@ class Builder {
       if (in_.one_in(2)) {
         d.atts.push_back(num_att("_FillValue", d.type, {-999.0}));
       }
-      if (in_.one_in(4)) {
+      if (spoil_if(in_.one_in(4))) {
         d.atts.push_back(text_att("standard_name", text("time")));
       }
       spoil(d);
@@ -602,6 +682,7 @@ class Builder {
       Var& i = var("stationIndex", NC_INT, {sample}, Role::index);
       i.atts.push_back(text_att("instance_dimension", text("station")));
     }
+    decoy_time(sample);
     static_cast<void>(stations);
   }
 
@@ -612,6 +693,7 @@ class Builder {
       plan_.global.push_back(text_att("fileformat", "20180123"));
     }
     const std::size_t stations = 1 + in_.below(3);
+    stations_ = stations;
     const std::size_t numStations = dim("numStations", stations);
     const std::size_t name_len = dim("stationNameLen", 8);
     for (const char* name : {"stationXCoordinate", "stationYCoordinate"}) {
@@ -621,8 +703,9 @@ class Builder {
                 std::string_view{name} == "stationXCoordinate" ? Role::lon
                                                                : Role::lat);
         if (std::string_view{name} == "stationXCoordinate" and keep()) {
-          v.atts.push_back(
-              num_att("HorizontalProjectionEPSG", NC_INT, {in_.pick(numbers)}));
+          const double code = in_.one_in(2) ? in_.pick(numbers) : 4326.0;
+          spoiled_ = spoiled_ or code != 4326.0;
+          v.atts.push_back(num_att("HorizontalProjectionEPSG", NC_INT, {code}));
         }
         spoil(v);
       }
@@ -633,12 +716,16 @@ class Builder {
     if (in_.one_in(2) and keep()) {
       var("stationId", NC_CHAR, {numStations, name_len}, Role::id);
     }
+    bool first_units = false;
+    bool first_datum = false;
     for (std::size_t s = 0; s < stations; ++s) {
       const std::string number = std::to_string(s + 1);
       const std::string suffix =
           std::string(4 - std::min<std::size_t>(4, number.size()), '0') +
           number;
-      const std::size_t len = dim("stationLength_" + suffix, 1 + in_.below(4));
+      const std::size_t good_length = 1 + in_.below(4);
+      station_lengths_.push_back(good_length);
+      const std::size_t len = dim("stationLength_" + suffix, good_length);
       if (keep()) {
         Var& t = var("time_station_" + suffix, NC_INT64, {len}, Role::time);
         if (in_.one_in(2)) {
@@ -651,14 +738,26 @@ class Builder {
       }
       if (keep()) {
         Var& d = var("data_station_" + suffix, NC_DOUBLE, {len}, Role::data);
-        if (in_.one_in(2)) {
+        // The stations must agree on their units and datum (SN 11): one that
+        // says something the first did not is a file the reader refuses.
+        const bool units = in_.one_in(2);
+        const bool datum = in_.one_in(2);
+        if (s == 0) {
+          first_units = units;
+          first_datum = datum;
+        }
+        spoiled_ = spoiled_ or units != first_units or datum != first_datum;
+        if (units) {
           d.atts.push_back(text_att("units", text("m")));
         }
-        if (in_.one_in(2)) {
+        if (datum) {
           d.atts.push_back(text_att("datum", text("MLLW")));
         }
         spoil(d);
       }
+    }
+    if (not spoiled_) {
+      exact_legacy(stations);
     }
   }
 
@@ -729,8 +828,142 @@ class Builder {
     }
   }
 
+  // ---- the data of a template nothing spoiled, and what it must read as
+
+  /// Where sample `j` of station `s` is in the flat data of a layout.
+  static std::size_t place(Layout layout, bool transposed, std::size_t stations,
+                           std::size_t times, std::size_t s, std::size_t j) {
+    switch (layout) {
+      case Layout::orthogonal:
+      case Layout::incomplete:
+        return transposed ? (j * stations) + s : (s * times) + j;
+      case Layout::contiguous:
+        return (s * times) + j;
+      case Layout::indexed:
+        return (j * stations) + s;
+      case Layout::single:
+        break;
+    }
+    return j;
+  }
+
+  static double sample_value(std::size_t s, std::size_t j) {
+    return 100.0 + (10.0 * static_cast<double>(s)) + static_cast<double>(j);
+  }
+
+  /// Rows of `width` characters, each a letter and NULs.
+  static std::string letter_rows(std::size_t rows, std::size_t width) {
+    std::string out(rows * width, '\0');
+    for (std::size_t s = 0; s < rows; ++s) {
+      out[s * width] = static_cast<char>('A' + s);
+    }
+    return out;
+  }
+
+  void exact_cf(bool v5, Layout layout) {
+    constexpr std::int64_t days_to_2000_ms = 946684800000;
+    constexpr std::int64_t day_ms = 86400000;
+    const bool single = layout == Layout::single;
+    const std::size_t stations = single ? 1 : stations_;
+    const std::size_t times = times_;
+    Expect expect{.type = v5 ? io::FileType::station_netcdf
+                             : io::FileType::foreign_cf_netcdf,
+                  .ids = {},
+                  .times_ms = {},
+                  .values = {}};
+    for (std::size_t s = 0; s < stations; ++s) {
+      expect.ids.emplace_back(1, static_cast<char>('A' + s));
+      expect.times_ms.emplace_back();
+      expect.values.emplace_back();
+      for (std::size_t j = 0; j < times; ++j) {
+        expect.times_ms[s].push_back(days_to_2000_ms +
+                                     (static_cast<std::int64_t>(j) * day_ms));
+        expect.values[s].push_back(sample_value(s, j));
+      }
+    }
+    const std::size_t total = stations * times;
+    for (Var& v : plan_.vars) {
+      std::vector<double>& d = v.exact_numbers;
+      if (v.name == "station_id" or v.name == "station_name") {
+        v.exact_chars = letter_rows(stations, 3);
+      } else if (v.name == "lat" or v.name == "lon") {
+        for (std::size_t s = 0; s < stations; ++s) {
+          d.push_back((v.name == "lat" ? 29.0 : -90.0) +
+                      static_cast<double>(s));
+        }
+      } else if (v.name == "time" and layout == Layout::orthogonal) {
+        for (std::size_t j = 0; j < times; ++j) {
+          d.push_back(static_cast<double>(j));
+        }
+      } else if (v.name == "obs_count" or v.name == "rowSize") {
+        d.assign(stations, static_cast<double>(times));
+      } else if (v.name == "time" or v.name == "temperature" or
+                 v.name == "stationIndex") {
+        d.assign(total, 0.0);
+        for (std::size_t s = 0; s < stations; ++s) {
+          for (std::size_t j = 0; j < times; ++j) {
+            const std::size_t at =
+                place(layout, transposed_, stations, times, s, j);
+            d[at] = v.name == "time"          ? static_cast<double>(j)
+                    : v.name == "temperature" ? sample_value(s, j)
+                                              : static_cast<double>(s);
+          }
+        }
+      }
+    }
+    plan_.expect = std::move(expect);
+  }
+
+  void exact_legacy(std::size_t stations) {
+    Expect expect{.type = io::FileType::legacy_station_netcdf,
+                  .ids = {},
+                  .times_ms = {},
+                  .values = {}};
+    constexpr std::size_t name_len = 8;
+    constexpr std::int64_t minute_ms = 60000;
+    for (std::size_t s = 0; s < stations; ++s) {
+      expect.ids.emplace_back(1, static_cast<char>('A' + s));
+      expect.times_ms.emplace_back();
+      expect.values.emplace_back();
+      for (std::size_t j = 0; j < station_lengths_[s]; ++j) {
+        expect.times_ms[s].push_back(static_cast<std::int64_t>(j) * minute_ms);
+        expect.values[s].push_back(5.0 + (10.0 * static_cast<double>(s)) +
+                                   static_cast<double>(j));
+      }
+    }
+    for (Var& v : plan_.vars) {
+      if (v.name == "stationName" or v.name == "stationId") {
+        v.exact_chars = letter_rows(stations, name_len);
+      } else if (v.name == "stationXCoordinate" or
+                 v.name == "stationYCoordinate") {
+        for (std::size_t s = 0; s < stations; ++s) {
+          v.exact_numbers.push_back(
+              (v.name == "stationXCoordinate" ? -90.0 : 29.0) +
+              static_cast<double>(s));
+        }
+      } else if (v.name.starts_with("time_station_") or
+                 v.name.starts_with("data_station_")) {
+        // Both end in the station's number: 1-based, four digits.
+        const std::size_t s = std::stoul(v.name.substr(v.name.size() - 4)) - 1;
+        for (std::size_t j = 0; j < station_lengths_[s]; ++j) {
+          v.exact_numbers.push_back(v.name.starts_with("time_")
+                                        ? static_cast<double>(j) * 60.0
+                                        : expect.values[s][j]);
+        }
+      }
+    }
+    plan_.expect = std::move(expect);
+  }
+
   Choices& in_;
   Plan plan_;
+  bool spoiled_{false};
+  bool transposed_{false};
+  bool v5_{false};
+  /// What the unspoiled template looks like, for its exact data.
+  std::size_t stations_{0};
+  std::size_t times_{0};
+  std::vector<std::size_t> station_lengths_;  // legacy: samples per station
 };
 
 // ---- writing the schema
@@ -799,7 +1032,16 @@ void put_data(int ncid, int varid, const Plan& plan, const Var& v,
   if (not n or *n == 0) {
     return;
   }
-  if (v.type == NC_CHAR) {
+  if (v.type == NC_CHAR and v.exact_chars.size() == *n) {
+    nc_put_var_text(ncid, varid, v.exact_chars.data());
+  } else if (v.exact_numbers.size() == *n and v.type == NC_INT64) {
+    const std::vector<long long> wide(v.exact_numbers.begin(),
+                                      v.exact_numbers.end());
+    nc_put_var_longlong(ncid, varid, wide.data());
+  } else if (v.exact_numbers.size() == *n and v.type != NC_CHAR and
+             v.type != NC_STRING) {
+    nc_put_var_double(ncid, varid, v.exact_numbers.data());
+  } else if (v.type == NC_CHAR) {
     std::string chars(*n, '\0');
     for (char& c : chars) {
       c = in.one_in(4) ? '\0' : static_cast<char>('A' + in.below(26));
@@ -832,8 +1074,13 @@ void put_data(int ncid, int varid, const Plan& plan, const Var& v,
 /// _FillValue of another type) leave that piece out.
 void write(const std::filesystem::path& path, const Plan& plan, Choices& in) {
   int ncid = -1;
-  if (nc_create(path.c_str(), plan.cmode | NC_CLOBBER, &ncid) != NC_NOERR) {
-    return;
+  if (const int status =
+          nc_create(path.c_str(), plan.cmode | NC_CLOBBER, &ncid);
+      status != NC_NOERR) {
+    // A fuzzer that cannot write its file would pass on nothing.
+    std::println(stderr, "cannot create {}: {}", path.string(),
+                 nc_strerror(status));
+    fail();
   }
   std::vector<int> dim_ids(plan.dims.size(), -1);
   for (std::size_t i = 0; i < plan.dims.size(); ++i) {
@@ -925,25 +1172,50 @@ void check_table(const core::StationTable& t, const io::ReadLimits& limits) {
   }
 }
 
-io::FileType expected_type(const io::StationFileOrigin& origin) {
-  if (std::holds_alternative<io::V5Origin>(origin)) {
-    return io::FileType::station_netcdf;
+/// An unspoiled template reads as it was written.
+void check_expected(const io::StationFile& file, const Expect& expect) {
+  if (io::file_type_of(file.origin) != expect.type) {
+    fail();
   }
-  if (std::holds_alternative<io::ForeignCfOrigin>(origin)) {
-    return io::FileType::foreign_cf_netcdf;
+  const core::StationTable& t = file.table;
+  if (t.size() != expect.ids.size() or t.schema().size() != 1) {
+    fail();
   }
-  return io::FileType::legacy_station_netcdf;
+  for (std::size_t i = 0; i < t.size(); ++i) {
+    const core::StationIndex at{i};
+    const auto times = t.times(at);
+    const auto column = t.column(at, core::ColumnIndex{0});
+    if (t.station(at).id.view() != expect.ids[i] or
+        times.size() != expect.times_ms[i].size() or
+        column.size() != expect.values[i].size()) {
+      fail();
+    }
+    for (std::size_t j = 0; j < times.size(); ++j) {
+      const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          times[j].time_since_epoch())
+                          .count();
+      if (ms != expect.times_ms[i][j] or
+          column[j].value() != std::optional{expect.values[i][j]}) {
+        fail();
+      }
+    }
+  }
 }
 
 void run_station_readers(const std::filesystem::path& path,
                          const io::ReadContext& ctx,
-                         const std::optional<io::FileType>& detected) {
+                         const std::optional<io::FileType>& detected,
+                         const std::optional<Expect>& expect) {
   const auto catalog = io::inspect_station_netcdf(path, ctx);
   if (catalog) {
     check_warnings(catalog->warnings);
-    if (detected and *detected != expected_type(catalog->value.origin)) {
+    if (detected and *detected != io::file_type_of(catalog->value.origin)) {
       fail();
     }
+  } else if (expect) {
+    std::println(stderr, "a good file does not open: {}",
+                 describe(catalog.error()));
+    fail();
   }
   for (const io::PaddingCheck padding :
        {io::PaddingCheck::boundary, io::PaddingCheck::whole}) {
@@ -951,6 +1223,11 @@ void run_station_readers(const std::filesystem::path& path,
         io::read_station_netcdf(path, io::AllStations{}, ctx,
                                 io::StationNcReadOptions{.padding = padding});
     if (not read) {
+      if (expect) {
+        std::println(stderr, "a good file does not read: {}",
+                     describe(read.error()));
+        fail();
+      }
       const auto* format = std::get_if<io::FormatError>(&read.error());
       const bool refused =
           format != nullptr and format->code == io::FormatErrc::not_this_format;
@@ -965,8 +1242,11 @@ void run_station_readers(const std::filesystem::path& path,
     }
     check_warnings(read->warnings);
     check_table(read->value.table, ctx.limits);
-    if (detected and *detected != expected_type(read->value.origin)) {
+    if (detected and *detected != io::file_type_of(read->value.origin)) {
       fail();
+    }
+    if (expect) {
+      check_expected(read->value, *expect);
     }
     if (catalog and padding == io::PaddingCheck::boundary) {
       const auto& c = catalog->value;
@@ -976,8 +1256,10 @@ void run_station_readers(const std::filesystem::path& path,
         fail();
       }
       for (std::size_t i = 0; i < t.size(); ++i) {
+        // The file holds `samples`; a read that drops repeated times returns
+        // fewer, never more.
         if (not(c.stations[i].station == t.station(core::StationIndex{i})) or
-            c.stations[i].samples != t.times(core::StationIndex{i}).size()) {
+            c.stations[i].samples < t.times(core::StationIndex{i}).size()) {
           fail();
         }
       }
@@ -1040,8 +1322,13 @@ std::filesystem::path scratch_file() {
     const char* chosen = std::getenv("MOV_FUZZ_SCRATCH");
     const std::filesystem::path dir{chosen != nullptr ? chosen
                                                       : MOV_FUZZ_SCRATCH_DIR};
-    std::error_code ignored;
-    std::filesystem::create_directories(dir, ignored);
+    std::error_code error;
+    std::filesystem::create_directories(dir, error);
+    if (error or not std::filesystem::is_directory(dir)) {
+      std::println(stderr, "cannot use {} for the scratch files: {}",
+                   dir.string(), error.message());
+      fail();
+    }
     return dir / ("structure-" + std::to_string(::getpid()) + ".nc");
   }();
   return path;
@@ -1064,10 +1351,21 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
 
   const io::ReadContext ctx = small_limits();
   std::optional<io::FileType> detected;
-  if (const auto type = io::detect_file_type(path, ctx.limits)) {
-    detected = *type;
+  if (const auto type = io::detect_file(path, ctx.limits)) {
+    detected = io::file_type_of(*type);
+  } else if (plan.expect) {
+    fail();
   }
-  run_station_readers(path, ctx, detected);
+  if (plan.expect and detected != plan.expect->type) {
+    fail();
+  }
+  if (std::getenv("MOV_FUZZ_TRACE") != nullptr) {
+    // Which inputs are valid files (to find seeds): "exact" if nothing spoiled
+    // the template, with the file type it must be.
+    std::println(stderr, "trace: {} {}", plan.expect ? "exact" : "spoiled",
+                 detected ? io::to_token(*detected) : "undetected");
+  }
+  run_station_readers(path, ctx, detected, plan.expect);
   run_model_readers(path, ctx);
 
   std::error_code ignored;

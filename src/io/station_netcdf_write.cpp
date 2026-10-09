@@ -144,7 +144,7 @@ std::expected<ColumnNames, Error> column_names(const core::QuantityId& q) {
   auto name = nc::NcName::make(token);
   auto status =
       nc::NcName::make(std::string{token} + std::string{sn::status_suffix});
-  if (sn::is_reserved(token) or not name or not status) {
+  if (not sn::writable_token(token, {}) or not name or not status) {
     return refuse(FormatErrc::invalid_variable_name, std::string{token});
   }
   return ColumnNames{.name = *std::move(name), .status = *std::move(status)};
@@ -251,19 +251,17 @@ std::expected<ColumnPlan, Error> plan_column(const core::StationTable& table,
       .reads_as_fill = facts.reads_as_fill};
 }
 
-/// No column may be named like another column's status variable, which every
-/// column reserves (whether or not it is written).
-std::expected<void, Error> check_status_names(const core::StationTable& table) {
+/// Every column must be writable next to the others (writable_token): not a
+/// name the format uses, and no column named like another column's status
+/// variable, which every column reserves (whether or not it is written).
+std::expected<void, Error> check_tokens(const core::StationTable& table) {
+  sn::TokenSet taken;
   for (const core::SeriesMeta& meta : table.schema()) {
-    const std::string status = std::string{core::token(meta.quantity())} +
-                               std::string{sn::status_suffix};
-    const auto clash =
-        std::ranges::find_if(table.schema(), [&](const core::SeriesMeta& m) {
-          return core::token(m.quantity()) == status;
-        });
-    if (clash != table.schema().end()) {
-      return refuse(FormatErrc::invalid_variable_name, status);
+    const std::string token{core::token(meta.quantity())};
+    if (not sn::writable_token(token, taken)) {
+      return refuse(FormatErrc::invalid_variable_name, token);
     }
+    taken.insert(token);
   }
   return {};
 }
@@ -357,7 +355,7 @@ std::expected<std::size_t, Error> check_table(
     StationNcLayout layout, const detail::StationNcWriteLimits& limits) {
   return check_collection(table)
       .and_then([&] { return check_options(options); })
-      .and_then([&] { return check_status_names(table); })
+      .and_then([&] { return check_tokens(table); })
       .and_then([&] { return sample_length(table, layout, limits); });
 }
 

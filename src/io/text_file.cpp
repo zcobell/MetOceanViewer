@@ -182,9 +182,17 @@ std::expected<std::string, FileError> read_text_file(
   return read_open_file(path, limits, std::nullopt);
 }
 
-std::expected<std::string, FileError> read_text_prefix(
+std::expected<FilePrefix, FileError> read_file_prefix(
     const std::filesystem::path& path, std::size_t max_bytes) {
-  return read_open_file(path, ReadLimits{}, std::uintmax_t{max_bytes});
+  // One byte more than asked for says whether the file goes on.
+  auto bytes = read_open_file(path, ReadLimits{},
+                              std::uintmax_t{max_bytes} + std::uintmax_t{1});
+  if (not bytes) {
+    return std::unexpected{std::move(bytes).error()};
+  }
+  const bool whole = bytes->size() <= max_bytes;
+  bytes->resize(std::min(bytes->size(), max_bytes));
+  return FilePrefix{.bytes = *std::move(bytes), .whole_file = whole};
 }
 
 }  // namespace mov::io

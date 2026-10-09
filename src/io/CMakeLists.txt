@@ -69,3 +69,9 @@ target_sources(
         station_netcdf_foreign_read.cpp
         station_netcdf_legacy.cpp
 )
+
+# Helpers the v5, foreign and legacy station netCDF readers share (WP10b review).
+target_sources(mov_io PRIVATE station_netcdf_shared.cpp)
+
+# The foreign CF reader: what each variable says, and the schema (WP10b review).
+target_sources(mov_io PRIVATE station_netcdf_foreign_facts.cpp station_netcdf_foreign_schema.cpp)

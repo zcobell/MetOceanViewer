@@ -7,7 +7,7 @@
 // read_station_netcdf, which reads a v5 file (WP10a), a foreign CF discrete
 // sampling geometry `timeSeries` file or a legacy v4 station file (WP10b).
 // What kind of file a path is, before any reader is chosen, is file_type.hpp's
-// detect_file_type.
+// detect_file.
 //
 // netCDF-C is not thread-safe: the caller serializes these functions with
 // every other netCDF call (nc/file.hpp). Each opens its file once and closes
@@ -186,14 +186,19 @@ struct AllStations {
 /// station count (inspect_station_netcdf gives the count).
 using StationNcSelection = std::variant<AllStations, core::StationSelection>;
 
-/// How much of the padding of an incomplete layout a read checks (SN 12.4).
+/// How much of the padding of an incomplete layout a read checks (SN 12.4):
+/// of a v5 file, and of a foreign one that has `obs_count`. (A foreign file
+/// without `obs_count` has its samples counted by the leading non-missing
+/// times, which looks at all of them: there is nothing left to check.)
 enum class PaddingCheck : std::uint8_t {
-  /// The first padding element of each station (the default): a read costs
-  /// what the stations' samples cost.
+  /// The padding a read goes through anyway: after the samples of the longest
+  /// selected station, one more element. A read costs what the stations'
+  /// samples cost (the default).
   boundary,
   /// Every padding element: a read costs selected stations x `obs`, which a
   /// pathological file (one long station among many short ones) makes
-  /// large. For tests and files of unknown origin.
+  /// large, and `too_large` when it exceeds ReadLimits. For tests and files of
+  /// unknown origin.
   whole,
 };
 
@@ -241,19 +246,23 @@ struct ForeignCfOrigin {
                                    const ForeignCfOrigin&) = default;
 };
 
-/// The two shapes of the legacy v4 station netCDF (legacy-formats.md 5; the
-/// `%4.4i` and `%04i` spellings of the station number are one dialect, and
-/// CRMS, dialect C, is not read). `a` carries the marks of v4's
-/// `Hmdf::writeNetcdf` (a global `fileformat` attribute or a `stationId`
-/// variable); `b` is a file in the same layout without them, which v4's reader
-/// accepted. Both are read the same way.
-enum class LegacyDialect : std::uint8_t { a, b };
+/// The digits of the station number in the variable names of a legacy file:
+/// `time_station_0001` (v4's `%04i`, which widens past 9999) or
+/// `time_station_000001` (the six-digit spelling of the CRMS dialect, accepted
+/// when the file has the station coordinates).
+enum class StationNumberWidth : std::uint8_t { four, six };
 
-/// A legacy v4 station file (SN 11).
+/// A legacy v4 station file (SN 11): what the file says about itself, not a
+/// label. v4's `Hmdf::writeNetcdf` writes a global `fileformat` and a
+/// `stationId` variable; v4's reader accepted files without them. Both read
+/// the same way.
 struct LegacyOrigin {
-  LegacyDialect dialect;
-  friend constexpr bool operator==(const LegacyOrigin&,
-                                   const LegacyOrigin&) = default;
+  /// The global `fileformat` attribute, if the file has a text one.
+  std::optional<std::string> fileformat;
+  /// The file has a `stationId` variable.
+  bool has_station_ids;
+  StationNumberWidth width;
+  friend bool operator==(const LegacyOrigin&, const LegacyOrigin&) = default;
 };
 
 /// Where a station file's table came from.
@@ -267,7 +276,9 @@ struct StationFile {
 };
 
 /// A station of a catalog and its number of samples (`obs_count`, or the
-/// length of `time` in the orthogonal layout).
+/// length of `time` in the orthogonal layout): what the file holds. A read of
+/// a foreign or legacy file that puts a series in order drops repeated times,
+/// so it can return fewer.
 struct CatalogStation {
   core::FileStation station;
   std::size_t samples;
@@ -300,31 +311,74 @@ inspect_station_netcdf(const std::filesystem::path& path,
 /// `not_this_format`):
 ///  - v5: the rules below;
 ///  - foreign CF (`featureType` timeSeries, CF-1.6 or later; SN 12 "Foreign",
-///    CF 9.3): any of the five layouts, variables found by `cf_role`,
-///    `standard_name`, `units`, `coordinates`, `sample_dimension` and
-///    `instance_dimension`; `_FillValue`, `missing_value`, `valid_*`,
-///    packing, int and float data and times, NC_STRING and integer ids are
-///    accepted; a registry quantity when the standard name is its own and the
-///    unit converts, else a generic one named after the variable (a
-///    substitute token, `variable_renamed`, when the name is none); variables
-///    that are not series are skipped (`skipped_variable`); warnings
-///    `foreign_cf` first, then `crs_assumed`, `duplicate_station_id_renamed`,
-///    `invalid_utf8_replaced`, `skipped_variable`, `variable_renamed`,
-///    `unknown_quantity`, `unrecognized_unit`, `datum_unknown`, the time
-///    units'. Errors: `missing_variable` (latitude, longitude, time),
-///    `no_station_id`, `no_data_variables`, `unsupported_layout`,
-///    `dimension_mismatch`, `bad_obs_count`, `bad_row_size`,
-///    `bad_ragged_index`, `padding_not_missing`, `time_*`, `missing_attribute`
-///    (`time:units`), `unsupported_calendar`, NcError (a `_FillValue` of the
-///    wrong type, `too_large`);
-///  - legacy v4 (SN 11): see station_netcdf_legacy.cpp; origin LegacyOrigin,
-///    warnings `legacy_dialect` first, then `tz_assumed_utc`, `epoch_used`,
-///    `crs_assumed`, `invalid_utf8_replaced`, `duplicate_station_id_renamed`,
-///    `crs_approximate`, `unrecognized_unit`, `datum_unknown`. Errors:
-///    `missing_dimension`/`missing_variable` (with the station for the
+///    CF 9.3): any of the five layouts. Variables are found by `cf_role`,
+///    `standard_name`, `units`, `axis`, `coordinates`, `sample_dimension` and
+///    `instance_dimension`; where CF has no attribute, by the names
+///    `station_name` (the station names, when no text variable has the
+///    standard name `platform_name`; either is used only over the station
+///    dimension, else skipped) and `obs_count`. The time variable is the best
+///    ranked of those that can be one (not a scalar, not a vector over the
+///    stations): the coordinate variable of its dimension, then one listed in
+///    some `coordinates`, then one with standard name `time` or axis T, then
+///    one with time units; two of the same rank are `unsupported_layout`
+///    naming both. Two variables with `cf_role` timeseries_id are
+///    `ambiguous_station_id`. An id that is missing (an empty or NULL string,
+///    a masked integer, no id variable) is the station's index in decimal
+///    (`station_id_substituted` when the file has an id variable); float ids
+///    are `bad_encoding`.
+///    `_FillValue`, `missing_value`, `valid_*`, packing, int and float data
+///    and times, NC_STRING and integer ids are accepted; a data variable whose
+///    masking attributes cannot be read is skipped (`skipped_variable`,
+///    subject `<variable>:<attribute>`), an error only when no data variable
+///    is left (`no_data_variables`) or for the time, position and helper
+///    variables. The quantity is a registry one when the standard name is its
+///    own and the unit converts (of the two water levels, the name or
+///    `long_name` hints decide: predict, tide, astronomical, harmonic say
+///    prediction; a further variable of a taken quantity warns
+///    `unknown_quantity` and is generic), else a generic one named after the
+///    variable (a substitute token when the name is none or is taken,
+///    `variable_renamed`, subject: the variable's name). The datum is the
+///    variable's `vertical_datum`, else its `geopotential_datum_name`, else
+///    that of its `grid_mapping` variable, by token or long name; any other
+///    text is no datum (`datum_unknown`). Integer `ancillary_variables` are
+///    quality flags: values a known scheme calls bad (QARTOD 4 and 9, or a
+///    `flag_meanings` word containing bad, fail or missing) become Missing
+///    (`flagged_samples_masked`), suspect ones are kept and counted
+///    (`suspect_samples_kept`), an unknown scheme is ignored
+///    (`quality_flags_ignored`). A series whose times are not strictly
+///    increasing is put in order as IMEDS does (`times_reordered`,
+///    `duplicate_times_dropped`, `conflicting_duplicate_times`; one axis shared
+///    by every station is sorted for all of them). The padding of an
+///    incomplete layout with `obs_count` is checked as options.padding says;
+///    without `obs_count` the counts are the leading non-missing times.
+///    Warnings, in this order: `foreign_cf`, `crs_assumed`, then the stations'
+///    (`station_id_substituted`, `invalid_utf8_replaced`,
+///    `duplicate_station_id_renamed`, `crs_approximate`), `skipped_variable`,
+///    `unknown_quantity`, `variable_renamed`, per variable `unrecognized_unit`
+///    and `datum_unknown`, `quality_flags_ignored`; when reading the time
+///    units', `times_reordered`, `duplicate_times_dropped`,
+///    `conflicting_duplicate_times`, `flagged_samples_masked`,
+///    `suspect_samples_kept`. Errors: `missing_variable` (latitude, longitude,
+///    time), `ambiguous_station_id`, `no_data_variables`,
+///    `unsupported_layout`, `dimension_mismatch`, `bad_obs_count`,
+///    `bad_row_size`, `bad_ragged_index`, `padding_not_missing`, `time_*`,
+///    `missing_attribute` (`time:units`), `unsupported_calendar`, NcError (a
+///    `_FillValue` of the wrong type on a time or position variable,
+///    `too_large`);
+///  - legacy v4 (SN 11): see station_netcdf_legacy.cpp; origin LegacyOrigin
+///    (what the file has: `fileformat`, a `stationId`, the digits of the
+///    station numbers), warnings in this order: `legacy_dialect`,
+///    `crs_assumed`, `tz_assumed_utc` (a `timezone` that is not UTC or GMT, or
+///    text after the 19 characters of `referenceDate`), `epoch_used`,
+///    `invalid_utf8_replaced`, `duplicate_station_id_renamed`,
+///    `crs_approximate`, `unrecognized_unit`, `datum_unknown`, and reading
+///    `times_reordered`, `duplicate_times_dropped`,
+///    `conflicting_duplicate_times` (the series are put in order as above).
+///    Errors: `missing_dimension`/`missing_variable` (with the station for the
 ///    per-station variables), `dimension_mismatch`, `inconsistent_metadata`,
 ///    `unsupported_crs`, ParseError `bad_date` (`referenceDate`), NcError
-///    `type_mismatch` for a `HorizontalProjectionEPSG` that is not an integer.
+///    `type_mismatch` for a `HorizontalProjectionEPSG` that is not a signed
+///    integer.
 ///
 /// For a v5 file: reads the stations `which` into a table (stations in the
 /// order of the selection; one shared axis in the orthogonal layout, one per

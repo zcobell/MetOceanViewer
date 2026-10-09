@@ -3,15 +3,16 @@
 
 #include "netcdf_kind.hpp"
 
-#include <array>
 #include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include "model_netcdf.hpp"
 #include "mov/core/detail/ascii.hpp"
+#include "mov/io/detail/text.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
 #include "mov/io/station_netcdf.hpp"
@@ -63,15 +64,25 @@ std::expected<bool, Error> is_dflow(const nc::File& file) {
   return has_var(file, "station_y_coordinate");
 }
 
-std::expected<bool, Error> is_foreign_cf(const nc::File& file) {
+/// What a foreign CF `timeSeries` check found: the CF version of the file, or
+/// the attribute that stands in the way.
+using ForeignCheck = std::variant<CfVersion, kind::Unrecognized>;
+
+std::expected<ForeignCheck, Error> check_foreign_cf(const nc::File& file) {
   auto feature = global_is(file, "featureType", sn::feature_type, true);
-  if (not feature or not *feature) {
-    return feature;
+  if (not feature) {
+    return std::unexpected{std::move(feature).error()};
+  }
+  if (not *feature) {
+    return ForeignCheck{kind::Unrecognized{.subject = ":featureType"}};
   }
   return sn::text_of(file, nc::global, "Conventions")
       .transform([](const std::optional<std::string>& text) {
         const auto cf = text ? parse_cf_conventions(*text) : std::nullopt;
-        return cf.has_value() and cf->major == 1 and cf->minor >= 6;
+        return cf and cf->major == 1 and cf->minor >= 6
+                   ? ForeignCheck{*cf}
+                   : ForeignCheck{
+                         kind::Unrecognized{.subject = ":Conventions"}};
       });
 }
 
@@ -92,43 +103,60 @@ std::expected<bool, Error> is_legacy(const nc::File& file) {
   return has_var(file, "stationXCoordinate");
 }
 
+/// The kinds that are decided by a yes or no, in order.
+std::expected<std::optional<NetcdfKind>, Error> model_kind(
+    const nc::File& file) {
+  auto adcirc = global_is(file, "model", "ADCIRC");
+  if (not adcirc) {
+    return std::unexpected{std::move(adcirc).error()};
+  }
+  if (*adcirc) {
+    return std::optional<NetcdfKind>{kind::Adcirc{}};
+  }
+  auto dflow = is_dflow(file);
+  if (not dflow) {
+    return std::unexpected{std::move(dflow).error()};
+  }
+  return *dflow ? std::optional<NetcdfKind>{kind::Dflow{}} : std::nullopt;
+}
+
 }  // namespace
 
 std::expected<NetcdfKind, Error> classify_netcdf(const nc::File& file) {
-  // A file that names its own format is that format or none of ours: it is
-  // not guessed to be a foreign CF file (a future major version of the format
-  // may keep the CF attributes).
+  // A file that names its own format is that format or none of ours.
   auto format = sn::text_of(file, nc::global, "metoceanviewer_format");
   if (not format) {
     return std::unexpected{std::move(format).error()};
   }
   if (*format) {
-    return core::detail::trim(**format) == station_nc_format
-               ? NetcdfKind::station_v5
-               : NetcdfKind::other;
-  }
-  struct Test {
-    NetcdfKind kind;
-    std::expected<bool, Error> (*matches)(const nc::File&);
-  };
-  static constexpr std::array<Test, 4> tests{{
-      {.kind = NetcdfKind::adcirc,
-       .matches =
-           [](const nc::File& f) { return global_is(f, "model", "ADCIRC"); }},
-      {.kind = NetcdfKind::dflow, .matches = is_dflow},
-      {.kind = NetcdfKind::foreign_cf, .matches = is_foreign_cf},
-      {.kind = NetcdfKind::legacy_station, .matches = is_legacy},
-  }};
-  for (const Test& test : tests) {
-    auto matches = test.matches(file);
-    if (not matches) {
-      return std::unexpected{std::move(matches).error()};
+    const std::string_view name = core::detail::trim(**format);
+    if (name == station_nc_format) {
+      return NetcdfKind{kind::StationV5{}};
     }
-    if (*matches) {
-      return test.kind;
-    }
+    return NetcdfKind{kind::OtherFormat{.name = sn::subject_of(name)}};
   }
-  return NetcdfKind::other;
+  auto model = model_kind(file);
+  if (not model) {
+    return std::unexpected{std::move(model).error()};
+  }
+  if (*model) {
+    return **std::move(model);
+  }
+  auto foreign = check_foreign_cf(file);
+  if (not foreign) {
+    return std::unexpected{std::move(foreign).error()};
+  }
+  if (const auto* version = std::get_if<CfVersion>(&*foreign)) {
+    return NetcdfKind{kind::ForeignCf{.version = *version}};
+  }
+  auto legacy = is_legacy(file);
+  if (not legacy) {
+    return std::unexpected{std::move(legacy).error()};
+  }
+  if (*legacy) {
+    return NetcdfKind{kind::LegacyStation{}};
+  }
+  return NetcdfKind{std::get<kind::Unrecognized>(std::move(*foreign))};
 }
 
 }  // namespace mov::io::detail

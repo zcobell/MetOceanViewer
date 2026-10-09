@@ -88,6 +88,16 @@ class Cdf {
     return *this;
   }
 
+  /// A numeric attribute of the given external type, as many values as given.
+  Cdf& nums(std::string_view var_name, const char* att, nc_type type,
+            const std::vector<double>& values) {
+    redef();
+    check(nc_put_att_double(ncid(), varid(var_name), att, type, values.size(),
+                            values.data()),
+          att);
+    return *this;
+  }
+
   Cdf& int64_att(std::string_view var_name, const char* att,
                  std::initializer_list<long long> values) {
     redef();

@@ -57,7 +57,8 @@ namespace {
 constexpr std::string_view time_prefix = "time_station_";
 constexpr std::string_view data_prefix = "data_station_";
 constexpr std::string_view length_prefix = "stationLength_";
-constexpr std::array<int, 2> widths{4, 6};
+constexpr std::array<StationNumberWidth, 2> widths{StationNumberWidth::four,
+                                                   StationNumberWidth::six};
 constexpr std::size_t stations_per_stop_poll = 256;
 /// `referenceDate` is `yyyy-MM-dd hh:mm:ss`: v4 read these 19 characters.
 constexpr std::size_t reference_date_chars = 19;
@@ -163,9 +164,10 @@ std::expected<Base, Error> find_base(const nc::File& file) {
 
 /// The digits of the station numbers: those of the first station's time
 /// variable (v4 writes four, a CRMS-style file six).
-std::expected<int, Error> number_width(const nc::File& file) {
-  for (const int width : widths) {
-    const std::string name = legacy_variable_name(time_prefix, 1, width);
+std::expected<StationNumberWidth, Error> number_width(const nc::File& file) {
+  for (const StationNumberWidth width : widths) {
+    const std::string name =
+        legacy_variable_name(time_prefix, 1, digits_of(width));
     const auto ref = nc::NcName::make(name);
     if (not ref) {
       continue;
@@ -178,36 +180,37 @@ std::expected<int, Error> number_width(const nc::File& file) {
       return width;
     }
   }
-  return invalid(FormatErrc::missing_variable,
-                 legacy_variable_name(time_prefix, 1, widths.front()), 0);
+  return invalid(
+      FormatErrc::missing_variable,
+      legacy_variable_name(time_prefix, 1, digits_of(widths.front())), 0);
 }
 
-/// Dialect A carries the marks of `Hmdf::writeNetcdf`.
-std::expected<LegacyDialect, Error> dialect_of(const nc::File& file,
-                                               const Base& base) {
-  if (base.id) {
-    return LegacyDialect::a;
-  }
+/// What the file says about itself: v4's writer puts a global `fileformat` and
+/// a `stationId` variable in its files; v4's reader accepted files without.
+std::expected<LegacyOrigin, Error> origin_of(const nc::File& file,
+                                             const Base& base,
+                                             StationNumberWidth width) {
   return text_of(file, nc::global, "fileformat")
-      .transform([](const std::optional<std::string>& text) {
-        return text ? LegacyDialect::a : LegacyDialect::b;
+      .transform([&](std::optional<std::string> format) {
+        return LegacyOrigin{.fileformat = std::move(format),
+                            .has_station_ids = base.id.has_value(),
+                            .width = width};
       });
 }
 
 // ---- the CRS ----------------------------------------------------------------
 
-bool is_type_mismatch(const NcError& e) {
-  const auto* fault = std::get_if<WrapperFault>(&e.status);
-  return fault != nullptr and *fault == WrapperFault::type_mismatch;
-}
-
 constexpr nc::NcNameRef x_var{"stationXCoordinate"};
 constexpr nc::NcNameRef epsg_att{"HorizontalProjectionEPSG"};
+constexpr std::string_view epsg_object =
+    "stationXCoordinate:HorizontalProjectionEPSG";
 
-template <class T>
-std::expected<std::optional<std::int64_t>, NcError> epsg_as(
+/// The EPSG code of `stationXCoordinate`, any signed integer type; nullopt
+/// when the attribute is absent. A text, floating-point or unsigned attribute
+/// is `type_mismatch` (B10: an error, never a code).
+std::expected<std::optional<std::int64_t>, Error> read_epsg(
     const nc::File& file) {
-  auto values = file.numeric_att<T>(x_var, epsg_att);
+  auto values = int_att(file, x_var, epsg_att, epsg_object);
   if (not values) {
     return std::unexpected{std::move(values).error()};
   }
@@ -215,37 +218,10 @@ std::expected<std::optional<std::int64_t>, NcError> epsg_as(
     return std::optional<std::int64_t>{};
   }
   if ((*values)->size() != 1) {
-    return std::unexpected{
-        NcError{.status = WrapperFault::count_mismatch,
-                .op = NcOp::get_att,
-                .object = "stationXCoordinate:HorizontalProjectionEPSG",
-                .file = file.path()}};
+    return fail(nc_fault(file, WrapperFault::count_mismatch, NcOp::get_att,
+                         epsg_object));
   }
   return std::optional<std::int64_t>{(*values)->front()};
-}
-
-/// The EPSG code of `stationXCoordinate`, any integer type; nullopt when the
-/// attribute is absent. A text or floating-point attribute is the first
-/// attempt's type_mismatch (B10: an error, never a code).
-std::expected<std::optional<std::int64_t>, Error> read_epsg(
-    const nc::File& file) {
-  auto as_int = epsg_as<std::int32_t>(file);
-  if (as_int or not is_type_mismatch(as_int.error())) {
-    return as_int.transform_error(lift<Error>);
-  }
-  if (auto wide = epsg_as<std::int64_t>(file);
-      wide or not is_type_mismatch(wide.error())) {
-    return wide.transform_error(lift<Error>);
-  }
-  if (auto small = epsg_as<std::int16_t>(file);
-      small or not is_type_mismatch(small.error())) {
-    return small.transform_error(lift<Error>);
-  }
-  if (auto tiny = epsg_as<std::int8_t>(file);
-      tiny or not is_type_mismatch(tiny.error())) {
-    return tiny.transform_error(lift<Error>);
-  }
-  return fail(std::move(as_int).error());
 }
 
 /// The file's CRS: its EPSG code, or 4326 with a warning when it has none.
@@ -402,8 +378,10 @@ std::expected<Read<std::vector<core::FileStation>>, Error> stations_of(
 /// naming it and the station.
 std::expected<nc::VarInfo, Error> station_var(const nc::File& file,
                                               std::string_view prefix,
-                                              std::size_t i, int width) {
-  const std::string name = legacy_variable_name(prefix, i + 1, width);
+                                              std::size_t i,
+                                              StationNumberWidth width) {
+  const std::string name =
+      legacy_variable_name(prefix, i + 1, digits_of(width));
   const auto ref = nc::NcName::make(name);
   if (not ref) {
     return invalid(FormatErrc::missing_variable, subject_of(name), i);
@@ -426,7 +404,8 @@ struct StationVars {
 };
 
 std::expected<StationVars, Error> station_vars(const nc::File& file,
-                                               std::size_t i, int width) {
+                                               std::size_t i,
+                                               StationNumberWidth width) {
   auto time = station_var(file, time_prefix, i, width);
   if (not time) {
     return std::unexpected{std::move(time).error()};
@@ -435,7 +414,8 @@ std::expected<StationVars, Error> station_vars(const nc::File& file,
   if (not data) {
     return std::unexpected{std::move(data).error()};
   }
-  const std::string length = legacy_variable_name(length_prefix, i + 1, width);
+  const std::string length =
+      legacy_variable_name(length_prefix, i + 1, digits_of(width));
   if (time->dims.size() != 1 or time->dims[0].name != length) {
     return invalid(FormatErrc::dimension_mismatch,
                    subject_of(time->name.view()), i);
@@ -449,19 +429,31 @@ std::expected<StationVars, Error> station_vars(const nc::File& file,
 
 // ---- time -------------------------------------------------------------------
 
+/// The clock of `referenceDate`: its epoch and what follows the 19 characters
+/// of the date.
+struct Reference {
+  core::Time epoch;
+  /// Text after the date (`Z`, `+02:00`, `local time`): not read, and said so.
+  std::string trailing;
+};
+
 /// The epoch of `referenceDate`: its first 19 characters, `yyyy-MM-dd hh:mm:ss`
 /// (B8: whatever the attribute's length, and a `T` is accepted). ParseError
 /// `bad_date` when they are not a date.
-std::expected<core::Time, Error> parse_reference(std::string_view text) {
-  const std::string_view date =
-      core::detail::trim(cut_at_nul(text)).substr(0, reference_date_chars);
-  const auto parsed = core::parse_utc_datetime(date);
+std::expected<Reference, Error> parse_reference(std::string_view text) {
+  const std::string_view whole = core::detail::trim(cut_at_nul(text));
+  const auto parsed =
+      core::parse_utc_datetime(whole.substr(0, reference_date_chars));
   if (not parsed) {
     return std::unexpected{Error{
         ParseError::make(ParseErrc::bad_date,
                          {.line = 1, .column = parsed.error().column}, text)}};
   }
-  return *parsed;
+  const std::string_view rest =
+      whole.size() > reference_date_chars
+          ? core::detail::trim(whole.substr(reference_date_chars))
+          : std::string_view{};
+  return Reference{.epoch = *parsed, .trailing = std::string{rest}};
 }
 
 /// What the time variables say about their clock, summed over the stations.
@@ -470,6 +462,25 @@ struct TimeNotes {
   std::size_t epoch_defaulted{0};
   std::vector<Warning> time_zones;  // tz_assumed_utc, one per distinct text
 };
+
+/// `tz_assumed_utc` for a zone (or what trails the date) other than UTC or
+/// GMT, one warning per distinct text, counted.
+void note_zone(TimeNotes& notes, std::string_view text) {
+  const std::string_view zone = core::detail::trim(text);
+  if (zone.empty() or core::detail::equal_ignore_case(zone, "utc") or
+      core::detail::equal_ignore_case(zone, "gmt")) {
+    return;
+  }
+  const std::string subject = subject_of(zone);
+  const auto known =
+      std::ranges::find(notes.time_zones, subject, &Warning::subject);
+  if (known != notes.time_zones.end()) {
+    ++known->count;
+  } else {
+    notes.time_zones.push_back(
+        {.code = WarningCode::tz_assumed_utc, .subject = subject});
+  }
+}
 
 std::expected<void, Error> note_time(const nc::File& file,
                                      const nc::VarInfo& time,
@@ -481,27 +492,15 @@ std::expected<void, Error> note_time(const nc::File& file,
     return std::unexpected{std::move(parts).error()};
   }
   const auto& [reference, zone] = *parts;
-  auto epoch = reference ? parse_reference(*reference)
-                         : parse_reference(default_reference);
-  if (not epoch) {
-    return std::unexpected{std::move(epoch).error()};
+  auto parsed = parse_reference(reference ? *reference : default_reference);
+  if (not parsed) {
+    return std::unexpected{std::move(parsed).error()};
   }
-  notes.epochs.push_back(*epoch);
+  notes.epochs.push_back(parsed->epoch);
   notes.epoch_defaulted += reference ? 0U : 1U;
+  note_zone(notes, parsed->trailing);
   if (zone) {
-    const std::string_view tz = core::detail::trim(*zone);
-    if (not core::detail::equal_ignore_case(tz, "utc") and
-        not core::detail::equal_ignore_case(tz, "gmt")) {
-      const std::string subject = subject_of(tz);
-      const auto known =
-          std::ranges::find(notes.time_zones, subject, &Warning::subject);
-      if (known != notes.time_zones.end()) {
-        ++known->count;
-      } else {
-        notes.time_zones.push_back(
-            {.code = WarningCode::tz_assumed_utc, .subject = subject});
-      }
-    }
+    note_zone(notes, *zone);
   }
   return {};
 }
@@ -515,42 +514,43 @@ struct MetaNotes {
   std::string datum;
 };
 
-std::expected<void, Error> note_meta(const nc::File& file,
-                                     const nc::VarInfo& data, std::size_t i,
-                                     MetaNotes& notes) {
+std::expected<MetaNotes, Error> meta_notes_of(const nc::File& file,
+                                              const nc::VarInfo& data) {
   auto parts = collect([&] { return text_of(file, data.name, "units"); },
                        [&] { return text_of(file, data.name, "datum"); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
   const auto& [units, datum] = *parts;
-  const std::string u{core::detail::trim(units.value_or(""))};
-  const std::string d = to_upper_ascii(core::detail::trim(datum.value_or("")));
-  if (i == 0) {
-    notes = {.units = u, .datum = d};
+  return MetaNotes{.units = std::string{core::detail::trim(units.value_or(""))},
+                   .datum = to_upper_ascii(datum_text(datum.value_or("")))};
+}
+
+/// The first station's notes are the file's; a later station that says
+/// something else is `inconsistent_metadata`.
+std::expected<void, Error> note_meta(const nc::File& file,
+                                     const nc::VarInfo& data, std::size_t i,
+                                     std::optional<MetaNotes>& notes) {
+  auto current = meta_notes_of(file, data);
+  if (not current) {
+    return std::unexpected{std::move(current).error()};
+  }
+  if (not notes) {
+    notes = *std::move(current);
     return {};
   }
-  if (u != notes.units) {
+  if (current->units != notes->units) {
     return invalid(FormatErrc::inconsistent_metadata, "units", i);
   }
-  if (d != notes.datum) {
+  if (current->datum != notes->datum) {
     return invalid(FormatErrc::inconsistent_metadata, "datum", i);
   }
   return {};
 }
 
 Read<core::SeriesMeta> meta_of(const MetaNotes& notes) {
-  Read<std::optional<core::Unit>> unit{.value = std::nullopt, .warnings = {}};
-  if (not notes.units.empty()) {
-    unit.value = core::parse_unit(notes.units);
-    if (unit.value) {
-      const auto* other = std::get_if<core::OtherUnit>(&*unit.value);
-      if (other != nullptr and not core::is_canonical_other(*other)) {
-        unit.warnings.push_back({.code = WarningCode::unrecognized_unit,
-                                 .subject = subject_of(other->symbol())});
-      }
-    }
-  }
+  Read<std::optional<core::Unit>> unit = parsed_unit(
+      notes.units.empty() ? std::nullopt : std::optional{notes.units});
   Read<core::SeriesMeta> out = with_datum(
       core::SeriesMeta::make({.quantity = core::GenericQuantity::value(),
                               .label = {},
@@ -565,11 +565,12 @@ Read<core::SeriesMeta> meta_of(const MetaNotes& notes) {
 struct Sweep {
   std::vector<std::size_t> samples;
   TimeNotes time;
-  MetaNotes meta;
+  std::optional<MetaNotes> meta;
 };
 
 std::expected<Sweep, Error> sweep_stations(const nc::File& file,
-                                           std::size_t count, int width,
+                                           std::size_t count,
+                                           StationNumberWidth width,
                                            const StopToken& stop) {
   Sweep out;
   out.samples.reserve(count);
@@ -593,6 +594,47 @@ std::expected<Sweep, Error> sweep_stations(const nc::File& file,
   return out;
 }
 
+/// One station's series as the file has it.
+struct Series {
+  core::TimeAxis axis;
+  core::Column column;
+};
+
+/// The times and values of station `i` (`n` samples); the times are not yet
+/// in order.
+std::expected<Series, Error> read_series(const nc::File& file,
+                                         const LegacyOpened& opened,
+                                         std::size_t i, const StopToken& stop) {
+  const std::size_t n = opened.catalog.stations[i].samples;
+  auto vars = station_vars(file, i, opened.width);
+  if (not vars) {
+    return std::unexpected{std::move(vars).error()};
+  }
+  if (n == 0) {
+    return Series{.axis = {}, .column = {}};
+  }
+  const nc::Slab slab{{.start = 0, .count = n}};
+  auto times = read_masked(file, vars->time, slab, RowRole::times, stop);
+  if (not times) {
+    return std::unexpected{std::move(times).error()};
+  }
+  auto clock =
+      make_clock({.unit = CfTimeUnit::second, .epoch = opened.epochs[i]},
+                 CfCalendar::proleptic_gregorian, vars->time.name.view());
+  if (not clock) {
+    return std::unexpected{std::move(clock).error()};
+  }
+  auto axis = times_of(*times, *clock, vars->time.name.view(), i);
+  if (not axis) {
+    return std::unexpected{std::move(axis).error()};
+  }
+  auto values = file.read_samples(vars->data.name, slab, stop);
+  if (not values) {
+    return std::unexpected{std::move(values).error()};
+  }
+  return Series{.axis = *std::move(axis), .column = *std::move(values)};
+}
+
 }  // namespace
 
 std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
@@ -608,12 +650,15 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
     return invalid(FormatErrc::empty_collection, "numStations");
   }
   auto parts =
-      collect([&] { return dialect_of(file, *base); },
-              [&] { return number_width(file); }, [&] { return crs_of(file); });
+      collect([&] { return number_width(file); }, [&] { return crs_of(file); });
   if (not parts) {
     return std::unexpected{std::move(parts).error()};
   }
-  auto& [dialect, width, crs] = *parts;
+  auto& [width, crs] = *parts;
+  auto origin = origin_of(file, *base, width);
+  if (not origin) {
+    return std::unexpected{std::move(origin).error()};
+  }
   auto stations = stations_of(file, *base, crs.value, stop);
   if (not stations) {
     return std::unexpected{std::move(stations).error()};
@@ -622,8 +667,13 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
   if (not sweep) {
     return std::unexpected{std::move(sweep).error()};
   }
-  Read<core::SeriesMeta> meta = meta_of(sweep->meta);
+  if (not sweep->meta) {
+    return invalid(FormatErrc::empty_collection, "numStations");
+  }
+  Read<core::SeriesMeta> meta = meta_of(*sweep->meta);
 
+  // The order of SN 11: a legacy file, the CRS, the clock (zones, then an
+  // epoch that was not given), the stations, the column.
   std::vector<Warning> warnings{{.code = WarningCode::legacy_dialect}};
   append(warnings, std::move(crs.warnings));
   append(warnings, std::move(sweep->time.time_zones));
@@ -633,9 +683,9 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
   append(warnings, std::move(stations->warnings));
   append(warnings, std::move(meta.warnings));
 
-  const LegacyOrigin origin{.dialect = dialect};
-  StationNcCatalog catalog{
-      .origin = origin, .stations = {}, .schema = {std::move(meta.value)}};
+  StationNcCatalog catalog{.origin = *std::move(origin),
+                           .stations = {},
+                           .schema = {std::move(meta.value)}};
   catalog.stations.reserve(stations->value.size());
   for (std::size_t i = 0; i < stations->value.size(); ++i) {
     catalog.stations.push_back({.station = std::move(stations->value[i]),
@@ -650,11 +700,13 @@ std::expected<Read<LegacyOpened>, Error> open_legacy(const nc::File& file,
 std::expected<Read<core::StationTable>, Error> read_legacy(
     const nc::File& file, const LegacyOpened& opened,
     std::span<const std::size_t> selected, const StopToken& stop) {
-  std::size_t total = 0;
-  for (const std::size_t i : selected) {
-    total += opened.catalog.stations[i].samples;
+  std::vector<std::size_t> counts;
+  counts.reserve(opened.catalog.stations.size());
+  for (const CatalogStation& c : opened.catalog.stations) {
+    counts.push_back(c.samples);
   }
-  if (auto fits = check_result_size(file, "data_station", 1, total, 1);
+  if (auto fits = check_rows_size(file, "data_station",
+                                  sum_selected(counts, selected), 1);
       not fits) {
     return std::unexpected{std::move(fits).error()};
   }
@@ -664,43 +716,20 @@ std::expected<Read<core::StationTable>, Error> read_legacy(
   axes.reserve(selected.size());
   columns.reserve(selected.size());
   rows.reserve(selected.size());
+  core::NormalizeReport report;
   for (std::size_t p = 0; p < selected.size(); ++p) {
     if (stop.stop_requested()) {
       return fail(Cancelled{});
     }
     const std::size_t i = selected[p];
-    const std::size_t n = opened.catalog.stations[i].samples;
-    auto vars = station_vars(file, i, opened.width);
-    if (not vars) {
-      return std::unexpected{std::move(vars).error()};
+    auto series = read_series(file, opened, i, stop);
+    if (not series) {
+      return std::unexpected{std::move(series).error()};
     }
-    core::TimeAxis axis;
-    core::Column column;
-    if (n > 0) {
-      const nc::Slab slab{{.start = 0, .count = n}};
-      auto times = read_masked(file, vars->time, slab, RowRole::times, stop);
-      if (not times) {
-        return std::unexpected{std::move(times).error()};
-      }
-      auto clock =
-          make_clock({.unit = CfTimeUnit::second, .epoch = opened.epochs[i]},
-                     CfCalendar::proleptic_gregorian, vars->time.name.view());
-      if (not clock) {
-        return std::unexpected{std::move(clock).error()};
-      }
-      auto made = axis_of(*times, *clock, vars->time.name.view(), i);
-      if (not made) {
-        return std::unexpected{std::move(made).error()};
-      }
-      axis = *std::move(made);
-      auto values = file.read_samples(vars->data.name, slab, stop);
-      if (not values) {
-        return std::unexpected{std::move(values).error()};
-      }
-      column = *std::move(values);
-    }
-    axes.push_back(std::move(axis));
-    columns.push_back(std::move(column));
+    std::array<core::Column*, 1> over{&series->column};
+    merge_reports(report, normalize_columns(series->axis, over));
+    axes.push_back(std::move(series->axis));
+    columns.push_back(std::move(series->column));
     rows.push_back({.station = opened.catalog.stations[i].station, .axis = p});
   }
   std::vector<core::Variable> variables;
@@ -711,7 +740,9 @@ std::expected<Read<core::StationTable>, Error> read_legacy(
   if (not table) {
     return fail(to_format_error(table.error()));
   }
-  return pure(*std::move(table));
+  Read<core::StationTable> out = pure(*std::move(table));
+  add_normalize_warnings(out.warnings, report, "time_station");
+  return out;
 }
 
 }  // namespace mov::io::detail::station_nc

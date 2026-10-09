@@ -60,6 +60,10 @@ enum class WarningCode : std::uint8_t {
   native_position_dropped,   // the file keeps WGS 84 only (SN 10.1)
   // foreign station netCDF
   variable_renamed,  // a variable name that is no quantity token became one
+  station_id_substituted,  // a missing or empty station id became its index
+  quality_flags_ignored,   // a quality-flag variable of an unknown scheme
+  flagged_samples_masked,  // samples a known quality scheme calls bad: Missing
+  suspect_samples_kept,    // samples flagged suspect, kept as they are
 };
 
 /// A stable lower-case identifier, the same as the enumerator's name

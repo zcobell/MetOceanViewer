@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "model_netcdf.hpp"
+#include "mov/core/detail/overloaded.hpp"
 #include "mov/core/station_table.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -33,6 +34,7 @@ namespace mov::io {
 namespace {
 
 namespace sn = detail::station_nc;
+using core::detail::Overloaded;
 using detail::classify_netcdf;
 using detail::NetcdfKind;
 
@@ -110,16 +112,16 @@ std::expected<Read<StationFile>, Error> read_v5(
 }
 
 std::expected<Read<StationFile>, Error> read_foreign_file(
-    const nc::File& file, const StationNcSelection& which,
-    const StopToken& stop) {
-  auto opened = sn::open_foreign(file, stop);
+    const nc::File& file, CfVersion version, const StationNcSelection& which,
+    const StationNcReadOptions& options, const StopToken& stop) {
+  auto opened = sn::open_foreign(file, version, stop);
   if (not opened) {
     return std::unexpected{std::move(opened).error()};
   }
   return with_table(
       *std::move(opened), which,
       [&](const sn::ForeignOpened& o, std::span<const std::size_t> sel) {
-        return sn::read_foreign(file, o, sel, stop);
+        return sn::read_foreign(file, o, sel, options.padding, stop);
       });
 }
 
@@ -137,20 +139,29 @@ std::expected<Read<StationFile>, Error> read_legacy_file(
       });
 }
 
-/// The kind of file is not one of the station kinds: `not_this_format`.
-std::unexpected<Error> not_a_station_file(NetcdfKind kind) {
-  switch (kind) {
-    case NetcdfKind::adcirc:
-      return sn::invalid(FormatErrc::not_this_format, "model");
-    case NetcdfKind::dflow:
-      return sn::invalid(FormatErrc::not_this_format, "station_x_coordinate");
-    case NetcdfKind::station_v5:
-    case NetcdfKind::foreign_cf:
-    case NetcdfKind::legacy_station:
-    case NetcdfKind::other:
-      break;
-  }
-  return sn::invalid(FormatErrc::not_this_format, ":metoceanviewer_format");
+/// The file is not one of the station kinds: `not_this_format`, naming what
+/// says so.
+std::unexpected<Error> not_a_station_file(const NetcdfKind& kind) {
+  return std::visit(
+      Overloaded{[](const detail::kind::Adcirc&) {
+                   return sn::invalid(FormatErrc::not_this_format, "model");
+                 },
+                 [](const detail::kind::Dflow&) {
+                   return sn::invalid(FormatErrc::not_this_format,
+                                      "station_x_coordinate");
+                 },
+                 [](const detail::kind::OtherFormat&) {
+                   return sn::invalid(FormatErrc::not_this_format,
+                                      ":metoceanviewer_format");
+                 },
+                 [](const detail::kind::Unrecognized& u) {
+                   return sn::invalid(FormatErrc::not_this_format, u.subject);
+                 },
+                 // The kinds the station reader reads are never refused here.
+                 [](const auto&) {
+                   return sn::invalid(FormatErrc::not_this_format, "");
+                 }},
+      kind);
 }
 
 std::expected<Read<StationFile>, Error> read_any(
@@ -160,19 +171,25 @@ std::expected<Read<StationFile>, Error> read_any(
   if (not kind) {
     return std::unexpected{kind.error()};
   }
-  switch (*kind) {
-    case NetcdfKind::station_v5:
-      return read_v5(file, which, options, stop);
-    case NetcdfKind::foreign_cf:
-      return read_foreign_file(file, which, stop);
-    case NetcdfKind::legacy_station:
-      return read_legacy_file(file, which, stop);
-    case NetcdfKind::adcirc:
-    case NetcdfKind::dflow:
-    case NetcdfKind::other:
-      break;
-  }
-  return not_a_station_file(*kind);
+  return std::visit(
+      Overloaded{
+          [&](const detail::kind::StationV5&)
+              -> std::expected<Read<StationFile>, Error> {
+            return read_v5(file, which, options, stop);
+          },
+          [&](const detail::kind::ForeignCf& foreign)
+              -> std::expected<Read<StationFile>, Error> {
+            return read_foreign_file(file, foreign.version, which, options,
+                                     stop);
+          },
+          [&](const detail::kind::LegacyStation&)
+              -> std::expected<Read<StationFile>, Error> {
+            return read_legacy_file(file, which, stop);
+          },
+          [&](const auto& other) -> std::expected<Read<StationFile>, Error> {
+            return not_a_station_file(NetcdfKind{other});
+          }},
+      *kind);
 }
 
 template <class Opened>
@@ -187,27 +204,33 @@ std::expected<Read<StationNcCatalog>, Error> inspect_any(
   if (not kind) {
     return std::unexpected{kind.error()};
   }
-  switch (*kind) {
-    case NetcdfKind::station_v5:
-      return sn::open_v5(file, stop).transform([](Read<sn::Opened> o) {
-        return catalog_of(std::move(o));
-      });
-    case NetcdfKind::foreign_cf:
-      return sn::open_foreign(file, stop)
-          .transform([](Read<sn::ForeignOpened> o) {
-            return catalog_of(std::move(o));
-          });
-    case NetcdfKind::legacy_station:
-      return sn::open_legacy(file, stop)
-          .transform([](Read<sn::LegacyOpened> o) {
-            return catalog_of(std::move(o));
-          });
-    case NetcdfKind::adcirc:
-    case NetcdfKind::dflow:
-    case NetcdfKind::other:
-      break;
-  }
-  return not_a_station_file(*kind);
+  return std::visit(
+      Overloaded{
+          [&](const detail::kind::StationV5&)
+              -> std::expected<Read<StationNcCatalog>, Error> {
+            return sn::open_v5(file, stop).transform([](Read<sn::Opened> o) {
+              return catalog_of(std::move(o));
+            });
+          },
+          [&](const detail::kind::ForeignCf& foreign)
+              -> std::expected<Read<StationNcCatalog>, Error> {
+            return sn::open_foreign(file, foreign.version, stop)
+                .transform([](Read<sn::ForeignOpened> o) {
+                  return catalog_of(std::move(o));
+                });
+          },
+          [&](const detail::kind::LegacyStation&)
+              -> std::expected<Read<StationNcCatalog>, Error> {
+            return sn::open_legacy(file, stop)
+                .transform([](Read<sn::LegacyOpened> o) {
+                  return catalog_of(std::move(o));
+                });
+          },
+          [&](const auto& other)
+              -> std::expected<Read<StationNcCatalog>, Error> {
+            return not_a_station_file(NetcdfKind{other});
+          }},
+      *kind);
 }
 
 }  // namespace

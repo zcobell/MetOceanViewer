@@ -94,16 +94,59 @@ TEST_CASE("foreign orthogonal: a classic (CDF-1) file reads",
   CHECK(netcdf4.value.table == classic.value.table);
 }
 
-TEST_CASE("foreign orthogonal: unsorted times are time_not_increasing",
+TEST_CASE("foreign orthogonal: unsorted times are put in order, and said so",
           "[io][station_nc][foreign]") {
   CfSpec spec;
   spec.times = {{0, 2, 1, 3}, {0, 2, 1, 3}, {0, 2, 1, 3}};
+  spec.values = {
+      {20, 22, 21, 23}, {30, 32, gen::cf_missing, 33}, {40, 42, 41, 43}};
   const FixtureFile file{spec};
-  const auto e = file.error();
-  CHECK(e.code == FormatErrc::time_not_increasing);
-  CHECK(e.index == 2);
+  const auto read = file.read();
+  const core::StationTable& t = read.value.table;
+  // One shared axis, in order; every column moved with it.
+  const auto axis = t.times(core::StationIndex{0});
+  REQUIRE(axis.size() == 4);
+  for (std::size_t i = 0; i < 4; ++i) {
+    CHECK(axis[i] == hours(static_cast<double>(i)));
+  }
+  CHECK(at(t, 0, 0, 1) == v(21.0));
+  CHECK(at(t, 0, 0, 2) == v(22.0));
+  CHECK(at(t, 1, 0, 1) == missing);
+  CHECK(at(t, 1, 0, 2) == v(32.0));
+  const io::Warning w = warning_of(read.warnings, WarningCode::times_reordered);
+  CHECK(w.count == 1);
+  CHECK(w.subject == "time");
+  CHECK(count_of(read.warnings, WarningCode::duplicate_times_dropped) == 0);
   // The catalog needs no times.
   CHECK(io::inspect_station_netcdf(file.path(), {}).has_value());
+}
+
+TEST_CASE("foreign orthogonal: a repeated time keeps its first row",
+          "[io][station_nc][foreign]") {
+  CfSpec spec;
+  spec.times = {{0, 1, 1, 3}, {0, 1, 1, 3}, {0, 1, 1, 3}};
+  spec.values = {{20, 21, 99, 23}, {30, 31, 31, 33}, {40, 41, 41, 43}};
+  const auto read = read_spec(spec);
+  const core::StationTable& t = read.value.table;
+  REQUIRE(t.times(core::StationIndex{0}).size() == 3);
+  CHECK(at(t, 0, 0, 1) == v(21.0));  // the first of the two
+  CHECK(at(t, 0, 0, 2) == v(23.0));
+  CHECK(warning_of(read.warnings, WarningCode::duplicate_times_dropped).count ==
+        1);
+  // Station 0's two rows differ.
+  CHECK(warning_of(read.warnings, WarningCode::conflicting_duplicate_times)
+            .count == 1);
+  CHECK(count_of(read.warnings, WarningCode::times_reordered) == 0);
+}
+
+TEST_CASE("foreign incomplete: each station is put in order on its own",
+          "[io][station_nc][foreign]") {
+  CfSpec spec = ragged(CfKind::incomplete);
+  spec.times = {{2, 0, 1}, {0, 1, 2, 3}, {6, 5}};
+  spec.values = {{22, 20, 21}, {30, 31, gen::cf_missing, 33}, {41, 40}};
+  const auto read = read_spec(spec);
+  check_ragged_table(read.value.table);
+  CHECK(warning_of(read.warnings, WarningCode::times_reordered).count == 2);
 }
 
 TEST_CASE("foreign: the selection picks and orders stations",

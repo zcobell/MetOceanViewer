@@ -223,6 +223,7 @@ enum class FormatErrc : std::uint8_t {
   bad_ragged_index,  // an indexed ragged instance index outside the stations
   inconsistent_metadata,  // stations of a legacy file that disagree on the
                           // units or datum of their one shared column
+  ambiguous_station_id,   // several variables claim to be the station id
 };
 
 /// A file that parses but does not mean what its format requires.

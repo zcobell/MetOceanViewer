@@ -179,7 +179,7 @@ TEST_CASE("foreign: bytes that are not UTF-8 in an id are replaced",
   CHECK(count_of(read.warnings, WarningCode::invalid_utf8_replaced) == 1);
 }
 
-TEST_CASE("foreign: duplicate ids are made unique, an empty one is refused",
+TEST_CASE("foreign: duplicate ids are made unique, an empty one is the index",
           "[io][station_nc][foreign]") {
   CfSpec spec;
   spec.ids = {"A", "A", "B"};
@@ -191,10 +191,21 @@ TEST_CASE("foreign: duplicate ids are made unique, an empty one is refused",
   CHECK(w.subject == "A");
   CHECK(w.count == 1);
 
+  // An id that is empty is the index of the station, said once for the file.
   spec.ids = {"A", "", "C"};
-  const auto e = error_of_spec(spec);
-  CHECK(e.code == FormatErrc::no_station_id);
-  CHECK(e.station == 1);
+  const auto substituted = read_spec(spec);
+  CHECK(substituted.value.table.station(core::StationIndex{1}).id.view() ==
+        "1");
+  CHECK(substituted.value.table.station(core::StationIndex{1}).name.view() ==
+        "1");
+  const io::Warning s =
+      warning_of(substituted.warnings, WarningCode::station_id_substituted);
+  CHECK(s.count == 1);
+  CHECK(s.subject == "station_name");
+  // ... and the index can collide with an id: that is a duplicate like any.
+  spec.ids = {"1", "", "C"};
+  const auto collide = read_spec(spec);
+  CHECK(collide.value.table.station(core::StationIndex{1}).id.view() == "1#2");
 }
 
 TEST_CASE(
@@ -355,11 +366,12 @@ TEST_CASE("foreign: standard names that are exactly a registry quantity",
   CHECK(t.schema()[6].quantity() ==
         core::QuantityId{core::Quantity::wind_speed});
   CHECK(t.schema()[6].unit() == unit("knots"));  // converted by core, later
-  // Kelvin is no unit of the registry: the standard name alone does not make
-  // an air temperature.
-  CHECK(t.schema()[7].quantity() == token("tair", "air_temperature"));
+  // Kelvin converts to the canonical temperature unit.
+  CHECK(t.schema()[7].quantity() ==
+        core::QuantityId{core::Quantity::air_temperature});
+  CHECK(t.schema()[7].unit() == unit("K"));
   CHECK(warning_of(read.warnings, WarningCode::unknown_quantity).subject ==
-        "air_temperature");
+        "water_surface_height_above_reference_datum");
   CHECK(t.schema()[8].quantity() ==
         core::QuantityId{core::Quantity::air_pressure});
   CHECK(t.schema()[8].unit() == unit("mb"));
@@ -395,11 +407,10 @@ TEST_CASE("foreign: a variable name that is no token gets a substitute (F4)",
   CHECK(core::token(t.schema()[7].quantity()) == "cr__me");
   // The label keeps the file's words.
   CHECK(t.schema()[1].label() == "label of Water Level (m)");
+  // The warning names the variable; the schema has the token.
   CHECK(subjects(read.warnings, WarningCode::variable_renamed) ==
-        std::vector<std::string>{
-            "1st -> v1st", "Water Level (m) -> Water_Level__m_", "a b -> a_b_2",
-            "a-b -> a_b_3", "cr\xc3\xa8me -> cr__me",
-            "wind_gust -> wind_gust_2"});
+        std::vector<std::string>{"1st", "Water Level (m)", "a b", "a-b",
+                                 "cr\xc3\xa8me", "wind_gust"});
 }
 
 TEST_CASE(
@@ -441,8 +452,10 @@ TEST_CASE("foreign: variables that are not series of this file are skipped",
   const core::StationTable& t = read.value.table;
   REQUIRE(t.schema().size() == 1);
   CHECK(subjects(read.warnings, WarningCode::skipped_variable) ==
-        std::vector<std::string>{"big", "cube", "flagged", "tclock",
-                                 "temperature_qc", "ub"});
+        std::vector<std::string>{"big", "cube", "flagged", "tclock", "ub"});
+  // The quality variable has no scheme to read: ignored, and said so.
+  CHECK(subjects(read.warnings, WarningCode::quality_flags_ignored) ==
+        std::vector<std::string>{"temperature_qc"});
 }
 
 TEST_CASE(
@@ -499,7 +512,8 @@ TEST_CASE("foreign: what a timeSeries file must have",
   SECTION("one cf_role") {
     const auto e = error_of_spec(with(
         [](Cdf& f, int, int) { f.text("lat", "cf_role", "timeseries_id"); }));
-    CHECK(e.code == FormatErrc::no_station_id);
+    CHECK(e.code == FormatErrc::ambiguous_station_id);
+    CHECK(e.subject == "station_name, lat");
   }
   SECTION("a data variable") {
     const auto e = error_of_spec(with(
@@ -608,9 +622,10 @@ TEST_CASE("foreign: a v5 file whose format attribute is gone reads as CF",
     CHECK(t.schema()[0].datum() == core::VerticalDatum::mllw);
     CHECK(t.schema()[1].quantity() ==
           core::QuantityId{core::Quantity::water_temperature});
-    // The wet/dry status of v5 is a plain ancillary variable here: skipped.
-    CHECK(subjects(read.warnings, WarningCode::skipped_variable) ==
-          std::vector<std::string>{"water_level_status"});
+    // The wet/dry status of v5 is a flag variable here, of a scheme that
+    // masks nothing: no series, no warning.
+    CHECK(count_of(read.warnings, WarningCode::skipped_variable) == 0);
+    CHECK(count_of(read.warnings, WarningCode::quality_flags_ignored) == 0);
     CHECK(count_of(read.warnings, WarningCode::foreign_cf) == 1);
   }
 }
