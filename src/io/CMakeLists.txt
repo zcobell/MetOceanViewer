@@ -28,6 +28,7 @@ mov_add_module(
         atomic_file.cpp
         cf_time.cpp
         error.cpp
+        part.cpp
         netcdf/attribute.cpp
         netcdf/blocks.cpp
         netcdf/file.cpp

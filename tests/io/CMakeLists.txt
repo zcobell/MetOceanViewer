@@ -240,3 +240,7 @@ endif()
 # options, names, tokens, quality flags, datums, water-level hints, warning
 # order.
 target_sources(mov_io_station_netcdf_tests PRIVATE test_station_netcdf_foreign_review.cpp)
+
+# Parts and their merge (docs/providers-design.md §5.4); bench_part.cpp holds
+# a hidden benchmark ("[benchmark]").
+mov_add_test(mov_io_part_tests SOURCES test_part.cpp bench_part.cpp LIBRARIES mov::io)

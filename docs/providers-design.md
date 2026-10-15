@@ -3,8 +3,9 @@
 Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's answers
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
-layers, gates and build plumbing) and P1 (§3, the core vocabulary; its deviations from
-revision 2 are in §3.7); nothing from P2 on. Phase 2 (`core`, `io`) is as built;
+layers, gates and build plumbing), P1 (§3, the core vocabulary; its deviations from
+revision 2 are in §3.7) and P6 (§5, the fetch layer; its deviations are in §5.7);
+nothing else from P2 on. Phase 2 (`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
@@ -568,7 +569,11 @@ parser-callback pattern (decode at `object_end`, discard).
 | `ndbc::parse_active_stations(text, ctx)` | `Read<vector<NdbcStationRecord>>` | §4.5; bad rows skipped and counted |
 | `github::parse_latest_release(body, ctx)` | `Read<ReleaseInfo>` | `tag_name` through core's `Version` (B23); `body` raw for the UI to show as plain text |
 
-`Part` is fetch's merge unit (§5.4); io builds it.
+`Part` is the merge unit (§5.4). It lives in io (`mov/io/part.hpp`: `Part`, `ColumnKey`,
+`combine`, `fold`, `DropTally`, `MergeError`), so the parsers return
+`io::Read<io::Part>`; fetch re-exports the names. A part's columns are
+`core::TimeSeries`, keyed by each series' own quantity (`Part::insert`), so a key
+cannot disagree with its series.
 
 ### 4.4 NDBC standard met
 
@@ -642,6 +647,16 @@ test runs `QXmlStreamReader` over the fuzz corpus as the reference (§10.4).
 ---
 
 ## 5. fetch: stages, units, policies, machine
+
+Built in P6 and its review round. Headers in `src/fetch/include/mov/fetch/`:
+`origin.hpp`, `policy.hpp`, `retry.hpp`, `limits.hpp`, `error.hpp`, `part.hpp` (which
+re-exports io's), `paging.hpp`, `steps.hpp`, `machine.hpp`, `then.hpp` (two stages as
+one machine), `gate.hpp` (the admission gate), and the provider plans in `plan/`
+(`coops.hpp`, `usgs.hpp`, `ndbc.hpp`). Parts and their merge are in io
+(`mov/io/part.hpp`), where the parsers build them. The sketches below are revision 2;
+the headers are the contract, and §5.7 lists where they differ. The provider specs
+(targets and parsers) wait for P2–P4 and are P7's; the machines are generic over a
+spec and are tested with toy specs and with test specs over the real plans.
 
 ### 5.1 Errors, labels, results (Bd SF8)
 
@@ -867,6 +882,42 @@ class Machine {
   fail concurrently that depends on completion order, so tests assert only that the
   reported unit is one of the failed ones (Br nit). v4 overwrote earlier errors with
   later ones and ignored failing chunks (L2, L3).
+- A lenient run with failed units and no data is the first failed unit's `Failure` in
+  plan order: `NoData` would hide the failures.
+
+### 5.7 As built (P6 and its review round): deviations from revision 2
+
+| Revision 2 | Built | Why |
+|---|---|---|
+| `using io::wire::Origin`, io's `ServiceError`, `NoData` | `mov::fetch::Origin`, `ServiceErrc`, `ServiceError` (trimmed, cut to 120 B) and `NoData` in fetch for now, shaped as P2's `io::wire` types (same enumerators, same order) | P2 is merged after P6. Each becomes a using-declaration of io's then. |
+| `Send{id, io::wire::Target, priority}`, `Parse{id}` | `Send<Target>{id, target, origin, priority}`, `Parse<Target>{id, target}`; `Target` is the spec's | The machine is generic over a spec, so it neither knows io's targets nor parses. The origin rides along for the gate; the parse step carries its target. |
+| `initial(request, now) -> vector<Unit>`, `next(unit, outcome) -> optional<Unit>`, `UnitOutcome = variant<Parsed<Part>, Absent>` | `FetchSpec` (`steps.hpp`): `initial -> expected<vector<Unit>, Error>`; `targets(request, unit)`, at least one (a unit with none fails `UnitWithoutExchanges`); `origin(target)`; `label`; `next(request, unit, UnitOutcome) -> expected<vector<Unit>, Error>`; `into_part(vector<SlotResult<Parsed>>)`; `has_data(Part)`; `merge(vector<Part>) -> expected<Read<Value>, Error>` (run by the job for the Merge step) | NDBC's fallback from last year's file has up to twelve successors. A page that breaks a paging rule ends its chain, so `next` returns an error. A parsed page (USGS: rows, `next` link, extent) is more than its part. |
+| A parse that finds nothing is `NoData` | `SlotResult<P> = variant<P, Absent>`: Absent is a parse's success value (a 404 at NDBC is one too); `NoData` is only a fetch's final result. `UnitOutcome = variant<Received{per-slot results}, Absent>`: a unit is Absent only when every slot is; a paired unit keeps the half with data and warns `PartlyAbsent{unit, slot}` | The owner's decision (P6 review): the observed half of a CO-OPS pair is kept when predictions are missing, and the reverse. |
+| Plan order: initial order, successors appended | Each unit has a path: initial unit i is `{i}`, the k-th successor of p is `p + {k}`; plan order is the paths' lexicographic order (pre-order) | A unit's successors land right after it, so NDBC's fallbacks keep the precedence order and a window's pages stay in sequence. |
+| `Wait{ExchangeId retry_of, delay}`, `WaitElapsed{ExchangeId}` | `TimerId`, from the same counter as `ExchangeId`; `Wait{TimerId, delay}` for retry delays, cool-down holds and the deadline; a timer that fires early (Qt's coarse timers: up to 5 %) waits again for the rest | A timer is not an exchange; one counter keeps every id unique. |
+| Ids per machine | `IdCursor`, opaque: `IdCursor::job_start()` for a job's first stage, `Machine::next_ids()` for the next (`Options::ids`) | No id is reused within a job; no raw counter to get wrong. |
+| Deadline checked on events | The machine also arms its own deadline timer at start, re-armed if it fires early; `tick(now)` applies the clock alone (`Then` ticks the running stage on an event of the other one). The feed must be monotonic: an event's `now` before one seen is taken as the latest. A start `now` or deadline beyond ±10,000 years fails `ClockOutOfRange`; delays saturate, so `now + delay` and `deadline - now` cannot overflow and no `Wait` is negative | A hung exchange sends no event. UBSan reproduced both overflows. |
+| `CoolDown` tells the gate | Every 429, retried or not (Retry-After beyond `max_retry_after`, attempts exhausted), emits a `CoolDown` for the server's wait (or a backoff), at least `min_cool_down` (1 s); the machine also holds its own sends to a cooled origin, and a hold longer than `max_retry_after` fails the unit `RateLimited` | Other jobs must not hammer an origin a failing job saw refuse. The invariant holds in the step stream, where the property tests and the fuzzer check it. |
+| `X-RateLimit-Remaining: 0` "is a 429 without Retry-After" | `rate_remaining <= 0` on an accepted response cools the origin for its Retry-After, else the policy's base (at least 1 s), and keeps the response; no retry | The data is good. |
+| `Response{status, retry_after, rate_remaining}` | `+ bytes` | `Stats::bytes`. |
+| `on(event, now, double unit_random)` | `Jitter` (`make(double)` refuses outside [0, 1), `from_bits(uint64)` is total) | A bad jitter cannot reach backoff. |
+| `RetryPolicy` aggregate, `int max_attempts` | Class with `make(Fields) -> expected<…, RetryPolicyError>` (attempts 1–16, 1 ms <= base <= cap <= 1 h, max_retry_after 1 s–1 day) and `defaults()` | A policy with zero attempts or a base above the cap cannot be built. |
+| `retry_after` clamped to [1 s, max_retry_after] | Clamped below only; delta-seconds saturate at 2^31 (RFC 9111); all three HTTP-date forms (RFC 9110 §5.6.7), RFC 850's two-digit year read against the Date header's year; `parse_http_date`, `format_imf_fixdate` public | A clamp would hide a long Retry-After; the machine fails with `RateLimited` instead. |
+| Attempts per unit | Attempts per exchange slot; `station_or_system`'s one extra attempt counts against `max_attempts` | A paired unit's two exchanges retry independently. |
+| `start(request, strictness, retry, deadline, now)` | `start(request, Options{strictness, retry, deadline, priority, ids, max_units, cooling}, now) -> Started{machine, steps}`; `max_units` (10,000) caps the plan (`UnitLimit`) | Designated options; a runaway plan fails instead of growing. |
+| Stage bind "in the Job" | `Then<S1, Bind, S2>` (`then.hpp`): one machine with the same event/step protocol; it owns the Cancel latch, the id cursor, the absolute deadline, stage 1's cool-downs and clock, offset progress and the joined trail; stage 1's `Finish` never reaches the job. `usgs::bind(C, rows) -> expected<DataRequest<C>, Failure>` (`DataRequest` made only by bind); `coops::DatumsRequest` | The boundary is where cancellation and ids go wrong; as a pure machine it is property-tested and fuzzed (§6.3). |
+| `Fetched{value, warnings, stats}` | `Fetched{value, Trail{warnings, stats}}`, `Trail` a monoid under `+` | A two-stage trail is stage 1's + stage 2's. |
+| `Error` alternatives | fetch's prepended to `io::Error`'s (`io::JsonError` joins when H5 adds it), `static_assert`ed distinct; new `WrongCollection`, `Unalignable`, `UnsupportedRange` (NDBC beyond the nameable years), `PagingError{PagingRule, page}`, `DuplicateSeries{id}`, `UnitWithoutExchanges`, `UnitLimit`, `ClockOutOfRange` | Every failure has a value; no failure is punned onto `ParseError`. |
+| `UnitMismatch{QuantityId column; Unit first, other}`, `MetaMismatch{QuantityId}` | In io, keyed by `ColumnKey` (the series' quantity identity); the units are optional | A predicted water level is its own quantity (`water_level_prediction`), so a pair is two columns; a part may lack a unit. |
+| `Resolution {}`; `NdbcFile{kind, year, optional<month>}` | `Resolution{page}`; `NdbcFile = variant<HistoricalFile, MonthlyFile, LatestMonthFile, RealtimeFile>` | Labels name what exists; no month on a yearly file. |
+| `CooledDown{origin, seconds}` | milliseconds | Backoff delays are milliseconds. |
+| `struct Column {meta, rows}`; `combine -> expected<Part, Error>` | `io::Part` of `core::TimeSeries`; `combine -> expected<Combined{Part, DropTally}, MergeError>`; `fold` emits one `duplicate_times_dropped` per column (subject the quantity token); an incoming part after the accumulator appends (columns built once) | TimeSeries already holds the invariant. The tally is a monoid, so associativity holds exactly, counts included. Folding 457 parts of 5760 rows went from 5.90 s to 65 ms (Clang 20, Release). |
+| `combine` associative | Exactly associative when a column has one unit; with conversions, the plan-order fold (always to the first part's unit) defines the result | Converting c to b and then to a rounds differently from c to a. |
+| — | `FellBack` when an absent unit labelled `NdbcFile` is followed by one with another label; lenient `UnitFailed` keeps the unit's io warnings and `Retried`; a lenient chain stopped by a paging rule keeps its page's data with `ChainStopped`; `Abort` names the parses to stop as well as the exchanges | Nothing is dropped silently. |
+| NDBC: `realtime2` "when the range ends within 45 days of now" | `Source = variant<Historical, HistoricalLastYear, Monthly, MonthlyDecimal, MonthlyLatest, Realtime>` (October–December's decimal spelling is its own type); ranges start at 1970 (`earliest_year`, NDBC's listing); realtime only when the range began before `now`; `extent(request, source)` for clipping a `{Mon}/{id}.txt` file's rows (`io::clip`) | Its name has no year, so rows of another year must neither reach the merge nor count as duplicates. |
+| Throughput "in any 60 s" | `ThroughputCheck`: consecutive windows from the first byte, judged at the progress reports; also the body cap | Progress reports are what the transport sees. |
+| `max_pages(window)` | `max_pages(PageBudget{span, cadence, page_rows})`; `PageGuard<Link, Position>` over `PageSummary{rows, optional<Extent>, next}`, `NoPosition` for a site's series; the last position survives a page without one | Generic over io's link type (P3's `Verbatim`); one guard for continuous, daily and resolution pages. |
+| Gate in providers | `OriginGate` (`gate.hpp`): a pure state machine (enqueue, release, abort_job, cool_down, tick, next_wake) for max_in_flight, spacing, cool-downs over queued tickets, withdrawal, round-robin across jobs, interactive ahead of background with background still progressing; P7's Qt gate drives it | Its rules are tested with property tests and fuzzed. |
 
 ---
 
@@ -943,23 +994,30 @@ class CoopsProvider {      // UsgsProvider, NdbcProvider, CatalogProvider, Updat
 fetch(req) [Network thread]
   Job (QObject, child of Network): QPromise<Result> p; p.start(); f = p.future()
   QFutureWatcher on f: canceled() → enqueue event::Cancel
-  steps = Machine::start(...).steps → step queue
+  steps = Machine::start(...).steps (one stage) or Then::start(...).steps (two)
   run queue (never re-entrant: a step that produces events enqueues them):
-    Send     → OriginGate (round-robin across jobs, interactive first, spacing, cool-down)
+    Send     → OriginGate::enqueue (fetch's pure gate: round-robin across jobs,
+                interactive first, spacing, cool-down); an Admit
                 → Transport::start → Exchange kept in a map by id
                 → Done posted to the job → enqueue event::Completed (body kept by id)
+                → OriginGate::release; a QTimer at OriginGate::next_wake() ticks it
     Wait     → QTimer::singleShot(delay, job, …) → event::WaitElapsed
     CoolDown → OriginGate::cool_down(origin, for)
     Parse    → QtConcurrent::run(pool, [body = std::move(body), stop]{ return S::parse(body, ctx); })
                  .then(job, …) → event::Parsed
-    Merge    → QtConcurrent::run(pool, [parts = std::move(m.in_plan_order), stop]{ fold, finish })
+    Merge    → QtConcurrent::run(pool, [parts = std::move(m.in_plan_order), stop]{ S::merge(parts) })
                  .then(job, …) → event::Merged
-    Abort    → erase the Exchanges (their destructors abort)
+    Abort    → erase the Exchanges (their destructors abort), withdraw them from the
+               gate, and stop the named parses
     Progress → p.setProgressRange / setProgressValueAndText
     Finish   → cache.insert (success only) ; if not p.isCanceled(): p.addResult(result) ;
                p.finish() ; job->deleteLater()
 ```
 
+- **Two stages:** the job runs one `Then<S1, Bind, S2>`, whose steps carry either
+  stage's targets, parts and parse requests. Stage 1's `Finish` stays inside `Then`
+  (its value is bound into stage 2's request), so the promise is finished once, by the
+  final `Finish`; a Cancel seen in stage 1 latches and stage 2 never starts.
 - **Result rule:** the job calls `addResult` before `finish()` unless the promise is
   cancelled (asserted): a finished promise without a result crashes its continuation
   (§1.5).
@@ -1353,8 +1411,8 @@ prose-editor.
 | P4 | io NDBC: stdmet parser, sentinel table, XML subset scanner, public `gunzip`, gzip sniff, fuzz | P1 | M (3) | same |
 | P5a | io station catalog + schema + `docs/station-catalog.md`; JSON series writer (droppable) | P1 | S (2) | same |
 | P5b | io daily outputs (D34): SN 1.1 writer and reader for `DailySeries`, `docs/station-netcdf.md` minor bump, CSV overload, `unsupported_cadence` | P1 | M (3) | neckbeard-nate (lead), sean-parent, ben-deane |
-| P6 | fetch: errors and labels, `initial`/`next` per provider, `Part`/`combine`, policies, `retry_after`, `Machine`, property tests, `fuzz_fetch_machine` | P1 (P2–P4 for the provider specs, which can land last) | L (6) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
-| P7 | providers: `Exchange`, `QnamTransport` (redirects, limits, body cap), `Network` (gates, key, cache, destruction order), `Job`, the providers, catalogs, snapshot resource, update check, `describe`, `FakeTransport`, cassettes, local server, `drive` | P2–P6 | L (7) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
+| P6 (built) | fetch: errors and labels, `initial`/`next` per provider, `Part`/`combine`, policies, `retry_after`, `Machine`, property tests, `fuzz_fetch_machine`; the provider specs (targets, parsers) move to P7 (§5.7) | P1 | L (6) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
+| P7 | providers: the provider specs (`FetchSpec`, §5.7: targets, parsers, merge and finish per provider and stage), `Exchange`, `QnamTransport` (redirects, limits, body cap), `Network` (gates, key, cache, destruction order), `Job`, the providers, catalogs, snapshot resource, update check, `describe`, `FakeTransport`, cassettes, local server, `drive` | P2–P6 | L (7) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
 | P8 | fixtures and live job: missing fixtures (curl first, cassettes after P7), compression ratios, gzip member counts, NDBC Oct–Dec codes, `live-api.yml` with the issue step | P2–P4; P7 | M (2.5) | neckbeard-nate, jason-turner |
 | P9a | CLI skeleton: `run`, `to_command`, rendering, outcome join, exit codes, output commit and EPIPE, SIGINT, `convert`, `hwm-stats` | H0, P5a | M (3.5) | uncle-bob-martin, neckbeard-nate |
 | P9b | CLI `fetch`, `stations`, rule table, `offered` selections, memory bound, `--partial`, `--dry-run`, `--record-cassette`, key file | P7, P9a | M (3.5) | uncle-bob-martin, neckbeard-nate |
