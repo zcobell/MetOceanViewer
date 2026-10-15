@@ -12,8 +12,10 @@
 #include <QTemporaryDir>
 #include <QtEnvironmentVariables>
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 #include "maplibre_provider.hpp"
 #include "mov/core/version.hpp"
@@ -66,10 +68,18 @@ TEST_CASE("The self-test passes in the build tree") {
   INFO(out.str());
   CHECK(passed);
   CHECK(out.str().find("self-test passed") != std::string::npos);
-  // It names the database it checked: the staged copy.
-  const std::string staged =
-      (mov::ui::packaged_projection_data_dir() / "proj.db").string();
-  CHECK(out.str().find(staged) != std::string::npos);
+  // It names the database it checked: the staged copy. Compared as files, not
+  // as text: the report spells the path as Qt does (forward slashes,
+  // normalized), std::filesystem as the platform does.
+  const std::string report = out.str();
+  const std::string_view label = "PROJ database: ";
+  const auto at = report.find(label);
+  REQUIRE(at != std::string::npos);
+  const auto from = at + label.size();
+  const std::filesystem::path named{
+      report.substr(from, report.find('\n', from) - from)};
+  const auto staged = mov::ui::packaged_projection_data_dir() / "proj.db";
+  CHECK(std::filesystem::equivalent(named, staged));
 }
 
 // The PROJ check can fail: a directory without proj.db is no database, and

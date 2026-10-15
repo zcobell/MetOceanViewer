@@ -13,7 +13,6 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include <iterator>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
@@ -29,6 +28,7 @@
 #include "mov/core/tide/node_factor.hpp"
 #include "mov/test/env.hpp"
 #include "mov/test/fixture.hpp"
+#include "mov/test/scratch_dir.hpp"
 
 using mov::core::tide::all_node_factors;
 using mov::core::tide::Argument;
@@ -47,11 +47,6 @@ namespace {
 std::filesystem::path schemas_dir() {
   return mov::test::fixture("").parent_path().parent_path().parent_path() /
          "docs" / "schemas";
-}
-
-std::string read_text(const std::filesystem::path& p) {
-  std::ifstream in{p, std::ios::binary};
-  return {std::istreambuf_iterator<char>{in}, std::istreambuf_iterator<char>{}};
 }
 
 /// The flattened Argument of a catalogue name; an unknown name fails the
@@ -149,13 +144,13 @@ TEST_CASE("constituents-nos.json is current", "[core][tide][drift]") {
   }
   INFO("rerun with MOV_UPDATE_CONSTITUENTS_JSON=1 to rewrite "
        << path.string());
-  CHECK(read_text(path) == generated);
+  CHECK(mov::test::read_bytes(path) == generated);
 }
 
 TEST_CASE("the schema's node_factor enum is the core NodeFactor",
           "[core][tide][drift]") {
   const auto schema = nlohmann::json::parse(
-      read_text(schemas_dir() / "harmonics-v1.schema.json"));
+      mov::test::read_bytes(schemas_dir() / "harmonics-v1.schema.json"));
   std::vector<std::string> tokens;
   for (const auto& t : schema.at("$defs").at("node_factor").at("enum")) {
     tokens.push_back(t.get<std::string>());

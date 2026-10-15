@@ -4,3 +4,7 @@ docs/provider-apis/** -text
 tests/fixtures/** -text
 *.nc binary
 packaging/licenses/** -text
+# Files that tests compare byte for byte with generated output: LF on every
+# checkout (Windows runners convert text to CRLF otherwise).
+docs/schemas/** text eol=lf
+*.qml text eol=lf
