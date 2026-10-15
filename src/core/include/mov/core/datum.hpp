@@ -16,12 +16,14 @@
 
 #include "mov/core/ascii.hpp"
 #include "mov/core/detail/numeric.hpp"
+#include "mov/core/enum_set.hpp"
 #include "mov/core/units.hpp"
 
 namespace mov::core {
 
-/// A vertical datum. The enumerators are the SN section 10.2 tokens plus
-/// IGLD85; the core enum is authoritative.
+/// A vertical datum. The enumerators are the SN section 10.2 tokens; the
+/// core enum is authoritative. HAT, LAT and DTL are the tidal datums a
+/// harmonics file adds (docs/harmonics-json.md 8.4).
 enum class VerticalDatum : std::uint8_t {
   mhhw,
   mhw,
@@ -37,23 +39,28 @@ enum class VerticalDatum : std::uint8_t {
   /// It means something only together with its station: heights against the
   /// STND of two stations are not comparable, and a DatumTable is one
   /// station's.
-  stnd
+  stnd,
+  /// Highest and lowest astronomical tide, diurnal tide level.
+  hat,
+  lat,
+  dtl
 };
 
 namespace detail {
 
-inline constexpr std::array<VerticalDatum, 10> all_datums{
+inline constexpr std::array<VerticalDatum, 13> all_datums{
     VerticalDatum::mhhw,   VerticalDatum::mhw,    VerticalDatum::mtl,
     VerticalDatum::msl,    VerticalDatum::mlw,    VerticalDatum::mllw,
     VerticalDatum::navd88, VerticalDatum::ngvd29, VerticalDatum::igld85,
-    VerticalDatum::stnd};
+    VerticalDatum::stnd,   VerticalDatum::hat,    VerticalDatum::lat,
+    VerticalDatum::dtl};
 static_assert(all_datums.size() ==
-              static_cast<std::size_t>(VerticalDatum::stnd) + 1);
+              static_cast<std::size_t>(VerticalDatum::dtl) + 1);
 
 // Indexed by the enumerator.
 inline constexpr std::array<std::string_view, all_datums.size()> datum_tokens{
-    "MHHW", "MHW",    "MTL",    "MSL",    "MLW",
-    "MLLW", "NAVD88", "NGVD29", "IGLD85", "STND"};
+    "MHHW",   "MHW",    "MTL",  "MSL", "MLW", "MLLW", "NAVD88",
+    "NGVD29", "IGLD85", "STND", "HAT", "LAT", "DTL"};
 
 struct DatumAlias {
   std::string_view text;
@@ -270,6 +277,12 @@ class DatumTable {
   }
 
   std::array<std::optional<Length>, detail::datum_count - 1> heights_{};
+};
+
+// Every datum, for EnumSet<VerticalDatum> (which checks the order).
+template <>
+struct Enumerators<VerticalDatum> {
+  static constexpr const auto& values = detail::all_datums;
 };
 
 }  // namespace mov::core

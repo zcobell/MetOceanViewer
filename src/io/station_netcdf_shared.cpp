@@ -185,7 +185,7 @@ struct DatumSpelling {
 // The names a CF file (geopotential_datum_name, a vertical_datum) gives the
 // datums core knows, by the words of their long names. The tokens and the
 // aliases NAVD, NGVD, IGLD are parse_vertical_datum's own.
-constexpr std::array<DatumSpelling, 22> datum_spellings{{
+constexpr std::array<DatumSpelling, 25> datum_spellings{{
     {.words = "north american vertical datum of 1988", .token = "NAVD88"},
     {.words = "north american vertical datum 1988", .token = "NAVD88"},
     {.words = "navd 88", .token = "NAVD88"},
@@ -199,6 +199,9 @@ constexpr std::array<DatumSpelling, 22> datum_spellings{{
     {.words = "mean high water", .token = "MHW"},
     {.words = "mean tide level", .token = "MTL"},
     {.words = "mean sea level", .token = "MSL"},
+    {.words = "highest astronomical tide", .token = "HAT"},
+    {.words = "lowest astronomical tide", .token = "LAT"},
+    {.words = "diurnal tide level", .token = "DTL"},
     {.words = "international great lakes datum of 1985", .token = "IGLD85"},
     {.words = "international great lakes datum 1985", .token = "IGLD85"},
     {.words = "igld 85", .token = "IGLD85"},

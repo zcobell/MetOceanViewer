@@ -8,6 +8,7 @@
 // MOV_UPDATE_CONSTITUENTS_JSON=1.
 
 #include <algorithm>
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <filesystem>
@@ -23,9 +24,12 @@
 #include <variant>
 #include <vector>
 
+#include "mov/core/datum.hpp"
 #include "mov/core/tide/catalogue.hpp"
 #include "mov/core/tide/constituent.hpp"
+#include "mov/core/tide/datums.hpp"
 #include "mov/core/tide/node_factor.hpp"
+#include "mov/core/tide/station_info.hpp"
 #include "mov/test/env.hpp"
 #include "mov/test/fixture.hpp"
 #include "mov/test/scratch_dir.hpp"
@@ -214,4 +218,51 @@ TEST_CASE("the generated dictionary is a valid format dictionary",
       }
     }
   }
+}
+
+namespace {
+
+/// The tokens of the schema's enum at JSON pointer `where`, sorted: the
+/// drift tests compare token sets, not the order of the enumerators.
+std::vector<std::string> schema_enum(const std::string& where) {
+  const auto schema = nlohmann::json::parse(
+      mov::test::read_bytes(schemas_dir() / "harmonics-v1.schema.json"));
+  std::vector<std::string> tokens;
+  for (const auto& t : schema.at(nlohmann::json::json_pointer{where})) {
+    tokens.push_back(t.get<std::string>());
+  }
+  std::ranges::sort(tokens);
+  return tokens;
+}
+
+/// The file tokens of `values`, sorted.
+template <class Enum, std::size_t N>
+std::vector<std::string> core_tokens(const std::array<Enum, N>& values,
+                                     auto token_of) {
+  std::vector<std::string> tokens;
+  tokens.reserve(N);
+  for (const Enum v : values) {
+    tokens.emplace_back(token_of(v));
+  }
+  std::ranges::sort(tokens);
+  return tokens;
+}
+
+}  // namespace
+
+TEST_CASE("the schema's datum and analysis enums are the core enums",
+          "[core][tide][drift]") {
+  // datum_token: every VerticalDatum but MSL (offsets.datum adds "MSL").
+  auto datums = core_tokens(
+      mov::core::detail::all_datums,
+      [](mov::core::VerticalDatum d) { return mov::core::to_string(d); });
+  std::erase(datums, "MSL");
+  CHECK(schema_enum("/$defs/datum_token/enum") == datums);
+  CHECK(schema_enum("/$defs/computed_datum_token/enum") ==
+        core_tokens(tide::all_computable_datums, [](tide::ComputableDatum d) {
+          return tide::to_string(d);
+        }));
+  CHECK(schema_enum("/$defs/station/properties/analysis/enum") ==
+        core_tokens(tide::all_analyses,
+                    [](tide::Analysis a) { return tide::to_token(a); }));
 }

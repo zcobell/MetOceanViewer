@@ -202,19 +202,23 @@ TEST_CASE("NDBC ids are five characters, upper-cased",
   STATIC_REQUIRE(fails<Ndbc>("burl_", StationIdError::invalid));
 }
 
-TEST_CASE("harmonics ids are station names", "[core][station][constexpr]") {
-  STATIC_REQUIRE(Harmonics::valid_id("Battery, New York Harbor, New York"));
-  STATIC_REQUIRE(Harmonics::valid_id("\xC3\x89le"));  // UTF-8 bytes are fine
+TEST_CASE("harmonics ids are <source>:<local>", "[core][station][constexpr]") {
+  STATIC_REQUIRE(Harmonics::valid_id("noaa-coops:8720030"));
+  STATIC_REQUIRE(Harmonics::valid_id("pringle:GESLA/Battery, New York #2"));
+  STATIC_REQUIRE(Harmonics::valid_id("ticon-4:\xC3\x89le"));  // UTF-8 is fine
   STATIC_REQUIRE_FALSE(Harmonics::valid_id(""));
-  STATIC_REQUIRE_FALSE(Harmonics::valid_id("a\tb"));
-  STATIC_REQUIRE_FALSE(Harmonics::valid_id("a\x7F"));
-  STATIC_REQUIRE_FALSE(Harmonics::valid_id(std::string_view{"a\0b", 3}));
-  STATIC_REQUIRE_FALSE(Harmonics::valid_id("\xC3\x28"));  // not UTF-8
-  STATIC_REQUIRE_FALSE(Harmonics::valid_id("Key West \xFF"));
-  STATIC_REQUIRE(Harmonics::valid_id(repeated('x', 255)));
-  STATIC_REQUIRE_FALSE(Harmonics::valid_id(repeated('x', 256)));
-  STATIC_REQUIRE(
-      makes<Harmonics>("  Key West, Florida \r\n", "Key West, Florida"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("Battery, New York Harbor"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("NOAA:8720030"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("noaa:"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("noaa:a\tb"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("noaa:a\x7F"));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id(std::string_view{"noaa:a\0b", 8}));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("noaa:\xC3\x28"));  // not UTF-8
+  STATIC_REQUIRE(Harmonics::valid_id("n:" + repeated('x', 253)));
+  STATIC_REQUIRE_FALSE(Harmonics::valid_id("n:" + repeated('x', 254)));
+  STATIC_REQUIRE(makes<Harmonics>("  noaa-coops:Key West, Florida \r\n",
+                                  "noaa-coops:Key West, Florida"));
+  STATIC_REQUIRE(fails<Harmonics>("Key West", StationIdError::invalid));
 }
 
 TEST_CASE("station text is UTF-8 without NUL", "[core][station][constexpr]") {

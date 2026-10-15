@@ -66,7 +66,7 @@ TEST_CASE("StationId::make normalizes at run time too", "[core][station]") {
   CHECK(StationId<Coops>::make("8761724x") ==
         std::unexpected{StationIdError::invalid});
   CHECK(StationId<Usgs>::make("") == std::unexpected{StationIdError::empty});
-  const std::string heap(300, 'x');  // beyond the small-string buffer
+  const std::string heap = "noaa:" + std::string(300, 'x');  // on the heap
   CHECK(StationId<mov::core::provider::Harmonics>::make(heap) ==
         std::unexpected{StationIdError::invalid});
   const StationId<Usgs> river = id<Usgs>("usgs-07374000");

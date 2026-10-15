@@ -455,7 +455,7 @@ text is parsed (size, gzip, syntax, encoding) carry a byte offset instead.
 | `E-REFERENCE` | `offsets.reference` is missing or is not a reference station. |
 | `E-OFFSET-DATUM` | The reference has `offsets.datum` neither in `datums` nor in `computed_datums.heights`. |
 | `E-DATUM-CONFLICT` | A token appears in both `datums` and `computed_datums.heights`, or a computed period is shorter than 18.61 years. |
-| `E-DATE` | `created`, `record` or `computed_datums.period` dates are not valid calendar dates, or an end precedes its start. |
+| `E-DATE` | `created`, `sources[].retrieved`, `record` or `computed_datums.period` dates are not valid calendar dates (`created` also not a valid time of day), or an end precedes its start. |
 
 ### 10.2 Warnings (the file is accepted)
 
@@ -465,7 +465,7 @@ text is parsed (size, gzip, syntax, encoding) carry a byte offset instead.
 | `W-MINOR-NEWER` | The file's minor version is newer than the reader's. Unknown members are ignored and unusable items are skipped transitively (§11); the warning carries the count per reason. |
 | `W-CONSTITUENT-REDEFINED` | The definition means something different from the reader's built-in catalogue entry of the same name: its flattened argument (V, c and u coefficients) or its node factor differs. An equivalent spelling (a compound versus the same Darwin entry) is not a redefinition. The file wins. |
 | `W-DATUM-UNSUPPORTED` | A valid datum token that the reader's datum model cannot represent. |
-| `W-UNUSED-CONSTITUENT`, `W-UNUSED-SOURCE` | A dictionary entry or source that no station references. |
+| `W-UNUSED-CONSTITUENT`, `W-UNUSED-SOURCE` | A dictionary entry or source that no station references. An entry is referenced when a station row names it or it is a term of a compound a row names. |
 
 ### 10.3 Limits (MetOceanViewer reader defaults; other readers MAY differ)
 
@@ -491,9 +491,12 @@ always gives the same error:
 2. syntax, encoding, duplicate members and structural limits, in document order;
 3. `format`, then `version` (`E-VERSION`, `E-MAJOR`), then `conventions`;
 4. schema rules, in document order;
-5. `sources` (uniqueness, licences), then the dictionary (names, terms, speeds);
-6. stations in document order (namespace, rows, datums, dates);
-7. cross-station rules (duplicate ids, then subordinate references and offset datums).
+5. `sources` in document order (uniqueness, licence, `retrieved`), then the dictionary in
+   document order (name, terms, speed of each entry);
+6. stations in document order (namespace, licence, rows, numbers, dates, datum conflicts);
+7. cross-station rules (duplicate ids, then each subordinate's reference and offset datum).
+
+MetOceanViewer's exact sequence within steps 5–7 is listed in HE §2.7.
 
 A validator MAY instead report every failure it can reach; steps after a syntax error are skipped.
 

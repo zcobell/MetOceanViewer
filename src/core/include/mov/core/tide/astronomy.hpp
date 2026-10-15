@@ -3,9 +3,12 @@
 
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 #include "mov/core/tide/node_factor.hpp"
 #include "mov/core/tide/phase.hpp"
@@ -192,5 +195,29 @@ struct NodalTerms {
 
 /// The value of node-factor formula `f` for `n` (A.3); 1 for unity.
 [[nodiscard]] double node_factor(NodeFactor f, const NodalTerms& n) noexcept;
+
+/// The value of every node-factor formula for one set of nodal terms: the
+/// 14 trigonometric evaluations a year needs, done once (YearAstronomy holds
+/// them), so that each constituent's f is a product of cached values.
+class NodeFactorValues {
+ public:
+  /// node_factor(f, n) for every f. Run time only: trigonometry.
+  [[nodiscard]] static NodeFactorValues of(const NodalTerms& n) noexcept;
+
+  [[nodiscard]] constexpr double operator[](NodeFactor f) const noexcept {
+    return values_[static_cast<std::size_t>(f)];
+  }
+
+  friend constexpr bool operator==(const NodeFactorValues&,
+                                   const NodeFactorValues&) = default;
+
+ private:
+  explicit constexpr NodeFactorValues(
+      const std::array<double, node_factor_count>& values) noexcept
+      : values_{values} {}
+
+  std::array<double, node_factor_count> values_;
+};
+static_assert(std::is_trivially_copyable_v<NodeFactorValues>);
 
 }  // namespace mov::core::tide

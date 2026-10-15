@@ -33,11 +33,12 @@ using mov::test::infinity;
 
 namespace {
 
-constexpr std::array all_datums{VerticalDatum::mhhw,   VerticalDatum::mhw,
-                                VerticalDatum::mtl,    VerticalDatum::msl,
-                                VerticalDatum::mlw,    VerticalDatum::mllw,
-                                VerticalDatum::navd88, VerticalDatum::ngvd29,
-                                VerticalDatum::igld85, VerticalDatum::stnd};
+constexpr std::array all_datums{
+    VerticalDatum::mhhw,   VerticalDatum::mhw,    VerticalDatum::mtl,
+    VerticalDatum::msl,    VerticalDatum::mlw,    VerticalDatum::mllw,
+    VerticalDatum::navd88, VerticalDatum::ngvd29, VerticalDatum::igld85,
+    VerticalDatum::stnd,   VerticalDatum::hat,    VerticalDatum::lat,
+    VerticalDatum::dtl};
 
 constexpr Length metres(double v) { return Length::in(v, LengthUnit::meter); }
 
@@ -89,12 +90,21 @@ constexpr bool offset_is_zero_everywhere(const DatumTable& t) {
   });
 }
 
+// The datums the cube below runs over: the ones its tables know, plus some
+// they do not. Not all 13: 13^3 triples would leave MSVC's default constexpr
+// step budget.
+constexpr std::array group_datums{VerticalDatum::mhhw,   VerticalDatum::mhw,
+                                  VerticalDatum::mtl,    VerticalDatum::msl,
+                                  VerticalDatum::mlw,    VerticalDatum::mllw,
+                                  VerticalDatum::navd88, VerticalDatum::ngvd29,
+                                  VerticalDatum::igld85, VerticalDatum::stnd};
+
 // offset(a, b) == -offset(b, a), and offset(a, b) + offset(b, c) ==
 // offset(a, c), for every triple the table knows.
 constexpr bool offsets_form_a_group(const DatumTable& t) {
-  for (const VerticalDatum a : all_datums) {
-    for (const VerticalDatum b : all_datums) {
-      for (const VerticalDatum c : all_datums) {
+  for (const VerticalDatum a : group_datums) {
+    for (const VerticalDatum b : group_datums) {
+      for (const VerticalDatum c : group_datums) {
         const auto ab = t.offset(a, b);
         const auto ba = t.offset(b, a);
         const auto bc = t.offset(b, c);
@@ -139,6 +149,10 @@ TEST_CASE("VerticalDatum tokens", "[core][datum][constexpr]") {
   STATIC_REQUIRE(to_string(VerticalDatum::ngvd29) == "NGVD29");
   STATIC_REQUIRE(to_string(VerticalDatum::igld85) == "IGLD85");
   STATIC_REQUIRE(to_string(VerticalDatum::stnd) == "STND");
+  STATIC_REQUIRE(to_string(VerticalDatum::hat) == "HAT");
+  STATIC_REQUIRE(to_string(VerticalDatum::lat) == "LAT");
+  STATIC_REQUIRE(to_string(VerticalDatum::dtl) == "DTL");
+  STATIC_REQUIRE(all_datums.size() == mov::core::detail::all_datums.size());
 }
 
 TEST_CASE("every token round-trips", "[core][datum][constexpr]") {

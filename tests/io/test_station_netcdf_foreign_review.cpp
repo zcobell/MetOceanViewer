@@ -681,6 +681,18 @@ TEST_CASE("datums: geopotential_datum_name and vertical_datum name one",
         datum_of(read_spec(datum_spec("Mean Lower Low Water", std::nullopt))) ==
         core::VerticalDatum::mllw);
   }
+  SECTION("the tidal datums of a harmonics file, by long name or token") {
+    CHECK(datum_of(read_spec(
+              datum_spec(std::nullopt, "Highest Astronomical Tide"))) ==
+          core::VerticalDatum::hat);
+    CHECK(datum_of(read_spec(
+              datum_spec(std::nullopt, "lowest astronomical tide"))) ==
+          core::VerticalDatum::lat);
+    CHECK(datum_of(read_spec(datum_spec(std::nullopt, "Diurnal Tide Level"))) ==
+          core::VerticalDatum::dtl);
+    CHECK(datum_of(read_spec(datum_spec("DTL", std::nullopt))) ==
+          core::VerticalDatum::dtl);
+  }
   SECTION("the grid mapping variable carries it") {
     const auto read =
         read_spec(datum_spec(std::nullopt, std::nullopt, "NAVD88"));

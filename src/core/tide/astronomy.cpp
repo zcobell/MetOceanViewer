@@ -191,4 +191,12 @@ double node_factor(NodeFactor f, const NodalTerms& n) noexcept {
   return formulas[i].value(trig_of(n.I), n);
 }
 
+NodeFactorValues NodeFactorValues::of(const NodalTerms& n) noexcept {
+  const ITrig trig = trig_of(n.I);  // once for all 14 formulas
+  std::array<double, node_factor_count> values{};
+  std::ranges::transform(formulas, values.begin(),
+                         [&](const Formula& f) { return f.value(trig, n); });
+  return NodeFactorValues{values};
+}
+
 }  // namespace mov::core::tide
