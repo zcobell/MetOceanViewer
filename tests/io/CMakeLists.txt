@@ -191,6 +191,9 @@ mov_add_test(
         test_station_netcdf_write.cpp
     LIBRARIES mov::io mov_nc_fixtures mov_station_nc_canonical
 )
+# The station readers look EPSG codes up; the listener points mov::io at
+# this build's proj.db before the run (support/proj_data_listener.cpp).
+target_sources(mov_io_station_netcdf_tests PRIVATE support/proj_data_listener.cpp)
 if(MOV_PROJ_DB)
     target_compile_definitions(mov_io_station_netcdf_tests PRIVATE MOV_TEST_PROJ_DATA_DIR="${MOV_TEST_PROJ_DATA_DIR}")
 endif()

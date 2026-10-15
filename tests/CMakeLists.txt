@@ -115,6 +115,12 @@ function(_mov_test_executable name)
     if(MSVC)
         target_compile_options(${name} PRIVATE /wd4702)
     endif()
+    # The application's UTF-8 code page and long-path settings, so tests of
+    # paths and of the app's self-test see what the app sees. MSVC's linker
+    # merges the manifest; the clang-cl cross-check (lld-link) is left out.
+    if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_sources(${name} PRIVATE "${PROJECT_SOURCE_DIR}/tests/support/windows/test.manifest")
+    endif()
     mov_enable_static_analysis(${name})
     set_property(GLOBAL APPEND PROPERTY MOV_TEST_TARGETS ${name})
     if(arg_DISCOVER)

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (c) 2026 Zach Cobell -->
+<!--
+  Manifest of every test executable on Windows (MSVC), merged by the linker:
+  the two process settings of the application's manifest
+  (packaging/windows/metoceanviewer.manifest.in) that change what the code
+  under test does, so the tests run as the application does.
+  - activeCodePage UTF-8: netCDF-C reads paths in the active code page, and
+    the app's self-test checks for UTF-8.
+  - longPathAware: paths over MAX_PATH (with the system's LongPathsEnabled).
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
+</assembly>
