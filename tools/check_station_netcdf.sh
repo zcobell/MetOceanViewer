@@ -12,12 +12,13 @@
 #   2. builds the checker image (tools/compliance/Dockerfile: IOOS
 #      compliance-checker, cfchecker, xarray, ncdump, all pinned), tagged with a
 #      hash of its inputs, unless it exists;
-#   3. runs tools/check_cf.py on the files in it, without network
+#   3. runs tools/check_cf.py on the files in it, and tools/check_json_schemas.py
+#      (the station catalog and series JSON schemas), without network
 #      (--network none): every table the checkers read is in the image.
 #
 #   tools/check_station_netcdf.sh
 #
-# Exit status: check_cf.py's (0 when every file passes).
+# Exit status: 0 when every file passes both.
 
 set -euo pipefail
 
@@ -55,4 +56,5 @@ docker run --rm --init --network none \
   --volume "${repo_root}:${repo_root}:ro" \
   --workdir "${repo_root}" \
   "${image}" \
-  python3 tools/check_cf.py "${out_dir}" --cdl tests/fixtures/io/station_netcdf
+  bash -c 'python3 tools/check_cf.py "$1" --cdl tests/fixtures/io/station_netcdf \
+    && python3 tools/check_json_schemas.py --require' _ "${out_dir}"

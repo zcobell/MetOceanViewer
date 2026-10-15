@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/zcobell/MetOceanViewer/master/docs/schemas/station-catalog-v1.schema.json",
+  "title": "Station catalog, format metoceanviewer-stations 1.0",
+  "description": "Normative structure of docs/station-catalog.md, version 1.x (this schema describes 1.0 in full; its version pattern accepts every 1.x so that a newer minor is distinguishable from a wrong major). Rules the schema cannot express (unique station ids, real calendar dates, ranges in order, a station's series, the clock) are in that document, section 8. The enums marked 'drift-tested' are checked against the core enums by the catalog tests.",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "provider",
+    "generated",
+    "sources",
+    "stations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "metoceanviewer-stations"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]{0,8})$"
+    },
+    "provider": {
+      "enum": [
+        "noaa_coops",
+        "usgs",
+        "ndbc"
+      ]
+    },
+    "generated": {
+      "$ref": "#/$defs/utc_timestamp"
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "stations": {
+      "type": "array"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provider": {
+            "const": "noaa_coops"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stations": {
+            "items": {
+              "$ref": "#/$defs/coops_station"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provider": {
+            "const": "usgs"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stations": {
+            "items": {
+              "$ref": "#/$defs/usgs_station"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provider": {
+            "const": "ndbc"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stations": {
+            "items": {
+              "$ref": "#/$defs/ndbc_station"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "text": {
+      "description": "Any JSON string without U+0000.",
+      "type": "string",
+      "pattern": "^[^\\u0000]*$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "utc_timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "url",
+        "retrieved"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "$ref": "#/$defs/text"
+        },
+        "retrieved": {
+          "$ref": "#/$defs/utc_timestamp"
+        }
+      }
+    },
+    "station_common": {
+      "description": "The members every station has; each station type adds its id pattern and its provider's block.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 360
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "first": {
+          "$ref": "#/$defs/date"
+        },
+        "last": {
+          "$ref": "#/$defs/date"
+        }
+      }
+    },
+    "coops_station": {
+      "type": "object",
+      "$ref": "#/$defs/station_common",
+      "required": [
+        "id",
+        "name",
+        "lon",
+        "lat",
+        "coops"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]{7}$"
+        },
+        "name": true,
+        "lon": true,
+        "lat": true,
+        "first": true,
+        "last": true,
+        "coops": {
+          "$ref": "#/$defs/coops_block"
+        }
+      },
+      "additionalProperties": false
+    },
+    "usgs_station": {
+      "type": "object",
+      "$ref": "#/$defs/station_common",
+      "required": [
+        "id",
+        "name",
+        "lon",
+        "lat",
+        "usgs"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]+-[A-Za-z0-9]+$"
+        },
+        "name": true,
+        "lon": true,
+        "lat": true,
+        "first": true,
+        "last": true,
+        "usgs": {
+          "$ref": "#/$defs/usgs_block"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ndbc_station": {
+      "type": "object",
+      "$ref": "#/$defs/station_common",
+      "required": [
+        "id",
+        "name",
+        "lon",
+        "lat",
+        "ndbc"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]{5}$"
+        },
+        "name": true,
+        "lon": true,
+        "lat": true,
+        "first": true,
+        "last": true,
+        "ndbc": {
+          "$ref": "#/$defs/ndbc_block"
+        }
+      },
+      "additionalProperties": false
+    },
+    "observed": {
+      "enum": [
+        "six_minute",
+        "one_minute",
+        "hourly"
+      ],
+      "$comment": "drift-tested against core coops::Observed"
+    },
+    "met": {
+      "enum": [
+        "air_temperature",
+        "water_temperature",
+        "wind",
+        "air_pressure",
+        "humidity",
+        "conductivity",
+        "salinity",
+        "visibility"
+      ],
+      "$comment": "drift-tested against core coops::Met"
+    },
+    "predictions": {
+      "enum": [
+        "none",
+        "hilo_only",
+        "any_interval"
+      ],
+      "$comment": "drift-tested against core coops::Predictions"
+    },
+    "coops_datum": {
+      "enum": [
+        "MHHW",
+        "MHW",
+        "MTL",
+        "MSL",
+        "MLW",
+        "MLLW",
+        "NAVD88",
+        "STND",
+        "IGLD85"
+      ],
+      "$comment": "drift-tested against core coops::Datum"
+    },
+    "height": {
+      "type": "number"
+    },
+    "coops_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "observed": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/observed"
+          }
+        },
+        "met": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/met"
+          }
+        },
+        "air_gap": {
+          "type": "boolean"
+        },
+        "predictions": {
+          "$ref": "#/$defs/predictions"
+        },
+        "datums_offered": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/coops_datum"
+          }
+        },
+        "datums": {
+          "description": "Heights in metres above the station's MSL, by datum token (drift-tested against core VerticalDatum).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "MHHW": {
+              "$ref": "#/$defs/height"
+            },
+            "MHW": {
+              "$ref": "#/$defs/height"
+            },
+            "MTL": {
+              "$ref": "#/$defs/height"
+            },
+            "MSL": {
+              "const": 0
+            },
+            "MLW": {
+              "$ref": "#/$defs/height"
+            },
+            "MLLW": {
+              "$ref": "#/$defs/height"
+            },
+            "NAVD88": {
+              "$ref": "#/$defs/height"
+            },
+            "NGVD29": {
+              "$ref": "#/$defs/height"
+            },
+            "IGLD85": {
+              "$ref": "#/$defs/height"
+            },
+            "STND": {
+              "$ref": "#/$defs/height"
+            },
+            "HAT": {
+              "$ref": "#/$defs/height"
+            },
+            "LAT": {
+              "$ref": "#/$defs/height"
+            },
+            "DTL": {
+              "$ref": "#/$defs/height"
+            }
+          }
+        }
+      }
+    },
+    "usgs_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "series": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/usgs_series"
+          }
+        }
+      }
+    },
+    "usgs_series": {
+      "type": "object",
+      "required": [
+        "id",
+        "parameter",
+        "statistic"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "parameter": {
+          "type": "string",
+          "pattern": "^[0-9]{5}$"
+        },
+        "statistic": {
+          "type": "string",
+          "pattern": "^[0-9]{5}$"
+        },
+        "parameter_name": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "boolean"
+        },
+        "unit": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "first": {
+          "$ref": "#/$defs/date"
+        },
+        "last": {
+          "$ref": "#/$defs/date"
+        }
+      }
+    },
+    "ndbc_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "$ref": "#/$defs/text"
+        },
+        "program": {
+          "$ref": "#/$defs/text"
+        },
+        "platform_type": {
+          "$ref": "#/$defs/text"
+        },
+        "elevation_m": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

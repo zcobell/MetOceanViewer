@@ -353,6 +353,9 @@ jobs:
           python tools/check_cf.py build/format-compliance
           --cdl tests/fixtures/io/station_netcdf
           --tables "${RUNNER_TEMP}/compliance"
+      # The station catalog and series JSON schemas (docs/station-catalog.md 11).
+      - name: JSON schemas
+        run: python tools/check_json_schemas.py --require
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

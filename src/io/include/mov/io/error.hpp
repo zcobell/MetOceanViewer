@@ -239,6 +239,9 @@ enum class FormatErrc : std::uint8_t {
                     // subject is the reason (to_token) and the link
   unexpected_link,  // a link of a form the protocol does not use (USGS: an
                     // offset link that is not the full last page's)
+  // station catalog (docs/station-catalog.md)
+  future_dated,    // `generated` more than a day after the reader's clock
+  wrong_provider,  // a catalog of another provider than the one asked for
 };
 
 /// A file that parses but does not mean what its format requires.

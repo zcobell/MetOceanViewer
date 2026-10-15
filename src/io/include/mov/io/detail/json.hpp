@@ -54,6 +54,12 @@ struct Keep {
   std::span<const Field> fields{};
   const Keep* element = nullptr;
   std::size_t max_elements = 0;
+  /// Objects: a member that `fields` does not name is kept too, under its
+  /// own name, as a leaf (a scalar as it is, a container empty), so a
+  /// decoder can tell an unknown member from an absent one. Repeated, it is
+  /// `bad_member` like a kept member. (A format whose readers refuse unknown
+  /// members: the station catalog.)
+  bool unknown_names = false;
 };
 
 /// Keeps a scalar; a container is kept empty.

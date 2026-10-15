@@ -169,6 +169,16 @@ enum class WarningCode : std::uint8_t {
   /// inverted: kept with an unknown validity. Subject: `dates`; the count is
   /// the rows.
   validity_ignored,
+
+  // ---- station catalog (docs/station-catalog.md) ----------------------------
+  /// Members and tokens of a newer minor version, ignored. Subject: where (a
+  /// member path such as `stations[].coops.rain`, or a token as
+  /// `stations[].coops.met[]=rain`, cut on a UTF-8 boundary; `other` past
+  /// the 32nd distinct one); the count is how often.
+  newer_content_ignored,
+  /// A station listed by several provider lists whose name, position or
+  /// validity differ: the first list's are kept. Subject: the station id.
+  station_lists_disagree,
 };
 /// A stable lower-case identifier, the same as the enumerator's name
 /// (for logs and tests; user-facing text belongs to the app).

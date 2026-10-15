@@ -1,0 +1,8 @@
+{"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",
+ "generated":"2026-10-15T12:00:00Z",
+ "sources":[{"url":"https://www.ndbc.noaa.gov/activestations.xml","retrieved":"2026-10-15T11:59:00Z"}],
+ "stations":[
+{"id":"41001","name":"EAST HATTERAS - 150 NM East of Cape Hatteras","lon":-72.317,"lat":34.724,"ndbc":{"owner":"NDBC","program":"NDBC Meteorological/Ocean","platform_type":"buoy","elevation_m":0}},
+{"id":"BURL1","name":"Southwest Pass, LA","lon":-89.428,"lat":28.905,"ndbc":{"elevation_m":37.8}},
+{"id":"TPLM2","name":"Thomas Point, MD \"Lighthouse\"","lon":-76.436,"lat":38.899,"ndbc":{}}
+]}

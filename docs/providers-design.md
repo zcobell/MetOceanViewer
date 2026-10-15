@@ -5,8 +5,9 @@ Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's an
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
 layers, gates and build plumbing), P1 (§3, the core vocabulary; its deviations from
 revision 2 are in §3.7), P2 (§4, the CO-OPS wire formats; deviations in §4.8), P3
-(§4, the USGS wire formats; deviations in §4.9) and P6 (§5, the fetch layer; its
-deviations are in §5.7); nothing else from P4 on. Phase 2
+(§4, the USGS wire formats; deviations in §4.9), P5a (§4.6, §4.7: the station catalog
+and the series JSON; deviations in §4.10) and P6 (§5, the fetch layer; its deviations
+are in §5.7); nothing else from P4 on. Phase 2
 (`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
@@ -662,6 +663,9 @@ test runs `QXmlStreamReader` over the fuzz corpus as the reference (§10.4).
 - `docs/schemas/stations-v1.schema.json` and `docs/station-catalog.md` (P5), checked in
   `format-compliance`.
 
+As built in P5a: §4.10 (the spec is `docs/station-catalog.md`, the schema
+`docs/schemas/station-catalog-v1.schema.json`).
+
 ### 4.7 Series outputs
 
 - **JSON** (`series_json.hpp`, EX #6, droppable): `{"format":"metoceanviewer-series",
@@ -811,6 +815,29 @@ the dates as written), L8 (an out-of-order page is sorted and reported, not trun
 Fuzz targets: `fuzz_usgs_items` and `fuzz_usgs_catalog` (inputs up to 1 MiB, large-page
 seeds), `fuzz_rfc3339` (core), and `fuzz_usgs_paging` in `tests/fetch` (pages joined by
 0xFF, read by io and followed by `fetch::usgs::next` with P7's echo rule).
+### 4.10 As built (P5a): deviations
+
+P5a built `mov/io/station_catalog.hpp` (the model, the reader, the writer and the load and
+refresh rules), `mov/io/wire/coops_catalog.hpp` (the CO-OPS merge of §4.8),
+`mov/io/series_json.hpp`, and the private `detail/json_write.hpp` (strings, numbers, dates)
+and `detail/station_catalog_text.hpp` (the tokens and the rounding the reader and writer
+share). The specs are `docs/station-catalog.md` and `docs/series-json.md`, with
+`docs/schemas/station-catalog-v1.schema.json` and `docs/schemas/series-v1.schema.json`.
+
+| §4.6, §4.7, §7 say | Built | Why |
+|---|---|---|
+| `"datums":{"reference":"STND","heights_m":{…}}` | `"datums":{"MHHW":0.195,…}`: metres above the station's MSL by datum token, MSL omitted (absent or 0), and `datums_offered` beside it | The harmonics format's convention (HJ H6) and `DatumTable`'s pivot: a height reads back exactly, where a STND reference would be rebased on every read. The example of §4.6 also left out the offered datums, which `offered()` needs. |
+| `read_station_catalog(bytes, ctx)` | `parse_station_catalog(text, now, ctx)` and `read_station_catalog(path, now, ctx)`; `catalog_of<P>(Read<StationCatalog>)` gives `FormatError{wrong_provider}` | io's names (`parse_x` text, `read_x` file); the future-dated rule needs a clock, passed in so the reader stays pure. A cache of another provider is the third invalid-cache case of §7. |
+| `Catalog<P>` | a class built by `make` (sorted by id, `DuplicateStation` otherwise), with `find` by binary search; `CatalogHeader{generated, sources}`, `CatalogEntry<P>{station, caps}` | A catalog with a repeated station cannot exist, and the id-indexed table of §7 (B25) is the catalog itself. |
+| "a bad id is an error" | so is an id that `StationId<P>::make` would rewrite (spaces, a lower-case USGS agency or NDBC id) | One spelling per station in our own format. |
+| version gate "as SN §13" | and a reader refuses unknown members and tokens in a file of its own minor or older (`bad_member` at them); a newer minor counts them (`newer_content_ignored`, a path per place) | A misspelt optional member would otherwise read as its default. It needed `Keep::unknown_names` in `detail/json.hpp`: an object keeps the members its Keep does not name, by name, as leaves. |
+| deterministic numbers | the reader rounds positions and heights to the writer's grid as well | Then `parse(format(c)) == c` for every catalog the reader returns, which `fuzz_station_catalog` checks, and `format` is idempotent. |
+| `FormatError{future_dated}` | as said, after the duplicate-id check; the order of all checks is the spec's §8.3 (format and version first, whatever the member order, so stations are decoded while streaming and their first failure is reported after the header) | The same file always gives the same error. |
+| "date sanity" | dates and timestamps exact and real, years 0000–9999, `first <= last`; no rule ties a station's dates to `generated` | A station listed with a future `established` date would otherwise fail a whole refresh. |
+| merge policy (§4.8) | `wire::coops::merge_station_lists(CatalogLists)`: union of capabilities, the first list's `GaugeStation`, `station_lists_disagree` per station (a new `WarningCode`, with `newer_content_ignored`); predictions from the tide-prediction list's type (a station listed there twice with different types keeps the first and is counted); `with_datums(entry, StationDatums)` | Pure, so the CLI's `stations build` and the app's refresh share it. The USGS grouping of series rows into sites and the NDBC entries are P3's and P4's (their parsers) or P9's. |
+| `CatalogStore` (§6.7, §7): startup choice, 30-day staleness, the 50 % rule | the rules as pure functions next to the type: `choose_catalog` (the cache only when strictly newer), `is_stale` (`catalog_max_age`, 30 days), `accept_refresh` (at least half, rounded up: `TooFewStations{current, refreshed}`) | Tested without files or Qt; the store (paths, files, the fetch) stays P7's. |
+| `stations-v1.schema.json`, "checked in format-compliance" | `station-catalog-v1.schema.json` and `series-v1.schema.json`; `tools/check_json_schemas.py` (the schemas, each fixture's schema verdict from `tests/fixtures/io/station_catalog/cases.txt`, the specs' worked examples equal to the goldens) runs as the ctest `json_schemas` and in `format-compliance`; `jsonschema` 4.26.0 is pinned in the dev image and, with hashes, in `tools/compliance/requirements.txt` | The test skips (exit 77) where the package is missing (the OS matrix); the dev image and the compliance job have it. |
+| series JSON (§4.7) | `format_series_json` / `write_series_json` over a `StationTable` and over `DailyAtStation` (`AtStation<FileStation, DailySeries>`); one station per line, streamed in 64 KiB chunks; `provider`, `label`, `unit` (udunits text) and `datum` absent when unset; `lon`/`lat` and values in shortest round-trip form; times with milliseconds; `status` only with a Dry sample | The CSV export's shape and streaming; the station netCDF's vocabulary. Write-only. |
 
 ---
 

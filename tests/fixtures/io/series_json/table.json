@@ -1,0 +1,5 @@
+{"format":"metoceanviewer-series","version":"1.0",
+ "stations":[
+{"id":"8729840","name":"Pensacola","provider":"noaa_coops","lon":-87.2112,"lat":30.4044,"series":[{"quantity":"water_level","label":"Water level","unit":"m","datum":"MLLW","time":["2026-10-01T00:00:00.000Z","2026-10-01T00:06:00.000Z","2026-10-01T00:12:00.000Z"],"value":[0.123,null,-1e-07]},{"quantity":"wind_speed","unit":"m s-1","time":["2026-10-01T00:00:00.000Z","2026-10-01T00:06:00.000Z","2026-10-01T00:12:00.000Z"],"value":[3.6,4,null]}]},
+{"id":"model 1","name":"Grid \"point\"\n","lon":-89.5,"lat":29,"series":[{"quantity":"water_level","label":"Water level","unit":"m","datum":"MLLW","time":["1969-12-31T23:59:59.005Z","2026-10-01T00:00:00.000Z"],"value":[null,2.5],"status":["dry","value"]},{"quantity":"wind_speed","unit":"m s-1","time":["1969-12-31T23:59:59.005Z","2026-10-01T00:00:00.000Z"],"value":[null,null]}]}
+]}

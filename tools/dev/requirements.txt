@@ -8,5 +8,7 @@
 # Keep in step with AQT_SOURCE in .github/actions/setup-qt/action.yml.
 aqtinstall @ git+https://github.com/miurahr/aqtinstall@076e1659807d0b362a3ed684d54c2e9c775eb9c7
 gcovr==8.6
+# The station catalog schema test (tests/io; tools/check_json_schemas.py).
+jsonschema==4.26.0
 lizard==1.24.1
 pre-commit==4.6.2

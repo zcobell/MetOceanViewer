@@ -1,0 +1,8 @@
+{"format":"metoceanviewer-stations","version":"1.0","provider":"noaa_coops",
+ "generated":"2026-10-15T16:50:00Z",
+ "sources":[{"url":"https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=waterlevels&expand=details,sensors","retrieved":"2026-10-15T16:49:00Z"},{"url":"https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=airgap&expand=details,sensors","retrieved":"2026-10-15T16:49:00Z"},{"url":"https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions","retrieved":"2026-10-15T16:49:00Z"}],
+ "stations":[
+{"id":"8517986","name":"Verrazano-Narrows Air Gap","lon":-74.04483,"lat":40.606224,"first":"2008-03-20","coops":{"air_gap":true}},
+{"id":"8729840","name":"Pensacola","lon":-87.2112,"lat":30.4044,"first":"1923-04-30","coops":{"observed":["six_minute","one_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure"],"predictions":"any_interval","datums_offered":["MHHW","MHW","MTL","MSL","MLW","MLLW","NAVD88","STND"],"datums":{"MHHW":0.195,"MHW":0.186,"MTL":0.003,"MLW":-0.179,"MLLW":-0.188,"NAVD88":-0.09,"STND":-2.757}}},
+{"id":"9063020","name":"Buffalo","lon":-78.89047,"lat":42.877445,"first":"1860-04-01","coops":{"observed":["six_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure","humidity"],"datums_offered":["IGLD85"]}}
+]}
