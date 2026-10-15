@@ -194,7 +194,8 @@ local-time parse of the ADCIRC cold start (N5).
 
 Factors to SI (`detail::*_factors`, indexed by enumerator): ft 0.3048, in 0.0254,
 mi 1609.344, nmi 1852, kt 1852/3600, mph 1609.344/3600, km/h 1000/3600, hPa = mb = 100,
-mH2O 9806.65 (v4 used 9806.38: a documented non-goal), ft3/s 0.028316846592.
+mH2O 9806.65 (v4 used 9806.38: a documented non-goal), ft3/s 0.028316846592, mS/cm 0.1
+and uS/cm 1e-4 (S/m; NOAA CO-OPS reports conductivity in mS/cm, added in Phase 3 P2).
 `Measure<U>` stores SI, has no raw-number constructor, orders by `std::partial_ordering`
 and offers exactly `+ − * /`, unary `+ −`, `Measure/Measure -> double`. Temperatures are a
 `Unit` alternative only (C6); their conversion is affine through a Celsius hub with exact
@@ -213,6 +214,7 @@ case):
 | other speeds | `mph`, `mile hour-1`; `km/h`, `kph`, `km h-1`, `km hour-1` |
 | pressure | `Pa`; `hPa`; `mb`, `mbar`, `millibar(s)`; `mH2O`, `m H2O` |
 | discharge | `m3/s`, `m3 s-1`; `ft3/s`, `ft3 s-1`, `cfs` |
+| conductivity | `S/m`, `S m-1`; `mS/cm`, `mS cm-1`; `uS/cm`, `uS cm-1` |
 | °C | `degC`, `deg C`, `C`, `celsius`, `degree_C`, `degree_celsius`, `°C` |
 | °F | `degF`, `deg F`, `F`, `fahrenheit`, `degree_F`, `degree_fahrenheit`, `°F` |
 | K | `K`, `kelvin`, `degK`, `degree_K` |
@@ -225,7 +227,8 @@ space; `Mb`, `PA` and `c` are therefore `OtherUnit`s. The display symbol for kno
 
 `OtherUnit` is built only by `parse_unit` through the passkey `detail::UnitKey` (its only
 friend is `detail::UnitFactory` in `units.cpp`). Aliases canonicalize: `%` → `percent`;
-`deg`, `degT`, `degrees`, `degrees_true` → `degree`; `sec` → `s`. `degree()` is a function
+`deg`, `degT`, `degrees`, `degrees_true` → `degree`; `sec` → `s`; `PSU` (any case) → `1`
+(practical salinity is dimensionless). `degree()` is a function
 because an `OtherUnit` holds a `std::string`. `symbol` and `udunits` have a constexpr
 overload per enumerator and for `const Unit&` (deleted for `Unit&&`: the view points into
 the variant); the name tables are `static_assert`ed against the enums and
@@ -527,10 +530,12 @@ is unrepresentable rather than checked.
   (`-Wmissing-field-initializers` catches it only on some). Its comparisons are `T`'s,
   through the conversion; a comparison of its own would make `required == t`
   ambiguous.
-- **CO-OPS** (`provider/coops.hpp`). `Product = variant<WaterLevel, Meteorological>`,
-  not default-constructible; only `WaterLevel` has a datum, `Required<Datum>` (the API
-  requires one and has no neutral default), and `Meteorological::interval` is
-  `Required` too. `LevelKind` is observed (`Observed`: 6-minute, 1-minute, hourly),
+- **CO-OPS** (`provider/coops.hpp`). `Product = variant<WaterLevel, Meteorological,
+  AirGap>`, not default-constructible; only `WaterLevel` has a datum, `Required<Datum>`
+  (the API requires one and has no neutral default), and `Meteorological::interval` is
+  `Required` too. `AirGap` (a bridge's clearance, EX #1) has neither: the API ignores
+  both, so it is its own alternative rather than a `Met` (Phase 3 P2's recordings), with
+  6-minute limits and its own sensor flag `Capabilities<Coops>::air_gap`. `LevelKind` is observed (`Observed`: 6-minute, 1-minute, hourly),
   predicted (`PredictionInterval`, no `hilo` until EX #7) or `ObservedVsPredicted` on a
   `PairedGrid`; `observed(grid)` and `predicted(grid)` name the two halves.
   `coops::Datum` is the nine datums the data API accepts that core can name; one table,
@@ -538,7 +543,7 @@ is unrepresentable rather than checked.
   twice, gives `to_vertical`, `from_vertical` (nullopt for NGVD29, D32) and the wire
   token (`NAVD`, `IGLD`). `max_window` returns a `WindowSpan` per alternative (1-minute
   4 d, 6-minute 31 d, hourly and every prediction interval 365 d, a paired product the
-  smaller half, met by its interval); `shape` names the result's form. The
+  smaller half, met by its interval, air gap 31 d); `shape` names the result's form. The
   `(name, interval) → Product` rule table and `WindComponent` are the CLI's spelling
   (PD §9.1) and stay in P9b.
 - **USGS** (`provider/usgs.hpp`). `ParameterCode`, `StatisticId` (5 digits) and

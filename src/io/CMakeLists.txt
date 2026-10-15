@@ -50,6 +50,24 @@ mov_add_module(
 # an implicit conversion would throw on the wrong type and hide such reads
 # from review. Private: no public io header names nlohmann.
 target_compile_definitions(mov_io PRIVATE JSON_USE_IMPLICIT_CONVERSIONS=0)
+# Every parsed JSON value knows the byte offset where it starts (start_pos()),
+# which the provider parsers report as the line and column of an error.
+target_compile_definitions(mov_io PRIVATE JSON_DIAGNOSTIC_POSITIONS=1)
+
+# Wire formats (docs/providers-design.md section 4): request targets and the
+# body checks in wire/, the JSON response parsers in json/ (the only sources
+# that include nlohmann/json).
+target_sources(
+    mov_io
+    PRIVATE
+        wire/body.cpp
+        wire/service.cpp
+        wire/coops_targets.cpp
+        json/document.cpp
+        json/coops_classify.cpp
+        json/coops_data.cpp
+        json/coops_metadata.cpp
+)
 
 # ADCIRC ASCII output and the HWM file.
 target_sources(
@@ -57,7 +75,10 @@ target_sources(
     PRIVATE model_number.cpp table_error.cpp adcirc_station_file.cpp adcirc_ascii.cpp hwm_file.cpp
 )
 # IMEDS and CSV.
-target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_names.cpp)
+target_sources(
+    mov_io
+    PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp normalize.cpp station_names.cpp
+)
 
 # ADCIRC netCDF station output and D-Flow FM history files, and what the
 # netCDF readers share (model_netcdf).

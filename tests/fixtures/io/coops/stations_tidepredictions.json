@@ -1,0 +1,117 @@
+{
+ "count": 3502,
+ "units": null,
+ "stations": [
+  {
+   "state": "HI",
+   "tidepredoffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1610367/tidepredoffsets.json"
+   },
+   "type": "S",
+   "timemeridian": -150,
+   "reference_id": "1612340",
+   "timezonecorr": -10,
+   "id": "1610367",
+   "name": "Nonopapa, Niihau Island",
+   "lat": 21.87,
+   "lng": -160.235,
+   "affiliations": "",
+   "portscode": "",
+   "products": null,
+   "disclaimers": null,
+   "notices": null,
+   "self": null,
+   "expand": null,
+   "tideType": ""
+  },
+  {
+   "state": "HI",
+   "tidepredoffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1612340/tidepredoffsets.json"
+   },
+   "type": "R",
+   "timemeridian": 0,
+   "reference_id": "",
+   "timezonecorr": -10,
+   "id": "1612340",
+   "name": "HONOLULU",
+   "lat": 21.30333333333334,
+   "lng": -157.8645277777778,
+   "affiliations": "",
+   "portscode": "",
+   "products": null,
+   "disclaimers": null,
+   "notices": null,
+   "self": null,
+   "expand": null,
+   "tideType": ""
+  },
+  {
+   "state": "",
+   "tidepredoffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8218617/tidepredoffsets.json"
+   },
+   "type": "S",
+   "timemeridian": -135,
+   "reference_id": "9450460",
+   "timezonecorr": -9,
+   "id": "8218617",
+   "name": "Mill Bay, Nass River, B.C.",
+   "lat": 55,
+   "lng": -129.9,
+   "affiliations": "",
+   "portscode": "",
+   "products": null,
+   "disclaimers": null,
+   "notices": null,
+   "self": null,
+   "expand": null,
+   "tideType": ""
+  },
+  {
+   "state": "FL",
+   "tidepredoffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8729840/tidepredoffsets.json"
+   },
+   "type": "R",
+   "timemeridian": 0,
+   "reference_id": "",
+   "timezonecorr": -6,
+   "id": "8729840",
+   "name": "PENSACOLA",
+   "lat": 30.404399871826172,
+   "lng": -87.21119689941406,
+   "affiliations": "",
+   "portscode": "",
+   "products": null,
+   "disclaimers": null,
+   "notices": null,
+   "self": null,
+   "expand": null,
+   "tideType": ""
+  },
+  {
+   "state": "",
+   "tidepredoffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/TEC1603/tidepredoffsets.json"
+   },
+   "type": "S",
+   "timemeridian": -75,
+   "reference_id": "8518995",
+   "timezonecorr": -5,
+   "id": "TEC1603",
+   "name": "Troy",
+   "lat": 42.71666666666667,
+   "lng": -73.7,
+   "affiliations": "",
+   "portscode": "",
+   "products": null,
+   "disclaimers": null,
+   "notices": null,
+   "self": null,
+   "expand": null,
+   "tideType": ""
+  }
+ ],
+ "self": null
+}

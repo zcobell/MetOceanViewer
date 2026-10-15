@@ -44,6 +44,7 @@ enum class Quantity : std::uint8_t {
   wave_period_average,
   wave_direction,
   discharge,
+  salinity,
   /// Derived: observed minus predicted (residual). It has no CF standard name,
   /// no fixed unit (it takes the unit of its operands) and never carries a
   /// datum, so it cannot be shifted.
@@ -122,7 +123,7 @@ struct QuantityInfo {
 
 namespace detail {
 
-inline constexpr std::array<QuantityInfo, 22> quantity_registry{{
+inline constexpr std::array<QuantityInfo, 23> quantity_registry{{
     {.token = "water_level",
      .standard_name = "water_surface_height_above_reference_datum",
      .long_name = "Water level",
@@ -208,6 +209,10 @@ inline constexpr std::array<QuantityInfo, 22> quantity_registry{{
      .standard_name = "water_volume_transport_in_river_channel",
      .long_name = "River discharge",
      .canonical_unit = "m3 s-1"},
+    {.token = "salinity",
+     .standard_name = "sea_water_practical_salinity",
+     .long_name = "Salinity",
+     .canonical_unit = "1"},
     {.token = "difference",
      .standard_name = "",
      .long_name = "Difference",
@@ -298,7 +303,7 @@ static_assert(
 [[nodiscard]] std::optional<Unit> canonical_unit(Quantity q);
 
 /// Whether an OtherUnit is one of the registry's own units (percent, degree,
-/// s, S m-1): the canonical units of the registry that are not in a unit
+/// s, 1): the canonical units of the registry that are not in a unit
 /// family. Readers warn `unrecognized_unit` for any other OtherUnit. The set
 /// is derived from the registry, so it cannot drift from it.
 [[nodiscard]] constexpr bool is_canonical_other(

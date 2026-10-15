@@ -68,6 +68,14 @@ enum class ParseErrc : std::uint8_t {
   /// line read). A file that is too big for `max_text_bytes` is a FileError
   /// (`file_too_large`) at open instead.
   too_large,
+  /// Not JSON: `line` and `column` are where the JSON parser stopped, the
+  /// context is the text from there.
+  not_json,
+  /// JSON whose shape is not the format's: a member missing, repeated, or of
+  /// the wrong JSON type. `line` and `column` are where the value at fault
+  /// starts (its object when the member is missing), the context is the text
+  /// from there.
+  bad_member,
 };
 
 namespace detail {

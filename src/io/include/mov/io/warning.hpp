@@ -140,8 +140,23 @@ enum class WarningCode : std::uint8_t {
   /// Samples a known quality scheme calls bad, made Missing. Subject: the data
   /// variable; the count is the samples.
   flagged_samples_masked,
-  /// Samples flagged suspect, kept as they are. Subject as above.
+  /// Samples flagged suspect, kept as they are. Subject as above; CO-OPS:
+  /// `coops:f` (a record with a nonzero quality flag).
   suspect_samples_kept,
+
+  // ---- provider responses (docs/providers-design.md section 4) --------------
+  /// Records the provider marks as not yet quality-controlled, kept. Subject:
+  /// where the mark is (CO-OPS `coops:q`, the records with `q` "p").
+  provisional_samples,
+  /// Sensors of a station list whose name the reader does not know: the
+  /// station is kept without them. Subject: the name as found; the count is
+  /// the sensors of that name.
+  unknown_sensor,
+  /// Stations of a station list that were left out, counted by reason.
+  /// Subject: the reason (CO-OPS: `id`, `name`, `position`, `dates`,
+  /// `sensors`, `member` for a member of the wrong JSON type, `type` for a
+  /// tide-prediction type); the count is the stations.
+  station_skipped,
 };
 /// A stable lower-case identifier, the same as the enumerator's name
 /// (for logs and tests; user-facing text belongs to the app).

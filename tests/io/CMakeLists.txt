@@ -244,3 +244,40 @@ target_sources(mov_io_station_netcdf_tests PRIVATE test_station_netcdf_foreign_r
 # Parts and their merge (docs/providers-design.md §5.4); bench_part.cpp holds
 # a hidden benchmark ("[benchmark]").
 mov_add_test(mov_io_part_tests SOURCES test_part.cpp bench_part.cpp LIBRARIES mov::io)
+
+# ---- wire formats (docs/providers-design.md section 4) -----------------------
+#
+# Request targets, the body checks and the provider response parsers, against
+# the recorded responses in tests/fixtures/io/coops/ (provenance.txt there).
+mov_add_test(
+    mov_io_wire_tests
+    SOURCES
+        test_wire_body.cpp
+        test_json_parse.cpp
+        test_coops_targets.cpp
+        test_coops_classify.cpp
+        test_coops_data.cpp
+        test_coops_metadata.cpp
+        measure_coops_json.cpp
+    CONSTEXPR_SOURCES test_wire_constexpr.cpp
+    LIBRARIES mov::io
+)
+# The depth fuzzer compares against nlohmann's own SAX parser (tests may
+# include it; src may not, outside src/io/json/).
+find_package(nlohmann_json CONFIG REQUIRED)
+mov_add_fuzz_test(
+    fuzz_json_depth
+    SOURCES fuzz_json_depth.cpp
+    LIBRARIES mov::io nlohmann_json::nlohmann_json
+    CORPUS io/json_depth
+)
+# A month of 6-minute records is about 600 KB: the inputs reach 1 MiB, so the
+# large-body seeds (a few hundred KB) are mutated whole.
+mov_add_fuzz_test(fuzz_coops_json SOURCES fuzz_coops_json.cpp LIBRARIES mov::io CORPUS io/coops_json MAX_LEN 1048576)
+mov_add_fuzz_test(
+    fuzz_coops_metadata
+    SOURCES fuzz_coops_metadata.cpp
+    LIBRARIES mov::io
+    CORPUS io/coops_metadata
+    MAX_LEN 1048576
+)

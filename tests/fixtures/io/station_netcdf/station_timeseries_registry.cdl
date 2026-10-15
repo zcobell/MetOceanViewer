@@ -193,6 +193,13 @@ variables:
 		discharge:standard_name = "water_volume_transport_in_river_channel" ;
 		discharge:long_name = "River discharge" ;
 		discharge:units = "m3 s-1" ;
+	double salinity(station, time) ;
+		salinity:_FillValue = 9.96920996838687e+36 ;
+		salinity:coordinates = "time lat lon station_id station_name" ;
+		salinity:grid_mapping = "crs" ;
+		salinity:standard_name = "sea_water_practical_salinity" ;
+		salinity:long_name = "Salinity" ;
+		salinity:units = "1" ;
 	double difference(station, time) ;
 		difference:_FillValue = 9.96920996838687e+36 ;
 		difference:coordinates = "time lat lon station_id station_name" ;

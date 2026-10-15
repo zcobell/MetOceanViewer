@@ -397,16 +397,16 @@ TEST_CASE("generic and difference columns: units, standard names, datums",
   const auto path = dir / "g.nc";
   static_cast<void>(must_write(
       path,
-      table(
-          {{.meta = meta(mov::core::GenericQuantity::value(), "gauge", "ft",
-                         VerticalDatum::stnd),
-            .per_station = {{v(1)}}},
-           {.meta = meta(Quantity::difference, "residual", "degC"),
-            .per_station = {{v(2)}}},
-           {.meta = meta(generic("salinity", "sea_water_salinity"), "", "1e-3"),
-            .per_station = {{v(35)}}},
-           {.meta = meta(generic("mystery"), "?"), .per_station = {{v(4)}}}},
-          {axis}, {{.station = station("A"), .axis = 0}})));
+      table({{.meta = meta(mov::core::GenericQuantity::value(), "gauge", "ft",
+                           VerticalDatum::stnd),
+              .per_station = {{v(1)}}},
+             {.meta = meta(Quantity::difference, "residual", "degC"),
+              .per_station = {{v(2)}}},
+             {.meta =
+                  meta(generic("turbidity", "sea_water_turbidity"), "", "1e-3"),
+              .per_station = {{v(35)}}},
+             {.meta = meta(generic("mystery"), "?"), .per_station = {{v(4)}}}},
+            {axis}, {{.station = station("A"), .axis = 0}})));
   const Inspect f{path};
   CHECK(f.text("value", "units") == "ft");
   CHECK(f.text("value", "vertical_datum") == "STND");
@@ -416,9 +416,9 @@ TEST_CASE("generic and difference columns: units, standard names, datums",
   CHECK(f.text("difference", "units_metadata") == "temperature: difference");
   CHECK(not(f.att("difference", "standard_name")));
   CHECK(not(f.att("difference", "vertical_datum")));
-  CHECK(f.text("salinity", "standard_name") == "sea_water_salinity");
-  CHECK(f.text("salinity", "long_name") == "salinity");  // empty label: token
-  CHECK(f.text("salinity", "units") == "1e-3");
+  CHECK(f.text("turbidity", "standard_name") == "sea_water_turbidity");
+  CHECK(f.text("turbidity", "long_name") == "turbidity");  // empty label: token
+  CHECK(f.text("turbidity", "units") == "1e-3");
   CHECK(not(f.att("mystery", "units")));
   CHECK(not(f.att("mystery", "standard_name")));
 }

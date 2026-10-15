@@ -42,6 +42,13 @@ enum class DischargeUnit : std::uint8_t {
   cubic_meter_per_second,
   cubic_foot_per_second
 };
+/// Electrical conductivity: S/m (the registry's canonical S m-1), and the
+/// mS/cm and uS/cm that instruments report (NOAA CO-OPS: mS/cm).
+enum class ConductivityUnit : std::uint8_t {
+  siemens_per_meter,
+  millisiemens_per_centimeter,
+  microsiemens_per_centimeter
+};
 /// A unit option only: the affine Temperature value type is deferred until
 /// the providers need it, so there is no Measure over it.
 enum class TemperatureUnit : std::uint8_t { celsius, fahrenheit, kelvin };
@@ -58,6 +65,8 @@ inline constexpr std::array<double, 5> speed_factors{
 inline constexpr std::array<double, 4> pressure_factors{1.0, 100.0, 100.0,
                                                         9806.65};
 inline constexpr std::array<double, 2> discharge_factors{1.0, 0.028316846592};
+// 1 mS/cm = 1e-3 S / 1e-2 m = 0.1 S/m; 1 uS/cm = 1e-4 S/m.
+inline constexpr std::array<double, 3> conductivity_factors{1.0, 0.1, 1e-4};
 
 static_assert(length_factors.size() ==
               static_cast<std::size_t>(LengthUnit::nautical_mile) + 1);
@@ -68,6 +77,10 @@ static_assert(pressure_factors.size() ==
 static_assert(discharge_factors.size() ==
               static_cast<std::size_t>(DischargeUnit::cubic_foot_per_second) +
                   1);
+static_assert(
+    conductivity_factors.size() ==
+    static_cast<std::size_t>(ConductivityUnit::microsiemens_per_centimeter) +
+        1);
 
 [[nodiscard]] constexpr double si_factor(LengthUnit u) noexcept {
   return length_factors[static_cast<std::size_t>(u)];
@@ -80,6 +93,9 @@ static_assert(discharge_factors.size() ==
 }
 [[nodiscard]] constexpr double si_factor(DischargeUnit u) noexcept {
   return discharge_factors[static_cast<std::size_t>(u)];
+}
+[[nodiscard]] constexpr double si_factor(ConductivityUnit u) noexcept {
+  return conductivity_factors[static_cast<std::size_t>(u)];
 }
 
 }  // namespace detail
@@ -156,6 +172,7 @@ using Length = Measure<LengthUnit>;
 using Speed = Measure<SpeedUnit>;
 using Pressure = Measure<PressureUnit>;
 using Discharge = Measure<DischargeUnit>;
+using Conductivity = Measure<ConductivityUnit>;
 
 namespace detail {
 
@@ -164,7 +181,7 @@ struct UnitFactory;
 
 }  // namespace detail
 
-/// A unit that is none of the families above ("percent", "degree", "S m-1",
+/// A unit that is none of the families above ("percent", "degree", "1",
 /// or whatever a foreign file says). Only parse_unit builds one, from text
 /// it has normalized, so equal spellings are equal units.
 class OtherUnit {
@@ -187,7 +204,7 @@ class OtherUnit {
 /// A unit of a series. Default-constructed it is LengthUnit::meter; text
 /// becomes a Unit only through parse_unit.
 using Unit = std::variant<LengthUnit, SpeedUnit, PressureUnit, DischargeUnit,
-                          TemperatureUnit, OtherUnit>;
+                          ConductivityUnit, TemperatureUnit, OtherUnit>;
 
 namespace detail {
 
@@ -233,6 +250,7 @@ struct NameTable {
   Names<5> speed;
   Names<4> pressure;
   Names<2> discharge;
+  Names<3> conductivity;
   Names<3> temperature;
 };
 
@@ -247,6 +265,10 @@ static_assert(std::tuple_size_v<decltype(NameTable::pressure)> ==
 static_assert(std::tuple_size_v<decltype(NameTable::discharge)> ==
               static_cast<std::size_t>(DischargeUnit::cubic_foot_per_second) +
                   1);
+static_assert(
+    std::tuple_size_v<decltype(NameTable::conductivity)> ==
+    static_cast<std::size_t>(ConductivityUnit::microsiemens_per_centimeter) +
+        1);
 static_assert(std::tuple_size_v<decltype(NameTable::temperature)> ==
               static_cast<std::size_t>(TemperatureUnit::kelvin) + 1);
 
@@ -257,6 +279,7 @@ inline constexpr NameTable symbol_names{
     .speed = {"m/s", "ft/s", "kt", "mph", "km/h"},
     .pressure = {"Pa", "hPa", "mb", "mH2O"},
     .discharge = {"m3/s", "ft3/s"},
+    .conductivity = {"S/m", "mS/cm", "uS/cm"},
     .temperature = {"\xC2\xB0"
                     "C",
                     "\xC2\xB0"
@@ -268,6 +291,7 @@ inline constexpr NameTable udunits_names{
     .speed = {"m s-1", "ft s-1", "knot", "mile hour-1", "km hour-1"},
     .pressure = {"Pa", "hPa", "millibar", "m H2O"},
     .discharge = {"m3 s-1", "ft3 s-1"},
+    .conductivity = {"S m-1", "mS cm-1", "uS cm-1"},
     .temperature = {"degC", "degF", "K"}};
 
 [[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
@@ -287,13 +311,17 @@ inline constexpr NameTable udunits_names{
   return t.discharge[static_cast<std::size_t>(u)];
 }
 [[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
+                                                 ConductivityUnit u) noexcept {
+  return t.conductivity[static_cast<std::size_t>(u)];
+}
+[[nodiscard]] constexpr std::string_view name_of(const NameTable& t,
                                                  TemperatureUnit u) noexcept {
   return t.temperature[static_cast<std::size_t>(u)];
 }
 
 // The name of a runtime Unit. get_if cannot throw, which the noexcept callers
 // need (std::visit can, on a valueless variant).
-static_assert(std::variant_size_v<Unit> == 6,
+static_assert(std::variant_size_v<Unit> == 7,
               "name_in must handle every alternative of Unit");
 
 template <UnitEnum E>
@@ -318,6 +346,9 @@ template <UnitEnum E>
     return *name;
   }
   if (const auto name = family_name<DischargeUnit>(t, u)) {
+    return *name;
+  }
+  if (const auto name = family_name<ConductivityUnit>(t, u)) {
     return *name;
   }
   if (const auto name = family_name<TemperatureUnit>(t, u)) {

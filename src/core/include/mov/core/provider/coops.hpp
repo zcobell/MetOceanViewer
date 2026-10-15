@@ -55,8 +55,8 @@ inline constexpr std::array every_observed{
     Observed::six_minute, Observed::one_minute, Observed::hourly};
 
 /// The meteorological and water-quality products. The first five are v4's;
-/// the rest are v5-extras #1 and may be dropped before they ship (P2 checks
-/// air_gap's datum handling and salinity's JSON against recorded fixtures).
+/// the rest are v5-extras #1 and may be dropped before they ship. Air gap is
+/// not one: it takes no interval (AirGap).
 enum class Met : std::uint8_t {
   air_temperature,
   water_temperature,
@@ -65,13 +65,12 @@ enum class Met : std::uint8_t {
   humidity,
   conductivity,
   salinity,
-  visibility,
-  air_gap
+  visibility
 };
 inline constexpr std::array every_met{
     Met::air_temperature, Met::water_temperature, Met::wind,
     Met::air_pressure,    Met::humidity,          Met::conductivity,
-    Met::salinity,        Met::visibility,        Met::air_gap};
+    Met::salinity,        Met::visibility};
 
 }  // namespace mov::core::coops
 
@@ -151,9 +150,16 @@ struct Meteorological {
   friend constexpr bool operator==(Meteorological, Meteorological) = default;
 };
 
+/// The distance from a bridge to the water (v5-extras #1): 6-minute data
+/// only, with neither a datum nor an interval (the API ignores both; P2's
+/// recordings, docs/providers-design.md section 1.1).
+struct AirGap {
+  friend constexpr bool operator==(AirGap, AirGap) = default;
+};
+
 /// Not default-constructible: a default would be some water level against
 /// some datum.
-using Product = std::variant<WaterLevel, Meteorological>;
+using Product = std::variant<WaterLevel, Meteorological, AirGap>;
 static_assert(not std::is_default_constructible_v<WaterLevel> and
               not std::is_default_constructible_v<Meteorological> and
               not std::is_default_constructible_v<Product>);
@@ -293,7 +299,8 @@ static_assert(std::ranges::all_of(every_datum, [](Datum d) {
                     }},
                 w.kind);
           },
-          [](Meteorological m) { return max_window(m.interval.get()); }},
+          [](Meteorological m) { return max_window(m.interval.get()); },
+          [](AirGap) { return max_window(Observed::six_minute); }},
       product);
 }
 
@@ -314,7 +321,8 @@ enum class Shape : std::uint8_t { series, observed_vs_predicted, wind };
                  },
                  [](Meteorological m) {
                    return m.product == Met::wind ? Shape::wind : Shape::series;
-                 }},
+                 },
+                 [](AirGap) { return Shape::series; }},
       product);
 }
 

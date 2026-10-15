@@ -19,6 +19,7 @@
 #include "mov/core/units.hpp"
 
 using mov::core::Affine;
+using mov::core::ConductivityUnit;
 using mov::core::conversion;
 using mov::core::DischargeUnit;
 using mov::core::IncompatibleUnits;
@@ -81,6 +82,12 @@ const std::vector<Spelling>& design_table() {
       {"ft3/s", DischargeUnit::cubic_foot_per_second},
       {"ft3 s-1", DischargeUnit::cubic_foot_per_second},
       {"cfs", DischargeUnit::cubic_foot_per_second},
+      {"S/m", ConductivityUnit::siemens_per_meter},
+      {"S m-1", ConductivityUnit::siemens_per_meter},
+      {"mS/cm", ConductivityUnit::millisiemens_per_centimeter},
+      {"mS cm-1", ConductivityUnit::millisiemens_per_centimeter},
+      {"uS/cm", ConductivityUnit::microsiemens_per_centimeter},
+      {"uS cm-1", ConductivityUnit::microsiemens_per_centimeter},
       {"m H2O", PressureUnit::meter_of_water},
       {"degree_C", TemperatureUnit::celsius},
       {"degree_Celsius", TemperatureUnit::celsius},
@@ -110,6 +117,9 @@ std::vector<Unit> all_units() {
       PressureUnit::meter_of_water,
       DischargeUnit::cubic_meter_per_second,
       DischargeUnit::cubic_foot_per_second,
+      ConductivityUnit::siemens_per_meter,
+      ConductivityUnit::millisiemens_per_centimeter,
+      ConductivityUnit::microsiemens_per_centimeter,
       TemperatureUnit::celsius,
       TemperatureUnit::fahrenheit,
       TemperatureUnit::kelvin,
@@ -235,7 +245,7 @@ TEST_CASE("degree() is the parsed degree unit", "[core][units]") {
 TEST_CASE("parse_unit keeps an unknown unit as an OtherUnit",
           "[core][units][parse]") {
   CHECK(other_symbol("furlong") == "furlong");
-  CHECK(other_symbol("S m-1") == "S m-1");
+  CHECK(other_symbol("W m-2") == "W m-2");
   CHECK(other_symbol("m s-2") == "m s-2");
   // Not a name collision with the families: "mi" is a mile, "mi/h" is not.
   CHECK(other_symbol("mi/h") == "mi/h");
@@ -246,7 +256,7 @@ TEST_CASE("parse_unit keeps an unknown unit as an OtherUnit",
 TEST_CASE("is_canonical_other names the registry's non-family units",
           "[core][units][parse]") {
   for (const char* text :
-       {"percent", "%", "degree", "deg", "degT", "s", "sec", "S m-1"}) {
+       {"percent", "%", "degree", "deg", "degT", "s", "sec", "1", "PSU"}) {
     INFO("unit: " << text);
     CHECK(is_canonical(text));
   }
@@ -272,6 +282,8 @@ TEST_CASE("symbol and udunits name every unit", "[core][units][symbol]") {
   CHECK(ud(Unit{PressureUnit::hectopascal}) == "hPa");
   CHECK(ud(Unit{DischargeUnit::cubic_meter_per_second}) == "m3 s-1");
   CHECK(ud(Unit{TemperatureUnit::celsius}) == "degC");
+  CHECK(sym(Unit{ConductivityUnit::millisiemens_per_centimeter}) == "mS/cm");
+  CHECK(ud(Unit{ConductivityUnit::siemens_per_meter}) == "S m-1");
   CHECK(ud(Unit{PressureUnit::meter_of_water}) == "m H2O");
 
   const Unit percent = unit_of("%");
@@ -286,7 +298,7 @@ TEST_CASE("symbol and udunits are parse_unit's inverse",
     CHECK(parse_unit(sym(unit)) == std::optional<Unit>{unit});
     CHECK(parse_unit(ud(unit)) == std::optional<Unit>{unit});
   }
-  for (const char* text : {"percent", "degree", "s", "S m-1", "furlong"}) {
+  for (const char* text : {"percent", "degree", "s", "1", "furlong"}) {
     const Unit unit = unit_of(text);
     CHECK(parse_unit(sym(unit)) == std::optional<Unit>{unit});
   }

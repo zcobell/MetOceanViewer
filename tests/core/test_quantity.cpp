@@ -273,7 +273,7 @@ TEST_CASE("is_canonical_other is derived from the registry",
           "[core][quantity]") {
   // The registry's non-family units, and their aliases, are canonical.
   for (const char* text : {"percent", "%", "degree", "deg", "degT", "degrees",
-                           "degrees_true", "s", "sec", "S m-1"}) {
+                           "degrees_true", "s", "sec", "1", "PSU", "psu"}) {
     INFO("unit: " << text);
     const auto unit = parse_unit(text);
     const auto* other = unit ? std::get_if<OtherUnit>(&*unit) : nullptr;

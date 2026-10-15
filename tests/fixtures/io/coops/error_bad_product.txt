@@ -1,0 +1,4 @@
+
+ Wrong Product: The correct Product values are air_gap, air_pressure, air_temperature, conductivity, currents, currents_survey, currents_predictions, currents_header.daily_mean, high_low, hourly_height, humidity, monthly_mean, one_minute_water_level, predictions, salinity, visibility, water_level, water_temperature, ofs_water_level, partner_water_level, daily_max_min and wind
+
+

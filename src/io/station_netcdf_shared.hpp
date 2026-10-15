@@ -26,6 +26,7 @@
 #include "mov/core/meta.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/timeseries.hpp"
+#include "mov/io/detail/normalize.hpp"
 #include "mov/io/detail/station_groups.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/netcdf/file.hpp"
@@ -176,24 +177,5 @@ struct Position {
 /// abbreviations give the datum's token; any other text comes back trimmed, for
 /// with_datum to refuse with `datum_unknown`.
 [[nodiscard]] std::string datum_text(std::string_view text);
-
-// ---- series whose times are not strictly increasing -------------------------
-
-/// Puts the series of one station in time order, as IMEDS does
-/// (core::normalizing_order): rows are stably sorted by time and of equal times
-/// the first is kept. `times` and every column are reordered together; the
-/// report counts what was moved and dropped (clean: nothing was changed).
-[[nodiscard]] core::NormalizeReport normalize_columns(
-    core::TimeAxis& times, std::span<core::Column* const> columns);
-
-/// `sum` plus `more`, field by field: the report of many series as one.
-void merge_reports(core::NormalizeReport& sum,
-                   const core::NormalizeReport& more);
-
-/// The warnings of a report (`times_reordered`, `duplicate_times_dropped`,
-/// `conflicting_duplicate_times`), each counted, about `subject`.
-void add_normalize_warnings(std::vector<Warning>& warnings,
-                            const core::NormalizeReport& report,
-                            std::string_view subject);
 
 }  // namespace mov::io::detail::station_nc

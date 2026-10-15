@@ -1,0 +1,191 @@
+{
+ "count": 21,
+ "units": null,
+ "stations": [
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "",
+   "details": {
+    "id": "8517986",
+    "established": "2008-03-20 00:00:00",
+    "removed": "",
+    "noaachart": "",
+    "timemeridian": -75,
+    "timezone": -5.0,
+    "origyear": "2008-05-01 00:00:00",
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/details.json"
+   },
+   "sensors": {
+    "units": "feet",
+    "sensors": [
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "Q1",
+      "name": "AIR GAP",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "site",
+      "name": "site",
+      "elevation": null,
+      "message": "",
+      "dcp": 0
+     }
+    ],
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/ofsmapoffsets.json"
+   },
+   "state": "NY",
+   "timezone": "EST",
+   "timezonecorr": -5,
+   "observedst": true,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/nearby.json"
+   },
+   "forecast": false,
+   "outlook": false,
+   "HTFhistorical": false,
+   "HTFmonthly": false,
+   "nonNavigational": false,
+   "inundationdb": false,
+   "id": "8517986",
+   "name": "Verrazano-Narrows Air Gap",
+   "lat": 40.606224,
+   "lng": -74.04483,
+   "affiliations": "PORTS",
+   "portscode": "ny",
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": ""
+  },
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "",
+   "details": {
+    "id": "8767931",
+    "established": "2009-02-17 00:00:00",
+    "removed": "",
+    "noaachart": "11345",
+    "timemeridian": -90,
+    "timezone": -6.0,
+    "origyear": "2009-02-17 00:00:00",
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/details.json"
+   },
+   "sensors": {
+    "units": "feet",
+    "sensors": [
+     {
+      "status": 0,
+      "refdatum": "",
+      "sensorID": "Q1",
+      "name": "AIR GAP",
+      "elevation": null,
+      "message": "2026-09-27 20:26:00&Missing Data - No data received from sensor for 24 hours or more.",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "site",
+      "name": "site",
+      "elevation": null,
+      "message": "",
+      "dcp": 0
+     }
+    ],
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/ofsmapoffsets.json"
+   },
+   "state": "LA",
+   "timezone": "CST",
+   "timezonecorr": -6,
+   "observedst": true,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/nearby.json"
+   },
+   "forecast": false,
+   "outlook": false,
+   "HTFhistorical": false,
+   "HTFmonthly": false,
+   "nonNavigational": false,
+   "inundationdb": false,
+   "id": "8767931",
+   "name": "Lake Charles I-210 Bridge Air Gap",
+   "lat": 30.201584,
+   "lng": -93.28061,
+   "affiliations": "PORTS",
+   "portscode": "lc",
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8767931.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": ""
+  }
+ ],
+ "self": null
+}

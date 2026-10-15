@@ -62,6 +62,8 @@ struct Capabilities<provider::Coops> {
   coops::ObservedSet observed;
   /// The met products of the sensors with status 1.
   coops::MetSet met;
+  /// An AIR GAP sensor with status 1 (the bridges of the air-gap list).
+  bool air_gap = false;
   coops::Predictions predictions = coops::Predictions::none;
   /// Heights from datums.json; nullopt when that failed or had no MSL.
   std::optional<DatumTable> datums;
@@ -93,8 +95,8 @@ struct Capabilities<provider::Ndbc> {
 /// app's picker. Water level is checked in this order: the level kind
 /// (product when the station has no water level, interval when it lacks the
 /// observed series or has only high/low predictions, predictions when it
-/// has none), then the datum (STND is always served). A met product needs
-/// its sensor.
+/// has none), then the datum (STND is always served). A met product, and air
+/// gap, need their sensor.
 [[nodiscard]] constexpr std::expected<void, coops::NotOffered> offered(
     const Capabilities<provider::Coops>& caps,
     const coops::Product& product) noexcept {
@@ -146,6 +148,12 @@ struct Capabilities<provider::Ndbc> {
           },
           [&caps](coops::Meteorological m) -> Offer {
             if (not caps.met.contains(m.product)) {
+              return std::unexpected{NotOffered::product};
+            }
+            return {};
+          },
+          [&caps](coops::AirGap) -> Offer {
+            if (not caps.air_gap) {
               return std::unexpected{NotOffered::product};
             }
             return {};

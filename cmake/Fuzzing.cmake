@@ -6,11 +6,14 @@
 # fuzz executables add the libFuzzer driver (-fsanitize=fuzzer). Combine with
 # the ASan/UBSan options, as the `fuzz` preset does.
 #
-# mov_add_fuzz_test(<name> SOURCES ... LIBRARIES ... CORPUS <dir under tests/fixtures>)
+# mov_add_fuzz_test(<name> SOURCES ... LIBRARIES ... CORPUS <dir under tests/fixtures>
+#                   [MAX_LEN <bytes>])
 #   builds the fuzzer and registers a ctest (label "fuzz") that runs it for
 #   MOV_FUZZ_SECONDS seconds, seeded from the committed corpus. New inputs go to
 #   a corpus directory in the build tree; crash reproducers are written next to
-#   it with the prefix <name>-.
+#   it with the prefix <name>-. MAX_LEN raises libFuzzer's input size limit
+#   (by default the largest seed, at least 4096 bytes) for targets whose large
+#   inputs matter.
 
 function(mov_enable_fuzzing_instrumentation target)
     if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -23,7 +26,7 @@ function(mov_add_fuzz_test name)
     if(NOT MOV_BUILD_FUZZ_TESTS)
         return()
     endif()
-    cmake_parse_arguments(PARSE_ARGV 1 arg "" "CORPUS" "SOURCES;LIBRARIES")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "" "CORPUS;MAX_LEN" "SOURCES;LIBRARIES")
     set(seed_dir "${PROJECT_SOURCE_DIR}/tests/fixtures/${arg_CORPUS}")
     if(NOT IS_DIRECTORY "${seed_dir}")
         message(FATAL_ERROR "mov_add_fuzz_test(${name}): seed corpus ${seed_dir} does not exist")
@@ -37,11 +40,15 @@ function(mov_add_fuzz_test name)
 
     set(work_dir "${CMAKE_CURRENT_BINARY_DIR}/${name}.work")
     file(MAKE_DIRECTORY "${work_dir}/corpus")
+    set(max_len_option "")
+    if(arg_MAX_LEN)
+        set(max_len_option "-max_len=${arg_MAX_LEN}")
+    endif()
     add_test(
         NAME ${name}
         COMMAND
             ${name} -max_total_time=${MOV_FUZZ_SECONDS} -timeout=10 -rss_limit_mb=2048 -print_final_stats=1
-            "-artifact_prefix=${work_dir}/${name}-" "${work_dir}/corpus" "${seed_dir}"
+            ${max_len_option} "-artifact_prefix=${work_dir}/${name}-" "${work_dir}/corpus" "${seed_dir}"
     )
     math(EXPR timeout "${MOV_FUZZ_SECONDS} + 60")
     set_tests_properties(${name} PROPERTIES LABELS fuzz TIMEOUT ${timeout})

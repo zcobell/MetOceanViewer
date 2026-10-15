@@ -471,6 +471,30 @@ TEST_CASE("station_or_system is retried once, then fails",
   CHECK(sc.finish().result.error().error == ambiguous);
 }
 
+TEST_CASE("a gateway failure is retried with backoff, as a 5xx is",
+          "[fetch][machine][retry]") {
+  // CO-OPS' gateway answers 200 with {"message": "Network error ..."}.
+  Script<ToySpec> sc{ToyRequest{.units = 1}, Options{}};
+  const Error gateway =
+      ServiceError::make(Origin::coops_data, ServiceErrc::gateway,
+                         "Network error communicating with endpoint");
+  // Every attempt the policy allows (4) is made; the last one's error is
+  // the unit's.
+  for (int attempt = 1; attempt < 4; ++attempt) {
+    INFO("attempt " << attempt);
+    const auto id = sc.sends().at(0).id;
+    sc.respond(id, 200);
+    sc.parse_failed(id, gateway);
+    REQUIRE(sc.has<Wait>());
+    sc.elapse(sc.first<Wait>().id);
+  }
+  const auto id = sc.sends().at(0).id;
+  sc.respond(id, 200);
+  sc.parse_failed(id, gateway);
+  CHECK_FALSE(sc.has<Wait>());
+  CHECK(sc.finish().result.error().error == gateway);
+}
+
 TEST_CASE("api_key_invalid fails at once", "[fetch][machine][retry]") {
   Script<ToySpec> sc{ToyRequest{.units = 1, .origin = Origin::usgs}, Options{}};
   const auto id = sc.sends().at(0).id;

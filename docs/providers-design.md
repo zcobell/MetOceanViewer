@@ -4,8 +4,9 @@ Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's an
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
 layers, gates and build plumbing), P1 (§3, the core vocabulary; its deviations from
-revision 2 are in §3.7) and P6 (§5, the fetch layer; its deviations are in §5.7);
-nothing else from P2 on. Phase 2 (`core`, `io`) is as built;
+revision 2 are in §3.7), P2 (§4, the CO-OPS wire formats; deviations in §4.8) and P6
+(§5, the fetch layer; its deviations are in §5.7); nothing else from P3 on. Phase 2
+(`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
@@ -65,6 +66,10 @@ program of §1.5 built against the pinned Qt 6.11.3.
 | Predictions: "Harmonic tide prediction stations can provide tide predictions on any available interval. Subordinate tide prediction stations can only provide tide predictions on a high / low interval"; "Subordinate tide prediction stations must use datum=MLLW". | https://api.tidesandcurrents.noaa.gov/api/prod/ (2026-10-09) |
 | Live (2026-10-09): `stations.json?type=tidepredictions` lists 3,502 stations, `type` R (harmonic, 1,260) or S (subordinate, 2,242, with `reference_id`). Subordinate 1610367 and 8578240: `interval=6` and `interval=h` give "No Predictions data was found…", `interval=hilo` gives data. Every water-level station with `tidal` true (238) is type R. Of the 315 met stations, 5 are type S and **56 have `tidal` true but are not in the predictions list at all** (8444069: no predictions at any interval). So `tidal` does not say whether predictions exist: the catalog takes the prediction type from the `tidepredictions` list (§3.3). | live |
 | `stations.json?type=waterlevels&expand=details,sensors`: 302 stations, `details.established`/`removed`, sensors (`name`, `status`, `sensorID`), 1.3 MB. `type=met`: 315. `expand=datums` does not expand; `products` are website links. `datums.json` values are relative to `STND`; it names `NAVD88`, `DTL`, `GT`, `MN`, `DHQ`, `DLQ` besides the tidal datums; `LAT`/`HAT` are top-level members. | live |
+| Live (2026-10-15, P2; bodies in `tests/fixtures/io/coops/`): `air_gap` ignores `datum` and `interval` (identical bodies), and the API page says "Datum is mandatory for water level data products, except Air Gap"; its 21 bridges are listed only by `type=airgap` (sensor `AIR GAP`), in neither the water-level nor the met list. `salinity` records are `s` (salinity) and `g` (specific gravity), not `v`. `conductivity` and `salinity` are the same numbers with `units=english`. `water_level` ignores `interval=h` (hourly is `hourly_height`). `docs/provider-apis/coops_wind.json` is in knots (its 7.0 is 3.6 m/s), so it is not a metric fixture. | live |
+| Live (2026-10-15): more refusals. `datum=IGLD` where there is none: "There is no IGLD for the station: 8729840"; no datum: "Wrong Datum: Datum cannot be null or empty ***station=…"; begin after end: "Wrong Date: … The end date should be greater than the begin date"; a bad product name: a **plain-text** body; a transient gateway failure: `{"message": "Network error communicating with endpoint"}`; the metadata API: `{"errorMsg": "Invalid type specified: …"}`; `datums.json` of an unknown or air-gap station: HTTP 200 with `"datums": null`. | live |
+| Live (2026-10-15): Great Lakes `datums.json` (9063020 Buffalo) lists only `GL_LWD` (173.5, an IGLD85 height), with no MSL, STND or IGLD, while the data API serves `datum=IGLD` and `STND` there (equal values: the station datum is IGLD85) and refuses MSL and MLLW ("There is no MSL for the station"). So IGLD comes from the list's `greatlakes`, not from `datums.json`. | live |
+| Live (2026-10-15): one-minute water level. `type=1minute` lists 257 stations; every water-level station with an active `Tsunami WL` sensor (236) is in it, plus 16 without one. 8771972 (Backup WL, Tsunami WL inactive) serves 1-minute data; 8518979 (in the list) and 8311062 (neither) return "No data was found". Neither rule is exact; P2 takes the sensor (§4.8). | live |
 
 ### 1.2 USGS Water Data
 
@@ -279,11 +284,12 @@ struct WaterLevel { LevelKind kind; Required<Datum> datum; };   // no default: l
 
 enum class Met : std::uint8_t {
   air_temperature, water_temperature, wind, air_pressure, humidity,   // v4 parity
-  conductivity, salinity, visibility, air_gap                          // EX #1, droppable
+  conductivity, salinity, visibility                                   // EX #1, droppable
 };
 enum class MetInterval : std::uint8_t { six_minute, hourly };
 struct Meteorological { Met product; Required<MetInterval> interval; };
-using Product = std::variant<WaterLevel, Meteorological>;   // not default-constructible
+struct AirGap {};                     // EX #1: no datum, no interval (P2: the API ignores both)
+using Product = std::variant<WaterLevel, Meteorological, AirGap>;   // not default-constructible
 
 struct Request { StationId<provider::Coops> station; TimeRange range; Product product; /* == */ };
 
@@ -298,8 +304,9 @@ enum class Shape : std::uint8_t { series, observed_vs_predicted, wind };
 }
 ```
 
-`air_gap`'s datum handling and `salinity` in JSON are confirmed with recorded fixtures in
-P2 before those alternatives ship. `daily_mean`, `monthly_mean`, `high_low` and `hilo`
+P2 confirmed `air_gap` and `salinity` with recorded bodies: air gap takes neither a datum
+nor an interval, so it became its own alternative `AirGap` (P2 review); salinity is `s`
+in PSU. `daily_mean`, `monthly_mean`, `high_low` and `hilo`
 are not alternatives (EX #7); each would be one enumerator, one span row and a fixture.
 `hilo` also needs `datum=MLLW` at subordinate stations (the API page, §1.1).
 
@@ -321,6 +328,7 @@ template <Provider P> struct Capabilities;
 template <> struct Capabilities<provider::Coops> {
   coops::ObservedSet observed;                     // from the water-level sensor
   coops::MetSet met;                               // from sensors with status 1
+  bool air_gap = false;                            // an AIR GAP sensor with status 1
   coops::Predictions predictions = coops::Predictions::none;
   std::optional<DatumTable> datums;                // nullopt: datums.json failed or had no MSL
   coops::DatumSet datums_offered;                  // datums.json names ∩ coops::Datum
@@ -644,6 +652,70 @@ test runs `QXmlStreamReader` over the fuzz corpus as the reference (§10.4).
 - io `WarningCode` gains `provisional_samples`, `qualified_samples`, `unknown_sensor`,
   `station_skipped`; `Error` gains HE's `JsonError` (H5).
 
+### 4.8 As built (P2): deviations
+
+P2 built `mov/io/wire/origin.hpp`, `service.hpp`, `body.hpp` and `coops.hpp`, with the
+private `mov/io/detail/json.hpp` (the JSON reader) and `detail/coops_json.hpp` (what the
+CO-OPS readers keep). Only `src/io/json/` includes nlohmann; the targets and body checks
+are in `src/io/wire/`. The facts behind the changes are the 2026-10-15 rows of §1.1,
+each pinned by a recorded body in `tests/fixtures/io/coops/` (`provenance.txt`). The P2
+review (neckbeard-nate, ben-deane, conor-hoekstra) is folded in.
+
+**The JSON reader.** nlohmann's lexer and parser drive a SAX handler of our own
+(`detail::json::parse`), not nlohmann's callback parser: that one erases each discarded
+element by scanning its container, which is quadratic (80,000 `{}` in a kept array took
+5.1 s). A `Keep` schema names what a format reads; everything else is lexed and skipped
+without being built. The one large array of a body is streamed: each element is built,
+handed to the reader and dropped. Kept arrays have a cap (a station's sensors: 256), past
+which the body is `too_large`. A value knows the byte offset where it starts (the
+iterator the lexer reads through publishes its position), so every error has a line and
+column; a string's start is exact, but a column *inside* a string (a bad `t`) counts
+decoded characters, so it is off when escapes come before it. Rules: the depth pre-scan
+(the parser and the reader hold state per open level, so the depth bounds that memory);
+a NUL byte anywhere is `not_json` (nlohmann's lexer takes it for the end of the input and
+would accept `{…}\0junk`, found by `fuzz_json_depth`); a leading byte order mark is
+skipped, by the parsers and `classify_body` alike; a member the format reads that its
+object repeats is `bad_member` (members it does not read are not checked); `ctx.stop` is
+polled at the first event and every 4096. Work is linear in SAX events, which the tests
+count: 300,000 `{}` streamed are 600,000 events; in a member nobody reads they cost the
+same and build nothing; as a station's sensors they stop at the 257th; before an error
+body's first member classification stops after 2 events.
+
+| §4 says | Built | Why |
+|---|---|---|
+| `Target = variant<Composed, Verbatim>` in `origin.hpp` | `Origin`, `base`, `QueryParam`, `Composed` only | CO-OPS composes every request; `Verbatim` and `Target` join with their first user (USGS paging, P3). |
+| `ServiceError`, `ServiceErrc`, `NoData` in fetch (§5.1) | in `io::wire` (`service.hpp`); `ServiceError` is a class whose `make` trims and cuts the text to 120 B on a UTF-8 boundary; `ServiceErrc` gains `gateway` | io classifies the bodies, so io names the result; fetch's `Error` takes these types (`using io::wire::ServiceError;`, likewise `NoData`, `ServiceErrc`). `gateway` is transient and retried like a 5xx (§5.3). |
+| `coops::targets(request, window)`, end sent as `window.end() − 1 min` | `targets(station, product, window) -> expected<WindowTargets, TargetError>`. `WindowTargets = variant<SingleTarget{Series, Composed}, PairTargets{Pair, Composed observed, Composed predicted}>`; `TargetError{TargetErrc reason, TimeRange window}` with `no_whole_minute` and `outside_four_digit_years`. `begin_date` is the first whole minute at or after the begin, `end_date` the last before the end | The unsplit request range is not to hand, so no window can be built from it. A pair is its grid and datum, and both halves are derived from it, so they cannot disagree. The same as "end − 1 min" for minute-aligned windows, and exact for any other. |
+| `Series` | `variant<Observation, Prediction, Meteorological, AirGap>`, each datum `Required`; `ProductSeries = variant<Single{Series}, Pair{PairedGrid, Required<Datum>}>` with `Pair::observed()` and `predicted()` | No default series, as core's `WaterLevel` has none. |
+| `datum` only for `WaterLevel`; `interval` when not the default | as said; predictions at 60 min send `h`, at 6 send nothing; air gap sends neither | The API ignores both on `air_gap` (recorded), so core's `Met` lost `air_gap` and `Product` gained `AirGap` (§3.2, CD §2.13). |
+| `catalog_targets()`: waterlevels, met, tidepredictions | `station_list_target(StationList)` for `water_levels`, `met`, `air_gap`, `tide_predictions`; `datums_target(id)` | The 21 air-gap bridges are in no other list. P5a reads all four. |
+| `classify_body(body)` with five message rules | `classify_body(Api, body, content_type)`, `Api {data, metadata}`: markup first; a body that is not JSON is classified by its text; a body whose first member is not `error`, `errorMsg` or `message` is a Payload at once; then `error`, `errorMsg`, or a lone `message`, which is `gateway`. The rule table is one matcher per rule: "No data was found" / "No Predictions data was found" → `NoData`; "Range Limit Exceeded"; the station message; "Wrong Datum" / "supported Datum values" / "There is no … for the station" → `datum_unavailable`; "Wrong Date" / "Wrong Product" / "Invalid type specified" → `invalid_parameter`; else `unknown` | Each recorded refusal of §1.1. Stopping at the first member (N6): on a 1.3 MB station list, 10.7 ms and 2 events against 232 ms and 80,245 events read whole (debug build; most of the 10.7 ms is the depth and NUL scans). JSON that does not parse is a Payload, for its parser to locate the error. |
+| `parse_data(body, kind, ctx)` and `parse_predictions(body, ctx)` -> `Read<Part>` | `read_data(body, content_type, Series, ctx) -> expected<variant<Read<io::Part>, NoData, ServiceError>, Error>` classifies (Api::data) and then parses: the one entry point, so no caller parses an unclassified body (the parse alone is `detail::coops::parse_data`, for tests). The series go into P6's `io::Part` (`part.hpp`), whose `insert(TimeSeries)` keys a series by its own quantity | One merge unit for every provider; P2's interim `Columns` was removed when P6 merged first. |
+| `v` (or `s`/`d`/`g`) | per product, pinned: water levels and predictions `v` (m, the datum asked for; predictions are `water_level_prediction`); temperatures `v` (degC); `air_pressure` hPa; `humidity` → `relative_humidity` (percent); `visibility` km; wind `s`, `d`, `g` → `wind_speed`, `wind_direction`, `wind_gust` (m/s, degree); `conductivity` `v` in mS/cm; `salinity` `s` in PSU → the registry's new `salinity` (`sea_water_practical_salinity`, unit `1`); `air_gap` `v` (m) → generic `air_gap`, no datum. `t` is exactly `yyyy-MM-dd HH:mm` | Core now converts mS/cm exactly to the registry's S m-1 (a `ConductivityUnit` family, CD §2.2), and `PSU` parses as `1`, so no CO-OPS body warns `unrecognized_unit`. |
+| one series per column, each normalized | one time axis and a sample column per quantity, put in order once (`detail::normalize_columns`, shared with the station netCDF readers); one `times_reordered` / `duplicate_times_dropped` / `conflicting_duplicate_times` per event about the product (`coops:wind`), a duplicate conflicting when any column differs | A record is one row; reporting it once per column triple-counted wind. |
+| silent fallbacks | none: a generic quantity that does not parse, a datum a quantity cannot take, a column that does not make a series, are errors (`inconsistent_metadata`), each unreachable for the pinned tables and every table row read by a golden test | N1. |
+| errors as `ParseError` | two new `ParseErrc`: `not_json` (where nlohmann stopped) and `bad_member` (a member missing, repeated or of the wrong JSON type) | HE's `JsonError` (H5) is the harmonics file's, with its own codes. |
+| `parse_stations` → `vector<CoopsStationRecord>` | `StationRecord{GaugeStation<Coops> station; ObservedSet observed; MetSet met; bool air_gap; DatumSet datums}`. Sensors by a pinned name table, status 1 only: Acoustic, Microwave, Pressure, SAE, Backup WL → 6-minute and hourly; Tsunami WL → 1-minute; Conductivity → conductivity and salinity; AIR GAP → `air_gap`; `site`, `Rain Fall`, `ANALOG SENSOR 1`/`2` → nothing. `datums` is `{IGLD85}` at a Great Lakes station (`greatlakes`), else empty. `"details": null` is unknown validity, `"sensors": null` no products: the station is kept. A station left out is counted by reason: `station_skipped` with subject `id`, `name`, `position`, `dates`, `sensors` or `member` and the count | The list's `greatlakes` is how the catalog learns that IGLD is served (§1.1); as a datum set at the leaf, merging the lists is a union. The 1-minute rule is the sensor; P5a may add the `type=1minute` list (§1.1 shows neither is exact). |
+| tidepredictions parsed in `parse_stations` | `parse_prediction_stations` → `vector<PredictionStation{id, PredictionType {harmonic, subordinate}}>`; TEC ids (`id`) and other types (`type`) left out and counted | Its records have no sensors or details. P5a maps the type to core's `Predictions`. |
+| `parse_datums` → `Read<DatumTable>`, no MSL an error | `parse_datums` → `Read<StationDatums{DatumSet offered; optional<DatumTable> table}>`; no MSL (Great Lakes, `"datums": null`) is no table, not an error; `units` other than "meters" is `FormatError noncanonical_unit`; conflicting heights `inconsistent_metadata`; NGVD29 enters the table but is never offered (D32); `IGLD`/`IGLD85` → IGLD85 | `Capabilities` needs both the table and `datums_offered`, and a station without MSL is ordinary. |
+| — | `ReadLimits`: a data record costs one element per column, a station 16 (CD §5), a datums row 1; the body is bounded by `max_text_bytes` | Limits before allocation, as every reader. |
+
+**For P5 (catalog merge across lists).** A station can appear in several lists (water
+level, met, air gap). Its capabilities are the union of the records (`observed`, `met`,
+`air_gap`, `datums`). Its `GaugeStation` (name, position, validity) is taken from the
+first list in the order water level, met, air gap; when a later list disagrees, the
+first is kept and a warning names the station.
+
+Regressions in P2 (`[regression]`): L1 (adjacent windows never share a minute, targets
+byte-exact), L4 (a one-point series is kept), L5 (wind is three columns), L9 (no 2050:
+an ongoing station has no last day), L10 (each half of a pair carries the request's
+datum in its own exchange). Fuzz targets: `fuzz_coops_json`, `fuzz_coops_metadata` (both
+with inputs up to 1 MiB and a large-body seed), `fuzz_json_depth` (§10.4).
+
+For H5: the harmonics reader can reuse `mov/io/detail/json.hpp` (the schema-driven
+parse, the repeated-member check, the depth pre-scan, the NUL rule). Its UTF-8 pass (HE
+§6.3 step 3) does not catch a NUL, which is valid UTF-8, so it needs the NUL rule too.
+
 ---
 
 ## 5. fetch: stages, units, policies, machine
@@ -670,7 +742,7 @@ struct TransportError { TransportErrc code; Origin origin; };
 struct HttpError { int status; Origin origin; };
 struct RateLimited { Origin origin; std::optional<std::chrono::seconds> retry_after; };
 enum class ServiceErrc : std::uint8_t { station_or_system, datum_unavailable, range_exceeded,
-  invalid_parameter, api_key_invalid, unexpected_content, unknown };
+  invalid_parameter, gateway, api_key_invalid, unexpected_content, unknown };   // io::wire's (§4.8)
 struct ServiceError { Origin origin; ServiceErrc code; std::string text; };  // ≤ 120 B, UTF-8 boundary, raw
 struct NoData {};
 struct AmbiguousSeries { std::vector<core::usgs::TimeSeriesId> candidates; };
@@ -772,6 +844,9 @@ struct ExchangeLimits {
   `X-RateLimit-Remaining: 0` is a 429 without `Retry-After`. Queued exchanges to that
   origin wait; the exchange that got the 429 is retried after the cool-down.
 - **`station_or_system`** is retried once, then fails.
+- **`gateway`** (an API gateway's own failure in a 200 body, P2: CO-OPS's
+  `{"message": "Network error communicating with endpoint"}`) is transient: retried with
+  backoff as a 5xx is, under the same attempt limit.
 - **`api_key_invalid`** fails at once; there is no silent retry without the key (N nit).
 - **Exchange limits** (N S14, Br): no fixed per-exchange deadline (a large page on a slow
   link is legitimate); an exchange fails `inactivity_timeout` after 30 s without a byte
@@ -889,7 +964,7 @@ class Machine {
 
 | Revision 2 | Built | Why |
 |---|---|---|
-| `using io::wire::Origin`, io's `ServiceError`, `NoData` | `mov::fetch::Origin`, `ServiceErrc`, `ServiceError` (trimmed, cut to 120 B) and `NoData` in fetch for now, shaped as P2's `io::wire` types (same enumerators, same order) | P2 is merged after P6. Each becomes a using-declaration of io's then. |
+| `using io::wire::Origin`, io's `ServiceError`, `NoData` | as said: since P2 merged, `mov::fetch::Origin`, `ServiceErrc`, `ServiceError` and `NoData` are using-declarations of io's (`mov/io/wire/origin.hpp`, `service.hpp`); `classify(ServiceErrc)` in `policy.hpp` says which refusals are retried (`station_or_system` once, `gateway` as a 5xx) | P2 was merged after P6, which declared shape-identical provisional types until then. |
 | `Send{id, io::wire::Target, priority}`, `Parse{id}` | `Send<Target>{id, target, origin, priority}`, `Parse<Target>{id, target}`; `Target` is the spec's | The machine is generic over a spec, so it neither knows io's targets nor parses. The origin rides along for the gate; the parse step carries its target. |
 | `initial(request, now) -> vector<Unit>`, `next(unit, outcome) -> optional<Unit>`, `UnitOutcome = variant<Parsed<Part>, Absent>` | `FetchSpec` (`steps.hpp`): `initial -> expected<vector<Unit>, Error>`; `targets(request, unit)`, at least one (a unit with none fails `UnitWithoutExchanges`); `origin(target)`; `label`; `next(request, unit, UnitOutcome) -> expected<vector<Unit>, Error>`; `into_part(vector<SlotResult<Parsed>>)`; `has_data(Part)`; `merge(vector<Part>) -> expected<Read<Value>, Error>` (run by the job for the Merge step) | NDBC's fallback from last year's file has up to twelve successors. A page that breaks a paging rule ends its chain, so `next` returns an error. A parsed page (USGS: rows, `next` link, extent) is more than its part. |
 | A parse that finds nothing is `NoData` | `SlotResult<P> = variant<P, Absent>`: Absent is a parse's success value (a 404 at NDBC is one too); `NoData` is only a fetch's final result. `UnitOutcome = variant<Received{per-slot results}, Absent>`: a unit is Absent only when every slot is; a paired unit keeps the half with data and warns `PartlyAbsent{unit, slot}` | The owner's decision (P6 review): the observed half of a CO-OPS pair is kept when predictions are missing, and the reverse. |

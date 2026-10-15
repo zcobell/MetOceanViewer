@@ -15,6 +15,7 @@
 #include "mov/fetch/limits.hpp"
 #include "mov/fetch/policy.hpp"
 #include "mov/fetch/retry.hpp"
+#include "mov/io/wire/service.hpp"
 
 using mov::fetch::classify;
 using mov::fetch::TransportErrc;
@@ -35,6 +36,21 @@ TEST_CASE("A transport failure the next attempt would repeat fails at once",
   STATIC_REQUIRE(classify(TransportErrc::redirect_refused) == Verdict::fail);
   STATIC_REQUIRE(classify(TransportErrc::body_too_large) == Verdict::fail);
   STATIC_REQUIRE(classify(TransportErrc::other) == Verdict::fail);
+}
+
+TEST_CASE(
+    "A gateway failure and station_or_system are retried; other "
+    "refusals fail",
+    "[fetch][policy]") {
+  using mov::io::wire::ServiceErrc;
+  STATIC_REQUIRE(classify(ServiceErrc::gateway) == Verdict::retry);
+  STATIC_REQUIRE(classify(ServiceErrc::station_or_system) == Verdict::retry);
+  STATIC_REQUIRE(classify(ServiceErrc::datum_unavailable) == Verdict::fail);
+  STATIC_REQUIRE(classify(ServiceErrc::range_exceeded) == Verdict::fail);
+  STATIC_REQUIRE(classify(ServiceErrc::invalid_parameter) == Verdict::fail);
+  STATIC_REQUIRE(classify(ServiceErrc::api_key_invalid) == Verdict::fail);
+  STATIC_REQUIRE(classify(ServiceErrc::unexpected_content) == Verdict::fail);
+  STATIC_REQUIRE(classify(ServiceErrc::unknown) == Verdict::fail);
 }
 
 // ---- HTTP statuses --------------------------------------------------------

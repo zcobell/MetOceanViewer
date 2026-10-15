@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include "mov/fetch/origin.hpp"
+#include "mov/io/wire/service.hpp"
 
 namespace mov::fetch {
 
@@ -83,6 +84,28 @@ enum class Verdict : std::uint8_t {
   }
   if (status == not_found and origin == Origin::ndbc) {
     return Verdict::absent;
+  }
+  return Verdict::fail;
+}
+
+/// A service's refusal in a body the exchange accepted: an API gateway's
+/// failure is transient, retried with backoff as a 5xx is; station_or_system
+/// (a bad id or a passing outage) is retried, once (the machine counts);
+/// every other refusal fails at once, api_key_invalid included (never a
+/// silent retry without the key).
+[[nodiscard]] constexpr Verdict classify(io::wire::ServiceErrc code) noexcept {
+  using io::wire::ServiceErrc;
+  switch (code) {
+    case ServiceErrc::station_or_system:
+    case ServiceErrc::gateway:
+      return Verdict::retry;
+    case ServiceErrc::datum_unavailable:
+    case ServiceErrc::range_exceeded:
+    case ServiceErrc::invalid_parameter:
+    case ServiceErrc::api_key_invalid:
+    case ServiceErrc::unexpected_content:
+    case ServiceErrc::unknown:
+      break;
   }
   return Verdict::fail;
 }

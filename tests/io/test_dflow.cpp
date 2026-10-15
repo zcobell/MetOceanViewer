@@ -861,11 +861,12 @@ TEST_CASE("quantities: registry names, tokens, and the unknown",
   const mov::test::ScratchDir dir;
   DflowNc spec = basic();
   const DflowVar no_unit = variable("waterlevel", 0, "");
-  DflowVar salinity = variable("salinity", 0, "ppt");
-  salinity.standard_name = "sea_water_salinity";
+  // Turbidity is no registry quantity (salinity is, since P2).
+  DflowVar turbidity = variable("turbidity", 0, "ppt");
+  turbidity.standard_name = "sea_water_turbidity";
   const DflowVar odd = variable("sea-water temperature", 0, "degC");
   const DflowVar discharge = variable("cross_section_discharge", 0, "m3/s");
-  spec.vars = {no_unit, salinity, odd, discharge};
+  spec.vars = {no_unit, turbidity, odd, discharge};
   make_dflow_nc(dir / "his.nc", spec);
   const auto path = dir / "his.nc";
 
@@ -878,12 +879,12 @@ TEST_CASE("quantities: registry names, tokens, and the unknown",
                                : mov::io::to_token(level.warnings[0].code)));
   CHECK(level.warnings.empty());
 
-  const auto sal = read_ok(path, flat_request("salinity", everything(3)));
-  CHECK(mov::core::token(sal.value.schema()[0].quantity()) == "salinity");
+  const auto sal = read_ok(path, flat_request("turbidity", everything(3)));
+  CHECK(mov::core::token(sal.value.schema()[0].quantity()) == "turbidity");
   const auto* generic = std::get_if<mov::core::GenericQuantity>(
       &sal.value.schema()[0].quantity());
   REQUIRE(generic != nullptr);
-  CHECK(generic->standard_name() == "sea_water_salinity");
+  CHECK(generic->standard_name() == "sea_water_turbidity");
   CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 1);
   // The subject is the unit text as the file has it, as in every reader.
   const auto* unit_warning =
@@ -929,9 +930,9 @@ TEST_CASE("text attributes end at their first NUL", "[io][dflow]") {
   DflowNc spec = basic();
   DflowVar level = variable("waterlevel", 0, "m"s + '\0' + "junk");
   level.long_name = "Water level"s + '\0' + "\xFFjunk";
-  DflowVar salinity = variable("salinity", 0, "S m-1"s + '\0' + "xx");
-  salinity.standard_name = "sea_water_salinity"s + '\0' + "_junk";
-  spec.vars = {level, salinity};
+  DflowVar turbidity = variable("turbidity", 0, "S m-1"s + '\0' + "xx");
+  turbidity.standard_name = "sea_water_turbidity"s + '\0' + "_junk";
+  spec.vars = {level, turbidity};
   spec.time_units = "seconds since 2010-01-01 00:00:00"s + '\0' + "junk";
   make_dflow_nc(dir / "his.nc", spec);
 
@@ -943,11 +944,11 @@ TEST_CASE("text attributes end at their first NUL", "[io][dflow]") {
   CHECK(read.warnings.empty());
 
   const auto sal =
-      read_ok(dir / "his.nc", flat_request("salinity", everything(3)));
+      read_ok(dir / "his.nc", flat_request("turbidity", everything(3)));
   const auto* generic = std::get_if<mov::core::GenericQuantity>(
       &sal.value.schema()[0].quantity());
   REQUIRE(generic != nullptr);
-  CHECK(generic->standard_name() == "sea_water_salinity");
+  CHECK(generic->standard_name() == "sea_water_turbidity");
   CHECK(sal.value.schema()[0].unit() == mov::core::parse_unit("S m-1"));
   CHECK(warning_count(sal.warnings, WarningCode::unrecognized_unit) == 0);
 }
