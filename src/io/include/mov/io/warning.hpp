@@ -152,9 +152,10 @@ enum class WarningCode : std::uint8_t {
   /// station is kept without them. Subject: the name as found; the count is
   /// the sensors of that name.
   unknown_sensor,
-  /// Stations of a station list that were left out: an id, position, date or
-  /// type that does not parse. Subject: the raw id as found (empty when the
-  /// record has none); the count is 1 per station.
+  /// Stations of a station list that were left out, counted by reason.
+  /// Subject: the reason (CO-OPS: `id`, `name`, `position`, `dates`,
+  /// `sensors`, `member` for a member of the wrong JSON type, `type` for a
+  /// tide-prediction type); the count is the stations.
   station_skipped,
 };
 /// A stable lower-case identifier, the same as the enumerator's name

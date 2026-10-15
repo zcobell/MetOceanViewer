@@ -75,7 +75,10 @@ target_sources(
     PRIVATE model_number.cpp table_error.cpp adcirc_station_file.cpp adcirc_ascii.cpp hwm_file.cpp
 )
 # IMEDS and CSV.
-target_sources(mov_io PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp station_names.cpp)
+target_sources(
+    mov_io
+    PRIVATE csv_export.cpp imeds.cpp imeds_write.cpp normalize.cpp station_names.cpp
+)
 
 # ADCIRC netCDF station output and D-Flow FM history files, and what the
 # netCDF readers share (model_netcdf).

@@ -6,7 +6,7 @@
 // list, datums.json), the rest is the body. Laws:
 //  - no crash, UB or hang;
 //  - every station kept has a CO-OPS id (seven digits), and every station
-//    left out is one station_skipped warning: kept + skipped never exceeds
+//    left out is counted by station_skipped: kept + skipped never exceeds
 //    the number of elements the list can have (its commas plus one);
 //  - a datum table, when there is one, is MSL-based (MSL at 0) and every
 //    datum offered is one the body named;
@@ -61,10 +61,13 @@ void check_error(const Result& r, std::string_view body, bool format_ok) {
   }
 }
 
+// The stations left out: station_skipped counts them by reason.
 std::size_t skipped(const std::vector<mov::io::Warning>& warnings) {
-  return static_cast<std::size_t>(
-      std::ranges::count(warnings, mov::io::WarningCode::station_skipped,
-                         &mov::io::Warning::code));
+  std::size_t n = 0;
+  for (const mov::io::Warning& w : warnings) {
+    n += w.code == mov::io::WarningCode::station_skipped ? w.count : 0;
+  }
+  return n;
 }
 
 bool seven_digits(std::string_view id) {

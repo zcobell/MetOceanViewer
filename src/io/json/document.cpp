@@ -1,286 +1,514 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-#include "document.hpp"
+// detail::json::parse: nlohmann's lexer and parser with a SAX handler that
+// builds only what a Keep schema names (mov/io/detail/json.hpp). Nothing here
+// scans a container: every event costs O(1) plus the value it builds, so a
+// parse is linear in the body. (nlohmann's own callback parser erases
+// discarded elements by scanning their container, which is quadratic.)
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <expected>
-#include <functional>
+#include <iterator>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
+#include <vector>
 
+#include "mov/core/ascii.hpp"
 #include "mov/core/cancelled.hpp"
+#include "mov/io/detail/json.hpp"
 #include "mov/io/detail/text.hpp"
 #include "mov/io/detail/text_position.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/wire/body.hpp"
 
-namespace mov::io::json {
+namespace mov::io::detail::json {
 
 namespace {
 
-constexpr std::size_t elements_per_stop_poll = 4096;
+using Nlohmann = nlohmann::json;
 
-// Thrown by the callback to stop the parse at the first error; caught in
-// parse_streaming, the one place it is thrown through nlohmann.
-class Abort : public std::exception {
+// A forward iterator over the body that publishes how far nlohmann's lexer
+// has read, so the handler knows where each token ends. The lexer reads one
+// byte per increment.
+class Reading {
  public:
-  explicit Abort(Error error) : error_{std::move(error)} {}
-  [[nodiscard]] const Error& error() const noexcept { return error_; }
-  [[nodiscard]] const char* what() const noexcept override {
-    return "mov::io::json parse stopped";
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = char;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const char*;
+  using reference = const char&;
+
+  Reading() = default;
+  Reading(const char* at, const char** cursor) noexcept
+      : at_{at}, cursor_{cursor} {}
+
+  reference operator*() const noexcept { return *at_; }
+  Reading& operator++() noexcept {
+    ++at_;
+    if (cursor_ != nullptr) {
+      *cursor_ = at_;
+    }
+    return *this;
+  }
+  Reading operator++(int) noexcept {
+    Reading before = *this;
+    ++*this;
+    return before;
+  }
+  friend bool operator==(const Reading& a, const Reading& b) noexcept {
+    return a.at_ == b.at_;
   }
 
  private:
-  Error error_;
+  const char* at_ = nullptr;
+  const char** cursor_ = nullptr;
 };
 
-// What the depth-1 container being parsed is.
-enum class Member : std::uint8_t { other, streamed_array, other_array };
+bool is_number_char(char c) noexcept {
+  return core::ascii::is_digit(c) or c == '-' or c == '+' or c == '.' or
+         c == 'e' or c == 'E';
+}
 
-// The parser callback (nlohmann's depth: the top-level value is 0, its
-// members 1, the elements of a top-level array member 2).
-class Streamer {
+// Where the string token that ends just before `end` starts: its opening
+// quote, the nearest one before the closing quote that an even number of
+// backslashes precedes (a quote inside a JSON string is always escaped).
+std::size_t string_start(std::string_view body, std::size_t end) noexcept {
+  std::size_t at = end >= 2 ? end - 2 : 0;
+  while (at > 0) {
+    if (body[at] == '"') {
+      std::size_t slashes = 0;
+      while (slashes < at and body[at - 1 - slashes] == '\\') {
+        ++slashes;
+      }
+      if (slashes % 2 == 0) {
+        return at;
+      }
+    }
+    --at;
+  }
+  return 0;
+}
+
+// Where a number ending at `end` (after the byte the lexer read past it, if
+// any) starts.
+std::size_t number_start(std::string_view body, std::size_t end) noexcept {
+  std::size_t at = std::min(end, body.size());
+  if (at > 0 and not is_number_char(body[at - 1])) {
+    --at;
+  }
+  while (at > 0 and is_number_char(body[at - 1])) {
+    --at;
+  }
+  return at;
+}
+
+// One open container.
+struct Frame {
+  enum class Kind : std::uint8_t { object, array };
+  Kind kind;
+  // What to keep of its contents; nullptr: nothing.
+  const Keep* keep;
+  // The built container; nullptr when it is not built (skipped, or the
+  // streamed array).
+  Value* value;
+  std::size_t offset;
+  bool streamed = false;
+  std::size_t elements = 0;
+  // Objects: the kept field of the key just read (nullptr: skip its value).
+  const Field* pending = nullptr;
+  std::size_t key_offset = 0;
+  bool repeated = false;
+};
+
+// What a Value holds.
+using Data = decltype(Value::data);
+
+class Builder final : public nlohmann::json_sax<Nlohmann> {
  public:
-  Streamer(const Body& body, std::string_view array_key, const ReadContext& ctx,
-           const OnElement& on_element)
+  Builder(std::string_view body, const char** cursor, const Keep& keep,
+          const ReadContext& ctx, const OnElement& on_element,
+          ParseOptions options)
       : body_{body},
-        array_key_{array_key},
+        cursor_{cursor},
+        keep_{keep},
         ctx_{ctx},
-        on_element_{on_element} {}
+        on_element_{on_element},
+        options_{options} {}
 
-  bool operator()(int depth, Json::parse_event_t event, Json& parsed) {
-    using enum Json::parse_event_t;
-    const auto level = static_cast<std::size_t>(std::max(depth, 0));
-    switch (event) {
-      case object_start:
-        start_object(level);
-        return keep_element_start(level);
-      case key:
-        record_key(level, parsed);
-        return true;
-      case object_end:
-        check_repeats(level, parsed);
-        return end_container(level, parsed);
-      case array_start:
-        if (level == 1) {
-          member_ = top_key_ == array_key_ ? Member::streamed_array
-                                           : Member::other_array;
-        }
-        return keep_element_start(level);
-      case array_end:
-        return end_container(level, parsed);
-      case value:
-        break;
-    }
-    return end_value(level, parsed);
+  // ---- scalars ----
+  bool null() override { return scalar(Data{Null{}}, literal_start(4)); }
+  bool boolean(bool val) override {
+    return scalar(Data{val}, literal_start(val ? 4 : 5));
   }
-
- private:
-  // One more level than the deepest the pre-scan lets through, for the keys
-  // of the deepest objects.
-  static constexpr std::size_t levels = wire::max_json_depth + 2;
-
-  void start_object(std::size_t level) {
-    if (level == 1) {
-      member_ = Member::other;
-    }
-    if (level + 1 < levels) {
-      keys_[level + 1].clear();
-      repeated_[level + 1] = false;
-    }
+  bool number_integer(number_integer_t val) override {
+    return scalar(Data{std::int64_t{val}}, number_start(body_, position()));
   }
-
-  // An element of another top-level array is dropped before it is built.
-  [[nodiscard]] bool keep_element_start(std::size_t level) const noexcept {
-    return level != 2 or member_ != Member::other_array;
+  bool number_unsigned(number_unsigned_t val) override {
+    return scalar(Data{std::uint64_t{val}}, number_start(body_, position()));
   }
-
-  void record_key(std::size_t level, const Json& parsed) {
-    const std::string* name = as_string(parsed);
-    if (name == nullptr or level >= levels) {
-      return;
-    }
-    if (level == 1) {
-      top_key_ = *name;
-    }
-    if (not keys_[level].insert(*name).second) {
-      repeated_[level] = true;
-    }
+  bool number_float(number_float_t val, const string_t& /*s*/) override {
+    return scalar(Data{double{val}}, number_start(body_, position()));
   }
-
-  // nlohmann keeps one of a repeated member; the object is refused instead.
-  void check_repeats(std::size_t level, const Json& parsed) const {
-    if (level + 1 < levels and repeated_[level + 1]) {
-      throw Abort{body_.error_at(ParseErrc::bad_member, parsed)};
-    }
+  bool string(string_t& val) override {
+    return scalar(Data{std::move(val)}, string_start(body_, position()));
   }
+  bool binary(binary_t& /*val*/) override { return true; }
 
-  [[nodiscard]] bool end_container(std::size_t level, Json& parsed) {
-    if (level == 1) {
-      member_ = Member::other;
-    }
-    return end_value(level, parsed);
+  // ---- containers ----
+  bool start_object(std::size_t /*elements*/) override {
+    return open(Frame::Kind::object, Data{Object{}});
   }
+  bool start_array(std::size_t /*elements*/) override {
+    return open(Frame::Kind::array, Data{Array{}});
+  }
+  bool end_object() override { return close(); }
+  bool end_array() override { return close(); }
 
-  // The end of any value: an element of the streamed array is handed over
-  // and dropped, any other element too.
-  [[nodiscard]] bool end_value(std::size_t level, Json& parsed) {
-    if (level != 2 or member_ == Member::other) {
+  bool key(string_t& val) override {
+    if (not tick()) {
+      return false;
+    }
+    Frame& top = frames_.back();
+    top.pending = nullptr;
+    if (top.keep == nullptr) {
       return true;
     }
-    if (member_ == Member::streamed_array) {
-      hand_over(parsed);
+    const auto field = std::ranges::find(top.keep->fields,
+                                         std::string_view{val}, &Field::name);
+    if (frames_.size() == 1 and options_.stop_at_unkept_first_member and
+        not first_member_seen_ and field == top.keep->fields.end()) {
+      stopped_early_ = true;
+      return false;
+    }
+    first_member_seen_ = first_member_seen_ or frames_.size() == 1;
+    if (field == top.keep->fields.end()) {
+      return true;
+    }
+    if (top.value != nullptr) {
+      const Object& members = std::get<Object>(top.value->data);
+      top.repeated =
+          top.repeated or
+          std::ranges::find(members, val, &Member::name) != members.end();
+    }
+    top.pending = &*field;
+    top.key_offset = string_start(body_, position());
+    return true;
+  }
+
+  bool parse_error(std::size_t position, const std::string& /*last_token*/,
+                   const nlohmann::detail::exception& ex) override {
+    // position counts the bytes read, 1-based: the one where it stopped.
+    const std::size_t at = position > 0 ? position - 1 : 0;
+    if (ex.id == number_overflow) {
+      fail(error_at(ParseErrc::out_of_range, body_,
+                    number_start(body_, this->position())));
+    } else {
+      fail(error_at(ParseErrc::not_json, body_, at));
     }
     return false;
   }
 
-  void hand_over(Json& element) {
-    const std::size_t index = count_++;
-    if (index % elements_per_stop_poll == 0 and ctx_.stop.stop_requested()) {
-      throw Abort{Error{core::Cancelled{}}};
-    }
-    if (auto handled = on_element_(index, element); not handled) {
-      throw Abort{std::move(handled).error()};
+  [[nodiscard]] std::optional<Error> take_error() {
+    return std::exchange(error_, std::nullopt);
+  }
+  [[nodiscard]] bool stopped_early() const noexcept { return stopped_early_; }
+  [[nodiscard]] std::uint64_t events() const noexcept { return events_; }
+  [[nodiscard]] Value take_root() { return std::exchange(root_, Value{}); }
+
+ private:
+  // nlohmann's exception id for a number past a double.
+  static constexpr int number_overflow = 406;
+
+  [[nodiscard]] std::size_t position() const noexcept {
+    return static_cast<std::size_t>(*cursor_ - body_.data());
+  }
+  [[nodiscard]] std::size_t literal_start(std::size_t length) const noexcept {
+    const std::size_t end = position();
+    return end >= length ? end - length : 0;
+  }
+
+  void fail(Error e) {
+    if (not error_) {
+      error_ = std::move(e);
     }
   }
 
-  const Body& body_;
-  std::string_view array_key_;
+  // Counts an event, and polls the stop request at the first event and
+  // every events_per_stop_poll after it.
+  [[nodiscard]] bool tick() {
+    if (events_++ % events_per_stop_poll == 0 and ctx_.stop.stop_requested()) {
+      fail(Error{core::Cancelled{}});
+      return false;
+    }
+    return true;
+  }
+
+  // Where a new value goes: the Keep of its own contents (nullptr: skip it)
+  // and the slot it is built in (nullptr: not built).
+  struct Slot {
+    const Keep* keep;
+    Value* value;
+    bool streamed;
+  };
+
+  // Places a new value of `data` at `offset` in the innermost container
+  // (the root when there is none). Returns its slot, or nullopt after an
+  // error.
+  std::optional<Slot> add(Data data, std::size_t offset) {
+    if (frames_.empty()) {
+      root_ = Value{.data = std::move(data), .offset = offset};
+      return Slot{.keep = &keep_, .value = &root_, .streamed = false};
+    }
+    Frame& top = frames_.back();
+    if (top.kind == Frame::Kind::object) {
+      const Field* field = top.pending;
+      top.pending = nullptr;
+      if (field == nullptr or top.value == nullptr) {
+        return Slot{.keep = nullptr, .value = nullptr, .streamed = false};
+      }
+      auto& members = std::get<Object>(top.value->data);
+      members.push_back(
+          Member{.name = std::string{field->name},
+                 .key_offset = top.key_offset,
+                 .value = Value{.data = std::move(data), .offset = offset}});
+      return Slot{.keep = field->keep,
+                  .value = &members.back().value,
+                  .streamed = field->streamed and frames_.size() == 1};
+    }
+    if (top.streamed) {
+      element_ = Value{.data = std::move(data), .offset = offset};
+      return Slot{.keep = top.keep, .value = &element_, .streamed = false};
+    }
+    if (top.keep == nullptr or top.keep->element == nullptr or
+        top.value == nullptr) {
+      return Slot{.keep = nullptr, .value = nullptr, .streamed = false};
+    }
+    if (++top.elements > top.keep->max_elements) {
+      fail(Error{
+          ParseError::make(ParseErrc::too_large, where_of(body_, top.offset),
+                           std::to_string(top.elements) + " elements, limit " +
+                               std::to_string(top.keep->max_elements))});
+      return std::nullopt;
+    }
+    auto& elements = std::get<Array>(top.value->data);
+    elements.push_back(Value{.data = std::move(data), .offset = offset});
+    return Slot{.keep = top.keep->element,
+                .value = &elements.back(),
+                .streamed = false};
+  }
+
+  // A complete element of the streamed array, if the innermost container is
+  // it: handed over and dropped.
+  bool hand_over_if_element() {
+    if (frames_.empty() or not frames_.back().streamed) {
+      return true;
+    }
+    const std::size_t index = element_count_++;
+    if (on_element_) {
+      if (auto handled = on_element_(index, element_); not handled) {
+        fail(std::move(handled).error());
+        return false;
+      }
+    }
+    element_ = Value{};
+    return true;
+  }
+
+  bool scalar(Data data, std::size_t offset) {
+    if (not tick()) {
+      return false;
+    }
+    // A scalar no Keep reaches is not built at all.
+    if (not frames_.empty() and not builds_children(frames_.back())) {
+      if (frames_.back().kind == Frame::Kind::object) {
+        frames_.back().pending = nullptr;
+      }
+      return true;
+    }
+    if (not add(std::move(data), offset)) {
+      return false;
+    }
+    return hand_over_if_element();
+  }
+
+  [[nodiscard]] static bool builds_children(const Frame& f) noexcept {
+    return f.streamed or (f.keep != nullptr and f.value != nullptr);
+  }
+
+  bool open(Frame::Kind kind, Data empty) {
+    if (not tick()) {
+      return false;
+    }
+    const std::size_t offset = position() > 0 ? position() - 1 : 0;
+    if (not frames_.empty() and not builds_children(frames_.back())) {
+      if (frames_.back().kind == Frame::Kind::object) {
+        frames_.back().pending = nullptr;
+      }
+      frames_.push_back(Frame{
+          .kind = kind, .keep = nullptr, .value = nullptr, .offset = offset});
+      return true;
+    }
+    const std::optional<Slot> slot = add(std::move(empty), offset);
+    if (not slot) {
+      return false;
+    }
+    const bool leaf_keep =
+        slot->keep == nullptr or
+        (slot->keep->fields.empty() and slot->keep->element == nullptr);
+    if (slot->streamed and kind == Frame::Kind::array) {
+      frames_.push_back(Frame{.kind = kind,
+                              .keep = slot->keep->element,
+                              .value = nullptr,
+                              .offset = offset,
+                              .streamed = true});
+      return true;
+    }
+    frames_.push_back(Frame{.kind = kind,
+                            .keep = leaf_keep ? nullptr : slot->keep,
+                            .value = leaf_keep ? nullptr : slot->value,
+                            .offset = offset});
+    return true;
+  }
+
+  bool close() {
+    if (not tick()) {
+      return false;
+    }
+    const Frame closed = frames_.back();
+    frames_.pop_back();
+    if (closed.repeated) {
+      fail(error_at(ParseErrc::bad_member, body_, closed.offset));
+      return false;
+    }
+    return hand_over_if_element();
+  }
+
+  std::string_view body_;
+  const char** cursor_;
+  const Keep& keep_;
   const ReadContext& ctx_;
   const OnElement& on_element_;
-  std::string top_key_;
-  Member member_ = Member::other;
-  std::size_t count_ = 0;
-  std::array<std::set<std::string, std::less<>>, levels> keys_{};
-  std::array<bool, levels> repeated_{};
+  ParseOptions options_;
+  std::vector<Frame> frames_;
+  Value root_;
+  Value element_;
+  std::size_t element_count_ = 0;
+  std::uint64_t events_ = 0;
+  std::optional<Error> error_;
+  bool first_member_seen_ = false;
+  bool stopped_early_ = false;
 };
 
 }  // namespace
 
-ParseError Body::error_at(ParseErrc code, const Json& value) const {
-  return error_at(code, value.start_pos());
-}
-
-ParseError Body::error_at(ParseErrc code, std::size_t offset) const {
-  return detail::error_at_offset(code, text_, offset);
-}
-
-ParseError::Where Body::where(const Json& value) const noexcept {
-  return detail::where_of(text_, value.start_pos());
-}
-
-std::expected<Json, Error> parse_streaming(const Body& body,
-                                           std::string_view array_key,
-                                           const ReadContext& ctx,
-                                           const OnElement& on_element) {
-  const std::string_view text = body.text();
-  if (detail::is_blank(text)) {
-    return std::unexpected{
-        Error{ParseError::make(ParseErrc::empty_input, {.line = 1}, "")}};
-  }
-  if (text.size() > ctx.limits.max_text_bytes) {
-    return std::unexpected{
-        Error{ParseError::make(ParseErrc::too_large, {.line = 1},
-                               std::to_string(text.size()) + " bytes, limit " +
-                                   std::to_string(ctx.limits.max_text_bytes))}};
-  }
-  if (auto deep = wire::check_json_depth(text); not deep) {
-    return std::unexpected{Error{std::move(deep).error()}};
-  }
-  // nlohmann's lexer takes a NUL byte for the end of the input, so it would
-  // accept "{...}\0anything". A NUL is never JSON text (nor allowed raw in a
-  // string): the body is not JSON there.
-  if (const std::size_t nul = text.find('\0'); nul != std::string_view::npos) {
-    return std::unexpected{Error{body.error_at(ParseErrc::not_json, nul)}};
-  }
-  // The first byte of the document: where a document-level error points.
-  const std::size_t start = text.size() - detail::skip_space(text).size();
-  Streamer streamer{body, array_key, ctx, on_element};
-  try {
-    Json document = Json::parse(
-        text.begin(), text.end(),
-        [&streamer](int depth, Json::parse_event_t event, Json& parsed) {
-          return streamer(depth, event, parsed);
-        });
-    if (not document.is_object()) {
-      return std::unexpected{
-          Error{body.error_at(ParseErrc::bad_member, start)}};
-    }
-    return document;
-  } catch (const Abort& abort) {
-    return std::unexpected{abort.error()};
-  } catch (const Json::parse_error& e) {
-    // byte is 1-based: the byte the parser stopped at.
-    const std::size_t offset = e.byte > 0 ? e.byte - 1 : 0;
-    return std::unexpected{Error{body.error_at(ParseErrc::not_json, offset)}};
-  } catch (const Json::out_of_range&) {
-    // A number past the range of a double (nlohmann's 406); it does not say
-    // where.
-    return std::unexpected{Error{ParseError::make(
-        ParseErrc::out_of_range, {.line = 1}, "number overflow")}};
-  }
-}
-
-const Json* find_member(const Json& object, std::string_view name) {
-  if (not object.is_object()) {
+const Value* member(const Value& object, std::string_view name) noexcept {
+  const Object* members = as_object(object);
+  if (members == nullptr) {
     return nullptr;
   }
-  const auto found = object.find(name);
-  return found == object.end() ? nullptr : &*found;
+  const auto found = std::ranges::find(*members, name, &Member::name);
+  return found == members->end() ? nullptr : &found->value;
 }
 
-const std::string* as_string(const Json& value) noexcept {
-  return value.get_ptr<const Json::string_t*>();
+const std::string* as_string(const Value& value) noexcept {
+  return std::get_if<std::string>(&value.data);
 }
 
-std::optional<double> as_double(const Json& value) noexcept {
-  if (const auto* f = value.get_ptr<const Json::number_float_t*>()) {
+std::optional<double> as_double(const Value& value) noexcept {
+  if (const auto* f = std::get_if<double>(&value.data)) {
     return *f;
   }
-  if (const auto* i = value.get_ptr<const Json::number_integer_t*>()) {
+  if (const auto* i = std::get_if<std::int64_t>(&value.data)) {
     return static_cast<double>(*i);
   }
-  if (const auto* u = value.get_ptr<const Json::number_unsigned_t*>()) {
+  if (const auto* u = std::get_if<std::uint64_t>(&value.data)) {
     return static_cast<double>(*u);
   }
   return std::nullopt;
 }
 
-std::expected<std::string_view, ParseError> string_member(
-    const Body& body, const Json& object, std::string_view name) {
-  const Json* member = find_member(object, name);
-  if (member == nullptr) {
-    return std::unexpected{body.error_at(ParseErrc::bad_member, object)};
+std::optional<std::int64_t> as_int(const Value& value) noexcept {
+  if (const auto* i = std::get_if<std::int64_t>(&value.data)) {
+    return *i;
   }
-  const std::string* text = as_string(*member);
-  if (text == nullptr) {
-    return std::unexpected{body.error_at(ParseErrc::bad_member, *member)};
+  if (const auto* u = std::get_if<std::uint64_t>(&value.data);
+      u != nullptr and *u <= static_cast<std::uint64_t>(INT64_MAX)) {
+    return static_cast<std::int64_t>(*u);
   }
-  return std::string_view{*text};
+  return std::nullopt;
 }
 
-std::expected<std::optional<std::string_view>, ParseError>
-optional_string_member(const Body& body, const Json& object,
-                       std::string_view name) {
-  const Json* member = find_member(object, name);
-  if (member == nullptr or member->is_null()) {
-    return std::optional<std::string_view>{};
-  }
-  const std::string* text = as_string(*member);
-  if (text == nullptr) {
-    return std::unexpected{body.error_at(ParseErrc::bad_member, *member)};
-  }
-  return std::optional<std::string_view>{*text};
+bool is_null(const Value& value) noexcept {
+  return std::holds_alternative<Null>(value.data);
+}
+const Object* as_object(const Value& value) noexcept {
+  return std::get_if<Object>(&value.data);
+}
+const Array* as_array(const Value& value) noexcept {
+  return std::get_if<Array>(&value.data);
 }
 
-}  // namespace mov::io::json
+ParseError error_at(ParseErrc code, std::string_view body, std::size_t offset) {
+  return detail::error_at_offset(code, body, offset);
+}
+
+std::expected<Document, Error> parse(std::string_view body, const Keep& keep,
+                                     const ReadContext& ctx,
+                                     const OnElement& on_element,
+                                     ParseOptions options) {
+  const std::size_t bom = bom_length(body);
+  const std::string_view text = body.substr(bom);
+  if (detail::is_blank(text)) {
+    return std::unexpected{
+        Error{ParseError::make(ParseErrc::empty_input, {.line = 1}, "")}};
+  }
+  if (body.size() > ctx.limits.max_text_bytes) {
+    return std::unexpected{
+        Error{ParseError::make(ParseErrc::too_large, {.line = 1},
+                               std::to_string(body.size()) + " bytes, limit " +
+                                   std::to_string(ctx.limits.max_text_bytes))}};
+  }
+  if (auto deep = wire::check_json_depth(body); not deep) {
+    return std::unexpected{Error{std::move(deep).error()}};
+  }
+  if (const std::size_t nul = body.find('\0'); nul != std::string_view::npos) {
+    return std::unexpected{Error{error_at(ParseErrc::not_json, body, nul)}};
+  }
+  // The lexer reads [begin, end) through Reading, never past `end`: no
+  // terminator is needed.
+  const char* const begin = std::to_address(text.begin());
+  const char* const end = begin + text.size();
+  const char* cursor = begin;
+  Builder builder{body, &cursor, keep, ctx, on_element, options};
+  const Reading first{begin, &cursor};
+  const Reading last{end, nullptr};
+  const bool parsed =
+      Nlohmann::sax_parse(first, last, &builder, Nlohmann::input_format_t::json,
+                          /*strict=*/true,
+                          /*ignore_comments=*/false);
+  const bool early = builder.stopped_early();
+  const std::uint64_t events = builder.events();
+  if (auto error = builder.take_error()) {
+    return std::unexpected{*std::move(error)};
+  }
+  if (not parsed and not early) {
+    // nlohmann stopped without saying why (it always reports a syntax error
+    // through parse_error); refuse rather than return half a document.
+    return std::unexpected{
+        Error{error_at(ParseErrc::not_json, body,
+                       static_cast<std::size_t>(cursor - body.data()))}};
+  }
+  return Document{.root = builder.take_root(), .events = events};
+}
+
+}  // namespace mov::io::detail::json

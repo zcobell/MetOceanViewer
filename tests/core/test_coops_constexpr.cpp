@@ -119,7 +119,7 @@ TEST_CASE("CO-OPS vocabulary types are values", "[core][coops][constexpr]") {
   STATIC_REQUIRE(mov::core::DenseEnum<Datum>);
   STATIC_REQUIRE(mov::core::DenseEnum<Observed>);
   STATIC_REQUIRE(mov::core::DenseEnum<Met>);
-  STATIC_REQUIRE(std::variant_size_v<Product> == 2);
+  STATIC_REQUIRE(std::variant_size_v<Product> == 3);
   STATIC_REQUIRE(std::variant_size_v<coops::LevelKind> == 3);
 }
 
@@ -172,6 +172,9 @@ TEST_CASE("CO-OPS maximum windows per product", "[core][coops][constexpr]") {
   STATIC_REQUIRE(coops::max_window(paired(PairedGrid::hourly)).duration() ==
                  days{365});
   STATIC_REQUIRE(met_windows_follow_interval());
+  // Air gap is 6-minute data and takes no interval.
+  STATIC_REQUIRE(coops::max_window(Product{coops::AirGap{}}).duration() ==
+                 days{31});
   STATIC_REQUIRE(coops::grain.duration() == std::chrono::minutes{1});
 }
 
@@ -203,6 +206,10 @@ TEST_CASE("CO-OPS product shapes", "[core][coops][constexpr]") {
   STATIC_REQUIRE(coops::shape(paired(PairedGrid::hourly)) ==
                  Shape::observed_vs_predicted);
   STATIC_REQUIRE(only_wind_is_wind_shaped());
+  STATIC_REQUIRE(coops::shape(Product{coops::AirGap{}}) == Shape::series);
+  STATIC_REQUIRE(Product{coops::AirGap{}} == Product{coops::AirGap{}});
+  STATIC_REQUIRE(Product{coops::AirGap{}} !=
+                 met(Met::wind, MetInterval::hourly));
 }
 
 TEST_CASE("CO-OPS requests compare by every field",

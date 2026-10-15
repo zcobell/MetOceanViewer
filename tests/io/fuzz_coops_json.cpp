@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// libFuzzer target: coops::classify_body and coops::parse_data
+// libFuzzer target: coops::classify_body, read_data and its parse
 // (docs/providers-design.md section 10.4). Byte 0 picks the series (one of
 // every kind), the rest is the body. Laws:
 //  - no crash, UB or hang; classify_body is total;
@@ -20,6 +20,7 @@
 #include "mov/core/provider/coops.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/timeseries.hpp"
+#include "mov/io/detail/coops_json.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/wire/coops.hpp"
@@ -75,7 +76,7 @@ wc::Series series_at(std::uint8_t pick) {
     case 12:
       return met(cc::Met::visibility);
     default:
-      return met(cc::Met::air_gap);
+      return cc::AirGap{};
   }
 }
 
@@ -136,12 +137,17 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   const std::string storage(data + 1, data + size);
   const std::string_view body{storage};
 
-  static_cast<void>(
-      wc::classify_body(mov::io::wire::Origin::coops_data, body, "x/y"));
+  // read_data is classify_body, then the parse of a Payload.
+  const auto reply = wc::read_data(body, "x/y", series, mov::io::ReadContext{});
+  if (reply) {
+    if (const auto* read = std::get_if<mov::io::Read<wc::Columns>>(&*reply)) {
+      check_columns(read->value, series, body);
+    }
+  }
 
   mov::io::ReadContext ctx;
   ctx.limits.max_elements = std::size_t{1} << 16;
-  const auto parsed = wc::parse_data(body, series, ctx);
+  const auto parsed = mov::io::detail::coops::parse_data(body, series, ctx);
   if (parsed) {
     check_columns(parsed->value, series, body);
     return 0;

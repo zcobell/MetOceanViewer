@@ -80,6 +80,7 @@ constexpr std::array sn_registry{
         "sea_surface_wave_from_direction", "degree"),
     row(Quantity::discharge, "discharge",
         "water_volume_transport_in_river_channel", "m3 s-1"),
+    row(Quantity::salinity, "salinity", "sea_water_practical_salinity", "1"),
     row(Quantity::difference, "difference", "", "")};
 
 constexpr bool info_matches_the_sn_table() {

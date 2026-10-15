@@ -191,7 +191,7 @@ series it was computed from; it is never a water level, so it carries no datum.
 | `wind_u`, `wind_v` | `eastward_wind`, `northward_wind` | `m s-1` | ADCIRC `windx`/`windy`, D-Flow `windx`/`windy` |
 | `air_pressure` | `air_pressure` | `hPa` | CO-OPS, NDBC PRES/BAR |
 | `relative_humidity` | `relative_humidity` | `percent` | CO-OPS |
-| `conductivity` | `sea_water_electrical_conductivity` | `S m-1` | CO-OPS |
+| `conductivity` | `sea_water_electrical_conductivity` | `S m-1` | CO-OPS (mS/cm converted exactly, × 0.1) |
 | `visibility` | `visibility_in_air` | `m` | CO-OPS, NDBC VIS |
 | `current_u`, `current_v` | `eastward_sea_water_velocity`, `northward_sea_water_velocity` | `m s-1` | ADCIRC `u-vel`/`v-vel`, D-Flow `x_velocity`/`y_velocity` (only when the model grid is geographic) |
 | `wave_height` | `sea_surface_wave_significant_height` | `m` | NDBC WVHT |
@@ -199,6 +199,7 @@ series it was computed from; it is never a water level, so it carries no datum.
 | `wave_period_average` | `sea_surface_wave_mean_period` | `s` | NDBC APD |
 | `wave_direction` | `sea_surface_wave_from_direction` | `degree` | NDBC MWD |
 | `discharge` | `water_volume_transport_in_river_channel` | `m3 s-1` | USGS 00060 (ft3/s converted exactly, 0.028316846592) |
+| `salinity` | `sea_water_practical_salinity` | `1` | CO-OPS (PSU, the same number); in the registry since Phase 3 P2, so a 1.0 reader takes it as generic (the minor bump comes with 1.1, §13) |
 | `difference` | none | the unit of its operands (no fixed canonical unit) | derived: observed minus predicted (residual), written only when a user saves one; `vertical_datum` is never written for it |
 | `value` | none | source text, or omitted if unknown | any series whose quantity is unknown (user IMEDS, legacy dialects A/B) |
 

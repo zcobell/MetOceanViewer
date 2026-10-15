@@ -24,9 +24,10 @@ inline constexpr std::size_t max_json_depth = 16;
 /// The JSON nesting pre-scan: one pass counting `[` and `{` outside strings
 /// (a backslash escapes the next byte inside one). Nesting deeper than
 /// `max_depth` is a ParseError `too_large` at the bracket that went too deep,
-/// before the JSON parser sees the text: the parser descends before any check
-/// of its own could run, and its tree is recursive to destroy. Nothing else is
-/// checked; text that is not JSON passes and is the parser's to refuse.
+/// before the JSON parser sees the text. The parser keeps state for every
+/// open level, and a reader one frame per level, so the depth bounds that
+/// memory before any of it is spent. Nothing else is checked; text that is
+/// not JSON passes and is the parser's to refuse.
 [[nodiscard]] std::expected<void, ParseError> check_json_depth(
     std::string_view body, std::size_t max_depth = max_json_depth);
 

@@ -253,10 +253,12 @@ mov_add_test(
     mov_io_wire_tests
     SOURCES
         test_wire_body.cpp
+        test_json_parse.cpp
         test_coops_targets.cpp
         test_coops_classify.cpp
         test_coops_data.cpp
         test_coops_metadata.cpp
+        measure_coops_json.cpp
     CONSTEXPR_SOURCES test_wire_constexpr.cpp
     LIBRARIES mov::io
 )
@@ -269,5 +271,13 @@ mov_add_fuzz_test(
     LIBRARIES mov::io nlohmann_json::nlohmann_json
     CORPUS io/json_depth
 )
-mov_add_fuzz_test(fuzz_coops_json SOURCES fuzz_coops_json.cpp LIBRARIES mov::io CORPUS io/coops_json)
-mov_add_fuzz_test(fuzz_coops_metadata SOURCES fuzz_coops_metadata.cpp LIBRARIES mov::io CORPUS io/coops_metadata)
+# A month of 6-minute records is about 600 KB: the inputs reach 1 MiB, so the
+# large-body seeds (a few hundred KB) are mutated whole.
+mov_add_fuzz_test(fuzz_coops_json SOURCES fuzz_coops_json.cpp LIBRARIES mov::io CORPUS io/coops_json MAX_LEN 1048576)
+mov_add_fuzz_test(
+    fuzz_coops_metadata
+    SOURCES fuzz_coops_metadata.cpp
+    LIBRARIES mov::io
+    CORPUS io/coops_metadata
+    MAX_LEN 1048576
+)

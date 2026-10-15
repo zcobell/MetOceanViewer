@@ -18,6 +18,7 @@
 #include "test_helpers.hpp"
 
 using mov::core::Affine;
+using mov::core::ConductivityUnit;
 using mov::core::conversion;
 using mov::core::Discharge;
 using mov::core::DischargeUnit;
@@ -48,6 +49,10 @@ constexpr std::array all_pressures{
     PressureUnit::meter_of_water};
 constexpr std::array all_discharges{DischargeUnit::cubic_meter_per_second,
                                     DischargeUnit::cubic_foot_per_second};
+constexpr std::array all_conductivities{
+    ConductivityUnit::siemens_per_meter,
+    ConductivityUnit::millisiemens_per_centimeter,
+    ConductivityUnit::microsiemens_per_centimeter};
 constexpr std::array all_temperatures{TemperatureUnit::celsius,
                                       TemperatureUnit::fahrenheit,
                                       TemperatureUnit::kelvin};
@@ -82,6 +87,10 @@ constexpr bool is_factor(PressureUnit u, double si) {
 }
 constexpr bool is_factor(DischargeUnit u, double si) {
   return Discharge::in(1.0, u).as(DischargeUnit::cubic_meter_per_second) == si;
+}
+constexpr bool is_factor(ConductivityUnit u, double si) {
+  return mov::core::Conductivity::in(1.0, u).as(
+             ConductivityUnit::siemens_per_meter) == si;
 }
 
 constexpr bool conversion_is_identity(const auto& units) {
@@ -207,6 +216,15 @@ TEST_CASE("unit factors to SI are exact", "[core][units][constexpr]") {
   STATIC_REQUIRE(is_factor(DischargeUnit::cubic_meter_per_second, 1.0));
   STATIC_REQUIRE(
       is_factor(DischargeUnit::cubic_foot_per_second, 0.028316846592));
+
+  // NOAA CO-OPS reports conductivity in mS/cm: 0.1 S/m.
+  STATIC_REQUIRE(is_factor(ConductivityUnit::siemens_per_meter, 1.0));
+  STATIC_REQUIRE(is_factor(ConductivityUnit::millisiemens_per_centimeter, 0.1));
+  STATIC_REQUIRE(
+      is_factor(ConductivityUnit::microsiemens_per_centimeter, 1e-4));
+  STATIC_REQUIRE(conversion(ConductivityUnit::millisiemens_per_centimeter,
+                            ConductivityUnit::siemens_per_meter)
+                     .scale == 0.1);
 }
 
 TEST_CASE("in and as round-trip every enumerator", "[core][units][constexpr]") {
@@ -214,6 +232,7 @@ TEST_CASE("in and as round-trip every enumerator", "[core][units][constexpr]") {
   STATIC_REQUIRE(round_trips<Speed>(all_speeds));
   STATIC_REQUIRE(round_trips<Pressure>(all_pressures));
   STATIC_REQUIRE(round_trips<Discharge>(all_discharges));
+  STATIC_REQUIRE(round_trips<mov::core::Conductivity>(all_conductivities));
 }
 
 TEST_CASE("Measure arithmetic", "[core][units][constexpr]") {

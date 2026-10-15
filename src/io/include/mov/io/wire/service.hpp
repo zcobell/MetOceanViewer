@@ -29,6 +29,10 @@ enum class ServiceErrc : std::uint8_t {
   range_exceeded,
   /// A parameter the service refused (a date, a product, a list type).
   invalid_parameter,
+  /// The service's gateway failed in front of it ("Network error
+  /// communicating with endpoint"): transient, so retried with backoff as a
+  /// 5xx is (section 5.3).
+  gateway,
   api_key_invalid,
   /// A body that is not what the endpoint serves: markup where JSON or text
   /// was expected (a maintenance or captive-portal page).

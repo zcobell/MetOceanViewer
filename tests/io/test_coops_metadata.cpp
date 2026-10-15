@@ -122,13 +122,15 @@ TEST_CASE("the water-level list: stations, validity and sensors",
   CHECK(pensacola.met == cc::MetSet{cc::Met::wind, cc::Met::air_temperature,
                                     cc::Met::water_temperature,
                                     cc::Met::air_pressure});
-  CHECK(not pensacola.great_lakes);
+  CHECK(pensacola.datums.empty());
+  CHECK(not pensacola.air_gap);
 
   // An inactive Tsunami WL sensor offers no 1-minute series.
   CHECK(record(all, "8771972").observed ==
         cc::ObservedSet{cc::Observed::six_minute, cc::Observed::hourly});
   const wc::StationRecord& buffalo = record(all, "9063020");
-  CHECK(buffalo.great_lakes);
+  // Great Lakes: the list says IGLD is served, as datums.json does not.
+  CHECK(buffalo.datums == cc::DatumSet{cc::Datum::igld85});
   CHECK(buffalo.station.validity.first() == on_day(1860, 4, 1));
   CHECK(buffalo.met.contains(cc::Met::humidity));
 }
@@ -178,8 +180,9 @@ TEST_CASE("the met and air-gap lists", "[io][wire][coops]") {
   auto gap =
       wc::parse_stations(coops_fixture("stations_airgap.json"), ReadContext{});
   REQUIRE(gap.has_value());
-  CHECK(record(gap->value, "8517986").met == cc::MetSet{cc::Met::air_gap});
-  CHECK(record(gap->value, "8767931").met.empty());  // its sensor is off
+  CHECK(record(gap->value, "8517986").air_gap);
+  CHECK(record(gap->value, "8517986").met.empty());
+  CHECK(not record(gap->value, "8767931").air_gap);  // its sensor is off
 }
 
 TEST_CASE("unknown sensor names are counted, by name", "[io][wire][coops]") {
@@ -209,16 +212,19 @@ TEST_CASE("unknown sensor names are counted, by name", "[io][wire][coops]") {
   CHECK(skipped->value.empty());
   CHECK(skipped->warnings ==
         std::vector<Warning>{
-            {.code = WarningCode::station_skipped, .subject = "1000001"}});
+            {.code = WarningCode::station_skipped, .subject = "sensors"}});
 }
 
-TEST_CASE("a bad station is left out and counted, by its raw id",
+TEST_CASE("a bad station is left out and counted, by reason",
           "[io][wire][coops]") {
   const std::string body =
       R"({"stations": [{"id": "TEC1603", "lat": 1, "lng": 2},)"
       R"({"id": "8729840", "lat": 91, "lng": 2},)"
       R"({"lat": 1, "lng": 2},)"
       R"(7,)"
+      R"({"id": "8729842", "lat": 1, "lng": 2, "greatlakes": 1},)"
+      R"({"id": "8729843", "lat": 1, "lng": 2, "details": {"removed": "x"}},)"
+      R"({"id": "8729844", "name": 5, "lat": 1, "lng": 2},)"
       R"({"id": "8729841", "lat": 1, "lng": 2}]})";
   auto r = wc::parse_stations(body, ReadContext{});
   REQUIRE(r.has_value());
@@ -227,10 +233,13 @@ TEST_CASE("a bad station is left out and counted, by its raw id",
   CHECK(r->value[0].station.name.view().empty());
   CHECK(r->warnings ==
         std::vector<Warning>{
-            {.code = WarningCode::station_skipped, .subject = "TEC1603"},
-            {.code = WarningCode::station_skipped, .subject = "8729840"},
-            {.code = WarningCode::station_skipped, .subject = ""},
-            {.code = WarningCode::station_skipped, .subject = ""}});
+            {.code = WarningCode::station_skipped, .subject = "id", .count = 2},
+            {.code = WarningCode::station_skipped, .subject = "name"},
+            {.code = WarningCode::station_skipped, .subject = "position"},
+            {.code = WarningCode::station_skipped, .subject = "dates"},
+            {.code = WarningCode::station_skipped,
+             .subject = "member",
+             .count = 2}});
 }
 
 TEST_CASE("each way a station can be bad", "[io][wire][coops]") {
@@ -320,16 +329,15 @@ TEST_CASE("the prediction type of each station", "[io][wire][coops]") {
   auto r = wc::parse_prediction_stations(
       coops_fixture("stations_tidepredictions.json"), ReadContext{});
   REQUIRE(r.has_value());
-  CHECK(
-      r->value ==
-      std::vector<wc::PredictionStation>{
-          {.id = id("1610367"), .predictions = cc::Predictions::hilo_only},
-          {.id = id("1612340"), .predictions = cc::Predictions::any_interval},
-          {.id = id("8218617"), .predictions = cc::Predictions::hilo_only},
-          {.id = id("8729840"), .predictions = cc::Predictions::any_interval}});
+  CHECK(r->value ==
+        std::vector<wc::PredictionStation>{
+            {.id = id("1610367"), .type = wc::PredictionType::subordinate},
+            {.id = id("1612340"), .type = wc::PredictionType::harmonic},
+            {.id = id("8218617"), .type = wc::PredictionType::subordinate},
+            {.id = id("8729840"), .type = wc::PredictionType::harmonic}});
   CHECK(r->warnings ==
         std::vector<Warning>{
-            {.code = WarningCode::station_skipped, .subject = "TEC1603"}});
+            {.code = WarningCode::station_skipped, .subject = "id"}});
   auto odd = wc::parse_prediction_stations(
       R"({"stations": [{"id": "1000001", "type": "X"},)"
       R"( {"id": "1000002"}, {"id": "1000003", "type": 1},)"
@@ -337,10 +345,26 @@ TEST_CASE("the prediction type of each station", "[io][wire][coops]") {
       ReadContext{});
   REQUIRE(odd.has_value());
   CHECK(odd->value.size() == 1);
-  CHECK(odd->warnings.size() == 3);
+  CHECK(odd->warnings ==
+        std::vector<Warning>{{.code = WarningCode::station_skipped,
+                              .subject = "type",
+                              .count = 3}});
   CHECK(parse_error_in(
             wc::parse_prediction_stations(R"({"x": []})", ReadContext{}))
             .code() == ParseErrc::bad_member);
+  // An element that is not an object is a member of the wrong type.
+  auto scalar =
+      wc::parse_prediction_stations(R"({"stations": [7]})", ReadContext{});
+  REQUIRE(scalar.has_value());
+  CHECK(scalar->warnings ==
+        std::vector<Warning>{
+            {.code = WarningCode::station_skipped, .subject = "member"}});
+  ReadContext small;
+  small.limits.max_elements = 16;
+  CHECK(
+      parse_error_in(wc::parse_prediction_stations(
+                         coops_fixture("stations_tidepredictions.json"), small))
+          .code() == ParseErrc::too_large);
 }
 
 // ---- datums.json

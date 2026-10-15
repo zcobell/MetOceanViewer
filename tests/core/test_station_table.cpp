@@ -186,9 +186,10 @@ TEST_CASE("schema quantities are unique by token", "[core][station_table]") {
   // Same token, different standard names: equal tokens collide, because both
   // would name the same file variable.
   const auto a =
-      GenericQuantity::parse({.token = "salinity", .standard_name = ""});
+      GenericQuantity::parse({.token = "chlorophyll", .standard_name = ""});
   const auto b = GenericQuantity::parse(
-      {.token = "salinity", .standard_name = "sea_water_salinity"});
+      {.token = "chlorophyll",
+       .standard_name = "mass_concentration_of_chlorophyll_in_sea_water"});
   REQUIRE(a.has_value());
   REQUIRE(b.has_value());
   CHECK(StationTable::make({blank(meta(a.value_or(GenericQuantity{})), 0, 0),

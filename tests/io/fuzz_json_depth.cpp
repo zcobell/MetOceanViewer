@@ -2,12 +2,15 @@
 // Copyright (c) 2026 Zach Cobell
 
 // libFuzzer target: the JSON nesting pre-scan (docs/providers-design.md
-// section 4.2) agrees with a reference count. For every text nlohmann
-// accepts, check_json_depth passes exactly when the deepest nesting, counted
-// by a SAX handler, is at most max_json_depth; a refusal names a line and
-// column inside the text. Text nlohmann refuses only must not crash the
-// scan. A NUL ends nlohmann's input, so a text with one is not compared (the
-// parsers refuse it first: test_coops_data.cpp).
+// section 4.2) agrees with a reference count, a SAX handler over nlohmann's
+// parser:
+//  - for every input, a pass means nothing nlohmann reads is nested deeper
+//    than max_json_depth (on text it refuses, the part it read before);
+//  - for every text nlohmann accepts, the scan passes exactly when the
+//    deepest nesting is at most max_json_depth;
+//  - a refusal names a line inside the text.
+// A NUL ends nlohmann's input, so the second law skips text with one (the
+// parsers refuse it before nlohmann sees it: test_json_parse.cpp).
 
 #include <cstddef>
 #include <cstdint>
@@ -83,16 +86,15 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   if (not verdict and verdict.error().line() > line_count(text)) {
     fail();
   }
-  // nlohmann's lexer takes a NUL for the end of the input (the parsers refuse
-  // a NUL before they call it), so the reference reads text without one.
-  if (text.find('\0') != std::string::npos) {
-    return 0;
-  }
   DepthCounter counter;
   const bool valid = Json::sax_parse(text, &counter, Json::input_format_t::json,
                                      /*strict=*/true);
-  if (valid and verdict.has_value() !=
-                    (counter.deepest() <= mov::io::wire::max_json_depth)) {
+  if (verdict and counter.deepest() > mov::io::wire::max_json_depth) {
+    fail();
+  }
+  if (valid and text.find('\0') == std::string::npos and
+      verdict.has_value() !=
+          (counter.deepest() <= mov::io::wire::max_json_depth)) {
     fail();
   }
   return 0;

@@ -22,13 +22,14 @@ using mov::io::wire::Origin;
 using mov::io::wire::Payload;
 using mov::io::wire::ServiceErrc;
 using mov::io::wire::ServiceError;
+using mov::io::wire::coops::Api;
 using mov::io::wire::coops::classify_body;
 using mov::test::coops_fixture;
 
 constexpr std::string_view json_type = "application/json;charset=UTF-8";
 
-BodyClass classify(std::string_view body, Origin origin = Origin::coops_data) {
-  return classify_body(origin, body, json_type);
+BodyClass classify(std::string_view body, Api api = Api::data) {
+  return classify_body(api, body, json_type);
 }
 
 ServiceError refusal(const BodyClass& c) {
@@ -72,9 +73,9 @@ TEST_CASE("each recorded refusal has its code", "[io][wire][coops]") {
   CHECK(code_of("error_wrong_date.json") == ServiceErrc::invalid_parameter);
   // Plain text, not JSON.
   CHECK(code_of("error_bad_product.txt") == ServiceErrc::invalid_parameter);
-  CHECK(code_of("gateway_error.json") == ServiceErrc::unknown);
-  CHECK(refusal(classify(coops_fixture("mdapi_error_type.json"),
-                         Origin::coops_metadata))
+  // The gateway's own failure: transient, retried like a 5xx.
+  CHECK(code_of("gateway_error.json") == ServiceErrc::gateway);
+  CHECK(refusal(classify(coops_fixture("mdapi_error_type.json"), Api::metadata))
             .code() == ServiceErrc::invalid_parameter);
 }
 
@@ -85,8 +86,8 @@ TEST_CASE("a refusal keeps the service's words, trimmed and cut",
   CHECK(station.text() ==
         "The station is not a valid station or there is system error.");
   CHECK(station.origin() == Origin::coops_data);
-  const ServiceError metadata = refusal(
-      classify(coops_fixture("mdapi_error_type.json"), Origin::coops_metadata));
+  const ServiceError metadata =
+      refusal(classify(coops_fixture("mdapi_error_type.json"), Api::metadata));
   CHECK(metadata.origin() == Origin::coops_metadata);
   CHECK(metadata.text().size() == ServiceError::max_text_bytes);
   CHECK(metadata.text().starts_with("Invalid type specified: valid options"));
@@ -97,9 +98,8 @@ TEST_CASE("a refusal keeps the service's words, trimmed and cut",
 
 TEST_CASE("markup is unexpected content with its content type",
           "[io][wire][coops]") {
-  const auto c = classify_body(Origin::coops_data,
-                               "<html><body>Down for maintenance</body></html>",
-                               "text/html");
+  const auto c = classify_body(
+      Api::data, "<html><body>Down for maintenance</body></html>", "text/html");
   const ServiceError e = refusal(c);
   CHECK(e.code() == ServiceErrc::unexpected_content);
   CHECK(e.text() == "text/html");
@@ -136,4 +136,30 @@ TEST_CASE("bodies a parser must refuse are payloads", "[io][wire][coops]") {
   const std::string deep =
       "{\"error\": " + std::string(40, '[') + std::string(40, ']') + "}";
   CHECK(std::holds_alternative<Payload>(classify(deep)));
+  using namespace std::string_literals;
+  CHECK(std::holds_alternative<Payload>(
+      classify(R"({"error": "Range Limit Exceeded"})"s + '\0')));
+}
+
+TEST_CASE("a byte order mark is skipped, as the parsers skip it",
+          "[io][wire][coops]") {
+  const std::string bom = "\xEF\xBB\xBF";
+  CHECK(refusal(classify(bom + coops_fixture("error_station.json"))).code() ==
+        ServiceErrc::station_or_system);
+  CHECK(refusal(classify(bom + " Wrong Product: x")).code() ==
+        ServiceErrc::invalid_parameter);
+  CHECK(std::holds_alternative<Payload>(
+      classify(bom + coops_fixture("water_level.json"))));
+}
+
+TEST_CASE("an error body names its error first", "[io][wire][coops]") {
+  // A body whose first member is not error, errorMsg or message is read no
+  // further: it is data, whatever follows.
+  CHECK(std::holds_alternative<Payload>(classify(
+      R"({"metadata": {"id": "1"}, "error": {"message": "No data was found"}})")));
+  CHECK(std::holds_alternative<NoData>(classify(
+      R"({"error": {"message": "No data was found"}, "metadata": {}})")));
+  // A lone message is the gateway's, whatever it says.
+  CHECK(refusal(classify(R"({"message": "Range Limit Exceeded"})")).code() ==
+        ServiceErrc::gateway);
 }

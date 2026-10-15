@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 Zach Cobell
 
-// coops::parse_data: the recorded datagetter bodies (goldens) and hostile
-// ones (docs/providers-design.md sections 4.3 and 10.1).
+// coops::read_data and its parse: the recorded datagetter bodies (goldens)
+// and hostile ones (docs/providers-design.md sections 4.3 and 10.1).
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <expected>
@@ -20,6 +21,7 @@
 #include "mov/core/time.hpp"
 #include "mov/core/timeseries.hpp"
 #include "mov/core/units.hpp"
+#include "mov/io/detail/coops_json.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
@@ -63,7 +65,7 @@ wc::Series met(cc::Met m, cc::MetInterval i = cc::MetInterval::six_minute) {
 
 Result parse(std::string_view body, const wc::Series& series,
              const ReadContext& ctx = {}) {
-  return wc::parse_data(body, series, ctx);
+  return mov::io::detail::coops::parse_data(body, series, ctx);
 }
 
 Read<wc::Columns> parsed(std::string_view body, const wc::Series& series) {
@@ -77,7 +79,8 @@ Read<wc::Columns> parsed(std::string_view body, const wc::Series& series) {
 }
 
 const TimeSeries& column(const Read<wc::Columns>& r, std::string_view token) {
-  const auto it = r.value.find(token);
+  const auto it = std::ranges::find_if(
+      r.value, [token](const auto& entry) { return entry.first == token; });
   REQUIRE(it != r.value.end());
   return it->second;
 }
@@ -269,24 +272,25 @@ TEST_CASE("the extra products: conductivity, salinity, air gap",
       parsed(coops_fixture("conductivity.json"), met(cc::Met::conductivity));
   const TimeSeries& c = column(conductivity, "conductivity");
   CHECK(values_of(c) == std::vector<Opt>{36.42, 36.42, 36.41});
-  // mS/cm is outside the unit table: kept as text, and said so.
-  CHECK(conductivity.warnings ==
-        std::vector<Warning>{
-            {.code = WarningCode::unrecognized_unit, .subject = "mS/cm"}});
+  // mS/cm is a unit core converts exactly to the registry's S m-1.
+  CHECK(c.meta().unit() ==
+        mov::core::Unit{
+            mov::core::ConductivityUnit::millisiemens_per_centimeter});
+  CHECK(conductivity.warnings.empty());
 
   const auto salinity =
       parsed(coops_fixture("salinity.json"), met(cc::Met::salinity));
   REQUIRE(salinity.value.size() == 1);
   const TimeSeries& s = column(salinity, "salinity");
   CHECK(values_of(s) == std::vector<Opt>{28.93, 28.93, 28.92});
-  CHECK(mov::core::token(s.meta().quantity()) == "salinity");
+  CHECK(s.meta().quantity() == mov::core::QuantityId{Quantity::salinity});
   CHECK(s.meta().label() == "Salinity");
-  CHECK(salinity.warnings ==
-        std::vector<Warning>{
-            {.code = WarningCode::unrecognized_unit, .subject = "PSU"}});
+  // PSU is practical salinity, the dimensionless "1".
+  CHECK(s.meta().unit() == unit("1"));
+  CHECK(salinity.warnings.empty());
 
   // Air gap: no datum (the API takes none), metres, sigma ignored.
-  const auto gap = parsed(coops_fixture("air_gap.json"), met(cc::Met::air_gap));
+  const auto gap = parsed(coops_fixture("air_gap.json"), cc::AirGap{});
   const TimeSeries& g = column(gap, "air_gap");
   CHECK(values_of(g) == std::vector<Opt>{70.134, 70.11, 70.083});
   CHECK(not g.meta().datum().has_value());
@@ -379,9 +383,8 @@ TEST_CASE("a NUL byte is not the end of the body", "[io][wire][coops]") {
   const auto e = parse_error_in(parse(body, observed()));
   CHECK(e.code() == ParseErrc::not_json);
   CHECK(e.column() == body.find('\0'));
-  CHECK(std::holds_alternative<mov::io::wire::Payload>(
-      wc::classify_body(mov::io::wire::Origin::coops_data,
-                        R"({"error": "Range Limit Exceeded"})"s + '\0', "x")));
+  CHECK(std::holds_alternative<mov::io::wire::Payload>(wc::classify_body(
+      wc::Api::data, R"({"error": "Range Limit Exceeded"})"s + '\0', "x")));
 }
 
 TEST_CASE("an empty body", "[io][wire][coops]") {
@@ -454,7 +457,8 @@ TEST_CASE("bad times are bad dates, at the character", "[io][wire][coops]") {
   CHECK(e.column() == body.find("24:00"));
   for (const std::string_view t :
        {"", "2026-10-01T00:00+01:00", "2026-13-01 00:00", "01/10/2026 00:00",
-        "2026-02-30 00:00", " 2026-10-01 00:00"}) {
+        "2026-02-30 00:00", " 2026-10-01 00:00", "2026-10-01T00:00",
+        "2026-10-01 00:00Z", "2026-10-01 00:00:00", "2026-10-01"}) {
     INFO(t);
     CHECK(code_of(
               parse(data_body(R"({"t":")" + std::string{t} + R"(", "v":"1"})"),
@@ -503,8 +507,9 @@ TEST_CASE("repeated members are refused, not collapsed", "[io][wire][coops]") {
   CHECK(e.column() == body.find(record));
   CHECK(code_of(parse(R"({"data": [], "data": []})", observed())) ==
         ParseErrc::bad_member);
-  CHECK(code_of(parse(R"({"metadata": {"id": "1", "id": "2"}, "data": []})",
-                      observed())) == ParseErrc::bad_member);
+  // Members the format does not read are not read for repeats either.
+  CHECK(parse(R"({"metadata": {"id": "1", "id": "2"}, "data": []})", observed())
+            .has_value());
   // The same name in different objects is fine.
   CHECK(parse(data_body(R"({"t":"2026-10-01 00:00", "v":"1", "x":{"v":"2"}})"),
               observed())
@@ -545,4 +550,88 @@ TEST_CASE("a stop request cancels the parse", "[io][wire][coops]") {
   const auto r = parse(coops_fixture("water_level.json"), observed(), ctx);
   REQUIRE(not r.has_value());
   CHECK(std::holds_alternative<mov::core::Cancelled>(r.error()));
+}
+
+TEST_CASE("wind records out of order: one report about the product",
+          "[io][wire][coops]") {
+  // The columns share one time axis: a reorder or a duplicate is one event,
+  // and a duplicate conflicts when any of its columns differs.
+  const auto r = parsed(
+      data_body(R"({"t":"2026-10-01 00:06", "s":"2", "d":"20", "g":"3"},)"
+                R"({"t":"2026-10-01 00:00", "s":"1", "d":"10", "g":"2"},)"
+                R"({"t":"2026-10-01 00:06", "s":"2", "d":"20", "g":"9"},)"
+                R"({"t":"2026-10-01 00:00", "s":"1", "d":"10", "g":"2"})"),
+      met(cc::Met::wind));
+  CHECK(times_of(column(r, "wind_speed")) == six_minute_times(2));
+  CHECK(values_of(column(r, "wind_speed")) == std::vector<Opt>{1, 2});
+  CHECK(values_of(column(r, "wind_direction")) == std::vector<Opt>{10, 20});
+  CHECK(values_of(column(r, "wind_gust")) == std::vector<Opt>{2, 3});
+  CHECK(r.warnings ==
+        std::vector<Warning>{{.code = WarningCode::times_reordered,
+                              .subject = "coops:wind",
+                              .count = 2},
+                             {.code = WarningCode::duplicate_times_dropped,
+                              .subject = "coops:wind",
+                              .count = 2},
+                             {.code = WarningCode::conflicting_duplicate_times,
+                              .subject = "coops:wind",
+                              .count = 1}});
+}
+
+TEST_CASE("a time is exactly yyyy-MM-dd HH:mm", "[io][wire][coops]") {
+  const std::string body = data_body(R"({"t":"2026-10-01T00:00", "v":"1"})");
+  const auto e = parse_error_in(parse(body, observed()));
+  CHECK(e.code() == ParseErrc::bad_date);
+  CHECK(e.column() == body.find("T00:00"));
+  const std::string longer =
+      data_body(R"({"t":"2026-10-01 00:00:00", "v":"1"})");
+  CHECK(parse_error_in(parse(longer, observed())).column() ==
+        longer.find(":00\""));
+}
+
+TEST_CASE("read_data classifies before it parses", "[io][wire][coops]") {
+  const auto read = [](std::string_view body) {
+    return wc::read_data(body, "application/json", observed(), ReadContext{});
+  };
+  const auto data = read(coops_fixture("water_level.json"));
+  REQUIRE(data.has_value());
+  const auto* columns = std::get_if<Read<wc::Columns>>(&*data);
+  REQUIRE(columns != nullptr);
+  CHECK(columns->value.size() == 1);
+  CHECK(columns->value.find(mov::core::QuantityId{Quantity::water_level}) !=
+        nullptr);
+  CHECK(columns->value.find(mov::core::QuantityId{Quantity::wind_speed}) ==
+        nullptr);
+
+  const auto none = read(coops_fixture("error_no_data.json"));
+  REQUIRE(none.has_value());
+  CHECK(std::holds_alternative<mov::io::wire::NoData>(*none));
+
+  const auto refused = read(coops_fixture("error_range.json"));
+  REQUIRE(refused.has_value());
+  const auto* error = std::get_if<mov::io::wire::ServiceError>(&*refused);
+  REQUIRE(error != nullptr);
+  CHECK(error->code() == mov::io::wire::ServiceErrc::range_exceeded);
+  CHECK(error->origin() == mov::io::wire::Origin::coops_data);
+
+  // A body that is no refusal and no data is the parser's error.
+  const auto broken = read(R"({"data": [{"t": 5}]})");
+  CHECK(code_of(broken.transform([](auto&&) { return Read<wc::Columns>{}; })) ==
+        ParseErrc::bad_member);
+}
+
+TEST_CASE("columns are keyed by their own quantity", "[io][wire][coops]") {
+  wc::Columns columns;
+  const auto series = [](Quantity q) {
+    return TimeSeries::make({}, {},
+                            mov::core::SeriesMeta::make({.quantity = q}))
+        .value_or(TimeSeries{});
+  };
+  CHECK(columns.insert(series(Quantity::wind_speed)));
+  CHECK(columns.insert(series(Quantity::wind_gust)));
+  // A second series of one quantity is refused, and nothing changes.
+  CHECK(not columns.insert(series(Quantity::wind_speed)));
+  CHECK(columns.size() == 2);
+  CHECK(columns.begin()->first == "wind_gust");
+  CHECK(columns.find(mov::core::QuantityId{Quantity::wind_gust}) != nullptr);
 }

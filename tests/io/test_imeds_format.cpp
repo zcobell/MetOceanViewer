@@ -121,7 +121,7 @@ TEST_CASE("the datum and unit are 'none' and 'unknown' when unset",
 
 TEST_CASE("a unit that is not in a family is written by its symbol",
           "[io][imeds][format]") {
-  const auto unit = core::parse_unit("S m-1");
+  const auto unit = core::parse_unit("W m-2");
   REQUIRE(unit.has_value());
   const auto table = test::one_column_table(meta_with(unit, std::nullopt),
                                             {{.id = "S",
@@ -129,7 +129,7 @@ TEST_CASE("a unit that is not in a family is written by its symbol",
                                               .where = test::location(1.0, 2.0),
                                               .times = {},
                                               .samples = {}}});
-  CHECK(formatted(table).contains("    UTC    none    S m-1\n"));
+  CHECK(formatted(table).contains("    UTC    none    W m-2\n"));
   // And it reads back as the same unit (the unit is the rest of the line).
   const auto back = test::parse_text(formatted(table));
   REQUIRE(back.has_value());

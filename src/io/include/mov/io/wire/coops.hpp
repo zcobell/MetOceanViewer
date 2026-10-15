@@ -4,6 +4,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -19,6 +20,7 @@
 #include "mov/core/overloaded.hpp"
 #include "mov/core/provider/capabilities.hpp"
 #include "mov/core/provider/coops.hpp"
+#include "mov/core/quantity.hpp"
 #include "mov/core/required.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
@@ -30,15 +32,15 @@
 #include "mov/io/wire/service.hpp"
 
 /// NOAA CO-OPS on the wire (docs/providers-design.md section 4): the requests
-/// of a core::coops::Request and the parsers of the responses. Every request
+/// of a core::coops product and the readers of the responses. Every request
 /// asks for UTC (`time_zone=gmt`), metric units and JSON; a water level is
-/// requested in its datum (decision 13: nothing is converted or shifted
-/// here). The bodies' facts are pinned by the recordings in
-/// tests/fixtures/io/coops/ (provenance.txt).
+/// requested in its datum (decision 13: nothing is shifted here). The bodies'
+/// facts are pinned by the recordings in tests/fixtures/io/coops/
+/// (provenance.txt).
 namespace mov::io::wire::coops {
 
 // ---- what one exchange asks for
-// ----------------------------------------------
+// -------------------------------------------------
 
 /// An observed water-level series in a datum.
 struct Observation {
@@ -54,141 +56,165 @@ struct Prediction {
   friend constexpr bool operator==(Prediction, Prediction) = default;
 };
 
-/// What one datagetter exchange asks for and its body holds: a Product that
-/// is not a pair. Observed-versus-predicted is two of these. There is no
-/// default series (the datum is Required, as in core::coops::WaterLevel).
-using Series =
-    std::variant<Observation, Prediction, core::coops::Meteorological>;
+/// What one datagetter exchange asks for and its body holds: a product that
+/// is not a pair. There is no default series (the datum is Required, as in
+/// core::coops::WaterLevel).
+using Series = std::variant<Observation, Prediction,
+                            core::coops::Meteorological, core::coops::AirGap>;
 static_assert(not std::is_default_constructible_v<Series>);
 
-/// The series of a product in exchange order: one, or the observed series
-/// and then the predictions of a pair on its grid.
-struct ProductSeries {
-  Series first;
-  std::optional<Series> second;
-  friend constexpr bool operator==(const ProductSeries&,
-                                   const ProductSeries&) = default;
+/// A product of one exchange.
+struct Single {
+  Series series;
+  friend constexpr bool operator==(const Single&, const Single&) = default;
 };
+
+/// Observed and predicted water levels on one grid, in one datum: two
+/// exchanges whose series both follow from the grid.
+struct Pair {
+  core::coops::PairedGrid grid;
+  core::Required<core::coops::Datum> datum;
+
+  [[nodiscard]] constexpr Observation observed() const noexcept {
+    return {.series = core::coops::observed(grid), .datum = datum};
+  }
+  [[nodiscard]] constexpr Prediction predicted() const noexcept {
+    return {.interval = core::coops::predicted(grid), .datum = datum};
+  }
+  friend constexpr bool operator==(Pair, Pair) = default;
+};
+
+using ProductSeries = std::variant<Single, Pair>;
 
 [[nodiscard]] constexpr ProductSeries series_of(
     const core::coops::Product& product) noexcept {
   using namespace core::coops;
   return std::visit(
       core::Overloaded{
-          [](const WaterLevel& w) {
+          [](const WaterLevel& w) -> ProductSeries {
             const Datum datum = w.datum.get();
             return std::visit(
                 core::Overloaded{
-                    [datum](ObservedLevel o) {
-                      return ProductSeries{
-                          .first =
-                              Observation{.series = o.series, .datum = datum},
-                          .second = std::nullopt};
+                    [datum](ObservedLevel o) -> ProductSeries {
+                      return Single{.series = Observation{.series = o.series,
+                                                          .datum = datum}};
                     },
-                    [datum](PredictedLevel p) {
-                      return ProductSeries{
-                          .first = Prediction{.interval = p.interval,
-                                              .datum = datum},
-                          .second = std::nullopt};
+                    [datum](PredictedLevel p) -> ProductSeries {
+                      return Single{.series = Prediction{.interval = p.interval,
+                                                         .datum = datum}};
                     },
-                    [datum](ObservedVsPredicted p) {
-                      return ProductSeries{
-                          .first = Observation{.series = observed(p.grid),
-                                               .datum = datum},
-                          .second = Series{Prediction{
-                              .interval = predicted(p.grid), .datum = datum}}};
+                    [datum](ObservedVsPredicted p) -> ProductSeries {
+                      return Pair{.grid = p.grid, .datum = datum};
                     }},
                 w.kind);
           },
-          [](Meteorological m) {
-            return ProductSeries{.first = m, .second = std::nullopt};
-          }},
+          [](Meteorological m) -> ProductSeries { return Single{.series = m}; },
+          [](AirGap a) -> ProductSeries { return Single{.series = a}; }},
       product);
+}
+
+/// The datagetter `product=` value of a met product.
+[[nodiscard]] constexpr std::string_view product_name(
+    core::coops::Met product) noexcept {
+  using core::coops::Met;
+  switch (product) {
+    case Met::air_temperature:
+      return "air_temperature";
+    case Met::water_temperature:
+      return "water_temperature";
+    case Met::wind:
+      return "wind";
+    case Met::air_pressure:
+      return "air_pressure";
+    case Met::humidity:
+      return "humidity";
+    case Met::conductivity:
+      return "conductivity";
+    case Met::salinity:
+      return "salinity";
+    case Met::visibility:
+      break;
+  }
+  return "visibility";
 }
 
 /// The datagetter `product=` value of a series.
 [[nodiscard]] constexpr std::string_view product_name(
     const Series& series) noexcept {
   using namespace core::coops;
-  return std::visit(core::Overloaded{[](Observation o) -> std::string_view {
-                                       switch (o.series) {
-                                         case Observed::six_minute:
-                                           return "water_level";
-                                         case Observed::one_minute:
-                                           return "one_minute_water_level";
-                                         case Observed::hourly:
-                                           break;
-                                       }
-                                       return "hourly_height";
-                                     },
-                                     [](Prediction) -> std::string_view {
-                                       return "predictions";
-                                     },
-                                     [](Meteorological m) -> std::string_view {
-                                       switch (m.product) {
-                                         case Met::air_temperature:
-                                           return "air_temperature";
-                                         case Met::water_temperature:
-                                           return "water_temperature";
-                                         case Met::wind:
-                                           return "wind";
-                                         case Met::air_pressure:
-                                           return "air_pressure";
-                                         case Met::humidity:
-                                           return "humidity";
-                                         case Met::conductivity:
-                                           return "conductivity";
-                                         case Met::salinity:
-                                           return "salinity";
-                                         case Met::visibility:
-                                           return "visibility";
-                                         case Met::air_gap:
-                                           break;
-                                       }
-                                       return "air_gap";
-                                     }},
-                    series);
-}
-
-/// The datagetter `interval=` value of a series; nullopt where the API's
-/// default is the one meant (6-minute predictions and met data) or the
-/// product takes none (observed water level, whose interval is its product).
-[[nodiscard]] constexpr std::optional<std::string_view> interval_token(
-    const Series& series) noexcept {
-  using namespace core::coops;
-  using Token = std::optional<std::string_view>;
   return std::visit(
-      core::Overloaded{[](Observation) -> Token { return std::nullopt; },
-                       [](Prediction p) -> Token {
-                         switch (p.interval) {
-                           case PredictionInterval::one:
-                             return "1";
-                           case PredictionInterval::five:
-                             return "5";
-                           case PredictionInterval::six:
-                             return std::nullopt;
-                           case PredictionInterval::ten:
-                             return "10";
-                           case PredictionInterval::fifteen:
-                             return "15";
-                           case PredictionInterval::thirty:
-                             return "30";
-                           case PredictionInterval::sixty:
-                             break;
-                         }
-                         return "h";
-                       },
-                       [](Meteorological m) -> Token {
-                         if (m.interval.get() == MetInterval::hourly) {
-                           return "h";
-                         }
-                         return std::nullopt;
-                       }},
+      core::Overloaded{
+          [](Observation o) -> std::string_view {
+            switch (o.series) {
+              case Observed::six_minute:
+                return "water_level";
+              case Observed::one_minute:
+                return "one_minute_water_level";
+              case Observed::hourly:
+                break;
+            }
+            return "hourly_height";
+          },
+          [](Prediction) -> std::string_view { return "predictions"; },
+          [](Meteorological m) { return product_name(m.product); },
+          [](AirGap) -> std::string_view { return "air_gap"; }},
       series);
 }
 
-/// The datagetter `datum=` value of a series: water levels only (the API
-/// ignores a datum on met products, air gap included).
+/// The datagetter `interval=` value of a prediction interval; nullopt for
+/// six minutes, the API's default.
+[[nodiscard]] constexpr std::optional<std::string_view> interval_token(
+    core::coops::PredictionInterval interval) noexcept {
+  using core::coops::PredictionInterval;
+  switch (interval) {
+    case PredictionInterval::one:
+      return "1";
+    case PredictionInterval::five:
+      return "5";
+    case PredictionInterval::six:
+      return std::nullopt;
+    case PredictionInterval::ten:
+      return "10";
+    case PredictionInterval::fifteen:
+      return "15";
+    case PredictionInterval::thirty:
+      return "30";
+    case PredictionInterval::sixty:
+      break;
+  }
+  return "h";
+}
+
+/// The `interval=` value of a met interval; nullopt for six minutes.
+[[nodiscard]] constexpr std::optional<std::string_view> interval_token(
+    core::coops::MetInterval interval) noexcept {
+  switch (interval) {
+    case core::coops::MetInterval::six_minute:
+      return std::nullopt;
+    case core::coops::MetInterval::hourly:
+      break;
+  }
+  return "h";
+}
+
+/// The `interval=` value of a series; nullopt where the default is meant or
+/// the product takes none (observed water level, whose interval is its
+/// product, and air gap).
+[[nodiscard]] constexpr std::optional<std::string_view> interval_token(
+    const Series& series) noexcept {
+  using Token = std::optional<std::string_view>;
+  return std::visit(
+      core::Overloaded{
+          [](Observation) -> Token { return std::nullopt; },
+          [](Prediction p) { return interval_token(p.interval); },
+          [](core::coops::Meteorological m) {
+            return interval_token(m.interval.get());
+          },
+          [](core::coops::AirGap) -> Token { return std::nullopt; }},
+      series);
+}
+
+/// The datagetter `datum=` value of a series: water levels only.
 [[nodiscard]] constexpr std::optional<core::coops::Datum> datum_of(
     const Series& series) noexcept {
   using Datum = std::optional<core::coops::Datum>;
@@ -196,45 +222,60 @@ struct ProductSeries {
       core::Overloaded{
           [](Observation o) -> Datum { return o.datum.get(); },
           [](Prediction p) -> Datum { return p.datum.get(); },
-          [](core::coops::Meteorological) -> Datum { return std::nullopt; }},
+          [](core::coops::Meteorological) -> Datum { return std::nullopt; },
+          [](core::coops::AirGap) -> Datum { return std::nullopt; }},
       series);
 }
 
 // ---- targets
-// ------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
-/// One exchange of a window: what it asks for and where.
-struct DataTarget {
+/// Why a window cannot be asked for.
+enum class TargetErrc : std::uint8_t {
+  no_whole_minute,          // the window holds no whole minute
+  outside_four_digit_years  // `yyyyMMdd` spells years 0000-9999 only
+};
+
+struct TargetError {
+  TargetErrc reason;
+  core::TimeRange window;
+  friend bool operator==(const TargetError&, const TargetError&) = default;
+};
+
+/// The exchange of a single product over one window.
+struct SingleTarget {
   Series series;
   Composed target;
-  friend bool operator==(const DataTarget&, const DataTarget&) = default;
+  friend bool operator==(const SingleTarget&, const SingleTarget&) = default;
 };
 
-/// The exchanges of one window: one, or two for observed-versus-predicted
-/// (the observed series first).
-struct WindowTargets {
-  DataTarget first;
-  std::optional<DataTarget> second;
-  friend bool operator==(const WindowTargets&, const WindowTargets&) = default;
+/// The two exchanges of observed versus predicted over one window; their
+/// series are pair.observed() and pair.predicted().
+struct PairTargets {
+  Pair pair;
+  Composed observed;
+  Composed predicted;
+  friend bool operator==(const PairTargets&, const PairTargets&) = default;
 };
 
-/// The datagetter requests of `request` over `window` (one unit of the plan,
-/// section 5.2). Parameters in this order: product, application
+using WindowTargets = std::variant<SingleTarget, PairTargets>;
+
+/// The datagetter requests of `product` at `station` over `window` (one unit
+/// of the plan, section 5.2). Parameters in this order: product, application
 /// (MetOceanViewer), station, begin_date, end_date, datum (water levels
 /// only), interval (when not the default), time_zone (gmt), units (metric),
-/// format (json). The API's range is inclusive and its times are whole
-/// minutes, so the half-open window [b, e) is sent as the minutes it holds:
-/// begin_date the first whole minute at or after b, end_date the last whole
-/// minute before e, as `yyyyMMdd HH:mm`. Adjacent windows therefore never
-/// share a sample (v4 bug L1). FormatError `unrepresentable_time` when the
-/// window holds no whole minute or a minute outside the years 0000-9999.
-[[nodiscard]] std::expected<WindowTargets, FormatError> targets(
-    const core::coops::Request& request, core::TimeRange window);
+/// format (json). The API's range is inclusive and its times whole minutes,
+/// so the half-open window [b, e) is sent as the minutes it holds: begin_date
+/// the first whole minute at or after b, end_date the last before e, as
+/// `yyyyMMdd HH:mm`. Adjacent windows never share a sample (v4 bug L1).
+[[nodiscard]] std::expected<WindowTargets, TargetError> targets(
+    const core::StationId<core::provider::Coops>& station,
+    const core::coops::Product& product, core::TimeRange window);
 
-/// The metadata API's station lists. The catalog reads the water-level and
-/// met lists (and the air-gap one, whose bridges are in neither) for the
-/// stations and their sensors, and the tide-prediction list for each
-/// station's prediction type (section 3.3).
+/// The metadata API's station lists: the water-level and met lists (and the
+/// air-gap one, whose bridges are in neither) give the stations and their
+/// sensors, the tide-prediction list each station's prediction type
+/// (section 3.3).
 enum class StationList : std::uint8_t {
   water_levels,
   met,
@@ -254,62 +295,107 @@ inline constexpr std::array every_station_list{
     const core::StationId<core::provider::Coops>& station);
 
 // ---- bodies
-// ---------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
-/// What a CO-OPS body says before its data is read. The data and metadata
-/// APIs answer a refused request with HTTP 200 and a message: data
-/// `{"error": {"message": "..."}}`, metadata `{"errorMsg": "..."}`, a bad
-/// product name plain text. The message decides, in this order:
-///  - "No data was found" or "No Predictions data was found": NoData;
+/// The two CO-OPS APIs a body can come from.
+enum class Api : std::uint8_t { data, metadata };
+
+[[nodiscard]] constexpr Origin origin_of(Api api) noexcept {
+  switch (api) {
+    case Api::data:
+      return Origin::coops_data;
+    case Api::metadata:
+      break;
+  }
+  return Origin::coops_metadata;
+}
+
+/// What a CO-OPS body says before its data is read. A refused request is
+/// HTTP 200 with a message: data `{"error": {"message": "..."}}`, metadata
+/// `{"errorMsg": "..."}`, a bad product name plain text, an API gateway's
+/// failure `{"message": "..."}`. The message decides, in this order:
+///  - "No data was found", "No Predictions data was found": NoData;
 ///  - "Range Limit Exceeded": range_exceeded;
 ///  - "The station is not a valid station or there is system error":
 ///    station_or_system;
-///  - "Wrong Datum", "supported Datum values", "There is no ... for the
+///  - "Wrong Datum", "supported Datum values", "There is no <datum> for the
 ///    station": datum_unavailable;
 ///  - "Wrong Date", "Wrong Product", "Invalid type specified":
 ///    invalid_parameter;
-///  - anything else (an API gateway's `{"message": "..."}` too): unknown.
+///  - anything else: unknown; but the gateway's own `{"message": ...}`
+///    (no error member, no data member) is `gateway`, a transient failure.
 /// Markup is unexpected_content (sniff_markup). Every other body, JSON that
-/// does not parse included, is a Payload: its parser reports what is wrong.
-/// `origin` is coops_data or coops_metadata and is only carried into the
-/// ServiceError.
-[[nodiscard]] BodyClass classify_body(Origin origin, std::string_view body,
+/// does not parse included, is a Payload. A leading byte order mark is
+/// skipped.
+[[nodiscard]] BodyClass classify_body(Api api, std::string_view body,
                                       std::string_view content_type);
 
-/// A parsed body's series, by quantity token: one, or for wind the three
-/// columns wind_speed, wind_direction and wind_gust. Each series is in time
-/// order and has the unit CO-OPS delivers in metric and, for a water level,
-/// the datum requested.
-using Columns = std::map<std::string, core::TimeSeries, std::less<>>;
+/// A body's series, by the token of their quantity: one, or for wind the
+/// three columns wind_speed, wind_direction and wind_gust. The key is the
+/// series' own quantity, so a series cannot be filed under another.
+class Columns {
+ public:
+  using Map = std::map<std::string, core::TimeSeries, std::less<>>;
 
-/// Parses a datagetter body for `series` (classify_body said Payload): the
-/// `{"metadata": ..., "data": [...]}` envelope, or `{"predictions": [...]}`
-/// for predictions. Each record's `t` ("yyyy-MM-dd HH:mm", UTC) through
-/// core::parse_utc_datetime; each value, a JSON string, through
-/// detail::parse_double, where "" is a Missing sample. Columns (unit):
+  /// Adds `series` under its quantity's token; false, and nothing changes,
+  /// when a series of that quantity is already there.
+  [[nodiscard]] bool insert(core::TimeSeries series);
+
+  /// The series of `quantity`, or nullptr.
+  [[nodiscard]] const core::TimeSeries* find(
+      const core::QuantityId& quantity) const;
+
+  [[nodiscard]] std::size_t size() const noexcept { return series_.size(); }
+  [[nodiscard]] bool empty() const noexcept { return series_.empty(); }
+  [[nodiscard]] Map::const_iterator begin() const noexcept {
+    return series_.begin();
+  }
+  [[nodiscard]] Map::const_iterator end() const noexcept {
+    return series_.end();
+  }
+
+  friend bool operator==(const Columns&, const Columns&) = default;
+
+ private:
+  Map series_;
+};
+
+/// A datagetter body, read: its columns, or the service's NoData or refusal.
+using DataReply = std::variant<Read<Columns>, NoData, ServiceError>;
+
+/// Classifies a datagetter body (classify_body, Api::data) and parses a
+/// Payload for `series`: the one entry point, so no body is parsed before it
+/// is classified.
+///
+/// The envelope is `{"metadata": ..., "data": [...]}`, or
+/// `{"predictions": [...]}` for predictions. Each record's `t` is exactly
+/// "yyyy-MM-dd HH:mm" (UTC); each value is a JSON string read by
+/// detail::parse_double, "" a Missing sample. Columns (metric units):
 ///   water levels: water_level, predictions water_level_prediction (m, the
 ///     datum asked for), from `v`;
 ///   air_temperature, water_temperature (degC), air_pressure (hPa),
 ///     humidity -> relative_humidity (percent), visibility (km),
 ///     conductivity (mS/cm), from `v`;
 ///   wind: wind_speed `s` and wind_gust `g` (m/s), wind_direction `d`
-///     (degree); `dr` is ignored;
-///   salinity: salinity `s` (PSU); the specific gravity `g` is ignored;
-///   air_gap (m, no datum: the API takes none), from `v`.
-/// mS/cm and PSU are outside the unit table: `unrecognized_unit`.
-/// Warnings: `suspect_samples_kept` (`coops:f`) for records with a nonzero
-/// quality flag, `provisional_samples` (`coops:q`) for `q` "p", and
-/// times_reordered / duplicate_times_dropped / conflicting_duplicate_times
-/// (`coops:<column>`) when the records are not in strictly increasing time
-/// (core::normalize). Members other than these are ignored.
+///     (degree);
+///   salinity `s` (PSU, the unit "1"); the specific gravity `g` is ignored;
+///   air_gap (m, no datum), from `v`.
+/// Members other than these and `f`, `q` are skipped unread. Warnings:
+/// `suspect_samples_kept` (`coops:f`) for records with a nonzero quality
+/// flag, `provisional_samples` (`coops:q`) for `q` "p", and, when the records
+/// are not in strictly increasing time, one times_reordered /
+/// duplicate_times_dropped / conflicting_duplicate_times about the product
+/// (`coops:<product>`, e.g. `coops:wind`: a record conflicts when any column
+/// differs).
 /// Errors (io::Error): ParseError `not_json`; `too_large` (nesting past
 /// max_json_depth, a body over ctx.limits.max_text_bytes, or more samples
 /// than max_elements); `bad_member` (no data array, a record that is not an
 /// object, `t` or a value missing or not a string, a repeated member);
 /// `bad_date`; `bad_number` or `out_of_range` for a value; `empty_input`;
-/// Cancelled (ctx.stop, polled every 4096 records).
-[[nodiscard]] std::expected<Read<Columns>, Error> parse_data(
-    std::string_view body, const Series& series, const ReadContext& ctx);
+/// Cancelled (ctx.stop).
+[[nodiscard]] std::expected<DataReply, Error> read_data(
+    std::string_view body, std::string_view content_type, const Series& series,
+    const ReadContext& ctx);
 
 /// One station of a station list (water level, met or air gap).
 struct StationRecord {
@@ -321,35 +407,46 @@ struct StationRecord {
   /// hourly series, the Tsunami WL sensor the 1-minute one.
   core::coops::ObservedSet observed;
   /// Met products by sensor, status 1 only (Conductivity gives conductivity
-  /// and salinity, AIR GAP air_gap).
+  /// and salinity).
   core::coops::MetSet met;
-  /// The list's `greatlakes`: CO-OPS serves IGLD there, which datums.json does
-  /// not name, and its station datum is IGLD85.
-  bool great_lakes;
+  /// An AIR GAP sensor with status 1.
+  bool air_gap = false;
+  /// Datums the list itself tells: IGLD85 at a Great Lakes station
+  /// (`greatlakes` true), which serves IGLD while its datums.json does not
+  /// name it (section 1.1); otherwise none.
+  core::coops::DatumSet datums;
   friend bool operator==(const StationRecord&, const StationRecord&) = default;
 };
 
 /// Parses a station list (`{"stations": [...]}`). A station whose id is not a
 /// CO-OPS id, whose name is not station text, whose position is not a
-/// Location, whose dates do not parse or are inverted, or whose members have
-/// the wrong JSON type is left out with a `station_skipped` warning. Sensor
-/// names outside the pinned table are `unknown_sensor` (by name, counted).
-/// Errors: as parse_data, plus `bad_member` when there is no stations array.
+/// Location, whose dates do not parse or are inverted, whose sensors are
+/// malformed, or whose members have the wrong JSON type, is left out:
+/// `station_skipped`, one warning per reason (subject `id`, `name`,
+/// `position`, `dates`, `sensors`, `member`) with the count. Sensor names
+/// outside the pinned table are `unknown_sensor` (by name, counted). A
+/// station's sensor list holds at most 256 sensors (`too_large`). Errors: as
+/// read_data, plus `bad_member` when there is no stations array.
 [[nodiscard]] std::expected<Read<std::vector<StationRecord>>, Error>
 parse_stations(std::string_view body, const ReadContext& ctx);
+
+/// The tide prediction a station has, by its type in the list.
+enum class PredictionType : std::uint8_t {
+  harmonic,    // type R: any interval
+  subordinate  // type S: high and low waters only
+};
 
 /// One station of the tide-prediction list.
 struct PredictionStation {
   core::StationId<core::provider::Coops> id;
-  /// Type R (harmonic): any_interval; S (subordinate): hilo_only.
-  core::coops::Predictions predictions;
+  PredictionType type;
   friend bool operator==(const PredictionStation&,
                          const PredictionStation&) = default;
 };
 
 /// Parses the tide-prediction list. A station whose id is not a CO-OPS id
-/// (the list holds TEC ids) or whose type is not R or S is left out with
-/// `station_skipped`. Errors as parse_stations.
+/// (the list holds TEC ids), or whose type is not R or S, is left out:
+/// `station_skipped` by reason (`id`, `type`). Errors as parse_stations.
 [[nodiscard]] std::expected<Read<std::vector<PredictionStation>>, Error>
 parse_prediction_stations(std::string_view body, const ReadContext& ctx);
 
@@ -372,7 +469,7 @@ struct StationDatums {
 /// low water datums (LWD, GL_LWD, CRD) are skipped; any other name is a
 /// `datum_unknown` warning. A row whose value is null is skipped. Conflicting
 /// rows and non-finite heights are FormatError `inconsistent_metadata`.
-/// Errors otherwise as parse_data.
+/// Errors otherwise as read_data.
 [[nodiscard]] std::expected<Read<StationDatums>, Error> parse_datums(
     std::string_view body, const ReadContext& ctx);
 

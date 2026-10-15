@@ -234,10 +234,6 @@ enum class FormatErrc : std::uint8_t {
   inconsistent_metadata,  // stations of a legacy file that disagree on the
                           // units or datum of their one shared column
   ambiguous_station_id,   // several variables claim to be the station id
-  // wire formats (request targets)
-  unrepresentable_time,  // a request time the wire format cannot spell: a
-                         // window with no whole minute, a year outside
-                         // 0000-9999
 };
 
 /// A file that parses but does not mean what its format requires.

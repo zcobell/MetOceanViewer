@@ -114,6 +114,15 @@ constexpr std::array discharge_spellings{
     symbol_spelling("cfs", DischargeUnit::cubic_foot_per_second),
 };
 
+constexpr std::array conductivity_spellings{
+    symbol_spelling("S/m", ConductivityUnit::siemens_per_meter),
+    symbol_spelling("S m-1", ConductivityUnit::siemens_per_meter),
+    symbol_spelling("mS/cm", ConductivityUnit::millisiemens_per_centimeter),
+    symbol_spelling("mS cm-1", ConductivityUnit::millisiemens_per_centimeter),
+    symbol_spelling("uS/cm", ConductivityUnit::microsiemens_per_centimeter),
+    symbol_spelling("uS cm-1", ConductivityUnit::microsiemens_per_centimeter),
+};
+
 // The degree sign is spelled as its UTF-8 bytes: the source encoding is not
 // assumed. The literals are split so that the hex escape ends before the "C".
 constexpr std::array temperature_spellings{
@@ -167,6 +176,9 @@ template <class U, std::size_t N>
   if (auto u = lookup(discharge_spellings, text)) {
     return u;
   }
+  if (auto u = lookup(conductivity_spellings, text)) {
+    return u;
+  }
   return lookup(temperature_spellings, text);
 }
 
@@ -202,6 +214,10 @@ template <class U, std::size_t N>
   }
   if (text == "sec") {
     return "s";
+  }
+  // Practical salinity is dimensionless (CF: "1"); PSU is its common name.
+  if (ascii::equal_ignore_case(text, "psu")) {
+    return "1";
   }
   return std::nullopt;
 }

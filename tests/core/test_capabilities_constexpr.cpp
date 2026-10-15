@@ -227,3 +227,17 @@ TEST_CASE("met products need their sensor", "[core][capabilities][constexpr]") {
                  refused(NotOffered::product));
   STATIC_REQUIRE(is_offered(met_only(), met(Met::air_temperature)));
 }
+
+TEST_CASE("air gap needs its sensor", "[core][capabilities][constexpr]") {
+  constexpr CoopsCaps bridge{.observed = {},
+                             .met = {},
+                             .air_gap = true,
+                             .predictions = Predictions::none,
+                             .datums = std::nullopt,
+                             .datums_offered = {}};
+  STATIC_REQUIRE(is_offered(bridge, Product{coops::AirGap{}}));
+  STATIC_REQUIRE(offered(tidal(), Product{coops::AirGap{}}) ==
+                 refused(NotOffered::product));
+  STATIC_REQUIRE(offered(bridge, met(Met::wind)) ==
+                 refused(NotOffered::product));
+}

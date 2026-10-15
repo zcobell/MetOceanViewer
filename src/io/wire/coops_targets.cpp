@@ -10,20 +10,22 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
+#include "mov/core/overloaded.hpp"
 #include "mov/core/provider/coops.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
 #include "mov/io/detail/civil_time.hpp"
-#include "mov/io/detail/reporting.hpp"
-#include "mov/io/error.hpp"
 #include "mov/io/wire/coops.hpp"
 #include "mov/io/wire/origin.hpp"
 
 namespace mov::io::wire::coops {
 
 namespace {
+
+using Station = core::StationId<core::provider::Coops>;
 
 constexpr std::string_view datagetter_path = "/api/prod/datagetter";
 constexpr std::string_view metadata_path = "/mdapi/prod/webapi";
@@ -41,24 +43,24 @@ std::string wire_minute(core::Time t) {
                      f.hour, f.minute);
 }
 
-std::expected<DateParams, FormatError> date_params(core::TimeRange window) {
-  // 64-bit minutes: std::chrono::minutes may be 32-bit (MSVC), too narrow for
-  // year 9999.
+std::expected<DateParams, TargetError> date_params(core::TimeRange window) {
+  // 64-bit minutes: std::chrono::minutes may be 32-bit (MSVC), too narrow
+  // for year 9999.
   using minutes = std::chrono::duration<std::int64_t, std::ratio<60>>;
   // Within these bounds the minute arithmetic below cannot overflow, and
   // every whole minute of the window has a four-digit year.
   if (window.begin() < detail::imeds_first or
       window.end() > detail::imeds_end) {
-    return std::unexpected{detail::format_error(
-        FormatErrc::unrepresentable_time, "window outside years 0000-9999")};
+    return std::unexpected{TargetError{
+        .reason = TargetErrc::outside_four_digit_years, .window = window}};
   }
   const core::Time first =
       std::chrono::ceil<minutes>(window.begin());  // at or after the begin
   const core::Time last =
       std::chrono::ceil<minutes>(window.end()) - minutes{1};  // before the end
   if (last < first) {
-    return std::unexpected{detail::format_error(
-        FormatErrc::unrepresentable_time, "window holds no whole minute")};
+    return std::unexpected{
+        TargetError{.reason = TargetErrc::no_whole_minute, .window = window}};
   }
   return DateParams{.begin = wire_minute(first), .end = wire_minute(last)};
 }
@@ -67,8 +69,8 @@ QueryParam param(std::string_view name, std::string_view value) {
   return {.name = std::string{name}, .value = std::string{value}};
 }
 
-Composed data_target(const core::StationId<core::provider::Coops>& station,
-                     const Series& series, const DateParams& dates) {
+Composed data_target(const Station& station, const Series& series,
+                     const DateParams& dates) {
   std::vector<QueryParam> query{
       param("product", product_name(series)),
       param("application", "MetOceanViewer"),
@@ -106,16 +108,24 @@ std::string_view list_type(StationList list) noexcept {
 
 }  // namespace
 
-std::expected<WindowTargets, FormatError> targets(
-    const core::coops::Request& request, core::TimeRange window) {
-  return date_params(window).transform([&request](const DateParams& dates) {
-    const auto target_of = [&](const Series& series) {
-      return DataTarget{.series = series,
-                        .target = data_target(request.station, series, dates)};
-    };
-    const ProductSeries series = series_of(request.product);
-    return WindowTargets{.first = target_of(series.first),
-                         .second = series.second.transform(target_of)};
+std::expected<WindowTargets, TargetError> targets(
+    const Station& station, const core::coops::Product& product,
+    core::TimeRange window) {
+  return date_params(window).transform([&](const DateParams& dates) {
+    return std::visit(
+        core::Overloaded{
+            [&](const Single& s) -> WindowTargets {
+              return SingleTarget{
+                  .series = s.series,
+                  .target = data_target(station, s.series, dates)};
+            },
+            [&](const Pair& p) -> WindowTargets {
+              return PairTargets{
+                  .pair = p,
+                  .observed = data_target(station, p.observed(), dates),
+                  .predicted = data_target(station, p.predicted(), dates)};
+            }},
+        series_of(product));
   });
 }
 
@@ -129,7 +139,7 @@ Composed station_list_target(StationList list) {
           .query = std::move(query)};
 }
 
-Composed datums_target(const core::StationId<core::provider::Coops>& station) {
+Composed datums_target(const Station& station) {
   return {.origin = Origin::coops_metadata,
           .path = std::format("{}/stations/{}/datums.json", metadata_path,
                               station.value()),
