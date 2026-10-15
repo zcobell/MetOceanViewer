@@ -47,7 +47,16 @@ function(mov_add_coverage_target)
     find_program(MOV_GCOVR gcovr REQUIRED)
     mov_find_gcov_command(gcov_command)
     set(report_dir "${PROJECT_BINARY_DIR}/coverage-report")
-    set(gcovr_common --root "${PROJECT_SOURCE_DIR}" --exclude-unreachable-branches --exclude-throw-branches)
+    # --merge-lines: a header line is covered when any template instance ran
+    # it (fetch's Machine is instantiated once per spec; without the merge
+    # every spec's instance would have to take every path).
+    set(gcovr_common
+        --root
+        "${PROJECT_SOURCE_DIR}"
+        --exclude-unreachable-branches
+        --exclude-throw-branches
+        --merge-lines
+    )
 
     set(layer_gates "")
     mov_qt_free_source_dirs(layer_dirs)

@@ -3,8 +3,9 @@
 Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's answers
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
-layers, gates and build plumbing) and P1 (§3, the core vocabulary; its deviations from
-revision 2 are in §3.7); nothing from P2 on. Phase 2 (`core`, `io`) is as built;
+layers, gates and build plumbing), P1 (§3, the core vocabulary; its deviations from
+revision 2 are in §3.7) and P6 (§5, the fetch layer; its deviations are in §5.7);
+nothing else from P2 on. Phase 2 (`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
@@ -643,6 +644,13 @@ test runs `QXmlStreamReader` over the fuzz corpus as the reference (§10.4).
 
 ## 5. fetch: stages, units, policies, machine
 
+Built in P6. Headers in `src/fetch/include/mov/fetch/`: `origin.hpp`, `policy.hpp`,
+`retry.hpp`, `limits.hpp`, `error.hpp`, `part.hpp`, `paging.hpp`, `steps.hpp`,
+`machine.hpp`, and the provider plans in `plan/` (`coops.hpp`, `usgs.hpp`, `ndbc.hpp`).
+The sketches below are revision 2; the headers are the contract, and §5.7 lists where
+they differ. The provider specs (targets and parsers) wait for P2–P4 and are P7's; the
+machine is generic over a spec and is tested with toy specs.
+
 ### 5.1 Errors, labels, results (Bd SF8)
 
 ```cpp
@@ -867,6 +875,46 @@ class Machine {
   fail concurrently that depends on completion order, so tests assert only that the
   reported unit is one of the failed ones (Br nit). v4 overwrote earlier errors with
   later ones and ignored failing chunks (L2, L3).
+- A lenient run with failed units and no data is the first failed unit's `Failure` in
+  plan order: `NoData` would hide the failures.
+
+### 5.7 As built (P6): deviations from revision 2
+
+| Revision 2 | Built | Why |
+|---|---|---|
+| `using io::wire::Origin` | `mov::fetch::Origin` in `origin.hpp`, the same enumerators in the same order, and `every_origin` | io's wire header is P2's, built in parallel. When it lands, fetch's name becomes a using-declaration of io's. |
+| `Send{id, io::wire::Target, priority}`, `Parse{id}` | `Send<Target>{id, target, origin, priority}`, `Parse<Target>{id, target}`; `Target` is the spec's | The machine is generic over a spec, so it neither knows io's targets nor parses. The origin rides along for the gate. The parse step carries its target, so the job keeps no map from id to target. |
+| `initial(request, now) -> vector<Unit>`, `next(unit, outcome) -> optional<Unit>`, `UnitOutcome = variant<Parsed<Part>, Absent>` | `FetchSpec` (`steps.hpp`): `initial(request, now) -> expected<vector<Unit>, Error>`; `targets(request, unit)` (two for a paired product); `origin(target)`; `label(request, unit)`; `next(request, unit, UnitOutcome) -> expected<vector<Unit>, Error>`; `into_part(Parsed)`; `has_data(Part)`. `UnitOutcome = variant<Received{span<const Parsed>}, Absent>` | NDBC's fallback from last year's file has twelve successors, not one. A page that breaks a paging rule fails its unit, so `next` returns an error. A parsed page (USGS: the part, the `next` link, the first and last time) is more than its part. `Absent` covers a 404 and a body parsed to `NoData`. |
+| Plan order: initial order, successors appended | Each unit has a path: initial unit i is `{i}`, the k-th successor of p is `p + {k}`; plan order is the paths' lexicographic order (pre-order) | A unit's successors land right after it, so NDBC's fallbacks keep the precedence order and a window's pages stay in sequence. |
+| `Wait{ExchangeId retry_of, delay}`, `WaitElapsed{ExchangeId}` | `TimerId`, from the same counter as `ExchangeId`; `Wait{TimerId, delay}` for retry delays, cool-down holds and the deadline | A timer is not an exchange. One counter keeps every id unique, so a stale event cannot name a live one. |
+| Deadline checked on events | The machine also arms its own deadline timer at start (a `Wait`), re-armed if it fires early | A hung exchange sends no event; the timer guarantees one. |
+| `CoolDown` tells the gate | The machine also holds its own sends to a cooled origin (a `Wait` for the rest of the cool-down) | "No `Send` to that origin before n s" then holds in the step stream, where the property test and the fuzzer check it. |
+| `X-RateLimit-Remaining: 0` "is a 429 without Retry-After" | On an accepted response it cools the origin down (backoff delay) and keeps the response; no retry | The data is good; retrying it would cost an exchange for nothing. |
+| `Response{status, retry_after, rate_remaining}` | `+ bytes` | `Stats::bytes`. |
+| `on(event, now, double unit_random)` | `Jitter` (`make(double)` refuses outside [0, 1), `from_bits(uint64)` is total) | Strong type: a bad jitter cannot reach backoff. |
+| `RetryPolicy` aggregate, `int max_attempts` | Class with `make(Fields) -> expected<…, RetryPolicyError>` (attempts 1–16, 1 ms <= base <= cap <= 1 h, max_retry_after 1 s–1 day) and `defaults()` | A policy with zero attempts or a base above the cap cannot be built. |
+| `retry_after` clamped to [1 s, max_retry_after] | Clamped below only; delta-seconds saturate at 2^31 (RFC 9111); all three HTTP-date forms (RFC 9110 §5.6.7); `parse_http_date` public | A clamp would hide a long Retry-After; the machine compares it with `max_retry_after` and fails with `RateLimited`. |
+| Attempts per unit | Attempts per exchange slot; `station_or_system`'s one extra attempt counts against `max_attempts` | A paired unit's two exchanges retry independently. |
+| `start(request, strictness, retry, deadline, now)` | `start(request, Options{strictness, retry, deadline, priority, first_id}, now) -> Started{machine, steps}`; `next_id()` | Designated options; a second stage continues the first's ids. |
+| Stage bind "in the Job" | As designed, from pure parts: `usgs::bind(C, rows) -> expected<DataRequest<C>, Failure>`; `split(Fetched)` / `after(Trail, Fetched)` join the stages' warnings and stats; `coops::DatumsRequest` is the CO-OPS catalog's second stage | Each piece is a function over values, tested without a job. |
+| `Error` alternatives | Built by prepending fetch's alternatives to `io::Error`'s, so `io::JsonError` joins when H5 adds it to `io::Error`; new `WrongCollection` (`ResolveError::wrong_collection`) and `Unalignable` (`core::aligned`'s nullopt) | `lift_io` stays a total visit; every failure has a value. |
+| `ServiceError` aggregate | Class with `make` (cuts to 120 B on a UTF-8 boundary) | The bound is an invariant. |
+| `UnitMismatch{QuantityId column; Unit first, other}`, `MetaMismatch{QuantityId}` | `column` is the part's column key (string); the units are optional | A paired product has two columns of one quantity (`observed`, `predicted`); a part may lack a unit. |
+| `Resolution {}` | `Resolution{page}` | Resolution pages. |
+| `CooledDown{origin, seconds}` | milliseconds | Backoff delays are milliseconds. |
+| `struct Column {meta, rows}`; `combine -> expected<Part, Error>` | `Column::make` checks strictly increasing rows; `combine -> expected<io::Read<Part>, MergeError>` (`variant<UnitMismatch, MetaMismatch>`, `lift_merge`), counting `duplicate_times_dropped` with the column key as subject; `fold` | Sorted columns make the union a linear `set_union`. The narrow error and the core-only dependencies let `Part` move to io unchanged (below). The file kind for an `ndbc:<kind>` subject is the NDBC spec's to add. |
+| `combine` associative | Exactly associative when a column has one unit; with conversions, the plan-order fold (always to the first part's unit) defines the result | Converting c to b and then to a rounds differently from c to a. |
+| — | `FellBack` when an absent unit labelled `NdbcFile` is followed by a unit with another `NdbcFile` label | A month's decimal spelling keeps its label, so it warns nothing. |
+| NDBC: `realtime2` "when the range ends within 45 days of now" | Also only when the range began before `now`; nothing for a range after `now`; last year's months (after `h{y}` is absent) only those in the range; every absent month tries `{Mon}/{id}.txt` | `realtime`'s label carries `now`'s year. |
+| Throughput "in any 60 s" | `ThroughputCheck`: consecutive windows from the first byte, judged at the progress reports; also the body cap | Progress reports are what the transport sees. |
+| `max_pages(window)` | `max_pages(span, cadence, rows)`; `PageGuard<Link, Position>` with a row count, positions optional (a site's series have no order); resolution pages capped at 4; the `ParseError`'s line is the page number | Generic over io's link type (P3's `Verbatim`); one guard for continuous, daily and resolution pages. |
+
+**Layering note for P2–P4.** §4.3 has io's parsers return `Read<Part>`, but `Part` is
+fetch's and io is below fetch. `Part`, `Column`, `combine` and `MergeError` depend on core
+and io only (`UnitMismatch`, `MetaMismatch` are in `error.hpp` with core types), so they
+can move to io as they are when P2 lands, with fetch re-exporting the names; or io's
+parsers return their own column value and the spec's `into_part` lifts it. The P2 merge
+decides.
 
 ---
 
@@ -1353,8 +1401,8 @@ prose-editor.
 | P4 | io NDBC: stdmet parser, sentinel table, XML subset scanner, public `gunzip`, gzip sniff, fuzz | P1 | M (3) | same |
 | P5a | io station catalog + schema + `docs/station-catalog.md`; JSON series writer (droppable) | P1 | S (2) | same |
 | P5b | io daily outputs (D34): SN 1.1 writer and reader for `DailySeries`, `docs/station-netcdf.md` minor bump, CSV overload, `unsupported_cadence` | P1 | M (3) | neckbeard-nate (lead), sean-parent, ben-deane |
-| P6 | fetch: errors and labels, `initial`/`next` per provider, `Part`/`combine`, policies, `retry_after`, `Machine`, property tests, `fuzz_fetch_machine` | P1 (P2–P4 for the provider specs, which can land last) | L (6) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
-| P7 | providers: `Exchange`, `QnamTransport` (redirects, limits, body cap), `Network` (gates, key, cache, destruction order), `Job`, the providers, catalogs, snapshot resource, update check, `describe`, `FakeTransport`, cassettes, local server, `drive` | P2–P6 | L (7) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
+| P6 (built) | fetch: errors and labels, `initial`/`next` per provider, `Part`/`combine`, policies, `retry_after`, `Machine`, property tests, `fuzz_fetch_machine`; the provider specs (targets, parsers) move to P7 (§5.7) | P1 | L (6) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
+| P7 | providers: the provider specs (`FetchSpec`, §5.7: targets, parsers, merge and finish per provider and stage), `Exchange`, `QnamTransport` (redirects, limits, body cap), `Network` (gates, key, cache, destruction order), `Job`, the providers, catalogs, snapshot resource, update check, `describe`, `FakeTransport`, cassettes, local server, `drive` | P2–P6 | L (7) | bryce-lelbach (lead), ben-deane, neckbeard-nate |
 | P8 | fixtures and live job: missing fixtures (curl first, cassettes after P7), compression ratios, gzip member counts, NDBC Oct–Dec codes, `live-api.yml` with the issue step | P2–P4; P7 | M (2.5) | neckbeard-nate, jason-turner |
 | P9a | CLI skeleton: `run`, `to_command`, rendering, outcome join, exit codes, output commit and EPIPE, SIGINT, `convert`, `hwm-stats` | H0, P5a | M (3.5) | uncle-bob-martin, neckbeard-nate |
 | P9b | CLI `fetch`, `stations`, rule table, `offered` selections, memory bound, `--partial`, `--dry-run`, `--record-cassette`, key file | P7, P9a | M (3.5) | uncle-bob-martin, neckbeard-nate |
