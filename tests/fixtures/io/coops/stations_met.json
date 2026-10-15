@@ -1,0 +1,592 @@
+{
+ "count": 314,
+ "units": null,
+ "stations": [
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "KWHH1",
+   "details": {
+    "id": "1617433",
+    "established": "1988-02-06 00:00:00",
+    "removed": "",
+    "noaachart": "19330",
+    "timemeridian": -150,
+    "timezone": -10.0,
+    "origyear": "1988-02-06 00:00:00",
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/details.json"
+   },
+   "sensors": {
+    "units": "feet",
+    "sensors": [
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "A1",
+      "name": "Acoustic WL",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "C1",
+      "name": "Wind",
+      "elevation": 28.277561,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "D1",
+      "name": "Air Temperature",
+      "elevation": 27.335957,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MLLW",
+      "sensorID": "E1",
+      "name": "Water Temperature",
+      "elevation": -5.124672,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "F1",
+      "name": "Barometric Pressure",
+      "elevation": 12.92651,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "J1",
+      "name": "Rain Fall",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "site",
+      "name": "site",
+      "elevation": 7.831365,
+      "message": "",
+      "dcp": 0
+     },
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "U1",
+      "name": "Tsunami WL",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     }
+    ],
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/ofsmapoffsets.json"
+   },
+   "state": "HI",
+   "timezone": "HAST",
+   "timezonecorr": -10,
+   "observedst": false,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/nearby.json"
+   },
+   "forecast": false,
+   "outlook": true,
+   "HTFhistorical": true,
+   "HTFmonthly": true,
+   "nonNavigational": false,
+   "inundationdb": true,
+   "id": "1617433",
+   "name": "Kawaihae",
+   "lat": 20.0366,
+   "lng": -155.8294,
+   "affiliations": "NWLON",
+   "portscode": null,
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/1617433.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": "Mixed"
+  },
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "SEIM1",
+   "details": {
+    "id": "8419870",
+    "established": "1926-08-26 00:00:00",
+    "removed": "",
+    "noaachart": "13283",
+    "timemeridian": -75,
+    "timezone": -5.0,
+    "origyear": "1998-05-12 00:00:00",
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/details.json"
+   },
+   "sensors": {
+    "units": "feet",
+    "sensors": [
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "D1",
+      "name": "Air Temperature",
+      "elevation": 14.960629,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MLLW",
+      "sensorID": "E1",
+      "name": "Water Temperature",
+      "elevation": -3.874672,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "F1",
+      "name": "Barometric Pressure",
+      "elevation": 16.633858,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "G1",
+      "name": "Conductivity",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "R1",
+      "name": "Relative Humidity",
+      "elevation": 14.960629,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "site",
+      "name": "site",
+      "elevation": 8.763124,
+      "message": "",
+      "dcp": 0
+     },
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "U1",
+      "name": "Tsunami WL",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "",
+      "sensorID": "Y1",
+      "name": "Microwave WL",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     }
+    ],
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/ofsmapoffsets.json"
+   },
+   "state": "ME",
+   "timezone": "EST",
+   "timezonecorr": -5,
+   "observedst": true,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/nearby.json"
+   },
+   "forecast": true,
+   "outlook": false,
+   "HTFhistorical": false,
+   "HTFmonthly": false,
+   "nonNavigational": false,
+   "inundationdb": true,
+   "id": "8419870",
+   "name": "Seavey Island",
+   "lat": 43.079723,
+   "lng": -70.74111,
+   "affiliations": "PORTS",
+   "portscode": "pm",
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8419870.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": "Mixed"
+  },
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "CPVM2",
+   "details": {
+    "id": "8575437",
+    "established": "2015-02-13 00:00:00",
+    "removed": "",
+    "noaachart": "12282",
+    "timemeridian": -75,
+    "timezone": -5.0,
+    "origyear": "2015-02-13 00:00:00",
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/details.json"
+   },
+   "sensors": {
+    "units": "feet",
+    "sensors": [
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "D1",
+      "name": "Air Temperature",
+      "elevation": 10.23622,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "O1",
+      "name": "Visibility",
+      "elevation": 9.744095,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "R1",
+      "name": "Relative Humidity",
+      "elevation": 10.23622,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "site",
+      "name": "site",
+      "elevation": 11.266404,
+      "message": "",
+      "dcp": 0
+     }
+    ],
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/ofsmapoffsets.json"
+   },
+   "state": "MD",
+   "timezone": "EST",
+   "timezonecorr": -5,
+   "observedst": true,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/nearby.json"
+   },
+   "forecast": false,
+   "outlook": false,
+   "HTFhistorical": false,
+   "HTFmonthly": false,
+   "nonNavigational": false,
+   "inundationdb": false,
+   "id": "8575437",
+   "name": "Chesapeake Bay Bridge Visibility",
+   "lat": 38.994804,
+   "lng": -76.38811,
+   "affiliations": "PORTS",
+   "portscode": "cn",
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8575437.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": ""
+  },
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "TXVT2",
+   "details": null,
+   "sensors": {
+    "units": "feet",
+    "sensors": [
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "D1",
+      "name": "Air Temperature",
+      "elevation": 7.217848,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "F1",
+      "name": "Barometric Pressure",
+      "elevation": null,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "O1",
+      "name": "Visibility",
+      "elevation": 10.006561,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "Site Elevation",
+      "sensorID": "R1",
+      "name": "Relative Humidity",
+      "elevation": 7.217848,
+      "message": "",
+      "dcp": 1
+     },
+     {
+      "status": 1,
+      "refdatum": "MSL",
+      "sensorID": "site",
+      "name": "site",
+      "elevation": 7.545932,
+      "message": "",
+      "dcp": 0
+     }
+    ],
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/ofsmapoffsets.json"
+   },
+   "state": "TX",
+   "timezone": "CST",
+   "timezonecorr": -6,
+   "observedst": true,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/nearby.json"
+   },
+   "forecast": false,
+   "outlook": false,
+   "HTFhistorical": false,
+   "HTFmonthly": false,
+   "nonNavigational": false,
+   "inundationdb": false,
+   "id": "8775302",
+   "name": "Texas State Aquarium Visibility",
+   "lat": 27.8125,
+   "lng": -97.38861,
+   "affiliations": "",
+   "portscode": "cc",
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8775302.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": ""
+  },
+  {
+   "tidal": true,
+   "greatlakes": false,
+   "shefcode": "",
+   "details": {
+    "id": "9435373",
+    "established": "2025-05-13 00:00:00",
+    "removed": "",
+    "noaachart": "",
+    "timemeridian": -120,
+    "timezone": -8.0,
+    "origyear": "2025-05-13 09:24:00",
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/details.json"
+   },
+   "sensors": {
+    "units": "feet",
+    "sensors": null,
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/sensors.json"
+   },
+   "floodlevels": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/floodlevels.json"
+   },
+   "datums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/datums.json"
+   },
+   "supersededdatums": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/supersededdatums.json"
+   },
+   "harmonicConstituents": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/harcon.json"
+   },
+   "benchmarks": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/benchmarks.json"
+   },
+   "tidePredOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/tidepredoffsets.json"
+   },
+   "ofsMapOffsets": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/ofsmapoffsets.json"
+   },
+   "state": "OR",
+   "timezone": "PST",
+   "timezonecorr": -8,
+   "observedst": true,
+   "stormsurge": false,
+   "nearby": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/nearby.json"
+   },
+   "forecast": false,
+   "outlook": false,
+   "HTFhistorical": false,
+   "HTFmonthly": false,
+   "nonNavigational": false,
+   "inundationdb": false,
+   "id": "9435373",
+   "name": "McLean Point Turning Basin",
+   "lat": 44.622196,
+   "lng": -124.03078,
+   "affiliations": "",
+   "portscode": null,
+   "products": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/products.json"
+   },
+   "disclaimers": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/disclaimers.json"
+   },
+   "notices": {
+    "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373/notices.json"
+   },
+   "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9435373.json",
+   "expand": "details,sensors,floodlevels,datums,harcon,tidepredoffsets,ofsmapoffsets,products,disclaimers,notices",
+   "tideType": ""
+  }
+ ],
+ "self": null
+}

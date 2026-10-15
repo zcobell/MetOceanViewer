@@ -1,0 +1,28 @@
+{
+  "accepted": null,
+  "superseded": null,
+  "epoch": null,
+  "units": "meters",
+  "OrthometricDatum": null,
+  "datums": null,
+  "LAT": null,
+  "LATdate": null,
+  "LATtime": null,
+  "HAT": null,
+  "HATdate": null,
+  "HATtime": null,
+  "min": null,
+  "mindate": null,
+  "mintime": null,
+  "max": null,
+  "maxdate": null,
+  "maxtime": null,
+  "disclaimers": {
+    "disclaimers": [],
+    "self": null
+  },
+  "DatumAnalysisPeriod": [],
+  "NGSLink": null,
+  "ctrlStation": null,
+  "self": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/8517986/datums.json"
+}

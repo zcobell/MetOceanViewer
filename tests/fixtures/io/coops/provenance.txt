@@ -1,0 +1,100 @@
+NOAA CO-OPS responses (US Government work, public domain), recorded with curl
+from https://api.tidesandcurrents.noaa.gov; no key is involved. Every file is
+the response body byte for byte, except the stations_*.json files (below).
+Times are UTC. The data API path is /api/prod/datagetter and every data
+request also had
+  &application=MetOceanViewer&time_zone=gmt&units=metric&format=json
+(D = /api/prod/datagetter?, M = /mdapi/prod/webapi/).
+
+Copied from docs/provider-apis/ (recorded 2026-10-06, metric):
+  water_level.json        coops_water_level.json: water_level, 8729840, MSL
+  predictions.json        coops_predictions.json: predictions, 8729840, 6 min
+  datums.json             coops_datums.json (re-recorded 2026-10-15 16:49Z
+                          from M stations/8729840/datums.json?units=metric:
+                          byte-identical)
+Not used: docs/provider-apis/coops_wind.json is in knots (units=english): its
+speed 7.0 and gust 11.27 are 3.6 and 5.8 m/s in wind.json below.
+
+Recorded 2026-10-15 16:49Z:
+  water_level_igld.json   D product=water_level&station=9063020&datum=IGLD
+                          &begin_date=20261001 00:00&end_date=20261001 00:12
+  hourly_height.json      D product=hourly_height&station=8729840&datum=MLLW
+                          &begin_date=20250101 00:00&end_date=20250101 03:00
+  one_minute_water_level.json
+                          D product=one_minute_water_level&station=8729840
+                          &datum=MSL&begin_date=20261001 00:00
+                          &end_date=20261001 00:12
+  predictions_six_minute_navd.json
+                          D product=predictions&station=8729840&datum=NAVD
+                          &interval=6&begin_date=20261001 00:00
+                          &end_date=20261001 00:12
+  predictions_hourly.json D product=predictions&station=8729840&datum=MLLW
+                          &interval=h&begin_date=20261001 00:00
+                          &end_date=20261001 02:59
+  wind.json               D product=wind&station=8729840
+                          &begin_date=20261001 00:00&end_date=20261001 00:30
+  wind_hourly.json        D product=wind&station=8729840&interval=h
+                          &begin_date=20261001 00:00&end_date=20261001 02:59
+  air_temperature.json, water_temperature.json, air_pressure.json
+                          D product=<name>&station=8729840
+                          &begin_date=20261001 00:00&end_date=20261001 00:12
+  humidity.json, conductivity.json, salinity.json
+                          D product=<name>&station=8419870 (same dates)
+  visibility.json         D product=visibility&station=8575437 (same dates)
+  air_gap.json            D product=air_gap&station=8517986 (same dates)
+  air_gap_with_datum.json the same with &datum=MLLW: an identical body (the
+                          API ignores datum and interval for air_gap)
+  error_datum_missing.json
+                          D product=water_level&station=8729840 (no datum)
+                          &begin_date=20261001 00:00&end_date=20261001 00:12
+  error_datum_invalid.json
+                          the same with &datum=FOO
+  error_datum_not_at_station.json
+                          the same with &datum=IGLD
+  error_no_predictions.json
+                          D product=predictions&station=1610367 (subordinate)
+                          &datum=MLLW&interval=6&begin_date=20261001 00:00
+                          &end_date=20261001 02:59
+  error_no_data.json      D product=one_minute_water_level&station=8311062
+                          &datum=STND&begin_date=20261001 00:00
+                          &end_date=20261001 00:12
+  error_range.json        D product=water_level&station=8729840&datum=MLLW
+                          &begin_date=20261001 00:00&end_date=20261201 00:00
+  error_station.json      D product=water_level&station=1234567&datum=MLLW
+                          &begin_date=20261001 00:00&end_date=20261001 00:12
+  gateway_error.json      D product=water_level&station=8729840&datum=MLLW
+                          &begin_date=20261001 00:00&end_date=20261001 00:30:
+                          one transient gateway failure (HTTP status not
+                          recorded); the request repeated 40 s later gave
+                          water_level_mllw.json
+  datums_great_lakes.json M stations/9063020/datums.json?units=metric
+  datums_null.json        M stations/8517986/datums.json?units=metric (an air
+                          gap station: "datums": null)
+
+Recorded 2026-10-15 16:49Z (16:49:53):
+  water_level_mllw.json   the gateway_error.json request, repeated
+
+Recorded 2026-10-15 16:56Z:
+  error_wrong_date.json   D product=water_level&station=8729840&datum=MLLW
+                          &begin_date=20261002 00:00&end_date=20261001 00:00
+  error_bad_product.txt   D product=waterlevel&station=8729840&datum=MLLW
+                          &begin_date=20261001 00:00&end_date=20261001 00:12
+                          (a plain-text body, not JSON)
+  mdapi_error_type.json   M stations.json?type=air_gap
+
+Trimmed station lists, recorded 2026-10-15 16:49Z and cut to a few stations
+with a script that keeps every member of the envelope and of each kept
+station and drops the other stations (json.dump, indent 1, so the bytes
+differ from the response; "count" still gives the full list's size):
+  stations_waterlevels.json  M stations.json?type=waterlevels
+                             &expand=details,sensors: 1611400, 8729840,
+                             8771972, 9063020 (of 302)
+  stations_met.json          M stations.json?type=met&expand=details,sensors:
+                             1617433, 8419870, 8575437, 8775302 ("details":
+                             null), 9435373 ("sensors": null) (of 314)
+  stations_airgap.json       M stations.json?type=airgap
+                             &expand=details,sensors: 8517986, 8767931 (of 21)
+  stations_tidepredictions.json
+                             M stations.json?type=tidepredictions: 1610367
+                             (type S), 1612340, 8218617 (integer lat),
+                             8729840, TEC1603 (not a CO-OPS id) (of 3502)

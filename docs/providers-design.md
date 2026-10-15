@@ -4,8 +4,9 @@ Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's an
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
 layers, gates and build plumbing), P1 (§3, the core vocabulary; its deviations from
-revision 2 are in §3.7) and P6 (§5, the fetch layer; its deviations are in §5.7);
-nothing else from P2 on. Phase 2 (`core`, `io`) is as built;
+revision 2 are in §3.7), P2 (§4, the CO-OPS wire formats; deviations in §4.8) and P6
+(§5, the fetch layer; its deviations are in §5.7); nothing else from P3 on. Phase 2
+(`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
 
@@ -65,6 +66,10 @@ program of §1.5 built against the pinned Qt 6.11.3.
 | Predictions: "Harmonic tide prediction stations can provide tide predictions on any available interval. Subordinate tide prediction stations can only provide tide predictions on a high / low interval"; "Subordinate tide prediction stations must use datum=MLLW". | https://api.tidesandcurrents.noaa.gov/api/prod/ (2026-10-09) |
 | Live (2026-10-09): `stations.json?type=tidepredictions` lists 3,502 stations, `type` R (harmonic, 1,260) or S (subordinate, 2,242, with `reference_id`). Subordinate 1610367 and 8578240: `interval=6` and `interval=h` give "No Predictions data was found…", `interval=hilo` gives data. Every water-level station with `tidal` true (238) is type R. Of the 315 met stations, 5 are type S and **56 have `tidal` true but are not in the predictions list at all** (8444069: no predictions at any interval). So `tidal` does not say whether predictions exist: the catalog takes the prediction type from the `tidepredictions` list (§3.3). | live |
 | `stations.json?type=waterlevels&expand=details,sensors`: 302 stations, `details.established`/`removed`, sensors (`name`, `status`, `sensorID`), 1.3 MB. `type=met`: 315. `expand=datums` does not expand; `products` are website links. `datums.json` values are relative to `STND`; it names `NAVD88`, `DTL`, `GT`, `MN`, `DHQ`, `DLQ` besides the tidal datums; `LAT`/`HAT` are top-level members. | live |
+| Live (2026-10-15, P2; bodies in `tests/fixtures/io/coops/`): `air_gap` ignores `datum` and `interval` (identical bodies), and the API page says "Datum is mandatory for water level data products, except Air Gap"; its 21 bridges are listed only by `type=airgap` (sensor `AIR GAP`), in neither the water-level nor the met list. `salinity` records are `s` (salinity) and `g` (specific gravity), not `v`. `conductivity` and `salinity` are the same numbers with `units=english`. `water_level` ignores `interval=h` (hourly is `hourly_height`). `docs/provider-apis/coops_wind.json` is in knots (its 7.0 is 3.6 m/s), so it is not a metric fixture. | live |
+| Live (2026-10-15): more refusals. `datum=IGLD` where there is none: "There is no IGLD for the station: 8729840"; no datum: "Wrong Datum: Datum cannot be null or empty ***station=…"; begin after end: "Wrong Date: … The end date should be greater than the begin date"; a bad product name: a **plain-text** body; a transient gateway failure: `{"message": "Network error communicating with endpoint"}`; the metadata API: `{"errorMsg": "Invalid type specified: …"}`; `datums.json` of an unknown or air-gap station: HTTP 200 with `"datums": null`. | live |
+| Live (2026-10-15): Great Lakes `datums.json` (9063020 Buffalo) lists only `GL_LWD` (173.5, an IGLD85 height), with no MSL, STND or IGLD, while the data API serves `datum=IGLD` and `STND` there (equal values: the station datum is IGLD85) and refuses MSL and MLLW ("There is no MSL for the station"). So IGLD comes from the list's `greatlakes`, not from `datums.json`. | live |
+| Live (2026-10-15): one-minute water level. `type=1minute` lists 257 stations; every water-level station with an active `Tsunami WL` sensor (236) is in it, plus 16 without one. 8771972 (Backup WL, Tsunami WL inactive) serves 1-minute data; 8518979 (in the list) and 8311062 (neither) return "No data was found". Neither rule is exact; P2 takes the sensor (§4.8). | live |
 
 ### 1.2 USGS Water Data
 
@@ -643,6 +648,39 @@ test runs `QXmlStreamReader` over the fuzz corpus as the reference (§10.4).
   CLI reports `unsupported_cadence` (a new `FormatErrc`).
 - io `WarningCode` gains `provisional_samples`, `qualified_samples`, `unknown_sensor`,
   `station_skipped`; `Error` gains HE's `JsonError` (H5).
+
+### 4.8 As built (P2): deviations
+
+P2 built `mov/io/wire/origin.hpp`, `service.hpp`, `body.hpp` and `coops.hpp`; the JSON
+parsers are in `src/io/json/` (the only sources that include nlohmann), the targets and
+body checks in `src/io/wire/`. The facts behind the changes are the 2026-10-15 rows of
+§1.1, each pinned by a recorded body in `tests/fixtures/io/coops/` (`provenance.txt`).
+
+| §4 says | Built | Why |
+|---|---|---|
+| `Target = variant<Composed, Verbatim>` in `origin.hpp` | `Origin`, `base`, `QueryParam`, `Composed` only | CO-OPS composes every request; `Verbatim` and `Target` join with their first user (USGS paging, P3). |
+| `ServiceError`, `ServiceErrc`, `NoData` in fetch (§5.1) | in `io::wire` (`service.hpp`); `ServiceError` is a class whose `make` trims and cuts the text to 120 B on a UTF-8 boundary | io classifies the bodies, so io names the result; fetch's `Error` takes these types (`using io::wire::ServiceError;`, likewise `NoData`, `ServiceErrc`) instead of declaring its own. |
+| `coops::targets(request, window)`, end sent as `window.end() − 1 min` | `targets(request, window) -> expected<WindowTargets, FormatError>`: `WindowTargets{DataTarget first; optional<DataTarget> second}`, each `{Series, Composed}`. `begin_date` is the first whole minute at or after the begin, `end_date` the last whole minute before the end | The same as "end − 1 min" for the minute-aligned windows the planner makes, and still exact for any other window. A window with no whole minute, or one outside the years 0000–9999 (`yyyyMMdd`), is the new `FormatErrc::unrepresentable_time`, not a precondition. |
+| `datum` only for `WaterLevel`; `interval` when not the default | as said; predictions at 60 min send `h`, at 6 send nothing; `air_gap` sends no datum | The API ignores a datum on `air_gap` (recorded); `interval=60` and `h` give the same body. |
+| `catalog_targets()`: waterlevels, met, tidepredictions | `station_list_target(StationList)` for `water_levels`, `met`, `air_gap`, `tide_predictions`; `datums_target(id)` | The 21 air-gap bridges are in no other list, so without `type=airgap` `Met::air_gap` is never offered. P5a reads all four. |
+| `classify_body(body)` with five message rules | `classify_body(origin, body, content_type)`: markup first (`sniff_markup`); a body that is not JSON is classified by its text; then `error`, `errorMsg`, or a lone `message`. Added rules: "No Predictions data was found" is `NoData`; "There is no … for the station" is `datum_unavailable`; "Wrong Date", "Wrong Product", "Invalid type specified" are `invalid_parameter`; anything else `unknown` | Each recorded refusal of §1.1. JSON that does not parse is a `Payload`, so its parser reports the error with a location. |
+| `parse_data(body, kind, ctx)` and `parse_predictions(body, ctx)` -> `Read<Part>` | one `parse_data(body, Series, ctx) -> expected<Read<Columns>, Error>`; `Series = variant<Observation, Prediction, Meteorological>` (a `Product` that is not a pair; `series_of(Product)` gives one or two); `Columns = map<string, TimeSeries>` by quantity token | The series decides the envelope (`data` or `predictions`), the columns, the unit and the datum, so one entry point cannot be called with the wrong envelope. `Part` is fetch's (P6, in parallel): io returns core values. **Assumption for P6:** a `fetch::Column{meta, rows}` is each `TimeSeries` taken apart (`into_parts`, times zipped with samples), or `Part` holds the `TimeSeries`; each column is already in strictly increasing time (disorder is put right by `core::normalize` with its warnings, subject `coops:<token>`). |
+| `v` (or `s`/`d`/`g`) | per product, pinned: water levels and predictions `v` (m, the datum asked for); temperatures `v` (degC); `air_pressure` hPa; `humidity` → `relative_humidity` (percent); `visibility` km; wind `s`, `d`, `g` → `wind_speed`, `wind_direction`, `wind_gust` (m/s, degree; `dr` ignored); `conductivity` `v` (mS/cm); `salinity` `s` (PSU; `g` ignored) → generic `salinity` (`sea_water_practical_salinity`); `air_gap` `v` (m) → generic `air_gap`, no datum | The recordings. mS/cm and PSU are outside the unit table, so every conductivity and salinity body warns `unrecognized_unit`, and the station netCDF writer cannot store conductivity in its canonical S m-1. **EX #1 decision before those two ship:** convert mS/cm exactly (× 0.1) at the edge, or add the unit. `air_gap` is settled as a met product (§3.2's open point). |
+| errors as `ParseError` | two new `ParseErrc`: `not_json` (where nlohmann stopped) and `bad_member` (a member missing, repeated or of the wrong JSON type); every error has the line and column of the value at fault, from nlohmann's `JSON_DIAGNOSTIC_POSITIONS` (each value's start offset), and its text from there as context; only a JSON number past a double (nlohmann's own `out_of_range`) has no column. A NUL byte anywhere is `not_json` there | HE's `JsonError` (H5) is the harmonics file's, with its own codes; a provider body needs only these two. A repeated member is refused at its object (nlohmann would keep one). nlohmann's lexer takes a NUL for the end of the input and would accept `{…}\0junk` (found by `fuzz_json_depth`). |
+| `parse_stations` → `vector<CoopsStationRecord>` | `StationRecord{GaugeStation<Coops> station; ObservedSet observed; MetSet met; bool great_lakes}`. Sensors by a pinned name table, status 1 only: Acoustic, Microwave, Pressure, SAE, Backup WL → 6-minute and hourly; Tsunami WL → 1-minute; Conductivity → conductivity and salinity; AIR GAP → air_gap; `site`, `Rain Fall`, `ANALOG SENSOR 1`/`2` → nothing. `"details": null` is unknown validity, `"sensors": null` no products: the station is kept | The 2026-10-15 lists. `great_lakes` is kept in the record (not in `Capabilities`): it is how the catalog learns that IGLD is served (§1.1). The 1-minute rule is the sensor; P5a may add the `type=1minute` list (§1.1 shows neither is exact). |
+| tidepredictions parsed in `parse_stations` | `parse_prediction_stations` → `vector<PredictionStation{id, Predictions}>`, R `any_interval`, S `hilo_only`; TEC ids and other types skipped and counted | Its records have no sensors or details. |
+| `parse_datums` → `Read<DatumTable>`, no MSL an error | `parse_datums` → `Read<StationDatums{DatumSet offered; optional<DatumTable> table}>`; no MSL (Great Lakes, `"datums": null`) is no table, not an error; `units` other than "meters" is `FormatError noncanonical_unit`; conflicting heights `inconsistent_metadata`; NGVD29 enters the table but is never offered (D32); `IGLD`/`IGLD85` → IGLD85 | `Capabilities` needs both the table and `datums_offered`, and a station without MSL is ordinary. |
+| — | `ReadLimits`: a data record costs one element per column, a station 16 (CD §5), a datums row 1; the body is bounded by `max_text_bytes` | Limits before allocation, as every reader. |
+
+Regressions in P2 (`[regression]`): L1 (adjacent windows never share a minute, targets
+byte-exact), L4 (a one-point series is kept), L5 (wind is three columns), L9 (no 2050:
+an ongoing station has no last day), L10 (predictions carry the request's datum in
+their own exchange). Fuzz targets: `fuzz_coops_json`, `fuzz_coops_metadata`,
+`fuzz_json_depth` (§10.4).
+
+For H5: the harmonics reader can reuse `src/io/json/document.hpp` (the streaming parse,
+the repeated-member check, the depth pre-scan and the NUL rule). Its UTF-8 pass (HE
+§6.3 step 3) does not catch a NUL, which is valid UTF-8, so it needs the NUL rule too.
 
 ---
 
