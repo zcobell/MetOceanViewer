@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace mov::fetch {
@@ -157,8 +158,16 @@ class RetryPolicy {
     std::string_view value, std::optional<std::string_view> date) noexcept;
 
 /// An HTTP-date (the three forms above) as an instant; nullopt for anything
-/// else. RFC 850's two-digit year is 19yy from 70 and 20yy below.
+/// else. RFC 850's two-digit year is the year with those digits at most 50
+/// years after `reference` (RFC 9110 §5.6.7); without a reference, 70 to 99
+/// are 19yy and the rest 20yy. retry_after passes the Date header's year.
 [[nodiscard]] std::optional<std::chrono::sys_seconds> parse_http_date(
-    std::string_view text) noexcept;
+    std::string_view text,
+    std::optional<std::chrono::year> reference = std::nullopt) noexcept;
+
+/// An instant as an IMF-fixdate ("Sun, 06 Nov 1994 08:49:37 GMT"); nullopt
+/// outside the four-digit years.
+[[nodiscard]] std::optional<std::string> format_imf_fixdate(
+    std::chrono::sys_seconds t);
 
 }  // namespace mov::fetch

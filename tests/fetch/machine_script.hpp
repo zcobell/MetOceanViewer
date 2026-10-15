@@ -58,8 +58,17 @@ class Script {
                       std::vector<io::Warning> warnings = {}) {
     return on(event::Parsed<typename S::Parsed>{
         .id = id,
-        .parsed = io::Read<typename S::Parsed>{
-            .value = std::move(value), .warnings = std::move(warnings)}});
+        .parsed = io::Read<SlotResult<typename S::Parsed>>{
+            .value = SlotResult<typename S::Parsed>{std::move(value)},
+            .warnings = std::move(warnings)}});
+  }
+  /// The body held nothing (CO-OPS "No data was found").
+  const Steps& parsed_absent(ExchangeId id) {
+    return on(event::Parsed<typename S::Parsed>{
+        .id = id,
+        .parsed = io::Read<SlotResult<typename S::Parsed>>{
+            .value = SlotResult<typename S::Parsed>{Absent{}},
+            .warnings = {}}});
   }
   const Steps& parse_failed(ExchangeId id, Error error) {
     return on(event::Parsed<typename S::Parsed>{

@@ -9,6 +9,6 @@
 
 mov_add_module(
     fetch
-    SOURCES coops_plan.cpp error.cpp ndbc_plan.cpp part.cpp retry_after.cpp usgs_plan.cpp
+    SOURCES coops_plan.cpp error.cpp gate.cpp ndbc_plan.cpp retry_after.cpp usgs_plan.cpp
     PUBLIC_LINK mov::io
 )

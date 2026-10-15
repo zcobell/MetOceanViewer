@@ -13,7 +13,6 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
-#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -43,29 +42,47 @@ struct PageUnit {
 
 /// The page that continues `unit`, after the page `summary` describes: none
 /// when the chain ends, one when its link may be followed. A page that
-/// breaks a paging rule fails the unit (PageGuard::after).
+/// breaks a paging rule fails the unit with the PagingError
+/// (PageGuard::after).
 template <class Link, class Position>
 [[nodiscard]] std::expected<std::optional<PageUnit<Link, Position>>, Error>
 next_page(const PageUnit<Link, Position>& unit,
           const PageSummary<Link, Position>& summary) {
   auto turn = unit.guard.after(summary);
   if (not turn) {
-    return std::unexpected{Error{std::move(turn).error()}};
+    return std::unexpected{Error{turn.error()}};
   }
-  if (not *turn) {
+  if (not turn->has_value()) {
     return std::optional<PageUnit<Link, Position>>{};
   }
+  auto& t = turn->value();
   return std::optional<PageUnit<Link, Position>>{PageUnit<Link, Position>{
-      .guard = std::move((*turn)->guard), .link = std::move((*turn)->link)}};
+      .guard = std::move(t.guard), .link = std::move(t.link)}};
+}
+
+/// The units that continue a chain: the next page as the unit `make` builds
+/// from it, or none.
+template <class Unit, class Link, class Position, class Make>
+[[nodiscard]] std::expected<std::vector<Unit>, Error> continue_chain(
+    const PageUnit<Link, Position>& page,
+    const PageSummary<Link, Position>& summary, Make make) {
+  return next_page(page, summary)
+      .transform([&](std::optional<PageUnit<Link, Position>> next) {
+        std::vector<Unit> units;
+        if (next) {
+          units.push_back(make(*std::move(next)));
+        }
+        return units;
+      });
 }
 
 // ---- stage 1: resolution --------------------------------------------------
 
-/// A page of the site's series. Series rows have no order, so the guard
-/// checks only the page count, empty pages and repeated links.
+/// A page of the site's series. Series rows have no order (NoPosition), so
+/// the guard checks only the page count, empty pages and repeated links.
 template <class Link>
 struct ResolutionUnit {
-  PageUnit<Link, core::Time> page;
+  PageUnit<Link, NoPosition> page;
   friend bool operator==(const ResolutionUnit&,
                          const ResolutionUnit&) = default;
 };
@@ -73,7 +90,7 @@ struct ResolutionUnit {
 template <class Link>
 [[nodiscard]] ResolutionUnit<Link> first_resolution_page() {
   return {.page = {
-              .guard = PageGuard<Link, core::Time>::first(max_resolution_pages),
+              .guard = PageGuard<Link, NoPosition>::first(max_resolution_pages),
               .link = std::nullopt}};
 }
 
@@ -85,36 +102,56 @@ template <class Link>
 template <class Link>
 [[nodiscard]] std::expected<std::vector<ResolutionUnit<Link>>, Error> next(
     const ResolutionUnit<Link>& unit,
-    const PageSummary<Link, core::Time>& summary) {
-  return next_page(unit.page, summary)
-      .transform([](std::optional<PageUnit<Link, core::Time>> page) {
-        std::vector<ResolutionUnit<Link>> units;
-        if (page) {
-          units.push_back({.page = *std::move(page)});
-        }
-        return units;
+    const PageSummary<Link, NoPosition>& summary) {
+  return continue_chain<ResolutionUnit<Link>>(
+      unit.page, summary, [](PageUnit<Link, NoPosition> page) {
+        return ResolutionUnit<Link>{.page = std::move(page)};
       });
 }
 
-/// What stage 1 hands stage 2: the request and the series it resolved to.
 template <class C>
-struct DataRequest {
-  C request;
-  core::usgs::Resolved<C> series;
-  friend bool operator==(const DataRequest&, const DataRequest&) = default;
-};
+class DataRequest;
 
 /// The bind between the stages: the site's series rows (stage 1's value) to
-/// stage 2's request. Several Primary series of the parameter and statistic
-/// are AmbiguousSeries (with their ids), a repeated id a ParseError
-/// (corrupt_record), no series NoData, a series of the other collection
-/// WrongCollection; each failure is labelled Resolution{0}.
+/// stage 2's request. A repeated id is DuplicateSeries, several Primary
+/// series of the parameter and statistic AmbiguousSeries (with their ids),
+/// no series NoData, a series of the other collection WrongCollection; each
+/// failure is labelled Resolution{0}.
 [[nodiscard]] std::expected<DataRequest<core::usgs::Continuous>, Failure> bind(
     const core::usgs::Continuous& request,
     const std::vector<core::usgs::SeriesInfo>& rows);
 [[nodiscard]] std::expected<DataRequest<core::usgs::Daily>, Failure> bind(
     const core::usgs::Daily& request,
     const std::vector<core::usgs::SeriesInfo>& rows);
+
+/// What stage 1 hands stage 2: the request and the series it resolved to.
+/// Made only by bind.
+template <class C>
+class DataRequest {
+ public:
+  [[nodiscard]] const C& request() const& noexcept { return request_; }
+  const C& request() && = delete;
+  [[nodiscard]] const core::usgs::Resolved<C>& series() const& noexcept {
+    return series_;
+  }
+  const core::usgs::Resolved<C>& series() && = delete;
+
+  friend bool operator==(const DataRequest&, const DataRequest&) = default;
+
+ private:
+  friend std::expected<DataRequest<core::usgs::Continuous>, Failure> bind(
+      const core::usgs::Continuous& request,
+      const std::vector<core::usgs::SeriesInfo>& rows);
+  friend std::expected<DataRequest<core::usgs::Daily>, Failure> bind(
+      const core::usgs::Daily& request,
+      const std::vector<core::usgs::SeriesInfo>& rows);
+
+  DataRequest(C request, core::usgs::Resolved<C> series)
+      : request_{std::move(request)}, series_{std::move(series)} {}
+
+  C request_;
+  core::usgs::Resolved<C> series_;
+};
 
 // ---- stage 2: data --------------------------------------------------------
 
@@ -147,19 +184,20 @@ struct DailyUnit {
 }
 
 /// The first page of every window, in time order. Each window may take
-/// max_pages(window, 1 min, page_rows) pages.
+/// max_pages({window, 1 min, page_rows}) pages.
 template <class Link>
 [[nodiscard]] std::expected<std::vector<ContinuousUnit<Link>>, Error> initial(
     const DataRequest<core::usgs::Continuous>& request) {
-  const auto cut = windows(request.request);
+  const auto cut = windows(request.request());
   if (not cut) {
     return std::unexpected{Error{cut.error()}};
   }
   std::vector<ContinuousUnit<Link>> units;
   units.reserve(cut->size());
   for (const core::TimeRange window : *cut) {
-    const auto pages =
-        max_pages(window.end() - window.begin(), finest_cadence, page_rows);
+    const auto pages = max_pages({.span = window.end() - window.begin(),
+                                  .cadence = finest_cadence,
+                                  .page_rows = page_rows});
     units.push_back(
         {.window = window,
          .page = {.guard = PageGuard<Link, core::Time>::first(pages),
@@ -169,14 +207,16 @@ template <class Link>
 }
 
 /// One unit: daily values have no window limit (36 years came back on one
-/// page); the chain may take max_pages(days, 1 day, page_rows) pages.
+/// page); the chain may take max_pages({days, 1 day, page_rows}) pages.
 template <class Link>
 [[nodiscard]] std::vector<DailyUnit<Link>> initial(
     const DataRequest<core::usgs::Daily>& request) {
-  const core::DayRange days = request.request.days;
-  const auto pages = max_pages(
-      std::chrono::duration_cast<std::chrono::milliseconds>(days.size()),
-      std::chrono::days{1}, page_rows);
+  const core::DayRange days = request.request().days;
+  const auto pages =
+      max_pages({.span = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     days.size()),
+                 .cadence = std::chrono::days{1},
+                 .page_rows = page_rows});
   return {DailyUnit<Link>{
       .days = days,
       .page = {.guard = PageGuard<Link, std::chrono::local_days>::first(pages),
@@ -197,13 +237,10 @@ template <class Link>
 [[nodiscard]] std::expected<std::vector<ContinuousUnit<Link>>, Error> next(
     const ContinuousUnit<Link>& unit,
     const PageSummary<Link, core::Time>& summary) {
-  return next_page(unit.page, summary)
-      .transform([&](std::optional<PageUnit<Link, core::Time>> page) {
-        std::vector<ContinuousUnit<Link>> units;
-        if (page) {
-          units.push_back({.window = unit.window, .page = *std::move(page)});
-        }
-        return units;
+  return continue_chain<ContinuousUnit<Link>>(
+      unit.page, summary, [&](PageUnit<Link, core::Time> page) {
+        return ContinuousUnit<Link>{.window = unit.window,
+                                    .page = std::move(page)};
       });
 }
 
@@ -211,15 +248,10 @@ template <class Link>
 [[nodiscard]] std::expected<std::vector<DailyUnit<Link>>, Error> next(
     const DailyUnit<Link>& unit,
     const PageSummary<Link, std::chrono::local_days>& summary) {
-  return next_page(unit.page, summary)
-      .transform(
-          [&](std::optional<PageUnit<Link, std::chrono::local_days>> page) {
-            std::vector<DailyUnit<Link>> units;
-            if (page) {
-              units.push_back({.days = unit.days, .page = *std::move(page)});
-            }
-            return units;
-          });
+  return continue_chain<DailyUnit<Link>>(
+      unit.page, summary, [&](PageUnit<Link, std::chrono::local_days> page) {
+        return DailyUnit<Link>{.days = unit.days, .page = std::move(page)};
+      });
 }
 
 }  // namespace mov::fetch::usgs

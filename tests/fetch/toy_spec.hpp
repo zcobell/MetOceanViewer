@@ -3,9 +3,10 @@
 
 #pragma once
 
-// A toy FetchSpec for the machine's tests: no provider, no parser. Each
-// parsed page is one number that encodes where it came from, so the merge's
-// plan order can be checked by sorting.
+// A toy FetchSpec for the machine's tests: no provider, no parser. A unit
+// is named by its plan path (initial index, then successor indices), each
+// parsed page is that path plus the slot, so a merge in plan order is sorted
+// and the units it came from can be read back.
 
 #include <chrono>
 #include <cstdint>
@@ -21,47 +22,73 @@
 
 namespace mov::fetch::test {
 
+/// A unit's place: its plan path (initial index first).
+using ToyPath = std::vector<std::uint32_t>;
+/// A parsed page: its unit's path and slot (key_of).
+using ToyKey = std::vector<std::uint32_t>;
+
 struct ToyRequest {
-  std::uint32_t units = 1;  ///< initial units
-  std::uint32_t slots = 1;  ///< exchanges per unit
-  std::uint32_t pages =
-      1;  ///< units per chain: a received unit adds the next page
-  bool fallback = false;  ///< an absent unit is followed by one fallback unit
+  std::uint32_t units = 1;   ///< initial units
+  std::uint32_t slots = 1;   ///< exchanges per unit (0 breaks the contract)
+  std::uint32_t depth = 0;   ///< successor levels after a received unit
+  std::uint32_t branch = 1;  ///< successors per received unit
+  bool fallback = false;  ///< an absent unit gets one fallback, twice at most
   Origin origin = Origin::coops_data;
   bool fail_initial = false;  ///< initial() fails
-  bool fail_next = false;     ///< next() fails on a received page 1
+  bool fail_next = false;     ///< next() fails on a received unit at depth 1
   friend bool operator==(const ToyRequest&, const ToyRequest&) = default;
 };
 
 struct ToyUnit {
-  std::uint32_t unit;
-  std::uint32_t page;
-  bool fallback;
+  ToyPath path;
+  std::uint32_t depth;      ///< successor levels below the initial unit
+  std::uint32_t fallbacks;  ///< fallbacks taken on the way here
   friend bool operator==(const ToyUnit&, const ToyUnit&) = default;
 };
 
 struct ToyTarget {
-  ToyUnit unit;
+  ToyPath path;
   std::uint32_t slot;
   Origin origin;
   friend bool operator==(const ToyTarget&, const ToyTarget&) = default;
 };
 
-/// The number a target's page parses to: ascending in plan order (unit,
-/// then the original chain before the fallback chain, then page, then
-/// slot), so a merge in plan order is sorted.
-[[nodiscard]] inline std::int64_t encode(const ToyTarget& t) {
-  constexpr std::int64_t per_unit = 1'000'000;
-  constexpr std::int64_t per_fallback = 100'000;
-  constexpr std::int64_t per_page = 100;
-  return (static_cast<std::int64_t>(t.unit.unit) * per_unit) +
-         (t.unit.fallback ? per_fallback : 0) +
-         (static_cast<std::int64_t>(t.unit.page) * per_page) +
-         static_cast<std::int64_t>(t.slot);
+/// A page's key: the path's steps + 1, a 0, then the slot, so keys sort in
+/// plan order (a unit's slots before its successors).
+[[nodiscard]] inline ToyKey key_of(const ToyTarget& t) {
+  ToyKey k;
+  for (const std::uint32_t step : t.path) {
+    k.push_back(step + 1);
+  }
+  k.push_back(0);
+  k.push_back(t.slot);
+  return k;
+}
+
+/// The path a key names.
+[[nodiscard]] inline ToyPath path_of(const ToyKey& k) {
+  ToyPath path;
+  for (const std::uint32_t step : k) {
+    if (step == 0) {
+      break;
+    }
+    path.push_back(step - 1);
+  }
+  return path;
+}
+
+/// A label index that names a path (unit < 8, at most 6 levels, index < 3).
+[[nodiscard]] inline std::uint32_t label_index(const ToyPath& path) {
+  constexpr std::uint32_t base = 4;
+  std::uint32_t index = 0;
+  for (const std::uint32_t step : path) {
+    index = (index * base) + step + 1;
+  }
+  return index;
 }
 
 struct ToyPage {
-  std::vector<std::int64_t> values;
+  std::vector<ToyKey> keys;
 };
 
 struct ToySpec {
@@ -69,8 +96,8 @@ struct ToySpec {
   using Unit = ToyUnit;
   using Target = ToyTarget;
   using Parsed = ToyPage;
-  using Part = std::vector<std::int64_t>;
-  using Value = std::vector<std::int64_t>;
+  using Part = std::vector<ToyKey>;
+  using Value = std::vector<ToyKey>;
 
   static std::expected<std::vector<Unit>, Error> initial(const Request& r,
                                                          core::Time /*now*/) {
@@ -79,7 +106,7 @@ struct ToySpec {
     }
     std::vector<Unit> units;
     for (std::uint32_t i = 0; i < r.units; ++i) {
-      units.push_back({.unit = i, .page = 0, .fallback = false});
+      units.push_back({.path = {i}, .depth = 0, .fallbacks = 0});
     }
     return units;
   }
@@ -87,7 +114,7 @@ struct ToySpec {
   static std::vector<Target> targets(const Request& r, const Unit& u) {
     std::vector<Target> out;
     for (std::uint32_t s = 0; s < r.slots; ++s) {
-      out.push_back({.unit = u, .slot = s, .origin = r.origin});
+      out.push_back({.path = u.path, .slot = s, .origin = r.origin});
     }
     return out;
   }
@@ -95,35 +122,68 @@ struct ToySpec {
   static Origin origin(const Target& t) { return t.origin; }
 
   static UnitLabel label(const Request& /*r*/, const Unit& u) {
-    constexpr std::uint32_t per_unit = 1000;
-    constexpr std::uint32_t per_fallback = 500;
-    return CatalogPart{.index = (u.unit * per_unit) +
-                                (u.fallback ? per_fallback : 0U) + u.page};
+    return CatalogPart{.index = label_index(u.path)};
   }
 
   static std::expected<std::vector<Unit>, Error> next(
       const Request& r, const Unit& u, const UnitOutcome<Parsed>& outcome) {
+    constexpr std::uint32_t max_fallbacks = 2;
+    std::vector<Unit> out;
+    const auto child = [&](std::uint32_t k, std::uint32_t depth,
+                           std::uint32_t fallbacks) {
+      ToyPath path = u.path;
+      path.push_back(k);
+      out.push_back(
+          {.path = std::move(path), .depth = depth, .fallbacks = fallbacks});
+    };
     if (std::holds_alternative<Absent>(outcome)) {
-      if (r.fallback and not u.fallback) {
-        return std::vector<Unit>{
-            {.unit = u.unit, .page = u.page, .fallback = true}};
+      if (r.fallback and u.fallbacks < max_fallbacks) {
+        child(0, u.depth, u.fallbacks + 1);
       }
-      return std::vector<Unit>{};
+      return out;
     }
-    if (r.fail_next and u.page == 1) {
-      return std::unexpected{Error{MetaMismatch{.column = "toy"}}};
+    if (r.fail_next and u.depth == 1) {
+      return std::unexpected{
+          Error{PagingError{.rule = PagingRule::link_repeated, .page = 1}}};
     }
-    if (u.page + 1 < r.pages) {
-      return std::vector<Unit>{
-          {.unit = u.unit, .page = u.page + 1, .fallback = u.fallback}};
+    if (u.depth < r.depth) {
+      for (std::uint32_t k = 0; k < r.branch; ++k) {
+        child(k, u.depth + 1, u.fallbacks);
+      }
     }
-    return std::vector<Unit>{};
+    return out;
   }
 
-  static Part into_part(Parsed&& p) { return std::move(p.values); }
+  static Part into_part(std::vector<SlotResult<Parsed>> slots) {
+    Part part;
+    for (auto& s : slots) {
+      if (auto* page = std::get_if<ToyPage>(&s)) {
+        for (auto& k : page->keys) {
+          part.push_back(std::move(k));
+        }
+      }
+    }
+    return part;
+  }
+
   static bool has_data(const Part& p) { return not p.empty(); }
+
+  static std::expected<io::Read<Value>, Error> merge(std::vector<Part> parts) {
+    Value all;
+    for (auto& p : parts) {
+      for (auto& k : p) {
+        all.push_back(std::move(k));
+      }
+    }
+    return io::Read<Value>{.value = std::move(all), .warnings = {}};
+  }
 };
 
 static_assert(FetchSpec<ToySpec>);
+
+/// The page a target parses to: its key.
+[[nodiscard]] inline ToyPage page_for(const ToyTarget& t) {
+  return ToyPage{.keys = {key_of(t)}};
+}
 
 }  // namespace mov::fetch::test

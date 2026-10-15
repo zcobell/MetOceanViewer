@@ -5,6 +5,7 @@
 // (docs/providers-design.md §5.1).
 
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -12,6 +13,7 @@
 #include <variant>
 #include <vector>
 
+#include "mov/core/quantity.hpp"
 #include "mov/fetch/error.hpp"
 #include "mov/fetch/part.hpp"
 
@@ -25,14 +27,23 @@ template <class T, class... A>
 constexpr bool holds_type<T, std::variant<A...>> =
     (std::is_same_v<T, A> or ...);
 
-// Every io::Error alternative is a fetch::Error alternative.
+// Every io::Error alternative is a fetch::Error alternative, once.
 template <class... A>
 constexpr bool all_in_error(std::variant<A...>* /*tag*/) {
   return (holds_type<A, Error> and ...);
 }
 static_assert(all_in_error(static_cast<mov::io::Error*>(nullptr)));
 static_assert(std::variant_size_v<Error> ==
-              std::variant_size_v<mov::io::Error> + 11);
+              std::variant_size_v<mov::io::Error> + 17);
+static_assert(detail::unique_alternatives<Error>);
+static_assert(not detail::unique_alternatives<std::variant<int, int>>);
+
+const ColumnKey key{.quantity = mov::core::Quantity::water_level};
+
+Trail trail(std::uint32_t exchanges, mov::io::WarningCode code) {
+  return {.warnings = {mov::io::Warning{.code = code}},
+          .stats = {.exchanges = exchanges, .retries = 0, .bytes = exchanges}};
+}
 
 }  // namespace
 
@@ -49,10 +60,10 @@ TEST_CASE("lift_io keeps the io error as it is", "[fetch][error]") {
 }
 
 TEST_CASE("lift_merge keeps the merge error as it is", "[fetch][error]") {
-  CHECK(lift_merge(MetaMismatch{.column = "c"}) ==
-        Error{MetaMismatch{.column = "c"}});
-  CHECK(lift_merge(UnitMismatch{.column = "c"}) ==
-        Error{UnitMismatch{.column = "c"}});
+  CHECK(lift_merge(MetaMismatch{.column = key}) ==
+        Error{MetaMismatch{.column = key}});
+  CHECK(lift_merge(UnitMismatch{.column = key}) ==
+        Error{UnitMismatch{.column = key}});
 }
 
 TEST_CASE("a service error's text is cut to 120 bytes on a UTF-8 boundary",
@@ -68,27 +79,25 @@ TEST_CASE("a service error's text is cut to 120 bytes on a UTF-8 boundary",
   const auto cut =
       ServiceError::make(Origin::usgs, ServiceErrc::unknown, straddle);
   CHECK(cut.text() == std::string(119, 'x'));
+  // Surrounding white space is trimmed first (as io::wire's).
+  const auto padded =
+      ServiceError::make(Origin::usgs, ServiceErrc::unknown, " \tNo key \n");
+  CHECK(padded.text() == "No key");
 }
 
-TEST_CASE("split and after carry an earlier stage's trail to the later result",
+TEST_CASE("the trail is a monoid: warnings in order, stats summed",
           "[fetch][stages]") {
-  Fetched<int> first{
-      .value = 7,
-      .warnings = {FetchWarning{CooledDown{
-          .origin = Origin::usgs, .for_ = std::chrono::milliseconds{5}}}},
-      .stats = {.exchanges = 2, .retries = 1, .bytes = 10}};
-  auto [value, trail] = split(std::move(first));
-  CHECK(value == 7);
-  CHECK(trail.stats == Stats{.exchanges = 2, .retries = 1, .bytes = 10});
-  Fetched<std::string> second{
-      .value = "data",
-      .warnings = {mov::io::Warning{.code = mov::io::WarningCode::epoch_used}},
-      .stats = {.exchanges = 3, .retries = 0, .bytes = 5}};
-  const Fetched<std::string> joined =
-      after(std::move(trail), std::move(second));
-  CHECK(joined.value == "data");
-  CHECK(joined.stats == Stats{.exchanges = 5, .retries = 1, .bytes = 15});
-  REQUIRE(joined.warnings.size() == 2);
-  CHECK(std::holds_alternative<FetchWarning>(joined.warnings[0]));
-  CHECK(std::holds_alternative<mov::io::Warning>(joined.warnings[1]));
+  const Trail a = trail(2, mov::io::WarningCode::epoch_used);
+  const Trail b = trail(3, mov::io::WarningCode::times_reordered);
+  const Trail c = trail(5, mov::io::WarningCode::foreign_cf);
+  CHECK(a + Trail{} == a);
+  CHECK(Trail{} + a == a);
+  CHECK((a + b) + c == a + (b + c));
+  const Trail ab = a + b;
+  CHECK(ab.stats == Stats{.exchanges = 5, .retries = 0, .bytes = 5});
+  REQUIRE(ab.warnings.size() == 2);
+  CHECK(std::get<mov::io::Warning>(ab.warnings[0]).code ==
+        mov::io::WarningCode::epoch_used);
+  const Fetched<int> f{.value = 7, .trail = ab};
+  CHECK(f.value == 7);
 }

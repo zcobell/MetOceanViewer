@@ -9,39 +9,58 @@
 
 #include <algorithm>
 #include <chrono>
+#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <limits>
 #include <optional>
-#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "mov/io/error.hpp"
+#include "mov/fetch/error.hpp"
 
 namespace mov::fetch {
 
-/// What a parsed page says about paging: how many rows it had, its first
-/// and last row's position (a time, or a day for daily values; nullopt when
-/// the rows have no order, as a site's series do), and the link to the next
+/// The position type of rows that have no order (a site's series): a page
+/// of them has no Extent, so only the count, empty-page and repeated-link
+/// rules apply.
+struct NoPosition {
+  friend constexpr auto operator<=>(NoPosition, NoPosition) = default;
+};
+
+/// The first and last row's position on a page (a time, or a day for daily
+/// values).
+template <class Position>
+struct Extent {
+  Position first;
+  Position last;
+  friend constexpr bool operator==(const Extent&, const Extent&) = default;
+};
+
+/// What a parsed page says about paging: how many rows it had, their extent
+/// when they have positions and there are any, and the link to the next
 /// page, if any.
 template <class Link, class Position>
 struct PageSummary {
   std::size_t rows;
-  std::optional<Position> first;
-  std::optional<Position> last;
+  std::optional<Extent<Position>> extent;
   std::optional<Link> next;
 };
 
-/// The pages a window of `span` may take at one row per `cadence` and at
-/// most `page_rows` rows a page: ceil(span / cadence / page_rows) + 2. The
+/// The arguments of max_pages, by name.
+struct PageBudget {
+  std::chrono::milliseconds span;     ///< the window
+  std::chrono::milliseconds cadence;  ///< the finest row spacing
+  std::uint32_t page_rows;            ///< the rows a page holds at most
+};
+
+/// The pages a window may take: ceil(span / cadence / page_rows) + 2. The
 /// two spare pages absorb a partial first page and an empty last one.
-/// Saturates at UINT32_MAX.
-[[nodiscard]] constexpr std::uint32_t max_pages(
-    std::chrono::milliseconds span, std::chrono::milliseconds cadence,
-    std::uint32_t page_rows) noexcept {
+/// Saturates at UINT32_MAX; a span, cadence or page size below 1 counts as
+/// 1.
+[[nodiscard]] constexpr std::uint32_t max_pages(PageBudget b) noexcept {
   const auto ceil_div = [](std::uint64_t n, std::uint64_t d) {
     return (n / d) + (n % d == 0 ? 0 : 1);
   };
@@ -49,9 +68,9 @@ struct PageSummary {
     return static_cast<std::uint64_t>(std::max<std::int64_t>(v, 1));
   };
   const std::uint64_t rows =
-      ceil_div(positive(span.count()), positive(cadence.count()));
+      ceil_div(positive(b.span.count()), positive(b.cadence.count()));
   const std::uint64_t pages =
-      ceil_div(rows, std::max<std::uint64_t>(page_rows, 1)) + 2;
+      ceil_div(rows, std::max<std::uint64_t>(b.page_rows, 1)) + 2;
   return static_cast<std::uint32_t>(std::min<std::uint64_t>(
       pages, std::numeric_limits<std::uint32_t>::max()));
 }
@@ -81,37 +100,37 @@ class PageGuard {
 
   /// After the page `summary` describes: nullopt when the chain ends (no
   /// link), the next page's guard and link when the link may be followed,
-  /// and ParseError{corrupt_record} when it may not: a page whose first
-  /// position is not after the previous page's last (checked when both are
-  /// known), a link on an empty page, a link seen before in this window, or
-  /// a link past max_pages. The
-  /// error's line is the page number (1-based) and its context names the
-  /// rule.
-  [[nodiscard]] std::expected<std::optional<Turn>, io::ParseError> after(
+  /// and a PagingError (at this page's number) when it may not: a page
+  /// whose first position is not after the last position seen (checked when
+  /// both are known), a link on an empty page, a link seen before in this
+  /// window, or a link past max_pages. The last position seen survives a
+  /// page without positions.
+  [[nodiscard]] std::expected<std::optional<Turn>, PagingError> after(
       const PageSummary<Link, Position>& summary) const {
-    const auto refuse = [&](std::string_view rule) {
-      return std::unexpected{io::ParseError::make(io::ParseErrc::corrupt_record,
-                                                  {.line = taken_}, rule)};
+    const auto refuse = [&](PagingRule rule) {
+      return std::unexpected{PagingError{.rule = rule, .page = taken_}};
     };
-    if (summary.first and last_ and not(*last_ < *summary.first)) {
-      return refuse("page does not advance");
+    if (summary.extent and last_ and not(*last_ < summary.extent->first)) {
+      return refuse(PagingRule::no_progress);
     }
     if (not summary.next) {
       return std::optional<Turn>{};
     }
     if (summary.rows == 0) {
-      return refuse("empty page with a next link");
+      return refuse(PagingRule::empty_page_with_link);
     }
     if (std::ranges::find(seen_, *summary.next) != seen_.end()) {
-      return refuse("next link repeated");
+      return refuse(PagingRule::link_repeated);
     }
     if (taken_ >= max_pages_) {
-      return refuse("page limit reached");
+      return refuse(PagingRule::page_limit);
     }
     PageGuard next = *this;
     next.taken_ = taken_ + 1;
     next.seen_.push_back(*summary.next);
-    next.last_ = summary.last;
+    if (summary.extent) {
+      next.last_ = summary.extent->last;
+    }
     return std::optional<Turn>{
         Turn{.guard = std::move(next), .link = *summary.next}};
   }

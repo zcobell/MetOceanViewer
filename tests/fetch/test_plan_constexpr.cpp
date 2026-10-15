@@ -39,16 +39,26 @@ constexpr cc::Product paired_hourly{cc::WaterLevel{
 
 TEST_CASE("max_pages is ceil(span / cadence / rows) + 2", "[fetch][paging]") {
   using mov::fetch::max_pages;
-  STATIC_REQUIRE(max_pages(days{1000}, minutes{1}, 50000) == 31);
-  STATIC_REQUIRE(max_pages(minutes{50000}, minutes{1}, 50000) == 3);
-  STATIC_REQUIRE(max_pages(minutes{50001}, minutes{1}, 50000) == 4);
-  STATIC_REQUIRE(max_pages(milliseconds{1}, minutes{1}, 50000) == 3);
+  STATIC_REQUIRE(max_pages({.span = days{1000},
+                            .cadence = minutes{1},
+                            .page_rows = 50000}) == 31);
+  STATIC_REQUIRE(max_pages({.span = minutes{50000},
+                            .cadence = minutes{1},
+                            .page_rows = 50000}) == 3);
+  STATIC_REQUIRE(max_pages({.span = minutes{50001},
+                            .cadence = minutes{1},
+                            .page_rows = 50000}) == 4);
+  STATIC_REQUIRE(max_pages({.span = milliseconds{1},
+                            .cadence = minutes{1},
+                            .page_rows = 50000}) == 3);
   // Degenerate inputs count as one.
-  STATIC_REQUIRE(max_pages(milliseconds{0}, milliseconds{0}, 0) == 3);
+  STATIC_REQUIRE(max_pages({.span = milliseconds{0},
+                            .cadence = milliseconds{0},
+                            .page_rows = 0}) == 3);
   STATIC_REQUIRE(
-      max_pages(milliseconds{std::numeric_limits<std::int64_t>::max()},
-                milliseconds{1},
-                1) == std::numeric_limits<std::uint32_t>::max());
+      max_pages({.span = milliseconds{std::numeric_limits<std::int64_t>::max()},
+                 .cadence = milliseconds{1},
+                 .page_rows = 1}) == std::numeric_limits<std::uint32_t>::max());
 }
 
 TEST_CASE("CO-OPS windows are minute-aligned and cut at the product's limit",
@@ -100,34 +110,41 @@ TEST_CASE("the CO-OPS range at the end of the time line is Unalignable",
 }
 
 TEST_CASE("NDBC month spellings", "[fetch][plan][ndbc]") {
-  using mov::fetch::ndbc::month_token;
-  using mov::fetch::ndbc::Monthly;
-  using mov::fetch::ndbc::MonthSpelling;
+  namespace nd = mov::fetch::ndbc;
   using std::chrono::year;
-  constexpr auto m = [](unsigned month, MonthSpelling s) {
-    return Monthly{
-        .year = year{2026}, .month = std::chrono::month{month}, .spelling = s};
+  constexpr auto m = [](unsigned month) {
+    return nd::Monthly{.year = year{2026}, .month = std::chrono::month{month}};
   };
-  STATIC_REQUIRE(month_token(m(1, MonthSpelling::primary)) == "1");
-  STATIC_REQUIRE(month_token(m(9, MonthSpelling::primary)) == "9");
-  STATIC_REQUIRE(month_token(m(10, MonthSpelling::primary)) == "a");
-  STATIC_REQUIRE(month_token(m(12, MonthSpelling::primary)) == "c");
-  STATIC_REQUIRE(month_token(m(10, MonthSpelling::decimal)) == "10");
-  STATIC_REQUIRE(month_token(m(12, MonthSpelling::decimal)) == "12");
+  STATIC_REQUIRE(nd::month_token(m(1)) == "1");
+  STATIC_REQUIRE(nd::month_token(m(9)) == "9");
+  STATIC_REQUIRE(nd::month_token(m(10)) == "a");
+  STATIC_REQUIRE(nd::month_token(m(12)) == "c");
+  STATIC_REQUIRE_FALSE(nd::month_token(m(0)).has_value());
+  STATIC_REQUIRE_FALSE(nd::month_token(m(13)).has_value());
+  STATIC_REQUIRE(nd::month_token(nd::MonthlyDecimal{
+                     .year = year{2026}, .month = nd::LateMonth::october}) ==
+                 "10");
+  STATIC_REQUIRE(nd::month_token(nd::MonthlyDecimal{
+                     .year = year{2026}, .month = nd::LateMonth::december}) ==
+                 "12");
+  STATIC_REQUIRE(nd::month_of(nd::LateMonth::november) ==
+                 std::chrono::November);
 }
 
 TEST_CASE("NDBC source kinds", "[fetch][plan][ndbc]") {
   namespace nd = mov::fetch::ndbc;
   using mov::core::ndbc::FileKind;
   using std::chrono::year;
-  STATIC_REQUIRE(nd::kind(nd::Historical{.year = year{2024},
-                                         .months_when_absent = false}) ==
+  STATIC_REQUIRE(nd::kind(nd::Historical{.year = year{2024}}) ==
+                 FileKind::historical);
+  STATIC_REQUIRE(nd::kind(nd::HistoricalLastYear{.year = year{2025}}) ==
                  FileKind::historical);
   STATIC_REQUIRE(
-      nd::kind(nd::Monthly{.year = year{2026},
-                           .month = std::chrono::March,
-                           .spelling = nd::MonthSpelling::primary}) ==
+      nd::kind(nd::Monthly{.year = year{2026}, .month = std::chrono::March}) ==
       FileKind::monthly);
+  STATIC_REQUIRE(nd::kind(nd::MonthlyDecimal{
+                     .year = year{2026}, .month = nd::LateMonth::october}) ==
+                 FileKind::monthly);
   STATIC_REQUIRE(nd::kind(nd::MonthlyLatest{.year = year{2026},
                                             .month = std::chrono::March}) ==
                  FileKind::monthly_latest);

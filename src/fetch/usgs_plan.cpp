@@ -11,7 +11,6 @@
 #include "mov/core/provider/usgs.hpp"
 #include "mov/fetch/error.hpp"
 #include "mov/fetch/plan/usgs.hpp"
-#include "mov/io/error.hpp"
 
 namespace mov::fetch::usgs {
 
@@ -42,9 +41,7 @@ namespace cu = core::usgs;
                                    const std::vector<cu::SeriesInfo>& rows) {
   return std::visit(
       core::Overloaded{[](const cu::DuplicateSeriesId& d) -> Error {
-                         return io::ParseError::make(
-                             io::ParseErrc::corrupt_record, {.line = 0},
-                             d.id.view());
+                         return DuplicateSeries{.id = d.id};
                        },
                        [&](const cu::SeveralPrimary& s) -> Error {
                          return ambiguous(s, rows);
@@ -64,7 +61,7 @@ namespace cu = core::usgs;
 }
 
 template <class C>
-[[nodiscard]] std::expected<DataRequest<C>, Failure> bind_stage(
+[[nodiscard]] std::expected<cu::Resolved<C>, Failure> resolve_rows(
     const C& request, const std::vector<cu::SeriesInfo>& rows,
     cu::Collection requested) {
   auto set = cu::SeriesSet::make(rows);
@@ -77,19 +74,27 @@ template <class C>
     return std::unexpected{
         resolution_failure(lift_resolve_error(resolved.error(), requested))};
   }
-  return DataRequest<C>{.request = request, .series = *std::move(resolved)};
+  return *std::move(resolved);
 }
 
 }  // namespace
 
 std::expected<DataRequest<cu::Continuous>, Failure> bind(
     const cu::Continuous& request, const std::vector<cu::SeriesInfo>& rows) {
-  return bind_stage(request, rows, cu::Collection::continuous);
+  auto series = resolve_rows(request, rows, cu::Collection::continuous);
+  if (not series) {
+    return std::unexpected{std::move(series).error()};
+  }
+  return DataRequest<cu::Continuous>{request, *std::move(series)};
 }
 
 std::expected<DataRequest<cu::Daily>, Failure> bind(
     const cu::Daily& request, const std::vector<cu::SeriesInfo>& rows) {
-  return bind_stage(request, rows, cu::Collection::daily);
+  auto series = resolve_rows(request, rows, cu::Collection::daily);
+  if (not series) {
+    return std::unexpected{std::move(series).error()};
+  }
+  return DataRequest<cu::Daily>{request, *std::move(series)};
 }
 
 }  // namespace mov::fetch::usgs

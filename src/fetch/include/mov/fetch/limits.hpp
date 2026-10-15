@@ -44,7 +44,7 @@ class ThroughputCheck {
  public:
   explicit constexpr ThroughputCheck(const ExchangeLimits& limits) noexcept
       : min_bytes_{limits.min_bytes_per_window},
-        window_{limits.throughput_window},
+        window_length_{limits.throughput_window},
         max_bytes_{limits.max_body_bytes} {}
 
   /// The failure the exchange has met, if any.
@@ -53,32 +53,36 @@ class ThroughputCheck {
     if (total > max_bytes_) {
       return TransportErrc::body_too_large;
     }
-    if (not window_start_) {
+    if (not window_) {
       if (total > 0) {
-        window_start_ = since_start;  // the first byte opens the first window
-        bytes_at_start_ = 0;
+        // The first byte opens the first window, which counts it.
+        window_ = Window{.start = since_start, .bytes_at_start = 0};
       }
       return std::nullopt;
     }
-    if (since_start - *window_start_ < window_) {
+    if (since_start - window_->start < window_length_) {
       return std::nullopt;
     }
     const std::uint64_t arrived =
-        total > bytes_at_start_ ? total - bytes_at_start_ : 0;
+        total > window_->bytes_at_start ? total - window_->bytes_at_start : 0;
     if (arrived < min_bytes_) {
       return TransportErrc::too_slow;
     }
-    window_start_ = since_start;
-    bytes_at_start_ = total;
+    window_ = Window{.start = since_start, .bytes_at_start = total};
     return std::nullopt;
   }
 
  private:
+  /// The window being filled: when it began and the bytes by then.
+  struct Window {
+    std::chrono::milliseconds start;
+    std::uint64_t bytes_at_start;
+  };
+
   std::uint64_t min_bytes_;
-  std::chrono::milliseconds window_;
+  std::chrono::milliseconds window_length_;
   std::uint64_t max_bytes_;
-  std::optional<std::chrono::milliseconds> window_start_;
-  std::uint64_t bytes_at_start_{0};
+  std::optional<Window> window_;
 };
 
 }  // namespace mov::fetch

@@ -6,7 +6,9 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <optional>
+#include <string>
 #include <string_view>
 
 #include "mov/fetch/retry.hpp"
@@ -171,8 +173,30 @@ struct Civil {
 }
 
 // Sunday, 06-Nov-94 08:49:37 GMT
+/// RFC 9110 §5.6.7: a two-digit year is the year with those last digits
+/// that is at most 50 years after `reference` and less than 50 before it.
+/// Without a reference, 70 to 99 are 19yy and 00 to 69 are 20yy.
+[[nodiscard]] int full_year(int yy, std::optional<int> reference) noexcept {
+  constexpr int century = 100;
+  constexpr int half_century = 50;
+  if (not reference) {
+    constexpr int pivot = 70;
+    constexpr int nineteen_hundred = 1900;
+    constexpr int two_thousand = 2000;
+    return yy >= pivot ? nineteen_hundred + yy : two_thousand + yy;
+  }
+  const int ref = *reference;
+  int candidate = (ref - (((ref % century) + century) % century)) + yy;
+  if (candidate > ref + half_century) {
+    candidate -= century;
+  } else if (candidate <= ref - half_century) {
+    candidate += century;
+  }
+  return candidate;
+}
+
 [[nodiscard]] std::optional<sys_seconds> rfc850_date(
-    std::string_view text) noexcept {
+    std::string_view text, std::optional<int> reference) noexcept {
   Cursor c{text};
   Civil out{};
   if (not c.take_one_of(long_days) or not c.take(", ")) {
@@ -191,10 +215,7 @@ struct Civil {
       not c.take(" GMT") or not c.done()) {
     return std::nullopt;
   }
-  constexpr int pivot = 70;
-  constexpr int nineteen_hundred = 1900;
-  constexpr int two_thousand = 2000;
-  out.year = *yy >= pivot ? nineteen_hundred + *yy : two_thousand + *yy;
+  out.year = full_year(*yy, reference);
   out.month_index = *month;
   out.day = *day;
   return to_instant(out);
@@ -241,11 +262,15 @@ struct Civil {
 
 }  // namespace
 
-std::optional<sys_seconds> parse_http_date(std::string_view text) noexcept {
+std::optional<sys_seconds> parse_http_date(
+    std::string_view text,
+    std::optional<std::chrono::year> reference) noexcept {
   if (const auto t = imf_fixdate(text)) {
     return t;
   }
-  if (const auto t = rfc850_date(text)) {
+  const auto ref = reference.transform(
+      [](std::chrono::year y) { return static_cast<int>(y); });
+  if (const auto t = rfc850_date(text, ref)) {
     return t;
   }
   return asctime_date(text);
@@ -257,15 +282,43 @@ std::optional<seconds> retry_after(
   if (const auto delta = delta_seconds(text)) {
     return seconds{std::max<std::int64_t>(1, *delta)};
   }
-  const auto target = parse_http_date(text);
-  if (not target or not date) {
+  if (not date) {
     return std::nullopt;
   }
-  const auto now = parse_http_date(trim_ows(*date));
+  // The Date header's own two-digit year has no reference but the pivot.
+  const auto now = parse_http_date(trim_ows(*date), std::nullopt);
   if (not now) {
     return std::nullopt;
   }
+  const std::chrono::year date_year =
+      std::chrono::year_month_day{std::chrono::floor<std::chrono::days>(*now)}
+          .year();
+  const auto target = parse_http_date(text, date_year);
+  if (not target) {
+    return std::nullopt;
+  }
   return std::max(seconds{1}, *target - *now);
+}
+
+std::optional<std::string> format_imf_fixdate(sys_seconds t) {
+  const auto day = std::chrono::floor<std::chrono::days>(t);
+  const std::chrono::year_month_day ymd{day};
+  const int year = static_cast<int>(ymd.year());
+  constexpr int last_four_digit_year = 9999;
+  if (year < 0 or year > last_four_digit_year) {
+    return std::nullopt;
+  }
+  const std::chrono::hh_mm_ss<seconds> time{t - day};
+  // weekday's c_encoding: 0 is Sunday; short_days starts on Monday.
+  constexpr unsigned days_in_week = 7;
+  const unsigned weekday =
+      (std::chrono::weekday{day}.c_encoding() + days_in_week - 1) %
+      days_in_week;
+  return std::format("{}, {:02} {} {:04} {:02}:{:02}:{:02} GMT",
+                     short_days[weekday], static_cast<unsigned>(ymd.day()),
+                     months[static_cast<unsigned>(ymd.month()) - 1], year,
+                     time.hours().count(), time.minutes().count(),
+                     time.seconds().count());
 }
 
 }  // namespace mov::fetch

@@ -14,6 +14,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -26,6 +27,7 @@
 #include "mov/fetch/origin.hpp"
 #include "mov/fetch/policy.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/part.hpp"
 #include "mov/io/warning.hpp"
 
 namespace mov::fetch {
@@ -67,7 +69,8 @@ enum class ServiceErrc : std::uint8_t {
 };
 
 /// The service answered with an error of its own (often with HTTP 200).
-/// `text` is the server's message, raw (escape before showing), at most
+/// `text` is the server's message, trimmed of surrounding white space and
+/// otherwise raw (escape before showing), at most
 /// max_text_bytes and cut on a UTF-8 boundary by make.
 class ServiceError {
  public:
@@ -124,20 +127,58 @@ struct Unalignable {
   friend constexpr bool operator==(Unalignable, Unalignable) = default;
 };
 
-/// Two parts disagree on a column's unit and neither converts to the other
-/// (either may be unset). `column` is the part's column key.
-struct UnitMismatch {
-  std::string column;
-  std::optional<core::Unit> first{};
-  std::optional<core::Unit> other{};
-  friend bool operator==(const UnitMismatch&, const UnitMismatch&) = default;
+/// The request's range lies where the provider's calendar cannot go (NDBC:
+/// a year outside the civil calendar's ±9999).
+struct UnsupportedRange {
+  core::TimeRange range;
+  friend constexpr bool operator==(UnsupportedRange,
+                                   UnsupportedRange) = default;
 };
 
-/// Two parts disagree on a column's quantity, label or datum.
-struct MetaMismatch {
-  std::string column;
-  friend bool operator==(const MetaMismatch&, const MetaMismatch&) = default;
+/// Which paging rule a page broke (docs/providers-design.md §5.2, N B1).
+enum class PagingRule : std::uint8_t {
+  no_progress,  ///< its first row is not after the previous page's last
+  empty_page_with_link,  ///< no rows, but a next link
+  link_repeated,         ///< a next link already followed in this window
+  page_limit,            ///< a next link past the window's max_pages
 };
+
+/// A page chain broke a paging rule at page `page` (1-based).
+struct PagingError {
+  PagingRule rule;
+  std::uint32_t page;
+  friend constexpr bool operator==(PagingError, PagingError) = default;
+};
+
+/// Two rows of a site's series have one id.
+struct DuplicateSeries {
+  core::usgs::TimeSeriesId id;
+  friend constexpr bool operator==(const DuplicateSeries&,
+                                   const DuplicateSeries&) = default;
+};
+
+/// A spec gave a unit no exchanges (FetchSpec's contract is at least one).
+struct UnitWithoutExchanges {
+  friend constexpr bool operator==(UnitWithoutExchanges,
+                                   UnitWithoutExchanges) = default;
+};
+
+/// The plan grew past Options::max_units units.
+struct UnitLimit {
+  std::uint32_t max;
+  friend constexpr bool operator==(UnitLimit, UnitLimit) = default;
+};
+
+/// A clock value (the start's `now` or the deadline) beyond ±10,000 years:
+/// no fetch runs there, and the arithmetic on it could overflow.
+struct ClockOutOfRange {
+  core::Time time;
+  friend constexpr bool operator==(ClockOutOfRange, ClockOutOfRange) = default;
+};
+
+/// Merging parts (io::combine) failed.
+using io::MetaMismatch;
+using io::UnitMismatch;
 
 namespace detail {
 
@@ -148,15 +189,30 @@ struct Prepend<std::variant<Back...>, Front...> {
   using type = std::variant<Front..., Back...>;
 };
 
+/// How often T is among A...
+template <class T, class... A>
+inline constexpr std::size_t count_of =
+    (std::size_t{0} + ... +
+     (std::is_same_v<T, A> ? std::size_t{1} : std::size_t{0}));
+
+template <class V>
+inline constexpr bool unique_alternatives = false;
+template <class... A>
+inline constexpr bool unique_alternatives<std::variant<A...>> =
+    ((count_of<A, A...> == 1) and ...);
+
 }  // namespace detail
 
 /// One error for fetch and providers: fetch's own alternatives, then every
 /// alternative of io::Error, so lift_io is a total visit and there is one
 /// Cancelled.
-using Error = detail::Prepend<io::Error, TransportError, HttpError, RateLimited,
-                              ServiceError, NoData, AmbiguousSeries,
-                              WrongCollection, DeadlineExceeded, Unalignable,
-                              UnitMismatch, MetaMismatch>::type;
+using Error = detail::Prepend<
+    io::Error, TransportError, HttpError, RateLimited, ServiceError, NoData,
+    AmbiguousSeries, WrongCollection, DeadlineExceeded, Unalignable,
+    UnsupportedRange, PagingError, DuplicateSeries, UnitWithoutExchanges,
+    UnitLimit, ClockOutOfRange, UnitMismatch, MetaMismatch>::type;
+static_assert(detail::unique_alternatives<Error>,
+              "every alternative of fetch::Error is a distinct type");
 
 /// An io error as a fetch error.
 [[nodiscard]] Error lift_io(io::Error e);
@@ -178,14 +234,31 @@ struct Page {
   std::uint32_t index;
   friend constexpr bool operator==(Page, Page) = default;
 };
-/// An NDBC file. `month` is set for a monthly file; a realtime file has the
-/// year of the fetch's `now`.
-struct NdbcFile {
-  core::ndbc::FileKind kind;
+
+/// An NDBC file, by kind: a year's quality-controlled file, a finalized
+/// month, a month's latest (not yet finalized) file, or realtime2 (with the
+/// fetch's year).
+struct HistoricalFile {
   std::chrono::year year;
-  std::optional<std::chrono::month> month;
-  friend constexpr bool operator==(const NdbcFile&, const NdbcFile&) = default;
+  friend constexpr bool operator==(HistoricalFile, HistoricalFile) = default;
 };
+struct MonthlyFile {
+  std::chrono::year year;
+  std::chrono::month month;
+  friend constexpr bool operator==(MonthlyFile, MonthlyFile) = default;
+};
+struct LatestMonthFile {
+  std::chrono::year year;
+  std::chrono::month month;
+  friend constexpr bool operator==(LatestMonthFile, LatestMonthFile) = default;
+};
+struct RealtimeFile {
+  std::chrono::year year;
+  friend constexpr bool operator==(RealtimeFile, RealtimeFile) = default;
+};
+using NdbcFile =
+    std::variant<HistoricalFile, MonthlyFile, LatestMonthFile, RealtimeFile>;
+
 /// A USGS resolution page (stage 1).
 struct Resolution {
   std::uint32_t page;
@@ -214,6 +287,22 @@ struct UnitFailed {
   Error error;
   friend bool operator==(const UnitFailed&, const UnitFailed&) = default;
 };
+/// A lenient fetch kept this unit's data but could not continue its chain
+/// (a page that broke a paging rule): the pages after it are missing.
+struct ChainStopped {
+  UnitLabel unit;
+  Error error;
+  friend bool operator==(const ChainStopped&, const ChainStopped&) = default;
+};
+/// Exchange `slot` of the unit (in the order of the spec's targets; for a
+/// paired CO-OPS product 0 is observed, 1 predicted) was absent while
+/// another had data, which is kept.
+struct PartlyAbsent {
+  UnitLabel unit;
+  std::uint32_t slot;
+  friend constexpr bool operator==(const PartlyAbsent&,
+                                   const PartlyAbsent&) = default;
+};
 /// One of the unit's exchanges succeeded after `attempts` sends.
 struct Retried {
   UnitLabel unit;
@@ -232,7 +321,8 @@ struct FellBack {
   NdbcFile to;
   friend constexpr bool operator==(const FellBack&, const FellBack&) = default;
 };
-using FetchWarning = std::variant<UnitFailed, Retried, CooledDown, FellBack>;
+using FetchWarning = std::variant<UnitFailed, ChainStopped, PartlyAbsent,
+                                  Retried, CooledDown, FellBack>;
 using Warning = std::variant<io::Warning, FetchWarning>;
 
 // ---- results --------------------------------------------------------------
@@ -250,39 +340,29 @@ struct Stats {
   friend constexpr bool operator==(Stats, Stats) = default;
 };
 
-template <class T>
-struct Fetched {
-  T value;
-  std::vector<Warning> warnings;
-  Stats stats;
-  friend bool operator==(const Fetched&, const Fetched&) = default;
-};
-
-/// What an earlier stage leaves to the result of a later one: its warnings
-/// and its cost (§5.2, the bind between stages).
+/// What a fetch noticed and what it cost: a monoid under + (warnings
+/// concatenated in order, stats summed) with Trail{} as identity, so the
+/// trail of a two-stage fetch is the first stage's + the second's.
 struct Trail {
   std::vector<Warning> warnings;
   Stats stats;
+
+  friend Trail operator+(Trail a, Trail b) {
+    a.warnings.insert(a.warnings.end(),
+                      std::make_move_iterator(b.warnings.begin()),
+                      std::make_move_iterator(b.warnings.end()));
+    a.stats = a.stats + b.stats;
+    return a;
+  }
   friend bool operator==(const Trail&, const Trail&) = default;
 };
 
-/// The value of a stage's result, and its trail.
+/// A fetch's value and its trail.
 template <class T>
-[[nodiscard]] std::pair<T, Trail> split(Fetched<T>&& f) {
-  return {std::move(f.value),
-          Trail{.warnings = std::move(f.warnings), .stats = f.stats}};
-}
-
-/// A later stage's result after an earlier stage's trail: the earlier
-/// warnings first, the costs summed.
-template <class T>
-[[nodiscard]] Fetched<T> after(Trail earlier, Fetched<T> later) {
-  earlier.warnings.insert(earlier.warnings.end(),
-                          std::make_move_iterator(later.warnings.begin()),
-                          std::make_move_iterator(later.warnings.end()));
-  return {.value = std::move(later.value),
-          .warnings = std::move(earlier.warnings),
-          .stats = earlier.stats + later.stats};
-}
+struct Fetched {
+  T value;
+  Trail trail;
+  friend bool operator==(const Fetched&, const Fetched&) = default;
+};
 
 }  // namespace mov::fetch
