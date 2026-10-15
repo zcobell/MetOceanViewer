@@ -29,6 +29,7 @@
 #include "mov/io/error.hpp"
 #include "mov/io/part.hpp"
 #include "mov/io/warning.hpp"
+#include "mov/io/wire/service.hpp"
 
 namespace mov::fetch {
 
@@ -57,48 +58,14 @@ struct RateLimited {
                                    const RateLimited&) = default;
 };
 
-enum class ServiceErrc : std::uint8_t {
-  station_or_system,  ///< CO-OPS' "not a valid station or system error":
-                      ///< retried once
-  datum_unavailable,
-  range_exceeded,  ///< the planner asked for too much: a bug
-  invalid_parameter,
-  api_key_invalid,  ///< fails at once; never retried without the key
-  unexpected_content,
-  unknown,
-};
-
-/// The service answered with an error of its own (often with HTTP 200).
-/// `text` is the server's message, trimmed of surrounding white space and
-/// otherwise raw (escape before showing), at most
-/// max_text_bytes and cut on a UTF-8 boundary by make.
-class ServiceError {
- public:
-  static constexpr std::size_t max_text_bytes = 120;
-
-  [[nodiscard]] static ServiceError make(Origin origin, ServiceErrc code,
-                                         std::string_view text);
-
-  [[nodiscard]] Origin origin() const noexcept { return origin_; }
-  [[nodiscard]] ServiceErrc code() const noexcept { return code_; }
-  [[nodiscard]] const std::string& text() const& noexcept { return text_; }
-  const std::string& text() && = delete;
-
-  friend bool operator==(const ServiceError&, const ServiceError&) = default;
-
- private:
-  ServiceError(Origin origin, ServiceErrc code, std::string text)
-      : origin_{origin}, code_{code}, text_{std::move(text)} {}
-
-  Origin origin_;
-  ServiceErrc code_;
-  std::string text_;
-};
-
-/// Nothing to show: every unit came back without data and none failed.
-struct NoData {
-  friend constexpr bool operator==(NoData, NoData) = default;
-};
+/// The service answered with an error of its own (often with HTTP 200), and
+/// "no data": io's (`mov/io/wire/service.hpp`), which classifies the bodies.
+/// station_or_system is retried once, gateway with backoff as a 5xx is,
+/// api_key_invalid never (§5.3). As a fetch's result, NoData means every unit
+/// came back without data and none failed.
+using io::wire::NoData;
+using io::wire::ServiceErrc;
+using io::wire::ServiceError;
 
 /// Several Primary series of the requested parameter and statistic.
 struct AmbiguousSeries {

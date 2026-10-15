@@ -259,7 +259,7 @@ TEST_CASE("300k elements in a member the format does not read",
   const auto read =
       mov::io::detail::coops::parse_data(body, water_level, ReadContext{});
   REQUIRE(read.has_value());
-  CHECK(read->value.size() == 1);
+  CHECK(read->value.columns().size() == 1);
 }
 
 TEST_CASE("300k elements in a kept container (a station's sensors)",

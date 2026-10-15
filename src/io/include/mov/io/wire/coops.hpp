@@ -26,6 +26,7 @@
 #include "mov/core/time.hpp"
 #include "mov/core/timeseries.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/part.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/wire/origin.hpp"
@@ -330,38 +331,10 @@ enum class Api : std::uint8_t { data, metadata };
 [[nodiscard]] BodyClass classify_body(Api api, std::string_view body,
                                       std::string_view content_type);
 
-/// A body's series, by the token of their quantity: one, or for wind the
-/// three columns wind_speed, wind_direction and wind_gust. The key is the
-/// series' own quantity, so a series cannot be filed under another.
-class Columns {
- public:
-  using Map = std::map<std::string, core::TimeSeries, std::less<>>;
-
-  /// Adds `series` under its quantity's token; false, and nothing changes,
-  /// when a series of that quantity is already there.
-  [[nodiscard]] bool insert(core::TimeSeries series);
-
-  /// The series of `quantity`, or nullptr.
-  [[nodiscard]] const core::TimeSeries* find(
-      const core::QuantityId& quantity) const;
-
-  [[nodiscard]] std::size_t size() const noexcept { return series_.size(); }
-  [[nodiscard]] bool empty() const noexcept { return series_.empty(); }
-  [[nodiscard]] Map::const_iterator begin() const noexcept {
-    return series_.begin();
-  }
-  [[nodiscard]] Map::const_iterator end() const noexcept {
-    return series_.end();
-  }
-
-  friend bool operator==(const Columns&, const Columns&) = default;
-
- private:
-  Map series_;
-};
-
-/// A datagetter body, read: its columns, or the service's NoData or refusal.
-using DataReply = std::variant<Read<Columns>, NoData, ServiceError>;
+/// A datagetter body, read: its series as a Part (io/part.hpp: one column,
+/// or for wind wind_speed, wind_direction and wind_gust, each keyed by its
+/// own quantity), or the service's NoData or refusal.
+using DataReply = std::variant<Read<Part>, NoData, ServiceError>;
 
 /// Classifies a datagetter body (classify_body, Api::data) and parses a
 /// Payload for `series`: the one entry point, so no body is parsed before it
@@ -370,7 +343,7 @@ using DataReply = std::variant<Read<Columns>, NoData, ServiceError>;
 /// The envelope is `{"metadata": ..., "data": [...]}`, or
 /// `{"predictions": [...]}` for predictions. Each record's `t` is exactly
 /// "yyyy-MM-dd HH:mm" (UTC); each value is a JSON string read by
-/// detail::parse_double, "" a Missing sample. Columns (metric units):
+/// detail::parse_double, "" a Missing sample. The columns (metric units):
 ///   water levels: water_level, predictions water_level_prediction (m, the
 ///     datum asked for), from `v`;
 ///   air_temperature, water_temperature (degC), air_pressure (hPa),

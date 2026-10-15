@@ -32,6 +32,7 @@
 #include "mov/io/detail/text.hpp"
 #include "mov/io/detail/text_position.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/part.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
@@ -244,7 +245,7 @@ class DataReader {
         ctx_{ctx},
         columns_(layout_.columns.size()) {}
 
-  std::expected<Read<Columns>, Error> read() && {
+  std::expected<Read<Part>, Error> read() && {
     const auto document =
         json::parse(body_, *layout_.keep, ctx_,
                     [this](std::size_t index, const json::Value& record) {
@@ -398,8 +399,8 @@ class DataReader {
     return {};
   }
 
-  std::expected<Read<Columns>, Error> columns() && {
-    Read<Columns> out{.value = {}, .warnings = {}};
+  std::expected<Read<Part>, Error> columns() && {
+    Read<Part> out{.value = {}, .warnings = {}};
     std::vector<core::Column*> all;
     all.reserve(columns_.size());
     for (core::Column& c : columns_) {
@@ -445,16 +446,6 @@ class DataReader {
 
 }  // namespace
 
-bool Columns::insert(core::TimeSeries series) {
-  std::string key{core::token(series.meta().quantity())};
-  return series_.emplace(std::move(key), std::move(series)).second;
-}
-
-const core::TimeSeries* Columns::find(const core::QuantityId& quantity) const {
-  const auto found = series_.find(core::token(quantity));
-  return found == series_.end() ? nullptr : &found->second;
-}
-
 std::expected<DataReply, Error> read_data(std::string_view body,
                                           std::string_view content_type,
                                           const Series& series,
@@ -464,7 +455,7 @@ std::expected<DataReply, Error> read_data(std::string_view body,
           [&](Payload) -> std::expected<DataReply, Error> {
             return io::detail::coops::parse_data(body, series, ctx)
                 .transform(
-                    [](Read<Columns> r) { return DataReply{std::move(r)}; });
+                    [](Read<Part> r) { return DataReply{std::move(r)}; });
           },
           [](NoData n) -> std::expected<DataReply, Error> {
             return DataReply{n};
@@ -483,9 +474,9 @@ const json::Keep& data_keep(const wire::coops::Series& series) {
   return *wire::coops::layout_of(series).keep;
 }
 
-std::expected<Read<wire::coops::Columns>, Error> parse_data(
-    std::string_view body, const wire::coops::Series& series,
-    const ReadContext& ctx) {
+std::expected<Read<Part>, Error> parse_data(std::string_view body,
+                                            const wire::coops::Series& series,
+                                            const ReadContext& ctx) {
   return wire::coops::DataReader{body, series, ctx}.read();
 }
 

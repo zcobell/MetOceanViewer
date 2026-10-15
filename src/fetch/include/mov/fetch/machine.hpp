@@ -413,11 +413,15 @@ class Machine {
 
   void on_parse_error(SlotRef ref, Error error, const Context& cx) {
     const auto* service = std::get_if<ServiceError>(&error);
-    const bool once_more = service != nullptr and
-                           service->code() == ServiceErrc::station_or_system and
-                           not slot(ref).service_retried;
-    if (once_more and may_retry(ref, std::nullopt)) {
-      slot(ref).service_retried = true;
+    // station_or_system once; a gateway failure as long as attempts remain.
+    const bool transient =
+        service != nullptr and classify(service->code()) == Verdict::retry and
+        not(service->code() == ServiceErrc::station_or_system and
+            slot(ref).service_retried);
+    if (transient and may_retry(ref, std::nullopt)) {
+      slot(ref).service_retried =
+          slot(ref).service_retried or
+          service->code() == ServiceErrc::station_or_system;
       schedule_retry(
           ref,
           backoff(options_.retry, slot(ref).attempts, std::nullopt, cx.jitter),

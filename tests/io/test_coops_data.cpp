@@ -23,6 +23,7 @@
 #include "mov/core/units.hpp"
 #include "mov/io/detail/coops_json.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/part.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
@@ -49,7 +50,7 @@ using mov::test::utc;
 using mov::test::values_of;
 using Opt = std::optional<double>;
 
-using Result = std::expected<Read<wc::Columns>, Error>;
+using Result = std::expected<Read<mov::io::Part>, Error>;
 
 wc::Series observed(cc::Observed s = cc::Observed::six_minute,
                     cc::Datum d = cc::Datum::msl) {
@@ -68,7 +69,7 @@ Result parse(std::string_view body, const wc::Series& series,
   return mov::io::detail::coops::parse_data(body, series, ctx);
 }
 
-Read<wc::Columns> parsed(std::string_view body, const wc::Series& series) {
+Read<mov::io::Part> parsed(std::string_view body, const wc::Series& series) {
   auto r = parse(body, series);
   if (not r) {
     const auto* p = std::get_if<mov::io::ParseError>(&r.error());
@@ -78,10 +79,12 @@ Read<wc::Columns> parsed(std::string_view body, const wc::Series& series) {
   return *std::move(r);
 }
 
-const TimeSeries& column(const Read<wc::Columns>& r, std::string_view token) {
-  const auto it = std::ranges::find_if(
-      r.value, [token](const auto& entry) { return entry.first == token; });
-  REQUIRE(it != r.value.end());
+const TimeSeries& column(const Read<mov::io::Part>& r, std::string_view token) {
+  const auto& columns = r.value.columns();
+  const auto it = std::ranges::find_if(columns, [token](const auto& entry) {
+    return mov::io::format(entry.first) == token;
+  });
+  REQUIRE(it != columns.end());
   return it->second;
 }
 
@@ -120,7 +123,7 @@ ParseErrc code_of(const Result& r) { return parse_error_in(r).code(); }
 TEST_CASE("a 6-minute water level: values, meta, flags and quality",
           "[io][wire][coops]") {
   const auto r = parsed(coops_fixture("water_level.json"), observed());
-  REQUIRE(r.value.size() == 1);
+  REQUIRE(r.value.columns().size() == 1);
   const TimeSeries& wl = column(r, "water_level");
   CHECK(times_of(wl) == six_minute_times(6));
   CHECK(values_of(wl) ==
@@ -198,7 +201,7 @@ TEST_CASE("predictions: their own envelope, quantity and datum",
 TEST_CASE("wind is three columns, not a split string",
           "[io][wire][coops][regression][L5]") {
   const auto r = parsed(coops_fixture("wind.json"), met(cc::Met::wind));
-  REQUIRE(r.value.size() == 3);
+  REQUIRE(r.value.columns().size() == 3);
   const TimeSeries& speed = column(r, "wind_speed");
   const TimeSeries& direction = column(r, "wind_direction");
   const TimeSeries& gust = column(r, "wind_gust");
@@ -256,8 +259,8 @@ TEST_CASE("met products: quantity and metric unit", "[io][wire][coops]") {
   for (const Row& row : rows) {
     INFO(row.fixture);
     const auto r = parsed(coops_fixture(row.fixture), met(row.product));
-    REQUIRE(r.value.size() == 1);
-    const TimeSeries& s = r.value.begin()->second;
+    REQUIRE(r.value.columns().size() == 1);
+    const TimeSeries& s = r.value.columns().begin()->second;
     CHECK(s.meta().quantity() == mov::core::QuantityId{row.quantity});
     CHECK(s.meta().unit() == unit(row.unit_text));
     CHECK(values_of(s) == row.values);
@@ -280,7 +283,7 @@ TEST_CASE("the extra products: conductivity, salinity, air gap",
 
   const auto salinity =
       parsed(coops_fixture("salinity.json"), met(cc::Met::salinity));
-  REQUIRE(salinity.value.size() == 1);
+  REQUIRE(salinity.value.columns().size() == 1);
   const TimeSeries& s = column(salinity, "salinity");
   CHECK(values_of(s) == std::vector<Opt>{28.93, 28.93, 28.92});
   CHECK(s.meta().quantity() == mov::core::QuantityId{Quantity::salinity});
@@ -325,7 +328,7 @@ TEST_CASE("an empty value is a Missing sample, nothing else is",
 
 TEST_CASE("an empty data array is an empty series", "[io][wire][coops]") {
   const auto r = parsed(R"({"data": []})", met(cc::Met::wind));
-  CHECK(r.value.size() == 3);
+  CHECK(r.value.columns().size() == 3);
   CHECK(column(r, "wind_speed").empty());
   const auto p = parsed(R"({"predictions": []})", predicted());
   CHECK(column(p, "water_level_prediction").empty());
@@ -595,13 +598,11 @@ TEST_CASE("read_data classifies before it parses", "[io][wire][coops]") {
   };
   const auto data = read(coops_fixture("water_level.json"));
   REQUIRE(data.has_value());
-  const auto* columns = std::get_if<Read<wc::Columns>>(&*data);
+  const auto* columns = std::get_if<Read<mov::io::Part>>(&*data);
   REQUIRE(columns != nullptr);
-  CHECK(columns->value.size() == 1);
-  CHECK(columns->value.find(mov::core::QuantityId{Quantity::water_level}) !=
-        nullptr);
-  CHECK(columns->value.find(mov::core::QuantityId{Quantity::wind_speed}) ==
-        nullptr);
+  CHECK(columns->value.columns().size() == 1);
+  CHECK(columns->value.columns().contains(
+      mov::io::ColumnKey{.quantity = Quantity::water_level}));
 
   const auto none = read(coops_fixture("error_no_data.json"));
   REQUIRE(none.has_value());
@@ -616,22 +617,7 @@ TEST_CASE("read_data classifies before it parses", "[io][wire][coops]") {
 
   // A body that is no refusal and no data is the parser's error.
   const auto broken = read(R"({"data": [{"t": 5}]})");
-  CHECK(code_of(broken.transform([](auto&&) { return Read<wc::Columns>{}; })) ==
-        ParseErrc::bad_member);
-}
-
-TEST_CASE("columns are keyed by their own quantity", "[io][wire][coops]") {
-  wc::Columns columns;
-  const auto series = [](Quantity q) {
-    return TimeSeries::make({}, {},
-                            mov::core::SeriesMeta::make({.quantity = q}))
-        .value_or(TimeSeries{});
-  };
-  CHECK(columns.insert(series(Quantity::wind_speed)));
-  CHECK(columns.insert(series(Quantity::wind_gust)));
-  // A second series of one quantity is refused, and nothing changes.
-  CHECK(not columns.insert(series(Quantity::wind_speed)));
-  CHECK(columns.size() == 2);
-  CHECK(columns.begin()->first == "wind_gust");
-  CHECK(columns.find(mov::core::QuantityId{Quantity::wind_gust}) != nullptr);
+  CHECK(code_of(broken.transform([](auto&&) {
+          return Read<mov::io::Part>{};
+        })) == ParseErrc::bad_member);
 }

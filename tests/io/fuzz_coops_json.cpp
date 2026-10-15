@@ -22,6 +22,7 @@
 #include "mov/core/timeseries.hpp"
 #include "mov/io/detail/coops_json.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/part.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/wire/coops.hpp"
 #include "mov/io/wire/origin.hpp"
@@ -98,15 +99,16 @@ std::size_t line_count(std::string_view text) {
   return occurrences(text, "\n") + 1;
 }
 
-void check_columns(const wc::Columns& columns, const wc::Series& series,
+void check_columns(const mov::io::Part& part, const wc::Series& series,
                    std::string_view body) {
+  const auto& columns = part.columns();
   if (columns.size() != expected_columns(series)) {
     fail();
   }
   const std::size_t empties = occurrences(body, "\"\"");
   std::size_t missing = 0;
-  for (const auto& [token, column] : columns) {
-    if (token != mov::core::token(column.meta().quantity())) {
+  for (const auto& [key, column] : columns) {
+    if (not(key == mov::io::ColumnKey::of(column))) {
       fail();
     }
     for (std::size_t i = 1; i < column.size(); ++i) {
@@ -140,7 +142,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   // read_data is classify_body, then the parse of a Payload.
   const auto reply = wc::read_data(body, "x/y", series, mov::io::ReadContext{});
   if (reply) {
-    if (const auto* read = std::get_if<mov::io::Read<wc::Columns>>(&*reply)) {
+    if (const auto* read = std::get_if<mov::io::Read<mov::io::Part>>(&*reply)) {
       check_columns(read->value, series, body);
     }
   }

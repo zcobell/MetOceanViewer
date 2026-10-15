@@ -12,6 +12,7 @@
 
 #include "mov/io/detail/json.hpp"
 #include "mov/io/error.hpp"
+#include "mov/io/part.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/wire/coops.hpp"
@@ -39,7 +40,7 @@ namespace mov::io::detail::coops {
 [[nodiscard]] const json::Keep& classify_keep();
 
 /// read_data's parse of a body classify_body called a Payload.
-[[nodiscard]] std::expected<Read<wire::coops::Columns>, Error> parse_data(
+[[nodiscard]] std::expected<Read<Part>, Error> parse_data(
     std::string_view body, const wire::coops::Series& series,
     const ReadContext& ctx);
 
