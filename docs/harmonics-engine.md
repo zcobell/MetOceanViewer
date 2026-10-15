@@ -1,6 +1,7 @@
 # Tide prediction engine, harmonics reader and builder (design)
 
-Status: **proposed, revision 2** (2026-10-08); WP H1 built (2026-10-09, §2.6). Revision 2 applies the type review, the
+Status: **proposed, revision 2** (2026-10-08); WP H1 built (2026-10-09, §2.6), WP H2 built
+(2026-10-15, §2.7). Revision 2 applies the type review, the
 numerics/IO review and the owner's answers; Appendix A maps each finding to its resolution.
 Implements plan §6 decision 31: v5 drops XTide and gets its own harmonic engine in `core`, a
 reader for the published harmonics format in `io`, a builder in `tools/`, and (in Phase 3) a
@@ -554,13 +555,50 @@ at the first two positions of a name, and the lengths 32 and 33, are tested exha
 grammar and `parse_node_factor` against `to_token`.
 
 **For H2 and H3 (not built in H1).**
-- H2: `YearArguments` should compute the 14 node-factor values once per `YearAstronomy` and take
-  each constituent's f as a product of those, instead of `Argument::f` re-evaluating the
-  formulas per constituent.
+- H2 (done, §2.7): `YearArguments` should compute the 14 node-factor values once per
+  `YearAstronomy` and take each constituent's f as a product of those, instead of `Argument::f`
+  re-evaluating the formulas per constituent.
 - H3: measure `Phase::wrap` in the prediction loop and add a fast path for arguments already in
   [0°, 360°) if it shows.
 - H3: the Anchorage golden (§8.2) replaces the one-off vetting; then the RP1 and KJ2 notes lose
   *provisional*.
+
+### 2.7 As built in H2 (2026-10-15)
+
+Headers: `src/core/include/mov/core/tide/{constituent_set,licence,datums,source,station_info,
+harmonics_input,harmonics}.hpp`, plus additions to `astronomy.hpp`, `constituent.hpp` and
+`year_arguments.hpp`; source `src/core/tide/harmonics.cpp`; tests `tests/core/tide/`
+(`test_tide_harmonics.cpp`, `test_tide_year_arguments.cpp`, `test_tide_model_constexpr.cpp`,
+the drift cases in `test_tide_catalogue_json.cpp`, `fuzz_licence`). The headers are the contract.
+Where they differ from §2.3–2.5:
+
+| Item | Design | As built, and why |
+|---|---|---|
+| Index types | `uint16`/`uint32` values; aggregates | `ConstituentIndex`, `SourceIndex`, `ReferenceIndex`, `SubordinateIndex` hold `std::size_t`, with private constructors (the set, or `detail::HarmonicsAccess` for the file). No size can overflow them, so there is no "too many" error; a `Constant` is 48 B either way (padding). |
+| `DictionaryEntry` | name, definition | Adds `description`, so a writer can round-trip it. The file's `speed` is not part of the entry: `HarmonicsFile::make` checks it (`SpeedMismatch`). |
+| `DictionaryError` | `DuplicateName`, `UnknownTerm{entry, term}`, `TermNotDarwin{entry, term}` | `variant<DuplicateName{entry, first}, InvalidTerm{entry, TermError}>`: H1's `TermError` already names the term and its fault. |
+| `ConstituentSet` | input order, sorted name index | Stored in the format's canonical order (species, speed, name; HJ §3), so two sets with the same entries are equal whatever their input order. `find` is exact; `indices()`, `description(i)`. `make` is `constexpr` (STATIC_REQUIRE tests on small dictionaries); `std::stable_sort` is not `constexpr` before C++26, so ties sort by position explicitly. |
+| `YearArguments` | `ConstituentYear` per index, `year_arguments(set, year)` | Holds H1's `Equilibrium` per index; `year_arguments(set, YearAstronomy)` and `(set, year)`. `YearAstronomy` now evaluates the 14 node-factor formulas once (`NodeFactorValues`, `node_factors()`), and `Argument::f(const NodeFactorValues&)` multiplies them in the same order as `Argument::f(NodalTerms)`: the same bits (tested for all 120 entries every 25 years). |
+| `Licence` | `LicenceError{offset}`; `identifiers()` | `LicenceError{offset, LicenceErrc}` (`empty`, `bad_character`, `expected_licence`, `expected_operator`, `unbalanced`); exceptions after `WITH` are `exceptions()`, apart from `identifiers()`. Operators are upper case only (HJ §6.1 names them so). The `-NC` test compares components ignoring case, so an allow-list fails closed. A state machine with a depth counter, no recursion; `constexpr`. `fuzz_licence` compares it with a recursive-descent parser of the same grammar. |
+| Datum tokens | `VerticalDatum` gains `hat`, `lat`, `dtl`; `Datums` over `VerticalDatum` | **Not done in H2**: `VerticalDatum` and `DatumTable` live in `mov/core/datum.hpp`, shared with io and the CO-OPS work running in parallel. The file model has its own `DatumToken` (the schema's 12 tokens, in its order, drift-tested) and `TideDatum = variant<MeanSeaLevel, DatumToken>` for `offsets.datum`. `Datums` keeps every height; `Datums::table()` is the `DatumTable` of the tokens core can name (`to_vertical_datum`), and HAT, LAT and DTL are reported by `W-DATUM-UNSUPPORTED` (HJ §8.4's rule for a reader whose model lacks a token). Follow-up: extend `VerticalDatum`; then `to_vertical_datum` is total and the warning disappears. |
+| `Datums` | `table()`, `origin()`, `published_epoch()`, `computed_period()` as `ValidRange` | `height(TideDatum)`, `origin(TideDatum)`, `published()`, `computed()` (`ComputedDatums{DatumPeriod, DatumHeights}`), `published_epoch()`, `table()` by value. `DatumPeriod{start, end}`: both ends are required, which `ValidRange` does not say. `DatumHeights` (token → finite height, each token once) is the reader's type for both objects. |
+| `provider::Harmonics` grammar | narrowed to `<source>:<local>` | **Not done in H2** (`station.hpp` is outside the tide paths). `station_namespace(id)` in `source.hpp` implements HJ §8.1's grammar; `make` reports an id without a source namespace as `UnknownSource`. Follow-up: `provider::Harmonics::valid_id` calls `station_namespace`. |
+| `Uncertainty` | `{Length, Phase}` | `{Length amplitude, double phase_deg}`: a phase spread in [0°, 360°] is not an angle (360 is allowed and is not 0). |
+| Constants | `ConstantInput{name, double, double, optional<pair>}` | `HarmonicConstant::make({.amplitude_m, .phase_deg, .sd})` checks H ≥ 0 and finite, G in [0°, 360°) (no wrapping: a round trip keeps the value), and the deviations; the reader builds it, so its error is `E-SCHEMA` at the column it names. `Constant{ConstituentIndex, HarmonicConstant}`. |
+| `SubordinateOffsets` | `make(minutes, height, datum)`, `OffsetsErrc` | `make(Values{minutes, height, datum})`, `SubordinateOffsetsError{high_time, low_time, high_height, low_height}`; minutes become ms rounded half away from zero exactly (integer part plus a fraction test, not `llround`, which is not `constexpr` everywhere). |
+| Inputs | `ReferenceInput`, `SubordinateInput` in two vectors | `HarmonicsInput{HeaderInput, sources, constituents, stations}` with `stations` one vector of `variant<ReferenceInput, SubordinateInput>` in document order: error order (HJ §10.4) and the reader's pointers need the interleaved order. Values the schema constrains arrive as checked value types (`ConstituentName`, `Definition`, `SourceToken`, `Location`, `StationText`, `HarmonicConstant`, `SubordinateOffsets`, `DatumHeights`); what has its own §10.1 code stays raw for `make`: licence text, dates as `year_month_day` (and `created` as fields), speeds, ids. |
+| `HarmonicsError` | 7 alternatives | 21, each naming input positions: `InvalidCreated`, `DuplicateSource`, `InvalidSourceLicence`, `InvalidRetrieved`, `DuplicateName`, `InvalidTerm`, `SpeedMismatch`, `UnknownSource`, `InvalidStationLicence`, `UnknownConstituent`, `DuplicateRow`, `InvalidNumber`, `UncomputableDatum`, `DatumConflict`, `InvalidStationDate`, `InvertedDates`, `ShortDatumPeriod`, `DuplicateStation`, `ReferenceMissing`, `ReferenceNotReference`, `OffsetDatumMissing`. `code(e)` gives the `HarmonicsErrc` and `to_string` its `E-…` spelling. `InvalidNumber` (z0, record years) and `UncomputableDatum` are `E-SCHEMA`: the reader's schema step reaches them first, and they keep `make` total. |
+| Warnings | io's `WarningCode` | `HarmonicsWarning = variant<ConstituentRedefined, UnusedConstituent, UnusedSource, DatumUnsupported>`, `code(w)`, `to_string`. Redefined compares the flattened `Argument` (V, c, u and the node-factor exponents) with the catalogue entry of the name or of the alias it is (`canonical_name`). An entry is used when a row names it or it is a term of a used compound. `DatumUnsupported` is one per token, with the station count and the first station. |
+| `make`, validation | `make` fail-first; io's `validate_harmonics` accumulates | `HarmonicsFile::make(HarmonicsInput) -> expected<HarmonicsBuild{file, warnings}, HarmonicsError>` and `validate(const HarmonicsInput&) -> HarmonicsReport{errors, warnings}` run one checker, so `validate`'s first error is always `make`'s (a property test over 500 random fault sets). `validate` skips only checks that depend on a failed one (speed after a bad term, date order after a bad date, the offsets datum after a missing reference) and reports warnings with errors. |
+| Pinned order | HJ §10.4 steps 5–7 | 1. `created`; 2. each source: id unique, licence, `retrieved`; 3. each dictionary entry: name unique ignoring case, compound terms, speed; 4. each station: id namespace, licence, rows in order (known, then not repeated), z0, record years, computed tokens then conflicts in token order, record dates (start, end, order), computed period (start, end, order, length); 5. station ids unique, then each subordinate: reference, then offsets datum. `retrieved` is a date the HJ §10.1 `E-DATE` row did not list; it is added there. |
+| `HarmonicsFile` storage | references and subordinates in vectors; views hold `const HarmonicsFile*` | The records are immutable and shared (`shared_ptr<const detail::HarmonicsData>`): a copy is cheap, and views point at the records, so moving a file (into a vector, out of an `expected`) leaves its views valid. Sources, references and subordinates are sorted by id and the dictionary is canonical, so `==` (content) ignores input order and the H5 writer needs no sorting. Accessors: `sources()`, `source(SourceIndex)`, `references()`/`subordinates()` (vectors of views), `reference(i)`, `subordinate(i)`, `find(id)`, `info(StationIndex)`, `effective_licence(StationIndex)`; views also give `licence()` and `source()`. |
+
+For H5: the reader fills `HarmonicsInput` after its schema checks, building the value types above
+(their errors are `E-SCHEMA` at the pointer it knows), then maps each `HarmonicsError` and
+`HarmonicsWarning` to a `LocatedError` or `Warning` by the positions they carry. Positions index
+the input vectors; a reader that skips items (newer minor, §6.3 step 6) keeps a map back to
+document positions. `station_namespace` is the `station_id` grammar check. `lon == -180` is
+refused before `Location::make`, which would normalize it to 180 (§6.4).
 
 ---
 
@@ -1287,7 +1325,7 @@ class TidesProvider {   // a providers::Fetcher (docs/providers-design.md §6.1,
 |---|---|---|---|---|
 | H0 | Config and doc sync: provider-apis §5 marked superseded; SN registry tokens (`harmonics`, HAT/LAT/DTL); `vcpkg.json` (+`nlohmann-json`, +`zlib`); CLAUDE.md build notes. Plan decision 31 is already JSON (e99c8abe). **Done** with the providers' H0 (`docs/providers-design.md` §12), which also linked both into `mov_io` and added their include gate. | — | coordinator | S (0.5 d) |
 | H1 | `Phase`, `HighLow`, `Argument` monoid, `constituent`, `catalogue` (NOS 37 + extended set for Anchorage, vetted aliases), `astronomy`, constexpr and law tests, generated `constituents-nos.json` + drift tests, congen golden table. **Done** (2026-10-09, revised after review; §2.6), with the per-year astronomy (`YearAstronomy`, `equilibrium`, `diagnostic::InstantAstronomy`), one `flatten` for the catalogue and H2, and the oracles in `tools/tide/`; the drift tests of the datum and analysis enums come with H2's vocabulary | H0 | Opus | L (4 d) |
-| H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3; the `provider::Harmonics` id grammar; `DataSource::harmonics` and `Cancelled` in core are done) | H1 | Opus | M (3 d) |
+| H2 | `ConstituentSet`, `YearArguments`, `Licence`, `HarmonicsFile` + views, `Datums`, vocabulary changes (`VerticalDatum` +3; the `provider::Harmonics` id grammar; `DataSource::harmonics` and `Cancelled` in core are done). **Built** (2026-10-15; §2.7) with the input records H5 fills, `validate`, the per-year node-factor cache, the datum and analysis drift tests and `fuzz_licence`. **Open:** `VerticalDatum` +3 and the `provider::Harmonics` narrowing touch `datum.hpp` and `station.hpp`, outside the tide paths during the parallel provider work; until then the file model has its own `DatumToken` and `station_namespace` (§2.7) | H1 | Opus | M (3 d) |
 | H3 | `predict`, `height_at`, `diagnostic::`, `extremes` (Lipschitz isolation, separation filter); fixture recorder; goldens §8.2 (reference stations, full-year hilo, New Year windows); self round trip | H2 | Opus (engine), Sonnet (fixtures) | L (4 d) |
 | H4 | `subordinate_extremes`, `subordinate_predict` (clamped warp), `Events` and `shift`; subordinate goldens; property test | H3 | Opus | M (3 d) |
 | H5 | io: callback parser, raw records, version gate and skip cascade, `validate_harmonics`, errors with pointers and values, gzip, writer, fixtures + manifest (3 categories), `format-compliance` schema step, fuzz targets | H2, H0 | Sonnet, Opus review | L (5 d) |

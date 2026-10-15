@@ -3,18 +3,25 @@
 
 #pragma once
 
+#include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <expected>
+#include <utility>
+#include <vector>
 
 #include "mov/core/tide/astronomy.hpp"
 #include "mov/core/tide/constituent.hpp"
+#include "mov/core/tide/constituent_set.hpp"
 #include "mov/core/tide/phase.hpp"
 #include "mov/core/time.hpp"
 
 // The NOS yearly nodal scheme (docs/harmonics-json.md section 5.2): V0 at
 // 1 January 00:00 UTC, u and f at mid-year, speeds from the 1900 rates. One
-// YearAstronomy per year segment is all that prediction needs; the per-set
-// table of every constituent's (V0 + u, f) is YearArguments (WP H2).
+// YearAstronomy per year segment holds what the year needs (the elements at
+// its start, the nodal terms and the 14 node-factor values at its middle);
+// YearArguments is the table of every constituent's (V0 + u, f) for one
+// ConstituentSet and year.
 
 namespace mov::core::tide {
 
@@ -47,7 +54,8 @@ struct YearOutOfRange {
 }
 
 /// The astronomy of one year in the yearly scheme: the elements at its start
-/// (for V0) and the nodal terms at its middle (for u and f).
+/// (for V0), the nodal terms at its middle (for u), and every node-factor
+/// formula evaluated there once (for f).
 class YearAstronomy {
  public:
   /// YearOutOfRange outside [first_year, last_year].
@@ -58,17 +66,26 @@ class YearAstronomy {
   [[nodiscard]] Time start() const noexcept { return year_start(year_); }
   [[nodiscard]] Elements at_start() const noexcept { return at_start_; }
   [[nodiscard]] NodalTerms at_mid_year() const noexcept { return at_mid_; }
+  /// NodeFactorValues::of(at_mid_year()), evaluated once by make().
+  [[nodiscard]] const NodeFactorValues& node_factors() const& noexcept {
+    return factors_;
+  }
+  const NodeFactorValues& node_factors() const&& = delete;  // would dangle
 
   friend bool operator==(const YearAstronomy&, const YearAstronomy&) = default;
 
  private:
   YearAstronomy(std::chrono::year y, Elements start_elements,
                 NodalTerms mid_terms) noexcept
-      : year_{y}, at_start_{start_elements}, at_mid_{mid_terms} {}
+      : year_{y},
+        at_start_{start_elements},
+        at_mid_{mid_terms},
+        factors_{NodeFactorValues::of(mid_terms)} {}
 
   std::chrono::year year_;
   Elements at_start_;
   NodalTerms at_mid_;
+  NodeFactorValues factors_;
 };
 
 /// A constituent's equilibrium argument (V + u) and node factor f, both from
@@ -81,10 +98,52 @@ struct Equilibrium {
 };
 
 /// (V0 + u) and f of `a` for the year of `y`: V0 at the year's start, u and f
-/// at its middle. Prediction within the year uses
-/// argument + speed * (hours since the start).
+/// at its middle (f from the year's cached node factors). Prediction within
+/// the year uses argument + speed * (hours since the start).
 [[nodiscard]] Equilibrium equilibrium(const Argument& a,
                                       const YearAstronomy& y) noexcept;
+
+/// Every constituent's Equilibrium for one ConstituentSet and one year: what
+/// a year segment of a prediction evaluates once. Indexed by the set's
+/// ConstituentIndex; built only by year_arguments().
+class YearArguments {
+ public:
+  [[nodiscard]] std::chrono::year year() const noexcept { return year_; }
+  /// year()-01-01T00:00:00Z, the origin of the hours in the argument.
+  [[nodiscard]] Time start() const noexcept { return year_start(year_); }
+  [[nodiscard]] std::size_t size() const noexcept {
+    return by_constituent_.size();
+  }
+
+  /// The entry of `i`, an index of the set this table was built for (an
+  /// index of a larger set is out of range: asserted).
+  [[nodiscard]] const Equilibrium& operator[](
+      ConstituentIndex i) const& noexcept {
+    assert(i.value() < by_constituent_.size());
+    return by_constituent_[i.value()];
+  }
+  const Equilibrium& operator[](ConstituentIndex) const&& = delete;
+
+  friend bool operator==(const YearArguments&, const YearArguments&) = default;
+
+ private:
+  friend YearArguments year_arguments(const ConstituentSet& set,
+                                      const YearAstronomy& y);
+  YearArguments(std::chrono::year y, std::vector<Equilibrium> by_constituent)
+      : year_{y}, by_constituent_{std::move(by_constituent)} {}
+
+  std::chrono::year year_;
+  std::vector<Equilibrium> by_constituent_;
+};
+
+/// The table of `set` for the year of `y`.
+[[nodiscard]] YearArguments year_arguments(const ConstituentSet& set,
+                                           const YearAstronomy& y);
+
+/// The table of `set` for year `y`; YearOutOfRange outside
+/// [first_year, last_year].
+[[nodiscard]] std::expected<YearArguments, YearOutOfRange> year_arguments(
+    const ConstituentSet& set, std::chrono::year y);
 
 namespace diagnostic {
 

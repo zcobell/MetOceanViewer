@@ -1,0 +1,1 @@
+(GPL-2.0-or-later WITH Classpath-exception-2.0) OR CC-BY-NC-SA-4.0

@@ -191,4 +191,12 @@ double node_factor(NodeFactor f, const NodalTerms& n) noexcept {
   return formulas[i].value(trig_of(n.I), n);
 }
 
+NodeFactorValues NodeFactorValues::of(const NodalTerms& n) noexcept {
+  std::array<double, node_factor_count> values{};
+  for (const NodeFactor f : all_node_factors) {
+    values[static_cast<std::size_t>(f)] = node_factor(f, n);
+  }
+  return NodeFactorValues{values};
+}
+
 }  // namespace mov::core::tide

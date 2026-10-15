@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <variant>
 
+#include "mov/core/ascii.hpp"
 #include "mov/core/tide/astronomy.hpp"
 #include "mov/core/tide/node_factor.hpp"
 #include "mov/core/tide/phase.hpp"
@@ -212,6 +213,22 @@ using Definition = std::variant<Darwin, CompoundTerms>;
 
 namespace mov::core::detail {
 
+/// a < b comparing ASCII letters without case (other bytes as they are),
+/// then by length: the order in which a dictionary finds names that differ
+/// only in case (docs/harmonics-json.md 7.1).
+[[nodiscard]] constexpr bool less_ignoring_case(std::string_view a,
+                                                std::string_view b) noexcept {
+  const std::size_t n = a.size() < b.size() ? a.size() : b.size();
+  for (std::size_t i = 0; i < n; ++i) {
+    const char x = ascii::to_lower(a[i]);
+    const char y = ascii::to_lower(b[i]);
+    if (x != y) {
+      return x < y;
+    }
+  }
+  return a.size() < b.size();
+}
+
 /// Reached only when an Argument coefficient or exponent would leave its
 /// type. Not constexpr, so constant evaluation stops there with an error; at
 /// run time it asserts. Flattening any Definition cannot reach it (see
@@ -376,6 +393,21 @@ class Argument {
 
   /// f = product over formulas of node_factor(formula, n)^exponent.
   [[nodiscard]] double f(const NodalTerms& n) const noexcept;
+
+  /// The same product from values already evaluated for the year: the same
+  /// multiplications in the same order, so the same bits as f(n) when
+  /// `values` is NodeFactorValues::of(n).
+  [[nodiscard]] constexpr double f(
+      const NodeFactorValues& values) const noexcept {
+    double product = 1.0;
+    for (const NodeFactor formula : all_node_factors) {
+      const std::uint32_t e = exponent(formula);
+      for (std::uint32_t k = 0; k < e; ++k) {
+        product *= values[formula];
+      }
+    }
+    return product;
+  }
 
   friend constexpr bool operator==(const Argument&, const Argument&) = default;
 

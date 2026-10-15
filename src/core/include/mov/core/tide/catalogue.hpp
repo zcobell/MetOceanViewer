@@ -451,19 +451,6 @@ using CatalogueSpan = std::span<const tide::CatalogueEntry>;
   return species;
 }
 
-[[nodiscard]] constexpr bool less_ignoring_case(std::string_view a,
-                                                std::string_view b) noexcept {
-  const std::size_t n = a.size() < b.size() ? a.size() : b.size();
-  for (std::size_t i = 0; i < n; ++i) {
-    const char x = ascii::to_lower(a[i]);
-    const char y = ascii::to_lower(b[i]);
-    if (x != y) {
-      return x < y;
-    }
-  }
-  return a.size() < b.size();
-}
-
 /// No two names, catalogue names and aliases together, are equal ignoring
 /// case: sorted, then neighbours compared. std::sort with a plain comparator
 /// (n log n) is the cheapest form in constant evaluation, where these

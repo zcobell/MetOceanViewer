@@ -5,9 +5,12 @@
 
 #include <chrono>
 #include <expected>
+#include <utility>
+#include <vector>
 
 #include "mov/core/tide/astronomy.hpp"
 #include "mov/core/tide/constituent.hpp"
+#include "mov/core/tide/constituent_set.hpp"
 #include "mov/core/tide/phase.hpp"
 #include "mov/core/time.hpp"
 
@@ -31,10 +34,27 @@ std::expected<YearAstronomy, YearOutOfRange> YearAstronomy::make(
 }
 
 Equilibrium equilibrium(const Argument& a, const YearAstronomy& y) noexcept {
-  const NodalTerms mid = y.at_mid_year();
   return Equilibrium{
-      .argument = Phase::wrap(a.v_deg(y.at_start()) + a.u_deg(mid)),
-      .node_factor = a.f(mid)};
+      .argument = Phase::wrap(a.v_deg(y.at_start()) + a.u_deg(y.at_mid_year())),
+      .node_factor = a.f(y.node_factors())};
+}
+
+YearArguments year_arguments(const ConstituentSet& set,
+                             const YearAstronomy& y) {
+  std::vector<Equilibrium> table;
+  table.reserve(set.size());
+  for (const ConstituentIndex i : set.indices()) {
+    table.push_back(equilibrium(set.argument(i), y));
+  }
+  return YearArguments{y.year(), std::move(table)};
+}
+
+std::expected<YearArguments, YearOutOfRange> year_arguments(
+    const ConstituentSet& set, std::chrono::year y) {
+  return YearAstronomy::make(y).transform(
+      [&set](const YearAstronomy& astronomy) {
+        return year_arguments(set, astronomy);
+      });
 }
 
 namespace diagnostic {

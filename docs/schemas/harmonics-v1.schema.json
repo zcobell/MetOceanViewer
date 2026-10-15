@@ -163,7 +163,7 @@
         "IGLD85",
         "STND"
       ],
-      "$comment": "drift-tested against core VerticalDatum (tide tokens)"
+      "$comment": "drift-tested against core tide::DatumToken"
     },
     "node_factor": {
       "enum": [
@@ -666,7 +666,7 @@
       "pattern": "^[^\\u0000-\\u001F\\u007F]*$"
     },
     "computed_datum_token": {
-      "$comment": "drift-tested against the builder's computed set (docs/harmonics-json.md 8.5)",
+      "$comment": "drift-tested against core tide::computable_datum_tokens (docs/harmonics-json.md 8.5)",
       "enum": [
         "HAT",
         "MHHW",
