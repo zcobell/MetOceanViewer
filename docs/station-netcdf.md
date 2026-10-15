@@ -441,8 +441,10 @@ coordinates. xarray promotes the byte status flag to float32 because of its `_Fi
 ### 10.2 Vertical datum
 
 `vertical_datum` (variable attribute, `water_level*` and generic `value` quantities) holds the `VerticalDatum` enum token, upper case:
-`MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `IGLD85`, `STND` (station/gauge datum); the tide engine adds `HAT`, `LAT` and `DTL`
-(`docs/harmonics-engine.md` §2.5, WP H2). The enum in `core` (`VerticalDatum`) is authoritative; no datum is
+`MLLW`, `MLW`, `MSL`, `MTL`, `MHW`, `MHHW`, `NGVD29`, `NAVD88`, `IGLD85`, `STND` (station/gauge datum), `HAT`, `LAT` and `DTL`
+(highest and lowest astronomical tide and diurnal tide level, from harmonics files; `docs/harmonics-engine.md` §2.7). A CF
+`geopotential_datum_name` or `vertical_datum` long name maps onto them too ("Highest Astronomical Tide", "Lowest Astronomical
+Tide", "Diurnal Tide Level"). The enum in `core` (`VerticalDatum`) is authoritative; no datum is
 represented by **omitting** the attribute, never by `"none"`. Unknown token on read => warning `W-DATUM-UNKNOWN`, datum treated as unspecified (no guessing; the text is kept in
 diagnostics). Datum shifts are applied in `core` (decision 18), never in the reader/writer. The attribute is not CF; CF's own channel for a vertical datum is a compound `crs_wkt`
 or `geopotential_datum_name` (App. F), which cannot express tidal datums and would imply a geoid relation; we keep one explicit attribute instead.

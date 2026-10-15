@@ -3,27 +3,44 @@
 
 #include "mov/core/tide/constituent.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cassert>
 #include <cstdint>
+#include <optional>
+#include <string_view>
 
 #include "mov/core/tide/astronomy.hpp"
+#include "mov/core/tide/builtin.hpp"
 #include "mov/core/tide/catalogue.hpp"
 #include "mov/core/tide/node_factor.hpp"
 
 namespace mov::core::tide {
 
 double Argument::f(const NodalTerms& n) const noexcept {
-  double product = 1.0;
-  for (const NodeFactor formula : all_node_factors) {
-    const std::uint32_t e = exponent(formula);
-    if (e == 0) {
-      continue;
-    }
-    const double value = node_factor(formula, n);
-    for (std::uint32_t k = 0; k < e; ++k) {
-      product *= value;
-    }
+  return f(NodeFactorValues::of(n));
+}
+
+std::optional<Argument> builtin_argument(std::string_view name) noexcept {
+  // Every entry flattened once, in catalogue order (the invariants below
+  // guarantee each flattens).
+  static const std::array<Argument, nos_catalogue.size()> arguments = [] {
+    std::array<Argument, nos_catalogue.size()> all{};
+    std::ranges::transform(
+        nos_catalogue, all.begin(), [](const CatalogueEntry& e) {
+          const auto a =
+              flatten(e.definition, detail::lookup_in(nos_catalogue));
+          assert(a.has_value());  // compound_terms_resolve, asserted below
+          return *a;
+        });
+    return all;
+  }();
+  const auto canonical = canonical_name(name);
+  if (not canonical) {
+    return std::nullopt;
   }
-  return product;
+  const auto i = catalogue_index(*canonical);
+  return i ? std::optional{arguments[*i]} : std::nullopt;
 }
 
 // The catalogue's invariants, checked once per build here rather than in the

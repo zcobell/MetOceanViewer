@@ -35,12 +35,8 @@ target_sources(mov_core PRIVATE tide/harmonics.cpp)
 # constituent.cpp includes the catalogue and static_asserts its invariants:
 # about 90,000 Clang constexpr steps for the catalogue's initializer and up to
 # 200,000 for one check, against cl's documented default of 100,000. A higher
-# cap for these TUs only, on cl alone (Clang's default is 1,048,576);
-# harmonics.cpp includes the catalogue too (W-CONSTITUENT-REDEFINED).
+# cap for this TU only, on cl alone (Clang's default is 1,048,576).
+# harmonics.cpp reaches the catalogue through builtin.hpp, not catalogue.hpp.
 if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set_source_files_properties(
-        tide/constituent.cpp
-        tide/harmonics.cpp
-        PROPERTIES COMPILE_OPTIONS "/constexpr:steps2000000"
-    )
+    set_source_files_properties(tide/constituent.cpp PROPERTIES COMPILE_OPTIONS "/constexpr:steps2000000")
 endif()

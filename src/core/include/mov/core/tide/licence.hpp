@@ -113,16 +113,27 @@ class LicenceParser {
  private:
   using Errc = tide::LicenceErrc;
   using Error = std::optional<tide::LicenceError>;
-  // What the next token may be: a licence or '(' (operand), AND, OR, WITH
-  // or ')' (operator_), the identifier after WITH (exception).
-  enum class Expect : std::uint8_t { operand, operator_, exception };
+  // What the next token may be: a licence or '(' (operand); after a licence
+  // identifier AND, OR, WITH or ')' (operator_or_with); after ')' or an
+  // exception AND, OR or ')' (operator_); the identifier after WITH
+  // (exception).
+  enum class Expect : std::uint8_t {
+    operand,
+    operator_or_with,
+    operator_,
+    exception
+  };
+
+  [[nodiscard]] constexpr bool after_operand() const noexcept {
+    return expect_ == Expect::operator_or_with or expect_ == Expect::operator_;
+  }
 
   [[nodiscard]] static constexpr Error fail(std::size_t offset,
                                             Errc code) noexcept {
     return tide::LicenceError{.offset = offset, .code = code};
   }
 
-  constexpr Error step() {
+  [[nodiscard]] constexpr Error step() {
     const char c = text_[at_];
     if (c == ' ') {
       ++at_;
@@ -140,7 +151,7 @@ class LicenceParser {
     return word();
   }
 
-  constexpr Error open() noexcept {
+  [[nodiscard]] constexpr Error open() noexcept {
     if (expect_ != Expect::operand) {
       return fail(at_, expect_ == Expect::exception ? Errc::expected_licence
                                                     : Errc::expected_operator);
@@ -150,20 +161,20 @@ class LicenceParser {
     return std::nullopt;
   }
 
-  constexpr Error close() noexcept {
-    if (expect_ != Expect::operator_) {
+  [[nodiscard]] constexpr Error close() noexcept {
+    if (not after_operand()) {
       return fail(at_, Errc::expected_licence);
     }
     if (depth_ == 0) {
       return fail(at_, Errc::unbalanced);
     }
     --depth_;
-    after_identifier_ = false;
+    expect_ = Expect::operator_;
     ++at_;
     return std::nullopt;
   }
 
-  constexpr Error word() {
+  [[nodiscard]] constexpr Error word() {
     std::size_t end = at_;
     while (end < text_.size() and is_licence_char(text_[end])) {
       ++end;
@@ -176,38 +187,35 @@ class LicenceParser {
     return error;
   }
 
-  constexpr Error conjunction() noexcept {
-    if (expect_ != Expect::operator_) {
+  [[nodiscard]] constexpr Error conjunction() noexcept {
+    if (not after_operand()) {
       return fail(at_, Errc::expected_licence);
     }
     expect_ = Expect::operand;
-    after_identifier_ = false;
     return std::nullopt;
   }
 
-  constexpr Error with() noexcept {
-    if (expect_ != Expect::operator_) {
+  [[nodiscard]] constexpr Error with() noexcept {
+    if (not after_operand()) {
       return fail(at_, Errc::expected_licence);
     }
-    if (not after_identifier_) {
+    if (expect_ != Expect::operator_or_with) {
       return fail(at_, Errc::expected_operator);
     }
     expect_ = Expect::exception;
-    after_identifier_ = false;
     return std::nullopt;
   }
 
-  constexpr Error identifier(std::string_view id) {
-    if (expect_ == Expect::operator_) {
+  [[nodiscard]] constexpr Error identifier(std::string_view id) {
+    if (after_operand()) {
       return fail(at_, Errc::expected_operator);
     }
     if (const auto bad = bad_licence_ref(id, at_)) {
       return fail(*bad, Errc::bad_character);
     }
-    (expect_ == Expect::exception ? exceptions_ : identifiers_)
-        .emplace_back(id);
-    after_identifier_ = expect_ == Expect::operand;
-    expect_ = Expect::operator_;
+    const bool exception = expect_ == Expect::exception;
+    (exception ? exceptions_ : identifiers_).emplace_back(id);
+    expect_ = exception ? Expect::operator_ : Expect::operator_or_with;
     return std::nullopt;
   }
 
@@ -215,7 +223,7 @@ class LicenceParser {
     if (identifiers_.empty() and expect_ == Expect::operand and depth_ == 0) {
       return fail(0, Errc::empty);
     }
-    if (expect_ != Expect::operator_) {
+    if (not after_operand()) {
       return fail(text_.size(), Errc::expected_licence);
     }
     if (depth_ != 0) {
@@ -228,7 +236,6 @@ class LicenceParser {
   std::size_t at_ = 0;
   std::size_t depth_ = 0;
   Expect expect_ = Expect::operand;
-  bool after_identifier_ = false;  // WITH may follow
   std::vector<std::string> identifiers_;
   std::vector<std::string> exceptions_;
 };

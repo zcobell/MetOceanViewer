@@ -3,8 +3,9 @@
 
 // STATIC_REQUIRE checks for the value types of the harmonics file model
 // (WP H2): licence expressions, source tokens and station-id namespaces,
-// datum tokens, DatumHeights and Datums, Analysis tokens, HarmonicConstant,
-// SubordinateOffsets and a small ConstituentSet.
+// file datum tokens, Heights, DatumPeriod and Datums, Analysis tokens,
+// HarmonicConstant, SubordinateOffsets, a small ConstituentSet, and the
+// spelling of the error and warning codes.
 
 #include <algorithm>
 #include <array>
@@ -20,9 +21,11 @@
 
 #include "../test_helpers.hpp"
 #include "mov/core/datum.hpp"
+#include "mov/core/enum_set.hpp"
 #include "mov/core/tide/constituent.hpp"
 #include "mov/core/tide/constituent_set.hpp"
 #include "mov/core/tide/datums.hpp"
+#include "mov/core/tide/harmonics.hpp"
 #include "mov/core/tide/licence.hpp"
 #include "mov/core/tide/node_factor.hpp"
 #include "mov/core/tide/phase.hpp"
@@ -34,22 +37,22 @@ using mov::core::Length;
 using mov::core::LengthUnit;
 using mov::core::VerticalDatum;
 using mov::core::tide::all_analyses;
-using mov::core::tide::all_datum_tokens;
+using mov::core::tide::all_computable_datums;
 using mov::core::tide::Analysis;
 using mov::core::tide::BothOrigins;
 using mov::core::tide::CompoundTerms;
+using mov::core::tide::ComputableDatum;
 using mov::core::tide::ComputedDatums;
+using mov::core::tide::ComputedHeights;
 using mov::core::tide::constituent_name;
 using mov::core::tide::ConstituentName;
 using mov::core::tide::ConstituentSet;
 using mov::core::tide::Darwin;
 using mov::core::tide::DatumHeights;
-using mov::core::tide::DatumHeightsErrc;
-using mov::core::tide::DatumHeightsError;
 using mov::core::tide::DatumOrigin;
 using mov::core::tide::DatumPeriod;
+using mov::core::tide::DatumPeriodError;
 using mov::core::tide::Datums;
-using mov::core::tide::DatumToken;
 using mov::core::tide::DictionaryEntry;
 using mov::core::tide::DictionaryError;
 using mov::core::tide::DuplicateName;
@@ -57,21 +60,18 @@ using mov::core::tide::HarmonicConstant;
 using mov::core::tide::HarmonicConstantError;
 using mov::core::tide::HeightOffset;
 using mov::core::tide::HeightRatio;
+using mov::core::tide::HeightRow;
+using mov::core::tide::HeightsErrc;
 using mov::core::tide::Licence;
 using mov::core::tide::LicenceErrc;
 using mov::core::tide::LicenceError;
-using mov::core::tide::MeanSeaLevel;
 using mov::core::tide::NodeFactor;
-using mov::core::tide::NotComputable;
-using mov::core::tide::ShortPeriod;
 using mov::core::tide::source_token;
 using mov::core::tide::SourceToken;
 using mov::core::tide::SourceTokenError;
 using mov::core::tide::station_namespace;
 using mov::core::tide::SubordinateOffsets;
 using mov::core::tide::SubordinateOffsetsError;
-using mov::core::tide::TideDatum;
-using mov::core::tide::TokenHeight;
 
 namespace tide = mov::core::tide;
 
@@ -237,80 +237,95 @@ TEST_CASE("a station id's namespace is its source token",
   }());
 }
 
-TEST_CASE("datum tokens round-trip and map onto core's VerticalDatum",
+TEST_CASE("the file's datum tokens are core's, spelled exactly",
           "[core][tide][datums][constexpr]") {
-  STATIC_REQUIRE(std::ranges::all_of(all_datum_tokens, [](DatumToken d) {
-    return tide::parse_datum_token(tide::to_token(d)) == d;
-  }));
-  STATIC_REQUIRE(tide::to_token(DatumToken::mllw) == "MLLW");
-  STATIC_REQUIRE_FALSE(tide::parse_datum_token("MSL"));
-  STATIC_REQUIRE_FALSE(tide::parse_datum_token("mllw"));
-  STATIC_REQUIRE(tide::parse_tide_datum("MSL") == TideDatum{MeanSeaLevel{}});
-  STATIC_REQUIRE(tide::parse_tide_datum("HAT") == TideDatum{DatumToken::hat});
-  STATIC_REQUIRE_FALSE(tide::parse_tide_datum("Msl"));
-  STATIC_REQUIRE(tide::to_token(TideDatum{MeanSeaLevel{}}) == "MSL");
-  STATIC_REQUIRE(tide::to_token(TideDatum{DatumToken::stnd}) == "STND");
-  // Every token with a core datum maps to the datum of the same token.
-  STATIC_REQUIRE(std::ranges::all_of(all_datum_tokens, [](DatumToken d) {
-    const auto core = tide::to_vertical_datum(d);
-    return not core or mov::core::to_string(*core) == tide::to_token(d);
-  }));
-  STATIC_REQUIRE_FALSE(tide::to_vertical_datum(DatumToken::hat));
-  STATIC_REQUIRE_FALSE(tide::to_vertical_datum(DatumToken::lat));
-  STATIC_REQUIRE_FALSE(tide::to_vertical_datum(DatumToken::dtl));
-  STATIC_REQUIRE(tide::to_vertical_datum(TideDatum{MeanSeaLevel{}}) ==
-                 VerticalDatum::msl);
-  STATIC_REQUIRE(tide::is_computable(DatumToken::lat));
-  STATIC_REQUIRE_FALSE(tide::is_computable(DatumToken::navd88));
+  STATIC_REQUIRE(
+      std::ranges::all_of(mov::core::detail::all_datums, [](VerticalDatum d) {
+        return tide::parse_file_datum(mov::core::to_string(d)) == d;
+      }));
+  STATIC_REQUIRE(tide::parse_file_datum("MSL") == VerticalDatum::msl);
+  STATIC_REQUIRE(tide::parse_file_datum("HAT") == VerticalDatum::hat);
+  STATIC_REQUIRE_FALSE(tide::parse_file_datum("mllw"));
+  STATIC_REQUIRE_FALSE(tide::parse_file_datum("NAVD"));  // an alias elsewhere
+  // Every computable datum is its core datum, and back.
+  STATIC_REQUIRE(
+      std::ranges::all_of(all_computable_datums, [](ComputableDatum c) {
+        return tide::computable(tide::vertical_datum(c)) == c;
+      }));
+  STATIC_REQUIRE(tide::to_string(ComputableDatum::dtl) == "DTL");
+  STATIC_REQUIRE_FALSE(tide::computable(VerticalDatum::navd88));
+  STATIC_REQUIRE_FALSE(tide::computable(VerticalDatum::msl));
 }
 
-TEST_CASE("DatumHeights holds each token once with a finite height",
+namespace {
+
+constexpr std::array published_rows{
+    HeightRow<VerticalDatum>{.datum = VerticalDatum::mllw,
+                             .height = metres(-1.004)},
+    HeightRow<VerticalDatum>{.datum = VerticalDatum::stnd,
+                             .height = metres(-1.522)}};
+
+}  // namespace
+
+TEST_CASE("datum heights hold each datum once, finite, never MSL",
           "[core][tide][datums][constexpr]") {
-  constexpr std::array rows{
-      TokenHeight{.datum = DatumToken::mllw, .height = metres(-1.004)},
-      TokenHeight{.datum = DatumToken::navd88, .height = metres(0.161)}};
-  STATIC_REQUIRE(DatumHeights::make(rows)->height(DatumToken::mllw) ==
-                 metres(-1.004));
-  STATIC_REQUIRE_FALSE(DatumHeights::make(rows)->height(DatumToken::mhw));
-  STATIC_REQUIRE(DatumHeights::make(rows)->rows().size() == 2);
-  STATIC_REQUIRE(DatumHeights::make(rows)->rows()[0].datum == DatumToken::mllw);
+  using Row = HeightRow<VerticalDatum>;
+  using Error = tide::HeightsError<VerticalDatum>;
+  STATIC_REQUIRE(
+      DatumHeights::make(published_rows)->height(VerticalDatum::mllw) ==
+      metres(-1.004));
+  STATIC_REQUIRE_FALSE(
+      DatumHeights::make(published_rows)->height(VerticalDatum::mhw));
+  STATIC_REQUIRE(DatumHeights::make(published_rows)->rows().size() == 2);
   STATIC_REQUIRE(DatumHeights{}.empty());
-  STATIC_REQUIRE_FALSE(DatumHeights::make(rows)->empty());
+  STATIC_REQUIRE_FALSE(DatumHeights::make(published_rows)->empty());
   constexpr std::array twice{
-      TokenHeight{.datum = DatumToken::mllw, .height = metres(-1.0)},
-      TokenHeight{.datum = DatumToken::mllw, .height = metres(-1.0)}};
-  STATIC_REQUIRE(DatumHeights::make(twice).error() ==
-                 DatumHeightsError{.datum = DatumToken::mllw,
-                                   .code = DatumHeightsErrc::duplicate});
-  constexpr std::array infinite{TokenHeight{
-      .datum = DatumToken::hat, .height = metres(mov::test::infinity)}};
-  STATIC_REQUIRE(DatumHeights::make(infinite).error() ==
-                 DatumHeightsError{.datum = DatumToken::hat,
-                                   .code = DatumHeightsErrc::not_finite});
+      Row{.datum = VerticalDatum::mllw, .height = metres(-1.0)},
+      Row{.datum = VerticalDatum::mllw, .height = metres(-1.0)}};
+  STATIC_REQUIRE(
+      DatumHeights::make(twice).error() ==
+      Error{.datum = VerticalDatum::mllw, .code = HeightsErrc::duplicate});
+  constexpr std::array infinite{
+      Row{.datum = VerticalDatum::hat, .height = metres(mov::test::infinity)}};
+  STATIC_REQUIRE(
+      DatumHeights::make(infinite).error() ==
+      Error{.datum = VerticalDatum::hat, .code = HeightsErrc::not_finite});
+  constexpr std::array msl{
+      Row{.datum = VerticalDatum::msl, .height = metres(0.0)}};
+  STATIC_REQUIRE(DatumHeights::make(msl).error() ==
+                 Error{.datum = VerticalDatum::msl, .code = HeightsErrc::msl});
+  constexpr std::array computed_rows{HeightRow<ComputableDatum>{
+      .datum = ComputableDatum::lat, .height = metres(-1.3)}};
+  STATIC_REQUIRE(
+      ComputedHeights::make(computed_rows)->height(ComputableDatum::lat) ==
+      metres(-1.3));
 }
 
 TEST_CASE("a computed period spans at least 18.61 Julian years",
           "[core][tide][datums][constexpr]") {
   // 18.61 x 365.25 = 6797.3025 days: 6797 is short, 6798 is long enough.
-  STATIC_REQUIRE_FALSE(tide::spans_nodal_cycle(
-      day(2000, 1, 1), day(2000, 1, 1) + std::chrono::days{6797}));
-  STATIC_REQUIRE(tide::spans_nodal_cycle(
-      day(2000, 1, 1), day(2000, 1, 1) + std::chrono::days{6798}));
-  STATIC_REQUIRE(tide::spans_nodal_cycle(day(2007, 1, 1), day(2026, 1, 1)));
-  STATIC_REQUIRE_FALSE(
-      tide::spans_nodal_cycle(day(2026, 1, 1), day(2007, 1, 1)));
+  STATIC_REQUIRE(DatumPeriod::make(day(2000, 1, 1),
+                                   day(2000, 1, 1) + std::chrono::days{6797})
+                     .error() == DatumPeriodError::too_short);
+  STATIC_REQUIRE(DatumPeriod::make(day(2000, 1, 1),
+                                   day(2000, 1, 1) + std::chrono::days{6798})
+                     .has_value());
+  STATIC_REQUIRE(DatumPeriod::make(day(2007, 1, 1), day(2026, 1, 1))->end() ==
+                 day(2026, 1, 1));
+  STATIC_REQUIRE(DatumPeriod::make(day(2026, 1, 1), day(2007, 1, 1)).error() ==
+                 DatumPeriodError::inverted);
+  STATIC_REQUIRE(DatumPeriod::make(day(2026, 1, 1), day(2026, 1, 1)).error() ==
+                 DatumPeriodError::too_short);
 }
 
 namespace {
 
-constexpr DatumHeights heights(std::initializer_list<TokenHeight> rows) {
-  return DatumHeights::make(std::span{rows.begin(), rows.size()}).value();
-}
-
-constexpr ComputedDatums computed(std::initializer_list<TokenHeight> rows) {
+constexpr ComputedDatums computed(
+    std::initializer_list<HeightRow<ComputableDatum>> rows) {
   return ComputedDatums{
-      .period = DatumPeriod{.start = day(2007, 1, 1), .end = day(2026, 1, 1)},
-      .heights = heights(rows)};
+      .period = DatumPeriod::make(day(2007, 1, 1), day(2026, 1, 1)).value(),
+      .heights =
+          ComputedHeights::make(std::span{rows.begin(), rows.size()}).value()};
 }
 
 }  // namespace
@@ -319,70 +334,65 @@ TEST_CASE("Datums knows each height and whether it was published",
           "[core][tide][datums][constexpr]") {
   STATIC_REQUIRE([] {
     const auto d = Datums::make(
-        heights({{.datum = DatumToken::mllw, .height = metres(-1.004)},
-                 {.datum = DatumToken::stnd, .height = metres(-1.522)}}),
-        computed({{.datum = DatumToken::lat, .height = metres(-1.3)},
-                  {.datum = DatumToken::mhw, .height = metres(0.9)}}),
+        DatumHeights::make(published_rows).value(),
+        computed({{.datum = ComputableDatum::lat, .height = metres(-1.3)},
+                  {.datum = ComputableDatum::mhw, .height = metres(0.9)}}),
         "1983-2001");
-    return d and d->height(TideDatum{MeanSeaLevel{}}) == metres(0.0) and
-           d->height(TideDatum{DatumToken::mllw}) == metres(-1.004) and
-           d->height(TideDatum{DatumToken::lat}) == metres(-1.3) and
-           not d->height(TideDatum{DatumToken::navd88}) and
-           d->origin(TideDatum{MeanSeaLevel{}}) == DatumOrigin::published and
-           d->origin(TideDatum{DatumToken::mllw}) == DatumOrigin::published and
-           d->origin(TideDatum{DatumToken::mhw}) == DatumOrigin::computed and
-           not d->origin(TideDatum{DatumToken::hat}) and
+    return d and d->height(VerticalDatum::msl) == metres(0.0) and
+           d->height(VerticalDatum::mllw) == metres(-1.004) and
+           d->height(VerticalDatum::lat) == metres(-1.3) and
+           not d->height(VerticalDatum::navd88) and
+           d->origin(VerticalDatum::msl) == DatumOrigin::published and
+           d->origin(VerticalDatum::mllw) == DatumOrigin::published and
+           d->origin(VerticalDatum::mhw) == DatumOrigin::computed and
+           not d->origin(VerticalDatum::hat) and
            d->published_epoch() == "1983-2001" and
-           d->computed()->period.start == day(2007, 1, 1);
+           d->computed()->period.start() == day(2007, 1, 1);
   }());
-  // The table holds what core's datums can name: MLLW, STND, MHW; not LAT.
+  // The table holds every datum either set has, LAT included.
   STATIC_REQUIRE([] {
     const auto d = Datums::make(
-        heights({{.datum = DatumToken::mllw, .height = metres(-1.004)},
-                 {.datum = DatumToken::stnd, .height = metres(-1.522)}}),
-        computed({{.datum = DatumToken::lat, .height = metres(-1.3)},
-                  {.datum = DatumToken::mhw, .height = metres(0.9)}}),
+        DatumHeights::make(published_rows).value(),
+        computed({{.datum = ComputableDatum::lat, .height = metres(-1.3)},
+                  {.datum = ComputableDatum::mhw, .height = metres(0.9)}}),
         std::nullopt);
     const auto t = d->table();
     return t.height_above_msl(VerticalDatum::mllw) == metres(-1.004) and
            t.height_above_msl(VerticalDatum::mhw) == metres(0.9) and
+           t.height_above_msl(VerticalDatum::lat) == metres(-1.3) and
            t.height_above_msl(VerticalDatum::stnd) == metres(-1.522) and
            not t.height_above_msl(VerticalDatum::navd88);
   }());
-  STATIC_REQUIRE(Datums{}.height(TideDatum{MeanSeaLevel{}}) == metres(0.0));
-  STATIC_REQUIRE_FALSE(Datums{}.height(TideDatum{DatumToken::mllw}));
-  STATIC_REQUIRE_FALSE(Datums{}.origin(TideDatum{DatumToken::mllw}));
+  STATIC_REQUIRE(Datums{}.height(VerticalDatum::msl) == metres(0.0));
+  STATIC_REQUIRE_FALSE(Datums{}.height(VerticalDatum::mllw));
+  STATIC_REQUIRE_FALSE(Datums{}.origin(VerticalDatum::mllw));
   STATIC_REQUIRE(Datums{}.table() == mov::core::DatumTable{});
 }
 
-TEST_CASE(
-    "Datums refuses conflicts, short periods and geodetic computed "
-    "datums",
-    "[core][tide][datums][constexpr]") {
+TEST_CASE("Datums refuses every datum both published and computed",
+          "[core][tide][datums][constexpr]") {
   STATIC_REQUIRE(
       Datums::make(
-          heights({{.datum = DatumToken::mllw, .height = metres(-1.0)}}),
-          computed({{.datum = DatumToken::mllw, .height = metres(-1.0)}}),
+          DatumHeights::make(published_rows).value(),
+          computed({{.datum = ComputableDatum::mllw, .height = metres(-1.0)},
+                    {.datum = ComputableDatum::lat, .height = metres(-1.3)}}),
           std::nullopt)
-          .error() ==
-      tide::DatumsError{BothOrigins{.datum = DatumToken::mllw}});
-  STATIC_REQUIRE(
-      Datums::make(
-          {},
-          computed({{.datum = DatumToken::navd88, .height = metres(0.1)},
-                    {.datum = DatumToken::stnd, .height = metres(1.0)}}),
-          std::nullopt)
-          .error() ==
-      tide::DatumsError{NotComputable{.datum = DatumToken::navd88}});
-  STATIC_REQUIRE(
-      Datums::make(
-          {},
-          ComputedDatums{.period = DatumPeriod{.start = day(2020, 1, 1),
-                                               .end = day(2026, 1, 1)},
-                         .heights = heights({{.datum = DatumToken::hat,
-                                              .height = metres(1.0)}})},
-          std::nullopt)
-          .error() == tide::DatumsError{ShortPeriod{}});
+          .error() == BothOrigins{.datums = mov::core::EnumSet<VerticalDatum>{
+                                      VerticalDatum::mllw}});
+  STATIC_REQUIRE([] {
+    using enum VerticalDatum;
+    constexpr std::array rows{
+        HeightRow<VerticalDatum>{.datum = mhw, .height = metres(0.9)},
+        HeightRow<VerticalDatum>{.datum = mllw, .height = metres(-1.0)}};
+    const auto e =
+        Datums::make(
+            DatumHeights::make(rows).value(),
+            computed({{.datum = ComputableDatum::mllw, .height = metres(-1.0)},
+                      {.datum = ComputableDatum::mhw, .height = metres(0.9)}}),
+            std::nullopt)
+            .error();
+    return e.datums == mov::core::EnumSet<VerticalDatum>{mhw, mllw};
+  }());
 }
 
 TEST_CASE("analysis tokens round-trip", "[core][tide][constexpr]") {
@@ -436,14 +446,13 @@ TEST_CASE("subordinate offsets: minutes to milliseconds, ratios positive",
     return SubordinateOffsets::make(
         {.minutes = {.high = th, .low = tl},
          .height = HeightRatio{.ratio = {.high = rh, .low = rl}},
-         .datum = TideDatum{DatumToken::mllw}});
+         .datum = VerticalDatum::mllw});
   };
   STATIC_REQUIRE(ratio(245.0, 249.0, 0.49, 1.16)->time().high ==
                  milliseconds{245 * 60'000});
   STATIC_REQUIRE(ratio(245.0, -249.0, 0.49, 1.16)->time().low ==
                  milliseconds{-249 * 60'000});
-  STATIC_REQUIRE(ratio(1.0, 1.0, 0.49, 1.16)->datum() ==
-                 TideDatum{DatumToken::mllw});
+  STATIC_REQUIRE(ratio(1.0, 1.0, 0.49, 1.16)->datum() == VerticalDatum::mllw);
   STATIC_REQUIRE(ratio(1.0, 1.0, 0.49, 1.16)->height() ==
                  tide::HeightAdjustment{
                      HeightRatio{.ratio = {.high = 0.49, .low = 1.16}}});
@@ -468,10 +477,10 @@ TEST_CASE("subordinate offsets: minutes to milliseconds, ratios positive",
         {.minutes = {.high = -17.0, .low = -29.0},
          .height =
              HeightOffset{.offset = {.high = metres(ah), .low = metres(al)}},
-         .datum = TideDatum{MeanSeaLevel{}}});
+         .datum = VerticalDatum::msl});
   };
   STATIC_REQUIRE(offset(-0.06, 0.03).has_value());
-  STATIC_REQUIRE(offset(-0.06, 0.03)->datum() == TideDatum{MeanSeaLevel{}});
+  STATIC_REQUIRE(offset(-0.06, 0.03)->datum() == VerticalDatum::msl);
   STATIC_REQUIRE(offset(mov::test::infinity, 0.0).error() == high_height);
   STATIC_REQUIRE(offset(0.0, -mov::test::infinity).error() == low_height);
 }
@@ -522,15 +531,16 @@ TEST_CASE("a constituent set resolves and orders its entries",
     if (not set or set->size() != 5) {
       return false;
     }
-    const auto all = set->indices();
     const std::array<std::string_view, 5> expected{"K1", "M2", "S2", "M4",
                                                    "MS4"};
-    for (std::size_t i = 0; i < all.size(); ++i) {
-      if (set->name(all[i]).view() != expected[i] or all[i].value() != i) {
+    std::size_t k = 0;
+    for (const auto i : set->indices()) {
+      if (set->name(i).view() != expected[k] or i.value() != k) {
         return false;
       }
+      ++k;
     }
-    return true;
+    return k == expected.size();
   }());
   STATIC_REQUIRE([] {
     const auto set = ConstituentSet::make(small_dictionary());
@@ -585,7 +595,41 @@ TEST_CASE("a constituent set refuses duplicate names and bad terms",
   STATIC_REQUIRE([] {
     const std::vector d{entry("Sa", s2_darwin), entry("SSA", s2_darwin),
                         entry("SA", s2_darwin), entry("sa", s2_darwin)};
-    const auto first = mov::core::detail::earlier_same_name(d);
+    const auto first = mov::core::detail::same_name_ignoring_case(d);
     return not first[0] and not first[1] and first[2] == 0 and first[3] == 0;
   }());
+}
+
+TEST_CASE("every error and warning code has its format spelling",
+          "[core][tide][harmonics][constexpr]") {
+  using enum tide::HarmonicsErrc;
+  STATIC_REQUIRE(tide::to_string(schema) == "E-SCHEMA");
+  STATIC_REQUIRE(tide::to_string(date) == "E-DATE");
+  STATIC_REQUIRE(tide::to_string(duplicate_source) == "E-DUPLICATE-SOURCE");
+  STATIC_REQUIRE(tide::to_string(licence) == "E-LICENCE");
+  STATIC_REQUIRE(tide::to_string(duplicate_constituent) ==
+                 "E-DUPLICATE-CONSTITUENT");
+  STATIC_REQUIRE(tide::to_string(compound_term) == "E-COMPOUND-TERM");
+  STATIC_REQUIRE(tide::to_string(speed_mismatch) == "E-SPEED-MISMATCH");
+  STATIC_REQUIRE(tide::to_string(unknown_source) == "E-UNKNOWN-SOURCE");
+  STATIC_REQUIRE(tide::to_string(unknown_constituent) ==
+                 "E-UNKNOWN-CONSTITUENT");
+  STATIC_REQUIRE(tide::to_string(duplicate_row) == "E-DUPLICATE-ROW");
+  STATIC_REQUIRE(tide::to_string(datum_conflict) == "E-DATUM-CONFLICT");
+  STATIC_REQUIRE(tide::to_string(duplicate_station) == "E-DUPLICATE-STATION");
+  STATIC_REQUIRE(tide::to_string(reference) == "E-REFERENCE");
+  STATIC_REQUIRE(tide::to_string(offset_datum) == "E-OFFSET-DATUM");
+  using W = tide::HarmonicsWarningCode;
+  STATIC_REQUIRE(tide::to_string(W::constituent_redefined) ==
+                 "W-CONSTITUENT-REDEFINED");
+  STATIC_REQUIRE(tide::to_string(W::unused_constituent) ==
+                 "W-UNUSED-CONSTITUENT");
+  STATIC_REQUIRE(tide::to_string(W::unused_source) == "W-UNUSED-SOURCE");
+  STATIC_REQUIRE(tide::code(tide::HarmonicsError{
+                     tide::ShortDatumPeriod{.station = 0}}) == datum_conflict);
+  STATIC_REQUIRE(tide::code(tide::HarmonicsError{tide::InvalidNumber{
+                     .station = 0, .number = tide::StationNumber::z0}}) ==
+                 schema);
+  STATIC_REQUIRE(tide::code(tide::HarmonicsWarning{
+                     tide::UnusedSource{.source = 0}}) == W::unused_source);
 }

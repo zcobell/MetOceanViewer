@@ -18,6 +18,7 @@
 
 #include "mov/core/ascii.hpp"
 #include "mov/core/geo.hpp"
+#include "mov/core/tide/source_token.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/utf8.hpp"
 
@@ -68,11 +69,6 @@ static_assert(rows_in_enumerator_order());
 [[nodiscard]] constexpr bool is_upper_alnum(char c) noexcept {
   return ascii::is_digit(c) or (c >= 'A' and c <= 'Z');
 }
-[[nodiscard]] constexpr bool is_control(char c) noexcept {
-  const auto byte = static_cast<unsigned char>(c);
-  return byte < 0x20 or byte == 0x7F;
-}
-
 }  // namespace detail
 
 [[nodiscard]] constexpr std::string_view to_token(DataSource s) noexcept {
@@ -217,19 +213,17 @@ struct Ndbc {
   }
 };
 
-/// A station of a tidal harmonics file (docs/harmonics-engine.md; v5's own
-/// engine replaces XTide). Non-empty well-formed UTF-8, at most
-/// 255 bytes, no control characters (bytes below 0x20 and 0x7F); the
-/// harmonics reader narrows this to its `<source>:<local>` ids.
+/// A station of a tidal harmonics file (docs/harmonics-json.md 8.1): an id
+/// `<source>:<local>`, at most 255 bytes of well-formed UTF-8, whose
+/// namespace is a source token and whose local part has no control
+/// characters (tide::station_namespace).
 struct Harmonics {
   static constexpr DataSource source = DataSource::harmonics;
-  static constexpr std::size_t max_id_bytes = 255;
   [[nodiscard]] static constexpr std::string canonical(std::string_view id) {
     return std::string{id};
   }
   [[nodiscard]] static constexpr bool valid_id(std::string_view id) noexcept {
-    return not id.empty() and id.size() <= max_id_bytes and
-           std::ranges::none_of(id, detail::is_control) and is_valid_utf8(id);
+    return tide::station_namespace(id).has_value();
   }
 };
 

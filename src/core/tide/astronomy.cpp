@@ -192,10 +192,10 @@ double node_factor(NodeFactor f, const NodalTerms& n) noexcept {
 }
 
 NodeFactorValues NodeFactorValues::of(const NodalTerms& n) noexcept {
+  const ITrig trig = trig_of(n.I);  // once for all 14 formulas
   std::array<double, node_factor_count> values{};
-  for (const NodeFactor f : all_node_factors) {
-    values[static_cast<std::size_t>(f)] = node_factor(f, n);
-  }
+  std::ranges::transform(formulas, values.begin(),
+                         [&](const Formula& f) { return f.value(trig, n); });
   return NodeFactorValues{values};
 }
 

@@ -3,19 +3,23 @@
 
 #pragma once
 
+#include <chrono>
 #include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
+#include "mov/core/datum.hpp"
+#include "mov/core/overloaded.hpp"
 #include "mov/core/tide/constituent.hpp"
 #include "mov/core/tide/constituent_set.hpp"
 #include "mov/core/tide/datums.hpp"
@@ -23,14 +27,15 @@
 #include "mov/core/tide/licence.hpp"
 #include "mov/core/tide/source.hpp"
 #include "mov/core/tide/station_info.hpp"
+#include "mov/core/tide/year_arguments.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/units.hpp"
 #include "mov/core/version.hpp"
 
-// A harmonics file in memory (docs/harmonics-engine.md 2.5): built once from
-// the decoded input by HarmonicsFile::make, which checks every rule of
-// docs/harmonics-json.md 10.1 that needs more than one value and resolves
-// every name and id exactly once. Prediction reads it only through
+// A harmonics file in memory (docs/harmonics-engine.md 2.5 and 2.7): built
+// once from the decoded input by HarmonicsFile::make, which checks every
+// rule of docs/harmonics-json.md 10.1 that needs more than one value and
+// resolves every name and id exactly once. Prediction reads it only through
 // ReferenceView and SubordinateView.
 
 namespace mov::core::detail {
@@ -47,6 +52,7 @@ class ReferenceIndex {
   friend constexpr auto operator<=>(ReferenceIndex, ReferenceIndex) = default;
 
  private:
+  friend class HarmonicsFile;
   friend struct detail::HarmonicsAccess;
   explicit constexpr ReferenceIndex(std::size_t v) noexcept : v_{v} {}
   std::size_t v_;
@@ -61,10 +67,13 @@ class SubordinateIndex {
                                     SubordinateIndex) = default;
 
  private:
+  friend class HarmonicsFile;
   friend struct detail::HarmonicsAccess;
   explicit constexpr SubordinateIndex(std::size_t v) noexcept : v_{v} {}
   std::size_t v_;
 };
+static_assert(std::is_trivially_copyable_v<ReferenceIndex>);
+static_assert(std::is_trivially_copyable_v<SubordinateIndex>);
 
 /// A station of either kind.
 using StationIndex = std::variant<ReferenceIndex, SubordinateIndex>;
@@ -127,8 +136,7 @@ struct SpeedMismatch {
   double derived;
   friend constexpr bool operator==(SpeedMismatch, SpeedMismatch) = default;
 };
-/// stations[station].id has no namespace that is a source id
-/// (E-UNKNOWN-SOURCE).
+/// stations[station].id's namespace is not a source id (E-UNKNOWN-SOURCE).
 struct UnknownSource {
   std::size_t station;
   friend constexpr bool operator==(UnknownSource, UnknownSource) = default;
@@ -156,8 +164,8 @@ struct DuplicateRow {
   std::size_t first;
   friend constexpr bool operator==(DuplicateRow, DuplicateRow) = default;
 };
-/// A number the schema bounds is not finite or out of its range
-/// (E-SCHEMA; the reader's schema check reports it first).
+/// z0 is not finite, or record years not finite and > 0 (E-SCHEMA). The
+/// reader's schema step refuses them first; this keeps make() total.
 struct InvalidNumber {
   std::size_t station;
   StationNumber number;
@@ -167,16 +175,8 @@ struct InvalidNumber {
 /// (E-DATUM-CONFLICT).
 struct DatumConflict {
   std::size_t station;
-  DatumToken datum;
+  VerticalDatum datum;
   friend constexpr bool operator==(DatumConflict, DatumConflict) = default;
-};
-/// `computed_datums.heights` holds a geodetic or station datum (E-SCHEMA;
-/// the reader's schema check reports it first).
-struct UncomputableDatum {
-  std::size_t station;
-  DatumToken datum;
-  friend constexpr bool operator==(UncomputableDatum,
-                                   UncomputableDatum) = default;
 };
 /// A station date is not a calendar date (E-DATE).
 struct InvalidStationDate {
@@ -185,8 +185,7 @@ struct InvalidStationDate {
   friend constexpr bool operator==(InvalidStationDate,
                                    InvalidStationDate) = default;
 };
-/// A station's end date precedes its start, or a computed period is empty
-/// (E-DATE).
+/// A station's end date precedes its start (E-DATE).
 struct InvertedDates {
   std::size_t station;
   DateRange range;
@@ -224,7 +223,7 @@ struct ReferenceNotReference {
 /// height of the offsets' datum (E-OFFSET-DATUM).
 struct OffsetDatumMissing {
   std::size_t station;
-  DatumToken datum;
+  VerticalDatum datum;
   friend constexpr bool operator==(OffsetDatumMissing,
                                    OffsetDatumMissing) = default;
 };
@@ -235,10 +234,9 @@ using HarmonicsError =
     std::variant<InvalidCreated, DuplicateSource, InvalidSourceLicence,
                  InvalidRetrieved, DuplicateName, InvalidTerm, SpeedMismatch,
                  UnknownSource, InvalidStationLicence, UnknownConstituent,
-                 DuplicateRow, InvalidNumber, UncomputableDatum, DatumConflict,
-                 InvalidStationDate, InvertedDates, ShortDatumPeriod,
-                 DuplicateStation, ReferenceMissing, ReferenceNotReference,
-                 OffsetDatumMissing>;
+                 DuplicateRow, InvalidNumber, InvalidStationDate, InvertedDates,
+                 ShortDatumPeriod, DatumConflict, DuplicateStation,
+                 ReferenceMissing, ReferenceNotReference, OffsetDatumMissing>;
 
 /// The docs/harmonics-json.md 10.1 codes HarmonicsFile::make reports.
 enum class HarmonicsErrc : std::uint8_t {
@@ -258,10 +256,68 @@ enum class HarmonicsErrc : std::uint8_t {
   offset_datum
 };
 
-[[nodiscard]] HarmonicsErrc code(const HarmonicsError& e);
+[[nodiscard]] constexpr HarmonicsErrc code(const HarmonicsError& e) {
+  using enum HarmonicsErrc;
+  return std::visit(
+      Overloaded{
+          [](InvalidCreated) { return date; },
+          [](DuplicateSource) { return duplicate_source; },
+          [](InvalidSourceLicence) { return licence; },
+          [](InvalidRetrieved) { return date; },
+          [](const DuplicateName&) { return duplicate_constituent; },
+          [](const InvalidTerm&) { return compound_term; },
+          [](SpeedMismatch) { return speed_mismatch; },
+          [](UnknownSource) { return unknown_source; },
+          [](InvalidStationLicence) { return licence; },
+          [](UnknownConstituent) { return unknown_constituent; },
+          [](DuplicateRow) { return duplicate_row; },
+          [](InvalidNumber) { return schema; },
+          [](InvalidStationDate) { return date; },
+          [](InvertedDates) { return date; },
+          [](ShortDatumPeriod) { return datum_conflict; },
+          [](DatumConflict) { return datum_conflict; },
+          [](DuplicateStation) { return duplicate_station; },
+          [](ReferenceMissing) { return reference; },
+          [](ReferenceNotReference) { return reference; },
+          [](OffsetDatumMissing) { return offset_datum; },
+      },
+      e);
+}
 
-/// "E-SCHEMA", "E-DATE", ...
-[[nodiscard]] std::string_view to_string(HarmonicsErrc c) noexcept;
+/// "E-SCHEMA", "E-DATE", ... A switch without default.
+[[nodiscard]] constexpr std::string_view to_string(HarmonicsErrc c) noexcept {
+  switch (c) {
+    case HarmonicsErrc::schema:
+      return "E-SCHEMA";
+    case HarmonicsErrc::date:
+      return "E-DATE";
+    case HarmonicsErrc::duplicate_source:
+      return "E-DUPLICATE-SOURCE";
+    case HarmonicsErrc::licence:
+      return "E-LICENCE";
+    case HarmonicsErrc::duplicate_constituent:
+      return "E-DUPLICATE-CONSTITUENT";
+    case HarmonicsErrc::compound_term:
+      return "E-COMPOUND-TERM";
+    case HarmonicsErrc::speed_mismatch:
+      return "E-SPEED-MISMATCH";
+    case HarmonicsErrc::unknown_source:
+      return "E-UNKNOWN-SOURCE";
+    case HarmonicsErrc::unknown_constituent:
+      return "E-UNKNOWN-CONSTITUENT";
+    case HarmonicsErrc::duplicate_row:
+      return "E-DUPLICATE-ROW";
+    case HarmonicsErrc::datum_conflict:
+      return "E-DATUM-CONFLICT";
+    case HarmonicsErrc::duplicate_station:
+      return "E-DUPLICATE-STATION";
+    case HarmonicsErrc::reference:
+      return "E-REFERENCE";
+    case HarmonicsErrc::offset_datum:
+      return "E-OFFSET-DATUM";
+  }
+  return "E-SCHEMA";  // unreachable: every enumerator is handled
+}
 
 // ---------------------------------------------------------------------------
 // Warnings (docs/harmonics-json.md 10.2); the file is accepted.
@@ -286,41 +342,49 @@ struct UnusedSource {
   std::size_t source;
   friend constexpr bool operator==(UnusedSource, UnusedSource) = default;
 };
-/// `datum` has no core VerticalDatum yet (HAT, LAT, DTL): `stations`
-/// stations hold it, the first being stations[first_station]. The heights
-/// are kept (Datums::height) but cannot be shifted to (Datums::table).
-struct DatumUnsupported {
-  DatumToken datum;
-  std::size_t stations;
-  std::size_t first_station;
-  friend constexpr bool operator==(DatumUnsupported,
-                                   DatumUnsupported) = default;
-};
 
-using HarmonicsWarning = std::variant<ConstituentRedefined, UnusedConstituent,
-                                      UnusedSource, DatumUnsupported>;
+using HarmonicsWarning =
+    std::variant<ConstituentRedefined, UnusedConstituent, UnusedSource>;
 
 enum class HarmonicsWarningCode : std::uint8_t {
   constituent_redefined,
   unused_constituent,
-  unused_source,
-  datum_unsupported
+  unused_source
 };
 
-[[nodiscard]] HarmonicsWarningCode code(const HarmonicsWarning& w);
+[[nodiscard]] constexpr HarmonicsWarningCode code(const HarmonicsWarning& w) {
+  using enum HarmonicsWarningCode;
+  return std::visit(
+      Overloaded{
+          [](ConstituentRedefined) { return constituent_redefined; },
+          [](UnusedConstituent) { return unused_constituent; },
+          [](UnusedSource) { return unused_source; },
+      },
+      w);
+}
 
-/// "W-CONSTITUENT-REDEFINED", ...
-[[nodiscard]] std::string_view to_string(HarmonicsWarningCode c) noexcept;
+/// "W-CONSTITUENT-REDEFINED", ... A switch without default.
+[[nodiscard]] constexpr std::string_view to_string(
+    HarmonicsWarningCode c) noexcept {
+  switch (c) {
+    case HarmonicsWarningCode::constituent_redefined:
+      return "W-CONSTITUENT-REDEFINED";
+    case HarmonicsWarningCode::unused_constituent:
+      return "W-UNUSED-CONSTITUENT";
+    case HarmonicsWarningCode::unused_source:
+      return "W-UNUSED-SOURCE";
+  }
+  return "W-UNUSED-SOURCE";  // unreachable: every enumerator is handled
+}
 
 // ---------------------------------------------------------------------------
 // Views.
 
-class HarmonicsFile;
-
-/// A reference station of a file, resolved: what prediction reads. Made
-/// only by the file; valid while a HarmonicsFile sharing its records lives
-/// (copies share them; providers hold a std::shared_ptr<const HarmonicsFile>
-/// for the duration of a task).
+/// A reference station of a file, resolved: what prediction reads. Like an
+/// iterator: made only by the file, valid while a HarmonicsFile sharing its
+/// records lives (copies share them; providers hold a HarmonicsFile by value
+/// for the duration of a task), and equal to another view exactly when both
+/// are the same station of the same records.
 class ReferenceView {
  public:
   [[nodiscard]] ReferenceIndex index() const noexcept { return index_; }
@@ -330,8 +394,13 @@ class ReferenceView {
   [[nodiscard]] const Source& source() const noexcept;
   /// The file's dictionary, which every constant's index belongs to.
   [[nodiscard]] const ConstituentSet& constituents() const noexcept;
-  /// One per constituent at most, in the file's row order.
+  /// One per constituent at most, sorted by ConstituentIndex (a sorted map,
+  /// whatever the file's row order).
   [[nodiscard]] std::span<const Constant> constants() const noexcept;
+  /// The constant of constituent `i`, if the station has one (binary
+  /// search).
+  [[nodiscard]] std::optional<HarmonicConstant> constant(
+      ConstituentIndex i) const noexcept;
   /// The analysis mean above the station's MSL.
   [[nodiscard]] Length z0() const noexcept;
   [[nodiscard]] std::optional<Analysis> analysis() const noexcept;
@@ -339,6 +408,7 @@ class ReferenceView {
   friend bool operator==(const ReferenceView&, const ReferenceView&) = default;
 
  private:
+  friend class HarmonicsFile;
   friend struct detail::HarmonicsAccess;
   ReferenceView(const detail::HarmonicsData& data,
                 ReferenceIndex index) noexcept
@@ -348,7 +418,7 @@ class ReferenceView {
   ReferenceIndex index_;
 };
 
-/// A subordinate station of a file, resolved. Same lifetime rule as
+/// A subordinate station of a file, resolved. Same lifetime and equality as
 /// ReferenceView.
 class SubordinateView {
  public:
@@ -368,6 +438,7 @@ class SubordinateView {
                          const SubordinateView&) = default;
 
  private:
+  friend class HarmonicsFile;
   friend struct detail::HarmonicsAccess;
   SubordinateView(const detail::HarmonicsData& data,
                   SubordinateIndex index) noexcept
@@ -382,31 +453,29 @@ class SubordinateView {
 
 struct HarmonicsBuild;
 
-/// A resolved harmonics file. Immutable: copies share one set of records,
-/// and two files are equal when their contents are, whatever the order of
-/// their input. Sources, references and subordinates are stored sorted by
-/// id and the dictionary in canonical order (docs/harmonics-json.md section
-/// 3), so the writer needs no sorting. A moved-from file may only be
-/// assigned to or destroyed.
+/// A resolved harmonics file. Immutable, so copies share one set of records
+/// (a copy is cheap); a move is a copy, so a moved-from file stays whole.
+///
+/// Equality is of content, and independent of the input's order of sources,
+/// stations, dictionary entries and rows: sources, references and
+/// subordinates are stored sorted by id, the dictionary in canonical order
+/// (docs/harmonics-json.md section 3), and each station's constants by
+/// constituent index. It does depend on the order of flags,
+/// provenance.also_in and provenance.dropped_constituents, which are kept as
+/// written, and on the exact text of every string (licences included).
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions): no moves.
 class HarmonicsFile {
  public:
-  /// Checks `input` and builds the file. Stops at the first error, in this
-  /// order (docs/harmonics-json.md 10.4, refined):
-  ///  1. `created`;
-  ///  2. sources in order: id unique, licence, `retrieved`;
-  ///  3. dictionary entries in order: name unique ignoring case, compound
-  ///     terms, speed;
-  ///  4. stations in order: id namespace, licence, rows in order (name
-  ///     known, then not repeated), z0, record years, computed tokens and
-  ///     conflicts (token order), record dates (start, end, order), computed
-  ///     period (start, end, order, length);
-  ///  5. ids unique (in order), then each subordinate in order: reference,
-  ///     offsets datum.
-  /// validate() reports every error in the same order, so its first error
-  /// is make()'s. Warnings: redefined constituents (dictionary order),
-  /// unsupported datums (token order), unused constituents, unused sources.
+  /// Checks `input` and builds the file: the first of validate(input)'s
+  /// errors when there are any, else the file and validate's warnings.
   [[nodiscard]] static std::expected<HarmonicsBuild, HarmonicsError> make(
       HarmonicsInput input);
+
+  // Copy operations only: a move copies the shared records' pointer, so no
+  // file is ever empty.
+  HarmonicsFile(const HarmonicsFile&) = default;
+  HarmonicsFile& operator=(const HarmonicsFile&) = default;
+  ~HarmonicsFile() = default;
 
   [[nodiscard]] const FileHeader& header() const& noexcept;
   const FileHeader& header() const&& = delete;
@@ -420,11 +489,23 @@ class HarmonicsFile {
 
   [[nodiscard]] std::size_t reference_count() const noexcept;
   [[nodiscard]] std::size_t subordinate_count() const noexcept;
-  /// Every reference / subordinate, in id order.
-  [[nodiscard]] std::vector<ReferenceView> references() const&;
-  std::vector<ReferenceView> references() const&& = delete;  // would dangle
-  [[nodiscard]] std::vector<SubordinateView> subordinates() const&;
-  std::vector<SubordinateView> subordinates() const&& = delete;
+
+  /// Every reference, in id order (a view; no allocation).
+  [[nodiscard]] auto references() const& {
+    return std::views::iota(std::size_t{0}, reference_count()) |
+           std::views::transform([data = data_.get()](std::size_t i) {
+             return ReferenceView{*data, ReferenceIndex{i}};
+           });
+  }
+  void references() const&& = delete;  // would dangle
+  /// Every subordinate, in id order (a view; no allocation).
+  [[nodiscard]] auto subordinates() const& {
+    return std::views::iota(std::size_t{0}, subordinate_count()) |
+           std::views::transform([data = data_.get()](std::size_t i) {
+             return SubordinateView{*data, SubordinateIndex{i}};
+           });
+  }
+  void subordinates() const&& = delete;  // would dangle
 
   /// An index of another file may be out of range: asserted.
   [[nodiscard]] ReferenceView reference(ReferenceIndex i) const& noexcept;
@@ -448,7 +529,7 @@ class HarmonicsFile {
   explicit HarmonicsFile(std::shared_ptr<const detail::HarmonicsData> data)
       : data_{std::move(data)} {}
 
-  std::shared_ptr<const detail::HarmonicsData> data_;
+  std::shared_ptr<const detail::HarmonicsData> data_;  // never null
 };
 
 /// A built file and the warnings it was accepted with.
@@ -457,10 +538,9 @@ struct HarmonicsBuild {
   std::vector<HarmonicsWarning> warnings;
 };
 
-/// Every error HarmonicsFile::make checks for, in its order (a check that
-/// depends on a failed one is skipped: no speed for an entry whose terms do
-/// not resolve, no offsets datum for a missing reference, no date order
-/// with an invalid date), and the warnings.
+/// Every error HarmonicsFile::make checks for, in its pinned order
+/// (docs/harmonics-engine.md 2.7), and the warnings. A check that depends on
+/// a failed one is skipped (listed there).
 struct HarmonicsReport {
   std::vector<HarmonicsError> errors;
   std::vector<HarmonicsWarning> warnings;
@@ -468,5 +548,13 @@ struct HarmonicsReport {
 };
 
 [[nodiscard]] HarmonicsReport validate(const HarmonicsInput& input);
+
+/// The year table of the file's dictionary: what a prediction of any of the
+/// file's references indexes with its constants.
+[[nodiscard]] std::expected<YearArguments, YearOutOfRange> year_arguments(
+    const HarmonicsFile& file, std::chrono::year y);
+/// The same table, reached from one of the file's stations.
+[[nodiscard]] std::expected<YearArguments, YearOutOfRange> year_arguments(
+    const ReferenceView& station, std::chrono::year y);
 
 }  // namespace mov::core::tide

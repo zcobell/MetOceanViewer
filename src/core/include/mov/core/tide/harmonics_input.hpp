@@ -25,10 +25,10 @@
 // The split of the checks: a value the schema constrains is checked by the
 // reader as it builds the value types below (ConstituentName, Definition,
 // SourceToken, Location, StationText, HarmonicConstant, SubordinateOffsets,
-// DatumHeights; their errors are E-SCHEMA). What only the whole file can
-// tell, or what docs/harmonics-json.md 10.1 names a code of its own for
-// (licences, dates, uniqueness, references, speeds, datum conflicts), stays
-// raw here and is HarmonicsFile::make's to check, in the order of
+// DatumHeights, ComputedHeights; their errors are E-SCHEMA). What only the
+// whole file can tell, or what docs/harmonics-json.md 10.1 names a code of its
+// own for (licences, dates, uniqueness, references, speeds, datum conflicts),
+// stays raw here and is HarmonicsFile::make's to check, in the order of
 // docs/harmonics-json.md 10.4. Every vector is in document order, and errors
 // and warnings name positions in these vectors.
 
@@ -97,7 +97,7 @@ struct RecordInput {
 struct ComputedDatumsInput {
   std::chrono::year_month_day start;
   std::chrono::year_month_day end;
-  DatumHeights heights;
+  ComputedHeights heights;
 };
 
 /// The members every station has (docs/harmonics-json.md 8.1). `id`'s
@@ -124,7 +124,9 @@ struct ConstantInput {
   HarmonicConstant value;
 };
 
-/// A `kind: "reference"` station. `z0` must be finite (else E-SCHEMA).
+/// A `kind: "reference"` station. `z0` must be finite (else E-SCHEMA). The
+/// schema's 1 to 512 rows are the reader's check (E-SCHEMA); the model
+/// accepts any number, including none (z0 alone).
 struct ReferenceInput {
   StationInput station;
   std::vector<ConstantInput> constants;

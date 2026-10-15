@@ -493,7 +493,7 @@ always gives the same error:
 4. schema rules, in document order;
 5. `sources` in document order (uniqueness, licence, `retrieved`), then the dictionary in
    document order (name, terms, speed of each entry);
-6. stations in document order (namespace, licence, rows, datums, dates);
+6. stations in document order (namespace, licence, rows, numbers, dates, datum conflicts);
 7. cross-station rules (duplicate ids, then each subordinate's reference and offset datum).
 
 MetOceanViewer's exact sequence within steps 5–7 is listed in HE §2.7.

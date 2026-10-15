@@ -3,8 +3,10 @@
 
 #include "mov/core/tide/year_arguments.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <expected>
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -43,10 +45,10 @@ YearArguments year_arguments(const ConstituentSet& set,
                              const YearAstronomy& y) {
   std::vector<Equilibrium> table;
   table.reserve(set.size());
-  for (const ConstituentIndex i : set.indices()) {
-    table.push_back(equilibrium(set.argument(i), y));
-  }
-  return YearArguments{y.year(), std::move(table)};
+  std::ranges::transform(
+      set.indices(), std::back_inserter(table),
+      [&](ConstituentIndex i) { return equilibrium(set.argument(i), y); });
+  return YearArguments{set, y.year(), std::move(table)};
 }
 
 std::expected<YearArguments, YearOutOfRange> year_arguments(

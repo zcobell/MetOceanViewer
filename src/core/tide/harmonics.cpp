@@ -4,17 +4,16 @@
 #include "mov/core/tide/harmonics.hpp"
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <expected>
 #include <functional>
-#include <map>
+#include <iterator>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -22,17 +21,19 @@
 #include <variant>
 #include <vector>
 
+#include "mov/core/datum.hpp"
 #include "mov/core/detail/numeric.hpp"
-#include "mov/core/overloaded.hpp"
 #include "mov/core/station.hpp"
-#include "mov/core/tide/catalogue.hpp"
+#include "mov/core/tide/builtin.hpp"
 #include "mov/core/tide/constituent.hpp"
 #include "mov/core/tide/constituent_set.hpp"
 #include "mov/core/tide/datums.hpp"
 #include "mov/core/tide/harmonics_input.hpp"
 #include "mov/core/tide/licence.hpp"
+#include "mov/core/tide/positions.hpp"
 #include "mov/core/tide/source.hpp"
 #include "mov/core/tide/station_info.hpp"
+#include "mov/core/tide/year_arguments.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/units.hpp"
 
@@ -40,7 +41,7 @@ namespace mov::core::detail {
 
 struct ReferenceRecord {
   tide::StationInfo info;
-  std::vector<tide::Constant> constants;
+  std::vector<tide::Constant> constants;  // sorted by constituent
   Length z0;
   std::optional<tide::Analysis> analysis;
   friend bool operator==(const ReferenceRecord&,
@@ -51,7 +52,7 @@ struct SubordinateRecord {
   tide::StationInfo info;
   tide::ReferenceIndex reference;
   tide::SubordinateOffsets offsets;
-  Length reference_datum_height;  // derived from the reference's datums
+  Length reference_datum_height;  // the reference's height of offsets.datum
   friend bool operator==(const SubordinateRecord&,
                          const SubordinateRecord&) = default;
 };
@@ -65,8 +66,8 @@ struct HarmonicsData {
   friend bool operator==(const HarmonicsData&, const HarmonicsData&) = default;
 };
 
-/// The one friend of the file's index and view types: makes them from
-/// positions it has checked.
+/// The one friend of the file's index, view and set types: makes them from
+/// positions the checks resolved.
 struct HarmonicsAccess {
   static tide::SourceIndex source(std::size_t i) noexcept {
     return tide::SourceIndex{i};
@@ -87,6 +88,11 @@ struct HarmonicsAccess {
   }
   static tide::HarmonicsFile file(std::shared_ptr<const HarmonicsData> d) {
     return tide::HarmonicsFile{std::move(d)};
+  }
+  static tide::ConstituentSet::Ranked ranked(
+      std::vector<tide::DictionaryEntry> entries,
+      std::span<const tide::Argument> arguments) {
+    return tide::ConstituentSet::ranked(std::move(entries), arguments);
   }
 };
 
@@ -112,6 +118,10 @@ const StationInput& common(const StationKindInput& s) {
       s);
 }
 
+std::string_view id_of(const StationKindInput& s) {
+  return common(s).id.value();
+}
+
 std::optional<std::chrono::sys_days> calendar_date(
     const std::chrono::year_month_day& d) noexcept {
   return d.ok() ? std::optional{std::chrono::sys_days{d}} : std::nullopt;
@@ -127,409 +137,401 @@ std::optional<Time> timestamp(const TimestampInput& t) noexcept {
          std::chrono::minutes{t.minute} + std::chrono::seconds{t.second};
 }
 
-/// What the checks found out on the way, for the build: each value is set
-/// where its check passed.
-struct Resolution {
-  std::optional<Time> created;
-  std::vector<std::optional<Licence>> source_licences;
-  std::vector<std::optional<std::chrono::sys_days>> retrieved;
-  std::map<std::string_view, std::size_t> source_by_id;  // first of each id
-  std::vector<DictionaryEntry> entries;                  // input order
-  std::vector<std::optional<Argument>> arguments;
-  std::vector<std::optional<std::size_t>> station_source;
-  std::vector<std::optional<Licence>> station_licences;
-  std::vector<std::optional<Record>> records;
-  std::vector<std::optional<DatumPeriod>> periods;
-  std::vector<std::optional<std::size_t>> subordinate_reference;
+/// The value of a fragment of a Checked without errors: every fragment is
+/// engaged then (an item's fragment is engaged when all its checks passed).
+template <class T>
+T engaged(std::optional<T> o) noexcept {
+  assert(o.has_value());
+  return *std::move(o);
+}
+
+/// A check failed (and was reported) or was skipped because one it depends
+/// on failed.
+struct Failed {};
+
+struct ResolvedSource {
+  Licence licence;
+  std::chrono::sys_days retrieved;
 };
 
-/// A reference's computed_datums, if it is a reference that has them.
-const ComputedDatumsInput* computed_datums_of(
-    const ReferenceInput* reference) noexcept {
-  if (reference == nullptr or not reference->computed_datums) {
-    return nullptr;
-  }
-  return &*reference->computed_datums;
+struct ResolvedStation {
+  std::optional<Licence> licence;  // the station's override, if it has one
+  std::optional<Record> record;    // if it has one
+  Datums datums;
+};
+
+/// A subordinate's reference, resolved.
+struct Link {
+  std::size_t reference;  // input position of the reference station
+  Length datum_height;    // the reference's height of offsets.datum
+};
+
+/// What the checks of a decoded file found: the errors in the pinned order,
+/// the lookups (made whatever the checks say), and each item resolved,
+/// engaged when every check of that item passed.
+struct Checked {
+  std::vector<HarmonicsError> errors;
+
+  // Lookups.
+  std::vector<DictionaryEntry> entries;  // input order
+  detail::EntryIndex entry_index;
+  std::vector<std::optional<std::size_t>> station_sources;    // by namespace
+  std::vector<std::vector<std::optional<std::size_t>>> rows;  // row -> entry
+
+  // Resolved items.
+  std::optional<Time> created;
+  std::vector<std::optional<ResolvedSource>> sources;
+  std::vector<std::optional<Argument>> arguments;
+  std::vector<std::optional<ResolvedStation>> stations;
+  std::vector<std::optional<Link>> links;  // subordinates only
+};
+
+std::vector<DictionaryEntry> entries_of(const HarmonicsInput& in) {
+  std::vector<DictionaryEntry> out;
+  out.reserve(in.constituents.size());
+  std::ranges::transform(in.constituents, std::back_inserter(out),
+                         &ConstituentInput::entry);
+  return out;
 }
 
-/// A Resolution sized for `in`, with the dictionary's entries copied (the
-/// checks look names up in them; the build moves them into the set).
-Resolution initial(const HarmonicsInput& in) {
-  Resolution r;
-  r.source_licences.resize(in.sources.size());
-  r.retrieved.resize(in.sources.size());
-  r.arguments.resize(in.constituents.size());
-  r.station_source.resize(in.stations.size());
-  r.station_licences.resize(in.stations.size());
-  r.records.resize(in.stations.size());
-  r.periods.resize(in.stations.size());
-  r.subordinate_reference.resize(in.stations.size());
-  r.entries.reserve(in.constituents.size());
-  for (const ConstituentInput& c : in.constituents) {
-    r.entries.push_back(c.entry);
-  }
-  return r;
-}
-
-/// The checks of HarmonicsFile::make in their pinned order. Fail-first stops
-/// at the first error; otherwise every check runs that does not depend on a
-/// failed one.
+/// Every check of HarmonicsFile::make, in the pinned order
+/// (docs/harmonics-engine.md 2.7). A check that depends on a failed one is
+/// skipped; nothing else stops the run.
 class Checker {
  public:
-  Checker(const HarmonicsInput& input, bool fail_first)
-      : in_{input}, fail_first_{fail_first}, r_{initial(input)} {}
-  Checker(const Checker&) = delete;
-  Checker& operator=(const Checker&) = delete;
-  Checker(Checker&&) = delete;
-  Checker& operator=(Checker&&) = delete;
-  ~Checker() = default;
+  explicit Checker(const HarmonicsInput& input)
+      : in_{input}, c_{initial(input)} {}
 
-  void run() {
-    const std::array steps{&Checker::check_created, &Checker::check_sources,
-                           &Checker::check_dictionary, &Checker::check_stations,
-                           &Checker::check_cross};
-    for (const auto step : steps) {
-      if (stopped()) {
-        return;
-      }
-      (this->*step)();
+  [[nodiscard]] Checked run() && {
+    check_created();
+    check_sources();
+    check_dictionary();
+    for (std::size_t s = 0; s < in_.stations.size(); ++s) {
+      check_station(s);
     }
-  }
-
-  [[nodiscard]] std::vector<HarmonicsError>& errors() noexcept {
-    return errors_;
-  }
-  [[nodiscard]] Resolution& resolution() noexcept { return r_; }
-  [[nodiscard]] const detail::EntryLookup& lookup() const noexcept {
-    return lookup_;
+    check_cross();
+    return std::move(c_);
   }
 
  private:
-  /// Records `e`; false when the caller must stop.
-  bool report(HarmonicsError e) {
-    errors_.push_back(e);
-    return not stopped();
-  }
-  [[nodiscard]] bool stopped() const noexcept {
-    return fail_first_ and not errors_.empty();
+  static Checked initial(const HarmonicsInput& in) {
+    auto entries = entries_of(in);
+    detail::EntryIndex index{entries};
+    const std::size_t stations = in.stations.size();
+    return Checked{
+        .errors = {},
+        .entries = std::move(entries),
+        .entry_index = std::move(index),
+        .station_sources = std::vector<std::optional<std::size_t>>(stations),
+        .rows = std::vector<std::vector<std::optional<std::size_t>>>(stations),
+        .created = std::nullopt,
+        .sources =
+            std::vector<std::optional<ResolvedSource>>(in.sources.size()),
+        .arguments =
+            std::vector<std::optional<Argument>>(in.constituents.size()),
+        .stations = std::vector<std::optional<ResolvedStation>>(stations),
+        .links = std::vector<std::optional<Link>>(stations)};
   }
 
+  void report(HarmonicsError e) { c_.errors.push_back(e); }
+
   void check_created() {
-    r_.created = timestamp(in_.header.created);
-    if (not r_.created) {
+    c_.created = timestamp(in_.header.created);
+    if (not c_.created) {
       report(InvalidCreated{});
     }
   }
 
   void check_sources() {
+    const auto first = detail::first_occurrence(
+        in_.sources.size(),
+        [this](std::size_t i) { return in_.sources[i].id.view(); });
     for (std::size_t i = 0; i < in_.sources.size(); ++i) {
       const SourceInput& s = in_.sources[i];
-      const auto [first, inserted] =
-          r_.source_by_id.try_emplace(s.id.view(), i);
-      if (not inserted and
-          not report(DuplicateSource{.source = i, .first = first->second})) {
-        return;
+      if (const auto& earlier = first[i]) {
+        report(DuplicateSource{.source = i, .first = *earlier});
       }
       auto licence = Licence::parse(s.licence);
-      if (licence) {
-        r_.source_licences[i] = *std::move(licence);
-      } else if (not report(InvalidSourceLicence{.source = i,
-                                                 .error = licence.error()})) {
-        return;
+      if (not licence) {
+        report(InvalidSourceLicence{.source = i, .error = licence.error()});
       }
-      r_.retrieved[i] = calendar_date(s.retrieved);
-      if (not r_.retrieved[i] and not report(InvalidRetrieved{.source = i})) {
-        return;
+      const auto retrieved = calendar_date(s.retrieved);
+      if (not retrieved) {
+        report(InvalidRetrieved{.source = i});
+      }
+      if (not first[i] and licence and retrieved) {
+        c_.sources[i] = ResolvedSource{.licence = *std::move(licence),
+                                       .retrieved = *retrieved};
       }
     }
   }
 
   void check_dictionary() {
-    const auto first = detail::earlier_same_name(r_.entries);
-    for (std::size_t i = 0; i < r_.entries.size(); ++i) {
-      if (const std::optional<std::size_t>& earlier = first[i];
-          earlier and
-          not report(DuplicateName{.entry = i, .first = *earlier})) {
-        return;
+    const auto first = detail::same_name_ignoring_case(c_.entries);
+    for (std::size_t i = 0; i < c_.entries.size(); ++i) {
+      if (const auto& earlier = first[i]) {
+        report(DuplicateName{.entry = i, .first = *earlier});
       }
-      const auto argument = flatten(r_.entries[i].definition, lookup_);
+      const auto argument =
+          flatten(c_.entries[i].definition, c_.entry_index.lookup(c_.entries));
       if (not argument) {
-        if (not report(InvalidTerm{.entry = i, .error = argument.error()})) {
-          return;
-        }
-        continue;
+        report(InvalidTerm{.entry = i, .error = argument.error()});
+        continue;  // no speed without a definition
       }
-      r_.arguments[i] = *argument;
       const double derived = argument->speed_deg_per_hour();
-      if (not(std::abs(in_.constituents[i].speed - derived) <=
-              max_speed_difference) and
-          not report(SpeedMismatch{.entry = i, .derived = derived})) {
-        return;
+      const bool speed_ok =
+          std::abs(in_.constituents[i].speed - derived) <= max_speed_difference;
+      if (not speed_ok) {
+        report(SpeedMismatch{.entry = i, .derived = derived});
+      }
+      if (not first[i] and speed_ok) {
+        c_.arguments[i] = *argument;
       }
     }
   }
 
-  void check_stations() {
-    for (std::size_t s = 0; s < in_.stations.size(); ++s) {
-      if (not check_station(s)) {
-        return;
-      }
-    }
-  }
-
-  /// One station's own rules, in the pinned order; false when the caller
-  /// must stop.
-  bool check_station(std::size_t s) {
+  void check_station(std::size_t s) {
     const StationInput& info = common(in_.stations[s]);
     const auto* reference = std::get_if<ReferenceInput>(&in_.stations[s]);
-    const ComputedDatumsInput* computed = computed_datums_of(reference);
-    return check_namespace(s, info) and check_station_licence(s, info) and
-           (reference == nullptr or check_rows(s, *reference)) and
-           (reference == nullptr or check_z0(s, *reference)) and
-           check_record_years(s, info) and
-           (computed == nullptr or
-            check_computed_tokens(s, info.datums, computed->heights)) and
-           (not info.record or check_record(s, *info.record)) and
-           (computed == nullptr or check_period(s, *computed));
+    const bool known_source = check_namespace(s, info);
+    auto licence = check_licence(s, info);
+    const bool rows = reference == nullptr or check_rows(s, *reference);
+    const bool z0 = reference == nullptr or check_z0(s, *reference);
+    const bool years = check_record_years(s, info);
+    const auto record = check_record(s, info);
+    const auto computed = check_period(s, reference);
+    // Conflicts are checked only with a valid period (dependent).
+    auto datums =
+        computed ? check_datums(s, info, *computed)
+                 : std::expected<Datums, Failed>{std::unexpected(Failed{})};
+    if (known_source and licence and rows and z0 and years and record and
+        datums) {
+      c_.stations[s] = ResolvedStation{.licence = *std::move(licence),
+                                       .record = *record,
+                                       .datums = *std::move(datums)};
+    }
   }
 
   bool check_namespace(std::size_t s, const StationInput& info) {
-    const auto ns = station_namespace(info.id.value());
-    const auto source =
-        ns ? r_.source_by_id.find(ns->view()) : r_.source_by_id.end();
-    if (source == r_.source_by_id.end()) {
-      return report(UnknownSource{.station = s});
+    const SourceToken ns = namespace_of(info.id);
+    const auto source = std::ranges::find(in_.sources, ns, &SourceInput::id);
+    if (source == in_.sources.end()) {
+      report(UnknownSource{.station = s});
+      return false;
     }
-    r_.station_source[s] = source->second;
+    c_.station_sources[s] =
+        static_cast<std::size_t>(source - in_.sources.begin());
     return true;
   }
 
-  bool check_station_licence(std::size_t s, const StationInput& info) {
+  std::expected<std::optional<Licence>, Failed> check_licence(
+      std::size_t s, const StationInput& info) {
     if (not info.licence) {
-      return true;
+      return std::optional<Licence>{};
     }
     auto licence = Licence::parse(*info.licence);
     if (not licence) {
-      return report(
-          InvalidStationLicence{.station = s, .error = licence.error()});
+      report(InvalidStationLicence{.station = s, .error = licence.error()});
+      return std::unexpected(Failed{});
     }
-    r_.station_licences[s] = *std::move(licence);
-    return true;
+    return std::optional<Licence>{*std::move(licence)};
+  }
+
+  /// Each row names an entry (recorded once, for everyone), then no row
+  /// repeats an earlier row's entry.
+  bool check_rows(std::size_t s, const ReferenceInput& reference) {
+    auto& rows = c_.rows[s];
+    rows.reserve(reference.constants.size());
+    std::ranges::transform(reference.constants, std::back_inserter(rows),
+                           [this](const ConstantInput& row) {
+                             return c_.entry_index.find(c_.entries,
+                                                        row.constituent.view());
+                           });
+    const auto first = detail::first_occurrence(
+        rows.size(), [&rows](std::size_t r) { return rows[r]; });
+    for (std::size_t row = 0; row < rows.size(); ++row) {
+      if (not rows[row]) {
+        report(UnknownConstituent{.station = s, .row = row});
+      } else if (const auto& earlier = first[row]) {
+        report(DuplicateRow{.station = s, .row = row, .first = *earlier});
+      }
+    }
+    return std::ranges::all_of(rows,
+                               [](const auto& e) { return e.has_value(); }) and
+           std::ranges::none_of(first,
+                                [](const auto& f) { return f.has_value(); });
   }
 
   bool check_z0(std::size_t s, const ReferenceInput& reference) {
-    return detail::is_finite(reference.z0.as(LengthUnit::meter)) or
-           report(InvalidNumber{.station = s, .number = StationNumber::z0});
+    if (detail::is_finite(reference.z0.as(LengthUnit::meter))) {
+      return true;
+    }
+    report(InvalidNumber{.station = s, .number = StationNumber::z0});
+    return false;
   }
 
   bool check_record_years(std::size_t s, const StationInput& info) {
     const auto years = info.record ? info.record->years : std::nullopt;
-    return not years or (detail::is_finite(*years) and *years > 0.0) or
-           report(InvalidNumber{.station = s,
-                                .number = StationNumber::record_years});
-  }
-
-  bool check_rows(std::size_t s, const ReferenceInput& reference) {
-    std::map<std::string_view, std::size_t> seen;
-    for (std::size_t row = 0; row < reference.constants.size(); ++row) {
-      const std::string_view name = reference.constants[row].constituent.view();
-      if (not lookup_.index(name)) {
-        if (not report(UnknownConstituent{.station = s, .row = row})) {
-          return false;
-        }
-        continue;
-      }
-      const auto [first, inserted] = seen.try_emplace(name, row);
-      if (not inserted and
-          not report(
-              DuplicateRow{.station = s, .row = row, .first = first->second})) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool check_computed_tokens(std::size_t s, const DatumHeights& published,
-                             const DatumHeights& computed) {
-    // all_of stops where report() says stop.
-    const auto computable = [&](DatumToken d) {
-      return not computed.height(d) or is_computable(d) or
-             report(UncomputableDatum{.station = s, .datum = d});
-    };
-    const auto one_origin = [&](DatumToken d) {
-      return not published.height(d) or not computed.height(d) or
-             report(DatumConflict{.station = s, .datum = d});
-    };
-    return std::ranges::all_of(all_datum_tokens, computable) and
-           std::ranges::all_of(all_datum_tokens, one_origin);
-  }
-
-  /// Reports `d` if it is present and not a calendar date, clearing
-  /// `all_valid`; false when the caller must stop.
-  bool date_ok(std::size_t s,
-               const std::optional<std::chrono::year_month_day>& d,
-               StationDate which, bool& all_valid) {
-    if (not d or d->ok()) {
+    if (not years or (detail::is_finite(*years) and *years > 0.0)) {
       return true;
     }
-    all_valid = false;
-    return report(InvalidStationDate{.station = s, .date = which});
+    report(InvalidNumber{.station = s, .number = StationNumber::record_years});
+    return false;
   }
 
-  bool check_record(std::size_t s, const RecordInput& record) {
-    bool valid = true;
-    if (not date_ok(s, record.start, StationDate::record_start, valid) or
-        not date_ok(s, record.end, StationDate::record_end, valid)) {
-      return false;
+  /// The calendar date of `d`; reports it when it is none.
+  std::optional<std::chrono::sys_days> date(
+      std::size_t s, const std::chrono::year_month_day& d, StationDate which) {
+    const auto day = calendar_date(d);
+    if (not day) {
+      report(InvalidStationDate{.station = s, .date = which});
     }
-    if (not valid) {
-      return true;
+    return day;
+  }
+
+  std::expected<std::optional<Record>, Failed> check_record(
+      std::size_t s, const StationInput& info) {
+    if (not info.record) {
+      return std::optional<Record>{};
     }
-    const auto day = [](const std::optional<std::chrono::year_month_day>& d) {
-      return d ? calendar_date(*d) : std::nullopt;
-    };
-    const auto dates =
-        ValidRange::make({.first = day(record.start), .last = day(record.end)});
+    const RecordInput& r = *info.record;
+    // Absent dates are unknown; present ones must be calendar dates.
+    const auto start =
+        r.start ? date(s, *r.start, StationDate::record_start) : std::nullopt;
+    const auto end =
+        r.end ? date(s, *r.end, StationDate::record_end) : std::nullopt;
+    if ((r.start and not start) or (r.end and not end)) {
+      return std::unexpected(Failed{});  // dependent: no order without dates
+    }
+    const auto dates = ValidRange::make({.first = start, .last = end});
     if (not dates) {
-      return report(InvertedDates{.station = s, .range = DateRange::record});
+      report(InvertedDates{.station = s, .range = DateRange::record});
+      return std::unexpected(Failed{});
     }
-    r_.records[s] = Record{.dates = *dates, .years = record.years};
-    return true;
+    return std::optional<Record>{Record{.dates = *dates, .years = r.years}};
   }
 
-  bool check_period(std::size_t s, const ComputedDatumsInput& computed) {
-    bool valid = true;
-    if (not date_ok(s, computed.start, StationDate::period_start, valid) or
-        not date_ok(s, computed.end, StationDate::period_end, valid)) {
-      return false;
+  /// The computed datums with their period, if the station has them.
+  std::expected<std::optional<ComputedDatums>, Failed> check_period(
+      std::size_t s, const ReferenceInput* reference) {
+    if (reference == nullptr or not reference->computed_datums) {
+      return std::optional<ComputedDatums>{};
     }
-    if (not valid) {
-      return true;
+    const ComputedDatumsInput& computed = *reference->computed_datums;
+    const auto start = date(s, computed.start, StationDate::period_start);
+    const auto end = date(s, computed.end, StationDate::period_end);
+    if (not start or not end) {
+      return std::unexpected(Failed{});  // dependent: no order without dates
     }
-    const std::chrono::sys_days start{computed.start};
-    const std::chrono::sys_days end{computed.end};
-    if (end < start) {
-      return report(InvertedDates{.station = s, .range = DateRange::period});
+    const auto period = DatumPeriod::make(*start, *end);
+    if (not period) {
+      report(period.error() == DatumPeriodError::inverted
+                 ? HarmonicsError{InvertedDates{.station = s,
+                                                .range = DateRange::period}}
+                 : HarmonicsError{ShortDatumPeriod{.station = s}});
+      return std::unexpected(Failed{});
     }
-    if (not spans_nodal_cycle(start, end)) {
-      return report(ShortDatumPeriod{.station = s});
+    return std::optional<ComputedDatums>{
+        ComputedDatums{.period = *period, .heights = computed.heights}};
+  }
+
+  std::expected<Datums, Failed> check_datums(
+      std::size_t s, const StationInput& info,
+      const std::optional<ComputedDatums>& computed) {
+    auto datums = Datums::make(info.datums, computed, info.datum_epoch);
+    if (not datums) {
+      for (const VerticalDatum d : detail::all_datums) {
+        if (datums.error().datums.contains(d)) {
+          report(DatumConflict{.station = s, .datum = d});
+        }
+      }
+      return std::unexpected(Failed{});
     }
-    r_.periods[s] = DatumPeriod{.start = start, .end = end};
-    return true;
+    return *std::move(datums);
   }
 
   void check_cross() {
-    std::map<std::string_view, std::size_t> by_id;
-    for (std::size_t s = 0; s < in_.stations.size(); ++s) {
-      const auto [first, inserted] =
-          by_id.try_emplace(common(in_.stations[s]).id.value(), s);
-      if (not inserted and
-          not report(DuplicateStation{.station = s, .first = first->second})) {
-        return;
+    const std::size_t n = in_.stations.size();
+    const auto id = [this](std::size_t s) { return id_of(in_.stations[s]); };
+    const auto first = detail::first_occurrence(n, id);
+    for (std::size_t s = 0; s < n; ++s) {
+      if (const auto& earlier = first[s]) {
+        report(DuplicateStation{.station = s, .first = *earlier});
       }
     }
-    for (std::size_t s = 0; s < in_.stations.size(); ++s) {
-      const auto* sub = std::get_if<SubordinateInput>(&in_.stations[s]);
-      if (sub and not check_subordinate(s, *sub, by_id)) {
-        return;
+    const std::vector<std::size_t> by_id = detail::sorted_index(n, id);
+    for (std::size_t s = 0; s < n; ++s) {
+      if (const auto* sub = std::get_if<SubordinateInput>(&in_.stations[s])) {
+        check_reference(s, *sub, by_id, id);
       }
     }
   }
 
-  bool check_subordinate(std::size_t s, const SubordinateInput& sub,
-                         const std::map<std::string_view, std::size_t>& by_id) {
-    const auto found = by_id.find(sub.reference.value());
-    if (found == by_id.end()) {
-      return report(ReferenceMissing{.station = s});
+  /// The reference exists and is a reference station; then it knows the
+  /// offsets' datum. The second is skipped when the reference's own checks
+  /// failed (its datums did not resolve).
+  void check_reference(std::size_t s, const SubordinateInput& sub,
+                       const std::vector<std::size_t>& by_id, const auto& id) {
+    const auto found = detail::find_sorted(by_id, sub.reference.value(), id);
+    if (not found) {
+      report(ReferenceMissing{.station = s});
+      return;
     }
-    const auto* reference =
-        std::get_if<ReferenceInput>(&in_.stations[found->second]);
+    if (not std::holds_alternative<ReferenceInput>(in_.stations[*found])) {
+      report(ReferenceNotReference{.station = s, .referenced = *found});
+      return;
+    }
+    const auto& reference = c_.stations[*found];
     if (not reference) {
-      return report(
-          ReferenceNotReference{.station = s, .referenced = found->second});
+      return;
     }
-    r_.subordinate_reference[s] = found->second;
-    const auto* token = std::get_if<DatumToken>(&sub.offsets.datum());
-    if (token == nullptr or reference->station.datums.height(*token) or
-        (reference->computed_datums and
-         reference->computed_datums->heights.height(*token))) {
-      return true;
+    const VerticalDatum d = sub.offsets.datum();
+    const auto height = reference->datums.height(d);
+    if (not height) {
+      report(OffsetDatumMissing{.station = s, .datum = d});
+      return;
     }
-    return report(OffsetDatumMissing{.station = s, .datum = *token});
+    c_.links[s] = Link{.reference = *found, .datum_height = *height};
   }
 
   const HarmonicsInput& in_;
-  bool fail_first_;
-  std::vector<HarmonicsError> errors_;
-  Resolution r_;
-  detail::EntryLookup lookup_{r_.entries};  // after r_: views its entries
+  Checked c_;
 };
 
 // ---------------------------------------------------------------------------
 // Warnings.
 
-void redefined_constituents(const Resolution& r,
+void redefined_constituents(const Checked& c,
                             std::vector<HarmonicsWarning>& out) {
-  for (std::size_t i = 0; i < r.entries.size(); ++i) {
-    const auto canonical = canonical_name(r.entries[i].name.view());
-    if (not canonical or not r.arguments[i]) {
+  for (std::size_t i = 0; i < c.entries.size(); ++i) {
+    const auto& argument = c.arguments[i];
+    if (not argument) {
       continue;
     }
-    if (catalogue_argument(*canonical) != r.arguments[i]) {
+    const auto builtin = builtin_argument(c.entries[i].name.view());
+    if (builtin and *builtin != *argument) {
       out.emplace_back(ConstituentRedefined{.entry = i});
     }
   }
 }
 
-void unsupported_datums(const HarmonicsInput& in,
-                        std::vector<HarmonicsWarning>& out) {
-  for (const DatumToken d : all_datum_tokens) {
-    if (to_vertical_datum(d)) {
-      continue;
-    }
-    std::optional<DatumUnsupported> found;
-    for (std::size_t s = 0; s < in.stations.size(); ++s) {
-      const auto* reference = std::get_if<ReferenceInput>(&in.stations[s]);
-      const bool holds =
-          common(in.stations[s]).datums.height(d).has_value() or
-          (reference and reference->computed_datums and
-           reference->computed_datums->heights.height(d).has_value());
-      if (not holds) {
-        continue;
-      }
-      if (found) {
-        ++found->stations;
-      } else {
-        found = DatumUnsupported{.datum = d, .stations = 1, .first_station = s};
-      }
-    }
-    if (found) {
-      out.emplace_back(*found);
-    }
-  }
-}
-
-void unused_constituents(const HarmonicsInput& in, const Resolution& r,
-                         const detail::EntryLookup& lookup,
-                         std::vector<HarmonicsWarning>& out) {
-  std::vector<bool> used(r.entries.size(), false);
-  for (const StationKindInput& station : in.stations) {
-    if (const auto* reference = std::get_if<ReferenceInput>(&station)) {
-      for (const ConstantInput& row : reference->constants) {
-        if (const auto i = lookup.index(row.constituent.view())) {
-          used[*i] = true;
-        }
+void unused_constituents(const Checked& c, std::vector<HarmonicsWarning>& out) {
+  std::vector<bool> used(c.entries.size(), false);
+  for (const auto& rows : c.rows) {
+    for (const auto& entry : rows) {
+      if (entry) {
+        used[*entry] = true;
       }
     }
   }
   // A compound's terms are Darwin entries, so one pass marks them all.
-  for (std::size_t i = 0; i < r.entries.size(); ++i) {
-    const auto* compound = std::get_if<CompoundTerms>(&r.entries[i].definition);
+  for (std::size_t i = 0; i < c.entries.size(); ++i) {
+    const auto* compound = std::get_if<CompoundTerms>(&c.entries[i].definition);
     if (not used[i] or compound == nullptr) {
       continue;
     }
     for (const CompoundTerms::Term& t : compound->terms()) {
-      if (const auto term = lookup.index(t.base.view())) {
+      if (const auto term = c.entry_index.find(c.entries, t.base.view())) {
         used[*term] = true;
       }
     }
@@ -541,10 +543,10 @@ void unused_constituents(const HarmonicsInput& in, const Resolution& r,
   }
 }
 
-void unused_sources(const HarmonicsInput& in, const Resolution& r,
+void unused_sources(std::size_t sources, const Checked& c,
                     std::vector<HarmonicsWarning>& out) {
-  std::vector<bool> used(in.sources.size(), false);
-  for (const auto& source : r.station_source) {
+  std::vector<bool> used(sources, false);
+  for (const auto& source : c.station_sources) {
     if (source) {
       used[*source] = true;
     }
@@ -557,105 +559,72 @@ void unused_sources(const HarmonicsInput& in, const Resolution& r,
 }
 
 std::vector<HarmonicsWarning> warnings(const HarmonicsInput& in,
-                                       const Resolution& r,
-                                       const detail::EntryLookup& lookup) {
+                                       const Checked& c) {
   std::vector<HarmonicsWarning> out;
-  redefined_constituents(r, out);
-  unsupported_datums(in, out);
-  unused_constituents(in, r, lookup, out);
-  unused_sources(in, r, out);
+  redefined_constituents(c, out);
+  unused_constituents(c, out);
+  unused_sources(in.sources.size(), c, out);
   return out;
 }
 
 // ---------------------------------------------------------------------------
-// The build, after every check passed.
+// The build, from a Checked without errors.
 
-/// Positions of `items` sorted by `key`: order[k] is the input position of
-/// the k-th, and rank[input position] is its sorted position.
-struct Sorted {
-  std::vector<std::size_t> order;
-  std::vector<std::size_t> rank;
-};
-
-/// The value a passed check stored. The build runs only after every check
-/// passed, so an empty `o` is a bug in the checks: stop rather than build a
-/// file from a guess.
-template <class T>
-T checked(std::optional<T> o) noexcept {
-  if (not o) {
-    std::abort();
+/// rank[order[k]] = k.
+std::vector<std::size_t> ranks(std::span<const std::size_t> order,
+                               std::size_t n) {
+  std::vector<std::size_t> rank(n);
+  for (std::size_t k = 0; k < order.size(); ++k) {
+    rank[order[k]] = k;
   }
-  return *std::move(o);
-}
-
-template <class T, class E>
-T checked(std::expected<T, E> e) noexcept {
-  if (not e) {
-    std::abort();
-  }
-  return *std::move(e);
-}
-
-template <class Key>
-Sorted sorted_by(std::size_t n, Key key) {
-  Sorted s{.order = std::vector<std::size_t>(n),
-           .rank = std::vector<std::size_t>(n)};
-  for (std::size_t i = 0; i < n; ++i) {
-    s.order[i] = i;
-  }
-  std::ranges::sort(s.order, std::less{}, key);
-  for (std::size_t k = 0; k < n; ++k) {
-    s.rank[s.order[k]] = k;
-  }
-  return s;
+  return rank;
 }
 
 class Builder {
  public:
-  Builder(HarmonicsInput& input, Resolution& r) : in_{input}, r_{r} {}
+  Builder(HarmonicsInput& input, Checked& checked) : in_{input}, c_{checked} {}
 
-  HarmonicsData build() {
-    const Sorted sources = sorted_by(in_.sources.size(), [this](std::size_t i) {
-      return in_.sources[i].id.view();
-    });
-    source_rank_ = sources.rank;
-    std::vector<Source> sorted_sources;
-    sorted_sources.reserve(in_.sources.size());
-    for (const std::size_t i : sources.order) {
-      sorted_sources.push_back(source(i));
-    }
+  [[nodiscard]] HarmonicsData build() && {
+    const std::vector<std::size_t> source_order = detail::sorted_index(
+        in_.sources.size(),
+        [this](std::size_t i) { return in_.sources[i].id.view(); });
+    source_rank_ = ranks(source_order, in_.sources.size());
+    std::vector<Source> sources;
+    sources.reserve(source_order.size());
+    std::ranges::transform(source_order, std::back_inserter(sources),
+                           [this](std::size_t i) { return source(i); });
 
+    std::vector<Argument> arguments;
+    arguments.reserve(c_.arguments.size());
+    std::ranges::transform(c_.arguments, std::back_inserter(arguments),
+                           [](const auto& a) { return engaged(a); });
+    auto ranked = HarmonicsAccess::ranked(std::move(c_.entries), arguments);
+    entry_index_ = std::move(ranked.index_of);
+
+    // Stations in id order, split by kind (each part stays in id order).
+    const std::size_t n = in_.stations.size();
+    const std::vector<std::size_t> by_id = detail::sorted_index(
+        n, [this](std::size_t s) { return id_of(in_.stations[s]); });
     std::vector<std::size_t> references;
     std::vector<std::size_t> subordinates;
-    for (std::size_t s = 0; s < in_.stations.size(); ++s) {
-      (std::holds_alternative<ReferenceInput>(in_.stations[s]) ? references
-                                                               : subordinates)
-          .push_back(s);
-    }
-    const auto id_of = [this](std::size_t s) {
-      return common(in_.stations[s]).id.value();
-    };
-    std::ranges::sort(references, std::less{}, id_of);
-    std::ranges::sort(subordinates, std::less{}, id_of);
-    reference_rank_.resize(in_.stations.size());
-    for (std::size_t k = 0; k < references.size(); ++k) {
-      reference_rank_[references[k]] = k;
-    }
+    std::ranges::partition_copy(
+        by_id, std::back_inserter(references), std::back_inserter(subordinates),
+        [this](std::size_t s) {
+          return std::holds_alternative<ReferenceInput>(in_.stations[s]);
+        });
+    reference_rank_ = ranks(references, n);
 
-    HarmonicsData data{
-        .header = header(),
-        .sources = std::move(sorted_sources),
-        .constituents = checked(ConstituentSet::make(std::move(r_.entries))),
-        .references = {},
-        .subordinates = {}};
+    HarmonicsData data{.header = header(),
+                       .sources = std::move(sources),
+                       .constituents = std::move(ranked.set),
+                       .references = {},
+                       .subordinates = {}};
     data.references.reserve(references.size());
-    for (const std::size_t s : references) {
-      data.references.push_back(reference(s, data.constituents));
-    }
+    std::ranges::transform(references, std::back_inserter(data.references),
+                           [this](std::size_t s) { return reference(s); });
     data.subordinates.reserve(subordinates.size());
-    for (const std::size_t s : subordinates) {
-      data.subordinates.push_back(subordinate(s, data.references));
-    }
+    std::ranges::transform(subordinates, std::back_inserter(data.subordinates),
+                           [this](std::size_t s) { return subordinate(s); });
     return data;
   }
 
@@ -663,7 +632,7 @@ class Builder {
   FileHeader header() {
     HeaderInput& h = in_.header;
     return FileHeader{.version = h.version,
-                      .created = checked(r_.created),
+                      .created = engaged(c_.created),
                       .generator = std::move(h.generator),
                       .title = std::move(h.title),
                       .description = std::move(h.description),
@@ -672,72 +641,66 @@ class Builder {
 
   Source source(std::size_t i) {
     SourceInput& s = in_.sources[i];
+    ResolvedSource resolved = engaged(std::move(c_.sources[i]));
     return Source{.id = s.id,
                   .name = std::move(s.name),
                   .url = std::move(s.url),
-                  .licence = checked(std::move(r_.source_licences[i])),
+                  .licence = std::move(resolved.licence),
                   .attribution = std::move(s.attribution),
-                  .retrieved = checked(r_.retrieved[i]),
+                  .retrieved = resolved.retrieved,
                   .version = std::move(s.version),
                   .sha256 = std::move(s.sha256),
                   .notes = std::move(s.notes)};
   }
 
-  StationInfo info(std::size_t s, StationInput& station,
-                   std::optional<ComputedDatums> computed) {
-    return StationInfo{
-        .id = std::move(station.id),
-        .name = std::move(station.name),
-        .location = station.location,
-        .source = HarmonicsAccess::source(
-            source_rank_[checked(r_.station_source[s])]),
-        .licence = std::move(r_.station_licences[s]),
-        .country = std::move(station.country),
-        .time_zone = std::move(station.time_zone),
-        .datums = checked(Datums::make(station.datums, computed,
-                                       std::move(station.datum_epoch))),
-        .record = r_.records[s],
-        .flags = std::move(station.flags),
-        .provenance = std::move(station.provenance)};
+  StationInfo info(std::size_t s, StationInput& station) {
+    ResolvedStation resolved = engaged(std::move(c_.stations[s]));
+    return StationInfo{.id = std::move(station.id),
+                       .name = std::move(station.name),
+                       .location = station.location,
+                       .source = HarmonicsAccess::source(
+                           source_rank_[engaged(c_.station_sources[s])]),
+                       .licence = std::move(resolved.licence),
+                       .country = std::move(station.country),
+                       .time_zone = std::move(station.time_zone),
+                       .datums = std::move(resolved.datums),
+                       .record = resolved.record,
+                       .flags = std::move(station.flags),
+                       .provenance = std::move(station.provenance)};
   }
 
-  ReferenceRecord reference(std::size_t s, const ConstituentSet& set) {
+  ReferenceRecord reference(std::size_t s) {
     auto& input = std::get<ReferenceInput>(in_.stations[s]);
-    std::optional<ComputedDatums> computed;
-    if (input.computed_datums) {
-      computed = ComputedDatums{.period = checked(r_.periods[s]),
-                                .heights = input.computed_datums->heights};
-    }
+    const auto& rows = c_.rows[s];
     std::vector<Constant> constants;
-    constants.reserve(input.constants.size());
-    for (const ConstantInput& row : input.constants) {
+    constants.reserve(rows.size());
+    for (std::size_t r = 0; r < rows.size(); ++r) {
       constants.push_back(
-          Constant{.constituent = checked(set.find(row.constituent.view())),
-                   .value = row.value});
+          Constant{.constituent = entry_index_[engaged(rows[r])],
+                   .value = input.constants[r].value});
     }
-    return ReferenceRecord{.info = info(s, input.station, computed),
+    std::ranges::sort(constants, std::less{}, &Constant::constituent);
+    return ReferenceRecord{.info = info(s, input.station),
                            .constants = std::move(constants),
                            .z0 = input.z0,
                            .analysis = input.analysis};
   }
 
-  SubordinateRecord subordinate(
-      std::size_t s, const std::vector<ReferenceRecord>& references) {
+  SubordinateRecord subordinate(std::size_t s) {
     auto& input = std::get<SubordinateInput>(in_.stations[s]);
-    const std::size_t rank =
-        reference_rank_[checked(r_.subordinate_reference[s])];
-    return SubordinateRecord{
-        .info = info(s, input.station, std::nullopt),
-        .reference = HarmonicsAccess::reference(rank),
-        .offsets = input.offsets,
-        .reference_datum_height = checked(
-            references[rank].info.datums.height(input.offsets.datum()))};
+    const Link link = engaged(c_.links[s]);
+    return SubordinateRecord{.info = info(s, input.station),
+                             .reference = HarmonicsAccess::reference(
+                                 reference_rank_[link.reference]),
+                             .offsets = input.offsets,
+                             .reference_datum_height = link.datum_height};
   }
 
   HarmonicsInput& in_;
-  Resolution& r_;
+  Checked& c_;
   std::vector<std::size_t> source_rank_;
   std::vector<std::size_t> reference_rank_;
+  std::vector<ConstituentIndex> entry_index_;  // by input entry position
 };
 
 const ReferenceRecord& record_of(const HarmonicsData& d,
@@ -760,121 +723,37 @@ const Licence& effective(const HarmonicsData& d,
 }  // namespace
 
 // ---------------------------------------------------------------------------
-// Codes.
+// make and validate: one checker, so make's error is validate's first.
 
-HarmonicsErrc code(const HarmonicsError& e) {
-  using enum HarmonicsErrc;
-  return std::visit(
-      Overloaded{
-          [](InvalidCreated) { return date; },
-          [](DuplicateSource) { return duplicate_source; },
-          [](InvalidSourceLicence) { return licence; },
-          [](InvalidRetrieved) { return date; },
-          [](const DuplicateName&) { return duplicate_constituent; },
-          [](const InvalidTerm&) { return compound_term; },
-          [](SpeedMismatch) { return speed_mismatch; },
-          [](UnknownSource) { return unknown_source; },
-          [](InvalidStationLicence) { return licence; },
-          [](UnknownConstituent) { return unknown_constituent; },
-          [](DuplicateRow) { return duplicate_row; },
-          [](InvalidNumber) { return schema; },
-          [](UncomputableDatum) { return schema; },
-          [](DatumConflict) { return datum_conflict; },
-          [](InvalidStationDate) { return date; },
-          [](InvertedDates) { return date; },
-          [](ShortDatumPeriod) { return datum_conflict; },
-          [](DuplicateStation) { return duplicate_station; },
-          [](ReferenceMissing) { return reference; },
-          [](ReferenceNotReference) { return reference; },
-          [](OffsetDatumMissing) { return offset_datum; },
-      },
-      e);
+HarmonicsReport validate(const HarmonicsInput& input) {
+  Checked checked = Checker{input}.run();
+  auto found = warnings(input, checked);
+  return HarmonicsReport{.errors = std::move(checked.errors),
+                         .warnings = std::move(found)};
 }
-
-std::string_view to_string(HarmonicsErrc c) noexcept {
-  switch (c) {
-    case HarmonicsErrc::schema:
-      return "E-SCHEMA";
-    case HarmonicsErrc::date:
-      return "E-DATE";
-    case HarmonicsErrc::duplicate_source:
-      return "E-DUPLICATE-SOURCE";
-    case HarmonicsErrc::licence:
-      return "E-LICENCE";
-    case HarmonicsErrc::duplicate_constituent:
-      return "E-DUPLICATE-CONSTITUENT";
-    case HarmonicsErrc::compound_term:
-      return "E-COMPOUND-TERM";
-    case HarmonicsErrc::speed_mismatch:
-      return "E-SPEED-MISMATCH";
-    case HarmonicsErrc::unknown_source:
-      return "E-UNKNOWN-SOURCE";
-    case HarmonicsErrc::unknown_constituent:
-      return "E-UNKNOWN-CONSTITUENT";
-    case HarmonicsErrc::duplicate_row:
-      return "E-DUPLICATE-ROW";
-    case HarmonicsErrc::datum_conflict:
-      return "E-DATUM-CONFLICT";
-    case HarmonicsErrc::duplicate_station:
-      return "E-DUPLICATE-STATION";
-    case HarmonicsErrc::reference:
-      return "E-REFERENCE";
-    case HarmonicsErrc::offset_datum:
-      return "E-OFFSET-DATUM";
-  }
-  return "E-SCHEMA";  // unreachable: every enumerator is handled
-}
-
-HarmonicsWarningCode code(const HarmonicsWarning& w) {
-  using enum HarmonicsWarningCode;
-  return std::visit(
-      Overloaded{
-          [](ConstituentRedefined) { return constituent_redefined; },
-          [](UnusedConstituent) { return unused_constituent; },
-          [](UnusedSource) { return unused_source; },
-          [](DatumUnsupported) { return datum_unsupported; },
-      },
-      w);
-}
-
-std::string_view to_string(HarmonicsWarningCode c) noexcept {
-  switch (c) {
-    case HarmonicsWarningCode::constituent_redefined:
-      return "W-CONSTITUENT-REDEFINED";
-    case HarmonicsWarningCode::unused_constituent:
-      return "W-UNUSED-CONSTITUENT";
-    case HarmonicsWarningCode::unused_source:
-      return "W-UNUSED-SOURCE";
-    case HarmonicsWarningCode::datum_unsupported:
-      return "W-DATUM-UNSUPPORTED";
-  }
-  return "W-DATUM-UNSUPPORTED";  // unreachable: every enumerator is handled
-}
-
-// ---------------------------------------------------------------------------
-// make and validate.
 
 std::expected<HarmonicsBuild, HarmonicsError> HarmonicsFile::make(
     HarmonicsInput input) {
-  Checker checker{input, true};
-  checker.run();
-  if (not checker.errors().empty()) {
-    return std::unexpected(checker.errors().front());
+  Checked checked = Checker{input}.run();
+  if (not checked.errors.empty()) {
+    return std::unexpected(checked.errors.front());
   }
-  auto found = warnings(input, checker.resolution(), checker.lookup());
-  auto data = Builder{input, checker.resolution()}.build();
+  auto found = warnings(input, checked);
+  auto data = Builder{input, checked}.build();
   return HarmonicsBuild{
       .file = HarmonicsAccess::file(
           std::make_shared<const HarmonicsData>(std::move(data))),
       .warnings = std::move(found)};
 }
 
-HarmonicsReport validate(const HarmonicsInput& input) {
-  Checker checker{input, false};
-  checker.run();
-  auto found = warnings(input, checker.resolution(), checker.lookup());
-  return HarmonicsReport{.errors = std::move(checker.errors()),
-                         .warnings = std::move(found)};
+std::expected<YearArguments, YearOutOfRange> year_arguments(
+    const HarmonicsFile& file, std::chrono::year y) {
+  return year_arguments(file.constituents(), y);
+}
+
+std::expected<YearArguments, YearOutOfRange> year_arguments(
+    const ReferenceView& station, std::chrono::year y) {
+  return year_arguments(station.constituents(), y);
 }
 
 // ---------------------------------------------------------------------------
@@ -905,50 +784,30 @@ std::size_t HarmonicsFile::subordinate_count() const noexcept {
   return data_->subordinates.size();
 }
 
-std::vector<ReferenceView> HarmonicsFile::references() const& {
-  std::vector<ReferenceView> all;
-  all.reserve(data_->references.size());
-  for (std::size_t i = 0; i < data_->references.size(); ++i) {
-    all.push_back(
-        HarmonicsAccess::reference_view(*data_, HarmonicsAccess::reference(i)));
-  }
-  return all;
-}
-
-std::vector<SubordinateView> HarmonicsFile::subordinates() const& {
-  std::vector<SubordinateView> all;
-  all.reserve(data_->subordinates.size());
-  for (std::size_t i = 0; i < data_->subordinates.size(); ++i) {
-    all.push_back(HarmonicsAccess::subordinate_view(
-        *data_, HarmonicsAccess::subordinate(i)));
-  }
-  return all;
-}
-
 ReferenceView HarmonicsFile::reference(ReferenceIndex i) const& noexcept {
   assert(i.value() < data_->references.size());
-  return HarmonicsAccess::reference_view(*data_, i);
+  return ReferenceView{*data_, i};
 }
 
 SubordinateView HarmonicsFile::subordinate(SubordinateIndex i) const& noexcept {
   assert(i.value() < data_->subordinates.size());
-  return HarmonicsAccess::subordinate_view(*data_, i);
+  return SubordinateView{*data_, i};
 }
 
 std::optional<StationIndex> HarmonicsFile::find(
     std::string_view id) const noexcept {
-  const auto id_of = [](const auto& record) { return record.info.id.value(); };
+  const auto id_in = [](const auto& record) { return record.info.id.value(); };
   const auto& refs = data_->references;
-  if (const auto r = std::ranges::lower_bound(refs, id, std::less{}, id_of);
+  if (const auto r = std::ranges::lower_bound(refs, id, {}, id_in);
       r != refs.end() and r->info.id.value() == id) {
     return StationIndex{
-        HarmonicsAccess::reference(static_cast<std::size_t>(r - refs.begin()))};
+        ReferenceIndex{static_cast<std::size_t>(r - refs.begin())}};
   }
   const auto& subs = data_->subordinates;
-  if (const auto s = std::ranges::lower_bound(subs, id, std::less{}, id_of);
+  if (const auto s = std::ranges::lower_bound(subs, id, {}, id_in);
       s != subs.end() and s->info.id.value() == id) {
-    return StationIndex{HarmonicsAccess::subordinate(
-        static_cast<std::size_t>(s - subs.begin()))};
+    return StationIndex{
+        SubordinateIndex{static_cast<std::size_t>(s - subs.begin())}};
   }
   return std::nullopt;
 }
@@ -990,6 +849,17 @@ const ConstituentSet& ReferenceView::constituents() const noexcept {
 
 std::span<const Constant> ReferenceView::constants() const noexcept {
   return record_of(*data_, index_).constants;
+}
+
+std::optional<HarmonicConstant> ReferenceView::constant(
+    ConstituentIndex i) const noexcept {
+  const auto all = constants();
+  const auto found =
+      std::ranges::lower_bound(all, i, {}, &Constant::constituent);
+  if (found == all.end() or found->constituent != i) {
+    return std::nullopt;
+  }
+  return found->value;
 }
 
 Length ReferenceView::z0() const noexcept {

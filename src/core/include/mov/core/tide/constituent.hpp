@@ -208,6 +208,9 @@ class CompoundTerms {
 
 /// How a dictionary entry defines its constituent.
 using Definition = std::variant<Darwin, CompoundTerms>;
+static_assert(std::is_trivially_copyable_v<ConstituentName>);
+static_assert(std::is_trivially_copyable_v<CompoundTerms>);
+static_assert(std::is_trivially_copyable_v<Definition>);
 
 }  // namespace mov::core::tide
 
@@ -417,6 +420,7 @@ class Argument {
   std::array<std::int32_t, 7> u_{};
   std::array<std::uint32_t, node_factor_count> exponent_{};  // unity: 0
 };
+static_assert(std::is_trivially_copyable_v<Argument>);
 
 /// A compound term that names no entry of the dictionary.
 struct UnknownTerm {

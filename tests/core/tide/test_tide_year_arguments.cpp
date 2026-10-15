@@ -19,6 +19,7 @@
 
 #include "harmonics_example.hpp"
 #include "mov/core/tide/astronomy.hpp"
+#include "mov/core/tide/builtin.hpp"
 #include "mov/core/tide/catalogue.hpp"
 #include "mov/core/tide/constituent.hpp"
 #include "mov/core/tide/constituent_set.hpp"
@@ -160,4 +161,12 @@ TEST_CASE("the worked example's 2026 arguments (docs/harmonics-json.md 13.2)",
     CHECK(angle_between(table[i].argument.degrees(), v.argument) < 5e-5);
     CHECK(std::abs(table[i].node_factor - v.f) < 5e-6);
   }
+}
+
+TEST_CASE("builtin_argument looks up a name or an alias",
+          "[core][tide][catalogue]") {
+  CHECK(t::builtin_argument("M2") == t::catalogue_argument("M2"));
+  CHECK(t::builtin_argument("LDA2") == t::catalogue_argument("LAM2"));
+  CHECK_FALSE(t::builtin_argument("XYZ9"));
+  CHECK_FALSE(t::builtin_argument("m2"));
 }

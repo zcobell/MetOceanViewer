@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 #include "mov/core/tide/node_factor.hpp"
 #include "mov/core/tide/phase.hpp"
@@ -217,5 +218,6 @@ class NodeFactorValues {
 
   std::array<double, node_factor_count> values_;
 };
+static_assert(std::is_trivially_copyable_v<NodeFactorValues>);
 
 }  // namespace mov::core::tide

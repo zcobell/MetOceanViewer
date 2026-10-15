@@ -11,9 +11,11 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
+#include "mov/core/datum.hpp"
 #include "mov/core/detail/numeric.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station.hpp"
@@ -169,6 +171,8 @@ struct Constant {
   HarmonicConstant value;
   friend constexpr bool operator==(const Constant&, const Constant&) = default;
 };
+static_assert(std::is_trivially_copyable_v<HarmonicConstant>);
+static_assert(std::is_trivially_copyable_v<Constant>);
 
 /// Subordinate heights as ratios of the reference's (> 0, finite).
 struct HeightRatio {
@@ -203,7 +207,7 @@ class SubordinateOffsets {
   struct Values {
     HighLow<double> minutes;
     HeightAdjustment height;
-    TideDatum datum;
+    VerticalDatum datum;
   };
 
   /// Minutes become milliseconds rounded half away from zero (-0 is 0).
@@ -240,10 +244,11 @@ class SubordinateOffsets {
     return height_;
   }
   const HeightAdjustment& height() const&& = delete;
-  [[nodiscard]] constexpr const TideDatum& datum() const& noexcept {
+  /// D: the datum the reference heights are taken relative to, and the
+  /// subordinate's heights are relative to.
+  [[nodiscard]] constexpr VerticalDatum datum() const noexcept {
     return datum_;
   }
-  const TideDatum& datum() const&& = delete;
 
   friend constexpr bool operator==(const SubordinateOffsets&,
                                    const SubordinateOffsets&) = default;
@@ -251,7 +256,7 @@ class SubordinateOffsets {
  private:
   constexpr SubordinateOffsets(HighLow<std::chrono::milliseconds> time,
                                HeightAdjustment height,
-                               TideDatum datum) noexcept
+                               VerticalDatum datum) noexcept
       : time_{time}, height_{height}, datum_{datum} {}
 
   [[nodiscard]] static constexpr bool time_ok(double minutes) noexcept {
@@ -294,8 +299,9 @@ class SubordinateOffsets {
 
   HighLow<std::chrono::milliseconds> time_;
   HeightAdjustment height_;
-  TideDatum datum_;
+  VerticalDatum datum_;
 };
+static_assert(std::is_trivially_copyable_v<SubordinateOffsets>);
 
 /// The analysed record (docs/harmonics-json.md 8.1): its dates (each may be
 /// unknown) and its effective length in years.

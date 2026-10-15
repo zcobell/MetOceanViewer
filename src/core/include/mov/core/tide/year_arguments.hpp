@@ -105,7 +105,10 @@ struct Equilibrium {
 
 /// Every constituent's Equilibrium for one ConstituentSet and one year: what
 /// a year segment of a prediction evaluates once. Indexed by the set's
-/// ConstituentIndex; built only by year_arguments().
+/// ConstituentIndex; built only by year_arguments(). It records which set it
+/// was built for (made_for), so a caller holding a ReferenceView can check
+/// that the view's constants index this table; prediction takes the table
+/// from the view (year_arguments(const ReferenceView&, ...), harmonics.hpp).
 class YearArguments {
  public:
   [[nodiscard]] std::chrono::year year() const noexcept { return year_; }
@@ -113,6 +116,10 @@ class YearArguments {
   [[nodiscard]] Time start() const noexcept { return year_start(year_); }
   [[nodiscard]] std::size_t size() const noexcept {
     return by_constituent_.size();
+  }
+  /// Whether this table was built for `set` (the same object).
+  [[nodiscard]] bool made_for(const ConstituentSet& set) const noexcept {
+    return set_ == &set;
   }
 
   /// The entry of `i`, an index of the set this table was built for (an
@@ -124,14 +131,17 @@ class YearArguments {
   }
   const Equilibrium& operator[](ConstituentIndex) const&& = delete;
 
+  /// Same set, same year, same values.
   friend bool operator==(const YearArguments&, const YearArguments&) = default;
 
  private:
   friend YearArguments year_arguments(const ConstituentSet& set,
                                       const YearAstronomy& y);
-  YearArguments(std::chrono::year y, std::vector<Equilibrium> by_constituent)
-      : year_{y}, by_constituent_{std::move(by_constituent)} {}
+  YearArguments(const ConstituentSet& set, std::chrono::year y,
+                std::vector<Equilibrium> by_constituent)
+      : set_{&set}, year_{y}, by_constituent_{std::move(by_constituent)} {}
 
+  const ConstituentSet* set_;  // identity only, never dereferenced
   std::chrono::year year_;
   std::vector<Equilibrium> by_constituent_;
 };

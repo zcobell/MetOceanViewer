@@ -10,6 +10,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdint>
+#include <expected>
 #include <initializer_list>
 #include <optional>
 #include <span>
@@ -19,6 +20,7 @@
 #include <variant>
 #include <vector>
 
+#include "mov/core/datum.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/tide/constituent.hpp"
@@ -42,6 +44,15 @@ T must(std::optional<T> o) {
     FAIL("an expected value is missing");
   }
   return *std::move(o);
+}
+
+/// The value of an expected the test needs; an error fails the test.
+template <class T, class E>
+T must(std::expected<T, E> e) {
+  if (not e) {
+    FAIL("an expected value is an error");
+  }
+  return *std::move(e);
 }
 
 inline core::Length metres(double m) {
@@ -87,8 +98,14 @@ inline t::ConstituentInput compound(
       .speed = speed};
 }
 
-inline t::DatumHeights heights(std::initializer_list<t::TokenHeight> rows) {
+inline t::DatumHeights heights(
+    std::initializer_list<t::HeightRow<core::VerticalDatum>> rows) {
   return t::DatumHeights::make(std::span{rows.begin(), rows.size()}).value();
+}
+
+inline t::ComputedHeights computed_heights(
+    std::initializer_list<t::HeightRow<t::ComputableDatum>> rows) {
+  return t::ComputedHeights::make(std::span{rows.begin(), rows.size()}).value();
 }
 
 inline t::ConstantInput row(std::string_view n, double h, double g) {
@@ -178,13 +195,13 @@ inline t::SubordinateInput kings_ferry() {
           t::SubordinateOffsets::make(
               {.minutes = {.high = 245.0, .low = 249.0},
                .height = t::HeightRatio{.ratio = {.high = 0.49, .low = 1.16}},
-               .datum = t::TideDatum{t::DatumToken::mllw}})
+               .datum = core::VerticalDatum::mllw})
               .value()};
 }
 
 /// Fernandina Beach, the reference (stations[1] of the example).
 inline t::ReferenceInput fernandina_beach() {
-  using enum t::DatumToken;
+  using enum core::VerticalDatum;
   t::StationInput s = station("noaa-coops:8720030", "Fernandina Beach, FL",
                               30.671356, -81.46584);
   s.country = "USA";

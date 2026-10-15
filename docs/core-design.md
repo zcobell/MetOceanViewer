@@ -428,8 +428,10 @@ decimation (first, min, max, last per pixel column) of a long series to W column
 
 ### 2.11 Datums — `datum.hpp`, `datum_shift.hpp` (D18)
 
-`VerticalDatum` has ten enumerators: the SN §10.2 tokens plus `mtl`, `igld85` and
-`stnd`; the core enum is authoritative. `parse_vertical_datum` returns
+`VerticalDatum` has thirteen enumerators: the SN §10.2 tokens plus `mtl`, `igld85` and
+`stnd`, then the tidal datums of harmonics files, `hat`, `lat` and `dtl` (WP H2,
+`docs/harmonics-engine.md` §2.7); the core enum is authoritative, and `DatumTable` has a
+slot for each but MSL. `Enumerators<VerticalDatum>` makes it a `DenseEnum` for `EnumSet`. `parse_vertical_datum` returns
 `expected<optional<VerticalDatum>, UnknownDatum>`: `""`, white space and `none` (any
 case) are an engaged nullopt (no datum); the tokens and the aliases `NAVD`, `NGVD`,
 `IGLD` match any case with surrounding ASCII white space ignored; anything else is

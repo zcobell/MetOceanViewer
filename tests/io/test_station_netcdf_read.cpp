@@ -46,11 +46,12 @@ using io::FormatErrc;
 using io::StationNcLayout;
 using mov::test::ScratchDir;
 
-constexpr std::array all_datums{VerticalDatum::mhhw,   VerticalDatum::mhw,
-                                VerticalDatum::mtl,    VerticalDatum::msl,
-                                VerticalDatum::mlw,    VerticalDatum::mllw,
-                                VerticalDatum::navd88, VerticalDatum::ngvd29,
-                                VerticalDatum::igld85, VerticalDatum::stnd};
+constexpr std::array all_datums{
+    VerticalDatum::mhhw,   VerticalDatum::mhw,    VerticalDatum::mtl,
+    VerticalDatum::msl,    VerticalDatum::mlw,    VerticalDatum::mllw,
+    VerticalDatum::navd88, VerticalDatum::ngvd29, VerticalDatum::igld85,
+    VerticalDatum::stnd,   VerticalDatum::hat,    VerticalDatum::lat,
+    VerticalDatum::dtl};
 
 constexpr std::int64_t max_ms = core::max_abs_time_ms;
 
