@@ -390,7 +390,8 @@ Implemented in Phase 1: see `docs/packaging.md` (macOS and Windows not yet run).
 ## 5. Phases
 
 Each phase ends with working, tested, CI-green software. Do not start GUI work
-before Phase 3 is done.
+before Phase 3's provider track (P1–P10, `docs/providers-design.md`) is done and
+CI-green; the tide track (H2–H9) may finish alongside Phase 4 (decision 36).
 
 1. **Foundation**
    - CMake, presets, vcpkg manifest and the GitHub Actions matrix on all three OSes.
@@ -614,6 +615,10 @@ open. Do not guess; ask before proceeding past the phase that needs them.
 35. **USGS API key storage** (amends decision 5): QtKeychain wherever a backend exists.
     Where none does (Linux without a Secret Service), the key is stored in plain text
     in the app's local data directory, as v4 did.
+36. **GUI start (decided 2026-10-15):** Phase 4 may start once Phase 3's provider
+    track (P1–P10) is done, reviewed and green in CI. The tide track (H2–H9) continues
+    in parallel with Phase 4; Phase 3 is closed (phase-end reviews) when both tracks
+    are done. The GUI's tide features wait for H9 (the tides provider).
 
 ### Open items from Phase 2 (owner; undecided, collected 2026-10-09)
 
