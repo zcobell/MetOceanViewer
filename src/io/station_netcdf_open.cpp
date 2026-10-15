@@ -296,12 +296,15 @@ std::expected<void, Error> check_status(const nc::File& file,
       split_ws(**meanings) == std::vector<std::string_view>{"dry", "wet"};
   const bool values_ok =
       *values == std::vector<std::int8_t>{sn::status_dry, sn::status_wet};
+  // Read in place: copying the vector through value_or makes GCC 14 at -O3
+  // report a bogus -Warray-bounds in the copy.
+  const std::span<const std::int8_t> fills =
+      *fill ? std::span<const std::int8_t>{**fill}
+            : std::span<const std::int8_t>{};
   const bool fill_ok =
-      fill->value_or(std::vector<std::int8_t>{}).size() <= 1 and
-      std::ranges::none_of(fill->value_or(std::vector<std::int8_t>{}),
-                           [](std::int8_t f) {
-                             return f == sn::status_dry or f == sn::status_wet;
-                           });
+      fills.size() <= 1 and std::ranges::none_of(fills, [](std::int8_t f) {
+        return f == sn::status_dry or f == sn::status_wet;
+      });
   if (not meanings_ok or not values_ok or not fill_ok) {
     return fail(format_error(FormatErrc::bad_flag, subject));
   }
