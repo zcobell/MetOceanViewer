@@ -234,6 +234,9 @@ enum class FormatErrc : std::uint8_t {
   inconsistent_metadata,  // stations of a legacy file that disagree on the
                           // units or datum of their one shared column
   ambiguous_station_id,   // several variables claim to be the station id
+  // provider responses
+  foreign_link,  // a link to follow that leaves the origin or collection
+                 // (wire::Verbatim); the subject is the link
 };
 
 /// A file that parses but does not mean what its format requires.

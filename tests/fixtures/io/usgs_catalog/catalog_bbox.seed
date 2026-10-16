@@ -1,0 +1,361 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204289402",
+        "monitoring_location_name": "STORM DRAIN AT CRANEYBROOK LANE AT EDGEFIELD, VA",
+        "id": "02d8b2a80bec4b09840092611dd2e94f",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2015-11-18T15:10:00+00:00",
+        "end": "2026-10-15T08:30:00+00:00"
+      },
+      "id": "02d8b2a80bec4b09840092611dd2e94f",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3806361111111,
+          36.8835444444444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204288771",
+        "monitoring_location_name": "STORM DRAIN AT USAA DRIVE AT NORFOLK, VA",
+        "id": "26ee07727abf4b31ab6df44c98888dfd",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2015-07-17T13:40:00+00:00",
+        "end": "2026-10-15T05:50:00+00:00"
+      },
+      "id": "26ee07727abf4b31ab6df44c98888dfd",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.20735,
+          36.8750833333333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-365017076174700",
+        "monitoring_location_name": "ELIZABETH RIVER AT NORTH LANDING AT PORTSMOUTH, VA",
+        "id": "27acfa7c886c418b996638ad367f6f21",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": null,
+        "end": null
+      },
+      "id": "27acfa7c886c418b996638ad367f6f21",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2963888888889,
+          36.8380555555556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204289989",
+        "monitoring_location_name": "STORM DRAIN AT SHEPPARD AVENUE NEAR NORFOLK, VA",
+        "id": "2c0e1d57f4e04cd9bdd0f02382e9cde5",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2015-08-18T19:50:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "2c0e1d57f4e04cd9bdd0f02382e9cde5",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2504972222222,
+          36.9235138888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204289989",
+        "monitoring_location_name": "STORM DRAIN AT SHEPPARD AVENUE NEAR NORFOLK, VA",
+        "id": "50674b467ddf428dbf39c77bf81a7785",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2015-07-28T15:55:00+00:00",
+        "end": "2026-10-15T05:50:00+00:00"
+      },
+      "id": "50674b467ddf428dbf39c77bf81a7785",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2504972222222,
+          36.9235138888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-365123107613412",
+        "monitoring_location_name": "ELIZABETH RIVER AT CROWN POINT NORFOLK, VA",
+        "id": "5378e6f545ba41de80fb7a4ef7695a88",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": null,
+        "end": null
+      },
+      "id": "5378e6f545ba41de80fb7a4ef7695a88",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2277716853001,
+          36.8565366229611
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204289131",
+        "monitoring_location_name": "STORM DRAIN AT DAISY DRIVE NEAR PORTSMOUTH, VA",
+        "id": "6fc34c7c8b784e4ab7882bb7e9a0bf74",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2016-04-09T15:25:00+00:00",
+        "end": "2026-10-15T05:30:00+00:00"
+      },
+      "id": "6fc34c7c8b784e4ab7882bb7e9a0bf74",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3842472222222,
+          36.8624972222222
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204289402",
+        "monitoring_location_name": "STORM DRAIN AT CRANEYBROOK LANE AT EDGEFIELD, VA",
+        "id": "7a1a0ee610664a17a8295bfc0667c09c",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2015-11-18T15:10:00+00:00",
+        "end": "2026-10-15T10:30:00+00:00"
+      },
+      "id": "7a1a0ee610664a17a8295bfc0667c09c",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3806361111111,
+          36.8835444444444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-02042893",
+        "monitoring_location_name": "WB ELIZABETH RIVER AT ROUTE 17 NEAR PORTSMOUTH, VA",
+        "id": "9a6e8b1cdcdb45ea840c9149697caaab",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2015-04-16T04:00:00+00:00",
+        "end": "2026-10-15T09:12:00+00:00"
+      },
+      "id": "9a6e8b1cdcdb45ea840c9149697caaab",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3648611111111,
+          36.8437222222222
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204289131",
+        "monitoring_location_name": "STORM DRAIN AT DAISY DRIVE NEAR PORTSMOUTH, VA",
+        "id": "caae3b8d57f04aaea40f16f62ddc4f5b",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2016-04-08T16:10:00+00:00",
+        "end": "2026-10-15T10:30:00+00:00"
+      },
+      "id": "caae3b8d57f04aaea40f16f62ddc4f5b",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3842472222222,
+          36.8624972222222
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-365119076174600",
+        "monitoring_location_name": "THE HAGUE AT PEDESTRIAN BRIDGE AT NORFOLK, VA",
+        "id": "d1be134485e64f0b87d9d10045504567",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2018-09-11T20:06:00+00:00",
+        "end": "2022-10-05T13:30:00+00:00"
+      },
+      "id": "d1be134485e64f0b87d9d10045504567",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2961694444444,
+          36.8552694444444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-365132076175600",
+        "monitoring_location_name": "THE HAGUE AT FAIRFAX AVENUE AT NORFOLK, VA",
+        "id": "d1ddee45a3f54eb98b6971b9194b2d2b",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": null,
+        "end": null
+      },
+      "id": "d1ddee45a3f54eb98b6971b9194b2d2b",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2988888888889,
+          36.8588888888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204288771",
+        "monitoring_location_name": "STORM DRAIN AT USAA DRIVE AT NORFOLK, VA",
+        "id": "eb36214b7ea94980aef7837d918ef3be",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2015-07-17T13:30:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "eb36214b7ea94980aef7837d918ef3be",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.20735,
+          36.8750833333333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204288831",
+        "monitoring_location_name": "ELIZABETH RIV AT MIDTOWN TUNNEL AT NORFOLK, VA",
+        "id": "f15681171f7440cb98d03365adb293b3",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2020-02-19T21:00:00+00:00",
+        "end": "2026-10-15T07:00:00+00:00"
+      },
+      "id": "f15681171f7440cb98d03365adb293b3",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3095,
+          36.862
+        ]
+      }
+    }
+  ],
+  "numberReturned": 14,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "type": "application/json",
+      "title": "Combined metadata",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata"
+    }
+  ],
+  "timeStamp": "2026-10-15T23:09:03.030108Z"
+}

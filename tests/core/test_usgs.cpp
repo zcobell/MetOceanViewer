@@ -245,18 +245,21 @@ TEST_CASE("USGS parameters name their quantity", "[core][usgs]") {
         QuantityId{Quantity::discharge});
   CHECK(usgs::quantity_of(parameter("62619")) ==
         QuantityId{Quantity::water_level});
+  CHECK(usgs::quantity_of(parameter("00010")) ==
+        QuantityId{Quantity::water_temperature});
   // Outside the registry: the generic quantity usgs_<code>, the same value
   // GenericQuantity::parse makes of that token.
-  const QuantityId temperature = usgs::quantity_of(parameter("00010"));
-  CHECK(mov::core::token(temperature) == "usgs_00010");
+  const QuantityId precipitation = usgs::quantity_of(parameter("00045"));
+  CHECK(mov::core::token(precipitation) == "usgs_00045");
   const auto parsed =
-      GenericQuantity::parse({.token = "usgs_00010", .standard_name = ""});
+      GenericQuantity::parse({.token = "usgs_00045", .standard_name = ""});
   REQUIRE(parsed.has_value());
-  CHECK(temperature == QuantityId{parsed.value_or(GenericQuantity{})});
+  CHECK(precipitation == QuantityId{parsed.value_or(GenericQuantity{})});
 }
 
 TEST_CASE("every registry datum suits its quantity", "[core][usgs]") {
-  for (const std::string_view code : {"00060", "00065", "62620", "62619"}) {
+  for (const std::string_view code : {"00010", "00020", "00035", "00036",
+                                      "00060", "00065", "62620", "62619"}) {
     const auto mapping = usgs::registry_quantity(parameter(code));
     REQUIRE(mapping.has_value());
     if (mapping and mapping->datum) {

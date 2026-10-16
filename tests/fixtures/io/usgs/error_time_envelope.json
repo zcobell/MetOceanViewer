@@ -1,0 +1,5 @@
+{
+  "code": "InvalidQuery",
+  "type": "InvalidQuery",
+  "description": "The requested time envelope is too large, the query must be limited to 1100 day(s) or less for this collection."
+}

@@ -354,9 +354,25 @@ struct ParameterRow {
   QuantityMapping mapping;
 };
 
-// Further rows (00010, 00020, 00035, 00036) only after P3 checks them against
-// the parameter-codes collection.
+// Each row checked against the parameter-codes collection (2026-10-15): its
+// name, description and unit agree with the quantity's.
 inline constexpr std::array parameter_rows{
+    // "Temperature, water, degrees Celsius" (deg C).
+    ParameterRow{.code = "00010",
+                 .mapping = {.quantity = Quantity::water_temperature,
+                             .datum = std::nullopt}},
+    // "Temperature, air, degrees Celsius" (deg C).
+    ParameterRow{.code = "00020",
+                 .mapping = {.quantity = Quantity::air_temperature,
+                             .datum = std::nullopt}},
+    // "Wind speed, miles per hour" (mph).
+    ParameterRow{
+        .code = "00035",
+        .mapping = {.quantity = Quantity::wind_speed, .datum = std::nullopt}},
+    // "Wind direction, degrees clockwise from true north" (Deg).
+    ParameterRow{.code = "00036",
+                 .mapping = {.quantity = Quantity::wind_direction,
+                             .datum = std::nullopt}},
     ParameterRow{
         .code = "00060",
         .mapping = {.quantity = Quantity::discharge, .datum = std::nullopt}},
@@ -379,9 +395,11 @@ static_assert(std::ranges::all_of(parameter_rows, [](const ParameterRow& row) {
 
 }  // namespace detail
 
-/// The registry quantity of a parameter: 00060 discharge; 00065 water_level
-/// relative to STND (the gage datum); 62620 water_level NAVD88; 62619
-/// water_level NGVD29. nullopt for any other parameter.
+/// The registry quantity of a parameter: 00010 water_temperature; 00020
+/// air_temperature; 00035 wind_speed; 00036 wind_direction; 00060
+/// discharge; 00065 water_level relative to STND (the gage datum); 62620
+/// water_level NAVD88; 62619 water_level NGVD29. nullopt for any other
+/// parameter.
 [[nodiscard]] constexpr std::optional<QuantityMapping> registry_quantity(
     const ParameterCode& parameter) noexcept {
   const auto row = std::ranges::find(detail::parameter_rows, parameter.view(),

@@ -1,0 +1,89 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2026-09-29",
+        "value": "3330",
+        "approval_status": "Provisional",
+        "qualifier": null
+      },
+      "id": "5c3d2c48-8d87-4209-b025-df1580f68d98",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2026-09-25",
+        "value": "3570",
+        "approval_status": "Provisional",
+        "qualifier": null
+      },
+      "id": "6dcad8c1-fc18-40f5-97bb-7fcf37306741",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2026-09-20",
+        "value": "1380",
+        "approval_status": "Provisional",
+        "qualifier": null
+      },
+      "id": "916d47ec-41f7-40de-8b99-fb97ea3f695e",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2026-09-21",
+        "value": "1540",
+        "approval_status": "Provisional",
+        "qualifier": null
+      },
+      "id": "b7f87d70-76a6-402d-960c-4fbc6d09ff26",
+      "geometry": null
+    }
+  ],
+  "numberReturned": 4,
+  "links": [
+    {
+      "rel": "next",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items?cursor=YjdmODdkNzAtNzZhNi00MDJkLTk2MGMtNGZiYzZkMDlmZjI2&time_series_id=2cf409b0d9694c01828f5d4ff14586a5&datetime=2026-09-20%2F2026-09-30&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=4&f=json",
+      "type": "application/geo+json",
+      "title": "Items (next)"
+    },
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items?f=json&time_series_id=2cf409b0d9694c01828f5d4ff14586a5&datetime=2026-09-20%2F2026-09-30&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=4"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items?f=jsonld&time_series_id=2cf409b0d9694c01828f5d4ff14586a5&datetime=2026-09-20%2F2026-09-30&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=4"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items?f=html&time_series_id=2cf409b0d9694c01828f5d4ff14586a5&datetime=2026-09-20%2F2026-09-30&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=4"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items?f=csv&time_series_id=2cf409b0d9694c01828f5d4ff14586a5&datetime=2026-09-20%2F2026-09-30&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=4"
+    },
+    {
+      "type": "application/json",
+      "title": "Daily values",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily"
+    }
+  ],
+  "timeStamp": "2026-10-15T23:04:40.218082Z"
+}

@@ -4,8 +4,9 @@ Status: **proposed, revision 2** (2026-10-09). Revision 2 applies the owner's an
 (plan §6 decisions 32–35) and the design review (bryce-lelbach, ben-deane,
 neckbeard-nate); Appendix A maps each finding to its resolution. Built: H0 (§2.2, the
 layers, gates and build plumbing), P1 (§3, the core vocabulary; its deviations from
-revision 2 are in §3.7), P2 (§4, the CO-OPS wire formats; deviations in §4.8) and P6
-(§5, the fetch layer; its deviations are in §5.7); nothing else from P3 on. Phase 2
+revision 2 are in §3.7), P2 (§4, the CO-OPS wire formats; deviations in §4.8), P3
+(§4, the USGS wire formats; deviations in §4.9) and P6 (§5, the fetch layer; its
+deviations are in §5.7); nothing else from P4 on. Phase 2
 (`core`, `io`) is as built;
 the tide engine work packages H1–H9 of `docs/harmonics-engine.md` have not started. Where a header written later disagrees with
 this page, the header wins and this page gets fixed.
@@ -81,6 +82,9 @@ program of §1.5 built against the pinned Qt 6.11.3.
 | Live: `continuous` with `limit=3` returns `next`, no `numberMatched`. `daily` over 36 years returns 13,150 items on one page. No `X-RateLimit-*` on keyless responses; `cache-control: public, max-age=3600`. | live |
 | Live: `f=csv` carries no next link (body or `Link` header): paging needs `f=json`. | live |
 | Live: `combined-metadata` returns geometry, `id` (32-hex series id), `monitoring_location_id`, `monitoring_location_name`, `parameter_code`, `parameter_name`, `statistic_id`, `computation_identifier`, `begin`, `end`, `primary`, `unit_of_measure`, `time_zone_abbreviation`, `uses_daylight_savings`; `properties=` rejects `time_series_id`. | live; `/collections/combined-metadata/queryables` |
+| Live (2026-10-15, P3; bodies in `tests/fixtures/io/usgs/`): `datetime` intervals are closed (`…00:00:00Z/…00:10:00Z` gave 00:00, 00:05, 00:10). With `sortby` only the first page is served (its `offset` link answers 400). Continuous pages follow `cursor` links in time order; a full last page carries an `offset=<limit>` link that re-reads the window (a cycle). Daily values come in feature-id order, not time order. Without `limit` a page has 10 rows. | live |
+| Live (2026-10-15): `qualifier` is an array of strings (`["ESTIMATED"]`) or null; `begin`/`end` of a series are RFC 3339 instants; `primary` is "Primary" or null, and several Primary series of one parameter and statistic are common (§4.9). Unfiltered, a site's `combined-metadata` also lists field-measurement rows (UUID ids) and peaks (no statistic); `data_type=Continuous values,Daily values` leaves them out. Units: `ft^3/s`, `ft`, `degC` (combined-metadata) but `ft3/s`, `deg C` (parameter-codes). | live |
+| Live (2026-10-15): the catalog query (§4.1, D33) returned 29,017 rows of 17,438 sites on one page: 20.2 MB, 2.8 s keyless. 707 rows not Primary, 1,132 without dates, 16 without geometry. Error bodies: an invalid key is HTTP 403 with api.data.gov's shape; OGC 400s say `InvalidQuery` or `InvalidParameterValue`; an unknown collection is 404 `NotFound`. | live |
 
 ### 1.3 NDBC
 
@@ -401,8 +405,9 @@ template <class C> class Resolved;   // C: Continuous or Daily
 inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::seconds>();
 
 /// 00060 discharge; 00065 water_level, datum stnd (the site's gage datum); 62620
-/// water_level navd88; 62619 water_level ngvd29. Further rows (00010, 00020, 00035,
-/// 00036) only after P3 checks them against parameter-codes.
+/// water_level navd88; 62619 water_level ngvd29; and since P3 (checked against
+/// parameter-codes) 00010 water_temperature, 00020 air_temperature, 00035 wind_speed,
+/// 00036 wind_direction.
 struct QuantityMapping { Quantity quantity; std::optional<VerticalDatum> datum; };
 [[nodiscard]] constexpr std::optional<QuantityMapping> registry_quantity(const ParameterCode&) noexcept;
 /// The registry quantity, else the generic "usgs_<code>".
@@ -715,6 +720,59 @@ with inputs up to 1 MiB and a large-body seed), `fuzz_json_depth` (§10.4).
 For H5: the harmonics reader can reuse `mov/io/detail/json.hpp` (the schema-driven
 parse, the repeated-member check, the depth pre-scan, the NUL rule). Its UTF-8 pass (HE
 §6.3 step 3) does not catch a NUL, which is valid UTF-8, so it needs the NUL rule too.
+
+### 4.9 As built (P3): USGS
+
+P3 built `mov/io/wire/usgs.hpp` (targets, unit spellings, classification, the page
+readers), `Verbatim` and `Target` in `origin.hpp`, `mov/io/rfc3339.hpp`
+(`io::parse_rfc3339`, constexpr) and the private `detail/usgs_json.hpp`. The readers
+reuse P2's SAX reader (`detail::json::parse`, Keep schemas, the depth, NUL and BOM
+rules, stop polling); only `src/io/json/` includes nlohmann. The facts are the
+2026-10-15 rows of §1.2, each pinned by a recorded body in `tests/fixtures/io/usgs/`
+(`provenance.txt`).
+
+| §4 says | Built | Why |
+|---|---|---|
+| `Verbatim::make(Origin, pinned_path, url) -> expected<Verbatim, FormatError>` | `-> expected<Verbatim, LinkError {too_long, bad_character, other_origin, other_path}>`; the URL is `base(origin)` then `/` (no port, no user information), the path exactly the pinned one, every byte an RFC 3986 URI character (no `#`, `%` with two hex digits), at most 8 KiB. A page whose link is refused is `FormatError{foreign_link}` (a new `FormatErrc`), subject the link | A narrow error at the type; the reader lifts it. A link that tries to leave is not a malformed body. |
+| `usgs::resolve_target(request)` with `computation_identifier` | `resolve_target(Continuous)`, `resolve_target(Daily)`: by parameter `parameter_code` and `statistic_id` (00011 for continuous), by id `id`; `properties` without `computation_identifier`; `limit=50000`. New: `site_series_target(station)` for §6.6, with `data_type=Continuous values,Daily values` | `SeriesInfo` has no field for it. Unfiltered, a site lists field-measurement rows (UUID ids) and peaks (no statistic). |
+| `usgs::data_target(resolved, window)` with `sortby=time` | `data_target(Resolved<Continuous>, TimeRange)` (the whole seconds of the window, `yyyy-mm-ddThh:mm:ssZ`, closed) and `data_target(Resolved<Daily>, DayRange)` (first and last day); `TargetError{no_whole_second, outside_four_digit_years}`; **no `sortby`** | With `sortby` the API serves only the first page: its next link is an `offset` link that answers 400 "Only the first page of data can be returned when specifying 'sortby'" (recorded). |
+| `usgs::parse_items(body, ctx) -> Read<UsgsPage>{Part, next, first, last}` | `read_continuous(body, content_type, Resolved<Continuous>, ctx)` and `read_daily(…, Resolved<Daily>, …)` -> `expected<variant<Read<Page>, ServiceError>, Error>`, classifying first as P2's `read_data`. `ContinuousPage{Part, optional<TimeExtent>, Paging}`, `DailyPage{DailySeries, Paging}`, `Paging{features, optional<Verbatim> next}` | The resolved series gives the column's metadata (quantity `quantity_of`, label `parameter_name`, unit, the registry's datum) and the daily statistic. |
+| daily pages: "reverses a strictly decreasing page" | Daily values come in **feature-id order**, on a page and across pages (recorded: 26, 27, 22, 28 / 29, 25, 20, 21 / 23, 30, 24). The reader sorts by day without a warning and reports only repeated days; a `DailyPage` has no extent | A time order the server never has is not a fault. P7 builds the daily `PageSummary` with no extent (the guard then checks only the count, empty pages and repeated links) and merges the pages by day. 36 years fit one page (§1.2), so a second daily page needs more than 137 years. |
+| — | A `next` link with `offset` and no `cursor` is **not** a next page: the reader drops it | The API adds `offset=<limit>` to every full last page of a cursor chain; followed, it reads the window again from that offset of its start (recorded: page 4 repeats page 2 and links back to page 3, a cycle; PageGuard would fail the unit `no_progress`). From a first page it reads an empty page. P8's live job (§10.5) should assert that a multi-page chain continues by `cursor`, since a server that paged by `offset` would end every chain at its first page. |
+| `value` string or `null`; `qualifier` "counted by text" | `value` a string (`""` Missing) or `null` (Missing); a number is `bad_member`. `qualifier` is null, a string, or an **array of strings** (recorded `["ESTIMATED"]`); each counted as `qualified_samples` (a new `WarningCode`) by text, at most 16 texts, the rest under `...`. `approval_status` "Provisional" counts `provisional_samples` (subject `usgs:approval_status`) | PA §1.5 said a nullable string. |
+| `numberReturned` not checked | Present, it must equal the features (`count_mismatch`) | A cut or inconsistent page. |
+| `usgs::classify_error(status, body)` | `classify_error(body, content_type)` and `classify_body(body, content_type) -> variant<Payload, ServiceError>` (no NoData: an empty page is a page). api.data.gov's `API_KEY_INVALID`, `_MISSING`, `_DISABLED`, `_UNAUTHORIZED`, `_UNVERIFIED` → `api_key_invalid`; OGC "time envelope is too large" → `range_exceeded`; `InvalidParameterValue`, `InvalidQuery` → `invalid_parameter`; anything else (`NotFound`, `OVER_RATE_LIMIT`) `unknown`; markup `unexpected_content` | The status adds nothing the body does not say; fetch keeps it in `HttpError`. `classify_body` stops at a page's first member (`type`): 2 events. |
+| `usgs::parse_series(body, ctx)`, `station_skipped` | `read_series` -> `SeriesPage{vector<SeriesInfo>, Paging}`; a row that cannot be a series is left out and counted as `series_skipped` (a new `WarningCode`; subjects `id`, `parameter`, `statistic`, `dates`, `member`, and for the catalog `station`, `name`, `position`); `primary` is true only for "Primary"; `begin`/`end` are RFC 3339 instants, stored as the UTC days they fall on; units read once per spelling, `unrecognized_unit` counted per spelling | A row is a series, not a station. |
+| `usgs::catalog_target(parameters)`, a catalog parser | `catalog_target()` over `map_parameters` (D33) with geometry; `read_catalog` -> `CatalogPage{vector<SiteSeries{station, name, location, SeriesInfo}>, Paging}`, a GeoJSON Point `[lon, lat]` (a height ignored; null geometry: `position`) | Grouping rows into sites (and the station's validity) is the catalog builder's (P5a/P9b), after every page. |
+| `io::parse_rfc3339` on core's `DateTimeCursor` | as said; `DateTimeCursor` and `parse_date` moved out of `core::detail` (the `core_detail_fence` gate) into `mov::core`, with `next_is_digit()`. `T`/`t`, `Z`/`z` or `±hh:mm` required, seconds required, no leap second, fraction 1–9 digits truncated to ms | RFC 3339 §5.6. The daily `time` is read with `parse_date` and must end there. |
+| unit aliases `ft^3/s`, `ft`, `deg C` | `unit_of_measure(text)`: `ft^3/s`, `m^3/s` (combined-metadata), `ft/sec`, `m3/sec`, `Deg` (parameter-codes) by a pinned table, the rest `parse_unit` (`ft`, `degC`, `deg C`, `mph`, `deg`, `uS/cm`, `%` already parse) | The spellings are those of §1.2. |
+| `registry_quantity` rows 00010, 00020, 00035, 00036 "after P3 checks them" | added: water_temperature, air_temperature, wind_speed, wind_direction | parameter-codes (2026-10-15): "Temperature, water, degrees Celsius", "Temperature, air, degrees Celsius", "Wind speed, miles per hour", "Wind direction, degrees clockwise from true north". |
+
+**Open for P1/P7 (finding).** USGS marks *every epoch* of a series `primary`:
+USGS-01646500 has three Primary instantaneous water-temperature series (2007–2019,
+2013–2019, 2019–now), and two Primary series of one parameter and statistic are
+common (24 pairs at that site; 343 catalog sites for the map parameters; USGS-12175000
+has two gage heights told apart only by `web_description` "Primary"/"Secondary",
+USGS-02431011 by `sublocation_identifier`). Core's `SeriesSet` refuses such a site
+(`SeveralPrimary`), so resolution by parameter there is `AmbiguousSeries`, and P5a cannot
+put such a site's series into `Capabilities<Usgs>`. A rule is needed (for example: among
+several Primary series, the one whose validity covers the request, else the latest; or
+`SeriesSet` keeping them and `resolve` choosing by date), and `SeriesInfo` may need
+`sublocation_identifier` and `web_description` for the picker. Both are core decisions,
+not P3's.
+
+**For P7.** `wire::usgs::page_rows` and `fetch::usgs::page_rows` are both 50,000: a
+`static_assert` in fetch (which sees io) would tie them. Continuous pages carry an
+extent; daily and series pages none. A page of 50,000 values is about 14 MB (a full
+page recorded at USGS-01485755), under the 64 MiB body cap.
+
+Regressions in P3 (`[regression]`): L4 (a one-sample page is a series), L6 (targets:
+the range as asked, closed intervals sent as the whole seconds or days of a half-open
+one), L7 (UTC instants across the 2025-11-02 DST change stay on the 5-minute grid;
+daily values are the dates as written), L8 (an out-of-order page is sorted and reported,
+not truncated). Fuzz targets: `fuzz_usgs_items` and `fuzz_usgs_catalog` (inputs up to
+1 MiB, large-page seeds), `fuzz_rfc3339`, and `fuzz_usgs_paging` in `tests/fetch`
+(pages joined by 0xFF, read by io and followed by `fetch::usgs::next`).
 
 ---
 

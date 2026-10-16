@@ -1,0 +1,131 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-365119076174600",
+        "monitoring_location_name": "THE HAGUE AT PEDESTRIAN BRIDGE AT NORFOLK, VA",
+        "id": "d1be134485e64f0b87d9d10045504567",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2018-09-11T20:06:00+00:00",
+        "end": "2022-10-05T13:30:00+00:00"
+      },
+      "id": "d1be134485e64f0b87d9d10045504567",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2961694444444,
+          36.8552694444444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-365132076175600",
+        "monitoring_location_name": "THE HAGUE AT FAIRFAX AVENUE AT NORFOLK, VA",
+        "id": "d1ddee45a3f54eb98b6971b9194b2d2b",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": null,
+        "end": null
+      },
+      "id": "d1ddee45a3f54eb98b6971b9194b2d2b",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2988888888889,
+          36.8588888888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204288771",
+        "monitoring_location_name": "STORM DRAIN AT USAA DRIVE AT NORFOLK, VA",
+        "id": "eb36214b7ea94980aef7837d918ef3be",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2015-07-17T13:30:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "eb36214b7ea94980aef7837d918ef3be",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.20735,
+          36.8750833333333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-0204288831",
+        "monitoring_location_name": "ELIZABETH RIV AT MIDTOWN TUNNEL AT NORFOLK, VA",
+        "id": "f15681171f7440cb98d03365adb293b3",
+        "parameter_code": "62620",
+        "parameter_name": "Elevation, ocean/est, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2020-02-19T21:00:00+00:00",
+        "end": "2026-10-15T07:00:00+00:00"
+      },
+      "id": "f15681171f7440cb98d03365adb293b3",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.3095,
+          36.862
+        ]
+      }
+    }
+  ],
+  "numberReturned": 4,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+    },
+    {
+      "type": "application/json",
+      "title": "Combined metadata",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata"
+    }
+  ],
+  "timeStamp": "2026-10-15T23:09:10.108034Z"
+}

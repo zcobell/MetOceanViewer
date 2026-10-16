@@ -281,3 +281,25 @@ mov_add_fuzz_test(
     CORPUS io/coops_metadata
     MAX_LEN 1048576
 )
+
+# ---- USGS Water Data (docs/providers-design.md sections 4.9 and 10) ---------
+#
+# Targets, next links, unit spellings, parse_rfc3339 and the page readers,
+# against the recorded responses in tests/fixtures/io/usgs/ (provenance.txt).
+mov_add_test(
+    mov_io_usgs_tests
+    SOURCES test_usgs_targets.cpp test_usgs_classify.cpp test_usgs_items.cpp test_usgs_series.cpp
+    CONSTEXPR_SOURCES test_usgs_constexpr.cpp
+    LIBRARIES mov::io
+)
+# A full page of 50,000 values is about 14 MB; the large seeds hold about
+# 3,000 (800 KB), so the inputs reach 1 MiB.
+mov_add_fuzz_test(fuzz_usgs_items SOURCES fuzz_usgs_items.cpp LIBRARIES mov::io CORPUS io/usgs_items MAX_LEN 1048576)
+mov_add_fuzz_test(
+    fuzz_usgs_catalog
+    SOURCES fuzz_usgs_catalog.cpp
+    LIBRARIES mov::io
+    CORPUS io/usgs_catalog
+    MAX_LEN 1048576
+)
+mov_add_fuzz_test(fuzz_rfc3339 SOURCES fuzz_rfc3339.cpp LIBRARIES mov::io CORPUS io/rfc3339)

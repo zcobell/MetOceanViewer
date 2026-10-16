@@ -69,6 +69,19 @@ target_sources(
         json/coops_metadata.cpp
 )
 
+# USGS Water Data (docs/providers-design.md section 4.9): next links
+# (Verbatim), targets and unit spellings in wire/, the page readers in json/.
+target_sources(
+    mov_io
+    PRIVATE
+        wire/verbatim.cpp
+        wire/usgs_targets.cpp
+        json/usgs_page.cpp
+        json/usgs_classify.cpp
+        json/usgs_items.cpp
+        json/usgs_series.cpp
+)
+
 # ADCIRC ASCII output and the HWM file.
 target_sources(
     mov_io

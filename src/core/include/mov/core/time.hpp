@@ -184,10 +184,9 @@ struct DateTimeError {
   friend constexpr bool operator==(DateTimeError, DateTimeError) = default;
 };
 
-namespace detail {
-
 /// A read position over a text, with the parse primitives of
-/// parse_utc_datetime.
+/// parse_utc_datetime: for the readers of other date and time grammars built
+/// from the same fields (io's parse_rfc3339, the USGS daily dates).
 class DateTimeCursor {
  public:
   explicit constexpr DateTimeCursor(std::string_view text) noexcept
@@ -198,6 +197,9 @@ class DateTimeCursor {
   }
   [[nodiscard]] constexpr bool next_is(char c) const noexcept {
     return not at_end() and text_[pos_] == c;
+  }
+  [[nodiscard]] constexpr bool next_is_digit() const noexcept {
+    return digit_here().has_value();
   }
   [[nodiscard]] constexpr DateTimeError error_here() const noexcept {
     return DateTimeError{.column = pos_};
@@ -271,6 +273,8 @@ class DateTimeCursor {
   std::size_t pos_{0};
 };
 
+namespace detail {
+
 /// "hh:mm[:ss[.f[f[f]]]]"
 [[nodiscard]] constexpr std::expected<std::chrono::milliseconds, DateTimeError>
 parse_clock(DateTimeCursor& cursor) noexcept {
@@ -306,7 +310,11 @@ parse_clock(DateTimeCursor& cursor) noexcept {
   return total + milliseconds{*fraction};
 }
 
-/// "yyyy-mm-dd"
+}  // namespace detail
+
+/// Reads "yyyy-mm-dd" (a four-digit year, two-digit month and day, a real
+/// date) at the cursor and moves past it. The error is where the text stopped
+/// fitting, or the start of a field out of range (the day of February 30).
 [[nodiscard]] constexpr std::expected<std::chrono::sys_days, DateTimeError>
 parse_date(DateTimeCursor& cursor) noexcept {
   using namespace std::chrono;
@@ -337,8 +345,6 @@ parse_date(DateTimeCursor& cursor) noexcept {
   return sys_days{ymd};
 }
 
-}  // namespace detail
-
 namespace detail {
 
 /// The optional "( |T)hh:mm[:ss[.f]]" after the date: midnight when absent.
@@ -358,8 +364,8 @@ parse_optional_clock(DateTimeCursor& cursor) noexcept {
 /// leap seconds. 1 to 3 fraction digits are milliseconds.
 [[nodiscard]] constexpr std::expected<Time, DateTimeError> parse_utc_datetime(
     std::string_view text) noexcept {
-  detail::DateTimeCursor cursor{text};
-  const auto date = detail::parse_date(cursor);
+  DateTimeCursor cursor{text};
+  const auto date = parse_date(cursor);
   if (not date) {
     return std::unexpected{date.error()};
   }

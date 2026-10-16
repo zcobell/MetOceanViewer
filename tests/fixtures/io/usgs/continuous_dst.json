@@ -1,0 +1,171 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T05:30:00+00:00",
+        "value": "2830",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "fdd2e174-413e-4302-8e56-2b89359700ef",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T05:35:00+00:00",
+        "value": "2830",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "2f387b23-4e1a-4c69-a6ad-130a084b8b77",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T05:40:00+00:00",
+        "value": "2830",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "5b77e561-dee3-4075-8190-590fa13e576d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T05:45:00+00:00",
+        "value": "2880",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "7bb9dc45-b4a5-4872-a88d-94d85b7a510f",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T05:50:00+00:00",
+        "value": "2830",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "5af7fd62-ae02-4c75-a4c0-17e3f7253dc2",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T05:55:00+00:00",
+        "value": "2830",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "fc1f0340-773f-4774-a305-2f522b45ebab",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T06:00:00+00:00",
+        "value": "2880",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "dda1511e-677e-4f24-a072-3e707dd1dc5c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T06:05:00+00:00",
+        "value": "2880",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "431ef73a-8525-4ded-91db-0732282562aa",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T06:10:00+00:00",
+        "value": "2880",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "8ea792c9-7fe6-4fa7-8f3a-7af5c306d04b",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T06:15:00+00:00",
+        "value": "2880",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "070676f3-0390-41fd-90ed-b7425d7446c0",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T06:20:00+00:00",
+        "value": "2880",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "3a1234c4-edc2-4662-97d8-9d3e6c3a3382",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "time": "2025-11-02T06:25:00+00:00",
+        "value": "2830",
+        "approval_status": "Approved",
+        "qualifier": null
+      },
+      "id": "b4327b95-5059-44c2-b121-27d14e5ef839",
+      "geometry": null
+    }
+  ],
+  "numberReturned": 12,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items?f=json&time_series_id=66a4e3fb8abe42fcb0942b5c0fe98f68&datetime=2025-11-02T05%3A30%3A00Z%2F2025-11-02T06%3A29%3A59Z&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=50000"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items?f=jsonld&time_series_id=66a4e3fb8abe42fcb0942b5c0fe98f68&datetime=2025-11-02T05%3A30%3A00Z%2F2025-11-02T06%3A29%3A59Z&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items?f=html&time_series_id=66a4e3fb8abe42fcb0942b5c0fe98f68&datetime=2025-11-02T05%3A30%3A00Z%2F2025-11-02T06%3A29%3A59Z&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items?f=csv&time_series_id=66a4e3fb8abe42fcb0942b5c0fe98f68&datetime=2025-11-02T05%3A30%3A00Z%2F2025-11-02T06%3A29%3A59Z&properties=time,value,approval_status,qualifier&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "application/json",
+      "title": "Continuous values",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous"
+    }
+  ],
+  "timeStamp": "2026-10-15T23:08:56.837224Z"
+}

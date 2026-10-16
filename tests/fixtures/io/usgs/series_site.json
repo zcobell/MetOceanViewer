@@ -1,0 +1,1059 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "063be3d188fc43859c6436f021a9a31f",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "063be3d188fc43859c6436f021a9a31f",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "07ae98fcf74e4687a603e550c1373d25",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "07ae98fcf74e4687a603e550c1373d25",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "088dd4b52b994012b67420da29032461",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "088dd4b52b994012b67420da29032461",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "089a50eca92a4e268b8816a1bc22c000",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-27T19:00:00+00:00"
+      },
+      "id": "089a50eca92a4e268b8816a1bc22c000",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "0db1ff42570e4521b8dc8958558f7250",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-27T20:00:00+00:00"
+      },
+      "id": "0db1ff42570e4521b8dc8958558f7250",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "262b35c5fc68445bb9d84990eb7b7bb3",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "1988-10-01T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "262b35c5fc68445bb9d84990eb7b7bb3",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "267143b0f3c942569ae2802b7c288bc0",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "267143b0f3c942569ae2802b7c288bc0",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "2cf409b0d9694c01828f5d4ff14586a5",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1930-03-01T05:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "2cf409b0d9694c01828f5d4ff14586a5",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3249b53540a44dc0877e6ff17b3325af",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-27T20:00:00+00:00"
+      },
+      "id": "3249b53540a44dc0877e6ff17b3325af",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "333ff6133c21492195c89858c23b302d",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-27T20:00:00+00:00"
+      },
+      "id": "333ff6133c21492195c89858c23b302d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3a55e6c16091466aabfb97a26c6ef15a",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "1992-09-30T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "3a55e6c16091466aabfb97a26c6ef15a",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3b26feed8ed54ea393835465db50fda3",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2011-12-03T05:00:00+00:00",
+        "end": "2019-06-10T04:00:00+00:00"
+      },
+      "id": "3b26feed8ed54ea393835465db50fda3",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3ce9d38124204deba3cd1996df5afee8",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "3ce9d38124204deba3cd1996df5afee8",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "400b3b19db09443da982418ceda360a6",
+        "parameter_code": "63160",
+        "parameter_name": "Stream level, NAVD88",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2026-10-15T07:50:00+00:00"
+      },
+      "id": "400b3b19db09443da982418ceda360a6",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "40bfcf380ef240e18699ee4875350640",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "40bfcf380ef240e18699ee4875350640",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "44ecf67807d3400eabbe388741e296a0",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "44ecf67807d3400eabbe388741e296a0",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "483f903dafb7474596b64ba7b37d7b6e",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "483f903dafb7474596b64ba7b37d7b6e",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4be302ef5b17459e825dc431e6837f98",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "4be302ef5b17459e825dc431e6837f98",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4cb7e97aa6db45eda9b189d12cefca5b",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "4cb7e97aa6db45eda9b189d12cefca5b",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4db043f6ac534ba0a7c68e7b84ba7b57",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "4db043f6ac534ba0a7c68e7b84ba7b57",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4f3ef7be7d3b45af8d21358ce9a1488c",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "4f3ef7be7d3b45af8d21358ce9a1488c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4f6db6b43e88466fb46fd6b65ded7d0c",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "4f6db6b43e88466fb46fd6b65ded7d0c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "52b33353ad684b76a8afd49cf017a42c",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:15:00+00:00"
+      },
+      "id": "52b33353ad684b76a8afd49cf017a42c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "5840cf8538df4bc8b12cb4f7fd4bb057",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "5840cf8538df4bc8b12cb4f7fd4bb057",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "5c12923ccedb4e53b12c036810f1127d",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2006-07-13T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "5c12923ccedb4e53b12c036810f1127d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "62603b70cb4a4ab29c0304e6bbb87e16",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2019-07-24T18:00:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "62603b70cb4a4ab29c0304e6bbb87e16",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "66a4e3fb8abe42fcb0942b5c0fe98f68",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1972-06-09T05:00:00+00:00",
+        "end": "2026-10-15T08:50:00+00:00"
+      },
+      "id": "66a4e3fb8abe42fcb0942b5c0fe98f68",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "6c904cf82efd42a6b7f94c982cea89f7",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2019-07-24T18:00:00+00:00",
+        "end": "2026-10-15T06:50:00+00:00"
+      },
+      "id": "6c904cf82efd42a6b7f94c982cea89f7",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "6f2cdd6644424eb188a29a5dcc098a76",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2006-07-13T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "6f2cdd6644424eb188a29a5dcc098a76",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "70c616bea54e42e09d58048021f81a62",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2011-12-03T05:00:00+00:00",
+        "end": "2019-06-10T04:00:00+00:00"
+      },
+      "id": "70c616bea54e42e09d58048021f81a62",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "73eaedd067e642c6ae52e6708251ef25",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2011-12-03T05:00:00+00:00",
+        "end": "2019-06-10T04:00:00+00:00"
+      },
+      "id": "73eaedd067e642c6ae52e6708251ef25",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "752afe085d8b4aeca22d1652eabc975d",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "752afe085d8b4aeca22d1652eabc975d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7a3d8fd9808947c2ab23d938e1c0ce6b",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "7a3d8fd9808947c2ab23d938e1c0ce6b",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7fb9204b83544455ada0bd8c8f441cce",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "7fb9204b83544455ada0bd8c8f441cce",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "802fc027a9b6432da7dfa08a44b5c1aa",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "1988-10-01T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "802fc027a9b6432da7dfa08a44b5c1aa",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "8a83eb3a3cbc4087b0c201cf07c0c76d",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "8a83eb3a3cbc4087b0c201cf07c0c76d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "8d207192a5b64299bc9ef82fb04339ef",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "8d207192a5b64299bc9ef82fb04339ef",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "8f29434a467e448990fcba524b2581a6",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "8f29434a467e448990fcba524b2581a6",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "9089f70baed44197b24a2aa8ea43a870",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "9089f70baed44197b24a2aa8ea43a870",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "97c538a59ad54faaa751f9ae48536e0f",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "97c538a59ad54faaa751f9ae48536e0f",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "97d74940f4f0428a9410b37dc90bf073",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "97d74940f4f0428a9410b37dc90bf073",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "9dac11dd5bb543108c03695ed609cbb7",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "1992-09-30T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "9dac11dd5bb543108c03695ed609cbb7",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "a4405a5a82314acd99ddc7f0472c651d",
+        "parameter_code": "63680",
+        "parameter_name": "Turbidity, FNU",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "_FNU",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "a4405a5a82314acd99ddc7f0472c651d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "a5240ba5fef2439d9dd61a2a4eacbdd0",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "a5240ba5fef2439d9dd61a2a4eacbdd0",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "adde19a1dd334f569273f5ee55b5b4c5",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "1992-09-30T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "adde19a1dd334f569273f5ee55b5b4c5",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b0989ee576fc45f2a239439db908e019",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:30:00+00:00"
+      },
+      "id": "b0989ee576fc45f2a239439db908e019",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b6c218a885b64b40aab7780d616ca13d",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2019-07-24T17:15:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "b6c218a885b64b40aab7780d616ca13d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "bb18f3558934465194f8da1d5f1c3df3",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-24T18:15:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "bb18f3558934465194f8da1d5f1c3df3",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c42a4b0d3f3f4cd8b667a7e2e49a8cdf",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-24T17:00:00+00:00",
+        "end": "2026-10-15T09:30:00+00:00"
+      },
+      "id": "c42a4b0d3f3f4cd8b667a7e2e49a8cdf",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c8e767f6cdfc4ff484a99f77962dc46c",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:30:00+00:00"
+      },
+      "id": "c8e767f6cdfc4ff484a99f77962dc46c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ca664de0b41845d8ba74a7103df714e4",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "ca664de0b41845d8ba74a7103df714e4",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "cb83dd0b32d44109b755c00fb8525f24",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "cb83dd0b32d44109b755c00fb8525f24",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "cc9c3c791c3b44d78c1f1f274e257f3b",
+        "parameter_code": "00095",
+        "parameter_name": "Specific cond at 25C",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "uS/cm",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "cc9c3c791c3b44d78c1f1f274e257f3b",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ceea3bb9b349410ba4ad72128cb63392",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2011-12-03T05:00:00+00:00",
+        "end": "2019-06-11T15:00:00+00:00"
+      },
+      "id": "ceea3bb9b349410ba4ad72128cb63392",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d1875d1d73e447d2a1203105ba654e7d",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2019-07-24T18:00:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00"
+      },
+      "id": "d1875d1d73e447d2a1203105ba654e7d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d1aab208a27b4a79bb1217ddd9472da6",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "d1aab208a27b4a79bb1217ddd9472da6",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d22c612bbfe0453aba7adf408ea83ded",
+        "parameter_code": "00300",
+        "parameter_name": "Dissolved oxygen",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "d22c612bbfe0453aba7adf408ea83ded",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d48f329cbda241b9923547b1dc2f90e0",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-27T20:00:00+00:00"
+      },
+      "id": "d48f329cbda241b9923547b1dc2f90e0",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d79cffc85456491db8f5e416a62c369e",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2006-07-13T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "d79cffc85456491db8f5e416a62c369e",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "dc8c6197e67642daa90a9e5394b2fc01",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00008",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "dc8c6197e67642daa90a9e5394b2fc01",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "df26f4c5e5c844e583ed44a9419bb8ff",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "1988-10-01T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "df26f4c5e5c844e583ed44a9419bb8ff",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "e3c168a6cbd840e095206dc7289991d3",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2006-07-13T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "e3c168a6cbd840e095206dc7289991d3",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "e7b2e294e6ff4b37823201aa90adb381",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2006-07-13T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "e7b2e294e6ff4b37823201aa90adb381",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f41205be5cf443c88e3c23246c366caf",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00002",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-13T04:00:00+00:00"
+      },
+      "id": "f41205be5cf443c88e3c23246c366caf",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f60be489a22b4dfd9fd0fb97f3acc285",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:15:00+00:00"
+      },
+      "id": "f60be489a22b4dfd9fd0fb97f3acc285",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f71829b2226641a3a1253b7b7f920f3f",
+        "parameter_code": "99133",
+        "parameter_name": "NO3+NO2,water,insitu as N",
+        "statistic_id": "00003",
+        "primary": "Primary",
+        "unit_of_measure": "mg/l",
+        "begin": "2019-07-25T04:00:00+00:00",
+        "end": "2026-10-14T04:00:00+00:00"
+      },
+      "id": "f71829b2226641a3a1253b7b7f920f3f",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f7e23f3c49b64d94894932c12dd575f9",
+        "parameter_code": "00400",
+        "parameter_name": "pH",
+        "statistic_id": "00008",
+        "primary": "Primary",
+        "unit_of_measure": "pH Units",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-26T04:00:00+00:00"
+      },
+      "id": "f7e23f3c49b64d94894932c12dd575f9",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fb924810fc234811ac97b517cb179a86",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00001",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2006-07-13T04:00:00+00:00",
+        "end": "2019-09-30T04:00:00+00:00"
+      },
+      "id": "fb924810fc234811ac97b517cb179a86",
+      "geometry": null
+    }
+  ],
+  "numberReturned": 68,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&monitoring_location_id=USGS-01646500&data_type=Continuous%20values,Daily%20values&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&skipGeometry=true&limit=50000"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&monitoring_location_id=USGS-01646500&data_type=Continuous%20values,Daily%20values&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&monitoring_location_id=USGS-01646500&data_type=Continuous%20values,Daily%20values&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&monitoring_location_id=USGS-01646500&data_type=Continuous%20values,Daily%20values&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "application/json",
+      "title": "Combined metadata",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata"
+    }
+  ],
+  "timeStamp": "2026-10-15T23:09:53.589797Z"
+}

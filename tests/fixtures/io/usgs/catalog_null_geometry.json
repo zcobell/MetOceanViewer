@@ -1,0 +1,311 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16898690",
+        "monitoring_location_name": "Lehn Mesi River, Pohnpei, FSM",
+        "id": "0ab27defb502480abd3e9e3c0e2d0a03",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1989-09-04T13:00:00+00:00",
+        "end": "1990-09-29T12:45:00+00:00"
+      },
+      "id": "0ab27defb502480abd3e9e3c0e2d0a03",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-421247071470201",
+        "monitoring_location_name": "BRIDGE-RT20W-QUINSIGAMOND, MA",
+        "id": "0e9ecb1aa0b842279c5ae26a66892f45",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2014-08-21T04:00:00+00:00",
+        "end": "2016-10-03T03:50:00+00:00"
+      },
+      "id": "0e9ecb1aa0b842279c5ae26a66892f45",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-02421475",
+        "monitoring_location_name": "BIG SWAMP CR @ WWTP OUTFALL NR HAYNEVILLE, ALA",
+        "id": "1e828d2359fa4507ac830f268ce69cff",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": null,
+        "end": null
+      },
+      "id": "1e828d2359fa4507ac830f268ce69cff",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16899800",
+        "monitoring_location_name": "Tofol River, Kosrae, FSM",
+        "id": "4aabed745c514a7f90fdfb50f4c3f372",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1988-09-30T13:30:00+00:00",
+        "end": "1990-09-08T12:45:00+00:00"
+      },
+      "id": "4aabed745c514a7f90fdfb50f4c3f372",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16892400",
+        "monitoring_location_name": "Qaringeel Stream, Yap, FSM",
+        "id": "54c90e1344294cb699586d58ceef6e30",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1988-10-23T14:00:00+00:00",
+        "end": "1989-09-29T13:45:00+00:00"
+      },
+      "id": "54c90e1344294cb699586d58ceef6e30",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16898600",
+        "monitoring_location_name": "Luhpwor River, Pohnpei, FSM",
+        "id": "66e747c726b24c2694a21caaed6c336e",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": null,
+        "end": null
+      },
+      "id": "66e747c726b24c2694a21caaed6c336e",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16893200",
+        "monitoring_location_name": "Mukong Stream, Gagil-Tomil, Yap, FSM",
+        "id": "77db8118096f4de2a96ff0d29587cedc",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1988-10-22T14:00:00+00:00",
+        "end": "1989-09-30T13:45:00+00:00"
+      },
+      "id": "77db8118096f4de2a96ff0d29587cedc",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16893100",
+        "monitoring_location_name": "Burong Stream, Yap, FSM",
+        "id": "7d15e0b586e84cb7a7bfd85204f77bbe",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1988-10-23T14:00:00+00:00",
+        "end": "1989-09-30T13:45:00+00:00"
+      },
+      "id": "7d15e0b586e84cb7a7bfd85204f77bbe",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16899620",
+        "monitoring_location_name": "Melo River, Kosrae, FSM",
+        "id": "90519ea4f2bb44ffb68dccbe221622fd",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1990-07-05T13:00:00+00:00",
+        "end": "1990-09-14T12:45:00+00:00"
+      },
+      "id": "90519ea4f2bb44ffb68dccbe221622fd",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-335523098293901",
+        "monitoring_location_name": "Wichita Falls Rv @ MLK Bridge at Wichita Falls TX",
+        "id": "918f391c0d594362873b9499bf806313",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": null,
+        "end": null
+      },
+      "id": "918f391c0d594362873b9499bf806313",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-15238950",
+        "monitoring_location_name": "EAST FORK MARTIN R BELOW DIXON GLACIER NR HOMER AK",
+        "id": "b973f44356b84fe695d9c0df13887fc7",
+        "parameter_code": "00065",
+        "parameter_name": "Gage height",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft",
+        "begin": "2022-07-26T18:45:00+00:00",
+        "end": "2023-02-14T14:45:00+00:00"
+      },
+      "id": "b973f44356b84fe695d9c0df13887fc7",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16898690",
+        "monitoring_location_name": "Lehn Mesi River, Pohnpei, FSM",
+        "id": "c35a9e102f1f4afbb0076ed1cf063629",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": null,
+        "end": null
+      },
+      "id": "c35a9e102f1f4afbb0076ed1cf063629",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-422108071052501",
+        "monitoring_location_name": "BRIDGE-RT2AE-BOSTON, MA",
+        "id": "cab1af047d5d4d07930195a43650cdd7",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "2014-06-21T04:00:00+00:00",
+        "end": "2016-09-30T03:50:00+00:00"
+      },
+      "id": "cab1af047d5d4d07930195a43650cdd7",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16898600",
+        "monitoring_location_name": "Luhpwor River, Pohnpei, FSM",
+        "id": "cb735597e38149a3ad7abaae9028d1cc",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1990-03-14T13:00:00+00:00",
+        "end": "1990-09-30T12:45:00+00:00"
+      },
+      "id": "cb735597e38149a3ad7abaae9028d1cc",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16893400",
+        "monitoring_location_name": "Eyeb Stream, Gagil-Tomil, Yap, FSM",
+        "id": "d7fada710c4f4679abffeb8c25b1e84a",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1988-10-22T14:00:00+00:00",
+        "end": "1989-09-30T13:45:00+00:00"
+      },
+      "id": "d7fada710c4f4679abffeb8c25b1e84a",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "monitoring_location_id": "USGS-16892000",
+        "monitoring_location_name": "Qatliw Stream, Yap, FSM",
+        "id": "d98cbdfb1ec04c5eb83e56fcd9ed68a7",
+        "parameter_code": "00060",
+        "parameter_name": "Discharge",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "ft^3/s",
+        "begin": "1988-10-23T14:00:00+00:00",
+        "end": "1989-09-30T13:50:57+00:00"
+      },
+      "id": "d98cbdfb1ec04c5eb83e56fcd9ed68a7",
+      "geometry": null
+    }
+  ],
+  "numberReturned": 16,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000"
+    },
+    {
+      "type": "application/json",
+      "title": "Combined metadata",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata"
+    }
+  ],
+  "timeStamp": "2026-10-15T23:05:38.613918Z"
+}

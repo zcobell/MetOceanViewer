@@ -1,0 +1,143 @@
+USGS Water Data API responses (US Government work, public domain), recorded
+with curl and Python's urllib from https://api.waterdata.usgs.gov without a
+key (api-version 1.10.3). Every file is the response body byte for byte,
+except the two marked "cut" below. Times in the requests are UTC.
+
+C = /ogcapi/v1/collections/continuous/items?
+D = /ogcapi/v1/collections/daily/items?
+M = /ogcapi/v1/collections/combined-metadata/items?
+V = &properties=time,value,approval_status,qualifier&skipGeometry=true
+S = &properties=id,parameter_code,parameter_name,statistic_id,primary,
+    unit_of_measure,begin,end&skipGeometry=true&limit=50000&f=json
+Q = 66a4e3fb8abe42fcb0942b5c0fe98f68 (USGS-01646500, 00060, instantaneous)
+R = 2cf409b0d9694c01828f5d4ff14586a5 (USGS-01646500, 00060, daily mean)
+
+Copied from docs/provider-apis/ (recorded 2026-10-06):
+  continuous_full_properties.json  usgs_continuous_items.json (every
+                                   property, geometry, limit=4)
+  continuous_slim_page1.json       usgs_continuous_slim_page1.json (a cursor
+                                   next link)
+  daily_full_properties.json       usgs_daily_items.json
+  error_property_not_found.json    usgs_error_unknown_property.json (the
+                                   older wording of the 400)
+
+Recorded 2026-10-15, 23:02-23:12Z:
+
+Paging. With `sortby` the API serves only the first page: its next link is
+`offset=` and following it is a 400. Without `sortby`, continuous pages
+follow `cursor=` links in time order, and a full last page carries an
+`offset=<limit>` link without a cursor; following it reads from that offset
+of the window's start again.
+  continuous_chain_page1.json      C time_series_id=Q&datetime=2026-10-01T00:00:00Z
+                                   /2026-10-01T00:29:59Z V&limit=2&f=json
+  continuous_chain_page2.json      its next link (a cursor)
+  continuous_chain_page3.json      its next link (a cursor); full, with an
+                                   offset=2 link
+  continuous_chain_page4_echo.json that offset link: 00:10 and 00:15 again,
+                                   with page 2's cursor link (a cycle)
+  continuous_full_last_page.json   C time_series_id=Q&datetime=2026-10-01T00:00:00Z
+                                   /2026-10-01T00:14:59Z V&limit=3&f=json:
+                                   three values, full, an offset=3 link
+  continuous_after_offset_link.json
+                                   that offset link: an empty page, no link
+  continuous_sortby_page1.json     as continuous_chain_page1 with
+                                   &sortby=time: an offset link
+  error_sortby_second_page.json    that link: HTTP 400, "Only the first page
+                                   of data can be returned when specifying
+                                   'sortby'"
+  daily_chain_page1.json           D time_series_id=R&datetime=2026-09-20
+                                   /2026-09-30 V&limit=4&f=json: days in
+                                   feature-id order (26, 27, 22, 28)
+  daily_chain_page2.json           its next link (29, 25, 20, 21)
+  daily_chain_page3.json           its next link (23, 30, 24), no link
+The datetime interval is closed: ...T00:00:00Z/...T00:10:00Z gave 00:00,
+00:05 and 00:10; .../...T00:09:59Z gave two values.
+
+Values:
+  continuous_dst.json              C time_series_id=Q&datetime=2025-11-02T05:30:00Z
+                                   /2025-11-02T06:29:59Z V&limit=50000&f=json
+                                   (EDT ended at 06:00Z: the 5-minute grid
+                                   holds)
+  daily_dst.json                   D time_series_id=R&datetime=2025-11-01
+                                   /2025-11-03 V&limit=50000&f=json
+  continuous_estimated.json        C monitoring_location_id=USGS-05331000
+                                   &parameter_code=00060&datetime=
+                                   2023-01-01T00:00:00Z/2023-01-01T02:00:00Z
+                                   V&f=json (no limit: the API sends 10;
+                                   `qualifier` is an array, ["ESTIMATED"])
+  daily_estimated.json             D monitoring_location_id=USGS-05331000
+                                   &parameter_code=00060&statistic_id=00003
+                                   &datetime=2023-01-01/2023-01-10
+                                   &properties=time,value,approval_status,
+                                   qualifier,time_series_id&skipGeometry=true
+                                   &f=json (ten values, full: offset link)
+  continuous_empty.json            C monitoring_location_id=USGS-15514000
+                                   &parameter_code=00060&datetime=
+                                   2024-01-15T00:00:00Z/2024-01-15T01:00:00Z
+                                   V&f=json (no values: numberReturned 0)
+
+Series (combined-metadata). `begin` and `end` are instants (the site's
+midnight in UTC for daily series); `primary` is "Primary" or null; USGS marks
+every epoch of a series Primary (USGS-01646500 has three Primary
+instantaneous water-temperature series), and USGS-12175000 two Primary gage
+heights (web_description "Primary" and "Secondary").
+  series_by_id.json                M monitoring_location_id=USGS-01646500&id=Q S
+  series_by_parameter.json         M monitoring_location_id=USGS-01646500
+                                   &parameter_code=00060&statistic_id=00011 S
+  series_none.json                 M monitoring_location_id=USGS-02431011&id=Q S
+                                   (another site's id: no row)
+  series_site.json                 M monitoring_location_id=USGS-01646500
+                                   &data_type=Continuous values,Daily values S
+                                   (68 rows)
+  series_site_unfiltered.json      M monitoring_location_id=USGS-01646500
+                                   &properties=id,parameter_code,parameter_name,
+                                   statistic_id,computation_identifier,primary,
+                                   unit_of_measure,begin,end&skipGeometry=true
+                                   &limit=50000&f=json (73 rows: also three
+                                   field-measurement rows with UUID ids and
+                                   two peak rows without a statistic)
+  series_several_primary.json      M monitoring_location_id=USGS-12175000
+                                   &parameter_code=00065&statistic_id=00011 S
+
+Catalog (combined-metadata with geometry). The whole catalog query,
+M parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=
+monitoring_location_id,monitoring_location_name,id,parameter_code,
+parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000
+&f=json, returned 29,017 rows of 17,438 sites on one page (20.2 MB, 2.8 s;
+00060 14,632, 00065 14,168, 62620 184, 62619 33; 707 rows not Primary;
+1,132 without begin and end; 16 without geometry; 343 sites with several
+Primary series of one parameter). It is not committed.
+  catalog_bbox.json                that query with &bbox=-76.4,36.8,-76.2,37.0
+                                   (14 rows, 10 sites)
+  catalog_page1.json .. catalog_page3.json
+                                   the same with limit=5 (cursor links)
+  catalog_null_geometry.json       cut: the 16 rows of the whole catalog
+                                   whose geometry is null, in the envelope of
+                                   that response (re-serialized by Python's
+                                   json, two-space indent; next link removed)
+
+Refusals (HTTP status, body):
+  error_invalid_key.json           403, header X-Api-Key: notakey0123456789:
+                                   api.data.gov's {"error":{"code":
+                                   "API_KEY_INVALID",...}}
+  error_time_envelope.json         400, C ...&datetime=2020-01-01T00:00:00Z
+                                   /2023-01-06T00:00:00Z
+  error_limit.json                 400, C ...&limit=100000
+  error_unknown_property.json      400, C ...&properties=time,nosuch
+  error_collection_not_found.json  404, /ogcapi/v1/collections/nosuch/items
+  error_datetime.json              400, C ...&datetime=yesterday
+
+Units (unit_of_measure) over the CONUS series of combined-metadata
+(bbox=-125,24,-66,50, first 50,000 rows): ft, ft^3/s, degC, uS/cm, mg/l, in,
+pH Units, _FNU, %, tons/day, ppt, degF, Acre-ft, RFU, ug/l, ft/s, mph, deg,
+mmHg, m, m/s, mbar, hPa, kn, m^3/s, kPa, psi, inHg and others. The
+parameter-codes collection spells some differently: ft3/s, deg C, ft/sec,
+m3/sec, Deg.
+
+Fuzz seeds (tests/fixtures/io/usgs_items, usgs_catalog, rfc3339 and
+tests/fixtures/fetch/usgs_paging) are these files with a first byte that
+picks the reader, or pages joined by 0xFF. large_continuous_page.seed is cut:
+the first 3,000 values of C time_series_id=000c816dd1d24df2b174f984b57a08d1
+(USGS-01485755, 62620) &datetime=2025-01-01T00:00:00Z/2025-12-31T23:59:59Z V
+&limit=50000&f=json (a full page: 50,000 values, 14 MB);
+large_catalog_page.seed the first 1,300 rows of the whole catalog.
