@@ -49,7 +49,7 @@ auto Catalog<P>::find(const core::StationId<P>& id) const& noexcept
   return &*found;
 }
 
-core::DataSource source_of(const StationCatalog& catalog) noexcept {
+core::DataSource source_of(const StationCatalog& catalog) {
   return std::visit([]<class P>(const Catalog<P>& /*c*/) { return P::source; },
                     catalog);
 }

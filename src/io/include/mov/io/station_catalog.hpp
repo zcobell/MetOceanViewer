@@ -126,8 +126,7 @@ using NdbcCatalog = Catalog<core::provider::Ndbc>;
 using StationCatalog = std::variant<CoopsCatalog, UsgsCatalog, NdbcCatalog>;
 
 /// The provider of the catalog.
-[[nodiscard]] core::DataSource source_of(
-    const StationCatalog& catalog) noexcept;
+[[nodiscard]] core::DataSource source_of(const StationCatalog& catalog);
 
 // ---- reading
 // -----------------------------------------------------------------

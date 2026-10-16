@@ -53,7 +53,7 @@ namespace mov::io {
 namespace {
 
 namespace json = detail::json;
-namespace text = detail::catalog;
+namespace tokens = detail::catalog;
 using core::provider::Coops;
 using core::provider::Ndbc;
 using core::provider::Usgs;
@@ -358,10 +358,10 @@ class Decoder {
   // recorded (`<path>[]=<token>`) and left out.
   template <class E, std::size_t N>
   [[nodiscard]] Decoded<core::EnumSet<E>> set_of(
-      const Value& array, const std::array<text::TokenRow<E>, N>& rows,
+      const Value& array, const std::array<tokens::TokenRow<E>, N>& rows,
       std::string_view path) {
     return set_by(
-        array, [&](std::string_view t) { return text::value_of(rows, t); },
+        array, [&](std::string_view t) { return tokens::value_of(rows, t); },
         path);
   }
 
@@ -407,14 +407,15 @@ class Decoder {
     note_unknown(block, coops_keep, "stations[].coops");
     core::Capabilities<Coops> caps;
     if (const Value* v = json::member(block, "observed")) {
-      auto set = set_of(*v, text::observed_tokens, "stations[].coops.observed");
+      auto set =
+          set_of(*v, tokens::observed_tokens, "stations[].coops.observed");
       if (not set) {
         return std::unexpected{std::move(set).error()};
       }
       caps.observed = *set;
     }
     if (const Value* v = json::member(block, "met")) {
-      auto set = set_of(*v, text::met_tokens, "stations[].coops.met");
+      auto set = set_of(*v, tokens::met_tokens, "stations[].coops.met");
       if (not set) {
         return std::unexpected{std::move(set).error()};
       }
@@ -432,7 +433,7 @@ class Decoder {
       if (not token) {
         return std::unexpected{std::move(token).error()};
       }
-      if (const auto p = text::value_of(text::predictions_tokens, *token)) {
+      if (const auto p = tokens::value_of(tokens::predictions_tokens, *token)) {
         caps.predictions = *p;
       } else {
         unknowns_.add(
@@ -442,7 +443,7 @@ class Decoder {
     }
     if (const Value* v = json::member(block, "datums_offered")) {
       auto set =
-          set_by(*v, text::coops_datum_of, "stations[].coops.datums_offered");
+          set_by(*v, tokens::coops_datum_of, "stations[].coops.datums_offered");
       if (not set) {
         return std::unexpected{std::move(set).error()};
       }
@@ -467,7 +468,7 @@ class Decoder {
     note_unknown(object, datums_keep, "stations[].coops.datums");
     std::vector<core::DatumHeight> rows;
     for (const json::Member& m : **members) {
-      const auto datum = text::vertical_datum_of(m.name);
+      const auto datum = tokens::vertical_datum_of(m.name);
       if (not datum) {
         continue;  // unknown: noted above
       }
@@ -476,7 +477,7 @@ class Decoder {
         return std::unexpected{metres.error()};
       }
       const core::Length height =
-          text::canonical(core::Length::in(*metres, core::LengthUnit::meter));
+          tokens::canonical(core::Length::in(*metres, core::LengthUnit::meter));
       if (*datum == core::VerticalDatum::msl and
           height.as(core::LengthUnit::meter) != 0.0) {
         return std::unexpected{fault(ParseErrc::out_of_range, m.value)};
@@ -606,7 +607,7 @@ class Decoder {
         return std::unexpected{std::move(metres).error()};
       }
       elevation =
-          text::canonical(core::Length::in(*metres, core::LengthUnit::meter));
+          tokens::canonical(core::Length::in(*metres, core::LengthUnit::meter));
     }
     return core::Capabilities<Ndbc>{.owner = *std::move(owner),
                                     .program = *std::move(program),
@@ -741,7 +742,7 @@ class Decoder {
               : **lon_value;
       return std::unexpected{fault(ParseErrc::out_of_range, at)};
     }
-    return text::canonical(*location);
+    return tokens::canonical(*location);
   }
 
   [[nodiscard]] static std::string series_error_text(
@@ -880,9 +881,9 @@ class Stations {
       core::DataSource provider) const {
     std::optional<std::size_t> first;
     for (std::size_t i = 0; i < first_offset_.size(); ++i) {
-      if (i != index_of(provider) and first_offset_.at(i)) {
-        first = std::min(first.value_or(*first_offset_.at(i)),
-                         *first_offset_.at(i));
+      const std::optional<std::size_t>& at = first_offset_.at(i);
+      if (i != index_of(provider) and at) {
+        first = std::min(first.value_or(*at), *at);
       }
     }
     return first;

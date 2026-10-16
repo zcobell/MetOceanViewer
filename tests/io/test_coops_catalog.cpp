@@ -49,9 +49,9 @@ std::vector<wc::StationRecord> list(std::string_view name) {
 }
 
 wc::StationDatums datums(std::string_view name) {
-  auto r = wc::parse_datums(coops_fixture(name), ReadContext{});
+  const auto r = wc::parse_datums(coops_fixture(name), ReadContext{});
   REQUIRE(r.has_value());
-  return std::move(r->value);
+  return r->value;
 }
 
 wc::StationRecord record(std::string_view id, std::string_view name, double lat,
@@ -131,10 +131,11 @@ TEST_CASE("the recorded station lists make the golden CO-OPS catalog",
   CHECK(pensacola.caps.datums_offered.contains(cc::Datum::navd88));
   REQUIRE(pensacola.caps.datums.has_value());
   // datums.json is relative to STND: MLLW 2.569 - MSL 2.757.
-  const auto mllw =
-      pensacola.caps.datums->height_above_msl(VerticalDatum::mllw);
+  const auto mllw = pensacola.caps.datums.value_or(DatumTable{})
+                        .height_above_msl(VerticalDatum::mllw);
   REQUIRE(mllw.has_value());
-  CHECK(std::abs(mllw->as(LengthUnit::meter) - -0.188) < 1e-12);
+  CHECK(std::abs(mllw.value_or(Length{}).as(LengthUnit::meter) - -0.188) <
+        1e-12);
 
   const auto& buffalo = *catalog.find(cat::id_of<Coops>("9063020"));
   CHECK(buffalo.caps.datums_offered == cc::DatumSet{cc::Datum::igld85});

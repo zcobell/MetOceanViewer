@@ -35,6 +35,7 @@ using mov::test::utc;
 io::NdbcCatalog stations(std::size_t n,
                          mov::core::Time generated = utc(2026, 10, 15)) {
   std::vector<io::CatalogEntry<Ndbc>> entries;
+  entries.reserve(n);
   for (std::size_t i = 0; i < n; ++i) {
     entries.push_back(
         cat::entry<Ndbc>(std::format("{:05}", i), "buoy", 30.0, -80.0));

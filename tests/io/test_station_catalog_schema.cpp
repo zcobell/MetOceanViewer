@@ -20,7 +20,7 @@
 
 namespace {
 
-namespace text = mov::io::detail::catalog;
+namespace tokens = mov::io::detail::catalog;
 
 const nlohmann::json& schema() {
   static const nlohmann::json loaded = nlohmann::json::parse(
@@ -30,8 +30,10 @@ const nlohmann::json& schema() {
 }
 
 std::vector<std::string> enum_of(std::string_view def) {
+  const auto& values = schema().at("$defs").at(std::string{def}).at("enum");
   std::vector<std::string> out;
-  for (const auto& v : schema().at("$defs").at(std::string{def}).at("enum")) {
+  out.reserve(values.size());
+  for (const auto& v : values) {
     out.push_back(v.get<std::string>());
   }
   return out;
@@ -40,6 +42,7 @@ std::vector<std::string> enum_of(std::string_view def) {
 template <class Rows>
 std::vector<std::string> tokens_of(const Rows& rows) {
   std::vector<std::string> out;
+  out.reserve(rows.size());
   for (const auto& row : rows) {
     out.emplace_back(row.token);
   }
@@ -50,13 +53,14 @@ std::vector<std::string> tokens_of(const Rows& rows) {
 
 TEST_CASE("the schema's enums are the reader's tokens, in enumerator order",
           "[io][catalog][schema]") {
-  CHECK(enum_of("observed") == tokens_of(text::observed_tokens));
-  CHECK(enum_of("met") == tokens_of(text::met_tokens));
-  CHECK(enum_of("predictions") == tokens_of(text::predictions_tokens));
+  CHECK(enum_of("observed") == tokens_of(tokens::observed_tokens));
+  CHECK(enum_of("met") == tokens_of(tokens::met_tokens));
+  CHECK(enum_of("predictions") == tokens_of(tokens::predictions_tokens));
 
   std::vector<std::string> datums;
+  datums.reserve(mov::core::coops::every_datum.size());
   for (const auto d : mov::core::coops::every_datum) {
-    datums.emplace_back(text::datum_token(d));
+    datums.emplace_back(tokens::datum_token(d));
   }
   CHECK(enum_of("coops_datum") == datums);
 
@@ -71,6 +75,8 @@ TEST_CASE("the schema's enums are the reader's tokens, in enumerator order",
     heights.push_back(name);
   }
   std::vector<std::string> core_tokens;
+  core_tokens.reserve(
+      mov::core::Enumerators<mov::core::VerticalDatum>::values.size());
   for (const auto d :
        mov::core::Enumerators<mov::core::VerticalDatum>::values) {
     core_tokens.emplace_back(mov::core::to_string(d));

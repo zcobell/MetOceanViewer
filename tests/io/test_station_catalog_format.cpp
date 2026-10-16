@@ -78,7 +78,7 @@ cu::SeriesInfo series(std::string_view id, std::string_view parameter,
 mov::core::Unit unit(std::string_view text) {
   const auto u = mov::core::parse_unit(text);
   REQUIRE(u.has_value());
-  return *u;
+  return u.value_or(mov::core::Unit{});
 }
 
 // The USGS golden catalog: two sites, one with an ended series.
@@ -278,7 +278,8 @@ TEST_CASE("the worked example of the spec reads and writes back unchanged",
   CHECK(caps.observed.contains(cc::Observed::six_minute));
   CHECK(caps.predictions == cc::Predictions::any_interval);
   REQUIRE(caps.datums.has_value());
-  CHECK(caps.datums->height_above_msl(VerticalDatum::stnd) ==
+  CHECK(caps.datums.value_or(mov::core::DatumTable{})
+            .height_above_msl(VerticalDatum::stnd) ==
         Length::in(-2.757, LengthUnit::meter));
 }
 
@@ -335,13 +336,16 @@ TEST_CASE("numbers are written on the file's grid and read back on it",
   const auto& again = std::get<io::CoopsCatalog>(read->value).entries()[0];
   CHECK(again.station.location.lon() == 180.0);
   CHECK(again.station.location.lat() == 30.404412);
-  CHECK(again.caps.datums->height_above_msl(VerticalDatum::mhhw) ==
+  CHECK(again.caps.datums.value_or(mov::core::DatumTable{})
+            .height_above_msl(VerticalDatum::mhhw) ==
         Length::in(0.195, LengthUnit::meter));
   CHECK(cat::format(std::get<io::CoopsCatalog>(read->value)) == text);
 }
 
 TEST_CASE("random catalogs survive the round trip", "[io][catalog][property]") {
-  std::mt19937_64 rng{20261015};
+  // A fixed seed: a failure must reproduce.
+  std::seed_seq seed{2026U, 10U, 15U, 5U};
+  std::mt19937_64 rng{seed};
   std::uniform_real_distribution<double> lat{-90.0, 90.0};
   std::uniform_real_distribution<double> lon{-180.0, 360.0};
   std::uniform_real_distribution<double> metres{-50.0, 50.0};
@@ -593,106 +597,137 @@ TEST_CASE("each station value the format refuses is a ParseError at it",
     std::string_view at;
     ParseErrc code;
   };
+  const auto refused = [](std::string text, std::string_view at,
+                          ParseErrc code) {
+    return Case{.text = std::move(text), .at = at, .code = code};
+  };
   const std::vector<Case> cases{
       // ids: the provider's grammar, exactly in canonical form
-      {document("noaa_coops",
-                R"({"id":"872984","name":"P","lon":0,"lat":0,"coops":{}})"),
-       "\"872984\"", ParseErrc::bad_member},
-      {document(
-           "usgs",
-           R"({"id":"usgs-07010000","name":"x","lon":0,"lat":0,"usgs":{}})"),
-       "\"usgs-", ParseErrc::bad_member},
-      {document("ndbc",
-                R"({"id":" 41001","name":"x","lon":0,"lat":0,"ndbc":{}})"),
-       "\" 41001\"", ParseErrc::bad_member},
-      {document("ndbc", R"({"id":41001,"name":"x","lon":0,"lat":0,"ndbc":{}})"),
-       "41001", ParseErrc::bad_member},
+      refused(
+          document("noaa_coops",
+                   R"({"id":"872984","name":"P","lon":0,"lat":0,"coops":{}})"),
+          "\"872984\"", ParseErrc::bad_member),
+      refused(
+          document(
+              "usgs",
+              R"({"id":"usgs-07010000","name":"x","lon":0,"lat":0,"usgs":{}})"),
+          "\"usgs-", ParseErrc::bad_member),
+      refused(
+          document("ndbc",
+                   R"({"id":" 41001","name":"x","lon":0,"lat":0,"ndbc":{}})"),
+          "\" 41001\"", ParseErrc::bad_member),
+      refused(document("ndbc",
+                       R"({"id":41001,"name":"x","lon":0,"lat":0,"ndbc":{}})"),
+              "41001", ParseErrc::bad_member),
       // missing members: at the station
-      {document("ndbc", R"({"name":"x","lon":0,"lat":0,"ndbc":{}})"),
-       "{\"name\"", ParseErrc::bad_member},
-      {document("ndbc", R"({"id":"41001","lon":0,"lat":0,"ndbc":{}})"),
-       "{\"id\"", ParseErrc::bad_member},
-      {document("ndbc", R"({"id":"41001","name":"x","lat":0,"ndbc":{}})"),
-       "{\"id\"", ParseErrc::bad_member},
+      refused(document("ndbc", R"({"name":"x","lon":0,"lat":0,"ndbc":{}})"),
+              "{\"name\"", ParseErrc::bad_member),
+      refused(document("ndbc", R"({"id":"41001","lon":0,"lat":0,"ndbc":{}})"),
+              "{\"id\"", ParseErrc::bad_member),
+      refused(
+          document("ndbc", R"({"id":"41001","name":"x","lat":0,"ndbc":{}})"),
+          "{\"id\"", ParseErrc::bad_member),
       // types and texts
-      {document(
-           "ndbc",
-           R"({"id":"41001","name":"a\u0000b","lon":0,"lat":0,"ndbc":{}})"),
-       "\"a\\u0000b\"", ParseErrc::bad_member},
-      {document("ndbc",
-                R"({"id":"41001","name":"x","lon":"0","lat":0,"ndbc":{}})"),
-       "\"0\"", ParseErrc::bad_member},
-      {document("ndbc",
-                R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":[]})"),
-       "[]}]", ParseErrc::bad_member},
-      {document(
-           "ndbc",
-           R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":{"elevation_m":null}})"),
-       "null", ParseErrc::bad_member},
+      refused(
+          document(
+              "ndbc",
+              R"({"id":"41001","name":"a\u0000b","lon":0,"lat":0,"ndbc":{}})"),
+          R"("a\u0000b")", ParseErrc::bad_member),
+      refused(
+          document("ndbc",
+                   R"({"id":"41001","name":"x","lon":"0","lat":0,"ndbc":{}})"),
+          "\"0\"", ParseErrc::bad_member),
+      refused(
+          document("ndbc",
+                   R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":[]})"),
+          "[]}]", ParseErrc::bad_member),
+      refused(
+          document(
+              "ndbc",
+              R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":{"elevation_m":null}})"),
+          "null", ParseErrc::bad_member),
       // positions
-      {document("ndbc",
-                R"({"id":"41001","name":"x","lon":0,"lat":90.5,"ndbc":{}})"),
-       "90.5", ParseErrc::out_of_range},
-      {document("ndbc",
-                R"({"id":"41001","name":"x","lon":-181,"lat":0,"ndbc":{}})"),
-       "-181", ParseErrc::out_of_range},
+      refused(
+          document("ndbc",
+                   R"({"id":"41001","name":"x","lon":0,"lat":90.5,"ndbc":{}})"),
+          "90.5", ParseErrc::out_of_range),
+      refused(
+          document("ndbc",
+                   R"({"id":"41001","name":"x","lon":-181,"lat":0,"ndbc":{}})"),
+          "-181", ParseErrc::out_of_range),
       // dates
-      {document(
-           "ndbc",
-           R"({"id":"41001","name":"x","lon":0,"lat":0,"first":"2026-02-29","ndbc":{}})"),
-       "\"2026-02-29\"", ParseErrc::bad_date},
-      {document(
-           "ndbc",
-           R"({"id":"41001","name":"x","lon":0,"lat":0,"first":"2020-01-02","last":"2020-01-01","ndbc":{}})"),
-       "\"2020-01-01\"", ParseErrc::out_of_range},
+      refused(
+          document(
+              "ndbc",
+              R"({"id":"41001","name":"x","lon":0,"lat":0,"first":"2026-02-29","ndbc":{}})"),
+          "\"2026-02-29\"", ParseErrc::bad_date),
+      refused(
+          document(
+              "ndbc",
+              R"({"id":"41001","name":"x","lon":0,"lat":0,"first":"2020-01-02","last":"2020-01-01","ndbc":{}})"),
+          "\"2020-01-01\"", ParseErrc::out_of_range),
       // provider blocks
-      {document("ndbc", R"({"id":"41001","name":"x","lon":0,"lat":0})"),
-       "{\"id\"", ParseErrc::bad_member},
-      {document(
-           "ndbc",
-           R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":{},"usgs":{}})"),
-       "{}}]", ParseErrc::bad_member},
-      {document("noaa_coops",
-                R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":{}})"),
-       "{\"id\"", ParseErrc::bad_member},
+      refused(document("ndbc", R"({"id":"41001","name":"x","lon":0,"lat":0})"),
+              "{\"id\"", ParseErrc::bad_member),
+      refused(
+          document(
+              "ndbc",
+              R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":{},"usgs":{}})"),
+          "{}}]", ParseErrc::bad_member),
+      refused(
+          document("noaa_coops",
+                   R"({"id":"41001","name":"x","lon":0,"lat":0,"ndbc":{}})"),
+          "{\"id\"", ParseErrc::bad_member),
       // CO-OPS block
-      {coops_with(R"("observed":["hourly","hourly"])"), "\"hourly\"]",
-       ParseErrc::bad_member},
-      {coops_with(R"("observed":"hourly")"), "\"hourly\"",
-       ParseErrc::bad_member},
-      {coops_with(R"("air_gap":1)"), "1}", ParseErrc::bad_member},
-      {coops_with(R"("datums":{"MSL":0.5})"), "0.5", ParseErrc::out_of_range},
-      {coops_with(R"("datums":{"MHHW":"1"})"), "\"1\"", ParseErrc::bad_member},
+      refused(coops_with(R"("observed":["hourly","hourly"])"), "\"hourly\"]",
+              ParseErrc::bad_member),
+      refused(coops_with(R"("observed":"hourly")"), "\"hourly\"",
+              ParseErrc::bad_member),
+      refused(coops_with(R"("air_gap":1)"), "1}", ParseErrc::bad_member),
+      refused(coops_with(R"("datums":{"MSL":0.5})"), "0.5",
+              ParseErrc::out_of_range),
+      refused(coops_with(R"("datums":{"MHHW":"1"})"), "\"1\"",
+              ParseErrc::bad_member),
       // USGS series
-      {usgs_with(R"({"id":"ABC","parameter":"00060","statistic":"00011"})"),
-       "\"ABC\"", ParseErrc::bad_member},
-      {usgs_with(
-           R"({"id":"00000000000000000000000000000000","parameter":"0006","statistic":"00011"})"),
-       "\"0006\"", ParseErrc::bad_member},
-      {usgs_with(
-           R"({"id":"00000000000000000000000000000000","parameter":"00060"})"),
-       "{\"id\":\"0000", ParseErrc::bad_member},
-      {usgs_with(
-           R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","unit":" "})"),
-       "\" \"", ParseErrc::bad_member},
-      {usgs_with(
-           R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","primary":"yes"})"),
-       "\"yes\"", ParseErrc::bad_member},
+      refused(
+          usgs_with(R"({"id":"ABC","parameter":"00060","statistic":"00011"})"),
+          "\"ABC\"", ParseErrc::bad_member),
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"0006","statistic":"00011"})"),
+          "\"0006\"", ParseErrc::bad_member),
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060"})"),
+          R"({"id":"0000)", ParseErrc::bad_member),
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","unit":" "})"),
+          "\" \"", ParseErrc::bad_member),
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","primary":"yes"})"),
+          "\"yes\"", ParseErrc::bad_member),
       // header values
-      {document("harmonics", ""), "\"harmonics\"", ParseErrc::bad_member},
-      {document("noaa", ""), "\"noaa\"", ParseErrc::bad_member},
-      {R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
-       R"("generated":"2026-10-15 17:00:00","sources":[],"stations":[]})",
-       "\"2026-10-15 17:00:00\"", ParseErrc::bad_date},
-      {R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
-       R"("generated":"2026-10-15T17:00:00Z","sources":[{"url":"u"}],"stations":[]})",
-       "{\"url\"", ParseErrc::bad_member},
-      {R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
-       R"("generated":"2026-10-15T17:00:00Z","sources":[],"stations":{}})",
-       "{}", ParseErrc::bad_member},
-      {R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
-       R"("generated":"2026-10-15T17:00:00Z","stations":[]})",
-       "{\"format\"", ParseErrc::bad_member},
+      refused(document("harmonics", ""), "\"harmonics\"",
+              ParseErrc::bad_member),
+      refused(document("noaa", ""), "\"noaa\"", ParseErrc::bad_member),
+      refused(
+          R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
+          R"("generated":"2026-10-15 17:00:00","sources":[],"stations":[]})",
+          "\"2026-10-15 17:00:00\"", ParseErrc::bad_date),
+      refused(
+          R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
+          R"("generated":"2026-10-15T17:00:00Z","sources":[{"url":"u"}],"stations":[]})",
+          "{\"url\"", ParseErrc::bad_member),
+      refused(
+          R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
+          R"("generated":"2026-10-15T17:00:00Z","sources":[],"stations":{}})",
+          "{}", ParseErrc::bad_member),
+      refused(
+          R"({"format":"metoceanviewer-stations","version":"1.0","provider":"ndbc",)"
+          R"("generated":"2026-10-15T17:00:00Z","stations":[]})",
+          "{\"format\"", ParseErrc::bad_member),
   };
   for (const Case& c : cases) {
     check_at(c.text, c.at, c.code);
@@ -771,7 +806,8 @@ TEST_CASE("what a reader accepts beyond the canonical text", "[io][catalog]") {
   CHECK(c.entries()[0].station.id.value() == "1611400");
   const auto& p = c.entries()[1];
   CHECK(not p.caps.air_gap);
-  CHECK(p.caps.datums->height_above_msl(VerticalDatum::mllw) ==
+  CHECK(p.caps.datums.value_or(mov::core::DatumTable{})
+            .height_above_msl(VerticalDatum::mllw) ==
         Length::in(-0.188, LengthUnit::meter));
 }
 

@@ -37,7 +37,7 @@ namespace mov::io {
 
 namespace {
 
-namespace text = detail::catalog;
+namespace tokens = detail::catalog;
 namespace jt = detail::json_text;
 using core::provider::Coops;
 using core::provider::Ndbc;
@@ -175,7 +175,7 @@ void append_validity(Members& m, const core::ValidRange& validity) {
 
 void append_height(std::string& out, core::Length height) {
   jt::append_fixed(out, height.as(core::LengthUnit::meter),
-                   text::height_decimals);
+                   tokens::height_decimals);
 }
 
 void append_block(std::string& out, const core::Capabilities<Coops>& caps) {
@@ -183,12 +183,12 @@ void append_block(std::string& out, const core::Capabilities<Coops>& caps) {
   if (not caps.observed.empty()) {
     append_set(m.member("observed"), caps.observed,
                [](core::coops::Observed o) {
-                 return text::token_of(text::observed_tokens, o);
+                 return tokens::token_of(tokens::observed_tokens, o);
                });
   }
   if (not caps.met.empty()) {
     append_set(m.member("met"), caps.met, [](core::coops::Met x) {
-      return text::token_of(text::met_tokens, x);
+      return tokens::token_of(tokens::met_tokens, x);
     });
   }
   if (caps.air_gap) {
@@ -197,11 +197,11 @@ void append_block(std::string& out, const core::Capabilities<Coops>& caps) {
   if (caps.predictions != core::coops::Predictions::none) {
     jt::append_string(
         m.member("predictions"),
-        text::token_of(text::predictions_tokens, caps.predictions));
+        tokens::token_of(tokens::predictions_tokens, caps.predictions));
   }
   if (not caps.datums_offered.empty()) {
     append_set(m.member("datums_offered"), caps.datums_offered,
-               text::datum_token);
+               tokens::datum_token);
   }
   if (caps.datums) {
     Members heights{m.member("datums")};
@@ -261,7 +261,7 @@ void append_block(std::string& out, const core::Capabilities<Ndbc>& caps) {
   text_member("program", caps.program);
   text_member("platform_type", caps.platform_type);
   if (caps.elevation) {
-    append_height(m.member("elevation_m"), text::canonical(*caps.elevation));
+    append_height(m.member("elevation_m"), tokens::canonical(*caps.elevation));
   }
   m.close();
 }
@@ -282,9 +282,9 @@ void append_station(std::string& out, const CatalogEntry<P>& e) {
   Members m{out};
   jt::append_string(m.member("id"), e.station.id.value());
   jt::append_string(m.member("name"), e.station.name.view());
-  const core::Location at = text::canonical(e.station.location);
-  jt::append_fixed(m.member("lon"), at.lon(), text::position_decimals);
-  jt::append_fixed(m.member("lat"), at.lat(), text::position_decimals);
+  const core::Location at = tokens::canonical(e.station.location);
+  jt::append_fixed(m.member("lon"), at.lon(), tokens::position_decimals);
+  jt::append_fixed(m.member("lat"), at.lat(), tokens::position_decimals);
   append_validity(m, e.station.validity);
   append_block(m.member(block_name(P{})), e.caps);
   m.close();
