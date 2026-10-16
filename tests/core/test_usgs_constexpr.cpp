@@ -135,9 +135,22 @@ TEST_CASE("USGS parameters in the quantity registry",
   STATIC_REQUIRE(mapping("62619") ==
                  QuantityMapping{.quantity = Quantity::water_level,
                                  .datum = VerticalDatum::ngvd29});
-  // Rows wait for P3's check against the parameter-codes collection.
-  STATIC_REQUIRE_FALSE(mapping("00010").has_value());
+  // P3 checked these against the parameter-codes collection (2026-10-15).
+  STATIC_REQUIRE(mapping("00010") ==
+                 QuantityMapping{.quantity = Quantity::water_temperature,
+                                 .datum = std::nullopt});
+  STATIC_REQUIRE(mapping("00020") ==
+                 QuantityMapping{.quantity = Quantity::air_temperature,
+                                 .datum = std::nullopt});
+  STATIC_REQUIRE(
+      mapping("00035") ==
+      QuantityMapping{.quantity = Quantity::wind_speed, .datum = std::nullopt});
+  STATIC_REQUIRE(mapping("00036") ==
+                 QuantityMapping{.quantity = Quantity::wind_direction,
+                                 .datum = std::nullopt});
+  // Precipitation (00045) has no registry quantity.
   STATIC_REQUIRE_FALSE(mapping("00045").has_value());
+  STATIC_REQUIRE_FALSE(mapping("63680").has_value());
   STATIC_REQUIRE(usgs::grain.duration() == std::chrono::seconds{1});
 }
 

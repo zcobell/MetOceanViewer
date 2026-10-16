@@ -157,6 +157,18 @@ enum class WarningCode : std::uint8_t {
   /// `sensors`, `member` for a member of the wrong JSON type, `type` for a
   /// tide-prediction type); the count is the stations.
   station_skipped,
+  /// Samples the provider qualifies, kept. Subject: the qualifier as found
+  /// (USGS: "ESTIMATED"); the count is the samples.
+  qualified_samples,
+  /// Rows of a series list (USGS combined-metadata) that were left out,
+  /// counted by reason. Subject: the reason (`id`, `parameter`,
+  /// `statistic`, `dates`, `member`, `station`, `name`, `position`); the
+  /// count is the rows.
+  series_skipped,
+  /// Rows of a series list whose validity dates did not parse or were
+  /// inverted: kept with an unknown validity. Subject: `dates`; the count is
+  /// the rows.
+  validity_ignored,
 };
 /// A stable lower-case identifier, the same as the enumerator's name
 /// (for logs and tests; user-facing text belongs to the app).

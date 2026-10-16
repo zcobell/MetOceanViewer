@@ -176,7 +176,7 @@ template <std::integral I>
                              static_cast<std::int64_t>(value) * unit.count());
 }
 
-/// Where parse_utc_datetime stopped: the 0-based offset of the first
+/// Where a date or time parser stopped: the 0-based offset of the first
 /// character that does not fit (the end of the text when it is truncated), or
 /// the start of the field whose value is out of range.
 struct DateTimeError {
@@ -187,7 +187,7 @@ struct DateTimeError {
 namespace detail {
 
 /// A read position over a text, with the parse primitives of
-/// parse_utc_datetime.
+/// parse_utc_datetime, parse_rfc3339 and parse_date.
 class DateTimeCursor {
  public:
   explicit constexpr DateTimeCursor(std::string_view text) noexcept
@@ -240,20 +240,24 @@ class DateTimeCursor {
     return value;
   }
 
-  /// One to three fraction digits, scaled to milliseconds.
-  [[nodiscard]] constexpr std::expected<int, DateTimeError>
-  fraction_ms() noexcept {
+  /// The fraction after a `.`: 1 to `max_digits` digits, the first three
+  /// scaled to milliseconds and any further ones truncated (a Time has
+  /// millisecond resolution). Stops after `max_digits`, so a further digit
+  /// is the caller's to refuse.
+  [[nodiscard]] constexpr std::expected<int, DateTimeError> fraction_ms(
+      std::size_t max_digits) noexcept {
     if (not digit_here()) {
       return std::unexpected{error_here()};
     }
     int value = 0;
     int scale = 100;
-    for (; scale > 0; scale /= 10) {
+    for (std::size_t n = 0; n < max_digits; ++n) {
       const auto digit = digit_here();
       if (not digit) {
         break;
       }
       value += *digit * scale;
+      scale /= 10;
       ++pos_;
     }
     return value;
@@ -271,10 +275,16 @@ class DateTimeCursor {
   std::size_t pos_{0};
 };
 
-/// "hh:mm[:ss[.f[f[f]]]]"
+/// "hh:mm:ss" (with `seconds` required) or "hh:mm[:ss]", then
+/// ".f..." with at most `max_fraction` digits.
 [[nodiscard]] constexpr std::expected<std::chrono::milliseconds, DateTimeError>
-parse_clock(DateTimeCursor& cursor) noexcept {
+parse_clock(DateTimeCursor& cursor, bool seconds_required,
+            std::size_t max_fraction) noexcept {
   using std::chrono::milliseconds;
+  // 64-bit milliseconds throughout: MSVC's minutes and hours have a 32-bit
+  // rep.
+  constexpr std::int64_t ms_per_second = 1000;
+  constexpr std::int64_t ms_per_minute = 60 * ms_per_second;
   const auto hour = cursor.field(2, 0, 23);
   if (not hour) {
     return std::unexpected{hour.error()};
@@ -286,27 +296,32 @@ parse_clock(DateTimeCursor& cursor) noexcept {
   if (not minute) {
     return std::unexpected{minute.error()};
   }
-  milliseconds total =
-      std::chrono::hours{*hour} + std::chrono::minutes{*minute};
-  if (not cursor.accept(':')) {
+  milliseconds total{((std::int64_t{*hour} * 60) + *minute) * ms_per_minute};
+  if (seconds_required) {
+    if (const auto colon = cursor.expect(':'); not colon) {
+      return std::unexpected{colon.error()};
+    }
+  } else if (not cursor.accept(':')) {
     return total;
   }
   const auto second = cursor.field(2, 0, 59);
   if (not second) {
     return std::unexpected{second.error()};
   }
-  total += std::chrono::seconds{*second};
+  total += milliseconds{std::int64_t{*second} * ms_per_second};
   if (not cursor.accept('.')) {
     return total;
   }
-  const auto fraction = cursor.fraction_ms();
+  const auto fraction = cursor.fraction_ms(max_fraction);
   if (not fraction) {
     return std::unexpected{fraction.error()};
   }
   return total + milliseconds{*fraction};
 }
 
-/// "yyyy-mm-dd"
+/// "yyyy-mm-dd" at the cursor (a four-digit year, two-digit month and day, a
+/// real date). The error is where the text stopped fitting, or the start of
+/// a field out of range (the day of February 30).
 [[nodiscard]] constexpr std::expected<std::chrono::sys_days, DateTimeError>
 parse_date(DateTimeCursor& cursor) noexcept {
   using namespace std::chrono;
@@ -337,20 +352,58 @@ parse_date(DateTimeCursor& cursor) noexcept {
   return sys_days{ymd};
 }
 
-}  // namespace detail
-
-namespace detail {
-
 /// The optional "( |T)hh:mm[:ss[.f]]" after the date: midnight when absent.
 [[nodiscard]] constexpr std::expected<std::chrono::milliseconds, DateTimeError>
 parse_optional_clock(DateTimeCursor& cursor) noexcept {
+  constexpr std::size_t ms_digits = 3;
   if (cursor.accept(' ') or cursor.accept('T')) {
-    return parse_clock(cursor);
+    return parse_clock(cursor, /*seconds_required=*/false, ms_digits);
   }
   return std::chrono::milliseconds{};
 }
 
+/// `Z` or `z` (zero), else `+hh:mm` or `-hh:mm`, as signed minutes east of
+/// UTC.
+[[nodiscard]] constexpr std::expected<int, DateTimeError> utc_offset(
+    DateTimeCursor& cursor) noexcept {
+  if (cursor.accept('Z') or cursor.accept('z')) {
+    return 0;
+  }
+  const bool west = cursor.next_is('-');
+  if (not(cursor.accept('+') or cursor.accept('-'))) {
+    return std::unexpected{cursor.error_here()};
+  }
+  const auto hours = cursor.field(2, 0, 23);
+  if (not hours) {
+    return std::unexpected{hours.error()};
+  }
+  if (const auto colon = cursor.expect(':'); not colon) {
+    return std::unexpected{colon.error()};
+  }
+  const auto minutes = cursor.field(2, 0, 59);
+  if (not minutes) {
+    return std::unexpected{minutes.error()};
+  }
+  const int east = (*hours * 60) + *minutes;
+  return west ? -east : east;
+}
+
 }  // namespace detail
+
+/// Parses exactly "yyyy-mm-dd" (a four-digit year, two-digit fields, a real
+/// date; nothing before or after): a calendar day, not an instant.
+[[nodiscard]] constexpr std::expected<std::chrono::sys_days, DateTimeError>
+parse_date(std::string_view text) noexcept {
+  detail::DateTimeCursor cursor{text};
+  const auto date = detail::parse_date(cursor);
+  if (not date) {
+    return std::unexpected{date.error()};
+  }
+  if (not cursor.at_end()) {
+    return std::unexpected{cursor.error_here()};
+  }
+  return *date;
+}
 
 /// Parses "yyyy-mm-dd[( |T)hh:mm[:ss[.f[f[f]]]]][Z]", always as UTC, whatever
 /// the machine's time zone (v4 used local time). Strict: four-digit
@@ -373,6 +426,45 @@ parse_optional_clock(DateTimeCursor& cursor) noexcept {
   }
   return std::chrono::time_point_cast<std::chrono::milliseconds>(*date) +
          *clock;
+}
+
+/// Parses an RFC 3339 date-time (section 5.6), the USGS Water Data API's
+/// `time`, `begin` and `end`, as the UTC instant it names:
+///
+///   yyyy-mm-dd ("T"|"t") hh:mm:ss ["." 1*9digit] ("Z"|"z"|("+"|"-") hh:mm)
+///
+/// Seconds and the offset are required; a leap second (60), a space for the
+/// `T`, `+hhmm` and surrounding white space are refused. The offset is
+/// subtracted (`-00:00`, "local offset unknown", is UTC). Fraction digits
+/// past the millisecond are truncated. The error is where the text stopped
+/// fitting, or the start of a field out of range.
+[[nodiscard]] constexpr std::expected<Time, DateTimeError> parse_rfc3339(
+    std::string_view text) noexcept {
+  constexpr std::size_t max_fraction = 9;
+  constexpr std::int64_t ms_per_minute = 60'000;
+  detail::DateTimeCursor cursor{text};
+  const auto date = detail::parse_date(cursor);
+  if (not date) {
+    return std::unexpected{date.error()};
+  }
+  if (not(cursor.accept('T') or cursor.accept('t'))) {
+    return std::unexpected{cursor.error_here()};
+  }
+  const auto clock =
+      detail::parse_clock(cursor, /*seconds_required=*/true, max_fraction);
+  if (not clock) {
+    return std::unexpected{clock.error()};
+  }
+  const auto offset = detail::utc_offset(cursor);
+  if (not offset) {
+    return std::unexpected{offset.error()};
+  }
+  if (not cursor.at_end()) {
+    return std::unexpected{cursor.error_here()};
+  }
+  return std::chrono::time_point_cast<std::chrono::milliseconds>(*date) +
+         *clock -
+         std::chrono::milliseconds{std::int64_t{*offset} * ms_per_minute};
 }
 
 }  // namespace mov::core

@@ -1,0 +1,5 @@
+{
+  "code": "InvalidQuery",
+  "type": "InvalidQuery",
+  "description": "At least one requested property wasn't found"
+}

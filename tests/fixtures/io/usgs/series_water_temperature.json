@@ -1,0 +1,124 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "089a50eca92a4e268b8816a1bc22c000",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2013-11-23T05:00:00+00:00",
+        "end": "2019-05-27T19:00:00+00:00",
+        "sublocation_identifier": "From multiparameter sonde",
+        "web_description": "Discontinued"
+      },
+      "id": "089a50eca92a4e268b8816a1bc22c000",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "52b33353ad684b76a8afd49cf017a42c",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:15:00+00:00",
+        "sublocation_identifier": "4.1 ft from riverbed (middle)",
+        "web_description": "Discontinued"
+      },
+      "id": "52b33353ad684b76a8afd49cf017a42c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c8e767f6cdfc4ff484a99f77962dc46c",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:30:00+00:00",
+        "sublocation_identifier": "7.1 ft from riverbed (top)",
+        "web_description": "Discontinued"
+      },
+      "id": "c8e767f6cdfc4ff484a99f77962dc46c",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d1875d1d73e447d2a1203105ba654e7d",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2019-07-24T18:00:00+00:00",
+        "end": "2026-10-15T09:50:00+00:00",
+        "sublocation_identifier": "From multiparameter sonde",
+        "web_description": null
+      },
+      "id": "d1875d1d73e447d2a1203105ba654e7d",
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f60be489a22b4dfd9fd0fb97f3acc285",
+        "parameter_code": "00010",
+        "parameter_name": "Temperature, water",
+        "statistic_id": "00011",
+        "primary": "Primary",
+        "unit_of_measure": "degC",
+        "begin": "2007-10-01T05:00:00+00:00",
+        "end": "2019-10-01T16:15:00+00:00",
+        "sublocation_identifier": "1.0 ft from riverbed (bottom)",
+        "web_description": "Discontinued"
+      },
+      "id": "f60be489a22b4dfd9fd0fb97f3acc285",
+      "geometry": null
+    }
+  ],
+  "numberReturned": 5,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&monitoring_location_id=USGS-01646500&parameter_code=00010&statistic_id=00011&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&skipGeometry=true&limit=50000"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&monitoring_location_id=USGS-01646500&parameter_code=00010&statistic_id=00011&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&monitoring_location_id=USGS-01646500&parameter_code=00010&statistic_id=00011&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&monitoring_location_id=USGS-01646500&parameter_code=00010&statistic_id=00011&properties=id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&skipGeometry=true&limit=50000"
+    },
+    {
+      "type": "application/json",
+      "title": "Combined metadata",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata"
+    }
+  ],
+  "timeStamp": "2026-10-16T02:27:53.037238Z"
+}

@@ -12,7 +12,7 @@ namespace mov::io {
 namespace {
 
 // Indexed by the enumerator's value; the static_assert keeps it in step.
-constexpr std::array<std::string_view, 43> tokens{
+constexpr std::array<std::string_view, 46> tokens{
     "times_reordered",
     "duplicate_times_dropped",
     "conflicting_duplicate_times",
@@ -56,9 +56,12 @@ constexpr std::array<std::string_view, 43> tokens{
     "provisional_samples",
     "unknown_sensor",
     "station_skipped",
+    "qualified_samples",
+    "series_skipped",
+    "validity_ignored",
 };
 
-static_assert(static_cast<std::size_t>(WarningCode::station_skipped) + 1 ==
+static_assert(static_cast<std::size_t>(WarningCode::validity_ignored) + 1 ==
                   tokens.size(),
               "a WarningCode has no token");
 

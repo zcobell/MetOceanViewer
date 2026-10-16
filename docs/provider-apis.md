@@ -155,7 +155,9 @@ Item properties: `time` is a **date** (`"2026-09-28"`, no time/zone; the site's
 local day), `value` `"3800"`, `unit_of_measure` `"ft^3/s"`, `approval_status`
 `"Provisional"` (older data `"Approved"`), `qualifier` null, `statistic_id` `"00003"`.
 `usgs_daily_items.json`. **Observed: daily items came back newest first** while
-`continuous` came back oldest first; always sort after merging pages.
+`continuous` came back oldest first; always sort after merging pages. Corrected
+2026-10-15: daily items come in feature-id order, neither oldest nor newest first, on a
+page and across pages; `continuous` pages are in time order (their cursor is the time).
 
 Query semantics (all verified):
 
@@ -167,7 +169,11 @@ Query semantics (all verified):
   (`id=62620,00065`). Unknown properties return a 400 (`usgs_error_unknown_property.json`).
 - `properties=a,b,c` selects returned fields; `skipGeometry=true` drops geometry
   (`"geometry": null`); `bbox=minLon,minLat,maxLon,maxLat`; `crs` selectable (EPSG:4326
-  default); `sortby` supported (OGC); `limit` default is server-chosen.
+  default); `sortby` supported (OGC); `limit` default is server-chosen. Corrected
+  2026-10-15: with `sortby` the API serves only the first page (the next link is an
+  `offset` link that answers 400 "Only the first page of data can be returned when
+  specifying 'sortby'"), so a paged request must not sort; without `limit` a page has
+  10 rows.
 - **Max request size**: `limit` max is **50000** (100000 returns
   `{"code":"InvalidParameterValue","description":"Limit of 50000 exceeded"}`); **the time
   envelope for `continuous` must be <= 1100 days** (error
@@ -181,7 +187,10 @@ Query semantics (all verified):
 - **Pagination**: cursor based. Follow `links[rel=next].href` verbatim until no `next`
   link exists (that is the documented end condition). Do not construct cursors. Keep
   `limit` constant between pages. `numberMatched` is generally absent for time series
-  (present on small code tables), so do not rely on it for progress.
+  (present on small code tables), so do not rely on it for progress. Corrected
+  2026-10-15: a full last page of a cursor chain carries a next link with `offset=<limit>`
+  and no `cursor`; following it reads the window again from that offset of its start
+  (a cycle), so such a link ends the chain (`tests/fixtures/io/usgs/provenance.txt`).
 - **Missing data**: represented by `null` values (migration guide; replaces the legacy
   `noDataValue`). `value` is a **string** ("transmitted as strings ... to preserve
   precision"), so parse with `from_chars` and treat null/empty as "absent sample", not
@@ -189,7 +198,8 @@ Query semantics (all verified):
 - **Qualifier / approval**: `approval_status` is a word (`Provisional`, `Approved`),
   replacing legacy `P`/`A`. `qualifier` is a nullable string (e.g. ice/equipment
   codes); model as an enum with an `Other(string)` arm. Provisional data is
-  revisable; surface it in the UI and in exports.
+  revisable; surface it in the UI and in exports. Corrected 2026-10-15: `qualifier` is
+  null or an **array** of strings (`["ESTIMATED"]`).
 - **Time zones**: `continuous` times are always UTC (`+00:00`). `daily` is a bare local
   date. Site tz metadata: `monitoring-locations` has `time_zone_abbreviation` (`EST`)
   and `uses_daylight_savings` (`Y`/`N`); `/collections/time-zone-codes` lists codes. The

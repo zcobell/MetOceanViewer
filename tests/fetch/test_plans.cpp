@@ -331,6 +331,23 @@ cu::SeriesInfo series(std::string_view id, std::string_view parameter,
           .validity = {}};
 }
 
+/// A Primary instantaneous gage height with dates and a sublocation.
+cu::SeriesInfo epoch(std::string_view id, std::optional<int> first_year,
+                     std::optional<int> last_year,
+                     std::optional<std::string_view> sublocation = {}) {
+  cu::SeriesInfo s = series(id, "00065", "00011", true);
+  const auto jan1 = [](std::optional<int> y) {
+    return y ? std::optional{std::chrono::sys_days{year{*y} / 1 / 1}}
+             : std::nullopt;
+  };
+  s.validity = *core::ValidRange::make(
+      {.first = jan1(first_year), .last = jan1(last_year)});
+  if (sublocation) {
+    s.sublocation = *cu::Sublocation::make(std::string{*sublocation});
+  }
+  return s;
+}
+
 constexpr std::string_view id_a = "0123456789abcdef0123456789abcdef";
 constexpr std::string_view id_b = "1123456789abcdef0123456789abcdef";
 constexpr std::string_view id_c = "2123456789abcdef0123456789abcdef";
@@ -361,13 +378,16 @@ TEST_CASE("the USGS bind resolves the site's series into the data stage",
                       series(id_b, "00065", "00011", false),
                       series(id_c, "00065", "00003", true)});
   REQUIRE(bound);
-  CHECK(bound->series().series().id == *cu::TimeSeriesId::make(id_a));
+  REQUIRE(bound->series().epochs().size() == 1);
+  CHECK(bound->series().epochs()[0].series().id ==
+        *cu::TimeSeriesId::make(id_a));
   CHECK(bound->request() == continuous(r));
 
   const auto by_id = mov::fetch::usgs::bind(
       daily_by_id(id_c), {series(id_c, "00065", "00003", true)});
   REQUIRE(by_id);
-  CHECK(by_id->series().series().statistic == cu::StatisticId::mean());
+  CHECK(by_id->series().epochs()[0].series().statistic ==
+        cu::StatisticId::mean());
 }
 
 TEST_CASE("the USGS bind's failures are Resolution failures",
@@ -375,17 +395,31 @@ TEST_CASE("the USGS bind's failures are Resolution failures",
   using mov::fetch::Failure;
   using mov::fetch::Resolution;
   const auto r = range(utc(2026, 1, 1), utc(2026, 2, 1));
+  // Two sublocations and no group without one.
   const auto ambiguous = mov::fetch::usgs::bind(
-      continuous(r), {series(id_b, "00065", "00011", true),
-                      series(id_a, "00065", "00011", true)});
-  CHECK(ambiguous.error() ==
-        Failure{.error =
-                    mov::fetch::AmbiguousSeries{
-                        .candidates = {*cu::TimeSeriesId::make(id_a),
-                                       *cu::TimeSeriesId::make(id_b)}},
-                .unit = Resolution{.page = 0}});
+      continuous(r), {epoch(id_b, std::nullopt, std::nullopt, "Tailwater"),
+                      epoch(id_a, std::nullopt, std::nullopt, "Headwater")});
+  CHECK(
+      ambiguous.error() ==
+      Failure{
+          .error =
+              mov::fetch::AmbiguousSeries{
+                  .candidates = {cu::key_of(epoch(id_a, std::nullopt,
+                                                  std::nullopt, "Headwater")),
+                                 cu::key_of(epoch(id_b, std::nullopt,
+                                                  std::nullopt, "Tailwater"))}},
+          .unit = Resolution{.page = 0}});
+  // Two Primary epochs of one key are stitched, not ambiguous.
+  CHECK(mov::fetch::usgs::bind(continuous(r),
+                               {series(id_b, "00065", "00011", true),
+                                series(id_a, "00065", "00011", true)})
+            .has_value());
   CHECK(mov::fetch::usgs::bind(continuous(r),
                                {series(id_a, "00065", "00011", false)})
+            .error()
+            .error == Error{mov::fetch::NoData{}});
+  // Epochs that end before the range: no data.
+  CHECK(mov::fetch::usgs::bind(continuous(r), {epoch(id_a, 1990, 2000)})
             .error()
             .error == Error{mov::fetch::NoData{}});
   CHECK(mov::fetch::usgs::bind(daily_by_id(id_a),
@@ -412,6 +446,9 @@ TEST_CASE("USGS continuous units are windows of 1000 days, first pages",
   REQUIRE(units);
   REQUIRE(units->size() == 3);  // 2192 days
   CHECK_FALSE((*units)[0].page.link);
+  CHECK((*units)[2].epoch == 0);
+  CHECK(mu::epoch_of(*bound, (*units)[1]).series().id ==
+        *cu::TimeSeriesId::make(id_a));
   CHECK(mu::label((*units)[1]) ==
         UnitLabel{mov::fetch::Page{.window = (*units)[1].window, .index = 0}});
   const auto next = mu::next(
@@ -424,6 +461,7 @@ TEST_CASE("USGS continuous units are windows of 1000 days, first pages",
   REQUIRE(next->size() == 1);
   CHECK((*next)[0].page.link == "p2");
   CHECK((*next)[0].window == (*units)[0].window);
+  CHECK((*next)[0].epoch == (*units)[0].epoch);
   CHECK(mu::label((*next)[0]) ==
         UnitLabel{mov::fetch::Page{.window = (*units)[0].window, .index = 1}});
   const auto refused = mu::next(
@@ -439,14 +477,75 @@ TEST_CASE("USGS continuous units are windows of 1000 days, first pages",
             ->empty());
 }
 
-TEST_CASE("USGS daily values are one unit; resolution pages are bounded",
+TEST_CASE("USGS pages must stay in the window they were asked for",
           "[fetch][plan][usgs]") {
+  namespace mu = mov::fetch::usgs;
+  const auto r = range(utc(2026, 1, 1), utc(2026, 2, 1));
+  const auto bound =
+      mu::bind(continuous(r), {series(id_a, "00065", "00011", true)});
+  REQUIRE(bound);
+  const auto units = mu::initial<Link>(*bound);
+  REQUIRE(units);
+  REQUIRE(units->size() == 1);
+  const auto& unit = (*units)[0];
+  const auto page_over = [&](core::Time first, core::Time last) {
+    return mu::next(
+        unit, PageSummary<Link, core::Time>{
+                  .rows = 2,
+                  .extent = Extent<core::Time>{.first = first, .last = last},
+                  .next = std::nullopt});
+  };
+  const Error outside{
+      PagingError{.rule = PagingRule::outside_window, .page = 1}};
+  // The first and the last instant of the window are in it.
+  CHECK(
+      page_over(utc(2026, 1, 1), utc(2026, 2, 1) - std::chrono::milliseconds{1})
+          .has_value());
+  // A server that ignored datetime: rows before or after the window.
+  CHECK(page_over(utc(2025, 12, 31), utc(2026, 1, 2)).error() == outside);
+  CHECK(page_over(utc(2026, 1, 30), utc(2026, 2, 1)).error() == outside);
+}
+
+TEST_CASE("USGS epochs are planned latest first, each in its own windows",
+          "[fetch][plan][usgs]") {
+  namespace mu = mov::fetch::usgs;
+  // An epoch to 2019 (with a day's margin), one from 2018 on, overlapping;
+  // the merge folds in plan order with a left-biased union, so the
+  // later-begun epoch's rows win where they overlap.
+  const auto r = range(utc(2017, 1, 1), utc(2021, 1, 1));
+  const auto bound = mu::bind(continuous(r), {epoch(id_a, 2010, 2019),
+                                              epoch(id_b, 2018, std::nullopt)});
+  REQUIRE(bound);
+  const auto units = mu::initial<Link>(*bound);
+  REQUIRE(units);
+  // b: 2017-12-31 .. 2021-01-01 (1097 days: two windows); a: 2017-01-01 ..
+  // 2019-01-03 (732 days: one window).
+  REQUIRE(units->size() == 3);
+  CHECK((*units)[0].epoch == 0);
+  CHECK((*units)[1].epoch == 0);
+  CHECK((*units)[2].epoch == 1);
+  CHECK(mu::epoch_of(*bound, (*units)[0]).series().id ==
+        *cu::TimeSeriesId::make(id_b));
+  CHECK(mu::epoch_of(*bound, (*units)[2]).series().id ==
+        *cu::TimeSeriesId::make(id_a));
+  CHECK((*units)[0].window.begin() == utc(2017, 12, 31));
+  CHECK((*units)[1].window.end() == utc(2021, 1, 1));
+  CHECK((*units)[2].window.begin() == utc(2017, 1, 1));
+  CHECK((*units)[2].window.end() == utc(2019, 1, 3));
+}
+
+TEST_CASE(
+    "USGS daily values are one unit per epoch; resolution pages are "
+    "bounded",
+    "[fetch][plan][usgs]") {
   namespace mu = mov::fetch::usgs;
   const auto bound =
       mu::bind(daily_by_id(id_c), {series(id_c, "00065", "00003", true)});
   REQUIRE(bound);
   const auto units = mu::initial<Link>(*bound);
   REQUIRE(units.size() == 1);
+  CHECK(units[0].epoch == 0);
+  CHECK(units[0].days == bound->request().days);
   CHECK(mu::label(units[0]) ==
         UnitLabel{mov::fetch::DayWindow{.days = units[0].days}});
   const auto day = [](unsigned d) {
@@ -461,6 +560,7 @@ TEST_CASE("USGS daily values are one unit; resolution pages are bounded",
                     .next = "d2"});
   REQUIRE(next);
   CHECK((*next)[0].days == units[0].days);
+  CHECK((*next)[0].epoch == units[0].epoch);
 
   auto unit = mu::first_resolution_page<Link>();
   CHECK(mu::label(unit) == UnitLabel{mov::fetch::Resolution{.page = 0}});

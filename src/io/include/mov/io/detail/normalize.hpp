@@ -35,4 +35,11 @@ void add_normalize_warnings(std::vector<Warning>& warnings,
                             const core::NormalizeReport& report,
                             std::string_view subject);
 
+/// The warnings of what a report dropped (`duplicate_times_dropped`,
+/// `conflicting_duplicate_times`), not of what it reordered: for a source
+/// whose order is not a time order to begin with (USGS daily values).
+void add_dropped_warnings(std::vector<Warning>& warnings,
+                          const core::NormalizeReport& report,
+                          std::string_view subject);
+
 }  // namespace mov::io::detail

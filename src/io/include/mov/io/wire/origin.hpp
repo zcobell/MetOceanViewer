@@ -3,9 +3,13 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <variant>
 #include <vector>
 
 /// What the app sends to the web services, as values
@@ -56,5 +60,81 @@ struct Composed {
   std::vector<QueryParam> query;
   friend bool operator==(const Composed&, const Composed&) = default;
 };
+
+/// Why a link the server handed out is not followed.
+enum class LinkError : std::uint8_t {
+  /// Longer than Verbatim::max_bytes.
+  too_long,
+  /// A byte outside RFC 3986's URI characters (white space, control and
+  /// non-ASCII bytes, `\`, `"`, `<`, `>`, `{`, `}`, `|`, `^`, `` ` ``), a
+  /// `#` (a fragment), `[` or `]` (IP literals, which no origin is), or a
+  /// `%` not followed by two hexadecimal digits.
+  bad_character,
+  /// Not `base(origin)` followed by `/`: another scheme, host or port, or
+  /// user information.
+  other_origin,
+  /// A path other than the pinned one (another collection).
+  other_path,
+};
+
+/// A stable lower-case identifier, the enumerator's name (for an error's
+/// subject and logs).
+[[nodiscard]] constexpr std::string_view to_token(LinkError error) noexcept {
+  switch (error) {
+    case LinkError::too_long:
+      return "too_long";
+    case LinkError::bad_character:
+      return "bad_character";
+    case LinkError::other_origin:
+      return "other_origin";
+    case LinkError::other_path:
+      break;
+  }
+  return "other_path";
+}
+
+/// A link the server handed out (a USGS page's `next`), sent as it is: the
+/// Qt edge parses it in strict mode and encodes nothing. make() accepts only
+/// the scheme, host and port of `base(origin)` (no port, no user
+/// information) and exactly the path `pinned_path`, so a page can send the
+/// client neither elsewhere nor to another collection
+/// (docs/providers-design.md section 4.1, N B1). The query is the server's
+/// and is kept byte for byte.
+class Verbatim {
+ public:
+  /// The longest link followed (the USGS links are about 400 bytes).
+  static constexpr std::size_t max_bytes = 8192;
+
+  /// `pinned_path` is an absolute path ("/ogcapi/v1/collections/x/items").
+  [[nodiscard]] static std::expected<Verbatim, LinkError> make(
+      Origin origin, std::string_view pinned_path, std::string_view url);
+
+  [[nodiscard]] Origin origin() const noexcept { return origin_; }
+  /// The whole link, as received.
+  [[nodiscard]] const std::string& url() const& noexcept { return url_; }
+  const std::string& url() && = delete;
+
+  friend bool operator==(const Verbatim&, const Verbatim&) = default;
+
+ private:
+  Verbatim(Origin origin, std::string url)
+      : origin_{origin}, url_{std::move(url)} {}
+
+  Origin origin_;
+  std::string url_;
+};
+
+/// What one exchange asks for: a request the app composes, or a link the
+/// server handed out.
+using Target = std::variant<Composed, Verbatim>;
+
+/// The origin a target goes to.
+[[nodiscard]] inline Origin origin_of(const Target& target) noexcept {
+  struct Of {
+    Origin operator()(const Composed& c) const noexcept { return c.origin; }
+    Origin operator()(const Verbatim& v) const noexcept { return v.origin(); }
+  };
+  return std::visit(Of{}, target);
+}
 
 }  // namespace mov::io::wire

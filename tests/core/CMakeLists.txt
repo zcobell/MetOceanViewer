@@ -20,6 +20,7 @@ mov_add_test(
         test_version_constexpr.cpp
         test_numeric_constexpr.cpp
         test_time_constexpr.cpp
+        test_rfc3339_constexpr.cpp
         test_sample_constexpr.cpp
         test_geo_constexpr.cpp
         test_units_constexpr.cpp
@@ -40,6 +41,7 @@ mov_add_fuzz_test(
     LIBRARIES mov::core
     CORPUS core/parse_utc_datetime
 )
+mov_add_fuzz_test(fuzz_rfc3339 SOURCES fuzz_rfc3339.cpp LIBRARIES mov::core CORPUS core/rfc3339)
 mov_add_fuzz_test(
     fuzz_parse_vertical_datum
     SOURCES fuzz_parse_vertical_datum.cpp

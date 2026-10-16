@@ -22,42 +22,18 @@ namespace cu = core::usgs;
   return Failure{.error = std::move(error), .unit = Resolution{.page = 0}};
 }
 
-/// The ids of the Primary series of one parameter and statistic.
-[[nodiscard]] AmbiguousSeries ambiguous(
-    const cu::SeveralPrimary& several,
-    const std::vector<cu::SeriesInfo>& rows) {
-  AmbiguousSeries out;
-  for (const cu::SeriesInfo& row : rows) {
-    if (row.primary and row.parameter == several.parameter and
-        row.statistic == several.statistic) {
-      out.candidates.push_back(row.id);
-    }
-  }
-  std::ranges::sort(out.candidates);
-  return out;
-}
-
-[[nodiscard]] Error lift_set_error(const cu::SeriesSetError& error,
-                                   const std::vector<cu::SeriesInfo>& rows) {
-  return std::visit(
-      core::Overloaded{[](const cu::DuplicateSeriesId& d) -> Error {
-                         return DuplicateSeries{.id = d.id};
-                       },
-                       [&](const cu::SeveralPrimary& s) -> Error {
-                         return ambiguous(s, rows);
-                       }},
-      error);
-}
-
 [[nodiscard]] Error lift_resolve_error(cu::ResolveError error,
                                        cu::Collection requested) {
-  switch (error) {
-    case cu::ResolveError::no_series:
-      break;
-    case cu::ResolveError::wrong_collection:
-      return WrongCollection{.requested = requested};
-  }
-  return NoData{};
+  return std::visit(
+      core::Overloaded{[](cu::NoSeries) -> Error { return NoData{}; },
+                       [requested](cu::WrongCollection) -> Error {
+                         return WrongCollection{.requested = requested};
+                       },
+                       [](cu::AmbiguousSeries& a) -> Error {
+                         return AmbiguousSeries{.candidates =
+                                                    std::move(a.candidates)};
+                       }},
+      error);
 }
 
 template <class C>
@@ -67,12 +43,12 @@ template <class C>
   auto set = cu::SeriesSet::make(rows);
   if (not set) {
     return std::unexpected{
-        resolution_failure(lift_set_error(set.error(), rows))};
+        resolution_failure(DuplicateSeries{.id = set.error().id})};
   }
   auto resolved = cu::resolve(request, *set);
   if (not resolved) {
-    return std::unexpected{
-        resolution_failure(lift_resolve_error(resolved.error(), requested))};
+    return std::unexpected{resolution_failure(
+        lift_resolve_error(std::move(resolved).error(), requested))};
   }
   return *std::move(resolved);
 }

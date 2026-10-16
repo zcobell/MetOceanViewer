@@ -113,9 +113,11 @@ template <class C>
 class DataRequest;
 
 /// The bind between the stages: the site's series rows (stage 1's value) to
-/// stage 2's request. A repeated id is DuplicateSeries, several Primary
-/// series of the parameter and statistic AmbiguousSeries (with their ids),
-/// no series NoData, a series of the other collection WrongCollection; each
+/// stage 2's request (core::usgs::resolve: the logical series and its
+/// epochs). A repeated id is DuplicateSeries; a request without a
+/// sublocation at a site with several sublocation groups and none without
+/// one AmbiguousSeries (with their keys); no series, or no epoch meeting the
+/// range, NoData; a series of the other collection WrongCollection. Each
 /// failure is labelled Resolution{0}.
 [[nodiscard]] std::expected<DataRequest<core::usgs::Continuous>, Failure> bind(
     const core::usgs::Continuous& request,
@@ -155,72 +157,98 @@ class DataRequest {
 
 // ---- stage 2: data --------------------------------------------------------
 
-/// A page of one window of instantaneous values.
+/// A page of one window of one epoch's instantaneous values.
 template <class Link>
 struct ContinuousUnit {
+  /// The epoch fetched: an index into the request's series().epochs().
+  std::uint32_t epoch;
   core::TimeRange window;
   PageUnit<Link, core::Time> page;
   friend bool operator==(const ContinuousUnit&,
                          const ContinuousUnit&) = default;
 };
 
-/// A page of daily values.
+/// A page of one epoch's daily values.
 template <class Link>
 struct DailyUnit {
+  /// The epoch fetched: an index into the request's series().epochs().
+  std::uint32_t epoch;
   core::DayRange days;
   PageUnit<Link, std::chrono::local_days> page;
   friend bool operator==(const DailyUnit&, const DailyUnit&) = default;
 };
 
-/// The windows of a continuous request: its range widened to whole seconds,
-/// split at 1000 days. Unalignable only at the ends of the time line.
+/// The windows of an epoch's range: widened to whole seconds, split at 1000
+/// days. Unalignable only at the ends of the time line.
 [[nodiscard]] constexpr std::expected<core::Windows, Unalignable> windows(
-    const core::usgs::Continuous& request) noexcept {
-  const auto range = core::aligned(request.range, core::usgs::grain);
+    const core::usgs::Epoch<core::usgs::Continuous>& epoch) noexcept {
+  const auto range = core::aligned(epoch.range(), core::usgs::grain);
   if (not range) {
-    return std::unexpected{Unalignable{.range = request.range}};
+    return std::unexpected{Unalignable{.range = epoch.range()}};
   }
-  return core::split(*range, core::usgs::max_window(request));
+  return core::split(*range, core::usgs::max_continuous_window);
 }
 
-/// The first page of every window, in time order. Each window may take
-/// max_pages({window, 1 min, page_rows}) pages.
+/// The first page of every (epoch, window), in plan order: the epochs in
+/// the resolved precedence order (the epoch begun last first), each epoch's
+/// windows in time order. The merge folds the parts in this order with a
+/// left-biased union, so where epochs overlap the later-begun epoch's rows
+/// win (decision 37). Each window may take max_pages({window, 1 min,
+/// page_rows}) pages.
 template <class Link>
 [[nodiscard]] std::expected<std::vector<ContinuousUnit<Link>>, Error> initial(
     const DataRequest<core::usgs::Continuous>& request) {
-  const auto cut = windows(request.request());
-  if (not cut) {
-    return std::unexpected{Error{cut.error()}};
-  }
   std::vector<ContinuousUnit<Link>> units;
-  units.reserve(cut->size());
-  for (const core::TimeRange window : *cut) {
-    const auto pages = max_pages({.span = window.end() - window.begin(),
-                                  .cadence = finest_cadence,
-                                  .page_rows = page_rows});
-    units.push_back(
-        {.window = window,
-         .page = {.guard = PageGuard<Link, core::Time>::first(pages),
-                  .link = std::nullopt}});
+  const auto epochs = request.series().epochs();
+  for (std::uint32_t e = 0; e < epochs.size(); ++e) {
+    const auto cut = windows(epochs[e]);
+    if (not cut) {
+      return std::unexpected{Error{cut.error()}};
+    }
+    for (const core::TimeRange window : *cut) {
+      const auto pages = max_pages({.span = window.end() - window.begin(),
+                                    .cadence = finest_cadence,
+                                    .page_rows = page_rows});
+      units.push_back(
+          {.epoch = e,
+           .window = window,
+           .page = {.guard = PageGuard<Link, core::Time>::first(pages),
+                    .link = std::nullopt}});
+    }
   }
   return units;
 }
 
-/// One unit: daily values have no window limit (36 years came back on one
-/// page); the chain may take max_pages({days, 1 day, page_rows}) pages.
+/// One unit per epoch, in the resolved precedence order (as above): daily
+/// values have no window limit (36 years came back on one page); a chain may
+/// take max_pages({days, 1 day, page_rows}) pages.
 template <class Link>
 [[nodiscard]] std::vector<DailyUnit<Link>> initial(
     const DataRequest<core::usgs::Daily>& request) {
-  const core::DayRange days = request.request().days;
-  const auto pages =
-      max_pages({.span = std::chrono::duration_cast<std::chrono::milliseconds>(
-                     days.size()),
-                 .cadence = std::chrono::days{1},
-                 .page_rows = page_rows});
-  return {DailyUnit<Link>{
-      .days = days,
-      .page = {.guard = PageGuard<Link, std::chrono::local_days>::first(pages),
-               .link = std::nullopt}}};
+  std::vector<DailyUnit<Link>> units;
+  const auto epochs = request.series().epochs();
+  for (std::uint32_t e = 0; e < epochs.size(); ++e) {
+    const core::DayRange days = epochs[e].range();
+    const auto pages = max_pages(
+        {.span =
+             std::chrono::duration_cast<std::chrono::milliseconds>(days.size()),
+         .cadence = std::chrono::days{1},
+         .page_rows = page_rows});
+    units.push_back(DailyUnit<Link>{
+        .epoch = e,
+        .days = days,
+        .page = {
+            .guard = PageGuard<Link, std::chrono::local_days>::first(pages),
+            .link = std::nullopt}});
+  }
+  return units;
+}
+
+/// The epoch a unit fetches (its series id and range go into the target).
+template <class C, class Unit>
+[[nodiscard]] const core::usgs::Epoch<C>& epoch_of(
+    const DataRequest<C>& request, const Unit& unit) {
+  return request.series().epochs()[unit.epoch];
 }
 
 template <class Link>
@@ -233,13 +261,24 @@ template <class Link>
   return DayWindow{.days = unit.days};
 }
 
+/// The next page of a window, after a page that `summary` describes. Its
+/// rows must lie in the window the page was asked for: a server that
+/// ignored `datetime` (on the first page or a followed one) fails the unit
+/// with PagingError outside_window rather than leak rows of another window
+/// into the merge.
 template <class Link>
 [[nodiscard]] std::expected<std::vector<ContinuousUnit<Link>>, Error> next(
     const ContinuousUnit<Link>& unit,
     const PageSummary<Link, core::Time>& summary) {
+  if (summary.extent and (summary.extent->first < unit.window.begin() or
+                          not(summary.extent->last < unit.window.end()))) {
+    return std::unexpected{Error{PagingError{.rule = PagingRule::outside_window,
+                                             .page = unit.page.guard.taken()}}};
+  }
   return continue_chain<ContinuousUnit<Link>>(
       unit.page, summary, [&](PageUnit<Link, core::Time> page) {
-        return ContinuousUnit<Link>{.window = unit.window,
+        return ContinuousUnit<Link>{.epoch = unit.epoch,
+                                    .window = unit.window,
                                     .page = std::move(page)};
       });
 }
@@ -250,7 +289,8 @@ template <class Link>
     const PageSummary<Link, std::chrono::local_days>& summary) {
   return continue_chain<DailyUnit<Link>>(
       unit.page, summary, [&](PageUnit<Link, std::chrono::local_days> page) {
-        return DailyUnit<Link>{.days = unit.days, .page = std::move(page)};
+        return DailyUnit<Link>{
+            .epoch = unit.epoch, .days = unit.days, .page = std::move(page)};
       });
 }
 

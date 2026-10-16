@@ -10,8 +10,10 @@
 #include <algorithm>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -211,14 +213,19 @@ class UsgsWorld {
         o, now);
   }
 
-  [[nodiscard]] static cu::SeriesInfo row(char id, bool primary) {
-    return {.id = *cu::TimeSeriesId::make(std::string(32, id)),
-            .parameter = *cu::ParameterCode::make("00065"),
-            .statistic = cu::StatisticId::instantaneous(),
-            .parameter_name = "gage height",
-            .primary = primary,
-            .unit = std::nullopt,
-            .validity = {}};
+  [[nodiscard]] static cu::SeriesInfo row(
+      char id, bool primary, std::optional<std::string_view> sublocation = {}) {
+    cu::SeriesInfo out{.id = *cu::TimeSeriesId::make(std::string(32, id)),
+                       .parameter = *cu::ParameterCode::make("00065"),
+                       .statistic = cu::StatisticId::instantaneous(),
+                       .parameter_name = "gage height",
+                       .primary = primary,
+                       .unit = std::nullopt,
+                       .validity = {}};
+    if (sublocation) {
+      out.sublocation = *cu::Sublocation::make(std::string{*sublocation});
+    }
+    return out;
   }
 
   [[nodiscard]] Event parse(const Parse<UsgsResolveSpec::Target>& p,
@@ -230,7 +237,8 @@ class UsgsWorld {
         rows = {row('a', true), row('b', false)};
         break;
       case 2:
-        rows = {row('a', true), row('b', true)};  // ambiguous
+        // Two sublocations, none without one: ambiguous.
+        rows = {row('a', true, "Headwater"), row('b', true, "Tailwater")};
         break;
       case 3:
         rows = {row('c', false)};  // no Primary

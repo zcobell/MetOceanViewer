@@ -59,6 +59,13 @@ void add_normalize_warnings(std::vector<Warning>& warnings,
   append_if_counted(warnings, {.code = WarningCode::times_reordered,
                                .subject = text,
                                .count = report.descents});
+  add_dropped_warnings(warnings, report, subject);
+}
+
+void add_dropped_warnings(std::vector<Warning>& warnings,
+                          const core::NormalizeReport& report,
+                          std::string_view subject) {
+  const std::string text = subject_of(subject);
   append_if_counted(warnings, {.code = WarningCode::duplicate_times_dropped,
                                .subject = text,
                                .count = report.duplicates_dropped});
