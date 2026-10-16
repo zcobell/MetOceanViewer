@@ -96,6 +96,10 @@ function(mov_add_coverage_target)
             "${PROJECT_SOURCE_DIR}/src/" --gcov-executable "${gcov_command}" --print-summary --html-details
             "${report_dir}/index.html" --cobertura "${report_dir}/coverage.xml" --json "${report_dir}/coverage.json"
             --txt "${report_dir}/summary.txt" --fail-under-line ${MOV_COVERAGE_FAIL_UNDER}
+            # Search only this build's counters: gcovr's default search path
+            # is --root, which also holds other build trees (other presets,
+            # agent worktrees under .claude/) and their partial .gcda files.
+            "${PROJECT_BINARY_DIR}"
         COMMAND ${CMAKE_COMMAND} -E cat "${report_dir}/summary.txt" ${layer_gates}
         WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
         COMMENT "Running tests and writing the coverage report to ${report_dir}"
