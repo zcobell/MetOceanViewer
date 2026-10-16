@@ -29,7 +29,9 @@
 #include "mov/core/station_table.hpp"
 #include "mov/core/time.hpp"
 #include "mov/core/units.hpp"
+#include "mov/core/utf8.hpp"
 #include "mov/io/detail/json_write.hpp"
+#include "mov/io/error.hpp"
 #include "mov/io/text_file.hpp"
 
 namespace mov::io {
@@ -77,7 +79,24 @@ void member(std::string& out, std::string_view name) {
   out.push_back(':');
 }
 
-// {"id":…,"name":…,"provider":…,"lon":…,"lat":…,"series":[
+// Text the format writes from a series' metadata: UTF-8 without NUL, else
+// `bad_encoding` about the quantity (StationText guarantees the rest).
+std::expected<void, FormatError> check_text(const core::SeriesMeta& meta) {
+  const auto writable = [](std::string_view text) {
+    return core::is_valid_utf8(text) and
+           text.find('\0') == std::string_view::npos;
+  };
+  const std::optional<core::Unit>& unit = meta.unit();
+  if (not writable(meta.label()) or
+      (unit and not writable(core::udunits(*unit)))) {
+    return std::unexpected{
+        FormatError{.code = FormatErrc::bad_encoding,
+                    .subject = std::string{core::token(meta.quantity())}}};
+  }
+  return {};
+}
+
+// {"id":…,"name":…,"provider":…,"lon":…,"lat":…,
 void open_station(std::string& out, const core::FileStation& station,
                   bool first) {
   out += first ? "\n{" : ",\n{";
@@ -97,7 +116,7 @@ void open_station(std::string& out, const core::FileStation& station,
   out.push_back(',');
   member(out, "lat");
   jt::append_shortest(out, station.location.lat());
-  out += ",\"series\":[";
+  out.push_back(',');
 }
 
 // {"quantity":…,"label":…,"unit":…,"datum":…,
@@ -130,7 +149,7 @@ std::string_view status_of(const core::Sample& s) {
   return s.is_dry() ? "dry" : "missing";
 }
 
-// `"<name>":[a,b,...]` of each sample's text, spilling as it goes.
+// `"<name>":[a,b,...]` of each item's text, spilling as it goes.
 template <class Flush, class Range, class Append>
 [[nodiscard]] bool append_array(Emitter<Flush>& e, std::string_view name,
                                 const Range& items, Append append) {
@@ -189,21 +208,22 @@ void close_document(std::string& out, bool empty) {
   out += empty ? "]}\n" : "\n]}\n";
 }
 
+// Each station's axis once, then its columns: "time":[…],"series":[…]}.
 template <class Flush>
 void emit(const core::StationTable& table, Emitter<Flush>& e) {
   open_document(e.out());
   for (const core::StationIndex i : table.stations()) {
     open_station(e.out(), table.station(i), i.value() == 0);
+    if (not append_array(e, "time", table.times(i),
+                         [](std::string& out, core::Time t) {
+                           jt::append_timestamp_ms(out, t);
+                         })) {
+      return;
+    }
+    e.out() += ",\"series\":[";
     for (const std::size_t k :
          std::views::iota(std::size_t{0}, table.schema().size())) {
       open_series(e.out(), table.schema()[k], k == 0);
-      if (not append_array(e, "time", table.times(i),
-                           [](std::string& out, core::Time t) {
-                             jt::append_timestamp_ms(out, t);
-                           })) {
-        return;
-      }
-      e.out().push_back(',');
       if (not close_series(e, table.column(i, core::ColumnIndex{k}))) {
         return;
       }
@@ -214,6 +234,8 @@ void emit(const core::StationTable& table, Emitter<Flush>& e) {
   e.finish();
 }
 
+// Each station's days, then its one series with its statistic:
+// "date":[…],"series":[{…,"statistic":…,"value":[…]}]}.
 template <class Flush>
 void emit(std::span<const DailyAtStation> stations, Emitter<Flush>& e) {
   open_document(e.out());
@@ -221,11 +243,6 @@ void emit(std::span<const DailyAtStation> stations, Emitter<Flush>& e) {
   for (const DailyAtStation& s : stations) {
     open_station(e.out(), s.station, first);
     first = false;
-    open_series(e.out(), s.data.meta(), true);
-    member(e.out(), "statistic");
-    const core::usgs::StatisticId statistic = s.data.statistic();
-    jt::append_string(e.out(), statistic.view());
-    e.out().push_back(',');
     if (not append_array(
             e, "date", s.data.days(),
             [](std::string& out, std::chrono::local_days d) {
@@ -233,6 +250,11 @@ void emit(std::span<const DailyAtStation> stations, Emitter<Flush>& e) {
             })) {
       return;
     }
+    e.out() += ",\"series\":[";
+    open_series(e.out(), s.data.meta(), true);
+    member(e.out(), "statistic");
+    const core::usgs::StatisticId statistic = s.data.statistic();
+    jt::append_string(e.out(), statistic.view());
     e.out().push_back(',');
     if (not close_series(e, s.data.samples())) {
       return;
@@ -243,23 +265,47 @@ void emit(std::span<const DailyAtStation> stations, Emitter<Flush>& e) {
   e.finish();
 }
 
+std::expected<void, FormatError> check(const core::StationTable& table) {
+  for (const core::SeriesMeta& meta : table.schema()) {
+    if (auto ok = check_text(meta); not ok) {
+      return ok;
+    }
+  }
+  return {};
+}
+
+std::expected<void, FormatError> check(
+    std::span<const DailyAtStation> stations) {
+  for (const DailyAtStation& s : stations) {
+    if (auto ok = check_text(s.data.meta()); not ok) {
+      return ok;
+    }
+  }
+  return {};
+}
+
 template <class Input>
-std::string format_whole(const Input& input) {
-  std::string text;
-  // One chunk: the buffer is the result.
-  auto take = [&text](std::string& buffer) {
-    text = std::move(buffer);
-    buffer.clear();
-    return true;
-  };
-  Emitter e{std::numeric_limits<std::size_t>::max(), take};
-  emit(input, e);
-  return text;
+std::expected<std::string, FormatError> format_whole(const Input& input) {
+  return check(input).transform([&input] {
+    std::string text;
+    // One chunk: the buffer is the result.
+    auto take = [&text](std::string& buffer) {
+      text = std::move(buffer);
+      buffer.clear();
+      return true;
+    };
+    Emitter e{std::numeric_limits<std::size_t>::max(), take};
+    emit(input, e);
+    return text;
+  });
 }
 
 template <class Input>
 std::expected<void, Error> write_chunked(const std::filesystem::path& path,
                                          const Input& input) {
+  if (auto ok = check(input); not ok) {
+    return std::unexpected{Error{std::move(ok).error()}};
+  }
   return write_file_atomic(
       path, [&input](std::ostream& out) -> std::expected<void, FileError> {
         Emitter e{chunk_bytes, [&out](std::string& buffer) {
@@ -275,11 +321,13 @@ std::expected<void, Error> write_chunked(const std::filesystem::path& path,
 
 }  // namespace
 
-std::string format_series_json(const core::StationTable& table) {
+std::expected<std::string, FormatError> format_series_json(
+    const core::StationTable& table) {
   return format_whole(table);
 }
 
-std::string format_series_json(std::span<const DailyAtStation> stations) {
+std::expected<std::string, FormatError> format_series_json(
+    std::span<const DailyAtStation> stations) {
   return format_whole(stations);
 }
 

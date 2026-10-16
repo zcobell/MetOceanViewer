@@ -476,12 +476,12 @@ class Decoder {
       if (not metres) {
         return std::unexpected{metres.error()};
       }
-      const core::Length height =
-          tokens::canonical(core::Length::in(*metres, core::LengthUnit::meter));
-      if (*datum == core::VerticalDatum::msl and
-          height.as(core::LengthUnit::meter) != 0.0) {
+      // MSL is the pivot: exactly 0 as written, not 0 once rounded.
+      if (*datum == core::VerticalDatum::msl and *metres != 0.0) {
         return std::unexpected{fault(ParseErrc::out_of_range, m.value)};
       }
+      const core::Length height =
+          tokens::canonical(core::Length::in(*metres, core::LengthUnit::meter));
       rows.push_back({.datum = *datum, .height = height});
     }
     auto table = core::DatumTable::from_heights(core::VerticalDatum::msl, rows);
@@ -510,11 +510,11 @@ class Decoder {
     }
     std::string name;
     if (const Value* v = json::member(row, "parameter_name")) {
-      auto s = string_of(*v);
-      if (not s) {
-        return std::unexpected{std::move(s).error()};
+      auto t = text_of(*v);
+      if (not t) {
+        return std::unexpected{std::move(t).error()};
       }
-      name = std::string{*s};
+      name = std::string{t->view()};
     }
     bool primary = false;
     if (const Value* v = json::member(row, "primary")) {
@@ -623,11 +623,10 @@ class Decoder {
     }
     note_unknown(station, station_keep, "stations[]");
     // Exactly one provider block: it says which provider's station this is.
-    constexpr std::array<std::string_view, 3> blocks{"coops", "usgs", "ndbc"};
     const Value* block = nullptr;
-    std::size_t which = 0;
-    for (std::size_t i = 0; i < blocks.size(); ++i) {
-      const Value* v = json::member(station, blocks.at(i));
+    std::optional<tokens::CatalogKind> which;
+    for (const tokens::CatalogKind kind : tokens::every_kind) {
+      const Value* v = json::member(station, tokens::block_name(kind));
       if (v == nullptr) {
         continue;
       }
@@ -636,27 +635,14 @@ class Decoder {
             fault(ParseErrc::bad_member, std::max(v->offset, block->offset))};
       }
       block = v;
-      which = i;
+      which = kind;
     }
-    if (block == nullptr) {
+    if (block == nullptr or not which) {
       return std::unexpected{fault(ParseErrc::bad_member, station)};
     }
-    switch (which) {
-      case 0:
-        return entry_of<Coops>(
-            station, *block,
-            [&](const Value& b, std::string_view) { return coops_of(b); });
-      case 1:
-        return entry_of<Usgs>(station, *block,
-                              [&](const Value& b, std::string_view id) {
-                                return usgs_of(b, id);
-                              });
-      default:
-        break;
-    }
-    return entry_of<Ndbc>(
-        station, *block,
-        [&](const Value& b, std::string_view) { return ndbc_of(b); });
+    return std::visit(
+        [&]<class P>(P /*provider*/) { return entry_of<P>(station, *block); },
+        *which);
   }
 
  private:
@@ -675,9 +661,25 @@ class Decoder {
     });
   }
 
-  template <class P, class Caps>
+  // The provider's block (the station id names a USGS station's series
+  // errors).
+  [[nodiscard]] Decoded<core::Capabilities<Coops>> caps_of(
+      Coops /*provider*/, const Value& block, std::string_view /*id*/) {
+    return coops_of(block);
+  }
+  [[nodiscard]] Decoded<core::Capabilities<Usgs>> caps_of(Usgs /*provider*/,
+                                                          const Value& block,
+                                                          std::string_view id) {
+    return usgs_of(block, id);
+  }
+  [[nodiscard]] Decoded<core::Capabilities<Ndbc>> caps_of(
+      Ndbc /*provider*/, const Value& block, std::string_view /*id*/) {
+    return ndbc_of(block);
+  }
+
+  template <class P>
   [[nodiscard]] Decoded<AnyEntry> entry_of(const Value& station,
-                                           const Value& block, Caps caps_of) {
+                                           const Value& block) {
     const auto id_value = required(station, "id");
     if (not id_value) {
       return std::unexpected{id_value.error()};
@@ -705,7 +707,7 @@ class Decoder {
     if (not validity) {
       return std::unexpected{std::move(validity).error()};
     }
-    auto caps = caps_of(block, id->value());
+    auto caps = caps_of(P{}, block, id->value());
     if (not caps) {
       return std::unexpected{std::move(caps).error()};
     }
@@ -824,22 +826,15 @@ std::expected<StationCatalog, Error> make_catalog(
   return StationCatalog{*std::move(catalog)};
 }
 
-// The provider's index among the three blocks (AnyEntry's order).
-std::size_t index_of(core::DataSource s) noexcept {
-  switch (s) {
-    case core::DataSource::noaa_coops:
-      return 0;
-    case core::DataSource::usgs:
-      return 1;
-    default:
-      break;
-  }
-  return 2;
-}
+// One provider's stations decoded so far, and where the first of them is.
+template <class P>
+struct Bucket {
+  std::vector<CatalogEntry<P>> entries;
+  std::optional<std::size_t> first;
+};
 
-// The stations decoded while the body streams by, by provider, with where
-// the first of each provider is, and the first failure (kept for after the
-// format and version are known).
+// The stations decoded while the body streams by, by provider, and the
+// first failure (kept for after the format and version are known).
 class Stations {
  public:
   // Decodes one element of the stations array; an error only past the
@@ -861,13 +856,12 @@ class Stations {
       fault_ = std::move(entry).error();
       return {};
     }
-    auto& first = first_offset_.at(entry->index());
-    first = first.value_or(element.offset);
     std::visit(
-        core::Overloaded{
-            [&](CatalogEntry<Coops>& e) { coops_.push_back(std::move(e)); },
-            [&](CatalogEntry<Usgs>& e) { usgs_.push_back(std::move(e)); },
-            [&](CatalogEntry<Ndbc>& e) { ndbc_.push_back(std::move(e)); }},
+        [&]<class P>(CatalogEntry<P>& e) {
+          auto& bucket = std::get<Bucket<P>>(buckets_);
+          bucket.first = bucket.first.value_or(element.offset);
+          bucket.entries.push_back(std::move(e));
+        },
         *entry);
     return {};
   }
@@ -876,38 +870,36 @@ class Stations {
     return fault_;
   }
 
-  // Where the first station of a provider other than `provider` is.
+  // Where the first station of a provider other than `kind`'s is.
   [[nodiscard]] std::optional<std::size_t> first_of_another(
-      core::DataSource provider) const {
-    std::optional<std::size_t> first;
-    for (std::size_t i = 0; i < first_offset_.size(); ++i) {
-      const std::optional<std::size_t>& at = first_offset_.at(i);
-      if (i != index_of(provider) and at) {
-        first = std::min(first.value_or(*at), *at);
-      }
-    }
-    return first;
+      tokens::CatalogKind kind) const {
+    return std::visit(
+        [this]<class P>(P /*provider*/) {
+          std::optional<std::size_t> first;
+          const auto take = [&first]<class Q>(const Bucket<Q>& bucket) {
+            if (not std::is_same_v<Q, P> and bucket.first) {
+              first = std::min(first.value_or(*bucket.first), *bucket.first);
+            }
+          };
+          std::apply([&take](const auto&... b) { (take(b), ...); }, buckets_);
+          return first;
+        },
+        kind);
   }
 
-  // The catalog of the provider's stations.
+  // The catalog of `kind`'s stations.
   [[nodiscard]] std::expected<StationCatalog, Error> catalog(
-      core::DataSource provider, CatalogHeader header) && {
-    switch (index_of(provider)) {
-      case 0:
-        return make_catalog(std::move(header), std::move(coops_));
-      case 1:
-        return make_catalog(std::move(header), std::move(usgs_));
-      default:
-        break;
-    }
-    return make_catalog(std::move(header), std::move(ndbc_));
+      tokens::CatalogKind kind, CatalogHeader header) && {
+    return std::visit(
+        [&]<class P>(P /*provider*/) {
+          return make_catalog(std::move(header),
+                              std::move(std::get<Bucket<P>>(buckets_).entries));
+        },
+        kind);
   }
 
  private:
-  std::vector<CatalogEntry<Coops>> coops_;
-  std::vector<CatalogEntry<Usgs>> usgs_;
-  std::vector<CatalogEntry<Ndbc>> ndbc_;
-  std::array<std::optional<std::size_t>, 3> first_offset_{};
+  std::tuple<Bucket<Coops>, Bucket<Usgs>, Bucket<Ndbc>> buckets_;
   std::optional<Fault> fault_;
   std::size_t elements_ = 0;
 };
@@ -942,17 +934,16 @@ std::expected<Version, Error> identify(const Value& root) {
 }
 
 // The provider the file names: one of the three catalog providers.
-Decoded<core::DataSource> provider_of(Decoder& d, const Value& root) {
+Decoded<tokens::CatalogKind> provider_of(Decoder& d, const Value& root) {
   return d.required(root, "provider").and_then([&](const Value* v) {
     return d.string_of(*v).and_then(
-        [&](std::string_view s) -> Decoded<core::DataSource> {
+        [&](std::string_view s) -> Decoded<tokens::CatalogKind> {
           const auto source = core::parse_data_source(s);
-          if (not source or (*source != core::DataSource::noaa_coops and
-                             *source != core::DataSource::usgs and
-                             *source != core::DataSource::ndbc)) {
+          const auto kind = source ? tokens::kind_of(*source) : std::nullopt;
+          if (not kind) {
             return std::unexpected{d.fault(ParseErrc::bad_member, *v)};
           }
-          return *source;
+          return *kind;
         });
   });
 }
@@ -999,7 +990,7 @@ Decoded<CatalogHeader> header_of(Decoder& d, const Value& root) {
 // another provider, and (unless the file is of a newer minor) the first
 // unknown member or token.
 struct Header {
-  core::DataSource provider;
+  tokens::CatalogKind provider;
   CatalogHeader header;
 };
 

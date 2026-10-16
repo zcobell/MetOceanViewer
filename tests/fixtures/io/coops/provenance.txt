@@ -98,3 +98,13 @@ differ from the response; "count" still gives the full list's size):
                              M stations.json?type=tidepredictions: 1610367
                              (type S), 1612340, 8218617 (integer lat),
                              8729840, TEC1603 (not a CO-OPS id) (of 3502)
+
+Overlapping lists, recorded 2026-10-16 03:32Z and trimmed as above (252 of
+the 302 water-level and 314 met stations are in both lists; on that day
+their names, positions and dates agreed in every one):
+  stations_waterlevels_overlap.json
+                             M stations.json?type=waterlevels
+                             &expand=details,sensors: 8447435 (water level
+                             only), 8518750, 8729840, 9063020
+  stations_met_overlap.json  M stations.json?type=met&expand=details,sensors:
+                             8444069 (met only), 8518750, 8729840, 9063020

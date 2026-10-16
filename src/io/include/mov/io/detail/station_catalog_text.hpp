@@ -13,15 +13,70 @@
 #include <cstddef>
 #include <optional>
 #include <string_view>
+#include <tuple>
+#include <variant>
 
 #include "mov/core/datum.hpp"
 #include "mov/core/geo.hpp"
 #include "mov/core/provider/capabilities.hpp"
 #include "mov/core/provider/coops.hpp"
+#include "mov/core/station.hpp"
 #include "mov/core/units.hpp"
 #include "mov/io/detail/json_write.hpp"
 
 namespace mov::io::detail::catalog {
+
+// ---- the providers a catalog can hold
+// ---------------------------------------
+
+/// Which provider's catalog or station: one alternative per CatalogProvider,
+/// in the order of StationCatalog. Dispatch is by visit, never by index.
+using CatalogKind = std::variant<core::provider::Coops, core::provider::Usgs,
+                                 core::provider::Ndbc>;
+
+/// The member name of a provider's station block, the one table of them.
+template <class P>
+struct BlockName {
+  std::string_view name;
+};
+inline constexpr std::tuple block_names{
+    BlockName<core::provider::Coops>{.name = "coops"},
+    BlockName<core::provider::Usgs>{.name = "usgs"},
+    BlockName<core::provider::Ndbc>{.name = "ndbc"}};
+
+template <class P>
+[[nodiscard]] constexpr std::string_view block_name() noexcept {
+  return std::get<BlockName<P>>(block_names).name;
+}
+
+[[nodiscard]] constexpr std::string_view block_name(CatalogKind kind) noexcept {
+  return std::visit([]<class P>(P /*provider*/) { return block_name<P>(); },
+                    kind);
+}
+
+[[nodiscard]] constexpr core::DataSource source_of(CatalogKind kind) noexcept {
+  return std::visit([]<class P>(P /*provider*/) { return P::source; }, kind);
+}
+
+/// Every kind, in CatalogKind's order.
+inline constexpr std::array<CatalogKind, 3> every_kind{
+    CatalogKind{core::provider::Coops{}}, CatalogKind{core::provider::Usgs{}},
+    CatalogKind{core::provider::Ndbc{}}};
+
+/// The kind whose provider is `source`, or nullopt (a source with no
+/// catalog: harmonics, model output, user files).
+[[nodiscard]] constexpr std::optional<CatalogKind> kind_of(
+    core::DataSource source) noexcept {
+  const auto kind = std::ranges::find(
+      every_kind, source, [](CatalogKind k) { return source_of(k); });
+  if (kind == every_kind.end()) {
+    return std::nullopt;
+  }
+  return *kind;
+}
+
+// ---- values
+// -------------------------------------------------------------------
 
 /// Decimals of what a file holds: positions in degrees, heights in metres.
 inline constexpr int position_decimals = 6;

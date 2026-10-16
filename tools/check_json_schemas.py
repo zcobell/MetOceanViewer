@@ -60,7 +60,8 @@ def catalog_cases() -> list[tuple[str, str]]:
         if not line.strip() or line.startswith("#"):
             continue
         words = line.split()
-        out.append((words[0], words[2]))
+        # A line without its three words has no verdict: reported as such.
+        out.append((words[0], words[2] if len(words) >= 3 else "<missing>"))
     return out
 
 

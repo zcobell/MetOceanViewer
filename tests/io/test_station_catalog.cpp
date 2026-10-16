@@ -157,8 +157,29 @@ TEST_CASE("a refresh with fewer than half the stations is refused",
     if (verdict) {
       CHECK(*verdict == refreshed);
     } else {
-      CHECK(verdict.error() == io::TooFewStations{.current = row.current,
-                                                  .refreshed = row.refreshed});
+      CHECK(verdict.error() ==
+            io::RefreshRefused{io::TooFewStations{.current = row.current,
+                                                  .refreshed = row.refreshed}});
     }
   }
+}
+
+TEST_CASE("a refresh not generated after the current catalog is refused",
+          "[io][catalog]") {
+  const auto current = stations(10, utc(2026, 10, 15));
+  for (const auto when : {utc(2026, 10, 15), utc(2026, 10, 14)}) {
+    // Even with more stations: the newer catalog is the one in use.
+    const auto verdict = io::accept_refresh(current, stations(20, when));
+    REQUIRE(not verdict.has_value());
+    CHECK(verdict.error() ==
+          io::RefreshRefused{
+              io::NotNewer{.current = utc(2026, 10, 15), .refreshed = when}});
+  }
+  // Not newer and too few: not newer is reported.
+  const auto both = io::accept_refresh(current, stations(1, utc(2026, 10, 1)));
+  REQUIRE(not both.has_value());
+  CHECK(std::holds_alternative<io::NotNewer>(both.error()));
+  CHECK(io::accept_refresh(
+            current, stations(10, utc(2026, 10, 15) + std::chrono::seconds{1}))
+            .has_value());
 }

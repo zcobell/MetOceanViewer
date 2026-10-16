@@ -35,16 +35,23 @@ using CatalogEntry = io::CatalogEntry<core::provider::Coops>;
 /// - its capabilities are the union of its records (`observed`, `met`,
 ///   `air_gap`, and the datums a list tells: IGLD85 at a Great Lakes
 ///   station);
-/// - its GaugeStation (name, position, validity) is the first record's, in
-///   the order water level, met, air gap; a later record that differs is
-///   counted in a `station_lists_disagree` warning naming the station (one
-///   per station, in id order, the count its differing records);
+/// - its name and position are the first record's, in the order water
+///   level, met, air gap; a later record whose name or position as a catalog
+///   holds it (rounded, docs/station-catalog.md section 7) differs makes the
+///   station one that disagrees;
+/// - its validity is the join of its records' (the earliest first day, the
+///   latest last one, ongoing when any record is);
 /// - its predictions are its type in the tide-prediction list: harmonic
 ///   `any_interval`, subordinate `hilo_only`, absent `none`. A station listed
-///   twice there with different types keeps the first and is counted as a
-///   disagreement too. Prediction stations in no other list are not
-///   catalog stations (most are subordinate stations without a gauge).
-/// The entries come back sorted by id.
+///   twice there with different types keeps the first and disagrees too.
+///   Prediction stations in no other list are not catalog stations (most
+///   are subordinate stations without a gauge).
+/// A station that offers nothing (no active water-level, met or air-gap
+/// sensor, and no predictions) is left out: decision 6, active stations
+/// only. Warnings: one `station_lists_disagree` (subject the smallest id that
+/// disagrees, count the stations), one `station_skipped` (subject
+/// `no_active_sensor`, count the stations left out). The entries come back
+/// sorted by id.
 [[nodiscard]] Read<std::vector<CatalogEntry>> merge_station_lists(
     const CatalogLists& lists);
 

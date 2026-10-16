@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/zcobell/MetOceanViewer/master/docs/schemas/series-v1.schema.json",
   "title": "Series JSON, format metoceanviewer-series 1.0",
-  "description": "Normative structure of docs/series-json.md, version 1.x (this schema describes 1.0 in full; its version pattern accepts every 1.x). Rules the schema cannot express (arrays of one series of equal length, times increasing, a status per sample consistent with its value) are in that document, section 5.",
+  "description": "Normative structure of docs/series-json.md, version 1.x (this schema describes 1.0 in full; its version pattern accepts every 1.x). Rules the schema cannot express (a station's time axis and its series' arrays of equal length, times increasing, a status per sample consistent with its value) are in that document, section 5.",
   "type": "object",
   "required": [
     "format",
@@ -80,13 +80,69 @@
           "minimum": -90,
           "maximum": 90
         },
+        "time": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^-?[0-9]{4,}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+          }
+        },
+        "date": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^-?[0-9]{4,}-[0-9]{2}-[0-9]{2}$"
+          }
+        },
         "series": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/series"
           }
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "time"
+          ],
+          "not": {
+            "required": [
+              "date"
+            ]
+          },
+          "properties": {
+            "series": {
+              "items": {
+                "not": {
+                  "required": [
+                    "statistic"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "required": [
+            "date"
+          ],
+          "not": {
+            "required": [
+              "time"
+            ]
+          },
+          "properties": {
+            "series": {
+              "items": {
+                "required": [
+                  "statistic"
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
     "series": {
       "type": "object",
@@ -126,20 +182,6 @@
           "type": "string",
           "pattern": "^[0-9]{5}$"
         },
-        "time": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^-?[0-9]{4,}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
-          }
-        },
-        "date": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^-?[0-9]{4,}-[0-9]{2}-[0-9]{2}$"
-          }
-        },
         "value": {
           "type": "array",
           "items": {
@@ -159,39 +201,7 @@
             ]
           }
         }
-      },
-      "oneOf": [
-        {
-          "required": [
-            "time"
-          ],
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "date"
-                ]
-              },
-              {
-                "required": [
-                  "statistic"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "date",
-            "statistic"
-          ],
-          "not": {
-            "required": [
-              "time"
-            ]
-          }
-        }
-      ]
+      }
     }
   }
 }

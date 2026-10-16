@@ -71,6 +71,10 @@ TEST_CASE("fixed numbers are rounded and printed without trailing zeros",
   CHECK(fixed(-0.0000001, 6) == "0");
   CHECK(fixed(1e300, 4).size() == 301);
   CHECK(fixed(123.0, 0) == "123");
+  // Ties go to even on the exact binary value: both are exact in binary.
+  CHECK(fixed(0.0078125, 6) == "0.007812");
+  CHECK(fixed(0.0234375, 6) == "0.023438");
+  CHECK(fixed(-0.0078125, 6) == "-0.007812");
 
   CHECK(jt::rounded(0.19500000000000028, 4) == 0.195);
   CHECK(jt::rounded(-0.0000001, 6) == 0.0);
@@ -174,4 +178,14 @@ TEST_CASE("unknown_names keeps the members a Keep does not name, by name",
   REQUIRE(only.has_value());
   REQUIRE(json::as_object(only->root)->size() == 1);
   CHECK(json::as_object(only->root)->front().name == "x");
+
+  // At most max_unknown of them per object: past it, too_large there.
+  static constexpr json::Keep two{.unknown_names = true, .max_unknown = 2};
+  CHECK(
+      json::parse(R"({"x":1,"y":2})", two, mov::io::ReadContext{}).has_value());
+  const auto three =
+      json::parse(R"({"x":1,"y":2,"z":3})", two, mov::io::ReadContext{});
+  const auto& error = mov::test::parse_error_in(three);
+  CHECK(error.code() == mov::io::ParseErrc::too_large);
+  CHECK(error.column() == 0);
 }

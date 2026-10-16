@@ -69,8 +69,12 @@ Chosen<P> choose_catalog(
 }
 
 template <CatalogProvider P>
-std::expected<Catalog<P>, TooFewStations> accept_refresh(
+std::expected<Catalog<P>, RefreshRefused> accept_refresh(
     const Catalog<P>& current, Catalog<P> refreshed) {
+  if (refreshed.header().generated <= current.header().generated) {
+    return std::unexpected{NotNewer{.current = current.header().generated,
+                                    .refreshed = refreshed.header().generated}};
+  }
   // At least half, rounded up, without forming 2 * size.
   const std::size_t half = (current.size() / 2) + (current.size() % 2);
   if (refreshed.size() < half) {
@@ -95,13 +99,13 @@ template Chosen<core::provider::Ndbc> choose_catalog(
     Catalog<core::provider::Ndbc>,
     std::optional<Catalog<core::provider::Ndbc>>);
 
-template std::expected<Catalog<core::provider::Coops>, TooFewStations>
+template std::expected<Catalog<core::provider::Coops>, RefreshRefused>
 accept_refresh(const Catalog<core::provider::Coops>&,
                Catalog<core::provider::Coops>);
-template std::expected<Catalog<core::provider::Usgs>, TooFewStations>
+template std::expected<Catalog<core::provider::Usgs>, RefreshRefused>
 accept_refresh(const Catalog<core::provider::Usgs>&,
                Catalog<core::provider::Usgs>);
-template std::expected<Catalog<core::provider::Ndbc>, TooFewStations>
+template std::expected<Catalog<core::provider::Ndbc>, RefreshRefused>
 accept_refresh(const Catalog<core::provider::Ndbc>&,
                Catalog<core::provider::Ndbc>);
 

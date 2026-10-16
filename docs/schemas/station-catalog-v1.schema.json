@@ -393,7 +393,7 @@
           "pattern": "^[0-9]{5}$"
         },
         "parameter_name": {
-          "type": "string"
+          "$ref": "#/$defs/text"
         },
         "primary": {
           "type": "boolean"

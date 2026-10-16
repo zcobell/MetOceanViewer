@@ -323,7 +323,15 @@ mov_add_test(
 # tests/fixtures/io/series_json/.
 mov_add_test(mov_io_series_json_tests SOURCES test_series_json.cpp LIBRARIES mov::io)
 target_compile_definitions(mov_io_catalog_tests PRIVATE MOV_TEST_REPO_DIR="${PROJECT_SOURCE_DIR}")
-mov_add_fuzz_test(fuzz_station_catalog SOURCES fuzz_station_catalog.cpp LIBRARIES mov::io CORPUS io/station_catalog)
+# Inputs up to 1 MiB, so the size limits and the unknown-member bound are
+# reached.
+mov_add_fuzz_test(
+    fuzz_station_catalog
+    SOURCES fuzz_station_catalog.cpp
+    LIBRARIES mov::io
+    CORPUS io/station_catalog
+    MAX_LEN 1048576
+)
 
 # The JSON Schema half of the station catalog and the series JSON
 # (tools/check_json_schemas.py: the schemas, the fixtures' schema verdicts,

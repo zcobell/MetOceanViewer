@@ -3,9 +3,11 @@
 
 // detail::json::parse: nlohmann's lexer and parser with a SAX handler that
 // builds only what a Keep schema names (mov/io/detail/json.hpp). Nothing here
-// scans a container: every event costs O(1) plus the value it builds, so a
-// parse is linear in the body. (nlohmann's own callback parser erases
-// discarded elements by scanning their container, which is quadratic.)
+// scans a container of the body's choosing: every event costs O(1) plus the
+// value it builds (a key is compared with the members kept so far, which its
+// Keep bounds: its fields and max_unknown), so a parse is linear in the body.
+// (nlohmann's own callback parser erases discarded elements by scanning their
+// container, which is quadratic.)
 
 #include <algorithm>
 #include <cstddef>
@@ -128,7 +130,9 @@ struct Frame {
   const Field* pending = nullptr;
   std::size_t key_offset = 0;
   bool repeated = false;
-  // The name of the pending member when it is unknown_field.
+  // Members kept by name (Keep::unknown_names), and the name of the pending
+  // one when it is unknown_field.
+  std::size_t unknown = 0;
   std::string unknown_key{};
 };
 
@@ -207,6 +211,13 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
           std::ranges::find(members, val, &Member::name) != members.end();
     }
     if (field == top.keep->fields.end()) {
+      if (++top.unknown > top.keep->max_unknown) {
+        fail(Error{ParseError::make(
+            ParseErrc::too_large, where_of(body_, top.offset),
+            std::to_string(top.unknown) + " unknown members, limit " +
+                std::to_string(top.keep->max_unknown))});
+        return false;
+      }
       top.unknown_key = val;
       top.pending = &unknown_field;
     } else {
@@ -397,10 +408,11 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
     if (not tick()) {
       return false;
     }
-    const Frame closed = frames_.back();
+    const bool repeated = frames_.back().repeated;
+    const std::size_t offset = frames_.back().offset;
     frames_.pop_back();
-    if (closed.repeated) {
-      fail(error_at(ParseErrc::bad_member, body_, closed.offset));
+    if (repeated) {
+      fail(error_at(ParseErrc::bad_member, body_, offset));
       return false;
     }
     return hand_over_if_element();

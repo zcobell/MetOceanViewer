@@ -17,10 +17,10 @@ The keywords MUST, SHOULD and MAY are used in the RFC 2119 sense.
 | # | Choice | Why (short) |
 |---|---|---|
 | J1 | UTF-8 JSON (RFC 8259); `format` = `"metoceanviewer-series"`, `version` = `"<major>.<minor>"` as the station catalog (`docs/station-catalog.md` §9). | One versioning rule for the project's JSON formats. |
-| J2 | A station holds its series; a series holds parallel arrays `time` and `value` (and `status` when needed). | One line of JavaScript or pandas per series; no object per sample. |
+| J2 | A station holds its time axis once (`time`) and its series; a series holds the array `value` parallel to it (and `status` when needed). | One line of JavaScript or pandas per series; no object per sample; and the axis is written once per station, as `StationTable` pools it, not once per column (§4). |
 | J3 | A Missing or Dry sample is `null` in `value`; `status` says which, and is written only when a series has a Dry sample. | Missing is the common case and needs no second array; Dry (model output) must not be mistaken for a gap (plan decision 16). |
 | J4 | Times are UTC text with milliseconds, `YYYY-MM-DDThh:mm:ss.sssZ`; values are the shortest decimal text that reads back as the same double. | Exact: a reader gets back the series bit for bit. |
-| J5 | Daily values (decision 34) have `date` (the station's local calendar day) and `statistic` in place of `time`. | A daily value belongs to a day, not an instant (`core::DailySeries`). |
+| J5 | A station of daily values (decision 34) has `date` (its local calendar days) in place of `time`, and its series a `statistic`. | A daily value belongs to a day, not an instant (`core::DailySeries`). |
 | J6 | Units are udunits text, quantities and datums the station netCDF tokens. | The same vocabulary as the station netCDF format (SN §6, §10.2). |
 
 ---
@@ -51,6 +51,8 @@ unique member names, text without U+0000 (control characters escaped), decimal n
 | `name` | text | yes | The station's name; may be empty. |
 | `provider` | token | no | Where the data came from: a station netCDF `station_provider` token (`noaa_coops`, `usgs`, `ndbc`, `harmonics`, `adcirc`, `dflowfm`, `user`); absent when unknown. |
 | `lon`, `lat` | number | yes | WGS 84 degrees, `lon` in (−180, 180], `lat` in [−90, 90]. |
+| `time` | array of strings | instantaneous | The station's time axis, shared by its series: UTC instants, `YYYY-MM-DDThh:mm:ss.sssZ`. |
+| `date` | array of strings | daily | The station's calendar days, `YYYY-MM-DD`. |
 | `series` | array | yes | The station's series. |
 
 | Series member | Type | Req. | Meaning |
@@ -60,18 +62,23 @@ unique member names, text without U+0000 (control characters escaped), decimal n
 | `unit` | text | no | udunits text (`m`, `m s-1`, `ft3 s-1`); absent when the series has no unit. |
 | `datum` | token | no | The vertical datum token (`MLLW`, `NAVD88`, …; SN §10.2); absent when none applies. |
 | `statistic` | string | daily | The USGS statistic code of daily values (`00003` mean, `00001` maximum, `00002` minimum). |
-| `time` | array of strings | instantaneous | UTC instants, `YYYY-MM-DDThh:mm:ss.sssZ`. |
-| `date` | array of strings | daily | Calendar days, `YYYY-MM-DD`. |
-| `value` | array | yes | A number per sample, or `null` for a Missing or Dry one. |
+| `value` | array | yes | A number per time (or date) of the station, or `null` for a Missing or Dry sample. |
 | `status` | array of tokens | no | Per sample `value`, `missing` or `dry`; written only when a sample is Dry. |
 
-A series has `time`, or `date` and `statistic`, never both.
+A station has `time`, or `date`, never both; the series of a station with `date` have a
+`statistic`, the others none.
+
+Writing the axis once per station is what the in-memory table does (`StationTable` pools
+its axes): a time costs 27 bytes of text (`"2026-10-01T00:06:00.000Z",`), so a station
+with k series saves 27 × (k − 1) bytes per time over a time array per series. For NDBC's
+13 standard met columns that is about 324 bytes per row.
 
 ---
 
 ## 5. Rules the schema cannot express
 
-- `time` (or `date`), `value` and `status` of one series have the same length.
+- A station's `time` (or `date`) and each of its series' `value` and `status` have the same
+  length.
 - Times are strictly increasing, and so are dates.
 - `status` is `value` exactly where `value` is a number.
 - Years outside 0000–9999 are written with as many digits as they need, a negative one with a
@@ -107,8 +114,8 @@ which the tests write byte for byte and `tools/check_json_schemas.py` validates.
 ```json
 {"format":"metoceanviewer-series","version":"1.0",
  "stations":[
-{"id":"8729840","name":"Pensacola","provider":"noaa_coops","lon":-87.2112,"lat":30.4044,"series":[{"quantity":"water_level","label":"Water level","unit":"m","datum":"MLLW","time":["2026-10-01T00:00:00.000Z","2026-10-01T00:06:00.000Z","2026-10-01T00:12:00.000Z"],"value":[0.123,null,-1e-07]},{"quantity":"wind_speed","unit":"m s-1","time":["2026-10-01T00:00:00.000Z","2026-10-01T00:06:00.000Z","2026-10-01T00:12:00.000Z"],"value":[3.6,4,null]}]},
-{"id":"model 1","name":"Grid \"point\"\n","lon":-89.5,"lat":29,"series":[{"quantity":"water_level","label":"Water level","unit":"m","datum":"MLLW","time":["1969-12-31T23:59:59.005Z","2026-10-01T00:00:00.000Z"],"value":[null,2.5],"status":["dry","value"]},{"quantity":"wind_speed","unit":"m s-1","time":["1969-12-31T23:59:59.005Z","2026-10-01T00:00:00.000Z"],"value":[null,null]}]}
+{"id":"8729840","name":"Pensacola","provider":"noaa_coops","lon":-87.2112,"lat":30.4044,"time":["2026-10-01T00:00:00.000Z","2026-10-01T00:06:00.000Z","2026-10-01T00:12:00.000Z"],"series":[{"quantity":"water_level","label":"Water level","unit":"m","datum":"MLLW","value":[0.123,null,-1e-07]},{"quantity":"wind_speed","unit":"m s-1","value":[3.6,4,null]}]},
+{"id":"model 1","name":"Grid \"point\"\n","lon":-89.5,"lat":29,"time":["1969-12-31T23:59:59.005Z","2026-10-01T00:00:00.000Z"],"series":[{"quantity":"water_level","label":"Water level","unit":"m","datum":"MLLW","value":[null,2.5],"status":["dry","value"]},{"quantity":"wind_speed","unit":"m s-1","value":[null,null]}]}
 ]}
 ```
 
@@ -117,6 +124,6 @@ Daily values (`daily.json`):
 ```json
 {"format":"metoceanviewer-series","version":"1.0",
  "stations":[
-{"id":"USGS-07010000","name":"MISSISSIPPI RIVER AT ST. LOUIS, MO","provider":"usgs","lon":-90.1796,"lat":38.629,"series":[{"quantity":"discharge","label":"Discharge, cubic feet per second","unit":"ft3 s-1","statistic":"00003","date":["2026-09-30","2026-10-01","2026-10-02"],"value":[512000,null,498000.5]}]}
+{"id":"USGS-07010000","name":"MISSISSIPPI RIVER AT ST. LOUIS, MO","provider":"usgs","lon":-90.1796,"lat":38.629,"date":["2026-09-30","2026-10-01","2026-10-02"],"series":[{"quantity":"discharge","label":"Discharge, cubic feet per second","unit":"ft3 s-1","statistic":"00003","value":[512000,null,498000.5]}]}
 ]}
 ```

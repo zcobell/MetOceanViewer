@@ -54,11 +54,12 @@ wc::StationDatums datums(std::string_view name) {
   return r->value;
 }
 
+// A station with an active 6-minute water-level sensor.
 wc::StationRecord record(std::string_view id, std::string_view name, double lat,
                          double lon) {
   const auto e = cat::entry<Coops>(id, name, lat, lon);
   return wc::StationRecord{.station = e.station,
-                           .observed = {},
+                           .observed = {cc::Observed::six_minute},
                            .met = {},
                            .air_gap = false,
                            .datums = {}};
@@ -88,7 +89,12 @@ mov::io::CoopsCatalog recorded_catalog() {
          REQUIRE(r.has_value());
          return std::move(r->value);
        }()});
-  CHECK(merged.warnings.empty());
+  // 8767931 (an air-gap bridge whose sensor is inactive) and 9435373 (a met
+  // station without sensors) offer nothing.
+  CHECK(merged.warnings ==
+        std::vector<Warning>{{.code = WarningCode::station_skipped,
+                              .subject = "no_active_sensor",
+                              .count = 2}});
   std::vector<wc::CatalogEntry> entries;
   for (wc::CatalogEntry& e : merged.value) {
     const std::string_view id = e.station.id.value();
@@ -124,7 +130,10 @@ mov::io::CoopsCatalog recorded_catalog() {
 TEST_CASE("the recorded station lists make the golden CO-OPS catalog",
           "[io][catalog][coops]") {
   const mov::io::CoopsCatalog catalog = recorded_catalog();
-  REQUIRE(catalog.size() == 11);  // 4 water level, 5 met, 2 air gap
+  // 4 water level, 5 met, 2 air gap, less 2 that offer nothing.
+  REQUIRE(catalog.size() == 9);
+  CHECK(catalog.find(cat::id_of<Coops>("8767931")) == nullptr);
+  CHECK(catalog.find(cat::id_of<Coops>("9435373")) == nullptr);
 
   const auto& pensacola = *catalog.find(cat::id_of<Coops>("8729840"));
   CHECK(pensacola.caps.predictions == cc::Predictions::any_interval);
@@ -181,7 +190,10 @@ TEST_CASE("a station in several lists is one entry with the union of them",
           "[io][catalog][coops]") {
   wc::StationRecord level = record("8729840", "Pensacola", 30.4044, -87.2112);
   level.observed = {cc::Observed::six_minute, cc::Observed::hourly};
+  level.station.validity = cat::valid(cat::day(1923, 4, 30));
   wc::StationRecord met = level;
+  met.station.validity =
+      cat::valid(cat::day(1950, 1, 1), cat::day(2000, 12, 31));
   met.observed = {};
   met.met = {cc::Met::wind, cc::Met::air_pressure};
   wc::StationRecord gap = level;
@@ -200,6 +212,85 @@ TEST_CASE("a station in several lists is one entry with the union of them",
   CHECK(caps.met == cc::MetSet{cc::Met::wind, cc::Met::air_pressure});
   CHECK(caps.air_gap);
   CHECK(caps.datums_offered == cc::DatumSet{cc::Datum::igld85});
+  // Ongoing in one list: ongoing; first reported in 1923 in another.
+  CHECK(merged.value.front().station.validity ==
+        cat::valid(cat::day(1923, 4, 30)));
+}
+
+TEST_CASE("validity across lists is the join of the records' ranges",
+          "[io][catalog][coops]") {
+  wc::StationRecord a = record("8729840", "Pensacola", 30.4044, -87.2112);
+  a.station.validity = cat::valid(cat::day(1950, 1, 1), cat::day(1990, 1, 1));
+  wc::StationRecord b = a;
+  b.station.validity = cat::valid(cat::day(1923, 4, 30), cat::day(1960, 1, 1));
+  wc::StationRecord c = a;
+  c.station.validity = cat::valid(std::nullopt, cat::day(2001, 2, 3));
+  const auto merged = wc::merge_station_lists(
+      {.water_levels = {a}, .met = {b}, .air_gap = {c}});
+  CHECK(merged.warnings.empty());
+  REQUIRE(merged.value.size() == 1);
+  CHECK(merged.value.front().station.validity ==
+        cat::valid(cat::day(1923, 4, 30), cat::day(2001, 2, 3)));
+}
+
+TEST_CASE("positions are compared as a catalog holds them",
+          "[io][catalog][coops]") {
+  const auto a = record("8729840", "Pensacola", 30.4044, -87.2112);
+  // Digits past 1e-6 degrees: the same position in a catalog.
+  const auto b = record("8729840", "Pensacola", 30.40440004, -87.21120003);
+  const auto merged =
+      wc::merge_station_lists({.water_levels = {a}, .met = {b}});
+  CHECK(merged.warnings.empty());
+  REQUIRE(merged.value.size() == 1);
+  CHECK(merged.value.front().station == a.station);
+}
+
+TEST_CASE("a station that offers nothing is left out and counted",
+          "[io][catalog][coops]") {
+  wc::StationRecord idle = record("8767931", "Lake Charles", 30.2, -93.28);
+  idle.observed = {};
+  wc::StationRecord predicted = record("1612340", "Honolulu", 21.3, -157.86);
+  predicted.observed = {};
+  wc::StationRecord idle_met = record("9435373", "McLean Point", 44.6, -124.0);
+  idle_met.observed = {};
+  const auto merged = wc::merge_station_lists(
+      {.water_levels = {predicted},
+       .met = {idle_met},
+       .air_gap = {idle},
+       .tide_predictions = {{.id = cat::id_of<Coops>("1612340"),
+                             .type = wc::PredictionType::harmonic}}});
+  // Predictions alone are something to offer.
+  REQUIRE(merged.value.size() == 1);
+  CHECK(merged.value.front().station.id.value() == "1612340");
+  CHECK(merged.warnings ==
+        std::vector<Warning>{{.code = WarningCode::station_skipped,
+                              .subject = "no_active_sensor",
+                              .count = 2}});
+}
+
+TEST_CASE("the recorded overlapping lists merge without a disagreement",
+          "[io][catalog][coops]") {
+  const auto levels = list("stations_waterlevels_overlap.json");
+  const auto met = list("stations_met_overlap.json");
+  const auto merged =
+      wc::merge_station_lists({.water_levels = levels, .met = met});
+  CHECK(merged.warnings.empty());
+  REQUIRE(merged.value.size() == 5);  // 3 in both, 1 in each alone
+  const auto& battery = find(merged.value, "8518750");
+  const auto& level = [&]() -> const wc::StationRecord& {
+    for (const wc::StationRecord& r : levels) {
+      if (r.station.id.value() == "8518750") {
+        return r;
+      }
+    }
+    FAIL("8518750 is not in the water-level list");
+    return levels.front();
+  }();
+  CHECK(battery.station.name == level.station.name);
+  CHECK(not battery.caps.observed.empty());
+  CHECK(not battery.caps.met.empty());
+  CHECK(not find(merged.value, "8447435").caps.observed.empty());
+  CHECK(not find(merged.value, "8444069").caps.met.empty());
 }
 
 TEST_CASE("the first list's station is kept and a later difference is warned",
@@ -210,20 +301,28 @@ TEST_CASE("the first list's station is kept and a later difference is warned",
   met.met = {cc::Met::wind};
   wc::StationRecord moved = record("8729840", "Pensacola", 30.5, -87.2112);
   moved.air_gap = true;
-  const wc::StationRecord other = record("8518750", "The Battery", 40.7, -74.0);
+  const wc::StationRecord battery =
+      record("8518750", "The Battery", 40.7, -74.0);
+  const wc::StationRecord battery_met =
+      record("8518750", "The Battery, NY", 40.7, -74.0);
+  const wc::StationRecord other =
+      record("9414290", "San Francisco", 37.8, -122.5);
 
-  const auto merged = wc::merge_station_lists(
-      {.water_levels = {level, other}, .met = {met}, .air_gap = {moved}});
-  REQUIRE(merged.value.size() == 2);
+  const auto merged =
+      wc::merge_station_lists({.water_levels = {level, battery, other},
+                               .met = {met, battery_met},
+                               .air_gap = {moved}});
+  REQUIRE(merged.value.size() == 3);
   // Sorted by id.
   CHECK(merged.value.at(0).station.id.value() == "8518750");
   const auto& kept = merged.value.at(1);
   CHECK(kept.station == level.station);
   CHECK(kept.caps.met == cc::MetSet{cc::Met::wind});
   CHECK(kept.caps.air_gap);
+  // One warning: the first station that disagrees, and how many do.
   CHECK(merged.warnings ==
         std::vector<Warning>{{.code = WarningCode::station_lists_disagree,
-                              .subject = "8729840",
+                              .subject = "8518750",
                               .count = 2}});
 }
 

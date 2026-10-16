@@ -132,7 +132,7 @@ Each series:
 | `id` | string | yes | The time series id: 32 lower-case hexadecimal digits. Unique within the site. |
 | `parameter` | string | yes | The parameter code: five digits. |
 | `statistic` | string | yes | The statistic code: five digits (`00011` instantaneous). |
-| `parameter_name` | string | no | USGS's name of the parameter; absent when empty. |
+| `parameter_name` | text | no | USGS's name of the parameter; absent when empty. |
 | `primary` | boolean | no | The site's Primary series of its parameter and statistic; at most one per pair. Absent is `false`. |
 | `unit` | string | no | The unit as udunits text (`ft`, `ft3 s-1`): what `core::parse_unit` reads back as the same unit. Not blank. |
 | `first`, `last` | date | no | The series' period, as for a station. |
@@ -174,7 +174,8 @@ then always gives the same bytes:
 
 What a catalog in memory can hold but the format cannot is refused before anything is
 written (`format_station_catalog`): a date or time outside the years 0000–9999
-(`time_out_of_range`), a series' parameter name that is not UTF-8 (`bad_encoding`), a unit
+(`time_out_of_range`), a series' parameter name that is not text (not UTF-8, or with
+U+0000: `bad_encoding`), an NDBC elevation that is not finite (`bad_coordinates`), a unit
 whose text does not read back as the same unit (`noncanonical_unit`). The writer replaces the
 target atomically (`write_file_atomic`): the old file or the whole new one.
 
@@ -193,13 +194,13 @@ the value at fault (of its object when a member is missing) and the text from th
 | Error | Rule |
 |---|---|
 | `ParseError empty_input`, `not_json` | Nothing but white space; not JSON (where the parser stopped), including a NUL byte anywhere. |
-| `ParseError too_large` | Nesting deeper than 16; more than the reader's text limit; more stations than its element limit allows (a station costs 16 elements, a USGS series 1 more); more than 4,096 series at a station, 256 sources or 64 tokens in an array. |
+| `ParseError too_large` | Nesting deeper than 16; more than the reader's text limit; more stations than its element limit allows (a station costs 16 elements, a USGS series 1 more); more than 4,096 series at a station, 256 sources or 64 tokens in an array; more than 64 unknown members in one object, in a file of any minor (the bound keeps the reader's repeated-member check, and so the parse, linear). |
 | `FormatError not_this_format` | `format` absent, not a string, or another text (subject: the text). |
 | `FormatError bad_version` | `version` absent or not `<major>.<minor>` (subject: the text). |
 | `FormatError unsupported_version` | A major other than 1 (subject: the version). |
 | `ParseError bad_member` | A member missing, repeated, or of the wrong JSON type (`null` included); a `provider` other than the three; an id not in its canonical form; text with U+0000; a token the format does not know; a token repeated in its array; a station without its provider's block, with two blocks, or with another provider's; a blank `unit`; in a file of this minor or an older one, any unknown member (C8). |
 | `ParseError bad_date` | A date or timestamp not exactly in its form, or not a real date or time of day. |
-| `ParseError out_of_range` | A position outside the ranges of §5; a `last` before its `first`; an `MSL` height other than 0. |
+| `ParseError out_of_range` | A position outside the ranges of §5; a `last` before its `first`; an `MSL` height other than exactly 0 as written (`0.00001` is refused, though it rounds to 0). |
 | `FormatError inconsistent_metadata` | A USGS station whose series repeat an id or have two Primary series of one parameter and statistic (subject: the station id and the rule). |
 | `FormatError duplicate_station_id` | Two stations with one id (subject: the smallest such id). |
 | `FormatError future_dated` | `generated` more than one day after the reader's clock (subject: its text). |
@@ -217,13 +218,24 @@ A reader that stops at the first error reports it in this order, so a file alway
 same error:
 
 1. syntax, nesting, repeated members and the size limits, in document order;
-2. `format`, then `version`;
-3. the first value the format refuses (§8.1 `bad_member`, `bad_date`, `out_of_range`,
-   `inconsistent_metadata`), in document order: the header's members and the stations
-   alike, whichever comes first in the text, so a file whose `version` follows its
-   stations is still judged by its version first;
+2. `format`, then `version`, wherever they are in the file;
+3. one failure (§8.1 `bad_member`, `bad_date`, `out_of_range`, `inconsistent_metadata`)
+   from each of these places, and of them the one that starts first in the text:
+   - `provider`;
+   - the header's other members, checked in the order `generated`, `sources` (each source
+     `url`, then `retrieved`);
+   - the `stations` member itself;
+   - the first station, in document order, that fails: within it, first that it has
+     exactly one provider block, then its members in the order of the tables of §5 and §6
+     (`id`, `name`, `lon` and `lat`, `first`, `last`, then the block, member by member in
+     its table's order); its first failure in that order is the one it gives;
+   - the first station whose block is another provider's;
+   - in a file of this minor or an older one, the first unknown member or token;
 4. repeated station ids;
 5. `generated` against the clock.
+
+So within one object the table order decides, not the text; between those places the text
+does, and a file whose `version` follows its stations is still judged by its version first.
 
 ### 8.4 What a reader returns
 
@@ -267,15 +279,20 @@ How MetOceanViewer uses a catalog (providers-design §7); pure functions in
   snapshot's, else the snapshot.
 - **Staleness** (`is_stale`): a catalog generated more than 30 days before now is refreshed in
   the background, at most once per launch.
-- **Refresh** (`accept_refresh`): the refreshed catalog replaces the current one only if it has
-  at least half as many stations, rounded up (10 → 5 is accepted, 10 → 4 refused); otherwise it
-  is discarded with a warning, so an upstream outage cannot empty the map.
+- **Refresh** (`accept_refresh`): the refreshed catalog replaces the current one only if it
+  was generated strictly later (`NotNewer` otherwise) and has at least half as many stations,
+  rounded up (10 → 5 is accepted, 10 → 4 refused: `TooFewStations`); otherwise it is
+  discarded with a warning, so an upstream outage cannot empty the map.
 - **The CO-OPS build** (`mov/io/wire/coops_catalog.hpp`): the water-level, met and air-gap
-  lists are merged by id. A station's capabilities are the union of its records; its name,
-  position and validity are the first list's (water level, then met, then air gap), and a
-  later list that differs gives `station_lists_disagree` naming the station. Its predictions
-  come from the tide-prediction list; then each station's `datums.json` adds its offered datums
-  and its table. A failed `datums.json` leaves the station without a table.
+  lists are merged by id. A station's capabilities are the union of its records, and its
+  validity their join (the earliest first day, the latest last one). Its name and position
+  are the first list's (water level, then met, then air gap); stations whose later lists
+  give another name or position (compared as the catalog holds positions, rounded) are
+  counted in one `station_lists_disagree` warning naming the first of them. Its predictions
+  come from the tide-prediction list. A station that offers nothing (no active sensor and
+  no predictions) is left out (decision 6, active stations only), counted as
+  `station_skipped` `no_active_sensor`. Then each station's `datums.json` adds its offered
+  datums and its table; a failed `datums.json` leaves the station without a table.
 
 ---
 
@@ -283,7 +300,8 @@ How MetOceanViewer uses a catalog (providers-design §7); pure functions in
 
 - `tests/fixtures/io/station_catalog/` holds the golden files and the cases; `cases.txt` gives
   each file's reader verdict and schema verdict (`valid`, `invalid`, or `any` for a newer
-  minor). `coops_lists.json` is the catalog of the recorded CO-OPS lists and `datums.json`
+  minor). `coops_lists.json` is the catalog of the recorded CO-OPS lists (two of their eleven
+  stations offer nothing and are left out) and `datums.json`
   bodies in `tests/fixtures/io/coops/`; the worked example (§13) is three of its stations.
 - The C++ tests (`tests/io/test_station_catalog*.cpp`, `test_coops_catalog.cpp`) check the
   goldens byte for byte, the round trip over generated catalogs, every rule of §8 with its

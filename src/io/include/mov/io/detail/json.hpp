@@ -60,6 +60,10 @@ struct Keep {
   /// `bad_member` like a kept member. (A format whose readers refuse unknown
   /// members: the station catalog.)
   bool unknown_names = false;
+  /// With unknown_names, the most unknown members one object may have; more
+  /// is ParseError `too_large` at the object. It bounds the members a key is
+  /// compared with (the repeated-member check), so the parse stays linear.
+  std::size_t max_unknown = 64;
 };
 
 /// Keeps a scalar; a container is kept empty.

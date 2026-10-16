@@ -138,23 +138,26 @@ using StationCatalog = std::variant<CoopsCatalog, UsgsCatalog, NdbcCatalog>;
 ///   leading byte order mark is skipped; `empty_input`, `not_json`,
 ///   `too_large` (nesting deeper than 16, more than ctx.limits.max_text_bytes,
 ///   more stations than ctx.limits.max_elements / 16, more than 4096 series
-///   at a station, 256 sources or 64 tokens in a set); a repeated member is
-///   `bad_member`.
+///   at a station, 256 sources or 64 tokens in a set, more than 64 unknown
+///   members in one object); a repeated member is `bad_member`.
 /// - `format` absent or another text: FormatError `not_this_format`.
 ///   `version` not "<major>.<minor>": `bad_version`; a major other than 1:
 ///   `unsupported_version` (subject: the version).
-/// - Then the first value the format refuses, in document order, as a
-///   ParseError at that value: `bad_member` (a member missing or of the wrong
-///   JSON type; a provider, id, token or text the format does not allow; a
-///   set that repeats a token; a station without its provider's block, or
-///   with another provider's); `bad_date` (a date or timestamp that is not
-///   exactly `YYYY-MM-DD` or `YYYY-MM-DDThh:mm:ssZ`, or not a real date);
-///   `out_of_range` (a position Location::make refuses, a nonzero MSL
-///   height, a range whose last day precedes its first). In a file of this
-///   minor or an older one an unknown member or token is `bad_member` too;
-///   in a newer minor each is ignored and counted (`newer_content_ignored`,
-///   after `minor_newer`). Rules over a station's series (SeriesSet::make)
-///   are FormatError `inconsistent_metadata` (subject: the station id).
+/// - Then one failure, the first in the text among: the provider, the other
+///   header members, the stations array, the first failing station (its own
+///   members in their table order), a station of another provider, and the
+///   first unknown member or token. A ParseError at that value: `bad_member` (a
+///   member missing or of the wrong JSON type; a provider, id, token or text
+///   the format does not allow; a set that repeats a token; a station without
+///   its provider's block, or with another provider's); `bad_date` (a date or
+///   timestamp that is not exactly `YYYY-MM-DD` or `YYYY-MM-DDThh:mm:ssZ`, or
+///   not a real date); `out_of_range` (a position Location::make refuses, an
+///   MSL height that is not exactly 0 as written, a range whose last day
+///   precedes its first). In a file of this minor or an older one an unknown
+///   member or token is `bad_member` too; in a newer minor each is ignored and
+///   counted (`newer_content_ignored`, after `minor_newer`). Rules over a
+///   station's series (SeriesSet::make) are FormatError `inconsistent_metadata`
+///   (subject: the station id).
 /// - Two stations with one id: `duplicate_station_id` (subject: the id).
 /// - `generated` more than a day after `now`: `future_dated` (subject: its
 ///   text). A clock running behind must not reject a fresh catalog.
@@ -198,9 +201,11 @@ template <CatalogProvider P>
 ///
 /// What the types allow but the format cannot hold is refused before any
 /// text is made: a date or time outside the years 0000-9999
-/// (`time_out_of_range`), a series' parameter name that is not UTF-8
-/// (`bad_encoding`), a unit whose text does not parse back to the same unit
-/// (`noncanonical_unit`); the subject is the station id (the header's:
+/// (`time_out_of_range`), a series' parameter name that is not station text
+/// (not UTF-8, or with a NUL: `bad_encoding`), an NDBC elevation that is not
+/// finite (`bad_coordinates`), a unit whose text does not parse back to the
+/// same unit (`noncanonical_unit`); the subject is the station id (the
+/// header's:
 /// `generated` or `sources`).
 [[nodiscard]] std::expected<std::string, FormatError> format_station_catalog(
     const StationCatalog& catalog);
@@ -254,11 +259,22 @@ struct TooFewStations {
   friend constexpr bool operator==(TooFewStations, TooFewStations) = default;
 };
 
-/// The refreshed catalog when it may replace the current one: it has at
-/// least half as many stations (rounded up). Valid it already is: a
-/// Catalog cannot be anything else.
+/// A refreshed catalog generated no later than the one in use (a clock that
+/// went back, or a stale response cached upstream).
+struct NotNewer {
+  core::Time current;
+  core::Time refreshed;
+  friend constexpr bool operator==(NotNewer, NotNewer) = default;
+};
+
+using RefreshRefused = std::variant<NotNewer, TooFewStations>;
+
+/// The refreshed catalog when it may replace the current one: it was
+/// generated strictly later (else NotNewer), and it has at least half as many
+/// stations, rounded up (else TooFewStations). Valid it already is: a Catalog
+/// cannot be anything else.
 template <CatalogProvider P>
-[[nodiscard]] std::expected<Catalog<P>, TooFewStations> accept_refresh(
+[[nodiscard]] std::expected<Catalog<P>, RefreshRefused> accept_refresh(
     const Catalog<P>& current, Catalog<P> refreshed);
 
 }  // namespace mov::io

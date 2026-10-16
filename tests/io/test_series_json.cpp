@@ -9,9 +9,11 @@
 #include <fstream>
 #include <ios>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/core/daily_series.hpp"
@@ -44,6 +46,18 @@ void check_golden(const std::string& actual, std::string_view name) {
     out << actual;
   }
   CHECK(actual == expected);
+}
+
+std::string json_of(const core::StationTable& table) {
+  auto text = io::format_series_json(table);
+  REQUIRE(text.has_value());
+  return *std::move(text);
+}
+
+std::string json_of(std::span<const io::DailyAtStation> stations) {
+  auto text = io::format_series_json(stations);
+  REQUIRE(text.has_value());
+  return *std::move(text);
 }
 
 core::SeriesMeta water_level() {
@@ -119,13 +133,13 @@ std::vector<io::DailyAtStation> daily() {
 
 TEST_CASE("a station table is written as its golden series JSON",
           "[io][series_json]") {
-  check_golden(io::format_series_json(table()), "table.json");
+  check_golden(json_of(table()), "table.json");
 }
 
 TEST_CASE("daily values are written with dates and their statistic",
           "[io][series_json]") {
   const auto stations = daily();
-  check_golden(io::format_series_json(stations), "daily.json");
+  check_golden(json_of(stations), "daily.json");
 }
 
 TEST_CASE("an empty table or list is a document without stations",
@@ -133,8 +147,8 @@ TEST_CASE("an empty table or list is a document without stations",
   const std::string empty =
       "{\"format\":\"metoceanviewer-series\",\"version\":\"1.0\",\n"
       " \"stations\":[]}\n";
-  CHECK(io::format_series_json(core::StationTable{}) == empty);
-  CHECK(io::format_series_json(std::vector<io::DailyAtStation>{}) == empty);
+  CHECK(json_of(core::StationTable{}) == empty);
+  CHECK(json_of(std::vector<io::DailyAtStation>{}) == empty);
 }
 
 TEST_CASE("write_series_json writes what format_series_json makes",
@@ -142,10 +156,10 @@ TEST_CASE("write_series_json writes what format_series_json makes",
   const mov::test::ScratchDir dir;
   const auto t = table();
   REQUIRE(io::write_series_json(dir / "t.json", t).has_value());
-  CHECK(mov::test::read_bytes(dir / "t.json") == io::format_series_json(t));
+  CHECK(mov::test::read_bytes(dir / "t.json") == json_of(t));
   const auto d = daily();
   REQUIRE(io::write_series_json(dir / "d.json", d).has_value());
-  CHECK(mov::test::read_bytes(dir / "d.json") == io::format_series_json(d));
+  CHECK(mov::test::read_bytes(dir / "d.json") == json_of(d));
 }
 
 TEST_CASE("a long series is streamed in chunks and written whole",
@@ -166,5 +180,63 @@ TEST_CASE("a long series is streamed in chunks and written whole",
   REQUIRE(io::write_series_json(dir / "long.json", t).has_value());
   const std::string text = mov::test::read_bytes(dir / "long.json");
   CHECK(text.size() > (std::size_t{1} << 16) * 4);
-  CHECK(text == io::format_series_json(t));
+  CHECK(text == json_of(t));
+}
+
+TEST_CASE("a label or unit text the format cannot hold is refused up front",
+          "[io][series_json]") {
+  for (const std::string& label :
+       {std::string{"Water \xE9level"}, std::string{"a\0b", 3}}) {
+    CAPTURE(label);
+    const auto meta = core::SeriesMeta::make(
+        {.quantity = core::Quantity::water_level, .label = label, .unit = {}});
+    const auto t = mov::test::one_column_table(
+        meta, {StationSpec{.id = "A",
+                           .name = "a",
+                           .where = mov::test::location(1, 2),
+                           .times = {utc(2026, 1, 1)},
+                           .samples = {value(1.0)}}});
+    const auto refused = io::format_series_json(t);
+    REQUIRE(not refused.has_value());
+    CHECK(refused.error().code == io::FormatErrc::bad_encoding);
+    CHECK(refused.error().subject == "water_level");
+
+    const mov::test::ScratchDir dir;
+    const auto written = io::write_series_json(dir / "t.json", t);
+    REQUIRE(not written.has_value());
+    CHECK(std::holds_alternative<io::FormatError>(written.error()));
+    CHECK(mov::test::entry_names(dir.path()).empty());
+
+    auto daily_series = core::DailySeries::make(
+        meta, {std::chrono::local_days{std::chrono::days{0}}}, {value(1.0)},
+        core::usgs::StatisticId::mean());
+    REQUIRE(daily_series.has_value());
+    const std::vector<io::DailyAtStation> stations{
+        {.station = mov::test::file_station({.id = "B",
+                                             .name = "b",
+                                             .where = mov::test::location(1, 2),
+                                             .times = {},
+                                             .samples = {}}),
+         .data = *std::move(daily_series)}};
+    const auto daily_refused = io::format_series_json(stations);
+    REQUIRE(not daily_refused.has_value());
+    CHECK(daily_refused.error().code == io::FormatErrc::bad_encoding);
+    CHECK(not io::write_series_json(dir / "d.json", stations).has_value());
+  }
+}
+
+TEST_CASE("a unit text that is not UTF-8 is refused", "[io][series_json]") {
+  const auto unit = core::parse_unit("\xE9");
+  REQUIRE(unit.has_value());
+  const auto meta = core::SeriesMeta::make(
+      {.quantity = core::Quantity::water_level, .label = "", .unit = unit});
+  const auto t = mov::test::one_column_table(
+      meta, {StationSpec{.id = "A",
+                         .name = "a",
+                         .where = mov::test::location(1, 2),
+                         .times = {utc(2026, 1, 1)},
+                         .samples = {value(1.0)}}});
+  const auto refused = io::format_series_json(t);
+  REQUIRE(not refused.has_value());
+  CHECK(refused.error().code == io::FormatErrc::bad_encoding);
 }

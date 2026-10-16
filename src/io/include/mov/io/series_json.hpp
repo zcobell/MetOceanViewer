@@ -29,31 +29,37 @@ inline constexpr std::string_view series_format = "metoceanviewer-series";
 using DailyAtStation = core::AtStation<core::FileStation, core::DailySeries>;
 
 /// The table as series JSON (docs/series-json.md section 4): one station per
-/// line, in table order, each with one series per schema column, in schema
-/// order. A station:
-///   {"id","name","provider"?,"lon","lat","series":[...]}
+/// line, in table order. A station holds its time axis once and one series
+/// per schema column, in schema order:
+///   {"id","name","provider"?,"lon","lat","time":[...],"series":[...]}
 /// `provider` is the FileStation's DataSource token, absent when it has none;
 /// `lon` and `lat` are WGS 84 in the shortest text that reads back as the
-/// same double (the native point, if any, is not written). A series:
-///   {"quantity","label"?,"unit"?,"datum"?,"time":[...],"value":[...],
-///    "status"?:[...]}
-/// `quantity` is the token, `unit` the udunits text, `datum` the token;
-/// `label`, `unit` and `datum` are absent when empty or unset. `time` holds
+/// same double (the native point, if any, is not written); `time` holds
 /// `YYYY-MM-DDThh:mm:ss.sssZ` (UTC; a year outside 0000-9999 with as many
-/// digits as it needs), `value` the shortest round-trip number of each Value
-/// sample and `null` for Missing and Dry, and `status` ("value", "missing",
-/// "dry" per sample) is written only when the series has a Dry sample. The
-/// text never fails: every StationText is UTF-8 and every sample finite.
-[[nodiscard]] std::string format_series_json(const core::StationTable& table);
+/// digits as it needs). A series:
+///   {"quantity","label"?,"unit"?,"datum"?,"value":[...],"status"?:[...]}
+/// `quantity` is the token, `unit` the udunits text, `datum` the token;
+/// `label`, `unit` and `datum` are absent when empty or unset. `value` holds
+/// the shortest round-trip number of each Value sample and `null` for
+/// Missing and Dry, and `status` ("value", "missing", "dry" per sample) is
+/// written only when the series has a Dry sample.
+///
+/// A label or unit text that is not UTF-8 or holds a NUL is refused before
+/// any text is made (`bad_encoding`, subject the quantity token); station
+/// texts are StationText and samples finite, so nothing else can fail.
+[[nodiscard]] std::expected<std::string, FormatError> format_series_json(
+    const core::StationTable& table);
 
-/// Daily values (decision 34): each station has one series, with `date`
-/// (`YYYY-MM-DD`, the station's local calendar day) in place of `time` and
-/// the USGS `statistic` code ("00003") after `datum`. In the given order.
-[[nodiscard]] std::string format_series_json(
+/// Daily values (decision 34): a station has `date` (`YYYY-MM-DD`, its local
+/// calendar days) in place of `time`, and its one series the USGS
+/// `statistic` code ("00003") after `datum`. In the given order. Refusals as
+/// above.
+[[nodiscard]] std::expected<std::string, FormatError> format_series_json(
     std::span<const DailyAtStation> stations);
 
 /// format_series_json, written atomically (write_file_atomic) in 64 KiB
-/// chunks, without building the whole text in memory.
+/// chunks, without building the whole text in memory. A refusal is the
+/// FormatError above, before the file is opened.
 [[nodiscard]] std::expected<void, Error> write_series_json(
     const std::filesystem::path& path, const core::StationTable& table);
 

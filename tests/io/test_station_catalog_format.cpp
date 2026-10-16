@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <format>
+#include <limits>
 #include <optional>
 #include <random>
 #include <sstream>
@@ -433,6 +434,18 @@ TEST_CASE("the writer refuses what the format cannot hold", "[io][catalog]") {
     CHECK(error.code == FormatErrc::time_out_of_range);
     CHECK(error.subject == "41001");
   }
+  SECTION("an elevation that is not finite") {
+    for (const double bad : {std::numeric_limits<double>::infinity(),
+                             -std::numeric_limits<double>::infinity(),
+                             std::numeric_limits<double>::quiet_NaN()}) {
+      auto e = cat::entry<Ndbc>("41001", "x", 30, -70);
+      e.caps.elevation = Length::in(bad, LengthUnit::meter);
+      const auto error =
+          format_error_in(io::format_station_catalog(cat::catalog<Ndbc>({e})));
+      CHECK(error.code == FormatErrc::bad_coordinates);
+      CHECK(error.subject == "41001");
+    }
+  }
   SECTION("a series name that is not UTF-8, a series date out of range") {
     auto site = cat::entry<Usgs>("USGS-1", "x", 30, -90);
     const auto with = [&](cu::SeriesInfo s) {
@@ -443,6 +456,9 @@ TEST_CASE("the writer refuses what the format cannot hold", "[io][catalog]") {
     const std::string_view id = "00000000000000000000000000000000";
     CHECK(format_error_in(
               with(series(id, "00060", "\xff", true, std::nullopt, {})))
+              .code == FormatErrc::bad_encoding);
+    CHECK(format_error_in(with(series(id, "00060", std::string{"a\0b", 3}, true,
+                                      std::nullopt, {})))
               .code == FormatErrc::bad_encoding);
     const auto late =
         with(series(id, "00060", "", true, std::nullopt,
@@ -686,6 +702,9 @@ TEST_CASE("each station value the format refuses is a ParseError at it",
       refused(coops_with(R"("air_gap":1)"), "1}", ParseErrc::bad_member),
       refused(coops_with(R"("datums":{"MSL":0.5})"), "0.5",
               ParseErrc::out_of_range),
+      // MSL is exactly 0 as written, not once rounded to 1e-4 m.
+      refused(coops_with(R"("datums":{"MSL":0.00001})"), "0.00001",
+              ParseErrc::out_of_range),
       refused(coops_with(R"("datums":{"MHHW":"1"})"), "\"1\"",
               ParseErrc::bad_member),
       // USGS series
@@ -708,6 +727,11 @@ TEST_CASE("each station value the format refuses is a ParseError at it",
           usgs_with(
               R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","primary":"yes"})"),
           "\"yes\"", ParseErrc::bad_member),
+      // A parameter name is station text: no NUL.
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","parameter_name":"a\u0000"})"),
+          R"("a\u0000")", ParseErrc::bad_member),
       // header values
       refused(document("harmonics", ""), "\"harmonics\"",
               ParseErrc::bad_member),
@@ -836,6 +860,32 @@ TEST_CASE("hostile catalogs are refused within the limits", "[io][catalog]") {
           ParseErrc::too_large);
     ctx.limits.max_elements = 16 * 10;
     CHECK(cat::parse(document("ndbc", stations), ctx).has_value());
+  }
+  SECTION("too many unknown members in one object, even in a newer minor") {
+    // 100k unknown members: each new key is compared with those kept so
+    // far, so an unbounded object would make the parse quadratic.
+    std::string members;
+    for (int i = 0; i < 100000; ++i) {
+      members += std::format(R"("u{}":0,)", i);
+    }
+    const std::string text = document(
+        "ndbc",
+        std::format(
+            R"({{{}"id":"41001","name":"","lon":0,"lat":0,"ndbc":{{}}}})",
+            members),
+        "1.9");
+    CHECK(parse_error_in(cat::parse(text)).code() == ParseErrc::too_large);
+    // 64 are kept, and counted.
+    std::string few;
+    for (int i = 0; i < 64; ++i) {
+      few += std::format(R"("u{}":0,)", i);
+    }
+    const auto read = cat::parse(document(
+        "ndbc",
+        std::format(
+            R"({{{}"id":"41001","name":"","lon":0,"lat":0,"ndbc":{{}}}})", few),
+        "1.9"));
+    REQUIRE(read.has_value());
   }
   SECTION("too many tokens in a set") {
     std::string tokens = "\"wind\"";

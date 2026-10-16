@@ -5,6 +5,7 @@
 // section 7).
 
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <expected>
 #include <filesystem>
@@ -79,14 +80,20 @@ Checked check_caps(const core::Capabilities<Coops>& /*caps*/,
   return {};
 }
 
-Checked check_caps(const core::Capabilities<Ndbc>& /*caps*/,
-                   std::string_view /*id*/) {
+// JSON has no literal for a NaN or an infinity.
+Checked check_caps(const core::Capabilities<Ndbc>& caps, std::string_view id) {
+  if (caps.elevation and
+      not std::isfinite(caps.elevation->as(core::LengthUnit::meter))) {
+    return std::unexpected{refuse(FormatErrc::bad_coordinates, id)};
+  }
   return {};
 }
 
+// A parameter name is read as station text: UTF-8 without NUL.
 Checked check_caps(const core::Capabilities<Usgs>& caps, std::string_view id) {
   for (const core::usgs::SeriesInfo& s : caps.series.items()) {
-    if (not core::is_valid_utf8(s.parameter_name)) {
+    if (not core::is_valid_utf8(s.parameter_name) or
+        s.parameter_name.find('\0') != std::string::npos) {
       return std::unexpected{refuse(FormatErrc::bad_encoding, id)};
     }
     if (s.unit and core::parse_unit(core::udunits(*s.unit)) != s.unit) {
@@ -266,17 +273,6 @@ void append_block(std::string& out, const core::Capabilities<Ndbc>& caps) {
   m.close();
 }
 
-// The member name of each provider's block.
-[[nodiscard]] constexpr std::string_view block_name(Coops /*p*/) noexcept {
-  return "coops";
-}
-[[nodiscard]] constexpr std::string_view block_name(Usgs /*p*/) noexcept {
-  return "usgs";
-}
-[[nodiscard]] constexpr std::string_view block_name(Ndbc /*p*/) noexcept {
-  return "ndbc";
-}
-
 template <CatalogProvider P>
 void append_station(std::string& out, const CatalogEntry<P>& e) {
   Members m{out};
@@ -286,7 +282,7 @@ void append_station(std::string& out, const CatalogEntry<P>& e) {
   jt::append_fixed(m.member("lon"), at.lon(), tokens::position_decimals);
   jt::append_fixed(m.member("lat"), at.lat(), tokens::position_decimals);
   append_validity(m, e.station.validity);
-  append_block(m.member(block_name(P{})), e.caps);
+  append_block(m.member(tokens::block_name<P>()), e.caps);
   m.close();
 }
 

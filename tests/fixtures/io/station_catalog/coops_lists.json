@@ -8,9 +8,7 @@
 {"id":"8517986","name":"Verrazano-Narrows Air Gap","lon":-74.04483,"lat":40.606224,"first":"2008-03-20","coops":{"air_gap":true}},
 {"id":"8575437","name":"Chesapeake Bay Bridge Visibility","lon":-76.38811,"lat":38.994804,"first":"2015-02-13","coops":{"met":["air_temperature","humidity","visibility"]}},
 {"id":"8729840","name":"Pensacola","lon":-87.2112,"lat":30.4044,"first":"1923-04-30","coops":{"observed":["six_minute","one_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure"],"predictions":"any_interval","datums_offered":["MHHW","MHW","MTL","MSL","MLW","MLLW","NAVD88","STND"],"datums":{"MHHW":0.195,"MHW":0.186,"MTL":0.003,"MLW":-0.179,"MLLW":-0.188,"NAVD88":-0.09,"STND":-2.757}}},
-{"id":"8767931","name":"Lake Charles I-210 Bridge Air Gap","lon":-93.28061,"lat":30.201584,"first":"2009-02-17","coops":{}},
 {"id":"8771972","name":"San Luis Pass","lon":-95.1133,"lat":29.095,"first":"1998-01-29","coops":{"observed":["six_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure"]}},
 {"id":"8775302","name":"Texas State Aquarium Visibility","lon":-97.38861,"lat":27.8125,"coops":{"met":["air_temperature","air_pressure","humidity","visibility"]}},
-{"id":"9063020","name":"Buffalo","lon":-78.89047,"lat":42.877445,"first":"1860-04-01","coops":{"observed":["six_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure","humidity"],"datums_offered":["IGLD85"]}},
-{"id":"9435373","name":"McLean Point Turning Basin","lon":-124.03078,"lat":44.622196,"first":"2025-05-13","coops":{}}
+{"id":"9063020","name":"Buffalo","lon":-78.89047,"lat":42.877445,"first":"1860-04-01","coops":{"observed":["six_minute","hourly"],"met":["air_temperature","water_temperature","wind","air_pressure","humidity"],"datums_offered":["IGLD85"]}}
 ]}
