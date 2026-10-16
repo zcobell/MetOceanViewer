@@ -125,15 +125,20 @@ A token array lists each token at most once (at most 64 elements). Tokens are ca
 |---|---|---|---|
 | `series` | array of objects | `[]` | The site's map series (`core::usgs::SeriesSet`), at most 4,096. |
 
-Each series:
+Each series is one epoch of a logical series (decision 37): USGS starts a new series, with a
+new id, for the same parameter, statistic and sublocation from time to time, and a reader
+groups the epochs by those three (`SeriesSet::keys`, `epochs`). Epochs may overlap; where
+they do, the later-begun one wins. Each series:
 
 | Member | Type | Req. | Meaning |
 |---|---|---|---|
 | `id` | string | yes | The time series id: 32 lower-case hexadecimal digits. Unique within the site. |
 | `parameter` | string | yes | The parameter code: five digits. |
 | `statistic` | string | yes | The statistic code: five digits (`00011` instantaneous). |
+| `sublocation` | text | no | USGS's `sublocation_identifier`: which of the site's sensors (`Headwater`, `Tailwater`); absent for the main one. Not empty, at most 128 bytes, no control character, no white space at either end. |
 | `parameter_name` | text | no | USGS's name of the parameter; absent when empty. |
-| `primary` | boolean | no | The site's Primary series of its parameter and statistic; at most one per pair. Absent is `false`. |
+| `description` | text | no | USGS's `web_description` (`Primary`, `Lock Level`): a label for a series picker; absent when empty. |
+| `primary` | boolean | no | One of the epochs the logical series is stitched from (USGS's Primary). Several epochs of one parameter, statistic and sublocation may be Primary. Absent is `false`. |
 | `unit` | string | no | The unit as udunits text (`ft`, `ft3 s-1`): what `core::parse_unit` reads back as the same unit. Not blank. |
 | `first`, `last` | date | no | The series' period, as for a station. |
 
@@ -158,7 +163,8 @@ then always gives the same bytes:
   then one station per line, compact, each but the last followed by `,`; then `]}` and a
   newline. With no station the last line is ` "stations":[]}`.
 - **Order.** Members in the order of the tables above. Stations sorted by id (byte order),
-  USGS series by id. Token arrays in the order the tables list the tokens (the core
+  USGS series by parameter, statistic and sublocation (none first), then by the day the
+  epoch begins (unknown first), then by id. Token arrays in the order the tables list the tokens (the core
   enumerator order); datum heights in the order `MHHW`, `MHW`, `MTL`, `MLW`, `MLLW`,
   `NAVD88`, `NGVD29`, `IGLD85`, `STND`, `HAT`, `LAT`, `DTL`.
 - **Absent defaults.** Empty arrays, `false`, `none`, empty NDBC texts, an empty parameter
@@ -198,10 +204,10 @@ the value at fault (of its object when a member is missing) and the text from th
 | `FormatError not_this_format` | `format` absent, not a string, or another text (subject: the text). |
 | `FormatError bad_version` | `version` absent or not `<major>.<minor>` (subject: the text). |
 | `FormatError unsupported_version` | A major other than 1 (subject: the version). |
-| `ParseError bad_member` | A member missing, repeated, or of the wrong JSON type (`null` included); a `provider` other than the three; an id not in its canonical form; text with U+0000; a token the format does not know; a token repeated in its array; a station without its provider's block, with two blocks, or with another provider's; a blank `unit`; in a file of this minor or an older one, any unknown member (C8). |
+| `ParseError bad_member` | A member missing, repeated, or of the wrong JSON type (`null` included); a `provider` other than the three; an id not in its canonical form; text with U+0000; a token the format does not know; a token repeated in its array; a station without its provider's block, with two blocks, or with another provider's; a blank `unit`; a `sublocation` that is not one (§6.2); in a file of this minor or an older one, any unknown member (C8). |
 | `ParseError bad_date` | A date or timestamp not exactly in its form, or not a real date or time of day. |
 | `ParseError out_of_range` | A position outside the ranges of §5; a `last` before its `first`; an `MSL` height other than exactly 0 as written (`0.00001` is refused, though it rounds to 0). |
-| `FormatError inconsistent_metadata` | A USGS station whose series repeat an id or have two Primary series of one parameter and statistic (subject: the station id and the rule). |
+| `FormatError inconsistent_metadata` | A USGS station whose series repeat an id (subject: the station id and the id). Overlapping epochs are legal (§6.2). |
 | `FormatError duplicate_station_id` | Two stations with one id (subject: the smallest such id). |
 | `FormatError future_dated` | `generated` more than one day after the reader's clock (subject: its text). |
 

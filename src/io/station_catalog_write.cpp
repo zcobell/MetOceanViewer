@@ -4,6 +4,7 @@
 // Writing a station catalog: its canonical text (docs/station-catalog.md
 // section 7).
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -14,8 +15,10 @@
 #include <ostream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "mov/core/datum.hpp"
 #include "mov/core/enum_set.hpp"
@@ -89,11 +92,16 @@ Checked check_caps(const core::Capabilities<Ndbc>& caps, std::string_view id) {
   return {};
 }
 
-// A parameter name is read as station text: UTF-8 without NUL.
+// Text read as station text: UTF-8 without NUL.
+bool is_text(std::string_view text) {
+  return core::is_valid_utf8(text) and
+         text.find('\0') == std::string_view::npos;
+}
+
+// A parameter name and a description are read as station text.
 Checked check_caps(const core::Capabilities<Usgs>& caps, std::string_view id) {
   for (const core::usgs::SeriesInfo& s : caps.series.items()) {
-    if (not core::is_valid_utf8(s.parameter_name) or
-        s.parameter_name.find('\0') != std::string::npos) {
+    if (not is_text(s.parameter_name) or not is_text(s.description)) {
       return std::unexpected{refuse(FormatErrc::bad_encoding, id)};
     }
     if (s.unit and core::parse_unit(core::udunits(*s.unit)) != s.unit) {
@@ -224,13 +232,35 @@ void append_block(std::string& out, const core::Capabilities<Coops>& caps) {
   m.close();
 }
 
+// A site's series as a file lists them: by parameter, statistic and
+// sublocation (a logical series, decision 37), then by the day each epoch
+// begins (unknown first), then by id.
+std::vector<const core::usgs::SeriesInfo*> in_file_order(
+    const core::usgs::SeriesSet& set) {
+  std::vector<const core::usgs::SeriesInfo*> order;
+  order.reserve(set.size());
+  for (const core::usgs::SeriesInfo& s : set.items()) {
+    order.push_back(&s);
+  }
+  std::ranges::sort(order, [](const core::usgs::SeriesInfo* a,
+                              const core::usgs::SeriesInfo* b) {
+    const auto a_first = a->validity.first();
+    const auto b_first = b->validity.first();
+    return std::tie(a->parameter, a->statistic, a->sublocation, a_first,
+                    a->id) <
+           std::tie(b->parameter, b->statistic, b->sublocation, b_first, b->id);
+  });
+  return order;
+}
+
 void append_block(std::string& out, const core::Capabilities<Usgs>& caps) {
   Members m{out};
   if (not caps.series.empty()) {
     std::string& list = m.member("series");
     list.push_back('[');
     bool first = true;
-    for (const core::usgs::SeriesInfo& s : caps.series.items()) {
+    for (const core::usgs::SeriesInfo* p : in_file_order(caps.series)) {
+      const core::usgs::SeriesInfo& s = *p;
       if (not first) {
         list.push_back(',');
       }
@@ -239,8 +269,14 @@ void append_block(std::string& out, const core::Capabilities<Usgs>& caps) {
       jt::append_string(row.member("id"), s.id.view());
       jt::append_string(row.member("parameter"), s.parameter.view());
       jt::append_string(row.member("statistic"), s.statistic.view());
+      if (s.sublocation) {
+        jt::append_string(row.member("sublocation"), s.sublocation->view());
+      }
       if (not s.parameter_name.empty()) {
         jt::append_string(row.member("parameter_name"), s.parameter_name);
+      }
+      if (not s.description.empty()) {
+        jt::append_string(row.member("description"), s.description);
       }
       if (s.primary) {
         row.member("primary") += "true";

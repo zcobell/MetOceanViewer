@@ -95,6 +95,36 @@ io::UsgsCatalog usgs_catalog() {
               cat::valid(cat::day(2007, 10, 1), cat::day(2025, 9, 30)))});
   REQUIRE(set.has_value());
   site.caps.series = *std::move(set);
+  // A lock and dam: two sublocations, the headwater's gage restarted as a
+  // new series (overlapping epochs, decision 37), ids out of file order.
+  auto lock = cat::entry<Usgs>(
+      "USGS-05587450", "MISSISSIPPI RIVER AT GRAFTON, IL", 38.968, -90.429);
+  const auto at = [](std::string_view where) {
+    auto s = cu::Sublocation::make(std::string{where});
+    REQUIRE(s.has_value());
+    return *std::move(s);
+  };
+  auto tail =
+      series("00000000000000000000000000000003", "00065", "Gage height, feet",
+             true, unit("ft"), cat::valid(cat::day(2001, 1, 1)));
+  tail.sublocation = at("Tailwater");
+  tail.description = "Tailwater";
+  auto head_new =
+      series("00000000000000000000000000000001", "00065", "Gage height, feet",
+             true, unit("ft"), cat::valid(cat::day(2020, 6, 1)));
+  head_new.sublocation = at("Headwater");
+  head_new.description = "Headwater (new gage)";
+  auto head_old = series(
+      "00000000000000000000000000000002", "00065", "Gage height, feet", true,
+      unit("ft"), cat::valid(cat::day(1990, 1, 1), cat::day(2020, 9, 30)));
+  head_old.sublocation = at("Headwater");
+  head_old.description = "Headwater";
+  auto main =
+      series("00000000000000000000000000000004", "00065", "Gage height, feet",
+             true, unit("ft"), cat::valid(cat::day(2010, 1, 1)));
+  auto epochs = cu::SeriesSet::make({tail, head_new, head_old, main});
+  REQUIRE(epochs.has_value());
+  lock.caps.series = *std::move(epochs);
   auto quiet =
       cat::entry<Usgs>("USGS-295501090190400", "", 29.916944, -90.317778);
   auto bare =
@@ -103,7 +133,7 @@ io::UsgsCatalog usgs_catalog() {
   REQUIRE(bare.has_value());
   quiet.caps.series = *std::move(bare);
   return cat::catalog<Usgs>(
-      {site, quiet},
+      {site, lock, quiet},
       {.generated = utc(2026, 10, 15, 12, 0, 0),
        .sources = {{.url = cat::text("https://api.waterdata.usgs.gov/ogcapi/"
                                      "v0/collections/combined-metadata/items"),
@@ -460,6 +490,9 @@ TEST_CASE("the writer refuses what the format cannot hold", "[io][catalog]") {
     CHECK(format_error_in(with(series(id, "00060", std::string{"a\0b", 3}, true,
                                       std::nullopt, {})))
               .code == FormatErrc::bad_encoding);
+    auto described = series(id, "00060", "", true, std::nullopt, {});
+    described.description = "\xff";
+    CHECK(format_error_in(with(described)).code == FormatErrc::bad_encoding);
     const auto late =
         with(series(id, "00060", "", true, std::nullopt,
                     cat::valid(std::nullopt, cat::day(-5, 1, 1))));
@@ -727,6 +760,19 @@ TEST_CASE("each station value the format refuses is a ParseError at it",
           usgs_with(
               R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","primary":"yes"})"),
           "\"yes\"", ParseErrc::bad_member),
+      // A sublocation: non-empty text without surrounding space.
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","sublocation":""})"),
+          R"(""})", ParseErrc::bad_member),
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","sublocation":"Headwater "})"),
+          R"("Headwater ")", ParseErrc::bad_member),
+      refused(
+          usgs_with(
+              R"({"id":"00000000000000000000000000000000","parameter":"00060","statistic":"00011","description":7})"),
+          "7}", ParseErrc::bad_member),
       // A parameter name is station text: no NUL.
       refused(
           usgs_with(
@@ -792,10 +838,11 @@ TEST_CASE("cross-station and header rules are FormatErrors", "[io][catalog]") {
     const auto dup = format_error_in(cat::parse(usgs_with(row + "," + row)));
     CHECK(dup.code == FormatErrc::inconsistent_metadata);
     CHECK(dup.subject.starts_with("USGS-07010000: "));
+    // Two Primary epochs of one parameter and statistic: legal (decision
+    // 37: the later-begun one wins where they overlap).
     const std::string other =
         R"({"id":"10000000000000000000000000000000","parameter":"00060","statistic":"00011","primary":true})";
-    CHECK(format_error_in(cat::parse(usgs_with(row + "," + other))).code ==
-          FormatErrc::inconsistent_metadata);
+    CHECK(cat::parse(usgs_with(row + "," + other)).has_value());
   }
   SECTION("generated more than a day ahead of the clock") {
     const std::string text = document("ndbc", "");

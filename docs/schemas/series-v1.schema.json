@@ -178,6 +178,10 @@
             "DTL"
           ]
         },
+        "sublocation": {
+          "$ref": "#/$defs/text",
+          "minLength": 1
+        },
         "statistic": {
           "type": "string",
           "pattern": "^[0-9]{5}$"

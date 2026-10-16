@@ -240,3 +240,53 @@ TEST_CASE("a unit text that is not UTF-8 is refused", "[io][series_json]") {
   REQUIRE(not refused.has_value());
   CHECK(refused.error().code == io::FormatErrc::bad_encoding);
 }
+
+TEST_CASE("a series' sublocation is written after its datum",
+          "[io][series_json]") {
+  const auto headwater = core::usgs::Sublocation::make("Headwater");
+  REQUIRE(headwater.has_value());
+  const auto t = table();
+  const std::vector<io::ColumnSublocation> sublocations{
+      {.station = core::StationIndex{1},
+       .column = core::ColumnIndex{0},
+       .sublocation = *headwater}};
+  const auto text = io::format_series_json(t, sublocations);
+  REQUIRE(text.has_value());
+  CHECK(text->find(
+            R"("datum":"MLLW","sublocation":"Headwater","value":[null,2.5])") !=
+        std::string::npos);
+  // Only that column has one.
+  CHECK(text->find("sublocation") == text->rfind("sublocation"));
+  const mov::test::ScratchDir dir;
+  REQUIRE(io::write_series_json(dir / "t.json", t, sublocations).has_value());
+  CHECK(mov::test::read_bytes(dir / "t.json") == *text);
+
+  auto d = daily();
+  d.front().sublocation = *headwater;
+  CHECK(
+      json_of(d).find(
+          R"("unit":"ft3 s-1","sublocation":"Headwater","statistic":"00003")") !=
+      std::string::npos);
+}
+
+TEST_CASE("a sublocation the table cannot place is refused",
+          "[io][series_json]") {
+  const auto lock = core::usgs::Sublocation::make("Lock Chamber");
+  REQUIRE(lock.has_value());
+  const auto t = table();  // 2 stations, 2 columns
+  const auto at = [&](std::size_t station, std::size_t column) {
+    return io::ColumnSublocation{.station = core::StationIndex{station},
+                                 .column = core::ColumnIndex{column},
+                                 .sublocation = *lock};
+  };
+  for (const std::vector<io::ColumnSublocation>& bad :
+       {std::vector{at(2, 0)}, std::vector{at(0, 2)},
+        std::vector{at(1, 1), at(1, 1)}}) {
+    const auto refused = io::format_series_json(t, bad);
+    REQUIRE(not refused.has_value());
+    CHECK(refused.error() == io::FormatError{.code = io::FormatErrc::bad_option,
+                                             .subject = "sublocation"});
+    const mov::test::ScratchDir dir;
+    CHECK(not io::write_series_json(dir / "t.json", t, bad).has_value());
+  }
+}

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/zcobell/MetOceanViewer/master/docs/schemas/station-catalog-v1.schema.json",
   "title": "Station catalog, format metoceanviewer-stations 1.0",
-  "description": "Normative structure of docs/station-catalog.md, version 1.x (this schema describes 1.0 in full; its version pattern accepts every 1.x so that a newer minor is distinguishable from a wrong major). Rules the schema cannot express (unique station ids, real calendar dates, ranges in order, a station's series, the clock) are in that document, section 8. The enums marked 'drift-tested' are checked against the core enums by the catalog tests.",
+  "description": "Normative structure of docs/station-catalog.md, version 1.x (this schema describes 1.0 in full; its version pattern accepts every 1.x so that a newer minor is distinguishable from a wrong major). Rules the schema cannot express (unique station ids, real calendar dates, ranges in order, a station's series (only a repeated series id), the clock) are in that document, section 8. The enums marked 'drift-tested' are checked against the core enums by the catalog tests.",
   "type": "object",
   "required": [
     "format",
@@ -392,7 +392,16 @@
           "type": "string",
           "pattern": "^[0-9]{5}$"
         },
+        "sublocation": {
+          "description": "USGS sublocation_identifier: non-empty, at most 128 bytes, no control character, no surrounding white space.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000-\\u001F\\u007F\\s](.*[^\\u0000-\\u001F\\u007F\\s])?$"
+        },
         "parameter_name": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
           "$ref": "#/$defs/text"
         },
         "primary": {

@@ -102,7 +102,9 @@ constexpr std::array series_fields{
     Field{.name = "id", .keep = &json::leaf},
     Field{.name = "parameter", .keep = &json::leaf},
     Field{.name = "statistic", .keep = &json::leaf},
+    Field{.name = "sublocation", .keep = &json::leaf},
     Field{.name = "parameter_name", .keep = &json::leaf},
+    Field{.name = "description", .keep = &json::leaf},
     Field{.name = "primary", .keep = &json::leaf},
     Field{.name = "unit", .keep = &json::leaf},
     Field{.name = "first", .keep = &json::leaf},
@@ -491,6 +493,42 @@ class Decoder {
     return *table;
   }
 
+  // `sublocation`: absent is the main sensor; present, a Sublocation.
+  [[nodiscard]] Decoded<std::optional<core::usgs::Sublocation>> sublocation_of(
+      const Value& row) const {
+    const Value* v = json::member(row, "sublocation");
+    if (v == nullptr) {
+      return std::optional<core::usgs::Sublocation>{};
+    }
+    const auto s = string_of(*v);
+    if (not s) {
+      return std::unexpected{s.error()};
+    }
+    auto made = core::usgs::Sublocation::make(std::string{*s});
+    if (not made) {  // empty: write no member instead
+      return std::unexpected{fault(ParseErrc::bad_member, *v)};
+    }
+    return std::optional{*std::move(made)};
+  }
+
+  // `unit`: absent is none; present, text parse_unit reads.
+  [[nodiscard]] Decoded<std::optional<core::Unit>> unit_of(
+      const Value& row) const {
+    const Value* v = json::member(row, "unit");
+    if (v == nullptr) {
+      return std::optional<core::Unit>{};
+    }
+    const auto s = string_of(*v);
+    if (not s) {
+      return std::unexpected{s.error()};
+    }
+    auto unit = core::parse_unit(*s);
+    if (not unit) {  // blank text: write no member instead
+      return std::unexpected{fault(ParseErrc::bad_member, *v)};
+    }
+    return unit;
+  }
+
   [[nodiscard]] Decoded<core::usgs::SeriesInfo> series_of(const Value& row) {
     if (auto o = object_of(row); not o) {
       return std::unexpected{std::move(o).error()};
@@ -508,13 +546,17 @@ class Decoder {
     if (not statistic) {
       return std::unexpected{std::move(statistic).error()};
     }
-    std::string name;
-    if (const Value* v = json::member(row, "parameter_name")) {
-      auto t = text_of(*v);
-      if (not t) {
-        return std::unexpected{std::move(t).error()};
-      }
-      name = std::string{t->view()};
+    auto sublocation = sublocation_of(row);
+    if (not sublocation) {
+      return std::unexpected{std::move(sublocation).error()};
+    }
+    auto name = optional_text(row, "parameter_name");
+    if (not name) {
+      return std::unexpected{std::move(name).error()};
+    }
+    auto description = optional_text(row, "description");
+    if (not description) {
+      return std::unexpected{std::move(description).error()};
     }
     bool primary = false;
     if (const Value* v = json::member(row, "primary")) {
@@ -524,28 +566,24 @@ class Decoder {
       }
       primary = *b;
     }
-    std::optional<core::Unit> unit;
-    if (const Value* v = json::member(row, "unit")) {
-      auto s = string_of(*v);
-      if (not s) {
-        return std::unexpected{std::move(s).error()};
-      }
-      unit = core::parse_unit(*s);
-      if (not unit) {  // blank text: write no member instead
-        return std::unexpected{fault(ParseErrc::bad_member, *v)};
-      }
+    auto unit = unit_of(row);
+    if (not unit) {
+      return std::unexpected{std::move(unit).error()};
     }
     auto validity = validity_of(row);
     if (not validity) {
       return std::unexpected{std::move(validity).error()};
     }
-    return core::usgs::SeriesInfo{.id = *id,
-                                  .parameter = *parameter,
-                                  .statistic = *statistic,
-                                  .parameter_name = std::move(name),
-                                  .primary = primary,
-                                  .unit = std::move(unit),
-                                  .validity = *validity};
+    return core::usgs::SeriesInfo{
+        .id = *id,
+        .parameter = *parameter,
+        .statistic = *statistic,
+        .parameter_name = std::string{name->view()},
+        .primary = primary,
+        .unit = *std::move(unit),
+        .validity = *validity,
+        .sublocation = *std::move(sublocation),
+        .description = std::string{description->view()}};
   }
 
   // The series, and how many there are (against the element limit).
@@ -574,11 +612,12 @@ class Decoder {
     }
     auto set = core::usgs::SeriesSet::make(std::move(series));
     if (not set) {
-      return std::unexpected{Fault{.offset = list->offset,
-                                   .error = Error{detail::format_error(
-                                       FormatErrc::inconsistent_metadata,
-                                       std::string{station_id} + ": " +
-                                           series_error_text(set.error()))}}};
+      return std::unexpected{
+          Fault{.offset = list->offset,
+                .error = Error{detail::format_error(
+                    FormatErrc::inconsistent_metadata,
+                    std::string{station_id} + ": " + "series " +
+                        std::string{set.error().id.view()} + " repeated")}}};
     }
     return core::Capabilities<Usgs>{.series = *std::move(set)};
   }
@@ -745,21 +784,6 @@ class Decoder {
       return std::unexpected{fault(ParseErrc::out_of_range, at)};
     }
     return tokens::canonical(*location);
-  }
-
-  [[nodiscard]] static std::string series_error_text(
-      const core::usgs::SeriesSetError& e) {
-    return std::visit(
-        core::Overloaded{[](const core::usgs::DuplicateSeriesId& d) {
-                           return "series " + std::string{d.id.view()} +
-                                  " repeated";
-                         },
-                         [](const core::usgs::SeveralPrimary& p) {
-                           return "several primary series of " +
-                                  std::string{p.parameter.view()} + "/" +
-                                  std::string{p.statistic.view()};
-                         }},
-        e);
   }
 
   std::string_view body_;

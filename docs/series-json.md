@@ -61,6 +61,7 @@ unique member names, text without U+0000 (control characters escaped), decimal n
 | `label` | text | no | A human label; absent when empty. |
 | `unit` | text | no | udunits text (`m`, `m s-1`, `ft3 s-1`); absent when the series has no unit. |
 | `datum` | token | no | The vertical datum token (`MLLW`, `NAVD88`, …; SN §10.2); absent when none applies. |
+| `sublocation` | text | no | Which of the site's sensors the series measures (USGS `sublocation_identifier`, decision 37: `Headwater`); absent for the main one. |
 | `statistic` | string | daily | The USGS statistic code of daily values (`00003` mean, `00001` maximum, `00002` minimum). |
 | `value` | array | yes | A number per time (or date) of the station, or `null` for a Missing or Dry sample. |
 | `status` | array of tokens | no | Per sample `value`, `missing` or `dry`; written only when a sample is Dry. |

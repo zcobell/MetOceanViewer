@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <ios>
 #include <limits>
+#include <map>
 #include <optional>
 #include <ostream>
 #include <ranges>
@@ -119,8 +120,9 @@ void open_station(std::string& out, const core::FileStation& station,
   out.push_back(',');
 }
 
-// {"quantity":…,"label":…,"unit":…,"datum":…,
-void open_series(std::string& out, const core::SeriesMeta& meta, bool first) {
+// {"quantity":…,"label":…,"unit":…,"datum":…,"sublocation":…,
+void open_series(std::string& out, const core::SeriesMeta& meta,
+                 const core::usgs::Sublocation* sublocation, bool first) {
   out += first ? "{" : ",{";
   member(out, "quantity");
   jt::append_string(out, core::token(meta.quantity()));
@@ -139,7 +141,30 @@ void open_series(std::string& out, const core::SeriesMeta& meta, bool first) {
     member(out, "datum");
     jt::append_string(out, core::to_string(*datum));
   }
+  if (sublocation != nullptr) {
+    out.push_back(',');
+    member(out, "sublocation");
+    jt::append_string(out, sublocation->view());
+  }
   out.push_back(',');
+}
+
+// The sublocation of each (station, column) that has one.
+using Sublocations = std::map<std::pair<std::size_t, std::size_t>,
+                              const core::usgs::Sublocation*>;
+
+std::expected<Sublocations, FormatError> sublocations_of(
+    const core::StationTable& table, std::span<const ColumnSublocation> given) {
+  Sublocations by_column;
+  for (const ColumnSublocation& s : given) {
+    const std::pair key{s.station.value(), s.column.value()};
+    if (key.first >= table.size() or key.second >= table.schema().size() or
+        not by_column.emplace(key, &s.sublocation).second) {
+      return std::unexpected{FormatError{.code = FormatErrc::bad_option,
+                                         .subject = "sublocation"}};
+    }
+  }
+  return by_column;
 }
 
 std::string_view status_of(const core::Sample& s) {
@@ -210,7 +235,8 @@ void close_document(std::string& out, bool empty) {
 
 // Each station's axis once, then its columns: "time":[…],"series":[…]}.
 template <class Flush>
-void emit(const core::StationTable& table, Emitter<Flush>& e) {
+void emit(const core::StationTable& table, const Sublocations& sublocations,
+          Emitter<Flush>& e) {
   open_document(e.out());
   for (const core::StationIndex i : table.stations()) {
     open_station(e.out(), table.station(i), i.value() == 0);
@@ -223,7 +249,11 @@ void emit(const core::StationTable& table, Emitter<Flush>& e) {
     e.out() += ",\"series\":[";
     for (const std::size_t k :
          std::views::iota(std::size_t{0}, table.schema().size())) {
-      open_series(e.out(), table.schema()[k], k == 0);
+      const auto sublocation = sublocations.find({i.value(), k});
+      open_series(
+          e.out(), table.schema()[k],
+          sublocation == sublocations.end() ? nullptr : sublocation->second,
+          k == 0);
       if (not close_series(e, table.column(i, core::ColumnIndex{k}))) {
         return;
       }
@@ -251,7 +281,8 @@ void emit(std::span<const DailyAtStation> stations, Emitter<Flush>& e) {
       return;
     }
     e.out() += ",\"series\":[";
-    open_series(e.out(), s.data.meta(), true);
+    open_series(e.out(), s.data.meta(),
+                s.sublocation ? &*s.sublocation : nullptr, true);
     member(e.out(), "statistic");
     const core::usgs::StatisticId statistic = s.data.statistic();
     jt::append_string(e.out(), statistic.view());
@@ -265,13 +296,17 @@ void emit(std::span<const DailyAtStation> stations, Emitter<Flush>& e) {
   e.finish();
 }
 
-std::expected<void, FormatError> check(const core::StationTable& table) {
+// What a table's text needs: its metadata texts checked, its sublocations
+// by column.
+std::expected<Sublocations, FormatError> check(
+    const core::StationTable& table,
+    std::span<const ColumnSublocation> sublocations) {
   for (const core::SeriesMeta& meta : table.schema()) {
     if (auto ok = check_text(meta); not ok) {
-      return ok;
+      return std::unexpected{std::move(ok).error()};
     }
   }
-  return {};
+  return sublocations_of(table, sublocations);
 }
 
 std::expected<void, FormatError> check(
@@ -284,37 +319,34 @@ std::expected<void, FormatError> check(
   return {};
 }
 
-template <class Input>
-std::expected<std::string, FormatError> format_whole(const Input& input) {
-  return check(input).transform([&input] {
-    std::string text;
-    // One chunk: the buffer is the result.
-    auto take = [&text](std::string& buffer) {
-      text = std::move(buffer);
-      buffer.clear();
-      return true;
-    };
-    Emitter e{std::numeric_limits<std::size_t>::max(), take};
-    emit(input, e);
-    return text;
-  });
+// The text of the whole input in one buffer (`emit_into(e)` writes it).
+template <class Emit>
+std::string format_whole(Emit emit_into) {
+  std::string text;
+  // One chunk: the buffer is the result.
+  auto take = [&text](std::string& buffer) {
+    text = std::move(buffer);
+    buffer.clear();
+    return true;
+  };
+  Emitter e{std::numeric_limits<std::size_t>::max(), take};
+  emit_into(e);
+  return text;
 }
 
-template <class Input>
+// The text streamed into an atomic write in chunks.
+template <class Emit>
 std::expected<void, Error> write_chunked(const std::filesystem::path& path,
-                                         const Input& input) {
-  if (auto ok = check(input); not ok) {
-    return std::unexpected{Error{std::move(ok).error()}};
-  }
+                                         Emit emit_into) {
   return write_file_atomic(
-      path, [&input](std::ostream& out) -> std::expected<void, FileError> {
+      path, [&emit_into](std::ostream& out) -> std::expected<void, FileError> {
         Emitter e{chunk_bytes, [&out](std::string& buffer) {
                     out.write(buffer.data(),
                               static_cast<std::streamsize>(buffer.size()));
                     buffer.clear();
                     return static_cast<bool>(out);  // a full disk stops it
                   }};
-        emit(input, e);
+        emit_into(e);
         return {};
       });
 }
@@ -322,24 +354,37 @@ std::expected<void, Error> write_chunked(const std::filesystem::path& path,
 }  // namespace
 
 std::expected<std::string, FormatError> format_series_json(
-    const core::StationTable& table) {
-  return format_whole(table);
+    const core::StationTable& table,
+    std::span<const ColumnSublocation> sublocations) {
+  return check(table, sublocations).transform([&table](const Sublocations& by) {
+    return format_whole([&](auto& e) { emit(table, by, e); });
+  });
 }
 
 std::expected<std::string, FormatError> format_series_json(
     std::span<const DailyAtStation> stations) {
-  return format_whole(stations);
+  return check(stations).transform([stations] {
+    return format_whole([stations](auto& e) { emit(stations, e); });
+  });
 }
 
-std::expected<void, Error> write_series_json(const std::filesystem::path& path,
-                                             const core::StationTable& table) {
-  return write_chunked(path, table);
+std::expected<void, Error> write_series_json(
+    const std::filesystem::path& path, const core::StationTable& table,
+    std::span<const ColumnSublocation> sublocations) {
+  auto by = check(table, sublocations);
+  if (not by) {
+    return std::unexpected{Error{std::move(by).error()}};
+  }
+  return write_chunked(path, [&](auto& e) { emit(table, *by, e); });
 }
 
 std::expected<void, Error> write_series_json(
     const std::filesystem::path& path,
     std::span<const DailyAtStation> stations) {
-  return write_chunked(path, stations);
+  if (auto ok = check(stations); not ok) {
+    return std::unexpected{Error{std::move(ok).error()}};
+  }
+  return write_chunked(path, [stations](auto& e) { emit(stations, e); });
 }
 
 }  // namespace mov::io
