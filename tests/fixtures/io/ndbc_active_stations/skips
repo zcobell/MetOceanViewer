@@ -1,0 +1,8 @@
+<stations>
+<station lat="1" lon="2"/>
+<station id="41002" lat="1" lon="2"/>
+<station id="41002" lat="3" lon="4"/>
+<station id="41003" lat="91" lon="2"/>
+<station id="41005" lat="1" lon="2" elev="-"/>
+<station id="41006" lat="1" lon="2" met="Y"/>
+</stations>

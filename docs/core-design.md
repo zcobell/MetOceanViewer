@@ -320,7 +320,7 @@ hot-start overlap, §5.3), and `normalize` is written on top of it.
   `StationId<P>::make` trims, canonicalizes, validates the grammar, then builds the
   `StationKey` it holds (`key()`). Grammars: CO-OPS `^[0-9]{7}$`; USGS
   `^[A-Z0-9]+-[A-Za-z0-9]+$` with the agency prefix upper-cased (`usgs-07374000` →
-  `USGS-07374000`); NDBC `^[A-Z0-9]{5}$` upper-cased; harmonics stations non-empty UTF-8
+  `USGS-07374000`); NDBC `^[A-Z0-9]{4,7}$` upper-cased (plan decision 38); harmonics stations non-empty UTF-8
   of at most 255 bytes without control characters (the harmonics reader narrows it).
   `StationId` keeps `<=>`: ids are ordered map keys and sorted lists.
 - `StationSelection` stores its `station_count()`, part of `==`; `applies_to(n)` is an
