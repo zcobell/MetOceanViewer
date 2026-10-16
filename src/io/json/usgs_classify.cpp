@@ -103,7 +103,8 @@ std::optional<ServiceError> refusal_of(const json::Value& document) {
 
 }  // namespace
 
-Classified classify_body(std::string_view body, std::string_view content_type) {
+Classified classify_body(std::string_view body, std::string_view content_type,
+                         const ReadContext& ctx) {
   if (auto markup = sniff_markup(Origin::usgs, body, content_type)) {
     return *std::move(markup);
   }
@@ -114,7 +115,7 @@ Classified classify_body(std::string_view body, std::string_view content_type) {
   }
   // An error body names its error first; a page names its type first, and
   // is not read further here (section 4.8, N6).
-  const auto parsed = json::parse(body, classify_schema, ReadContext{}, {},
+  const auto parsed = json::parse(body, classify_schema, ctx, {},
                                   {.stop_at_unkept_first_member = true});
   if (not parsed) {
     return Payload{};
@@ -126,11 +127,12 @@ Classified classify_body(std::string_view body, std::string_view content_type) {
 }
 
 ServiceError classify_error(std::string_view body,
-                            std::string_view content_type) {
+                            std::string_view content_type,
+                            const ReadContext& ctx) {
   if (auto markup = sniff_markup(Origin::usgs, body, content_type)) {
     return *std::move(markup);
   }
-  const auto parsed = json::parse(body, classify_schema, ReadContext{});
+  const auto parsed = json::parse(body, classify_schema, ctx);
   if (parsed) {
     if (auto refusal = refusal_of(parsed->root)) {
       return *std::move(refusal);

@@ -30,7 +30,6 @@
 #include "mov/io/error.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
-#include "mov/io/rfc3339.hpp"
 #include "mov/io/warning.hpp"
 #include "mov/io/wire/service.hpp"
 #include "mov/io/wire/usgs.hpp"
@@ -47,8 +46,9 @@ using StationId = core::StationId<core::provider::Usgs>;
 // ---- what is kept
 // ------------------------------------------------------------
 
-// A Point's coordinates: [lon, lat] or [lon, lat, height].
-constexpr std::size_t max_coordinates = 3;
+// A Point's coordinates: [lon, lat] or [lon, lat, height]. A row with more
+// is read (its first two are the position); more than this fails the page.
+constexpr std::size_t max_coordinates = 16;
 
 constexpr std::array row_fields{
     json::Field{.name = "id", .keep = &json::leaf},
@@ -59,6 +59,8 @@ constexpr std::array row_fields{
     json::Field{.name = "unit_of_measure", .keep = &json::leaf},
     json::Field{.name = "begin", .keep = &json::leaf},
     json::Field{.name = "end", .keep = &json::leaf},
+    json::Field{.name = "sublocation_identifier", .keep = &json::leaf},
+    json::Field{.name = "web_description", .keep = &json::leaf},
     json::Field{.name = "monitoring_location_id", .keep = &json::leaf},
     json::Field{.name = "monitoring_location_name", .keep = &json::leaf}};
 constexpr json::Keep row_schema{.fields = row_fields};
@@ -85,46 +87,70 @@ enum class Skip : std::uint8_t {
   id,
   parameter,
   statistic,
-  dates,
+  sublocation,
   member,  // a member of the wrong JSON type
   station,
   name,
   position,
 };
 
-constexpr std::array skip_tokens{
-    std::string_view{"id"},        std::string_view{"parameter"},
-    std::string_view{"statistic"}, std::string_view{"dates"},
-    std::string_view{"member"},    std::string_view{"station"},
-    std::string_view{"name"},      std::string_view{"position"}};
-static_assert(skip_tokens.size() ==
-              static_cast<std::size_t>(Skip::position) + 1);
+// The warning subject of a reason.
+constexpr std::string_view token_of(Skip why) noexcept {
+  switch (why) {
+    case Skip::id:
+      return "id";
+    case Skip::parameter:
+      return "parameter";
+    case Skip::statistic:
+      return "statistic";
+    case Skip::sublocation:
+      return "sublocation";
+    case Skip::member:
+      return "member";
+    case Skip::station:
+      return "station";
+    case Skip::name:
+      return "name";
+    case Skip::position:
+      break;
+  }
+  return "position";
+}
+
+// The reasons in their reporting order.
+constexpr std::array every_skip{
+    Skip::id,     Skip::parameter, Skip::statistic, Skip::sublocation,
+    Skip::member, Skip::station,   Skip::name,      Skip::position};
 
 class Skipped {
  public:
   void add(Skip why) noexcept { ++counts_.at(static_cast<std::size_t>(why)); }
 
   void report(std::vector<Warning>& warnings) const {
-    for (std::size_t i = 0; i < counts_.size(); ++i) {
-      append_if_counted(warnings, {.code = WarningCode::series_skipped,
-                                   .subject = std::string{skip_tokens.at(i)},
-                                   .count = counts_.at(i)});
+    for (const Skip why : every_skip) {
+      append_if_counted(warnings,
+                        {.code = WarningCode::series_skipped,
+                         .subject = std::string{token_of(why)},
+                         .count = counts_.at(static_cast<std::size_t>(why))});
     }
   }
 
  private:
-  std::array<std::size_t, skip_tokens.size()> counts_{};
+  std::array<std::size_t, every_skip.size()> counts_{};
 };
 
 template <class T>
 using Kept = std::expected<T, Skip>;
 
-// ---- units, read once per spelling
+// ---- what the rows of a page share
 // --------------------------------------------
 
-class Units {
+// What the rows of a page share: their unit spellings, read once each, and
+// the rows whose validity was ignored.
+class RowState {
  public:
-  const std::optional<core::Unit>& of(std::optional<std::string_view> text) {
+  const std::optional<core::Unit>& unit_of(
+      std::optional<std::string_view> text) {
     const std::string key{text.value_or(std::string_view{})};
     auto it = cache_.find(key);
     if (it == cache_.end()) {
@@ -138,11 +164,17 @@ class Units {
 
   void report(std::vector<Warning>& warnings) const {
     unrecognized_.report(warnings, WarningCode::unrecognized_unit);
+    append_if_counted(warnings, {.code = WarningCode::validity_ignored,
+                                 .subject = "dates",
+                                 .count = validity_ignored_});
   }
+
+  void ignore_validity() noexcept { ++validity_ignored_; }
 
  private:
   std::map<std::string, Read<std::optional<core::Unit>>, std::less<>> cache_;
   page::TextCounts unrecognized_;
+  std::size_t validity_ignored_ = 0;
 };
 
 // ---- one row
@@ -181,40 +213,57 @@ Kept<Code> code_of(const json::Value& row, std::string_view name, Skip why) {
 }
 
 // `begin` or `end`: the UTC day of an RFC 3339 instant; null is unknown.
-Kept<std::optional<std::chrono::sys_days>> day_of(const json::Value& row,
-                                                  std::string_view name) {
+// nullopt (the outer one) when it is not one.
+std::optional<std::optional<std::chrono::sys_days>> day_of(
+    const json::Value& row, std::string_view name) {
   const auto text = optional_text(row, name);
   if (not text) {
-    return std::unexpected{text.error()};
+    return std::nullopt;
   }
   if (not *text) {
     return std::optional<std::chrono::sys_days>{};
   }
-  const auto instant = parse_rfc3339(**text);
+  const auto instant = core::parse_rfc3339(**text);
   if (not instant) {
-    return std::unexpected{Skip::dates};
+    return std::nullopt;
   }
   return std::optional<std::chrono::sys_days>{
       std::chrono::floor<std::chrono::days>(*instant)};
 }
 
-Kept<core::ValidRange> validity_of(const json::Value& row) {
+// The validity of `begin` and `end`. Validity is advisory: dates that are
+// not RFC 3339 or null, or an end before the begin, give an unknown one.
+core::ValidRange validity_of(const json::Value& row, RowState& shared) {
   const auto first = day_of(row, "begin");
-  if (not first) {
-    return std::unexpected{first.error()};
-  }
   const auto last = day_of(row, "end");
-  if (not last) {
-    return std::unexpected{last.error()};
+  if (first and last) {
+    if (const auto range =
+            core::ValidRange::make({.first = *first, .last = *last})) {
+      return *range;
+    }
   }
-  const auto range = core::ValidRange::make({.first = *first, .last = *last});
-  if (not range) {
-    return std::unexpected{Skip::dates};
-  }
-  return *range;
+  shared.ignore_validity();
+  return core::ValidRange{};
 }
 
-Kept<SeriesInfo> series_of(const json::Value& row, Units& units) {
+// `sublocation_identifier`: null is none.
+Kept<std::optional<core::usgs::Sublocation>> sublocation_of(
+    const json::Value& row) {
+  const auto text = optional_text(row, "sublocation_identifier");
+  if (not text) {
+    return std::unexpected{text.error()};
+  }
+  if (not *text) {
+    return std::optional<core::usgs::Sublocation>{};
+  }
+  auto sublocation = core::usgs::Sublocation::make(std::string{**text});
+  if (not sublocation) {
+    return std::unexpected{Skip::sublocation};
+  }
+  return std::optional<core::usgs::Sublocation>{*std::move(sublocation)};
+}
+
+Kept<SeriesInfo> series_of(const json::Value& row, RowState& shared) {
   const auto id = code_of<core::usgs::TimeSeriesId>(row, "id", Skip::id);
   if (not id) {
     return std::unexpected{id.error()};
@@ -229,15 +278,16 @@ Kept<SeriesInfo> series_of(const json::Value& row, Units& units) {
   if (not statistic) {
     return std::unexpected{statistic.error()};
   }
+  auto sublocation = sublocation_of(row);
+  if (not sublocation) {
+    return std::unexpected{sublocation.error()};
+  }
   const auto name = optional_text(row, "parameter_name");
   const auto primary = optional_text(row, "primary");
   const auto unit = optional_text(row, "unit_of_measure");
-  if (not name or not primary or not unit) {
+  const auto description = optional_text(row, "web_description");
+  if (not name or not primary or not unit or not description) {
     return std::unexpected{Skip::member};
-  }
-  const auto validity = validity_of(row);
-  if (not validity) {
-    return std::unexpected{validity.error()};
   }
   return SeriesInfo{
       .id = *id,
@@ -245,8 +295,10 @@ Kept<SeriesInfo> series_of(const json::Value& row, Units& units) {
       .statistic = *statistic,
       .parameter_name = std::string{name->value_or(std::string_view{})},
       .primary = primary->value_or(std::string_view{}) == "Primary",
-      .unit = units.of(*unit),
-      .validity = *validity};
+      .unit = shared.unit_of(*unit),
+      .validity = validity_of(row, shared),
+      .sublocation = *std::move(sublocation),
+      .description = std::string{description->value_or(std::string_view{})}};
 }
 
 // A GeoJSON Point `[lon, lat]` (a height after them is ignored).
@@ -277,7 +329,7 @@ Kept<core::Location> location_of(const json::Value& feature) {
 }
 
 Kept<SiteSeries> site_series_of(const json::Value& feature,
-                                const json::Value& row, Units& units) {
+                                const json::Value& row, RowState& shared) {
   const auto raw_id = optional_text(row, "monitoring_location_id");
   if (not raw_id) {
     return std::unexpected{raw_id.error()};
@@ -299,7 +351,7 @@ Kept<SiteSeries> site_series_of(const json::Value& feature,
   if (not location) {
     return std::unexpected{location.error()};
   }
-  auto series = series_of(row, units);
+  auto series = series_of(row, shared);
   if (not series) {
     return std::unexpected{series.error()};
   }
@@ -318,7 +370,7 @@ std::expected<Read<std::pair<std::vector<Row>, Paging>>, Error> rows_page(
     std::string_view body, const ReadContext& ctx, RowOf row_of) {
   std::vector<Row> rows;
   Skipped skipped;
-  Units units;
+  RowState shared;
   std::size_t features = 0;
   const auto document = json::parse(
       body, page_schema, ctx,
@@ -332,7 +384,7 @@ std::expected<Read<std::pair<std::vector<Row>, Paging>>, Error> rows_page(
           return std::unexpected{properties.error()};
         }
         ++features;
-        auto row = row_of(feature, **properties, units);
+        auto row = row_of(feature, **properties, shared);
         if (row) {
           rows.push_back(*std::move(row));
         } else {
@@ -344,20 +396,21 @@ std::expected<Read<std::pair<std::vector<Row>, Paging>>, Error> rows_page(
     return std::unexpected{document.error()};
   }
   auto paging = page::read_paging(body, document->root, features,
-                                  Collection::combined_metadata);
+                                  Endpoint::combined_metadata);
   if (not paging) {
     return std::unexpected{std::move(paging).error()};
   }
   Read<std::pair<std::vector<Row>, Paging>> out{
       .value = {std::move(rows), *std::move(paging)}, .warnings = {}};
   skipped.report(out.warnings);
-  units.report(out.warnings);
+  shared.report(out.warnings);
   return out;
 }
 
 template <class Page, class Parse>
 std::expected<Reply<Page>, Error> classified(std::string_view body,
                                              std::string_view content_type,
+                                             const ReadContext& ctx,
                                              Parse parse) {
   return std::visit(
       core::Overloaded{
@@ -368,7 +421,7 @@ std::expected<Reply<Page>, Error> classified(std::string_view body,
           [](const ServiceError& e) -> std::expected<Reply<Page>, Error> {
             return Reply<Page>{e};
           }},
-      classify_body(body, content_type));
+      classify_body(body, content_type, ctx));
 }
 
 }  // namespace
@@ -376,7 +429,7 @@ std::expected<Reply<Page>, Error> classified(std::string_view body,
 std::expected<Reply<SeriesPage>, Error> read_series(
     std::string_view body, std::string_view content_type,
     const ReadContext& ctx) {
-  return classified<SeriesPage>(body, content_type, [&] {
+  return classified<SeriesPage>(body, content_type, ctx, [&] {
     return io::detail::usgs::parse_series(body, ctx);
   });
 }
@@ -384,7 +437,7 @@ std::expected<Reply<SeriesPage>, Error> read_series(
 std::expected<Reply<CatalogPage>, Error> read_catalog(
     std::string_view body, std::string_view content_type,
     const ReadContext& ctx) {
-  return classified<CatalogPage>(body, content_type, [&] {
+  return classified<CatalogPage>(body, content_type, ctx, [&] {
     return io::detail::usgs::parse_catalog(body, ctx);
   });
 }
@@ -400,8 +453,8 @@ std::expected<Read<wire::usgs::SeriesPage>, Error> parse_series(
   return wire::usgs::rows_page<core::usgs::SeriesInfo>(
              body, ctx,
              [](const json::Value& /*feature*/, const json::Value& row,
-                wire::usgs::Units& units) {
-               return wire::usgs::series_of(row, units);
+                wire::usgs::RowState& shared) {
+               return wire::usgs::series_of(row, shared);
              })
       .transform([](auto r) {
         return std::move(r).transform([](auto rows_and_paging) {
@@ -417,8 +470,8 @@ std::expected<Read<wire::usgs::CatalogPage>, Error> parse_catalog(
   return wire::usgs::rows_page<wire::usgs::SiteSeries>(
              body, ctx,
              [](const json::Value& feature, const json::Value& row,
-                wire::usgs::Units& units) {
-               return wire::usgs::site_series_of(feature, row, units);
+                wire::usgs::RowState& shared) {
+               return wire::usgs::site_series_of(feature, row, shared);
              })
       .transform([](auto r) {
         return std::move(r).transform([](auto rows_and_paging) {

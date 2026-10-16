@@ -619,6 +619,15 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     track (P1–P10) is done, reviewed and green in CI. The tide track (H2–H9) continues
     in parallel with Phase 4; Phase 3 is closed (phase-end reviews) when both tracks
     are done. The GUI's tide features wait for H9 (the tides provider).
+37. **USGS series: group by sublocation, stitch epochs (decided 2026-10-16).** USGS
+    starts a new series id (an epoch) for the same parameter, statistic and
+    sublocation and marks each one Primary; epochs may overlap. Series with the same
+    parameter, statistic and sublocation form one logical series: all of its Primary
+    epochs are fetched for the requested range and stitched in time, the later-begun
+    epoch winning where they overlap (the current record). Different sublocations are
+    separate choices in the picker, labelled with USGS's sublocation and
+    web_description; the map and the default use the sublocation group whose data reach
+    latest. (`docs/providers-design.md` §3.4, §4.9, §5.2.)
 
 ### Open items from Phase 2 (owner; undecided, collected 2026-10-09)
 

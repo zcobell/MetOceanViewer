@@ -12,7 +12,7 @@
 //  - the next link is absent, or a Verbatim of the USGS origin whose path
 //    is combined-metadata's;
 //  - a refusal is a ParseError whose line lies inside the text, or a
-//    FormatError foreign_link.
+//    FormatError refused_link or unexpected_link.
 
 #include <cstddef>
 #include <cstdint>
@@ -60,7 +60,8 @@ void check_error(const Result& r, std::string_view body) {
     return;
   }
   const auto* f = std::get_if<mov::io::FormatError>(&r.error());
-  if (f == nullptr or f->code != mov::io::FormatErrc::foreign_link) {
+  if (f == nullptr or (f->code != mov::io::FormatErrc::refused_link and
+                       f->code != mov::io::FormatErrc::unexpected_link)) {
     fail();
   }
 }
@@ -85,13 +86,16 @@ void check_paging(const wu::Paging& paging, std::size_t rows,
   if (rows + skipped != paging.features) {
     fail();
   }
-  if (not paging.next) {
+  const auto* next = std::get_if<wu::Next>(&paging.next);
+  const auto* echo = std::get_if<wu::OffsetEcho>(&paging.next);
+  if (next == nullptr and echo == nullptr) {
     return;
   }
   const std::string prefix =
       std::string{mov::io::wire::base(mov::io::wire::Origin::usgs)} +
-      std::string{wu::items_path(wu::Collection::combined_metadata)};
-  const std::string& url = paging.next->url();
+      std::string{wu::items_path(wu::Endpoint::combined_metadata)};
+  const std::string& url =
+      next != nullptr ? next->link.url() : echo->link.url();
   if (not url.starts_with(prefix) or
       (url.size() > prefix.size() and url[prefix.size()] != '?')) {
     fail();

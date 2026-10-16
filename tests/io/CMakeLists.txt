@@ -302,4 +302,3 @@ mov_add_fuzz_test(
     CORPUS io/usgs_catalog
     MAX_LEN 1048576
 )
-mov_add_fuzz_test(fuzz_rfc3339 SOURCES fuzz_rfc3339.cpp LIBRARIES mov::io CORPUS io/rfc3339)

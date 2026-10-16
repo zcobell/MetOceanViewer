@@ -9,6 +9,7 @@
 #include <string_view>
 #include <variant>
 
+#include "mov/core/stop_token.hpp"
 #include "mov/io/detail/json.hpp"
 #include "mov/io/detail/usgs_json.hpp"
 #include "mov/io/read_limits.hpp"
@@ -29,7 +30,7 @@ using mov::test::usgs_fixture;
 constexpr std::string_view json_type = "application/json; charset=utf-8";
 
 ServiceError error_of(std::string_view name) {
-  return wu::classify_error(usgs_fixture(name), json_type);
+  return wu::classify_error(usgs_fixture(name), json_type, {});
 }
 
 }  // namespace
@@ -69,7 +70,7 @@ TEST_CASE("the recorded refusals map to their codes", "[io][usgs][classify]") {
 
 TEST_CASE("refusals the recordings do not show", "[io][usgs][classify]") {
   const auto classify = [](std::string_view body) {
-    return wu::classify_error(body, json_type);
+    return wu::classify_error(body, json_type, {});
   };
   for (const std::string_view code :
        {"API_KEY_MISSING", "API_KEY_DISABLED", "API_KEY_UNAUTHORIZED",
@@ -91,9 +92,10 @@ TEST_CASE("refusals the recordings do not show", "[io][usgs][classify]") {
         ServiceError::make(Origin::usgs, ServiceErrc::invalid_parameter,
                            "InvalidQuery"));
   // Markup (a maintenance or captive-portal page) and plain text.
-  CHECK(wu::classify_error("  <html><body>down</body></html>", "text/html") ==
-        ServiceError::make(Origin::usgs, ServiceErrc::unexpected_content,
-                           "text/html"));
+  CHECK(
+      wu::classify_error("  <html><body>down</body></html>", "text/html", {}) ==
+      ServiceError::make(Origin::usgs, ServiceErrc::unexpected_content,
+                         "text/html"));
   CHECK(classify("upstream connect error") ==
         ServiceError::make(Origin::usgs, ServiceErrc::unknown,
                            "upstream connect error"));
@@ -110,29 +112,59 @@ TEST_CASE("refusals the recordings do not show", "[io][usgs][classify]") {
 
 TEST_CASE("an accepted body is a page unless it names an error first",
           "[io][usgs][classify]") {
+  const auto classify_body = [](std::string_view body,
+                                std::string_view content_type) {
+    return wu::classify_body(body, content_type, {});
+  };
   for (const std::string_view page :
        {"continuous_chain_page1.json", "daily_full_properties.json",
         "series_site.json", "catalog_bbox.json", "continuous_empty.json"}) {
     CHECK(std::holds_alternative<Payload>(
-        wu::classify_body(usgs_fixture(page), json_type)));
+        classify_body(usgs_fixture(page), json_type)));
   }
-  const auto refusal = wu::classify_body(usgs_fixture("error_invalid_key.json"),
-                                         "application/json");
+  const auto refusal =
+      classify_body(usgs_fixture("error_invalid_key.json"), "application/json");
   REQUIRE(std::holds_alternative<ServiceError>(refusal));
   CHECK(std::get<ServiceError>(refusal).code() == ServiceErrc::api_key_invalid);
   CHECK(std::get<ServiceError>(
-            wu::classify_body(
+            classify_body(
                 "\xEF\xBB\xBF" + usgs_fixture("error_time_envelope.json"),
                 json_type))
             .code() == ServiceErrc::range_exceeded);
-  CHECK(
-      std::get<ServiceError>(wu::classify_body("<!DOCTYPE html>", "text/html"))
-          .code() == ServiceErrc::unexpected_content);
+  CHECK(std::get<ServiceError>(classify_body("<!DOCTYPE html>", "text/html"))
+            .code() == ServiceErrc::unexpected_content);
   // Not JSON, or JSON that does not parse: its parser says where.
-  CHECK(std::holds_alternative<Payload>(wu::classify_body("", json_type)));
-  CHECK(std::holds_alternative<Payload>(wu::classify_body("[1]", json_type)));
-  CHECK(std::holds_alternative<Payload>(
-      wu::classify_body("{\"code\":", json_type)));
+  CHECK(std::holds_alternative<Payload>(classify_body("", json_type)));
+  CHECK(std::holds_alternative<Payload>(classify_body("[1]", json_type)));
+  CHECK(
+      std::holds_alternative<Payload>(classify_body("{\"code\":", json_type)));
+  // Classification reads the first member, a choice: an OGC error whose
+  // `type` came first is taken for a page, which its parser then refuses.
+  const std::string type_first =
+      R"({"type":"InvalidQuery","code":"InvalidQuery","description":"x"})";
+  CHECK(std::holds_alternative<Payload>(classify_body(type_first, json_type)));
+  CHECK(mov::test::parse_error_in(
+            mov::io::detail::usgs::parse_series(type_first, {}))
+            .code() == mov::io::ParseErrc::bad_member);
+  // The whole body read as a refusal says what it is.
+  CHECK(wu::classify_error(type_first, json_type, {}).code() ==
+        ServiceErrc::invalid_parameter);
+}
+
+TEST_CASE("classification uses the caller's limits and stop",
+          "[io][usgs][classify]") {
+  mov::io::ReadContext small;
+  small.limits.max_text_bytes = 8;
+  // Over the limit, the body is not read: a page for its parser to refuse,
+  // or an unknown refusal with its text.
+  CHECK(std::holds_alternative<Payload>(wu::classify_body(
+      usgs_fixture("error_invalid_key.json"), json_type, small)));
+  CHECK(wu::classify_error(R"({"code":"InvalidQuery"})", json_type, small)
+            .code() == ServiceErrc::unknown);
+  mov::io::ReadContext stopped;
+  stopped.stop = mov::core::StopToken{[] { return true; }};
+  CHECK(std::holds_alternative<Payload>(wu::classify_body(
+      usgs_fixture("error_invalid_key.json"), json_type, stopped)));
 }
 
 TEST_CASE("classification stops at a page's first member",

@@ -84,6 +84,7 @@ program of §1.5 built against the pinned Qt 6.11.3.
 | Live: `combined-metadata` returns geometry, `id` (32-hex series id), `monitoring_location_id`, `monitoring_location_name`, `parameter_code`, `parameter_name`, `statistic_id`, `computation_identifier`, `begin`, `end`, `primary`, `unit_of_measure`, `time_zone_abbreviation`, `uses_daylight_savings`; `properties=` rejects `time_series_id`. | live; `/collections/combined-metadata/queryables` |
 | Live (2026-10-15, P3; bodies in `tests/fixtures/io/usgs/`): `datetime` intervals are closed (`…00:00:00Z/…00:10:00Z` gave 00:00, 00:05, 00:10). With `sortby` only the first page is served (its `offset` link answers 400). Continuous pages follow `cursor` links in time order; a full last page carries an `offset=<limit>` link that re-reads the window (a cycle). Daily values come in feature-id order, not time order. Without `limit` a page has 10 rows. | live |
 | Live (2026-10-15): `qualifier` is an array of strings (`["ESTIMATED"]`) or null; `begin`/`end` of a series are RFC 3339 instants; `primary` is "Primary" or null, and several Primary series of one parameter and statistic are common (§4.9). Unfiltered, a site's `combined-metadata` also lists field-measurement rows (UUID ids) and peaks (no statistic); `data_type=Continuous values,Daily values` leaves them out. Units: `ft^3/s`, `ft`, `degC` (combined-metadata) but `ft3/s`, `deg C` (parameter-codes). | live |
+| Live (2026-10-16): `sublocation_identifier` and `web_description` tell a site's sensors apart. USGS-02431011 gage height: Headwater, Tailwater, Lock Chamber ("Lock Level"); USGS-01646500 water temperature: a sonde (two Primary epochs, 2013–2019 and 2019 on) and three depths; USGS-12175000: two Primary gage heights without a sublocation, `web_description` "Primary" and "Secondary". In the catalog (map parameters, Primary rows): 113 site-parameters with several sublocation groups (40 with an unnamed one besides), 233 with several Primary epochs in one group; 364 rows have a sublocation, some naming a datum (`NAVD88`, `NAVD 88`). | live |
 | Live (2026-10-15): the catalog query (§4.1, D33) returned 29,017 rows of 17,438 sites on one page: 20.2 MB, 2.8 s keyless. 707 rows not Primary, 1,132 without dates, 16 without geometry. Error bodies: an invalid key is HTTP 403 with api.data.gov's shape; OGC 400s say `InvalidQuery` or `InvalidParameterValue`; an unknown collection is 404 `NotFound`. | live |
 
 ### 1.3 NDBC
@@ -375,8 +376,10 @@ class TimeSeriesId  { /* 32 lower-case hex */ };
 enum class Collection : std::uint8_t { continuous, daily };
 [[nodiscard]] constexpr Collection collection_of(const StatisticId&) noexcept;   // 00011: continuous
 
-struct ByParameter      { ParameterCode parameter; };                        // continuous: statistic 00011
-struct DailyByParameter { ParameterCode parameter; StatisticId statistic; };
+class Sublocation    { /* USGS's sublocation_identifier: non-empty UTF-8, <= 128 B */ };
+struct ByParameter      { ParameterCode parameter; std::optional<Sublocation> sublocation; };  // 00011
+struct DailyByParameter { ParameterCode parameter; StatisticId statistic;
+                          std::optional<Sublocation> sublocation; };
 struct ByTimeSeries     { TimeSeriesId id; };
 
 struct Continuous { StationId<provider::Usgs> station; std::variant<ByParameter, ByTimeSeries> series; TimeRange range; };
@@ -386,17 +389,26 @@ using Request = std::variant<Continuous, Daily>;
 /// One series of a site: catalog row (Capabilities<Usgs>), picker row, resolution input.
 struct SeriesInfo { TimeSeriesId id; ParameterCode parameter; StatisticId statistic;
                     std::string parameter_name; bool primary; std::optional<Unit> unit;
-                    ValidRange validity; };
-/// A site's series: sorted, unique by id, at most one Primary per (parameter,
-/// statistic). make -> expected<SeriesSet, variant<DuplicateSeriesId, SeveralPrimary>>;
-/// find(id) by binary search; primary(parameter, statistic).
+                    ValidRange validity;                       // advisory
+                    std::optional<Sublocation> sublocation; std::string description; };
+/// A logical series (decision 37): the Primary epochs of one key, stitched in time.
+struct SeriesKey { ParameterCode parameter; StatisticId statistic;
+                   std::optional<Sublocation> sublocation; /* <=> */ };
+/// A site's series: sorted, unique by id (the one invariant); make -> expected<SeriesSet,
+/// DuplicateSeriesId>; find(id); keys(); epochs(key) by validity begin (unknown first),
+/// then id. Epochs may overlap.
 class SeriesSet;
+/// The map's group: the one whose data reach latest.
+[[nodiscard]] std::optional<SeriesKey> map_default(const SeriesSet&, const ParameterCode&,
+                                                   const StatisticId&);
 
-/// Resolution (stage 1, §5.2) over the site's series. Resolved<C> is made only by
-/// resolve and proves the series exists at the station, belongs to collection C, and is
-/// the Primary one when chosen by parameter; series() is its SeriesInfo.
-enum class ResolveError : std::uint8_t { no_series, wrong_collection };
-template <class C> class Resolved;   // C: Continuous or Daily
+/// Resolution (stage 1, §5.2) over the site's series. Resolved<C> holds the key and the
+/// epochs that meet the request, each an Epoch<C>{series(), range()} with its sub-range,
+/// in precedence order (the epoch begun last first); both take core's CoreKey, so only
+/// resolve makes them.
+using ResolveError = std::variant<NoSeries, WrongCollection, AmbiguousSeries /*keys*/>;
+template <class C> class Epoch;      // C: Continuous (TimeRange) or Daily (DayRange)
+template <class C> class Resolved;
 [[nodiscard]] std::expected<Resolved<Continuous>, ResolveError> resolve(const Continuous&, const SeriesSet&);
 [[nodiscard]] std::expected<Resolved<Daily>, ResolveError> resolve(const Daily&, const SeriesSet&);
 
@@ -429,10 +441,21 @@ class DailySeries {
 
 - Resolution **always** runs (Bd B2), also for `ByTimeSeries`: it supplies the unit,
   name and statistic, and proves the id belongs to the collection; the station is
-  proved by the query (`monitoring_location_id`). `ByParameter` with no Primary series
-  is `no_series` (the fetch's `NoData`). Several Primary series of one parameter and
-  statistic are refused when the site's `SeriesSet` is built (`SeveralPrimary`), which
-  the fetch reports as `AmbiguousSeries`.
+  proved by the query (`monitoring_location_id`). `ByParameter` with no Primary epoch,
+  or none meeting the range, is `NoSeries` (the fetch's `NoData`).
+- **Epochs and sublocations (decision 37, P3 review).** USGS starts a new series id for
+  the same parameter, statistic and sublocation from time to time and marks each
+  Primary; epochs overlap. A by-parameter request resolves to the logical series of its
+  key and all of its Primary epochs that meet the range, each fetched over its own
+  sub-range (the request within the epoch's validity, a day wider at a known end:
+  validity is advisory, its days are UTC days) and stitched. **Overlap rule:** the
+  later-begun epoch wins; `Resolved` lists the epochs in that precedence order, the
+  plan fetches and folds them in that order (§5.2), and the left-biased union of
+  `io::Part` (and of the daily merge) keeps the earlier part's rows, so the rule needs
+  no code of its own. Without a named sublocation the request means the group without
+  one if the site has it, else the site's only group, else `AmbiguousSeries` with the
+  candidate keys (the picker offers them, labelled with the sublocation and
+  `web_description`). `ByTimeSeries` is one epoch over the whole range, Primary or not.
 - The statistic of a continuous request is `00011` by construction; a daily request by
   parameter must name a daily statistic (00011 is `wrong_collection`).
 
@@ -721,45 +744,59 @@ For H5: the harmonics reader can reuse `mov/io/detail/json.hpp` (the schema-driv
 parse, the repeated-member check, the depth pre-scan, the NUL rule). Its UTF-8 pass (HE
 §6.3 step 3) does not catch a NUL, which is valid UTF-8, so it needs the NUL rule too.
 
-### 4.9 As built (P3): USGS
+### 4.9 As built (P3 and its review round): USGS
 
 P3 built `mov/io/wire/usgs.hpp` (targets, unit spellings, classification, the page
-readers), `Verbatim` and `Target` in `origin.hpp`, `mov/io/rfc3339.hpp`
-(`io::parse_rfc3339`, constexpr) and the private `detail/usgs_json.hpp`. The readers
-reuse P2's SAX reader (`detail::json::parse`, Keep schemas, the depth, NUL and BOM
-rules, stop polling); only `src/io/json/` includes nlohmann. The facts are the
-2026-10-15 rows of §1.2, each pinned by a recorded body in `tests/fixtures/io/usgs/`
-(`provenance.txt`).
+readers), `Verbatim` and `Target` in `origin.hpp`, and the private
+`detail/usgs_json.hpp`; `parse_rfc3339` and the whole-text `parse_date` are core's
+(`mov/core/time.hpp`). The readers reuse P2's SAX reader (`detail::json::parse`, Keep
+schemas, the depth, NUL and BOM rules, stop polling); only `src/io/json/` includes
+nlohmann. The facts are the 2026-10-15 and 2026-10-16 rows of §1.2, each pinned by a
+recorded body in `tests/fixtures/io/usgs/` (`provenance.txt`). The review round
+(neckbeard-nate, ben-deane) and decision 37 are folded in.
 
 | §4 says | Built | Why |
 |---|---|---|
-| `Verbatim::make(Origin, pinned_path, url) -> expected<Verbatim, FormatError>` | `-> expected<Verbatim, LinkError {too_long, bad_character, other_origin, other_path}>`; the URL is `base(origin)` then `/` (no port, no user information), the path exactly the pinned one, every byte an RFC 3986 URI character (no `#`, `%` with two hex digits), at most 8 KiB. A page whose link is refused is `FormatError{foreign_link}` (a new `FormatErrc`), subject the link | A narrow error at the type; the reader lifts it. A link that tries to leave is not a malformed body. |
-| `usgs::resolve_target(request)` with `computation_identifier` | `resolve_target(Continuous)`, `resolve_target(Daily)`: by parameter `parameter_code` and `statistic_id` (00011 for continuous), by id `id`; `properties` without `computation_identifier`; `limit=50000`. New: `site_series_target(station)` for §6.6, with `data_type=Continuous values,Daily values` | `SeriesInfo` has no field for it. Unfiltered, a site lists field-measurement rows (UUID ids) and peaks (no statistic). |
-| `usgs::data_target(resolved, window)` with `sortby=time` | `data_target(Resolved<Continuous>, TimeRange)` (the whole seconds of the window, `yyyy-mm-ddThh:mm:ssZ`, closed) and `data_target(Resolved<Daily>, DayRange)` (first and last day); `TargetError{no_whole_second, outside_four_digit_years}`; **no `sortby`** | With `sortby` the API serves only the first page: its next link is an `offset` link that answers 400 "Only the first page of data can be returned when specifying 'sortby'" (recorded). |
-| `usgs::parse_items(body, ctx) -> Read<UsgsPage>{Part, next, first, last}` | `read_continuous(body, content_type, Resolved<Continuous>, ctx)` and `read_daily(…, Resolved<Daily>, …)` -> `expected<variant<Read<Page>, ServiceError>, Error>`, classifying first as P2's `read_data`. `ContinuousPage{Part, optional<TimeExtent>, Paging}`, `DailyPage{DailySeries, Paging}`, `Paging{features, optional<Verbatim> next}` | The resolved series gives the column's metadata (quantity `quantity_of`, label `parameter_name`, unit, the registry's datum) and the daily statistic. |
-| daily pages: "reverses a strictly decreasing page" | Daily values come in **feature-id order**, on a page and across pages (recorded: 26, 27, 22, 28 / 29, 25, 20, 21 / 23, 30, 24). The reader sorts by day without a warning and reports only repeated days; a `DailyPage` has no extent | A time order the server never has is not a fault. P7 builds the daily `PageSummary` with no extent (the guard then checks only the count, empty pages and repeated links) and merges the pages by day. 36 years fit one page (§1.2), so a second daily page needs more than 137 years. |
-| — | A `next` link with `offset` and no `cursor` is **not** a next page: the reader drops it | The API adds `offset=<limit>` to every full last page of a cursor chain; followed, it reads the window again from that offset of its start (recorded: page 4 repeats page 2 and links back to page 3, a cycle; PageGuard would fail the unit `no_progress`). From a first page it reads an empty page. P8's live job (§10.5) should assert that a multi-page chain continues by `cursor`, since a server that paged by `offset` would end every chain at its first page. |
-| `value` string or `null`; `qualifier` "counted by text" | `value` a string (`""` Missing) or `null` (Missing); a number is `bad_member`. `qualifier` is null, a string, or an **array of strings** (recorded `["ESTIMATED"]`); each counted as `qualified_samples` (a new `WarningCode`) by text, at most 16 texts, the rest under `...`. `approval_status` "Provisional" counts `provisional_samples` (subject `usgs:approval_status`) | PA §1.5 said a nullable string. |
+| `Verbatim::make(Origin, pinned_path, url) -> expected<Verbatim, FormatError>` | `-> expected<Verbatim, LinkError {too_long, bad_character, other_origin, other_path}>` (`to_token`); the URL is `base(origin)` then `/` (no port, no user information), the path exactly the pinned one, every byte an RFC 3986 URI character (no `#`, no `[`/`]`, `%` with two hex digits), at most 8 KiB. A page whose link is refused is `FormatError{refused_link}` (a new `FormatErrc`), subject the reason's token and the link | A narrow error at the type; the reader lifts it and keeps the reason. A link that tries to leave is not a malformed body. |
+| `usgs::resolve_target(request)` with `computation_identifier` | `resolve_target(Continuous)`, `resolve_target(Daily)`: by parameter `parameter_code` and `statistic_id` (00011 for continuous), by id `id`, never by sublocation (every group's rows say whether the choice is ambiguous); `properties` add `sublocation_identifier` and `web_description`, drop `computation_identifier`; `limit=50000`. New: `site_series_target(station)` for §6.6, with `data_type=Continuous values,Daily values` | `SeriesInfo` has no field for the computation. Unfiltered, a site lists field-measurement rows (UUID ids) and peaks (no statistic). |
+| `usgs::data_target(resolved, window)` with `sortby=time` | `data_target(Epoch<Continuous>, TimeRange)` (the whole seconds of the window, `yyyy-mm-ddThh:mm:ssZ`, closed) and `data_target(Epoch<Daily>, DayRange)` (first and last day): one epoch's id (decision 37); `TargetError{TargetErrc {no_whole_second, outside_four_digit_years}, variant<TimeRange, DayRange> window}`; **no `sortby`**; `Endpoint {continuous, daily, combined_metadata}` with `endpoint_of(core::usgs::Collection)` | With `sortby` the API serves only the first page: its next link is an `offset` link that answers 400 "Only the first page of data can be returned when specifying 'sortby'" (recorded). |
+| `usgs::parse_items(body, ctx) -> Read<UsgsPage>{Part, next, first, last}` | `read_continuous(body, content_type, Epoch<Continuous>, ctx)` and `read_daily(…, Epoch<Daily>, …)` -> `expected<variant<Read<Page>, ServiceError>, Error>`, classifying first as P2's `read_data`. `ContinuousPage{TimeSeries values, Paging}` with `extent()` computed (`TimeExtent`, first <= last by construction); `DailyPage{DailySeries, Paging}` | The epoch gives the series' metadata (quantity `quantity_of`, label `parameter_name`, unit, the registry's datum) and the daily statistic. A page is one series; P7 inserts it into an `io::Part`. |
+| daily pages: "reverses a strictly decreasing page" | Daily values come in **feature-id order**, on a page and across pages (recorded: 26, 27, 22, 28 / 29, 25, 20, 21 / 23, 30, 24). The reader sorts by day and reports only repeated days (`detail::add_dropped_warnings`); a `DailyPage` has no extent | A time order the server never has is not a fault. P7 builds the daily `PageSummary` with no extent (the guard then checks only the count, empty pages and repeated links) and merges the pages by day. 36 years fit one page (§1.2), so a second daily page needs more than 137 years. |
+| — | `Paging{features, NextPage next}`, `NextPage = variant<NoNext, Next{Verbatim}, OffsetEcho{Verbatim}>`. A link is checked by `Verbatim::make` first; then a link with `offset` and no `cursor` is an `OffsetEcho` only when its `offset` and `limit` both equal the page's features, and any other such link is `FormatError{unexpected_link}`; every other link is a `Next` | The API adds `offset=<limit>` to every full last page of a cursor chain; followed from a later page it reads the window again from that offset of its start (recorded: page 4 repeats page 2 and links back to page 3, a cycle; PageGuard would fail the unit `no_progress`). **For P7:** follow an `OffsetEcho` only from a chain's first page (where it reads the rest of an offset-paged result, or an empty page) and end the chain on one from a later page. P8's live job (§10.5) should assert that a multi-page chain continues by `cursor`. |
+| `value` string or `null`; `qualifier` "counted by text" | `value` a string (`""` Missing) or `null` (Missing); a number is `bad_member`. `qualifier` is null, a string, or an **array of strings** (recorded `["ESTIMATED"]`, at most 256 per sample; more fails the page); each counted as `qualified_samples` (a new `WarningCode`) by text, at most 16 texts per page, the rest under `...`. `approval_status` "Provisional" counts `provisional_samples` (subject `usgs:approval_status`). **For P7:** a fetch sums its pages' warnings by (code, subject) without applying the cap again | PA §1.5 said a nullable string. |
 | `numberReturned` not checked | Present, it must equal the features (`count_mismatch`) | A cut or inconsistent page. |
-| `usgs::classify_error(status, body)` | `classify_error(body, content_type)` and `classify_body(body, content_type) -> variant<Payload, ServiceError>` (no NoData: an empty page is a page). api.data.gov's `API_KEY_INVALID`, `_MISSING`, `_DISABLED`, `_UNAUTHORIZED`, `_UNVERIFIED` → `api_key_invalid`; OGC "time envelope is too large" → `range_exceeded`; `InvalidParameterValue`, `InvalidQuery` → `invalid_parameter`; anything else (`NotFound`, `OVER_RATE_LIMIT`) `unknown`; markup `unexpected_content` | The status adds nothing the body does not say; fetch keeps it in `HttpError`. `classify_body` stops at a page's first member (`type`): 2 events. |
-| `usgs::parse_series(body, ctx)`, `station_skipped` | `read_series` -> `SeriesPage{vector<SeriesInfo>, Paging}`; a row that cannot be a series is left out and counted as `series_skipped` (a new `WarningCode`; subjects `id`, `parameter`, `statistic`, `dates`, `member`, and for the catalog `station`, `name`, `position`); `primary` is true only for "Primary"; `begin`/`end` are RFC 3339 instants, stored as the UTC days they fall on; units read once per spelling, `unrecognized_unit` counted per spelling | A row is a series, not a station. |
-| `usgs::catalog_target(parameters)`, a catalog parser | `catalog_target()` over `map_parameters` (D33) with geometry; `read_catalog` -> `CatalogPage{vector<SiteSeries{station, name, location, SeriesInfo}>, Paging}`, a GeoJSON Point `[lon, lat]` (a height ignored; null geometry: `position`) | Grouping rows into sites (and the station's validity) is the catalog builder's (P5a/P9b), after every page. |
-| `io::parse_rfc3339` on core's `DateTimeCursor` | as said; `DateTimeCursor` and `parse_date` moved out of `core::detail` (the `core_detail_fence` gate) into `mov::core`, with `next_is_digit()`. `T`/`t`, `Z`/`z` or `±hh:mm` required, seconds required, no leap second, fraction 1–9 digits truncated to ms | RFC 3339 §5.6. The daily `time` is read with `parse_date` and must end there. |
+| `usgs::classify_error(status, body)` | `classify_error(body, content_type, ctx)` and `classify_body(body, content_type, ctx) -> variant<Payload, ServiceError>` (no NoData: an empty page is a page), with the caller's limits and stop token. api.data.gov's `API_KEY_INVALID`, `_MISSING`, `_DISABLED`, `_UNAUTHORIZED`, `_UNVERIFIED` → `api_key_invalid`; OGC "time envelope is too large" → `range_exceeded`; `InvalidParameterValue`, `InvalidQuery` → `invalid_parameter`; anything else (`NotFound`, `OVER_RATE_LIMIT`) `unknown`; markup `unexpected_content`. Classifying by the first member is a choice, pinned by a test: an OGC error with `type` first is a Payload, which its parser refuses | The status adds nothing the body does not say; fetch keeps it in `HttpError`. `classify_body` stops at a page's first member (`type`): 2 events. |
+| `usgs::parse_series(body, ctx)`, `station_skipped` | `read_series` -> `SeriesPage{vector<SeriesInfo>, Paging}`; `sublocation_identifier` (a `core::usgs::Sublocation`) and `web_description` read; a row that cannot be a series is left out and counted as `series_skipped` (a new `WarningCode`; subjects `id`, `parameter`, `statistic`, `sublocation`, `member`, and for the catalog `station`, `name`, `position`, from an exhaustive switch); `primary` is true only for "Primary"; `begin`/`end` are RFC 3339 instants, stored as the UTC days they fall on. **Validity is advisory:** dates that do not parse or are inverted keep the row with `ValidRange{}` and count `validity_ignored` (a new `WarningCode`) | A row is a series, not a station; a bad date must not hide a series. |
+| `usgs::catalog_target(parameters)`, a catalog parser | `catalog_target()` over `map_parameters` (D33) with geometry and the sublocation fields; `read_catalog` -> `CatalogPage{vector<SiteSeries{station, name, location, SeriesInfo}>, Paging}`, a GeoJSON Point `[lon, lat]` (further coordinates ignored, at most 16, more fails the page; null geometry: `position`) | Grouping rows into sites (and `map_default` per site) is the catalog builder's (P5a/P9b), after every page. |
+| `io::parse_rfc3339` on core's `DateTimeCursor` | `core::parse_rfc3339` beside `parse_utc_datetime`, one fraction parser (1–9 digits truncated to ms for RFC 3339, 1–3 for `parse_utc_datetime`); the whole-text `core::parse_date(string_view)` for daily dates; the cursor stays in `core::detail`. `T`/`t`, `Z`/`z` or `±hh:mm` required, seconds required, no leap second | RFC 3339 §5.6; the `core_detail_fence` keeps the cursor private. `fuzz_rfc3339` (core) checks that `±hh:mm` names the Z form's instant minus the offset. |
 | unit aliases `ft^3/s`, `ft`, `deg C` | `unit_of_measure(text)`: `ft^3/s`, `m^3/s` (combined-metadata), `ft/sec`, `m3/sec`, `Deg` (parameter-codes) by a pinned table, the rest `parse_unit` (`ft`, `degC`, `deg C`, `mph`, `deg`, `uS/cm`, `%` already parse) | The spellings are those of §1.2. |
 | `registry_quantity` rows 00010, 00020, 00035, 00036 "after P3 checks them" | added: water_temperature, air_temperature, wind_speed, wind_direction | parameter-codes (2026-10-15): "Temperature, water, degrees Celsius", "Temperature, air, degrees Celsius", "Wind speed, miles per hour", "Wind direction, degrees clockwise from true north". |
+| core: at most one Primary series per (parameter, statistic) (`SeveralPrimary`) | decision 37: `SeriesSet` keeps unique ids only and groups Primary epochs by `SeriesKey`; `resolve` returns the key and its epochs that meet the range with their sub-ranges, in precedence order; `AmbiguousSeries` carries `SeriesKey`s; `map_default` (§3.4) | USGS marks every epoch Primary (three water-temperature epochs at USGS-01646500; 233 site-parameters of the catalog have several Primary epochs in one group). |
+| fetch: one unit per window | one unit per (epoch, window) in plan order, `epoch_of(request, unit)`; a page whose extent leaves its window is `PagingError{outside_window}` (§5.2) | Checked in the plan's `next`, on every page including the first, rather than by pinning `time_series_id` and `datetime` in `Verbatim::make`: it catches a server that ignores `datetime` on the composed first page too, and needs no parsing of percent-encoded queries. |
 
-**Open for P1/P7 (finding).** USGS marks *every epoch* of a series `primary`:
-USGS-01646500 has three Primary instantaneous water-temperature series (2007–2019,
-2013–2019, 2019–now), and two Primary series of one parameter and statistic are
-common (24 pairs at that site; 343 catalog sites for the map parameters; USGS-12175000
-has two gage heights told apart only by `web_description` "Primary"/"Secondary",
-USGS-02431011 by `sublocation_identifier`). Core's `SeriesSet` refuses such a site
-(`SeveralPrimary`), so resolution by parameter there is `AmbiguousSeries`, and P5a cannot
-put such a site's series into `Capabilities<Usgs>`. A rule is needed (for example: among
-several Primary series, the one whose validity covers the request, else the latest; or
-`SeriesSet` keeping them and `resolve` choosing by date), and `SeriesInfo` may need
-`sublocation_identifier` and `web_description` for the picker. Both are core decisions,
-not P3's.
+**Consequences of decision 37 to note (owner).** USGS-12175000 has two Primary gage
+heights without a sublocation, told apart only by `web_description` "Primary" (2007 on)
+and "Secondary" (2023 on): one logical series, so from 2023 the "Secondary" epoch wins.
+40 site-parameters of the catalog have both a group without a sublocation and named
+ones; a request without a sublocation takes the unnamed group (the rule above), which
+keeps every group reachable with `optional<Sublocation>` (the review asked for
+`AmbiguousSeries` whenever there are several groups, which would leave the unnamed one
+unselectable). Some sublocations name a datum (`NAVD88`, `NAVD 88`: 27 rows):
+`registry_quantity` still calls 00065 gage height at STND there.
+
+**For P5 (questions, not decided here).**
+- A cached catalog shows an active series as ended: `end` is the time of the last
+  value, so a series stored with `end` = the day it was fetched looks ended a day
+  later. The catalog needs a rule (for example "ended" only when `end` is older than a
+  threshold, or no `last` while the series is current).
+- Daily validity in local days: `begin`/`end` are the UTC instants of the site's local
+  midnight, stored as UTC days, which is the local day west of UTC but the day before
+  at UTC+10 (Guam, the Pacific islands). Resolution widens each epoch by a day, so
+  fetches are right; a catalog or picker that shows the dates may be a day early there.
+
+**For P4 and the UI.** Every text a warning or error subject carries from a body (a
+qualifier, a unit, a refused link, a service message) is raw server text, cut to 120 B
+on a UTF-8 boundary: render it as plain text and escape control characters (§6.9).
 
 **For P7.** `wire::usgs::page_rows` and `fetch::usgs::page_rows` are both 50,000: a
 `static_assert` in fetch (which sees io) would tie them. Continuous pages carry an
@@ -768,11 +805,12 @@ page recorded at USGS-01485755), under the 64 MiB body cap.
 
 Regressions in P3 (`[regression]`): L4 (a one-sample page is a series), L6 (targets:
 the range as asked, closed intervals sent as the whole seconds or days of a half-open
-one), L7 (UTC instants across the 2025-11-02 DST change stay on the 5-minute grid;
-daily values are the dates as written), L8 (an out-of-order page is sorted and reported,
-not truncated). Fuzz targets: `fuzz_usgs_items` and `fuzz_usgs_catalog` (inputs up to
-1 MiB, large-page seeds), `fuzz_rfc3339`, and `fuzz_usgs_paging` in `tests/fetch`
-(pages joined by 0xFF, read by io and followed by `fetch::usgs::next`).
+one), L7 (UTC instants across the 2025-11-02 DST change stay on the 5-minute grid, also
+written with `-04:00`/`-05:00` offsets through the repeated local hour; daily values are
+the dates as written), L8 (an out-of-order page is sorted and reported, not truncated).
+Fuzz targets: `fuzz_usgs_items` and `fuzz_usgs_catalog` (inputs up to 1 MiB, large-page
+seeds), `fuzz_rfc3339` (core), and `fuzz_usgs_paging` in `tests/fetch` (pages joined by
+0xFF, read by io and followed by `fetch::usgs::next` with P7's echo rule).
 
 ---
 
@@ -803,7 +841,7 @@ enum class ServiceErrc : std::uint8_t { station_or_system, datum_unavailable, ra
   invalid_parameter, gateway, api_key_invalid, unexpected_content, unknown };   // io::wire's (§4.8)
 struct ServiceError { Origin origin; ServiceErrc code; std::string text; };  // ≤ 120 B, UTF-8 boundary, raw
 struct NoData {};
-struct AmbiguousSeries { std::vector<core::usgs::TimeSeriesId> candidates; };
+struct AmbiguousSeries { std::vector<core::usgs::SeriesKey> candidates; };
 struct DeadlineExceeded {};
 struct UnitMismatch { core::QuantityId column; core::Unit first, other; };
 struct MetaMismatch { core::QuantityId column; };
@@ -860,7 +898,7 @@ compositions, each used for one kind of dependency:
 |---|---|---|
 | CO-OPS | windows of `split(aligned(range, 1 min), max_window)`; one exchange per window, two for a paired product (one unit) | none |
 | USGS stage 1 | one `Resolution` | `next` page of `combined-metadata` (bounded as below) |
-| USGS stage 2 | continuous: windows of `split(aligned(range, 1 s), 1000 d)`; daily: one `DayWindow` | the page's `next`, accepted only when: the page was non-empty, the link was not seen before in this window, the page's first time is after the previous page's last, and fewer than `max_pages(window) = ceil(window / 1 min / 50000) + 2` pages were taken (N B1). Otherwise the unit fails with `ParseError{corrupt_record}`. |
+| USGS stage 2 | one unit per (epoch, window) in plan order: the resolved epochs in precedence order (the epoch begun last first, decision 37), each epoch's windows of `split(aligned(epoch range, 1 s), 1000 d)` in time order; daily: one `DayWindow` per epoch. The merge folds in plan order, so the later-begun epoch's rows win where epochs overlap. A page whose extent leaves its window fails the unit (`PagingError{outside_window}`) | the page's `next`, accepted only when: the page was non-empty, the link was not seen before in this window, the page's first time is after the previous page's last, and fewer than `max_pages(window) = ceil(window / 1 min / 50000) + 2` pages were taken (N B1). Otherwise the unit fails with `ParseError{corrupt_record}`. |
 | NDBC | one unit per **source** in precedence order, from `range` and `now` | `Absent` (404) → the next spelling or source: historical `h{y}`, then for `y == year(now) − 1` the twelve monthly files; for the current year each past month `{id}{m}{y}.txt.gz` → `{id}.txt` → absent; month codes 10–12 try `a`/`b`/`c` and then decimal until §1.3 is verified; plus `realtime2` when the range ends within 45 days of `now` |
 | catalogs | the provider's list exchanges; CO-OPS then one `datums.json` unit per station | the list's next page (USGS) |
 

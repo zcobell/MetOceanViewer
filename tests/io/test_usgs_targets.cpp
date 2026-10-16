@@ -43,7 +43,7 @@ using Query = std::vector<QueryParam>;
 
 constexpr std::string_view series_properties =
     "id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,"
-    "begin,end";
+    "begin,end,sublocation_identifier,web_description";
 
 cu::TimeSeriesId series_id(std::string_view text) {
   return must(cu::TimeSeriesId::make(text));
@@ -155,7 +155,8 @@ TEST_CASE("the catalog asks for the map parameters with their locations",
                          {"properties",
                           "monitoring_location_id,monitoring_location_name,id,"
                           "parameter_code,parameter_name,statistic_id,primary,"
-                          "unit_of_measure,begin,end"},
+                          "unit_of_measure,begin,end,sublocation_identifier,"
+                          "web_description"},
                          {"limit", "50000"},
                          {"f", "json"}});
 }
@@ -165,7 +166,7 @@ TEST_CASE("the catalog asks for the map parameters with their locations",
 
 TEST_CASE("a continuous window is sent as the whole seconds it holds",
           "[io][usgs][targets][regression][L6]") {
-  const auto series = mov::test::resolved_continuous();
+  const auto series = mov::test::continuous_epoch();
   const auto target =
       must(wu::data_target(series, range(utc(2026, 10, 1), utc(2026, 10, 2))));
   CHECK(target ==
@@ -187,7 +188,7 @@ TEST_CASE("a continuous window is sent as the whole seconds it holds",
 
 TEST_CASE("adjacent continuous windows share no second",
           "[io][usgs][targets][regression][L6]") {
-  const auto series = mov::test::resolved_continuous();
+  const auto series = mov::test::continuous_epoch();
   const mov::core::Time b = utc(2023, 1, 1);
   const auto windows = mov::core::split(
       range(b, utc(2026, 1, 1)),
@@ -204,20 +205,24 @@ TEST_CASE("adjacent continuous windows share no second",
 
 TEST_CASE("a window off the second grid is cut to its whole seconds",
           "[io][usgs][targets]") {
-  const auto series = mov::test::resolved_continuous();
+  const auto series = mov::test::continuous_epoch();
   using std::chrono::milliseconds;
   const mov::core::Time b = utc(2026, 10, 1, 0, 0, 0) + milliseconds{250};
   const mov::core::Time e = utc(2026, 10, 1, 0, 0, 2) + milliseconds{500};
   CHECK(datetime_of(must(wu::data_target(series, range(b, e)))) ==
         "2026-10-01T00:00:01Z/2026-10-01T00:00:02Z");
   // A window inside one second holds none.
-  CHECK(wu::data_target(series, range(b, b + milliseconds{500})) ==
-        std::unexpected{
-            wu::TargetError{.reason = wu::TargetErrc::no_whole_second}});
-  // datetime has four-digit years.
-  CHECK(wu::data_target(series, range(utc(9999, 12, 31), utc(10000, 1, 2))) ==
+  // A window inside one second holds none; the error names the window.
+  const auto inside = range(b, b + milliseconds{500});
+  CHECK(wu::data_target(series, inside) ==
         std::unexpected{wu::TargetError{
-            .reason = wu::TargetErrc::outside_four_digit_years}});
+            .reason = wu::TargetErrc::no_whole_second, .window = inside}});
+  // datetime has four-digit years.
+  const auto far = range(utc(9999, 12, 31), utc(10000, 1, 2));
+  CHECK(
+      wu::data_target(series, far) ==
+      std::unexpected{wu::TargetError{
+          .reason = wu::TargetErrc::outside_four_digit_years, .window = far}});
   CHECK(datetime_of(must(wu::data_target(
             series, range(utc(9999, 12, 31, 23, 59, 59), utc(10000, 1, 1))))) ==
         "9999-12-31T23:59:59Z/9999-12-31T23:59:59Z");
@@ -225,7 +230,7 @@ TEST_CASE("a window off the second grid is cut to its whole seconds",
 
 TEST_CASE("daily values are asked for by their first and last day",
           "[io][usgs][targets][regression][L6]") {
-  const auto series = mov::test::resolved_daily();
+  const auto series = mov::test::daily_epoch();
   const auto target =
       must(wu::data_target(series, days(day(2026, 9, 28), day(2026, 10, 1))));
   CHECK(target ==
@@ -245,12 +250,16 @@ TEST_CASE("daily values are asked for by their first and last day",
   CHECK(datetime_of(must(
             wu::data_target(series, days(day(0, 1, 1), day(10000, 1, 1))))) ==
         "0000-01-01/9999-12-31");
-  CHECK(wu::data_target(series, days(day(-1, 12, 31), day(2026, 1, 1))) ==
-        std::unexpected{wu::TargetError{
-            .reason = wu::TargetErrc::outside_four_digit_years}});
-  CHECK(wu::data_target(series, days(day(2026, 1, 1), day(10000, 1, 2))) ==
-        std::unexpected{wu::TargetError{
-            .reason = wu::TargetErrc::outside_four_digit_years}});
+  const auto before = days(day(-1, 12, 31), day(2026, 1, 1));
+  CHECK(wu::data_target(series, before) ==
+        std::unexpected{
+            wu::TargetError{.reason = wu::TargetErrc::outside_four_digit_years,
+                            .window = before}});
+  const auto after = days(day(2026, 1, 1), day(10000, 1, 2));
+  CHECK(wu::data_target(series, after) ==
+        std::unexpected{
+            wu::TargetError{.reason = wu::TargetErrc::outside_four_digit_years,
+                            .window = after}});
 }
 
 // ---- next links
@@ -260,7 +269,7 @@ TEST_CASE("a next link is followed only on its origin and path",
           "[io][usgs][verbatim]") {
   const std::string next = std::string{continuous_items} +
                            "?cursor=NjZh&time_series_id=66a4&limit=2&f=json";
-  const auto pinned = wu::items_path(wu::Collection::continuous);
+  const auto pinned = wu::items_path(wu::Endpoint::continuous);
   const Verbatim link = must(Verbatim::make(Origin::usgs, pinned, next));
   CHECK(link.url() == next);
   CHECK(link.origin() == Origin::usgs);
@@ -303,6 +312,8 @@ TEST_CASE("a next link is followed only on its origin and path",
   CHECK(refused(std::string{continuous_items} + "?a=b c") ==
         LinkError::bad_character);
   CHECK(refused(std::string{continuous_items} + "#frag") ==
+        LinkError::bad_character);
+  CHECK(refused(std::string{continuous_items} + "?a=[1]") ==
         LinkError::bad_character);
   CHECK(refused(std::string{continuous_items} + "?a=%zz") ==
         LinkError::bad_character);

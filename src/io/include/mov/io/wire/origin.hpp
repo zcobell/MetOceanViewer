@@ -67,7 +67,8 @@ enum class LinkError : std::uint8_t {
   too_long,
   /// A byte outside RFC 3986's URI characters (white space, control and
   /// non-ASCII bytes, `\`, `"`, `<`, `>`, `{`, `}`, `|`, `^`, `` ` ``), a
-  /// `#` (a fragment), or a `%` not followed by two hexadecimal digits.
+  /// `#` (a fragment), `[` or `]` (IP literals, which no origin is), or a
+  /// `%` not followed by two hexadecimal digits.
   bad_character,
   /// Not `base(origin)` followed by `/`: another scheme, host or port, or
   /// user information.
@@ -75,6 +76,22 @@ enum class LinkError : std::uint8_t {
   /// A path other than the pinned one (another collection).
   other_path,
 };
+
+/// A stable lower-case identifier, the enumerator's name (for an error's
+/// subject and logs).
+[[nodiscard]] constexpr std::string_view to_token(LinkError error) noexcept {
+  switch (error) {
+    case LinkError::too_long:
+      return "too_long";
+    case LinkError::bad_character:
+      return "bad_character";
+    case LinkError::other_origin:
+      return "other_origin";
+    case LinkError::other_path:
+      break;
+  }
+  return "other_path";
+}
 
 /// A link the server handed out (a USGS page's `next`), sent as it is: the
 /// Qt edge parses it in strict mode and encodes nothing. make() accepts only

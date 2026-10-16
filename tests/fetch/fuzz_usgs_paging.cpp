@@ -10,7 +10,8 @@
 //  - no crash, UB or hang;
 //  - the chain ends within the window's max_pages;
 //  - it never follows a link it followed before, a link on an empty page,
-//    or past a page whose first time is not after the last time seen.
+//    or past a page whose first time is not after the last time seen, nor
+//    an offset echo after the chain's first page (P7's rule, applied here).
 
 #include <algorithm>
 #include <chrono>
@@ -21,6 +22,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/core/provider/usgs.hpp"
@@ -77,6 +79,20 @@ const fu::DataRequest<cu::Continuous>& request() {
   return bound;
 }
 
+// P7's rule: a Next is followed; an OffsetEcho only from a chain's first
+// page (from a later one it re-reads the window).
+std::optional<Link> link_to_follow(const mov::io::wire::usgs::NextPage& next,
+                                   bool first_page) {
+  if (const auto* n = std::get_if<mov::io::wire::usgs::Next>(&next)) {
+    return n->link;
+  }
+  if (const auto* echo = std::get_if<mov::io::wire::usgs::OffsetEcho>(&next);
+      echo != nullptr and first_page) {
+    return echo->link;
+  }
+  return std::nullopt;
+}
+
 std::vector<std::string_view> bodies(std::string_view bytes) {
   std::vector<std::string_view> out;
   while (true) {
@@ -111,18 +127,19 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     if (pages > budget) {
       fail();
     }
-    const auto page =
-        mov::io::detail::usgs::parse_continuous(body, request().series(), {});
+    const auto page = mov::io::detail::usgs::parse_continuous(
+        body, fu::epoch_of(request(), unit), {});
     if (not page) {
       return 0;  // the unit fails with the parse error
     }
-    const auto& extent = page->value.extent;
+    const auto extent = page->value.extent();
     const mov::fetch::PageSummary<Link, mov::core::Time> summary{
         .rows = page->value.paging.features,
-        .extent = extent ? std::optional{mov::fetch::Extent<mov::core::Time>{
-                               .first = extent->first, .last = extent->last}}
-                         : std::nullopt,
-        .next = page->value.paging.next};
+        .extent = extent
+                      ? std::optional{mov::fetch::Extent<mov::core::Time>{
+                            .first = extent->first(), .last = extent->last()}}
+                      : std::nullopt,
+        .next = link_to_follow(page->value.paging.next, pages == 1)};
     const auto next = fu::next(unit, summary);
     if (not next or next->empty()) {
       return 0;  // a paging rule ended the chain, or the page did
@@ -135,12 +152,12 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     const Link& link = *followed_link;
     if (summary.rows == 0 or
         std::ranges::find(followed, link.url()) != followed.end() or
-        (extent and last and not(*last < extent->first))) {
+        (extent and last and not(*last < extent->first()))) {
       fail();
     }
     followed.push_back(link.url());
     if (extent) {
-      last = extent->last;
+      last = extent->last();
     }
     unit = next->front();
   }

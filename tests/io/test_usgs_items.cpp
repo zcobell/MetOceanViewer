@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <format>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -23,7 +24,6 @@
 #include "mov/core/units.hpp"
 #include "mov/io/detail/usgs_json.hpp"
 #include "mov/io/error.hpp"
-#include "mov/io/part.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
 #include "mov/io/warning.hpp"
@@ -41,12 +41,14 @@ using mov::core::Time;
 using mov::core::TimeSeries;
 using mov::core::VerticalDatum;
 using mov::io::Error;
+using mov::io::FormatErrc;
 using mov::io::ParseErrc;
 using mov::io::Read;
 using mov::io::ReadContext;
 using mov::io::Warning;
 using mov::io::WarningCode;
 using mov::test::day;
+using mov::test::ends;
 using mov::test::next_url;
 using mov::test::parse_error_in;
 using mov::test::usgs_fixture;
@@ -62,7 +64,7 @@ constexpr std::string_view continuous_items =
 
 ContinuousResult parse(std::string_view body, const ReadContext& ctx = {}) {
   return mov::io::detail::usgs::parse_continuous(
-      body, mov::test::resolved_continuous(), ctx);
+      body, mov::test::continuous_epoch(), ctx);
 }
 
 Read<wu::ContinuousPage> parsed(std::string_view body) {
@@ -76,7 +78,7 @@ Read<wu::ContinuousPage> parsed(std::string_view body) {
 }
 
 DailyResult parse_daily(std::string_view body, const ReadContext& ctx = {}) {
-  return mov::io::detail::usgs::parse_daily(body, mov::test::resolved_daily(),
+  return mov::io::detail::usgs::parse_daily(body, mov::test::daily_epoch(),
                                             ctx);
 }
 
@@ -84,11 +86,6 @@ Read<wu::DailyPage> parsed_daily(std::string_view body) {
   auto r = parse_daily(body);
   REQUIRE(r.has_value());
   return *std::move(r);
-}
-
-const TimeSeries& only_column(const Read<wu::ContinuousPage>& r) {
-  REQUIRE(r.value.part.columns().size() == 1);
-  return r.value.part.columns().begin()->second;
 }
 
 std::vector<Time> times_of(const TimeSeries& s) {
@@ -105,6 +102,11 @@ std::vector<Opt> daily_values(const mov::core::DailySeries& s) {
 
 std::vector<std::chrono::local_days> days_of(const mov::core::DailySeries& s) {
   return {s.days().begin(), s.days().end()};
+}
+
+// An extent to compare a page's with (nullopt only if inverted).
+std::optional<wu::TimeExtent> extent(Time first, Time last) {
+  return wu::TimeExtent::make(first, last);
 }
 
 // A page of the given features (JSON objects, comma-separated) and links.
@@ -145,7 +147,7 @@ const Warning provisional_2{.code = WarningCode::provisional_samples,
 TEST_CASE("a continuous page: values, meta, approval and the next link",
           "[io][usgs][continuous]") {
   const auto r = parsed(usgs_fixture("continuous_chain_page1.json"));
-  const TimeSeries& q = only_column(r);
+  const TimeSeries& q = r.value.values;
   CHECK(times_of(q) ==
         std::vector<Time>{utc(2026, 10, 1, 0, 0), utc(2026, 10, 1, 0, 5)});
   CHECK(values_of(q) == std::vector<Opt>{2700.0, 2750.0});
@@ -153,54 +155,97 @@ TEST_CASE("a continuous page: values, meta, approval and the next link",
   CHECK(q.meta().label() == "Discharge");
   CHECK(q.meta().unit() == mov::core::parse_unit("ft3/s"));
   CHECK(not q.meta().datum().has_value());
-  CHECK(r.value.extent == wu::TimeExtent{.first = utc(2026, 10, 1, 0, 0),
-                                         .last = utc(2026, 10, 1, 0, 5)});
+  CHECK(r.value.extent() ==
+        extent(utc(2026, 10, 1, 0, 0), utc(2026, 10, 1, 0, 5)));
   CHECK(r.value.paging.features == 2);
-  REQUIRE(r.value.paging.next.has_value());
   CHECK(next_url(r.value.paging)
             .starts_with(std::string{continuous_items} + "?cursor="));
   CHECK(next_url(r.value.paging).ends_with("&limit=2&f=json"));
   CHECK(r.warnings == std::vector<Warning>{provisional_2});
 }
 
-TEST_CASE("a cursor chain continues, and its full last page ends it",
+TEST_CASE("an extent is ordered", "[io][usgs][continuous]") {
+  CHECK(wu::TimeExtent::make(utc(2026, 1, 1), utc(2026, 1, 1)).has_value());
+  CHECK_FALSE(wu::TimeExtent::make(utc(2026, 1, 2), utc(2026, 1, 1)));
+}
+
+TEST_CASE("a cursor chain continues, and its full last page echoes",
           "[io][usgs][continuous][paging]") {
   // limit=2 over six values: three pages, then the API's offset link.
   const auto p2 = parsed(usgs_fixture("continuous_chain_page2.json"));
-  CHECK(times_of(only_column(p2)) ==
+  CHECK(times_of(p2.value.values) ==
         std::vector<Time>{utc(2026, 10, 1, 0, 10), utc(2026, 10, 1, 0, 15)});
-  REQUIRE(p2.value.paging.next.has_value());
+  CHECK_FALSE(next_url(p2.value.paging).empty());
   const auto p3 = parsed(usgs_fixture("continuous_chain_page3.json"));
-  CHECK(values_of(only_column(p3)) == std::vector<Opt>{2750.0, 2700.0});
-  // Page 3 is full and its link is `offset=2` without the cursor: following
-  // it reads 00:10 and 00:15 again (continuous_chain_page4_echo.json).
-  CHECK(not p3.value.paging.next.has_value());
+  CHECK(values_of(p3.value.values) == std::vector<Opt>{2750.0, 2700.0});
+  // Page 3 is full and its link is offset=2&limit=2 without the cursor: an
+  // echo, which re-reads 00:10 and 00:15 (continuous_chain_page4_echo.json)
+  // when followed from a later page. P7 follows it only from a first page.
+  const auto* echo = std::get_if<wu::OffsetEcho>(&p3.value.paging.next);
+  REQUIRE(echo != nullptr);
+  CHECK(echo->link.url().find("offset=2") != std::string::npos);
   CHECK(p3.value.paging.features == 2);
-  const auto echo = parsed(usgs_fixture("continuous_chain_page4_echo.json"));
-  CHECK(times_of(only_column(echo)) == times_of(only_column(p2)));
-  // A single full page: its offset link would read an empty page.
+  const auto again = parsed(usgs_fixture("continuous_chain_page4_echo.json"));
+  CHECK(times_of(again.value.values) == times_of(p2.value.values));
+  // A single full page: its echo would read an empty page.
   const auto full = parsed(usgs_fixture("continuous_full_last_page.json"));
   CHECK(full.value.paging.features == 3);
-  CHECK(not full.value.paging.next.has_value());
+  CHECK(std::holds_alternative<wu::OffsetEcho>(full.value.paging.next));
   const auto after = parsed(usgs_fixture("continuous_after_offset_link.json"));
   CHECK(after.value.paging.features == 0);
-  CHECK(not after.value.extent.has_value());
-  CHECK(only_column(after).empty());
-  // An offset link with a cursor, or a link without either, is followed.
+  CHECK(not after.value.extent().has_value());
+  CHECK(after.value.values.empty());
+  CHECK(ends(after.value.paging));
+  // An offset link with a cursor, or a link without either, is a Next.
   for (const std::string_view query :
        {"?offset=2&cursor=abc&limit=2", "?limit=2&f=json", ""}) {
     const auto r = parsed(
         page_of(value_at("2026-10-01T00:00:00Z", "\"1\""),
                 next_link(std::string{continuous_items} + std::string{query})));
-    CHECK(r.value.paging.next.has_value());
+    CHECK(std::holds_alternative<wu::Next>(r.value.paging.next));
   }
+}
+
+TEST_CASE("an offset link that is no echo is refused",
+          "[io][usgs][continuous][paging]") {
+  const std::string one = value_at("2026-10-01T00:00:00Z", "\"1\"");
+  const std::string two = one + "," + value_at("2026-10-01T00:05:00Z", "\"2\"");
+  const auto unexpected = [](const ContinuousResult& r) {
+    return mov::test::format_error_in(r).code == FormatErrc::unexpected_link;
+  };
+  const auto with_link = [&](std::string_view features,
+                             std::string_view query) {
+    return parse(page_of(features, next_link(std::string{continuous_items} +
+                                             "?" + std::string{query})));
+  };
+  // A one-row page is not full at limit 2.
+  CHECK(unexpected(with_link(one, "offset=2&limit=2")));
+  // An offset past the page.
+  CHECK(unexpected(with_link(two, "offset=100&limit=50")));
+  CHECK(unexpected(with_link(two, "offset=2&limit=50")));
+  CHECK(unexpected(with_link(two, "offset=2")));
+  CHECK(unexpected(with_link(two, "offset=x&limit=2")));
+  CHECK(unexpected(with_link(two, "offset=&limit=2")));
+  // offset = limit = features: the echo.
+  CHECK(std::holds_alternative<wu::OffsetEcho>(
+      with_link(two, "f=json&offset=2&limit=2")->value.paging.next));
+  // The recorded page whose offset link has no limit (the request had none).
+  const auto no_limit =
+      parse_daily(usgs_fixture("daily_offset_without_limit.json"));
+  CHECK(mov::test::format_error_in(no_limit).code ==
+        FormatErrc::unexpected_link);
+  // A link elsewhere is refused for that first, offset or not.
+  const auto foreign = parse(page_of(
+      two, next_link("https://evil.example/ogcapi/v1/collections/continuous/"
+                     "items?offset=2&limit=2")));
+  CHECK(mov::test::format_error_in(foreign).code == FormatErrc::refused_link);
 }
 
 TEST_CASE("UTC instants across a DST change stay on their grid",
           "[io][usgs][continuous][regression][L7]") {
   // USGS-01646500 on 2025-11-02, when EDT ended at 06:00Z.
   const auto r = parsed(usgs_fixture("continuous_dst.json"));
-  const TimeSeries& q = only_column(r);
+  const TimeSeries& q = r.value.values;
   REQUIRE(q.size() == 12);
   for (std::size_t i = 0; i < q.size(); ++i) {
     const std::chrono::milliseconds step{static_cast<std::int64_t>(i) *
@@ -208,25 +253,53 @@ TEST_CASE("UTC instants across a DST change stay on their grid",
     CHECK(q.times()[i] == utc(2025, 11, 2, 5, 30) + step);
   }
   CHECK(r.warnings.empty());  // Approved, no qualifier
-  CHECK(not r.value.paging.next.has_value());
+  CHECK(ends(r.value.paging));
+}
+
+TEST_CASE("local offsets across the DST change are the same instants",
+          "[io][usgs][continuous][regression][L7]") {
+  // The twelve instants of continuous_dst.json written as the site's local
+  // time: EDT (-04:00) until 06:00Z, then EST (-05:00). 01:30-01:55 local
+  // occurs twice, once in each offset.
+  std::string features;
+  for (int i = 0; i < 12; ++i) {
+    const int utc_minutes = (5 * 60) + 30 + (5 * i);
+    const bool edt = utc_minutes < 6 * 60;
+    const int local = utc_minutes - (edt ? 4 * 60 : 5 * 60);
+    const std::string time =
+        std::format("2025-11-02T{:02}:{:02}:00{}", local / 60, local % 60,
+                    edt ? "-04:00" : "-05:00");
+    features += (i == 0 ? "" : ",");
+    features += value_at(time, "\"" + std::to_string(i) + "\"");
+  }
+  const auto r = parsed(page_of(features));
+  const TimeSeries& q = r.value.values;
+  REQUIRE(q.size() == 12);
+  for (std::size_t i = 0; i < q.size(); ++i) {
+    const std::chrono::milliseconds step{static_cast<std::int64_t>(i) *
+                                         300'000};
+    CHECK(q.times()[i] == utc(2025, 11, 2, 5, 30) + step);
+  }
+  // No duplicates, no reordering: distinct instants in order.
+  CHECK(r.warnings.empty());
 }
 
 TEST_CASE("qualifiers are counted by their text", "[io][usgs][continuous]") {
   const auto r = parsed(usgs_fixture("continuous_estimated.json"));
-  CHECK(only_column(r).size() == 10);
+  CHECK(r.value.values.size() == 10);
   CHECK(r.warnings ==
         std::vector<Warning>{{.code = WarningCode::qualified_samples,
                               .subject = "ESTIMATED",
                               .count = 10}});
-  CHECK(r.value.paging.next.has_value());  // a cursor: more values
+  CHECK(std::holds_alternative<wu::Next>(r.value.paging.next));  // a cursor
 }
 
-TEST_CASE("an empty page has an empty column and no extent",
+TEST_CASE("an empty page has an empty series and no extent",
           "[io][usgs][continuous]") {
   const auto r = parsed(usgs_fixture("continuous_empty.json"));
-  CHECK(only_column(r).empty());
-  CHECK(not r.value.extent.has_value());
-  CHECK(r.value.paging == wu::Paging{.features = 0, .next = std::nullopt});
+  CHECK(r.value.values.empty());
+  CHECK(not r.value.extent().has_value());
+  CHECK(r.value.paging == wu::Paging{.features = 0, .next = wu::NoNext{}});
   CHECK(r.warnings.empty());
 }
 
@@ -234,11 +307,11 @@ TEST_CASE("properties the request did not ask for are skipped",
           "[io][usgs][continuous]") {
   // Every property, and geometry (the docs' recording).
   const auto full = parsed(usgs_fixture("continuous_full_properties.json"));
-  CHECK(values_of(only_column(full)) ==
+  CHECK(values_of(full.value.values) ==
         std::vector<Opt>{2700.0, 2750.0, 2750.0, 2750.0});
   const auto slim = parsed(usgs_fixture("continuous_slim_page1.json"));
-  CHECK(only_column(slim).size() == 3);
-  REQUIRE(slim.value.paging.next.has_value());
+  CHECK(slim.value.values.size() == 3);
+  CHECK(std::holds_alternative<wu::Next>(slim.value.paging.next));
 }
 
 TEST_CASE(
@@ -247,26 +320,26 @@ TEST_CASE(
     "[io][usgs][continuous]") {
   const auto gage = mov::io::detail::usgs::parse_continuous(
       usgs_fixture("continuous_chain_page1.json"),
-      mov::test::resolved_continuous(
+      mov::test::continuous_epoch(
           {.parameter = "00065", .name = "Gage height", .unit = "ft"}),
       {});
   REQUIRE(gage.has_value());
-  const TimeSeries& wl = only_column(*gage);
+  const TimeSeries& wl = gage->value.values;
   CHECK(wl.meta().quantity() == QuantityId{Quantity::water_level});
   CHECK(wl.meta().datum() == VerticalDatum::stnd);
   CHECK(wl.meta().unit() == mov::core::parse_unit("ft"));
   const auto navd = mov::io::detail::usgs::parse_continuous(
       usgs_fixture("continuous_chain_page1.json"),
-      mov::test::resolved_continuous({.parameter = "62620", .unit = "ft"}), {});
+      mov::test::continuous_epoch({.parameter = "62620", .unit = "ft"}), {});
   REQUIRE(navd.has_value());
-  CHECK(only_column(*navd).meta().datum() == VerticalDatum::navd88);
+  CHECK(navd->value.values.meta().datum() == VerticalDatum::navd88);
   const auto turbidity = mov::io::detail::usgs::parse_continuous(
       usgs_fixture("continuous_chain_page1.json"),
-      mov::test::resolved_continuous(
+      mov::test::continuous_epoch(
           {.parameter = "63680", .name = "Turbidity, FNU", .unit = "_FNU"}),
       {});
   REQUIRE(turbidity.has_value());
-  const TimeSeries& t = only_column(*turbidity);
+  const TimeSeries& t = turbidity->value.values;
   CHECK(mov::core::token(t.meta().quantity()) == "usgs_63680");
   CHECK(t.meta().label() == "Turbidity, FNU");
   CHECK(not t.meta().datum().has_value());
@@ -274,20 +347,20 @@ TEST_CASE(
 
 TEST_CASE("read_continuous classifies before it parses",
           "[io][usgs][continuous]") {
-  const auto series = mov::test::resolved_continuous();
+  const auto epoch = mov::test::continuous_epoch();
   const auto page =
       wu::read_continuous(usgs_fixture("continuous_chain_page1.json"),
-                          "application/json", series, {});
+                          "application/json", epoch, {});
   REQUIRE(page.has_value());
   REQUIRE(std::holds_alternative<Read<wu::ContinuousPage>>(*page));
   const auto refusal = wu::read_continuous(
-      usgs_fixture("error_time_envelope.json"), "application/json", series, {});
+      usgs_fixture("error_time_envelope.json"), "application/json", epoch, {});
   REQUIRE(refusal.has_value());
   REQUIRE(std::holds_alternative<mov::io::wire::ServiceError>(*refusal));
   CHECK(std::get<mov::io::wire::ServiceError>(*refusal).code() ==
         mov::io::wire::ServiceErrc::range_exceeded);
   const auto broken =
-      wu::read_continuous("{\"type\":", "application/json", series, {});
+      wu::read_continuous("{\"type\":", "application/json", epoch, {});
   REQUIRE(not broken.has_value());
   CHECK(parse_error_in(broken).code() == ParseErrc::not_json);
 }
@@ -301,7 +374,7 @@ TEST_CASE("null and empty values are Missing samples",
       parsed(page_of(value_at("2026-10-01T00:00:00+00:00", "null") + "," +
                      value_at("2026-10-01T00:05:00+00:00", "\"\"") + "," +
                      value_at("2026-10-01T00:10:00+00:00", "\"-1.5e2\"")));
-  CHECK(values_of(only_column(r)) ==
+  CHECK(values_of(r.value.values) ==
         std::vector<Opt>{std::nullopt, std::nullopt, -150.0});
 }
 
@@ -313,10 +386,9 @@ TEST_CASE("a page out of time order is put in order, not dropped",
                      value_at("2026-10-01T00:00:00Z", "\"1\"") + "," +
                      value_at("2026-10-01T00:05:00Z", "\"2\"") + "," +
                      value_at("2026-10-01T00:05:00Z", "\"9\"")));
-  const TimeSeries& q = only_column(r);
-  CHECK(values_of(q) == std::vector<Opt>{1.0, 2.0, 3.0});
-  CHECK(r.value.extent == wu::TimeExtent{.first = utc(2026, 10, 1, 0, 0),
-                                         .last = utc(2026, 10, 1, 0, 10)});
+  CHECK(values_of(r.value.values) == std::vector<Opt>{1.0, 2.0, 3.0});
+  CHECK(r.value.extent() ==
+        extent(utc(2026, 10, 1, 0, 0), utc(2026, 10, 1, 0, 10)));
   CHECK(r.warnings ==
         std::vector<Warning>{{.code = WarningCode::times_reordered,
                               .subject = "usgs:continuous",
@@ -333,7 +405,7 @@ TEST_CASE("a one-sample page is a series",
           "[io][usgs][continuous][regression][L4]") {
   // v4 dropped series of fewer than three points.
   const auto r = parsed(page_of(value_at("2026-10-01T00:00:00Z", "\"7\"")));
-  CHECK(values_of(only_column(r)) == std::vector<Opt>{7.0});
+  CHECK(values_of(r.value.values) == std::vector<Opt>{7.0});
 }
 
 TEST_CASE("qualifiers as text or list, approval as text or null",
@@ -449,18 +521,29 @@ TEST_CASE("malformed continuous pages are refused where they break",
 TEST_CASE("a next link elsewhere is refused, not followed",
           "[io][usgs][continuous][paging]") {
   const std::string ok = value_at("2026-10-01T00:00:00Z", "\"1\"");
-  for (const std::string_view href :
-       {"https://evil.example/ogcapi/v1/collections/continuous/items?cursor=a",
-        "http://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/"
-        "items?cursor=a",
-        "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/"
-        "items?cursor=a",
-        "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/"
-        "items?cursor=a#x"}) {
-    const auto r = parse(page_of(ok, next_link(href)));
+  struct Case {
+    std::string_view href;
+    std::string_view reason;
+  };
+  for (const Case c :
+       {Case{.href = "https://evil.example/ogcapi/v1/collections/continuous/"
+                     "items?cursor=a",
+             .reason = "other_origin"},
+        Case{.href = "http://api.waterdata.usgs.gov/ogcapi/v1/collections/"
+                     "continuous/items?cursor=a",
+             .reason = "other_origin"},
+        Case{.href =
+                 "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/"
+                 "items?cursor=a",
+             .reason = "other_path"},
+        Case{.href = "https://api.waterdata.usgs.gov/ogcapi/v1/collections/"
+                     "continuous/items?cursor=a#x",
+             .reason = "bad_character"}}) {
+    const auto r = parse(page_of(ok, next_link(c.href)));
     const auto e = mov::test::format_error_in(r);
-    CHECK(e.code == mov::io::FormatErrc::foreign_link);
-    CHECK(e.subject == href);
+    CHECK(e.code == FormatErrc::refused_link);
+    // The reason, then the link.
+    CHECK(e.subject == std::string{c.reason} + " " + std::string{c.href});
   }
 }
 
@@ -486,13 +569,21 @@ TEST_CASE("continuous pages are bounded before they are built",
     links += R"({"rel":"alternate","href":"x"})";
   }
   CHECK(code_of(parse(page_of(two, links + "]"))) == ParseErrc::too_large);
-  std::string qualifiers;
-  for (int i = 0; i < 17; ++i) {
-    qualifiers += (i == 0 ? "\"Q\"" : ",\"Q\"");
-  }
+  const auto qualifiers = [](int n) {
+    std::string out;
+    for (int i = 0; i < n; ++i) {
+      out += (i == 0 ? "\"Q\"" : ",\"Q\"");
+    }
+    return out;
+  };
+  // 256 qualifiers on one sample are read; 257 fail the page.
+  CHECK(parse(page_of(feature(
+                  R"("time":"2026-10-01T00:00:00Z","value":"1","qualifier":[)" +
+                  qualifiers(256) + "]")))
+            .has_value());
   CHECK(code_of(parse(page_of(feature(
             R"("time":"2026-10-01T00:00:00Z","value":"1","qualifier":[)" +
-            qualifiers + "]")))) == ParseErrc::too_large);
+            qualifiers(257) + "]")))) == ParseErrc::too_large);
   // A leading byte order mark is skipped.
   CHECK(parse("\xEF\xBB\xBF" + page_of(two)).has_value());
 }
@@ -519,7 +610,7 @@ TEST_CASE("a daily page: local days in order, the statistic, the meta",
   CHECK(d.statistic() == mov::core::usgs::StatisticId::mean());
   CHECK(d.meta().quantity() == QuantityId{Quantity::discharge});
   CHECK(d.meta().unit() == mov::core::parse_unit("cfs"));
-  CHECK(r.value.paging == wu::Paging{.features = 3, .next = std::nullopt});
+  CHECK(r.value.paging == wu::Paging{.features = 3, .next = wu::NoNext{}});
   CHECK(r.warnings ==
         std::vector<Warning>{{.code = WarningCode::provisional_samples,
                               .subject = "usgs:approval_status",
@@ -536,11 +627,9 @@ TEST_CASE("daily values come in no time order and are sorted silently",
                                         day(2026, 9, 27), day(2026, 9, 28)});
   CHECK(daily_values(p1.value.values) ==
         std::vector<Opt>{2640.0, 3670.0, 4470.0, 3800.0});
-  REQUIRE(p1.value.paging.next.has_value());
   CHECK(next_url(p1.value.paging)
-            .starts_with(
-                "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/"
-                "items?cursor="));
+            .starts_with("https://api.waterdata.usgs.gov/ogcapi/v1/"
+                         "collections/daily/items?cursor="));
   // No times_reordered: the order is the API's, not a fault.
   CHECK(p1.warnings ==
         std::vector<Warning>{{.code = WarningCode::provisional_samples,
@@ -548,12 +637,12 @@ TEST_CASE("daily values come in no time order and are sorted silently",
                               .count = 4}});
   const auto p2 = parsed_daily(usgs_fixture("daily_chain_page2.json"));
   CHECK(days_of(p2.value.values).front() == day(2026, 9, 20));
-  REQUIRE(p2.value.paging.next.has_value());
+  CHECK(std::holds_alternative<wu::Next>(p2.value.paging.next));
   const auto p3 = parsed_daily(usgs_fixture("daily_chain_page3.json"));
   CHECK(days_of(p3.value.values) ==
         std::vector<std::chrono::local_days>{day(2026, 9, 23), day(2026, 9, 24),
                                              day(2026, 9, 30)});
-  CHECK(not p3.value.paging.next.has_value());
+  CHECK(ends(p3.value.paging));
 }
 
 TEST_CASE("a daily value is the site's day, not an instant",
@@ -565,10 +654,10 @@ TEST_CASE("a daily value is the site's day, not an instant",
                                              day(2025, 11, 3)});
   CHECK(daily_values(r.value.values) ==
         std::vector<Opt>{2540.0, 3040.0, 2920.0});
-  // A full page of ten days whose offset link is the end.
+  // A full page of ten days (limit=10) whose offset link is its echo.
   const auto estimated = parsed_daily(usgs_fixture("daily_estimated.json"));
   CHECK(estimated.value.values.size() == 10);
-  CHECK(not estimated.value.paging.next.has_value());
+  CHECK(std::holds_alternative<wu::OffsetEcho>(estimated.value.paging.next));
   CHECK(estimated.warnings ==
         std::vector<Warning>{{.code = WarningCode::qualified_samples,
                               .subject = "ESTIMATED",
@@ -604,13 +693,13 @@ TEST_CASE("a daily time is a date and nothing else", "[io][usgs][daily]") {
 }
 
 TEST_CASE("read_daily classifies before it parses", "[io][usgs][daily]") {
-  const auto series = mov::test::resolved_daily();
+  const auto epoch = mov::test::daily_epoch();
   const auto page = wu::read_daily(usgs_fixture("daily_dst.json"),
-                                   "application/json", series, {});
+                                   "application/json", epoch, {});
   REQUIRE(page.has_value());
   CHECK(std::holds_alternative<Read<wu::DailyPage>>(*page));
   const auto refusal = wu::read_daily(usgs_fixture("error_invalid_key.json"),
-                                      "application/json", series, {});
+                                      "application/json", epoch, {});
   REQUIRE(refusal.has_value());
   CHECK(std::get<mov::io::wire::ServiceError>(*refusal).code() ==
         mov::io::wire::ServiceErrc::api_key_invalid);

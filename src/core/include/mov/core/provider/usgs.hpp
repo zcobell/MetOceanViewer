@@ -21,6 +21,7 @@
 
 #include "mov/core/ascii.hpp"
 #include "mov/core/datum.hpp"
+#include "mov/core/detail/core_key.hpp"
 #include "mov/core/quantity.hpp"
 #include "mov/core/station.hpp"
 #include "mov/core/time.hpp"
@@ -162,21 +163,55 @@ class TimeSeriesId {
   std::array<char, 32> chars_;
 };
 
-/// The site's Primary continuous series of a parameter (statistic 00011 by
-/// construction of Continuous).
+enum class SublocationError : std::uint8_t {
+  empty,
+  too_long,
+  /// Not UTF-8, a control character, or white space at either end.
+  invalid_text,
+};
+
+/// Which of a site's sensors a series measures, as USGS names it in
+/// `sublocation_identifier` ("Headwater", "Tailwater", "Lock Chamber"). A
+/// series without one measures the site's main sensor. Non-empty, at most
+/// max_bytes of UTF-8 without control characters or surrounding white
+/// space; built only by make, which accepts exactly that (no trimming).
+class Sublocation {
+ public:
+  static constexpr std::size_t max_bytes = 128;
+
+  [[nodiscard]] static std::expected<Sublocation, SublocationError> make(
+      std::string text);
+
+  [[nodiscard]] std::string_view view() const& noexcept { return text_; }
+  std::string_view view() const&& = delete;
+
+  friend auto operator<=>(const Sublocation&, const Sublocation&) = default;
+
+ private:
+  explicit Sublocation(std::string text) : text_{std::move(text)} {}
+
+  std::string text_;
+};
+
+/// The site's continuous series of a parameter (statistic 00011 by
+/// construction of Continuous) at a sublocation. Without one: the group
+/// without a sublocation if the site has one, else the site's only group
+/// (several: AmbiguousSeries).
 struct ByParameter {
   ParameterCode parameter;
-  friend constexpr bool operator==(const ByParameter&,
-                                   const ByParameter&) = default;
+  std::optional<Sublocation> sublocation{};
+  friend bool operator==(const ByParameter&, const ByParameter&) = default;
 };
-/// The site's Primary daily series of a parameter and statistic.
+/// The site's daily series of a parameter and statistic at a sublocation
+/// (chosen as for ByParameter).
 struct DailyByParameter {
   ParameterCode parameter;
   StatisticId statistic;
-  friend constexpr bool operator==(const DailyByParameter&,
-                                   const DailyByParameter&) = default;
+  std::optional<Sublocation> sublocation{};
+  friend bool operator==(const DailyByParameter&,
+                         const DailyByParameter&) = default;
 };
-/// One series by its id, whatever its parameter.
+/// One series by its id, whatever its parameter: that epoch alone.
 struct ByTimeSeries {
   TimeSeriesId id;
   friend constexpr bool operator==(const ByTimeSeries&,
@@ -188,8 +223,7 @@ struct Continuous {
   StationId<provider::Usgs> station;
   std::variant<ByParameter, ByTimeSeries> series;
   TimeRange range;
-  friend constexpr bool operator==(const Continuous&,
-                                   const Continuous&) = default;
+  friend bool operator==(const Continuous&, const Continuous&) = default;
 };
 
 /// Daily values over calendar days (the `daily` collection, decision 34).
@@ -197,7 +231,7 @@ struct Daily {
   StationId<provider::Usgs> station;
   std::variant<DailyByParameter, ByTimeSeries> series;
   DayRange days;
-  friend constexpr bool operator==(const Daily&, const Daily&) = default;
+  friend bool operator==(const Daily&, const Daily&) = default;
 };
 
 using Request = std::variant<Continuous, Daily>;
@@ -214,7 +248,9 @@ enum class Collection : std::uint8_t { continuous, daily };
 
 /// One series of a site, as `combined-metadata` describes it: a row of the
 /// station catalog (Capabilities<Usgs>), of the series picker, and the input
-/// of resolution.
+/// of resolution. USGS starts a new series (a new id) for the same
+/// parameter, statistic and sublocation from time to time: each such epoch
+/// is one SeriesInfo, usually Primary, and their validity may overlap.
 struct SeriesInfo {
   TimeSeriesId id;
   ParameterCode parameter;
@@ -222,9 +258,26 @@ struct SeriesInfo {
   std::string parameter_name;
   bool primary;
   std::optional<Unit> unit;
+  /// From `begin` and `end` (the time of the last value): advisory.
   ValidRange validity;
+  /// `sublocation_identifier`; nullopt: the site's main sensor.
+  std::optional<Sublocation> sublocation{};
+  /// `web_description` ("Primary", "Secondary", "Lock Level"; "" when null):
+  /// a label for the picker.
+  std::string description{};
   friend bool operator==(const SeriesInfo&, const SeriesInfo&) = default;
 };
+
+/// A logical series (decision 37): the Primary epochs of one parameter,
+/// statistic and sublocation, stitched in time. Ordered, so a map key.
+struct SeriesKey {
+  ParameterCode parameter;
+  StatisticId statistic;
+  std::optional<Sublocation> sublocation;
+  friend auto operator<=>(const SeriesKey&, const SeriesKey&) = default;
+};
+
+[[nodiscard]] SeriesKey key_of(const SeriesInfo& series);
 
 /// Two rows with one id.
 struct DuplicateSeriesId {
@@ -232,24 +285,16 @@ struct DuplicateSeriesId {
   friend constexpr bool operator==(const DuplicateSeriesId&,
                                    const DuplicateSeriesId&) = default;
 };
-/// Two rows are the Primary series of one parameter and statistic.
-struct SeveralPrimary {
-  ParameterCode parameter;
-  StatisticId statistic;
-  friend constexpr bool operator==(const SeveralPrimary&,
-                                   const SeveralPrimary&) = default;
-};
-using SeriesSetError = std::variant<DuplicateSeriesId, SeveralPrimary>;
 
-/// The series of one site: unique ids, sorted by id, and at most one Primary
-/// series per (parameter, statistic). Built only by make; empty by default.
+/// The series of one site: unique ids, sorted by id; and its logical series,
+/// each the Primary epochs of one key. Built only by make; empty by default.
 class SeriesSet {
  public:
   SeriesSet() = default;
 
-  /// Sorts by id; then DuplicateSeriesId for the smallest repeated id, then
-  /// SeveralPrimary for the first such pair in id order.
-  [[nodiscard]] static std::expected<SeriesSet, SeriesSetError> make(
+  /// Sorts by id; DuplicateSeriesId for the smallest repeated id. Epochs
+  /// may overlap (they do at USGS-01646500), so nothing else is refused.
+  [[nodiscard]] static std::expected<SeriesSet, DuplicateSeriesId> make(
       std::vector<SeriesInfo> series);
 
   [[nodiscard]] std::span<const SeriesInfo> items() const& noexcept {
@@ -264,74 +309,160 @@ class SeriesSet {
   [[nodiscard]] const SeriesInfo* find(const TimeSeriesId& id) const& noexcept;
   const SeriesInfo* find(const TimeSeriesId& id) const&& = delete;
 
-  /// The Primary series of the parameter and statistic, or nullptr. Points
-  /// into the set.
-  [[nodiscard]] const SeriesInfo* primary(
-      const ParameterCode& parameter,
-      const StatisticId& statistic) const& noexcept;
-  const SeriesInfo* primary(const ParameterCode& parameter,
-                            const StatisticId& statistic) const&& = delete;
+  /// The keys of the site's logical series (those with a Primary epoch),
+  /// sorted.
+  [[nodiscard]] std::span<const SeriesKey> keys() const& noexcept {
+    return keys_;
+  }
+  std::span<const SeriesKey> keys() const&& = delete;
+
+  /// The Primary epochs of a key, sorted by the day their validity begins
+  /// (unknown first), then by id; empty for a key the set does not have.
+  [[nodiscard]] std::span<const SeriesInfo> epochs(
+      const SeriesKey& key) const& noexcept;
+  std::span<const SeriesInfo> epochs(const SeriesKey& key) const&& = delete;
 
   friend bool operator==(const SeriesSet&, const SeriesSet&) = default;
 
  private:
-  explicit SeriesSet(std::vector<SeriesInfo> sorted)
-      : series_{std::move(sorted)} {}
+  SeriesSet(std::vector<SeriesInfo> by_id, std::vector<SeriesInfo> epochs,
+            std::vector<SeriesKey> keys, std::vector<std::size_t> starts)
+      : series_{std::move(by_id)},
+        epochs_{std::move(epochs)},
+        keys_{std::move(keys)},
+        starts_{std::move(starts)} {}
 
   std::vector<SeriesInfo> series_;
+  // The Primary rows grouped by key (in keys_ order), each group in epoch
+  // order; group i is [starts_[i], starts_[i + 1]).
+  std::vector<SeriesInfo> epochs_;
+  std::vector<SeriesKey> keys_;
+  std::vector<std::size_t> starts_;
 };
 
-/// Why no series answers a request: none does (a missing id, or no Primary
-/// series of the parameter and statistic: the fetch's NoData), or the
-/// request names a series or statistic of the other collection.
-enum class ResolveError : std::uint8_t { no_series, wrong_collection };
+/// The logical series the map shows for a parameter and statistic: of the
+/// site's groups, the one whose data reach latest (an epoch without an end
+/// is ongoing and reaches furthest; then the later begin, then key order).
+/// nullopt when the site has no group of the parameter and statistic.
+[[nodiscard]] std::optional<SeriesKey> map_default(
+    const SeriesSet& site, const ParameterCode& parameter,
+    const StatisticId& statistic);
+
+/// No series answers the request: a missing id, a parameter (or
+/// sublocation) the site has no Primary series of, or epochs none of which
+/// meets the request's range. The fetch's NoData.
+struct NoSeries {
+  friend constexpr bool operator==(NoSeries, NoSeries) = default;
+};
+/// The request names a series or statistic of the other collection.
+struct WrongCollection {
+  friend constexpr bool operator==(WrongCollection, WrongCollection) = default;
+};
+/// The request names no sublocation, the site has no group without one and
+/// several with one: the candidates, sorted, for the user to choose from.
+struct AmbiguousSeries {
+  std::vector<SeriesKey> candidates;
+  friend bool operator==(const AmbiguousSeries&,
+                         const AmbiguousSeries&) = default;
+};
+using ResolveError = std::variant<NoSeries, WrongCollection, AmbiguousSeries>;
+
+/// The range of a collection's request: instants for continuous values,
+/// local days for daily ones.
+template <class C>
+struct RangeOf;
+template <>
+struct RangeOf<Continuous> {
+  using type = TimeRange;
+};
+template <>
+struct RangeOf<Daily> {
+  using type = DayRange;
+};
+
+/// One epoch of a resolved series and the part of the request's range it
+/// is fetched for: the request's range within the epoch's validity, widened
+/// by a day at each known end (validity is advisory: the whole UTC days of
+/// the first and last value, whose local days may differ). Made only by
+/// resolve (the key is core's).
+template <class C>
+  requires std::same_as<C, Continuous> or std::same_as<C, Daily>
+class Epoch {
+ public:
+  using Range = typename RangeOf<C>::type;
+
+  Epoch(const core::detail::CoreKey& /*key*/, SeriesInfo series, Range range)
+      : series_{std::move(series)}, range_{range} {}
+
+  [[nodiscard]] const SeriesInfo& series() const& noexcept { return series_; }
+  const SeriesInfo& series() const&& = delete;
+  [[nodiscard]] Range range() const noexcept { return range_; }
+
+  friend bool operator==(const Epoch&, const Epoch&) = default;
+
+ private:
+  SeriesInfo series_;
+  Range range_;
+};
 
 template <class C>
   requires std::same_as<C, Continuous> or std::same_as<C, Daily>
 class Resolved;
 
 /// Resolution, the first stage of a USGS fetch, over the series of the
-/// request's site (`combined-metadata` by monitoring location). By
-/// parameter: the Primary series of the parameter with statistic 00011
-/// (continuous) or with the request's statistic, which must be a daily one.
-/// By id: the series, which must belong to the request's collection.
+/// request's site (`combined-metadata` by monitoring location).
+///  - By parameter: the logical series of the parameter, the statistic
+///    (00011 for continuous; a daily request must name a daily one) and the
+///    sublocation (without one: the group without one if the site has it,
+///    else its only group, else AmbiguousSeries); its Primary epochs that
+///    meet the request's range, each with its sub-range (Epoch).
+///  - By id: that series alone over the whole range; it must belong to the
+///    request's collection and need not be Primary.
 [[nodiscard]] std::expected<Resolved<Continuous>, ResolveError> resolve(
     const Continuous& request, const SeriesSet& site);
 [[nodiscard]] std::expected<Resolved<Daily>, ResolveError> resolve(
     const Daily& request, const SeriesSet& site);
 
-/// The series a request of collection C resolved to. Resolution proves that
-/// it exists at the station, belongs to C, and is the Primary one when chosen
-/// by parameter. Only resolve() makes one, so it cannot be forged, and the
-/// data stage takes a (C, Resolved<C>) pair, so a continuous request cannot
-/// be paired with a daily series. Its quantity is a function of the
-/// parameter (registry_quantity, else quantity_of), not a field.
+/// The series a request of collection C resolved to: its key and the epochs
+/// to fetch, never empty, which exist at the station and belong to C. The
+/// epochs are in precedence order, the epoch begun last first (then the
+/// larger id): fetched and merged in this order, a left-biased union keeps
+/// the later epoch's rows where epochs overlap, so the current record wins
+/// (decision 37). The data stage takes a (C, Resolved<C>) pair, so a
+/// continuous request cannot be paired with a daily series. Made only by
+/// resolve (the key is core's).
 template <class C>
   requires std::same_as<C, Continuous> or std::same_as<C, Daily>
 class Resolved {
  public:
-  [[nodiscard]] const SeriesInfo& series() const& noexcept { return series_; }
-  const SeriesInfo& series() const&& = delete;
+  Resolved(const core::detail::CoreKey& /*key*/, SeriesKey series,
+           std::vector<Epoch<C>> epochs)
+      : key_{std::move(series)}, epochs_{std::move(epochs)} {}
+
+  [[nodiscard]] const SeriesKey& key() const& noexcept { return key_; }
+  const SeriesKey& key() const&& = delete;
+  [[nodiscard]] std::span<const Epoch<C>> epochs() const& noexcept {
+    return epochs_;
+  }
+  std::span<const Epoch<C>> epochs() const&& = delete;
 
   friend bool operator==(const Resolved&, const Resolved&) = default;
 
  private:
-  friend std::expected<Resolved<Continuous>, ResolveError> resolve(
-      const Continuous& request, const SeriesSet& site);
-  friend std::expected<Resolved<Daily>, ResolveError> resolve(
-      const Daily& request, const SeriesSet& site);
-
-  explicit Resolved(SeriesInfo series) : series_{std::move(series)} {}
-
-  SeriesInfo series_;
+  SeriesKey key_;
+  std::vector<Epoch<C>> epochs_;
 };
 
 /// The longest window one continuous request may span: 1000 days (the
 /// server refuses more than 1100). Daily values have no limit (36 years came
-/// back on one page), so there is no Daily overload.
+/// back on one page), so there is no daily one.
+inline constexpr WindowSpan max_continuous_window =
+    WindowSpan::of<1000, std::chrono::days>();
+
+/// max_continuous_window, for a request.
 [[nodiscard]] constexpr WindowSpan max_window(
     const Continuous& /*request*/) noexcept {
-  return WindowSpan::of<1000, std::chrono::days>();
+  return max_continuous_window;
 }
 
 /// The grain continuous windows are aligned to: whole seconds (the API's

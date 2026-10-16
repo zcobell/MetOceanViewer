@@ -67,15 +67,17 @@ using io::wire::NoData;
 using io::wire::ServiceErrc;
 using io::wire::ServiceError;
 
-/// Several Primary series of the requested parameter and statistic.
+/// The request names no sublocation, and the site has several logical
+/// series of the parameter and statistic, none without one
+/// (core::usgs::AmbiguousSeries): the candidates, sorted.
 struct AmbiguousSeries {
-  std::vector<core::usgs::TimeSeriesId> candidates;
+  std::vector<core::usgs::SeriesKey> candidates;
   friend bool operator==(const AmbiguousSeries&,
                          const AmbiguousSeries&) = default;
 };
 
 /// A USGS request named a series or a statistic of the other collection
-/// (core::usgs::ResolveError::wrong_collection).
+/// (core::usgs::WrongCollection).
 struct WrongCollection {
   core::usgs::Collection requested;
   friend constexpr bool operator==(WrongCollection, WrongCollection) = default;
@@ -108,6 +110,7 @@ enum class PagingRule : std::uint8_t {
   empty_page_with_link,  ///< no rows, but a next link
   link_repeated,         ///< a next link already followed in this window
   page_limit,            ///< a next link past the window's max_pages
+  outside_window,        ///< rows outside the window the page was asked for
 };
 
 /// A page chain broke a paging rule at page `page` (1-based).

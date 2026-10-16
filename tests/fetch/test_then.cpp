@@ -117,9 +117,9 @@ TEST_CASE("USGS: a bind failure is the fetch's failure", "[fetch][then]") {
   static_cast<void>(
       m.on(event::Completed{.id = id, .outcome = Response{.status = 200}}, t0,
            Jitter::from_bits(0)));
-  auto steps = m.on(
-      resolution(id, {UsgsWorld::row('a', true), UsgsWorld::row('b', true)}),
-      t0, Jitter::from_bits(0));
+  auto steps = m.on(resolution(id, {UsgsWorld::row('a', true, "Headwater"),
+                                    UsgsWorld::row('b', true, "Tailwater")}),
+                    t0, Jitter::from_bits(0));
   steps =
       m.on(UsgsWorld::merge(all<Merge<UsgsResolveSpec::Part>>(steps).at(0), 0),
            t0, Jitter::from_bits(0));

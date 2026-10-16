@@ -22,10 +22,10 @@ namespace {
 }
 
 // RFC 3986's unreserved and reserved characters, without `#` (a fragment
-// has no business in a link to follow) and without `%`, which is checked
-// with its two digits.
+// has no business in a link to follow), `[` and `]` (IP literals, which no
+// origin is) and `%`, which is checked with its two digits.
 [[nodiscard]] constexpr bool is_uri_char(char c) noexcept {
-  constexpr std::string_view marks = "-._~:/?[]@!$&'()*+,;=";
+  constexpr std::string_view marks = "-._~:/?@!$&'()*+,;=";
   return core::ascii::is_alnum(c) or marks.find(c) != std::string_view::npos;
 }
 

@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "mov/core/provider/usgs.hpp"
@@ -92,9 +93,29 @@ resolved_continuous(SeriesFacts facts = {}) {
   return must(core::usgs::resolve(request, set));
 }
 
-/// The next link of a page, or "" when it has none.
+/// The epoch of `facts`, as resolution would give it for a request over
+/// 2026-10-01 (continuous) or 2026-09 (daily).
+[[nodiscard]] inline core::usgs::Epoch<core::usgs::Continuous> continuous_epoch(
+    SeriesFacts facts = {}) {
+  const auto resolved = resolved_continuous(facts);
+  return resolved.epochs()[0];
+}
+[[nodiscard]] inline core::usgs::Epoch<core::usgs::Daily> daily_epoch(
+    SeriesFacts facts = {.id = "2cf409b0d9694c01828f5d4ff14586a5",
+                         .statistic = "00003"}) {
+  const auto resolved = resolved_daily(facts);
+  return resolved.epochs()[0];
+}
+
+/// The link of a page's Next, or "" when its next page is no Next.
 [[nodiscard]] inline std::string next_url(const io::wire::usgs::Paging& p) {
-  return p.next ? p.next->url() : std::string{};
+  const auto* next = std::get_if<io::wire::usgs::Next>(&p.next);
+  return next != nullptr ? next->link.url() : std::string{};
+}
+
+/// Whether a page has no next page.
+[[nodiscard]] inline bool ends(const io::wire::usgs::Paging& p) {
+  return std::holds_alternative<io::wire::usgs::NoNext>(p.next);
 }
 
 /// A local day.

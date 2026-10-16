@@ -235,8 +235,10 @@ enum class FormatErrc : std::uint8_t {
                           // units or datum of their one shared column
   ambiguous_station_id,   // several variables claim to be the station id
   // provider responses
-  foreign_link,  // a link to follow that leaves the origin or collection
-                 // (wire::Verbatim); the subject is the link
+  refused_link,     // a link to follow that wire::Verbatim refuses; the
+                    // subject is the reason (to_token) and the link
+  unexpected_link,  // a link of a form the protocol does not use (USGS: an
+                    // offset link that is not the full last page's)
 };
 
 /// A file that parses but does not mean what its format requires.

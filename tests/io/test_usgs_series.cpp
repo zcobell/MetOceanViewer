@@ -90,6 +90,18 @@ constexpr std::string_view site_fields =
 constexpr std::string_view point =
     R"({"type":"Point","coordinates":[-77.1,38.9]})";
 
+cu::ParameterCode parameter(std::string_view code) {
+  return must(cu::ParameterCode::make(code));
+}
+
+// A continuous request at USGS-01646500 over 2026-10-01.
+cu::Continuous continuous_request(cu::ParameterCode code) {
+  return {.station = mov::test::usgs_station(),
+          .series = cu::ByParameter{.parameter = code},
+          .range = must(mov::core::TimeRange::make(
+              mov::test::utc(2026, 10, 1), mov::test::utc(2026, 10, 2)))};
+}
+
 // The series_skipped warning of `subject`, or a count of 0.
 std::size_t skipped(const std::vector<Warning>& warnings,
                     std::string_view subject) {
@@ -120,7 +132,7 @@ TEST_CASE("resolution by id: one series, its unit and days",
   // begin and end are instants (the site's midnight in UTC): their UTC days.
   CHECK(s.validity.first() == ymd(1972, 6, 9));
   CHECK(s.validity.last() == ymd(2026, 10, 15));
-  CHECK(r.value.paging == wu::Paging{.features = 1, .next = std::nullopt});
+  CHECK(r.value.paging == wu::Paging{.features = 1, .next = wu::NoNext{}});
   CHECK(r.warnings.empty());
   // By parameter, the same row; a series of another site, none.
   CHECK(series_page(usgs_fixture("series_by_parameter.json")).value.series ==
@@ -134,24 +146,65 @@ TEST_CASE("resolution: the rows make the site's series set",
           "[io][usgs][series]") {
   const auto rows = series_page(usgs_fixture("series_by_parameter.json"));
   const auto set = must(cu::SeriesSet::make(rows.value.series));
-  const cu::Continuous request{
-      .station = mov::test::usgs_station(),
-      .series =
-          cu::ByParameter{.parameter = must(cu::ParameterCode::make("00060"))},
-      .range = must(mov::core::TimeRange::make(mov::test::utc(2026, 10, 1),
-                                               mov::test::utc(2026, 10, 2)))};
-  const auto resolved = must(cu::resolve(request, set));
-  CHECK(resolved.series() == rows.value.series.front());
-  // Two Primary gage heights at one site (USGS-12175000: web_description
-  // "Primary" and "Secondary"): the set refuses them, which the fetch
-  // reports as AmbiguousSeries.
+  const auto resolved =
+      must(cu::resolve(continuous_request(parameter("00060")), set));
+  REQUIRE(resolved.epochs().size() == 1);
+  CHECK(resolved.epochs()[0].series() == rows.value.series.front());
+  // Two Primary gage heights without a sublocation at one site
+  // (USGS-12175000, web_description "Primary" since 2007 and "Secondary"
+  // since 2023): one logical series of two epochs, the later-begun first.
   const auto several = series_page(usgs_fixture("series_several_primary.json"));
   REQUIRE(several.value.series.size() == 2);
-  CHECK(several.value.series[0].primary);
-  CHECK(several.value.series[1].primary);
-  const auto refused = cu::SeriesSet::make(several.value.series);
-  REQUIRE(not refused.has_value());
-  CHECK(std::holds_alternative<cu::SeveralPrimary>(refused.error()));
+  CHECK(several.value.series[0].description == "Primary");
+  CHECK(several.value.series[1].description == "Secondary");
+  const auto stitched =
+      must(cu::resolve(continuous_request(parameter("00065")),
+                       must(cu::SeriesSet::make(several.value.series))));
+  REQUIRE(stitched.epochs().size() == 2);
+  CHECK(stitched.epochs()[0].series().description == "Secondary");
+  CHECK(stitched.epochs()[1].series().description == "Primary");
+}
+
+TEST_CASE("sublocations are groups to choose from", "[io][usgs][series]") {
+  // USGS-02431011: gage heights at Headwater, Tailwater and Lock Chamber.
+  const auto lock = series_page(usgs_fixture("series_sublocations.json"));
+  REQUIRE(lock.value.series.size() == 3);
+  CHECK(lock.value.series[2].sublocation.has_value());
+  CHECK(lock.value.series[2].description == "Lock Level");
+  const auto set = must(cu::SeriesSet::make(lock.value.series));
+  CHECK(set.keys().size() == 3);
+  const auto ambiguous =
+      cu::resolve(continuous_request(parameter("00065")), set);
+  REQUIRE_FALSE(ambiguous.has_value());
+  const auto* candidates = std::get_if<cu::AmbiguousSeries>(&ambiguous.error());
+  REQUIRE(candidates != nullptr);
+  CHECK(candidates->candidates.size() == 3);
+  // The map shows the group whose data reach latest: Headwater and
+  // Tailwater both end on 2026-10-15 and began together; Headwater sorts
+  // first. The lock chamber ended in 2025.
+  const auto shown = cu::map_default(set, parameter("00065"),
+                                     cu::StatisticId::instantaneous());
+  CHECK(shown.transform([](const cu::SeriesKey& k) { return k.sublocation; }) ==
+        std::optional{std::optional{must(cu::Sublocation::make("Headwater"))}});
+  // USGS-01646500's water temperature: four sensors (a sonde and three
+  // depths), the sonde in two epochs, 2013-2019 and 2019 on.
+  const auto temperature =
+      series_page(usgs_fixture("series_water_temperature.json"));
+  const auto temperature_set =
+      must(cu::SeriesSet::make(temperature.value.series));
+  CHECK(temperature_set.keys().size() == 4);
+  const auto sonde = must(cu::resolve(
+      cu::Continuous{
+          .station = mov::test::usgs_station(),
+          .series = cu::ByParameter{.parameter = parameter("00010"),
+                                    .sublocation = must(cu::Sublocation::make(
+                                        "From multiparameter sonde"))},
+          .range = must(mov::core::TimeRange::make(
+              mov::test::utc(2019, 1, 1), mov::test::utc(2020, 1, 1)))},
+      temperature_set));
+  REQUIRE(sonde.epochs().size() == 2);
+  CHECK(sonde.epochs()[0].series().id.view() ==
+        "d1875d1d73e447d2a1203105ba654e7d");
 }
 
 TEST_CASE("a site's every series, units said once per spelling",
@@ -164,6 +217,7 @@ TEST_CASE("a site's every series, units said once per spelling",
   REQUIRE(temperature != nullptr);
   CHECK(temperature->parameter.view() == "00010");
   CHECK(temperature->unit == mov::core::parse_unit("degC"));
+  CHECK(temperature->description == "Discontinued");
   CHECK(r.warnings ==
         std::vector<Warning>{{.code = WarningCode::unrecognized_unit,
                               .subject = "_FNU",
@@ -174,13 +228,8 @@ TEST_CASE("a site's every series, units said once per spelling",
                              {.code = WarningCode::unrecognized_unit,
                               .subject = "pH Units",
                               .count = 8}});
-  // The ids are unique, but USGS marks every epoch of a series Primary: the
-  // water temperature (00010, 00011) has three, 2007-2019, 2013-2019 and
-  // 2019-now, so core's one-Primary rule refuses this site's set
-  // (providers-design section 4.9: open for P1/P7).
-  const auto set = cu::SeriesSet::make(r.value.series);
-  REQUIRE(not set.has_value());
-  CHECK(std::holds_alternative<cu::SeveralPrimary>(set.error()));
+  // Unique ids: a set, whatever the epochs and sublocations.
+  CHECK(cu::SeriesSet::make(r.value.series).has_value());
 }
 
 TEST_CASE("rows that are not series are left out and counted",
@@ -204,6 +253,8 @@ TEST_CASE("each field of a row", "[io][usgs][series]") {
   REQUIRE(row.value.series.size() == 1);
   CHECK(row.value.series[0].validity.first() == ymd(1972, 6, 9));
   CHECK(not row.value.series[0].validity.last().has_value());
+  CHECK(not row.value.series[0].sublocation.has_value());
+  CHECK(row.value.series[0].description.empty());
 
   // primary: "Primary" only.
   const auto not_primary =
@@ -214,6 +265,15 @@ TEST_CASE("each field of a row", "[io][usgs][series]") {
   CHECK(not_primary.value.series[0].parameter_name.empty());
   CHECK(not not_primary.value.series[0].unit.has_value());
   CHECK(not_primary.value.series[0].validity == mov::core::ValidRange{});
+
+  // A sublocation and a description.
+  const auto at =
+      one(R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00065",)"
+          R"("statistic_id":"00011","sublocation_identifier":"Tailwater",)"
+          R"("web_description":"Lock Level")");
+  REQUIRE(at.value.series.size() == 1);
+  CHECK(at.value.series[0].sublocation == cu::Sublocation::make("Tailwater"));
+  CHECK(at.value.series[0].description == "Lock Level");
 
   const auto skip = [&](std::string_view properties, std::string_view why) {
     const auto r = one(properties);
@@ -231,11 +291,11 @@ TEST_CASE("each field of a row", "[io][usgs][series]") {
       R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":null)",
       "statistic");
   skip(
-      R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","begin":"2026-01-02","end":null)",
-      "dates");
+      R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","sublocation_identifier":" Tailwater")",
+      "sublocation");
   skip(
-      R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","begin":"2026-01-02T00:00:00Z","end":"2026-01-01T00:00:00Z")",
-      "dates");
+      R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","sublocation_identifier":3)",
+      "member");
   skip(R"("id":5,"parameter_code":"00060","statistic_id":"00011")", "member");
   skip(
       R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","primary":true)",
@@ -243,10 +303,40 @@ TEST_CASE("each field of a row", "[io][usgs][series]") {
   skip(
       R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","unit_of_measure":3)",
       "member");
+  skip(
+      R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","web_description":[])",
+      "member");
   // One day, a begin equal to the end, is a range.
   CHECK(
       one(R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060","statistic_id":"00011","begin":"2026-01-01T05:00:00Z","end":"2026-01-01T23:00:00Z")")
           .value.series.size() == 1);
+}
+
+TEST_CASE("validity is advisory: bad dates keep the row",
+          "[io][usgs][series]") {
+  const auto kept = [](std::string_view dates) {
+    const auto r = series_page(row_page(
+        R"("id":"66a4e3fb8abe42fcb0942b5c0fe98f68","parameter_code":"00060",)"
+        R"("statistic_id":"00011","primary":"Primary",)" +
+        std::string{dates}));
+    REQUIRE(r.value.series.size() == 1);
+    CHECK(r.value.series[0].validity == mov::core::ValidRange{});
+    CHECK(r.warnings ==
+          std::vector<Warning>{{.code = WarningCode::validity_ignored,
+                                .subject = "dates",
+                                .count = 1}});
+    return r.value.series;
+  };
+  static_cast<void>(kept(R"("begin":"2026-01-02","end":null)"));
+  static_cast<void>(kept(R"("begin":5,"end":null)"));
+  static_cast<void>(kept(R"("begin":null,"end":"yesterday")"));
+  // An end before the begin: kept, and it still resolves.
+  const auto inverted =
+      kept(R"("begin":"2026-01-02T00:00:00Z","end":"2026-01-01T00:00:00Z")");
+  const auto resolved = cu::resolve(continuous_request(parameter("00060")),
+                                    must(cu::SeriesSet::make(inverted)));
+  REQUIRE(resolved.has_value());
+  CHECK(resolved->epochs()[0].series().id == inverted[0].id);
 }
 
 TEST_CASE("read_series classifies before it parses", "[io][usgs][series]") {
@@ -296,8 +386,9 @@ TEST_CASE("a catalog in pages is the catalog", "[io][usgs][catalog][paging]") {
        {"catalog_page1.json", "catalog_page2.json", "catalog_page3.json"}) {
     const auto page = catalog_page(usgs_fixture(name));
     rows.insert(rows.end(), page.value.rows.begin(), page.value.rows.end());
-    CHECK(page.value.paging.next.has_value() == (name != "catalog_page3.json"));
-    if (page.value.paging.next) {
+    if (name == "catalog_page3.json") {
+      CHECK(mov::test::ends(page.value.paging));
+    } else {
       CHECK(next_url(page.value.paging)
                 .starts_with(
                     "https://api.waterdata.usgs.gov/ogcapi/v1/collections/"
@@ -325,6 +416,27 @@ TEST_CASE("each location field of a catalog row", "[io][usgs][catalog]") {
   };
   CHECK(with(site_fields, point).value.rows.size() == 1);
   // A height after lon and lat is ignored.
+  // A row with four coordinates is read by its first two, and the page's
+  // other rows are untouched; a row array past the cap fails the page.
+  const std::string feature_at =
+      std::string{R"({"type":"Feature","properties":{)"} +
+      std::string{site_fields} + std::string{good_row} + R"(},"geometry":)";
+  const auto two_rows = [&](std::string_view coordinates) {
+    return R"({"type":"FeatureCollection","features":[)" + feature_at +
+           R"({"type":"Point","coordinates":)" + std::string{coordinates} +
+           "}}," + feature_at + std::string{point} + "}]}";
+  };
+  const auto four = catalog_page(two_rows("[-77.1,38.9,12,7]"));
+  REQUIRE(four.value.rows.size() == 2);
+  CHECK(four.value.rows[0].location == four.value.rows[1].location);
+  CHECK(four.warnings.empty());
+  std::string seventeen = "[-77.1,38.9";
+  for (int i = 0; i < 15; ++i) {
+    seventeen += ",0";
+  }
+  CHECK(parse_error_in(
+            mov::io::detail::usgs::parse_catalog(two_rows(seventeen + "]"), {}))
+            .code() == ParseErrc::too_large);
   CHECK(with(site_fields, R"({"type":"Point","coordinates":[-77.1,38.9,12]})")
             .value.rows.size() == 1);
   const auto skip = [&](std::string_view site, std::string_view geometry,

@@ -39,11 +39,12 @@ using Station = core::StationId<core::provider::Usgs>;
 // What resolution and the series picker read of a series.
 constexpr std::string_view series_properties =
     "id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,"
-    "begin,end";
+    "begin,end,sublocation_identifier,web_description";
 // The catalog reads its monitoring location too.
 constexpr std::string_view catalog_properties =
     "monitoring_location_id,monitoring_location_name,id,parameter_code,"
-    "parameter_name,statistic_id,primary,unit_of_measure,begin,end";
+    "parameter_name,statistic_id,primary,unit_of_measure,begin,end,"
+    "sublocation_identifier,web_description";
 // What a data page reads of a value.
 constexpr std::string_view value_properties =
     "time,value,approval_status,qualifier";
@@ -64,7 +65,7 @@ Composed series_request(std::vector<QueryParam> selection) {
   selection.push_back(param("skipGeometry", "true"));
   append_page(selection);
   return {.origin = Origin::usgs,
-          .path = std::string{items_path(Collection::combined_metadata)},
+          .path = std::string{items_path(Endpoint::combined_metadata)},
           .query = std::move(selection)};
 }
 
@@ -104,13 +105,14 @@ std::expected<std::string, TargetError> instants(core::TimeRange window) {
   using seconds = std::chrono::duration<std::int64_t>;
   if (window.begin() < io::detail::imeds_first or
       window.end() > io::detail::imeds_end) {
-    return std::unexpected{
-        TargetError{.reason = TargetErrc::outside_four_digit_years}};
+    return std::unexpected{TargetError{
+        .reason = TargetErrc::outside_four_digit_years, .window = window}};
   }
   const core::Time first = std::chrono::ceil<seconds>(window.begin());
   const core::Time last = std::chrono::ceil<seconds>(window.end()) - seconds{1};
   if (last < first) {
-    return std::unexpected{TargetError{.reason = TargetErrc::no_whole_second}};
+    return std::unexpected{
+        TargetError{.reason = TargetErrc::no_whole_second, .window = window}};
   }
   return wire_second(first) + "/" + wire_second(last);
 }
@@ -124,13 +126,13 @@ std::expected<std::string, TargetError> dates(core::DayRange range) {
   constexpr local_days end_day{year{9999} / std::chrono::December / 31};
   const local_days last = range.end() - std::chrono::days{1};
   if (range.first() < first_day or last > end_day) {
-    return std::unexpected{
-        TargetError{.reason = TargetErrc::outside_four_digit_years}};
+    return std::unexpected{TargetError{
+        .reason = TargetErrc::outside_four_digit_years, .window = range}};
   }
   return wire_day(range.first()) + "/" + wire_day(last);
 }
 
-Composed data_request(Collection collection, const core::usgs::TimeSeriesId& id,
+Composed data_request(Endpoint endpoint, const core::usgs::TimeSeriesId& id,
                       std::string_view datetime) {
   std::vector<QueryParam> query{
       param("time_series_id", id.view()),
@@ -140,7 +142,7 @@ Composed data_request(Collection collection, const core::usgs::TimeSeriesId& id,
   };
   append_page(query);
   return {.origin = Origin::usgs,
-          .path = std::string{items_path(collection)},
+          .path = std::string{items_path(endpoint)},
           .query = std::move(query)};
 }
 
@@ -210,23 +212,22 @@ Composed catalog_target() {
   };
   append_page(query);
   return {.origin = Origin::usgs,
-          .path = std::string{items_path(Collection::combined_metadata)},
+          .path = std::string{items_path(Endpoint::combined_metadata)},
           .query = std::move(query)};
 }
 
 std::expected<Composed, TargetError> data_target(
-    const core::usgs::Resolved<core::usgs::Continuous>& series,
+    const core::usgs::Epoch<core::usgs::Continuous>& epoch,
     core::TimeRange window) {
   return instants(window).transform([&](const std::string& datetime) {
-    return data_request(Collection::continuous, series.series().id, datetime);
+    return data_request(Endpoint::continuous, epoch.series().id, datetime);
   });
 }
 
 std::expected<Composed, TargetError> data_target(
-    const core::usgs::Resolved<core::usgs::Daily>& series,
-    core::DayRange days) {
+    const core::usgs::Epoch<core::usgs::Daily>& epoch, core::DayRange days) {
   return dates(days).transform([&](const std::string& datetime) {
-    return data_request(Collection::daily, series.series().id, datetime);
+    return data_request(Endpoint::daily, epoch.series().id, datetime);
   });
 }
 

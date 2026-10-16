@@ -80,7 +80,8 @@ usgs::Request continuous(
       mov::core::TimeRange::make(mov::core::Time{std::chrono::milliseconds{0}},
                                  mov::core::Time{std::chrono::milliseconds{1}});
   REQUIRE(range.has_value());
-  return usgs::Continuous{.station = site(), .series = s, .range = *range};
+  return usgs::Continuous{
+      .station = site(), .series = std::move(s), .range = *range};
 }
 
 usgs::Request daily(
@@ -90,7 +91,7 @@ usgs::Request daily(
   const auto range =
       mov::core::DayRange::make(local_days{days{0}}, local_days{days{7}});
   REQUIRE(range.has_value());
-  return usgs::Daily{.station = site(), .series = s, .days = *range};
+  return usgs::Daily{.station = site(), .series = std::move(s), .days = *range};
 }
 
 usgs::ByParameter by_parameter(std::string_view code) {
@@ -122,6 +123,31 @@ TEST_CASE("continuous values by parameter need an instantaneous series",
         refused(NotOffered::statistic));
   CHECK(offered(UsgsCaps{}, continuous(by_parameter("00060"))) ==
         refused(NotOffered::parameter));
+}
+
+TEST_CASE("a named sublocation must be the site's", "[core][capabilities]") {
+  auto headwater = usgs::Sublocation::make("Headwater");
+  REQUIRE(headwater.has_value());
+  usgs::SeriesInfo at_headwater =
+      series('e', "00000", StatisticId::instantaneous());
+  at_headwater.parameter = parameter("00065");
+  at_headwater.sublocation = *headwater;
+  const UsgsCaps lock = caps_of({at_headwater});
+  const auto named = [&](std::string_view where) {
+    auto s = usgs::Sublocation::make(std::string{where});
+    REQUIRE(s.has_value());
+    return usgs::ByParameter{.parameter = parameter("00065"),
+                             .sublocation = *std::move(s)};
+  };
+  CHECK(offered(lock, continuous(named("Headwater"))).has_value());
+  CHECK(offered(lock, continuous(named("Tailwater"))) ==
+        refused(NotOffered::series));
+  // Without a name, any sublocation of the parameter offers it.
+  CHECK(offered(lock, continuous(by_parameter("00065"))).has_value());
+  auto daily_named = usgs::DailyByParameter{.parameter = parameter("00065"),
+                                            .statistic = StatisticId::mean(),
+                                            .sublocation = *headwater};
+  CHECK(offered(lock, daily(daily_named)) == refused(NotOffered::statistic));
 }
 
 TEST_CASE("daily values by parameter need the statistic",

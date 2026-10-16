@@ -165,6 +165,10 @@ enum class WarningCode : std::uint8_t {
   /// `statistic`, `dates`, `member`, `station`, `name`, `position`); the
   /// count is the rows.
   series_skipped,
+  /// Rows of a series list whose validity dates did not parse or were
+  /// inverted: kept with an unknown validity. Subject: `dates`; the count is
+  /// the rows.
+  validity_ignored,
 };
 /// A stable lower-case identifier, the same as the enumerator's name
 /// (for logs and tests; user-facing text belongs to the app).

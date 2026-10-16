@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Zach Cobell
 
 // usgs::read_continuous and read_daily: a page of a series' values
-// (docs/providers-design.md sections 4.3 and 4.9).
+// (docs/providers-design.md sections 4.3 and 4.9). Each page is one epoch's
+// (decision 37).
 
 #include <array>
 #include <chrono>
@@ -32,7 +33,6 @@
 #include "mov/io/part.hpp"
 #include "mov/io/read.hpp"
 #include "mov/io/read_limits.hpp"
-#include "mov/io/rfc3339.hpp"
 #include "mov/io/warning.hpp"
 #include "mov/io/wire/service.hpp"
 #include "mov/io/wire/usgs.hpp"
@@ -48,8 +48,8 @@ using core::usgs::SeriesInfo;
 // ---- what is kept
 // ------------------------------------------------------------
 
-// The most qualifiers one sample may carry (one seen).
-constexpr std::size_t max_qualifiers = 16;
+// The most qualifiers one sample may carry (one seen); more fails the page.
+constexpr std::size_t max_qualifiers = 256;
 
 constexpr json::Keep qualifier_schema{.element = &json::leaf,
                                       .max_elements = max_qualifiers};
@@ -144,7 +144,7 @@ std::expected<core::Time, Error> instant_of(std::string_view body,
   if (not time) {
     return std::unexpected{time.error()};
   }
-  const auto parsed = parse_rfc3339(*json::as_string(**time));
+  const auto parsed = core::parse_rfc3339(*json::as_string(**time));
   if (not parsed) {
     return page::fail_at(body, ParseErrc::bad_date,
                          page::text_start(**time) + parsed.error().column);
@@ -159,14 +159,10 @@ std::expected<std::chrono::local_days, Error> day_of(
   if (not time) {
     return std::unexpected{time.error()};
   }
-  const std::string& text = *json::as_string(**time);
-  core::DateTimeCursor cursor{text};
-  const auto date = core::parse_date(cursor);
-  if (not date or not cursor.at_end()) {
-    const std::size_t column =
-        date ? cursor.error_here().column : date.error().column;
+  const auto date = core::parse_date(*json::as_string(**time));
+  if (not date) {
     return page::fail_at(body, ParseErrc::bad_date,
-                         page::text_start(**time) + column);
+                         page::text_start(**time) + date.error().column);
   }
   return std::chrono::local_days{date->time_since_epoch()};
 }
@@ -226,7 +222,7 @@ class Rows {
 template <class RowsT>
 std::expected<Paging, Error> parse_page(std::string_view body,
                                         const ReadContext& ctx, RowsT& rows,
-                                        Collection collection) {
+                                        Endpoint endpoint) {
   const auto document =
       json::parse(body, page_schema, ctx,
                   [&rows](std::size_t index, const json::Value& feature) {
@@ -235,7 +231,7 @@ std::expected<Paging, Error> parse_page(std::string_view body,
   if (not document) {
     return std::unexpected{document.error()};
   }
-  return page::read_paging(body, document->root, rows.size(), collection);
+  return page::read_paging(body, document->root, rows.size(), endpoint);
 }
 
 using InstantRows = Rows<core::Time, std::expected<core::Time, Error> (*)(
@@ -247,7 +243,7 @@ using DayRows = Rows<std::chrono::local_days,
 std::expected<Read<ContinuousPage>, Error> continuous_page(
     std::string_view body, const SeriesInfo& series, const ReadContext& ctx) {
   InstantRows rows{body, ctx, &instant_of};
-  auto paging = parse_page(body, ctx, rows, Collection::continuous);
+  auto paging = parse_page(body, ctx, rows, Endpoint::continuous);
   if (not paging) {
     return std::unexpected{std::move(paging).error()};
   }
@@ -259,21 +255,14 @@ std::expected<Read<ContinuousPage>, Error> continuous_page(
   std::array<core::Column*, 1> columns{&rows.samples()};
   const core::NormalizeReport report =
       io::detail::normalize_columns(times, columns);
-  std::optional<TimeExtent> extent;
-  if (not times.empty()) {
-    extent = TimeExtent{.first = times.front(), .last = times.back()};
-  }
   auto values = core::TimeSeries::make(
       std::move(times), std::move(rows.samples()), *std::move(meta));
   if (not values) {
     return inconsistent("usgs:continuous");
   }
   Read<ContinuousPage> out{
-      .value = {.part = {}, .extent = extent, .paging = *std::move(paging)},
+      .value = {.values = *std::move(values), .paging = *std::move(paging)},
       .warnings = {}};
-  if (not out.value.part.insert(*std::move(values))) {
-    return inconsistent("usgs:continuous");
-  }
   io::detail::add_normalize_warnings(out.warnings, report, "usgs:continuous");
   rows.marks().report(out.warnings);
   return out;
@@ -293,7 +282,7 @@ std::expected<Read<DailyPage>, Error> daily_page(std::string_view body,
                                                  const SeriesInfo& series,
                                                  const ReadContext& ctx) {
   DayRows rows{body, ctx, &day_of};
-  auto paging = parse_page(body, ctx, rows, Collection::daily);
+  auto paging = parse_page(body, ctx, rows, Endpoint::daily);
   if (not paging) {
     return std::unexpected{std::move(paging).error()};
   }
@@ -309,8 +298,8 @@ std::expected<Read<DailyPage>, Error> daily_page(std::string_view body,
     times.push_back(as_instant(day));
   }
   std::array<core::Column*, 1> columns{&rows.samples()};
-  core::NormalizeReport report = io::detail::normalize_columns(times, columns);
-  report.descents = 0;
+  const core::NormalizeReport report =
+      io::detail::normalize_columns(times, columns);
   std::vector<std::chrono::local_days> days;
   days.reserve(times.size());
   for (const core::Time t : times) {
@@ -325,7 +314,7 @@ std::expected<Read<DailyPage>, Error> daily_page(std::string_view body,
   Read<DailyPage> out{
       .value = {.values = *std::move(values), .paging = *std::move(paging)},
       .warnings = {}};
-  io::detail::add_normalize_warnings(out.warnings, report, "usgs:daily");
+  io::detail::add_dropped_warnings(out.warnings, report, "usgs:daily");
   rows.marks().report(out.warnings);
   return out;
 }
@@ -333,6 +322,7 @@ std::expected<Read<DailyPage>, Error> daily_page(std::string_view body,
 template <class Page, class Parse>
 std::expected<Reply<Page>, Error> classified(std::string_view body,
                                              std::string_view content_type,
+                                             const ReadContext& ctx,
                                              Parse parse) {
   return std::visit(
       core::Overloaded{
@@ -343,26 +333,41 @@ std::expected<Reply<Page>, Error> classified(std::string_view body,
           [](const ServiceError& e) -> std::expected<Reply<Page>, Error> {
             return Reply<Page>{e};
           }},
-      classify_body(body, content_type));
+      classify_body(body, content_type, ctx));
 }
 
 }  // namespace
 
+std::optional<TimeExtent> TimeExtent::make(core::Time first,
+                                           core::Time last) noexcept {
+  if (last < first) {
+    return std::nullopt;
+  }
+  return TimeExtent{first, last};
+}
+
+std::optional<TimeExtent> ContinuousPage::extent() const {
+  const auto times = values.times();
+  if (times.empty()) {
+    return std::nullopt;
+  }
+  return TimeExtent::make(times.front(), times.back());
+}
+
 std::expected<Reply<ContinuousPage>, Error> read_continuous(
     std::string_view body, std::string_view content_type,
-    const core::usgs::Resolved<core::usgs::Continuous>& series,
+    const core::usgs::Epoch<core::usgs::Continuous>& epoch,
     const ReadContext& ctx) {
-  return classified<ContinuousPage>(body, content_type, [&] {
-    return io::detail::usgs::parse_continuous(body, series, ctx);
+  return classified<ContinuousPage>(body, content_type, ctx, [&] {
+    return io::detail::usgs::parse_continuous(body, epoch, ctx);
   });
 }
 
 std::expected<Reply<DailyPage>, Error> read_daily(
     std::string_view body, std::string_view content_type,
-    const core::usgs::Resolved<core::usgs::Daily>& series,
-    const ReadContext& ctx) {
-  return classified<DailyPage>(body, content_type, [&] {
-    return io::detail::usgs::parse_daily(body, series, ctx);
+    const core::usgs::Epoch<core::usgs::Daily>& epoch, const ReadContext& ctx) {
+  return classified<DailyPage>(body, content_type, ctx, [&] {
+    return io::detail::usgs::parse_daily(body, epoch, ctx);
   });
 }
 
@@ -374,16 +379,15 @@ const json::Keep& data_keep() { return wire::usgs::page_schema; }
 
 std::expected<Read<wire::usgs::ContinuousPage>, Error> parse_continuous(
     std::string_view body,
-    const core::usgs::Resolved<core::usgs::Continuous>& series,
+    const core::usgs::Epoch<core::usgs::Continuous>& epoch,
     const ReadContext& ctx) {
-  return wire::usgs::continuous_page(body, series.series(), ctx);
+  return wire::usgs::continuous_page(body, epoch.series(), ctx);
 }
 
 std::expected<Read<wire::usgs::DailyPage>, Error> parse_daily(
-    std::string_view body,
-    const core::usgs::Resolved<core::usgs::Daily>& series,
+    std::string_view body, const core::usgs::Epoch<core::usgs::Daily>& epoch,
     const ReadContext& ctx) {
-  return wire::usgs::daily_page(body, series.series(), ctx);
+  return wire::usgs::daily_page(body, epoch.series(), ctx);
 }
 
 }  // namespace mov::io::detail::usgs

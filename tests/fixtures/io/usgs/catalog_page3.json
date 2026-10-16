@@ -13,7 +13,9 @@
         "primary": "Primary",
         "unit_of_measure": "ft",
         "begin": "2018-09-11T20:06:00+00:00",
-        "end": "2022-10-05T13:30:00+00:00"
+        "end": "2022-10-05T13:30:00+00:00",
+        "sublocation_identifier": null,
+        "web_description": null
       },
       "id": "d1be134485e64f0b87d9d10045504567",
       "geometry": {
@@ -36,7 +38,9 @@
         "primary": "Primary",
         "unit_of_measure": "ft",
         "begin": null,
-        "end": null
+        "end": null,
+        "sublocation_identifier": null,
+        "web_description": null
       },
       "id": "d1ddee45a3f54eb98b6971b9194b2d2b",
       "geometry": {
@@ -59,7 +63,9 @@
         "primary": "Primary",
         "unit_of_measure": "ft^3/s",
         "begin": "2015-07-17T13:30:00+00:00",
-        "end": "2026-10-15T09:50:00+00:00"
+        "end": "2026-10-15T09:50:00+00:00",
+        "sublocation_identifier": null,
+        "web_description": null
       },
       "id": "eb36214b7ea94980aef7837d918ef3be",
       "geometry": {
@@ -82,7 +88,9 @@
         "primary": "Primary",
         "unit_of_measure": "ft",
         "begin": "2020-02-19T21:00:00+00:00",
-        "end": "2026-10-15T07:00:00+00:00"
+        "end": "2026-10-15T07:00:00+00:00",
+        "sublocation_identifier": null,
+        "web_description": null
       },
       "id": "f15681171f7440cb98d03365adb293b3",
       "geometry": {
@@ -100,25 +108,25 @@
       "type": "application/geo+json",
       "rel": "self",
       "title": "This document as GeoJSON",
-      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=json&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&limit=5"
     },
     {
       "rel": "alternate",
       "type": "application/ld+json",
       "title": "This document as RDF (JSON-LD)",
-      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=jsonld&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&limit=5"
     },
     {
       "type": "text/html",
       "rel": "alternate",
       "title": "This document as HTML",
-      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=html&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&limit=5"
     },
     {
       "type": "text/csv; charset=utf-8",
       "rel": "alternate",
       "title": "This document as CSV",
-      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=5"
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata/items?f=csv&bbox=-76.4,36.8,-76.2,37.0&parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=monitoring_location_id,monitoring_location_name,id,parameter_code,parameter_name,statistic_id,primary,unit_of_measure,begin,end,sublocation_identifier,web_description&limit=5"
     },
     {
       "type": "application/json",
@@ -127,5 +135,5 @@
       "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/combined-metadata"
     }
   ],
-  "timeStamp": "2026-10-15T23:09:10.108034Z"
+  "timeStamp": "2026-10-16T02:27:54.202784Z"
 }

@@ -40,11 +40,10 @@ inline constexpr std::size_t max_links = 64;
 /// The parses of a Payload.
 [[nodiscard]] std::expected<Read<wire::usgs::ContinuousPage>, Error>
 parse_continuous(std::string_view body,
-                 const core::usgs::Resolved<core::usgs::Continuous>& series,
+                 const core::usgs::Epoch<core::usgs::Continuous>& epoch,
                  const ReadContext& ctx);
 [[nodiscard]] std::expected<Read<wire::usgs::DailyPage>, Error> parse_daily(
-    std::string_view body,
-    const core::usgs::Resolved<core::usgs::Daily>& series,
+    std::string_view body, const core::usgs::Epoch<core::usgs::Daily>& epoch,
     const ReadContext& ctx);
 [[nodiscard]] std::expected<Read<wire::usgs::SeriesPage>, Error> parse_series(
     std::string_view body, const ReadContext& ctx);

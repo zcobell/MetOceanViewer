@@ -190,6 +190,12 @@ the 0-based offset of the first bad character, the text size when truncated, or 
 of the field whose value is out of range (`2005-02-30` gives 8). It replaces v4's
 local-time parse of the ADCIRC cold start (N5).
 
+Two siblings share its cursor and its one fraction parser (Phase 3 P3): `parse_date`
+reads exactly `yyyy-mm-dd` (a calendar day, the USGS daily values), and
+`parse_rfc3339` reads RFC 3339 §5.6 (`T` or `t`, seconds required, 1–9 fraction digits
+truncated to milliseconds, `Z`/`z` or a required `±hh:mm` offset that is subtracted), the
+USGS Water Data API's instants. Both report the same `DateTimeError`.
+
 ### 2.2 Units — `units.hpp` (D13)
 
 Factors to SI (`detail::*_factors`, indexed by enumerator): ft 0.3048, in 0.0254,
@@ -484,7 +490,8 @@ from one fact. A `DatumTable` that carries its station is deferred (§9.3).
 | `WindowSpan::make` | none (nullopt below 1 ms) |
 | `usgs::ParameterCode`, `StatisticId`, `TimeSeriesId` `make` | `usgs::CodeError` |
 | `offered` | `coops::NotOffered`, `usgs::NotOffered` |
-| `usgs::SeriesSet::make` / `resolve` | `usgs::SeriesSetError` / `usgs::ResolveError` |
+| `usgs::SeriesSet::make` / `resolve` | `usgs::DuplicateSeriesId` / `usgs::ResolveError` |
+| `usgs::Sublocation::make` | `usgs::SublocationError` |
 | `DailySeries::make` | `ConstructionError` |
 
 Errors carry no text. `describe(const X&) -> std::string` for each of them belongs to
@@ -558,24 +565,37 @@ is unrepresentable rather than checked.
   `ByParameter` (00011 by construction) or `ByTimeSeries` over a `TimeRange`; `Daily`
   selects `DailyByParameter` (with the statistic) or `ByTimeSeries` over a `DayRange`.
   `max_window` exists for `Continuous` only (1000 d): daily values have no window.
-- **Resolution.** `SeriesInfo` is the one record of a site's series (id, parameter,
-  statistic, parameter name, Primary flag, unit, validity): the catalog row, the picker
-  row and resolution's input; there is no second resolved-series struct to drift from it
-  (sean-parent Q9). `SeriesSet::make` sorts by id and refuses a repeated id
-  (`DuplicateSeriesId`) and two Primary series of one parameter and statistic
-  (`SeveralPrimary`, the fetch's `AmbiguousSeries`); `find` is a binary search.
-  `resolve(Continuous|Daily, const SeriesSet&)` is resolution's pure decision: by
-  parameter the Primary series with 00011 or the request's (daily) statistic, by id the
-  series if it belongs to the request's collection; else `ResolveError::no_series` (the
-  fetch's `NoData`) or `wrong_collection`. Its value, `Resolved<C>`, has a private
-  constructor that only the two `resolve` overloads reach, so it cannot be forged, and
-  `C` makes a continuous request and a daily series a type error. A passkey was the
-  alternative; it cannot cross layers (io and fetch cannot hold `CoreKey`), so the
-  decision moved into core instead. The quantity is a function of the parameter
-  (`registry_quantity`, four D33 rows; else `quantity_of`'s generic `usgs_<code>`),
-  never a field. `quantity_of` builds the generic quantity through a core passkey
-  constructor of `GenericQuantity`, with a `static_assert` that no registry token starts
-  with `usgs_`: no runtime fallback.
+- **Resolution** (decision 37, rewritten in the P3 review). `SeriesInfo` is the one
+  record of a site's series (id, parameter, statistic, parameter name, Primary flag,
+  unit, advisory validity, `Sublocation` and USGS's `web_description`): the catalog row,
+  the picker row and resolution's input (sean-parent Q9). USGS starts a new series id
+  (an *epoch*) for the same parameter, statistic and sublocation from time to time and
+  marks each Primary, and epochs may overlap (three Primary water-temperature epochs at
+  USGS-01646500), so the old one-Primary rule is gone. A logical series is a
+  `SeriesKey{parameter, statistic, optional<Sublocation>}`; `SeriesSet::make` keeps one
+  invariant, unique ids (`DuplicateSeriesId`), and groups the Primary rows by key:
+  `keys()` sorted, `epochs(key)` by validity begin (unknown first), then id.
+  `Sublocation` is a strong type (non-empty UTF-8 text of at most 128 bytes, no control
+  characters or surrounding space). `resolve(Continuous|Daily, const SeriesSet&)` is
+  resolution's pure decision: by parameter, the key of the parameter, statistic (00011
+  for continuous) and sublocation (none named: the group without a sublocation if the
+  site has one, else its only group, else `AmbiguousSeries` with the candidate keys);
+  then its Primary epochs that meet the request's range, each an `Epoch<C>` with its
+  sub-range (the request within the validity, a day wider at each known end; validity
+  is advisory). By id, that series alone over the whole range, in the request's
+  collection. Failures are `ResolveError = variant<NoSeries, WrongCollection,
+  AmbiguousSeries>`. `Resolved<C>` holds the key and the epochs in precedence order,
+  the epoch begun last first: folded in that order by a left-biased union (`io::Part`,
+  the daily union), the later epoch's rows win where epochs overlap, so the current
+  record wins. `Epoch` and `Resolved` take core's `CoreKey`, so only `resolve` makes
+  them, and `C` makes a continuous request and a daily series a type error.
+  `map_default(site, parameter, statistic)` is the map's group: the one whose data reach
+  latest (an epoch with a begin and no end is ongoing; then the later begin; then key
+  order). The quantity is a function of the parameter (`registry_quantity`, eight rows
+  since P3; else `quantity_of`'s generic `usgs_<code>`), never a field. `quantity_of`
+  builds the generic quantity through a core passkey constructor of `GenericQuantity`,
+  with a `static_assert` that no registry token starts with `usgs_`: no runtime
+  fallback.
 - **NDBC** (`provider/ndbc.hpp`): `StdMet{station, range}`, `FileKind`, an explicit
   `precedence(FileKind)` (historical 0 … realtime 3; the enumerator order is not the
   contract), a 1-minute grain.
@@ -1527,7 +1547,7 @@ Conventions:
 | datum_shift | pinned check order; nulls / Dry kept; result datum; input unchanged on error; The Battery +0.77527 m | — |
 | hwm | `is_dry` edges; `checked_elevation` / `model_value` bounds; `classify` at every break, decimal ties in metres and feet (`hwm_ties.csv`, `hwm_ties_ft.csv`: `1.8,2.3`, `11.00,12.50`, `-9.94,-6.44`, `12.49999` / `12.50001`); defaults; invalid breaks (NaN first) | all |
 | hwm_stats | `Moments` identity exact, `of(Dry)` = identity, fold halves ≈ whole; `wet_moments` bit-identical to the explicit left fold and different from the reversed one; golden free and origin (F8, `golden.py`); `fit` alternative matches mode (N1); σ n−1 (D17); threshold rows (N2); legacy closed forms agree (free); every `HwmStatsError`; R² nullopt rules; 1e-12 relative | `Moments` small |
-| provider vocabulary (§2.13) | `split` exact multiples, remainders, a span past the range, the whole time line, 2^64 − 1 windows counted and indexed, the view's range concepts and `std::ranges::to`, the laws on a grid and on 2,000 seeded random ranges; `WindowSpan` make and of; `aligned` floor and ceiling for negative times, refusal only at the ends of the time line (5,000 random ranges); the S8 minute law, also for a CO-OPS month (L1); `DayRange` `make` and its year bounds; `EnumSet` order, repeats, the monoid laws, `DenseEnum` refusing gaps and shuffles; `Required` and the non-default products; CO-OPS datum table round trip and pinned wire tokens, `max_window` and `shape` for every product; USGS code grammars, the statistic constants, `collection_of`, `registry_quantity` rows and `quantity_of` (equal to `parse`), `max_window`; `SeriesSet` order, duplicate ids, several Primary series; `resolve` by parameter and by id with each `ResolveError`; `offered` truth tables for both providers with their check order (STND always, subordinate stations); NDBC `precedence`; `DailySeries::make` errors and their order; `GaugeStation` has no `datums` | all but the USGS requests, `SeriesSet`, `resolve`, USGS `offered`, `quantity_of`, `DailySeries` |
+| provider vocabulary (§2.13) | `split` exact multiples, remainders, a span past the range, the whole time line, 2^64 − 1 windows counted and indexed, the view's range concepts and `std::ranges::to`, the laws on a grid and on 2,000 seeded random ranges; `WindowSpan` make and of; `aligned` floor and ceiling for negative times, refusal only at the ends of the time line (5,000 random ranges); the S8 minute law, also for a CO-OPS month (L1); `DayRange` `make` and its year bounds; `EnumSet` order, repeats, the monoid laws, `DenseEnum` refusing gaps and shuffles; `Required` and the non-default products; CO-OPS datum table round trip and pinned wire tokens, `max_window` and `shape` for every product; USGS code grammars, the statistic constants, `collection_of`, `registry_quantity` rows and `quantity_of` (equal to `parse`), `max_window`; `Sublocation` grammar; `SeriesSet` order, duplicate ids, grouping and epoch order; `resolve` by parameter (epochs, sub-ranges, precedence, sublocation choice) and by id with each `ResolveError`; `map_default`; `offered` truth tables for both providers with their check order (STND always, subordinate stations); NDBC `precedence`; `DailySeries::make` errors and their order; `GaugeStation` has no `datums` | all but the USGS requests, `SeriesSet`, `resolve`, USGS `offered`, `quantity_of`, `DailySeries` |
 
 Mutations tried by hand and caught (series_ops): tie rule `<` to `<=`, `slice` end
 inclusive, datum offset sign flipped, `units_differ` check removed, `first` taking the

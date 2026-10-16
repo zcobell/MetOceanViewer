@@ -16,6 +16,7 @@
 
 #include "mov/io/detail/json.hpp"
 #include "mov/io/detail/reporting.hpp"
+#include "mov/io/detail/text.hpp"
 #include "mov/io/detail/text_position.hpp"
 #include "mov/io/error.hpp"
 #include "mov/io/read_limits.hpp"
@@ -27,33 +28,42 @@ namespace mov::io::wire::usgs::page {
 
 namespace {
 
-// Whether the query of `url` has a parameter `name` (`name=` or a bare
-// `name`).
-bool has_parameter(std::string_view url, std::string_view name) {
+// The value of the query parameter `name` of `url` ("" for a bare name),
+// or nullopt when it has none.
+std::optional<std::string_view> parameter(std::string_view url,
+                                          std::string_view name) {
   const std::size_t mark = url.find('?');
   if (mark == std::string_view::npos) {
-    return false;
+    return std::nullopt;
   }
   std::string_view query = url.substr(mark + 1);
   while (not query.empty()) {
     const std::size_t amp = query.find('&');
     const std::string_view pair = query.substr(0, amp);
-    if (pair.substr(0, pair.find('=')) == name) {
-      return true;
+    const std::size_t equals = pair.find('=');
+    if (pair.substr(0, equals) == name) {
+      return equals == std::string_view::npos ? std::string_view{}
+                                              : pair.substr(equals + 1);
     }
     if (amp == std::string_view::npos) {
       break;
     }
     query.remove_prefix(amp + 1);
   }
-  return false;
+  return std::nullopt;
 }
 
-// The API's link after a full last page: an offset into the result without
-// the cursor that the pages before it followed. Following it reads the
-// window again from that offset of its start.
-bool is_offset_echo(std::string_view url) {
-  return has_parameter(url, "offset") and not has_parameter(url, "cursor");
+// Whether an offset link (no cursor) is the API's echo after a full last
+// page: its `offset` and its `limit` both the page's number of features.
+bool is_offset_echo(std::string_view url, std::string_view offset,
+                    std::size_t features) {
+  const auto limit = parameter(url, "limit");
+  if (not limit) {
+    return false;
+  }
+  const auto at = io::detail::parse_int<std::uint64_t>(offset);
+  const auto rows = io::detail::parse_int<std::uint64_t>(*limit);
+  return at and rows and *at == features and *rows == features;
 }
 
 // The `next` link of `links`, if any: at most one.
@@ -87,6 +97,28 @@ std::expected<const json::Value*, Error> next_href(std::string_view body,
   return found;
 }
 
+// The next page a link names, after Verbatim's check.
+std::expected<NextPage, Error> next_page(std::string_view url,
+                                         std::size_t features,
+                                         Endpoint endpoint) {
+  auto link = Verbatim::make(Origin::usgs, items_path(endpoint), url);
+  if (not link) {
+    return io::detail::fail(io::detail::format_error(
+        FormatErrc::refused_link,
+        io::detail::subject_of(std::string{to_token(link.error())} + " " +
+                               std::string{url})));
+  }
+  const auto offset = parameter(url, "offset");
+  if (not offset or parameter(url, "cursor")) {
+    return NextPage{Next{.link = *std::move(link)}};
+  }
+  if (not is_offset_echo(url, *offset, features)) {
+    return io::detail::fail(io::detail::format_error(
+        FormatErrc::unexpected_link, io::detail::subject_of(url)));
+  }
+  return NextPage{OffsetEcho{.link = *std::move(link)}};
+}
+
 // The string member `name` of `object`: nullptr when it is absent or null,
 // bad_member at it when it is another JSON type.
 std::expected<const std::string*, Error> optional_string(
@@ -112,7 +144,7 @@ std::unexpected<Error> fail_at(std::string_view body, ParseErrc code,
 std::expected<Paging, Error> read_paging(std::string_view body,
                                          const json::Value& root,
                                          std::size_t features,
-                                         Collection collection) {
+                                         Endpoint endpoint) {
   const json::Value* array = json::member(root, "features");
   if (array == nullptr or json::as_array(*array) == nullptr) {
     return fail_at(body, ParseErrc::bad_member,
@@ -127,7 +159,7 @@ std::expected<Paging, Error> read_paging(std::string_view body,
       return fail_at(body, ParseErrc::count_mismatch, returned->offset);
     }
   }
-  Paging paging{.features = features, .next = std::nullopt};
+  Paging paging{.features = features, .next = NoNext{}};
   const json::Value* links = json::member(root, "links");
   if (links == nullptr) {
     return paging;
@@ -139,16 +171,11 @@ std::expected<Paging, Error> read_paging(std::string_view body,
   if (*href == nullptr) {
     return paging;
   }
-  const std::string& url = *json::as_string(**href);
-  if (is_offset_echo(url)) {
-    return paging;
+  auto next = next_page(*json::as_string(**href), features, endpoint);
+  if (not next) {
+    return std::unexpected{std::move(next).error()};
   }
-  auto link = Verbatim::make(Origin::usgs, items_path(collection), url);
-  if (not link) {
-    return io::detail::fail(io::detail::format_error(
-        FormatErrc::foreign_link, io::detail::subject_of(url)));
-  }
-  paging.next = *std::move(link);
+  paging.next = *std::move(next);
   return paging;
 }
 

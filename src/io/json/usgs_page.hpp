@@ -52,12 +52,13 @@ inline constexpr json::Field links_field{.name = "links",
 /// The paging of a parsed page that streamed `features` features: the
 /// `features` array is required; `numberReturned`, when present, must be
 /// that count (count_mismatch); the `next` link (at most one) is a Verbatim
-/// pinned to `collection`'s items path, or none when it carries `offset`
-/// without `cursor` (the API's link after a full last page).
+/// pinned to `endpoint`'s items path (FormatError refused_link), then a
+/// Next, or an OffsetEcho when it has `offset` = `limit` = features and no
+/// `cursor` (any other offset link without a cursor: unexpected_link).
 [[nodiscard]] std::expected<Paging, Error> read_paging(std::string_view body,
                                                        const json::Value& root,
                                                        std::size_t features,
-                                                       Collection collection);
+                                                       Endpoint endpoint);
 
 // ---- features
 // ----------------------------------------------------------------------
@@ -90,7 +91,8 @@ inline constexpr json::Field links_field{.name = "links",
 
 /// Counts by text with at most `max_subjects` distinct texts; any further
 /// one is counted under "...". A hostile page cannot make a warning per
-/// sample.
+/// sample. The cap is per page: the fetch layer sums the warnings of a
+/// chain's pages by (code, subject) and does not apply it again.
 class TextCounts {
  public:
   static constexpr std::size_t max_subjects = 16;

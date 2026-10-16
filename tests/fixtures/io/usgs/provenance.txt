@@ -8,7 +8,8 @@ D = /ogcapi/v1/collections/daily/items?
 M = /ogcapi/v1/collections/combined-metadata/items?
 V = &properties=time,value,approval_status,qualifier&skipGeometry=true
 S = &properties=id,parameter_code,parameter_name,statistic_id,primary,
-    unit_of_measure,begin,end&skipGeometry=true&limit=50000&f=json
+    unit_of_measure,begin,end,sublocation_identifier,web_description
+    &skipGeometry=true&limit=50000&f=json
 Q = 66a4e3fb8abe42fcb0942b5c0fe98f68 (USGS-01646500, 00060, instantaneous)
 R = 2cf409b0d9694c01828f5d4ff14586a5 (USGS-01646500, 00060, daily mean)
 
@@ -65,22 +66,25 @@ Values:
                                    2023-01-01T00:00:00Z/2023-01-01T02:00:00Z
                                    V&f=json (no limit: the API sends 10;
                                    `qualifier` is an array, ["ESTIMATED"])
-  daily_estimated.json             D monitoring_location_id=USGS-05331000
+  daily_offset_without_limit.json  D monitoring_location_id=USGS-05331000
                                    &parameter_code=00060&statistic_id=00003
                                    &datetime=2023-01-01/2023-01-10
                                    &properties=time,value,approval_status,
                                    qualifier,time_series_id&skipGeometry=true
-                                   &f=json (ten values, full: offset link)
+                                   &f=json (no limit; ten values, full: an
+                                   offset=10 link without a limit)
+  daily_estimated.json             recorded 2026-10-16: the same with
+                                   &limit=10 (its echo link has offset=10 and
+                                   limit=10)
   continuous_empty.json            C monitoring_location_id=USGS-15514000
                                    &parameter_code=00060&datetime=
                                    2024-01-15T00:00:00Z/2024-01-15T01:00:00Z
                                    V&f=json (no values: numberReturned 0)
 
-Series (combined-metadata). `begin` and `end` are instants (the site's
-midnight in UTC for daily series); `primary` is "Primary" or null; USGS marks
-every epoch of a series Primary (USGS-01646500 has three Primary
-instantaneous water-temperature series), and USGS-12175000 two Primary gage
-heights (web_description "Primary" and "Secondary").
+Series (combined-metadata; re-recorded 2026-10-16 with the sublocation
+fields, same rows). `begin` and `end` are instants (the site's midnight in UTC
+for daily series); `primary` is "Primary" or null; USGS marks every epoch of a
+series Primary, and a site's sensors differ by `sublocation_identifier`.
   series_by_id.json                M monitoring_location_id=USGS-01646500&id=Q S
   series_by_parameter.json         M monitoring_location_id=USGS-01646500
                                    &parameter_code=00060&statistic_id=00011 S
@@ -98,6 +102,14 @@ heights (web_description "Primary" and "Secondary").
                                    two peak rows without a statistic)
   series_several_primary.json      M monitoring_location_id=USGS-12175000
                                    &parameter_code=00065&statistic_id=00011 S
+                                   (two Primary epochs, no sublocation;
+                                   web_description Primary and Secondary)
+  series_sublocations.json         M monitoring_location_id=USGS-02431011
+                                   &parameter_code=00065&statistic_id=00011 S
+                                   (Headwater, Tailwater, Lock Chamber)
+  series_water_temperature.json    M monitoring_location_id=USGS-01646500
+                                   &parameter_code=00010&statistic_id=00011 S
+                                   (a sonde in two epochs, three depths)
 
 Catalog (combined-metadata with geometry). The whole catalog query,
 M parameter_code=00060,00065,62620,62619&statistic_id=00011&properties=
@@ -106,14 +118,17 @@ parameter_name,statistic_id,primary,unit_of_measure,begin,end&limit=50000
 &f=json, returned 29,017 rows of 17,438 sites on one page (20.2 MB, 2.8 s;
 00060 14,632, 00065 14,168, 62620 184, 62619 33; 707 rows not Primary;
 1,132 without begin and end; 16 without geometry; 343 sites with several
-Primary series of one parameter). It is not committed.
+Primary series of one parameter). With sublocation_identifier and
+web_description added (2026-10-16): 22.4 MB, the same 29,017 rows; 364 rows
+have a sublocation. It is not committed. The catalog files below were
+re-recorded on 2026-10-16 with those two properties.
   catalog_bbox.json                that query with &bbox=-76.4,36.8,-76.2,37.0
                                    (14 rows, 10 sites)
   catalog_page1.json .. catalog_page3.json
                                    the same with limit=5 (cursor links)
   catalog_null_geometry.json       cut: the 16 rows of the whole catalog
-                                   whose geometry is null, in the envelope of
-                                   that response (re-serialized by Python's
+                                   (2026-10-16) whose geometry is null, in the
+                                   envelope of that response (re-serialized by Python's
                                    json, two-space indent; next link removed)
 
 Refusals (HTTP status, body):
