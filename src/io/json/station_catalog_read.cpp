@@ -901,8 +901,11 @@ class Stations {
         [this]<class P>(P /*provider*/) {
           std::optional<std::size_t> first;
           const auto take = [&first]<class Q>(const Bucket<Q>& bucket) {
-            if (not std::is_same_v<Q, P> and bucket.first) {
-              first = std::min(first.value_or(*bucket.first), *bucket.first);
+            // if constexpr: a plain `if` on the type test is MSVC C4127.
+            if constexpr (not std::is_same_v<Q, P>) {
+              if (bucket.first) {
+                first = std::min(first.value_or(*bucket.first), *bucket.first);
+              }
             }
           };
           std::apply([&take](const auto&... b) { (take(b), ...); }, buckets_);
