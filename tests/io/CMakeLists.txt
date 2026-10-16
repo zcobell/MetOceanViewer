@@ -302,3 +302,34 @@ mov_add_fuzz_test(
     CORPUS io/usgs_catalog
     MAX_LEN 1048576
 )
+
+# ---- NDBC and gzip (docs/providers-design.md sections 4.2, 4.4, 4.5) ---------
+#
+# The recorded files in tests/fixtures/io/ndbc/ (provenance.txt there). The
+# tests and fuzz targets make gzip bodies with zlib itself
+# (gzip_test_support.hpp).
+find_package(ZLIB REQUIRED)
+mov_add_test(
+    mov_io_ndbc_tests
+    SOURCES test_gzip.cpp test_ndbc_targets.cpp test_ndbc_stdmet.cpp test_ndbc_stations.cpp
+    LIBRARIES mov::io ZLIB::ZLIB
+)
+mov_add_fuzz_test(fuzz_gunzip SOURCES fuzz_gunzip.cpp LIBRARIES mov::io ZLIB::ZLIB CORPUS io/gunzip)
+mov_add_fuzz_test(fuzz_ndbc_stdmet SOURCES fuzz_ndbc_stdmet.cpp LIBRARIES mov::io CORPUS io/ndbc_stdmet MAX_LEN 262144)
+mov_add_fuzz_test(
+    fuzz_ndbc_active_stations
+    SOURCES fuzz_ndbc_active_stations.cpp
+    LIBRARIES mov::io
+    CORPUS io/ndbc_active_stations
+    MAX_LEN 65536
+)
+# The scanner against a real XML reader, over the fuzz seeds and mutants
+# (label qt).
+if(MOV_ENABLE_QT)
+    mov_add_test(
+        mov_io_ndbc_xml_reference_tests
+        QT
+        SOURCES qt_main.cpp test_ndbc_xml_reference.cpp
+        LIBRARIES mov::io Qt6::Core
+    )
+endif()

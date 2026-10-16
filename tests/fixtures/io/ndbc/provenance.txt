@@ -1,0 +1,92 @@
+NDBC standard meteorological files and the active station list (US Government
+work, public domain), recorded with curl from https://www.ndbc.noaa.gov on
+2026-10-15 between 23:02Z and 23:05Z; no key is involved. Station 41002 (South
+Hatteras) has files from 1973 to now; 42040 (Luke Offshore Test Platform) is
+the station Tropical Storm Arlene passed in June 2005. Times in the files are
+UTC.
+
+H = /data/historical/stdmet/, S = /data/stdmet/, R = /data/realtime2/.
+
+Byte for byte, as served (Content-Type application/x-gzip, no
+Content-Encoding; each a single gzip member):
+  41002h1973.txt.gz       H 41002h1973.txt.gz. One header line "YY MM DD hh
+                          WD ... VIS": two-digit years, no minute column,
+                          no TIDE; WD and BAR are the old names. 461 rows.
+  4100212026.txt.gz       S Jan/4100212026.txt.gz: January 2026, a finalized
+                          month of the current year (month digit 1). Two
+                          header lines, units row with VIS "nmi" and MWD
+                          "deg" (not "degT"); 9-filled missing values. 4464
+                          rows.
+
+Trimmed (the first lines of the decompressed file, byte for byte, LF line
+ends as served; nothing else changed):
+  41002h1996.txt          H 41002h1996.txt.gz, header and 12 rows: two-digit
+                          years of the 1990s; a WSPD written ".7".
+  41002h1999.txt          H 41002h1999.txt.gz, header and 12 rows: header
+                          "YYYY", four-digit years, no minute column; the
+                          first row is missing in every column (999, 99.0,
+                          99.00, 9999.0 BAR, 999.0). Its rows end in CRLF,
+                          its header line in LF, as served.
+  41002h2001.txt          H 41002h2001.txt.gz, header and 6 rows: TIDE
+                          appears, still no minute column.
+  41002h2005.txt          H 41002h2005.txt.gz, header and 6 rows: one header
+                          line with the minute column "mm".
+  41002h2007.txt          H 41002h2007.txt.gz, two header lines and 6 rows:
+                          "#YY" header and "#yr" units row, whose VIS unit is
+                          "nmi" in this historical file (2019's says "mi").
+  41002h2019.txt          H 41002h2019.txt.gz, two header lines and 6 rows,
+                          10-minute rows ending in a space; VIS "mi".
+  Sep_41002.txt           S Sep/41002.txt, two header lines and 12 rows: the
+                          latest month not yet finalized on 2026-10-15
+                          (Content-Type text/plain; charset=ISO-8859-1,
+                          uncompressed; "Oct/" was empty). Units row as the
+                          monthly files (nmi, deg); 9-filled.
+  41002_realtime2.txt     R 41002.txt (upper-case id), the two header lines,
+                          the first 12 rows and the last 2 (6465 lines in
+                          all). Newest first; "MM" for missing values; PTDY
+                          with an explicit sign ("+1.3", "-0.0"). The newest
+                          row was 2026-10-03 16:50, twelve days old.
+
+Selected rows (header line 1, then lines 3443-3446 and 3844-3850 of the
+decompressed file, byte for byte; the rows stay in time order):
+  42040h2005_arlene.txt   H 42040h2005.txt.gz: a 9999.0 BAR row (missing) on
+                          2005-05-25 17:00, and Arlene's 2005-06-11 rows with
+                          real pressures 999.2, 999.0 (twice), 998.6, 999.3
+                          hPa: 999.0 hPa is data, not a sentinel (v4 bug L12).
+
+Error body:
+  view_text_file_missing.txt
+                          /view_text_file.php?filename=41002h2026.txt.gz
+                          &dir=data/historical/stdmet/ (the CGI wrapper v4
+                          used, for a year that has no file): "Unable to
+                          access data file" and a newline. Served with
+                          HTTP 404 and text/plain;charset=UTF-8 on
+                          2026-10-15 (provider-apis.md section 3.1 recorded
+                          HTTP 200 on 2026-10-06). v5 never asks the wrapper;
+                          the body proves a parser refuses it (L15).
+
+The active station list, https://www.ndbc.noaa.gov/activestations.xml
+(Content-Type text/xml, 272,964 bytes, 1354 stations, created
+"2026-10-15T23:00:05UTC"; sha256 of the body
+05829ca19d73075cd626843da985a98ced2cb8a3c89a242f8983becc6e13c319):
+  activestations_full.xml.gz
+                          the whole body, gzip-compressed here (level 9,
+                          mtime 0); it decompresses to the body byte for
+                          byte.
+  activestations.xml      lines 1-3, 7, 16, 26, 70, 89, 92, 159, 178, 243,
+                          350, 588, 760, 899, 1219 and 1357 (the last) of the
+                          body, byte for byte: the declaration and root on
+                          line 1 (its count="1354" is the whole list's), the
+                          comment, and stations with an empty name (14041), a
+                          seven-digit id (1801589), no elev (22101), a TAO
+                          buoy without the met/currents/waterquality/dart
+                          attributes (32303), a lower-case id (32st0), &amp;
+                          (42092), an apostrophe (44098), &quot; (62114),
+                          four-character ids (cwci, katp).
+
+Facts the full list shows (2026-10-15): every station element is
+self-closing on its own line; no non-ASCII byte; entities &amp; (8) and
+&quot; (8) only; 743 lower-case ids; 36 ids of four characters and 18 of
+seven digits, which are not NDBC ids by core's ^[A-Z0-9]{5}$; 264 stations
+without elev; 48 TAO buoys without the four feed flags; 41002 and 42040 have
+met="n" although both serve standard met files.

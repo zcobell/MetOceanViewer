@@ -82,6 +82,14 @@ target_sources(
         json/usgs_series.cpp
 )
 
+# NDBC (section 4.4, 4.5): the file targets, the standard-met text parser,
+# the activestations.xml subset scanner and its records; gunzip for the
+# .txt.gz files (gzip.cpp, the only source that includes zlib).
+target_sources(
+    mov_io
+    PRIVATE gzip.cpp wire/ndbc_targets.cpp wire/ndbc_stdmet.cpp wire/ndbc_xml.cpp wire/ndbc_stations.cpp
+)
+
 # ADCIRC ASCII output and the HWM file.
 target_sources(
     mov_io

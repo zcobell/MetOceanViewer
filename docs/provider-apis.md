@@ -451,7 +451,7 @@ the site has no machine-readable terms; keep requests sequential and cache.
 | Use | URL | Notes |
 |---|---|---|
 | Historical standard met, one file per station-year | `https://www.ndbc.noaa.gov/data/historical/stdmet/{id}h{YYYY}.txt.gz` (e.g. `42040h2019.txt.gz`) | gzip; **404 for years that do not exist**; the current year's file does **not** exist (`42019h2026` is 404; the newest is last complete year) |
-| Same via CGI wrapper (what v4 uses) | `https://www.ndbc.noaa.gov/view_text_file.php?filename=42040h2019.txt.gz&dir=data/historical/stdmet/` | still works (200 `text/plain`, decompressed). **For a missing year it returns HTTP 200 with body `Unable to access data file`**, which v4 hid with `d.length() > 4`. Prefer the direct `.gz` file and treat 404 as "year absent" |
+| Same via CGI wrapper (what v4 uses) | `https://www.ndbc.noaa.gov/view_text_file.php?filename=42040h2019.txt.gz&dir=data/historical/stdmet/` | still works (200 `text/plain`, decompressed). **For a missing year it returns HTTP 200 with body `Unable to access data file`**, which v4 hid with `d.length() > 4`. Corrected 2026-10-15: now HTTP 404 with the same body. Prefer the direct `.gz` file and treat 404 as "year absent" |
 | Real-time, last 45 days, newest first | `https://www.ndbc.noaa.gov/data/realtime2/{ID}.txt` | station ids are upper-case here (e.g. `32ST0.txt`); 404 if absent (`42040` and `42019` returned 404 today; not all stations have one). Files `.ocean`, `.srad`, `.spec` etc. are the other feeds |
 | Monthly (current-year gap fill) | Corrected 2026-10-09, two patterns: finalized months `https://www.ndbc.noaa.gov/data/stdmet/{Mon}/{id}{m}{yyyy}.txt.gz` (lower-case id, `m` the month digit: `Jan/4100212026.txt.gz`, seen Jan-Jul 2026); the latest month not yet finalized `.../stdmet/{Mon}/{id}.txt` (uncompressed, lower-case id: `Aug/41002.txt`, 2-line header with realtime units `nmi`, missing values 9-filled, not `MM`) | `Sep/` was empty on 2026-10-09 (covered by `realtime2`); `Oct/`-`Dec/` were empty (last year's months are in the yearly file). The month code for October-December (believed `a`/`b`/`c`) is unverified. Files seen are single-member gzip, compression ratio 4.5-6.2. |
 | Station metadata | `https://www.ndbc.noaa.gov/activestations.xml` | `<stations created=... count="1354"><station id lat lon elev name owner pgm type met currents waterquality dart/>` (`ndbc_activestations_head.xml`); active stations only, includes `met="y"` flag (905 stations) |
@@ -476,9 +476,12 @@ realtime2:             #YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PR
 (`ndbc_hist_2005_head.txt`, `ndbc_hist_2019_head.txt`, `ndbc_realtime2_head.txt`.)
 
 Observations: the header names differ by era (`WD` vs `WDIR`, `BAR` vs `PRES`); the
+years have two digits before 1999 (`YY`, e.g. `73 12 01 01`); the
 `mm` column appears from about 2005 on (v4 detected it with `d[4] == "mm"`, which is
 fragile; v5 must key on the header tokens); `PTDY` exists only in realtime; **visibility
-units differ**: statute miles in historical, nautical miles in realtime. Column set can
+units differ**: statute miles in historical, nautical miles in realtime (corrected
+2026-10-15: the 2007 historical file's units row says `nmi` too, so the units row
+decides wherever there is one; see `docs/providers-design.md` §4.9). Column set can
 differ between years of the same station, so parse each file by its own header and
 build the series union by column name (v4 used the first file's header for all).
 

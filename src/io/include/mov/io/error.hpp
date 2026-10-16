@@ -76,6 +76,11 @@ enum class ParseErrc : std::uint8_t {
   /// starts (its object when the member is missing), the context is the text
   /// from there.
   bad_member,
+  /// A gzip body that does not inflate (io::gunzip): a bad stream, a
+  /// truncated one, a second member or trailing bytes. `line` is 1 and
+  /// `column` the byte offset into the compressed body; the context names
+  /// the reason.
+  bad_gzip,
 };
 
 namespace detail {
