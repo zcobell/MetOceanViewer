@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Zach Cobell
 #
-# The CF checkers of the format-compliance job (docs/station-netcdf.md 14.2):
+# The CF checkers of the format-compliance job (docs/station-netcdf.md 14.2),
+# and jsonschema for the station catalog schema (docs/station-catalog.md 11):
 # every package pinned (the resolved set, 2026-10-07) and its file pinned by
 # SHA-256 for CPython 3.12 on x86-64 Linux (Ubuntu 24.04, the image and the
 # CI runner), so a new release or a replaced file cannot change the verdict.
 # setup.sh installs it with --require-hashes.
+attrs==26.1.0 \
+    --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309
 certifi==2026.7.22 \
     --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775
 cf-units==3.3.1 \
@@ -28,6 +31,10 @@ isodate==0.7.2 \
     --hash=sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15
 Jinja2==3.1.6 \
     --hash=sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67
+jsonschema==4.26.0 \
+    --hash=sha256:d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce
+jsonschema-specifications==2025.9.1 \
+    --hash=sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe
 lxml==6.1.3 \
     --hash=sha256:909f4e927bb051f7740d6367285fc60cdcfdaf0258c2dba4ff5ba7eadadc250c
 MarkupSafe==3.0.4 \
@@ -52,10 +59,14 @@ python-dateutil==2.9.0.post0 \
     --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
 PyYAML==6.0.3 \
     --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
+referencing==0.37.0 \
+    --hash=sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231
 regex==2026.9.29 \
     --hash=sha256:39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0
 requests==2.34.2 \
     --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0
+rpds-py==2026.9.1 \
+    --hash=sha256:addeda51556dac7c1a2f14cda62db8b621cd12afba3091d03a96c72932387eab
 setuptools==84.0.0 \
     --hash=sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670
 shapely==2.2.0 \

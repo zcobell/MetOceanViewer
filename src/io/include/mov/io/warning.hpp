@@ -155,7 +155,8 @@ enum class WarningCode : std::uint8_t {
   /// Stations of a station list that were left out, counted by reason.
   /// Subject: the reason (CO-OPS: `id`, `name`, `position`, `dates`,
   /// `sensors`, `member` for a member of the wrong JSON type, `type` for a
-  /// tide-prediction type); the count is the stations.
+  /// tide-prediction type; the CO-OPS catalog merge: `no_active_sensor` for
+  /// a station that offers nothing); the count is the stations.
   station_skipped,
   /// Samples the provider qualifies, kept. Subject: the qualifier as found
   /// (USGS: "ESTIMATED"); the count is the samples.
@@ -169,6 +170,17 @@ enum class WarningCode : std::uint8_t {
   /// inverted: kept with an unknown validity. Subject: `dates`; the count is
   /// the rows.
   validity_ignored,
+
+  // ---- station catalog (docs/station-catalog.md) ----------------------------
+  /// Members and tokens of a newer minor version, ignored. Subject: where (a
+  /// member path such as `stations[].coops.rain`, or a token as
+  /// `stations[].coops.met[]=rain`, cut on a UTF-8 boundary; `other` past
+  /// the 32nd distinct one); the count is how often.
+  newer_content_ignored,
+  /// Stations listed by several provider lists whose name or position
+  /// differ: the first list's are kept. One warning: subject the smallest
+  /// such station id, count the stations.
+  station_lists_disagree,
 };
 /// A stable lower-case identifier, the same as the enumerator's name
 /// (for logs and tests; user-facing text belongs to the app).

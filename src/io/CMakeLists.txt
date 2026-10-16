@@ -125,3 +125,18 @@ target_sources(
         station_netcdf_legacy.cpp
         station_netcdf_shared.cpp
 )
+
+# The station catalog (docs/station-catalog.md): the model and its load and
+# refresh rules, the writer, the reader (json/: the SAX reader's schemas), the
+# CO-OPS merge of the station lists; the series JSON (docs/series-json.md);
+# the JSON text helpers they share.
+target_sources(
+    mov_io
+    PRIVATE
+        json_write.cpp
+        series_json.cpp
+        station_catalog.cpp
+        station_catalog_write.cpp
+        json/station_catalog_read.cpp
+        wire/coops_catalog.cpp
+)

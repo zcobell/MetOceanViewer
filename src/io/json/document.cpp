@@ -3,9 +3,11 @@
 
 // detail::json::parse: nlohmann's lexer and parser with a SAX handler that
 // builds only what a Keep schema names (mov/io/detail/json.hpp). Nothing here
-// scans a container: every event costs O(1) plus the value it builds, so a
-// parse is linear in the body. (nlohmann's own callback parser erases
-// discarded elements by scanning their container, which is quadratic.)
+// scans a container of the body's choosing: every event costs O(1) plus the
+// value it builds (a key is compared with the members kept so far, which its
+// Keep bounds: its fields and max_unknown), so a parse is linear in the body.
+// (nlohmann's own callback parser erases discarded elements by scanning their
+// container, which is quadratic.)
 
 #include <algorithm>
 #include <cstddef>
@@ -128,7 +130,15 @@ struct Frame {
   const Field* pending = nullptr;
   std::size_t key_offset = 0;
   bool repeated = false;
+  // Members kept by name (Keep::unknown_names), and the name of the pending
+  // one when it is unknown_field.
+  std::size_t unknown = 0;
+  std::string unknown_key{};
 };
+
+// The pending field of a member its object's Keep does not name, kept by
+// name (Keep::unknown_names): its value is a leaf.
+constexpr Field unknown_field{.name = "", .keep = nullptr};
 
 // What a Value holds.
 using Data = decltype(Value::data);
@@ -191,7 +201,7 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
       return false;
     }
     first_member_seen_ = first_member_seen_ or frames_.size() == 1;
-    if (field == top.keep->fields.end()) {
+    if (field == top.keep->fields.end() and not top.keep->unknown_names) {
       return true;
     }
     if (top.value != nullptr) {
@@ -200,7 +210,19 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
           top.repeated or
           std::ranges::find(members, val, &Member::name) != members.end();
     }
-    top.pending = &*field;
+    if (field == top.keep->fields.end()) {
+      if (++top.unknown > top.keep->max_unknown) {
+        fail(Error{ParseError::make(
+            ParseErrc::too_large, where_of(body_, top.offset),
+            std::to_string(top.unknown) + " unknown members, limit " +
+                std::to_string(top.keep->max_unknown))});
+        return false;
+      }
+      top.unknown_key = val;
+      top.pending = &unknown_field;
+    } else {
+      top.pending = &*field;
+    }
     top.key_offset = string_start(body_, position());
     return true;
   }
@@ -278,7 +300,8 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
       }
       auto& members = std::get<Object>(top.value->data);
       members.push_back(
-          Member{.name = std::string{field->name},
+          Member{.name = field == &unknown_field ? std::move(top.unknown_key)
+                                                 : std::string{field->name},
                  .key_offset = top.key_offset,
                  .value = Value{.data = std::move(data), .offset = offset}});
       return Slot{.keep = field->keep,
@@ -364,7 +387,8 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
     }
     const bool leaf_keep =
         slot->keep == nullptr or
-        (slot->keep->fields.empty() and slot->keep->element == nullptr);
+        (slot->keep->fields.empty() and slot->keep->element == nullptr and
+         not slot->keep->unknown_names);
     if (slot->streamed and kind == Frame::Kind::array) {
       frames_.push_back(Frame{.kind = kind,
                               .keep = slot->keep->element,
@@ -384,10 +408,11 @@ class Builder final : public nlohmann::json_sax<Nlohmann> {
     if (not tick()) {
       return false;
     }
-    const Frame closed = frames_.back();
+    const bool repeated = frames_.back().repeated;
+    const std::size_t offset = frames_.back().offset;
     frames_.pop_back();
-    if (closed.repeated) {
-      fail(error_at(ParseErrc::bad_member, body_, closed.offset));
+    if (repeated) {
+      fail(error_at(ParseErrc::bad_member, body_, offset));
       return false;
     }
     return hand_over_if_element();

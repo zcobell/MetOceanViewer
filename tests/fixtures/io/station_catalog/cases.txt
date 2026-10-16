@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 Zach Cobell
+#
+# The station catalog fixtures (docs/station-catalog.md section 11) and their
+# verdicts. Read by tests/io/test_station_catalog_format.cpp (the reader,
+# clock 2026-10-20) and tools/check_json_schemas.py (the schema).
+#
+# file                    reader                        schema
+coops_lists.json          ok                            valid
+worked_example.json       ok                            valid
+usgs.json                 ok                            valid
+ndbc.json                 ok                            valid
+empty_ndbc.json           ok                            valid
+newer_minor.json          newer                         any
+not_catalog.json          format:not_this_format        invalid
+bad_version.json          format:bad_version            invalid
+major_2.json              format:unsupported_version    invalid
+unknown_member.json       parse:bad_member              invalid
+unknown_token.json        parse:bad_member              invalid
+duplicate_token.json      parse:bad_member              invalid
+null_member.json          parse:bad_member              invalid
+bad_id.json               parse:bad_member              invalid
+two_blocks.json           parse:bad_member              invalid
+other_block.json          parse:bad_member              invalid
+latitude.json             parse:out_of_range            invalid
+msl_nonzero.json          parse:out_of_range            invalid
+bad_date.json             parse:bad_date                valid
+inverted_range.json       parse:out_of_range            valid
+duplicate_station.json    format:duplicate_station_id   valid
+series_duplicate.json     format:inconsistent_metadata  valid
+future_dated.json         format:future_dated           valid

@@ -1,0 +1,4 @@
+{"format":"metoceanviewer-series","version":"1.0",
+ "stations":[
+{"id":"USGS-07010000","name":"MISSISSIPPI RIVER AT ST. LOUIS, MO","provider":"usgs","lon":-90.1796,"lat":38.629,"date":["2026-09-30","2026-10-01","2026-10-02"],"series":[{"quantity":"discharge","label":"Discharge, cubic feet per second","unit":"ft3 s-1","statistic":"00003","value":[512000,null,498000.5]}]}
+]}

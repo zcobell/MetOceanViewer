@@ -344,3 +344,43 @@ if(MOV_ENABLE_QT)
         LIBRARIES mov::io Qt6::Network Qt6::Core
     )
 endif()
+
+# ---- the station catalog (docs/station-catalog.md) ----------------------------
+#
+# The model and its load and refresh rules, the reader and writer against the
+# golden files in tests/fixtures/io/station_catalog/ (cases.txt there lists
+# each file's verdict), the CO-OPS merge of the recorded station lists, and
+# the JSON text helpers.
+mov_add_test(
+    mov_io_catalog_tests
+    SOURCES
+        test_station_catalog.cpp
+        test_station_catalog_format.cpp
+        test_station_catalog_schema.cpp
+        test_coops_catalog.cpp
+        test_json_write.cpp
+    LIBRARIES mov::io nlohmann_json::nlohmann_json
+)
+# The series JSON (docs/series-json.md), golden files in
+# tests/fixtures/io/series_json/.
+mov_add_test(mov_io_series_json_tests SOURCES test_series_json.cpp LIBRARIES mov::io)
+target_compile_definitions(mov_io_catalog_tests PRIVATE MOV_TEST_REPO_DIR="${PROJECT_SOURCE_DIR}")
+# Inputs up to 1 MiB, so the size limits and the unknown-member bound are
+# reached.
+mov_add_fuzz_test(
+    fuzz_station_catalog
+    SOURCES fuzz_station_catalog.cpp
+    LIBRARIES mov::io
+    CORPUS io/station_catalog
+    MAX_LEN 1048576
+)
+
+# The JSON Schema half of the station catalog and the series JSON
+# (tools/check_json_schemas.py: the schemas, the fixtures' schema verdicts,
+# the specs' worked examples). It needs the jsonschema package (pinned in the
+# dev image and the format-compliance job) and skips without it.
+find_package(Python3 3.11 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME json_schemas COMMAND ${Python3_EXECUTABLE} -I "${PROJECT_SOURCE_DIR}/tools/check_json_schemas.py")
+    set_tests_properties(json_schemas PROPERTIES SKIP_RETURN_CODE 77)
+endif()
