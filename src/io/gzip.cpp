@@ -13,6 +13,7 @@
 #include <limits>
 #include <new>
 #include <span>
+#include <stdexcept>
 #include <string>
 
 #include "mov/core/cancelled.hpp"
@@ -31,8 +32,10 @@ namespace {
 constexpr std::size_t min_chunk = std::size_t{64} << 10;
 constexpr std::size_t max_chunk = std::size_t{1} << 20;
 
-// zlib counts in uInt: the input is handed over in pieces of at most this.
-constexpr std::size_t max_feed = std::numeric_limits<uInt>::max();
+// The input is handed to zlib 1 MiB at a time (zlib counts in uInt, and the
+// stop request is polled between steps, so a step's work stays bounded).
+constexpr std::size_t max_feed = std::size_t{1} << 20;
+static_assert(max_feed <= std::numeric_limits<uInt>::max());
 
 [[nodiscard]] const Bytef* zlib_in(const std::byte* p) noexcept {
   return static_cast<const Bytef*>(static_cast<const void*>(p));
@@ -47,8 +50,14 @@ constexpr std::size_t max_feed = std::numeric_limits<uInt>::max();
 class Inflater {
  public:
   explicit Inflater(std::span<const std::byte> input) : input_{input} {
-    if (inflateInit2(&stream_, 16 + MAX_WBITS) != Z_OK) {
-      throw std::bad_alloc{};  // Z_MEM_ERROR; the arguments are valid
+    const int status = inflateInit2(&stream_, 16 + MAX_WBITS);
+    if (status == Z_MEM_ERROR) {
+      throw std::bad_alloc{};
+    }
+    if (status != Z_OK) {
+      // Z_VERSION_ERROR or Z_STREAM_ERROR: a zlib that does not match its
+      // header, or arguments it refuses. Neither is the input's fault.
+      throw std::logic_error{"inflateInit2 failed"};
     }
   }
   Inflater(const Inflater&) = delete;
@@ -133,8 +142,11 @@ std::expected<std::string, GunzipError> gunzip(
     if (status == Z_MEM_ERROR) {
       throw std::bad_alloc{};
     }
-    if (status != Z_OK and status != Z_STREAM_END and status != Z_BUF_ERROR) {
-      return failure(GzipErrc::corrupt, z.offset());  // Z_DATA_ERROR
+    if (status == Z_STREAM_ERROR) {
+      throw std::logic_error{"inflate: inconsistent stream state"};
+    }
+    if (status == Z_DATA_ERROR or status == Z_NEED_DICT) {
+      return failure(GzipErrc::corrupt, z.offset());
     }
     if (status != Z_STREAM_END and not step.filled and not z.input_left()) {
       return failure(GzipErrc::truncated, z.offset());

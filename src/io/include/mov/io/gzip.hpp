@@ -68,10 +68,20 @@ using GunzipError = std::variant<GzipError, core::Cancelled>;
 
 /// The decompressed bytes of exactly one gzip member that fills `compressed`:
 /// a second member or any trailing byte is an error, not ignored. At most
-/// `max_out` bytes are returned; one more is `too_large`, and the output
-/// never grows past `max_out` + 1 bytes however much the input claims.
-/// Inflates in steps of 64 KiB to 1 MiB and polls `stop` before each one.
-/// Allocation failure (also inside zlib) throws std::bad_alloc.
+/// `max_out` bytes are returned; one more is `too_large`.
+///
+/// Memory: the output never holds more than `max_out` + 1 bytes, however
+/// much the input claims. Its capacity may be larger, by the string's growth
+/// policy (at most twice the size in libstdc++, libc++ and MSVC's STL), so
+/// the allocation is below 2 * (`max_out` + 1). An exact bound would need a
+/// buffer the caller cannot take as a std::string without a full copy,
+/// which costs the same peak.
+///
+/// Each step feeds zlib at most 1 MiB of input and takes at most 1 MiB of
+/// output (from 64 KiB, growing with the output), and `stop` is polled
+/// before each step. Allocation failure (also inside zlib) throws
+/// std::bad_alloc; a zlib that refuses its own initialization throws
+/// std::logic_error.
 [[nodiscard]] std::expected<std::string, GunzipError> gunzip(
     std::span<const std::byte> compressed, std::uintmax_t max_out,
     const StopToken& stop = {});

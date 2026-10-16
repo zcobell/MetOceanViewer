@@ -9,7 +9,8 @@
 //    WDIR, BAR and PRES one each), each column in strictly increasing time
 //    on one axis, no Dry sample;
 //  - Missing samples never exceed the 9-filled values counted plus the
-//    `MM` words of the text;
+//    `MM` words of the text, and no present sample equals its column's
+//    9-filled value (999.0 is data only for pressure, whose value is 9999);
 //  - markup is the service's refusal only when the text starts with '<';
 //  - a refusal is a ParseError whose line lies inside the text, or a
 //    FormatError; read_stdmet of a text body is parse_stdmet of it.
@@ -19,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <optional>
 #include <set>
 #include <span>
 #include <string>
@@ -27,6 +29,7 @@
 #include <vector>
 
 #include "mov/core/provider/ndbc.hpp"
+#include "mov/core/quantity.hpp"
 #include "mov/core/sample.hpp"
 #include "mov/core/timeseries.hpp"
 #include "mov/io/detail/text.hpp"
@@ -104,6 +107,37 @@ std::size_t header_columns(std::string_view text) {
   return 0;
 }
 
+// The 9-filled missing value of a column, written independently of the
+// parser's table (provider-apis.md section 3.2); PTDY has none.
+std::optional<double> sentinel_of(const mov::io::ColumnKey& key) {
+  struct Sentinel {
+    std::string_view quantity;
+    double value;
+  };
+  constexpr std::array<Sentinel, 13> sentinels{{
+      {.quantity = "wind_direction", .value = 999.0},
+      {.quantity = "wave_direction", .value = 999.0},
+      {.quantity = "wind_speed", .value = 99.0},
+      {.quantity = "wind_gust", .value = 99.0},
+      {.quantity = "visibility", .value = 99.0},
+      {.quantity = "wave_height", .value = 99.0},
+      {.quantity = "wave_period_dominant", .value = 99.0},
+      {.quantity = "wave_period_average", .value = 99.0},
+      {.quantity = "water_level", .value = 99.0},
+      {.quantity = "air_temperature", .value = 999.0},
+      {.quantity = "water_temperature", .value = 999.0},
+      {.quantity = "dew_point", .value = 999.0},
+      {.quantity = "air_pressure", .value = 9999.0},
+  }};
+  const std::string_view token = mov::core::token(key.quantity);
+  for (const Sentinel& s : sentinels) {
+    if (s.quantity == token) {
+      return s.value;
+    }
+  }
+  return std::nullopt;
+}
+
 std::size_t mm_words(std::string_view text) {
   std::size_t n = 0;
   std::string_view rest = text;
@@ -138,8 +172,9 @@ void check_part(const mov::io::Read<mov::io::Part>& r, std::string_view text) {
         fail();
       }
     }
+    const std::optional<double> sentinel = sentinel_of(key);
     for (const auto& s : series.samples()) {
-      if (s.is_dry()) {
+      if (s.is_dry() or (sentinel and s.value() == sentinel)) {
         fail();
       }
       missing += s.is_missing() ? 1 : 0;

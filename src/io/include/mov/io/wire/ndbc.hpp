@@ -30,6 +30,9 @@
 /// are pinned by the recordings in tests/fixtures/io/ndbc/ (provenance.txt).
 namespace mov::io::wire::ndbc {
 
+/// An NDBC id: four to seven letters and digits (plan decision 38), so
+/// four-character shore stations (KATP) and seven-digit DART buoys (5401000)
+/// are stations like the five-character buoys.
 using Station = core::StationId<core::provider::Ndbc>;
 
 // ---- which file
@@ -129,13 +132,20 @@ struct TargetError {
 /// is read.
 using StdMetReply = std::variant<Read<Part>, ServiceError>;
 
+/// The most text a standard-met body may hold, compressed or not, whatever
+/// larger ctx.limits.max_text_bytes allows. The largest real files measured
+/// (2026-10-16) are a year of 10-minute rows: 44013h2024 inflates to
+/// 4,735,745 bytes, 41002h2019 to 4,509,358; realtime2 files are about
+/// 0.3 MB. 64 MiB is more than thirteen such years.
+inline constexpr std::uintmax_t max_stdmet_bytes = std::uintmax_t{64} << 20;
+
 /// The one entry point for a body as received: inflated when it starts with
-/// the gzip magic (io::gunzip, at most ctx.limits.max_text_bytes out; a
-/// `.txt.gz` file arrives compressed, a `.txt` file or a body Qt already
-/// inflated does not), then sniffed for markup (sniff_markup), then
-/// parse_stdmet. A gzip failure is a ParseError `bad_gzip` (its column the
-/// byte offset into the body; `too_large` past the cap), a text body over
-/// max_text_bytes `too_large`.
+/// the gzip magic (io::gunzip; a `.txt.gz` file arrives compressed, a `.txt`
+/// file or a body Qt already inflated does not), then sniffed for markup
+/// (sniff_markup), then parse_stdmet. The text, inflated or not, is at most
+/// min(ctx.limits.max_text_bytes, max_stdmet_bytes); more is `too_large`. A
+/// gzip failure is a ParseError `bad_gzip`, its column the byte offset into
+/// the body.
 [[nodiscard]] std::expected<StdMetReply, Error> read_stdmet(
     std::span<const std::byte> body, std::string_view content_type,
     core::ndbc::FileKind kind, const ReadContext& ctx);
@@ -159,9 +169,10 @@ using StdMetReply = std::variant<Read<Part>, ServiceError>;
 ///  - Units from the units row, each of its column's kind (direction degT
 ///    or deg, speed, length, period sec, pressure, temperature), else
 ///    FormatError noncanonical_unit (subject "<column> <unit>"). Without a
-///    units row (files before 2007) the documented units: m/s, m, sec, degT,
-///    hPa, degC, TIDE ft, and VIS mi in a historical file, nmi in any
-///    other. A units row's VIS wins (the 2007 historical file says nmi).
+///    units row (the files before 2007) the units of NDBC's measurement
+///    descriptions: m/s, m, sec, degT, hPa, degC, TIDE ft and VIS nmi
+///    ("Station visibility (nautical miles)"), whatever the file kind. A
+///    units row wins (2019's historical file says VIS `mi`).
 ///  - Years: two digits are 19YY (files before 1999), four as written. The
 ///    time is UTC; without a minute column the minute is 0.
 ///  - Missing values, exact per column: `MM` in any column (realtime2);
@@ -173,9 +184,12 @@ using StdMetReply = std::variant<Read<Part>, ServiceError>;
 ///    a number is a ParseError (v4 read `MM` as 0.0, L12).
 ///  - Lines after the header that start with `#` are comments, skipped and
 ///    counted (`header_line_skipped`, subject the first one).
-///  - Order: a file in strictly decreasing time (realtime2) is reversed;
-///    any other is put in order by normalize, whose warnings are about
-///    "ndbc:<kind>" (historical, monthly, monthly_latest, realtime).
+///  - Order: a realtime2 file is written newest first. When its times
+///    never increase it is reversed, rows of one time kept in file order;
+///    then every file goes through normalize, so only true faults (a
+///    repeated time, a row out of place) are reported, about "ndbc:<kind>"
+///    (historical, monthly, monthly_latest, realtime). Of rows with one
+///    time the first in the file is kept (plan decision 30.3).
 /// Every recognized column is in the part, all-Missing ones included; a
 /// header without data rows gives empty columns.
 /// Errors: empty_input; missing_header (no time columns as above, with
@@ -205,7 +219,8 @@ struct Feeds {
 /// One station of the list: id, name and position as listed (validity
 /// unknown and ongoing: the list has no dates); owner, `pgm` (program),
 /// `type` (platform) and `elev` (metres above mean sea level) as its
-/// capabilities.
+/// capabilities. The texts are the server's, with the references decoded
+/// (`&lt;b&gt;` is `<b>`): whatever shows them renders them as plain text.
 struct StationRecord {
   core::GaugeStation<core::provider::Ndbc> station;
   core::Capabilities<core::provider::Ndbc> caps;
@@ -228,8 +243,7 @@ struct StationRecord {
 /// `id` for a missing id or one that is not an NDBC id, `duplicate` for an
 /// id listed before, `position`, `elevation`, `text` for a name, owner,
 /// pgm or type that is not station text, `feeds` for a flag other than "y"
-/// or "n"). 54 of the 1354 stations of 2026-10-15 have ids of four or seven
-/// characters, which core's NDBC id refuses (provenance.txt).
+/// or "n").
 /// Errors: corrupt_record, empty_input, too_large (more than
 /// ctx.limits.max_elements / 16 stations, or the text over max_text_bytes),
 /// Cancelled.

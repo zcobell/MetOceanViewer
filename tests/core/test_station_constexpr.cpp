@@ -189,17 +189,29 @@ TEST_CASE("USGS ids are agency-number", "[core][station][constexpr]") {
   STATIC_REQUIRE(fails<Usgs>("usgs_07374000", StationIdError::invalid));
 }
 
-TEST_CASE("NDBC ids are five characters, upper-cased",
+TEST_CASE("NDBC ids are four to seven characters, upper-cased",
           "[core][station][constexpr]") {
+  // Owner decision (plan section 6, 2026-10-16): activestations.xml lists
+  // four-character shore stations (KATP, CWCI; EB01 in the 1970s files) and
+  // seven-digit ids (DART 5401000, 4403585) besides the five-character buoys.
   STATIC_REQUIRE(Ndbc::valid_id("42001"));
   STATIC_REQUIRE(Ndbc::valid_id("BURL1"));
+  STATIC_REQUIRE(Ndbc::valid_id("KATP"));
+  STATIC_REQUIRE(Ndbc::valid_id("EB01"));
+  STATIC_REQUIRE(Ndbc::valid_id("420011"));
+  STATIC_REQUIRE(Ndbc::valid_id("5401000"));
   // The predicate sees the upper-cased text; make does the folding.
   STATIC_REQUIRE_FALSE(Ndbc::valid_id("burl1"));
-  STATIC_REQUIRE_FALSE(Ndbc::valid_id("4200"));
-  STATIC_REQUIRE_FALSE(Ndbc::valid_id("420011"));
+  STATIC_REQUIRE_FALSE(Ndbc::valid_id("420"));
+  STATIC_REQUIRE_FALSE(Ndbc::valid_id("54010001"));
   STATIC_REQUIRE_FALSE(Ndbc::valid_id("42-01"));
+  STATIC_REQUIRE_FALSE(Ndbc::valid_id("42/01"));
+  STATIC_REQUIRE_FALSE(Ndbc::valid_id("42.01"));
   STATIC_REQUIRE(makes<Ndbc>(" burl1 ", "BURL1"));
+  STATIC_REQUIRE(makes<Ndbc>("katp", "KATP"));
+  STATIC_REQUIRE(makes<Ndbc>("4403585", "4403585"));
   STATIC_REQUIRE(fails<Ndbc>("burl_", StationIdError::invalid));
+  STATIC_REQUIRE(fails<Ndbc>("abc", StationIdError::invalid));
 }
 
 TEST_CASE("harmonics ids are <source>:<local>", "[core][station][constexpr]") {

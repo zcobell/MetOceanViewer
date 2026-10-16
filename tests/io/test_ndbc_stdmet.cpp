@@ -158,8 +158,9 @@ TEST_CASE("1973: two-digit years, no minute, old names, read from gzip",
   CHECK(masked(part, "WTMP") == 461);
   CHECK(masked(part, "DEWP") == 445);
   CHECK(masked(part, "VIS") == 461);
+  // No units row: NDBC's measurement descriptions say nautical miles.
   CHECK(length_unit(column(part.value, Quantity::visibility)) ==
-        LengthUnit::statute_mile);
+        LengthUnit::nautical_mile);
 }
 
 TEST_CASE("1996: two-digit years of the 1990s and a value written .7",
@@ -250,6 +251,13 @@ TEST_CASE("a finalized month, as served (gzip)", "[io][wire][ndbc]") {
   CHECK(length_unit(column(r.value, Quantity::visibility)) ==
         LengthUnit::nautical_mile);
   CHECK_FALSE(warning_of(r.warnings, WarningCode::times_reordered));
+  // A real 999.0 hPa of the current era stays data (L12): 2026-01-31 23:30.
+  const TimeSeries& pressure = column(r.value, Quantity::air_pressure);
+  const auto at = std::ranges::find(pressure.times(), utc(2026, 1, 31, 23, 30));
+  REQUIRE(at != pressure.times().end());
+  const auto i = static_cast<std::size_t>(at - pressure.times().begin());
+  CHECK(values_of(pressure)[i] == Opt{999.0});
+  CHECK(values_of(pressure)[i - 1] == Opt{999.1});
 }
 
 TEST_CASE("the latest month: text, nmi, 9-filled", "[io][wire][ndbc]") {
@@ -299,20 +307,24 @@ TEST_CASE("999.0 hPa is a pressure; 9999.0 is missing",
 
 TEST_CASE("each file by its own header: two eras of one station",
           "[io][wire][ndbc][regression][L14]") {
+  // A unit check of the parser; the merge of two eras through fetch is a
+  // P7 test (providers-design section 4.10).
   const auto older = parsed(ndbc_fixture("41002h1999.txt"));
-  const auto newer = parsed(ndbc_fixture("41002h2007.txt"));
+  const auto newer = parsed(ndbc_fixture("41002h2019.txt"));
   CHECK_FALSE(older.value.columns().contains(key(Quantity::water_level)));
   CHECK(newer.value.columns().contains(key(Quantity::water_level)));
   CHECK(length_unit(column(older.value, Quantity::visibility)) ==
-        LengthUnit::statute_mile);
+        LengthUnit::nautical_mile);  // no units row
   CHECK(length_unit(column(newer.value, Quantity::visibility)) ==
-        LengthUnit::nautical_mile);
-  CHECK(column(newer.value, Quantity::wind_speed).times().front() ==
-        utc(2007, 1, 1));
+        LengthUnit::statute_mile);  // its units row says mi
+  CHECK(column(newer.value, Quantity::wind_speed).times()[1] ==
+        utc(2019, 1, 1, 0, 10));
 }
 
 TEST_CASE("the CGI wrapper's error body is not data",
           "[io][wire][ndbc][regression][L15]") {
+  // A unit check of the parser; that no request names the wrapper is
+  // test_ndbc_targets.cpp's, and P7's through the provider.
   const std::string body = ndbc_fixture("view_text_file_missing.txt");
   const auto r = parse(body);
   CHECK(parse_error_in(r).code() == ParseErrc::missing_header);
@@ -324,7 +336,10 @@ TEST_CASE("the CGI wrapper's error body is not data",
 
 TEST_CASE("the minute column is a token, not a position",
           "[io][wire][ndbc][regression][L13]") {
-  // v4 took the fifth word for minutes when it read "mm"; here WD is a value.
+  // v4 cut the date out of each row at fixed character offsets (13 or 16
+  // bytes, chosen by the first file's fifth header word; ndbcdata.cpp:186),
+  // so other spacing or two-digit years moved every field. Here the fields
+  // are words.
   const auto hourly = parsed("YYYY MM DD hh WD\n2004 01 01 05 00\n");
   CHECK(column(hourly.value, Quantity::wind_direction).times()[0] ==
         utc(2004, 1, 1, 5));
@@ -333,6 +348,14 @@ TEST_CASE("the minute column is a token, not a position",
   const auto minutes = parsed("YYYY MM DD hh mm WD\n2005 01 01 05 30 10\n");
   CHECK(column(minutes.value, Quantity::wind_direction).times()[0] ==
         utc(2005, 1, 1, 5, 30));
+  // Irregular spacing and one-digit fields: v4's offsets read garbage.
+  const auto spaced =
+      parsed("YYYY MM DD hh mm WD\n2005  1  1  5 30 10\n  2005 1 2 6 0   20\n");
+  CHECK(std::ranges::equal(
+      column(spaced.value, Quantity::wind_direction).times(),
+      std::vector{utc(2005, 1, 1, 5, 30), utc(2005, 1, 2, 6, 0)}));
+  CHECK(values_of(column(spaced.value, Quantity::wind_direction)) ==
+        Values{10.0, 20.0});
 }
 
 TEST_CASE("missing values are exact per column",
@@ -360,16 +383,20 @@ TEST_CASE("missing values are exact per column",
   CHECK(masked(r, "PTDY") == 0);
 }
 
-TEST_CASE("units without a units row follow the file kind",
+TEST_CASE("without a units row VIS is nautical miles in every file kind",
           "[io][wire][ndbc]") {
+  // https://www.ndbc.noaa.gov/faq/measdes.shtml: "Station visibility
+  // (nautical miles)". Only a units row says otherwise (2019's says mi).
   const std::string_view text = "YYYY MM DD hh VIS\n2005 01 01 00 1.5\n";
-  CHECK(length_unit(column(parsed(text, FileKind::historical).value,
-                           Quantity::visibility)) == LengthUnit::statute_mile);
-  for (const FileKind k :
-       {FileKind::monthly, FileKind::monthly_latest, FileKind::realtime}) {
+  for (const FileKind k : {FileKind::historical, FileKind::monthly,
+                           FileKind::monthly_latest, FileKind::realtime}) {
     CHECK(length_unit(column(parsed(text, k).value, Quantity::visibility)) ==
           LengthUnit::nautical_mile);
   }
+  const auto statute =
+      parsed("#YY MM DD hh VIS\n#yr mo dy hr mi\n2019 01 01 00 1.5\n");
+  CHECK(length_unit(column(statute.value, Quantity::visibility)) ==
+        LengthUnit::statute_mile);
 }
 
 TEST_CASE("a units row of the wrong kind is refused", "[io][wire][ndbc]") {
@@ -517,20 +544,53 @@ TEST_CASE("rows out of order go through normalize, about the file kind",
   CHECK(warning_of(r.warnings, WarningCode::conflicting_duplicate_times));
 }
 
-TEST_CASE("a strictly decreasing file of any kind is reversed silently",
+TEST_CASE("realtime2 newest first is reversed silently; other kinds are not",
+          "[io][wire][ndbc]") {
+  const std::string_view newest_first =
+      "YYYY MM DD hh WSPD\n2005 01 01 02 3.0\n"
+      "2005 01 01 01 2.0\n2005 01 01 00 1.0\n";
+  const auto realtime = parsed(newest_first, FileKind::realtime);
+  CHECK(values_of(column(realtime.value, Quantity::wind_speed)) ==
+        Values{1.0, 2.0, 3.0});
+  CHECK(realtime.warnings.empty());
+  // Only realtime2 is written newest first: elsewhere it is a fault.
+  for (const FileKind k :
+       {FileKind::historical, FileKind::monthly, FileKind::monthly_latest}) {
+    const auto r = parsed(newest_first, k);
+    CHECK(values_of(column(r.value, Quantity::wind_speed)) ==
+          Values{1.0, 2.0, 3.0});
+    CHECK(warning_of(r.warnings, WarningCode::times_reordered));
+  }
+}
+
+TEST_CASE("of rows with one time the first in the file is kept",
+          "[io][wire][ndbc]") {
+  // Plan decision 30.3: the first of equal times wins, newest-first files
+  // included, so a reversal keeps a tie in file order.
+  const std::string_view tied =
+      "YYYY MM DD hh WSPD\n2005 01 01 02 3.0\n"
+      "2005 01 01 02 2.0\n2005 01 01 00 1.0\n";
+  for (const FileKind k : {FileKind::historical, FileKind::realtime}) {
+    const auto r = parsed(tied, k);
+    CHECK(values_of(column(r.value, Quantity::wind_speed)) == Values{1.0, 3.0});
+  }
+}
+
+TEST_CASE("a newest-first file with a repeated time: one duplicate, no reorder",
           "[io][wire][ndbc]") {
   const auto r = parsed(
-      "YYYY MM DD hh WSPD\n2005 01 01 02 3.0\n"
-      "2005 01 01 01 2.0\n2005 01 01 00 1.0\n");
+      "#YY MM DD hh mm WSPD\n#yr mo dy hr mn m/s\n"
+      "2026 10 03 16 50 3.0\n2026 10 03 16 40 2.0\n"
+      "2026 10 03 16 40 9.0\n2026 10 03 16 30 1.0\n",
+      FileKind::realtime);
   CHECK(values_of(column(r.value, Quantity::wind_speed)) ==
         Values{1.0, 2.0, 3.0});
-  CHECK(r.warnings.empty());
-  // Two equal times are not strictly decreasing: normalize keeps the first.
-  const auto tied = parsed(
-      "YYYY MM DD hh WSPD\n2005 01 01 02 3.0\n"
-      "2005 01 01 02 2.0\n2005 01 01 00 1.0\n");
-  CHECK(values_of(column(tied.value, Quantity::wind_speed)) ==
-        Values{1.0, 3.0});
+  CHECK(warning_of(r.warnings, WarningCode::duplicate_times_dropped) ==
+        mov::io::Warning{.code = WarningCode::duplicate_times_dropped,
+                         .subject = "ndbc:realtime",
+                         .count = 1});
+  CHECK(warning_of(r.warnings, WarningCode::conflicting_duplicate_times));
+  CHECK_FALSE(warning_of(r.warnings, WarningCode::times_reordered));
 }
 
 TEST_CASE("limits come before the samples are kept", "[io][wire][ndbc]") {
@@ -635,4 +695,17 @@ TEST_CASE("a body larger than the text limit, compressed or not",
       wn::read_stdmet(bytes_of(gz), "", FileKind::historical, stop);
   REQUIRE(not cancelled.has_value());
   CHECK(std::holds_alternative<mov::io::Cancelled>(cancelled.error()));
+}
+
+TEST_CASE("a standard-met body is at most 64 MiB, whatever the context allows",
+          "[io][wire][ndbc]") {
+  // ReadContext's default text limit is 1 GiB; NDBC's own cap is lower.
+  const std::string zeros(wn::max_stdmet_bytes + 1, '0');
+  const auto plain =
+      wn::read_stdmet(bytes_of(zeros), "", FileKind::historical, {});
+  CHECK(parse_error_in(plain).code() == ParseErrc::too_large);
+  const std::string gz = mov::test::gzip_of(zeros);
+  const auto inflated =
+      wn::read_stdmet(bytes_of(gz), "", FileKind::historical, {});
+  CHECK(parse_error_in(inflated).code() == ParseErrc::too_large);
 }

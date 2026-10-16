@@ -628,6 +628,15 @@ open. Do not guess; ask before proceeding past the phase that needs them.
     separate choices in the picker, labelled with USGS's sublocation and
     web_description; the map and the default use the sublocation group whose data reach
     latest. (`docs/providers-design.md` §3.4, §4.9, §5.2.)
+38. **NDBC station ids (decided 2026-10-16):** an NDBC id is `^[A-Z0-9]{4,7}$`
+    after upper-casing, not five characters only. `activestations.xml` lists 36
+    four-character shore stations (Marine METAR and C-MAN, such as `KATP`, `CWCI`;
+    the 1970s files `eb01h1970.txt.gz` too) and 18 seven-digit ids (14 DART buoys, a
+    Saildrone, three Great Lakes buoys such as `4403585`), and all are accepted.
+    Letters and digits only, so an id is always safe in a path. A station of each
+    provider is told apart by its provider, never by its id text (`8771013` can be
+    a CO-OPS and an NDBC id). DART buoys are listed with the feeds NDBC serves for
+    them (`docs/providers-design.md` §4.10).
 
 ### Open items from Phase 2 (owner; undecided, collected 2026-10-09)
 

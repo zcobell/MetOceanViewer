@@ -333,3 +333,14 @@ if(MOV_ENABLE_QT)
         LIBRARIES mov::io Qt6::Core
     )
 endif()
+# Live probes of the NDBC file rules (label live; skipped unless
+# MOV_LIVE_API=1): the id case per directory and the month codes (L16).
+if(MOV_ENABLE_QT)
+    mov_add_test(
+        mov_io_ndbc_live_tests
+        LIVE
+        QT
+        SOURCES qt_main.cpp test_ndbc_live.cpp
+        LIBRARIES mov::io Qt6::Network Qt6::Core
+    )
+endif()

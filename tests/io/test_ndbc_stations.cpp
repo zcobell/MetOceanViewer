@@ -100,9 +100,14 @@ std::string valid_attributes(std::string_view extra = "") {
 TEST_CASE("the recorded list, trimmed: every kind of station",
           "[io][wire][ndbc]") {
   const auto r = records(ndbc_fixture("activestations.xml"));
-  CHECK(r.value.size() == 12);
-  CHECK(skipped(r, "id") == 3);  // 1801589, cwci, katp
-  CHECK(r.warnings.size() == 1);
+  // Every station is a record: the four- and seven-character ids too
+  // (owner decision 2026-10-16).
+  CHECK(r.value.size() == 15);
+  CHECK(r.warnings.empty());
+  CHECK(station(r.value, "KATP").caps.program.view() == "Marine METAR");
+  CHECK(station(r.value, "CWCI").caps.elevation ==
+        mov::core::Length::in(163.0, mov::core::LengthUnit::meter));
+  CHECK(station(r.value, "1801589").caps.platform_type.view() == "usv");
 
   const auto& hatteras = station(r.value, "41002");
   CHECK(hatteras.station.name.view() ==
@@ -149,9 +154,16 @@ TEST_CASE("the whole recorded list", "[io][wire][ndbc]") {
   CHECK(document.stations.front().line == 3);
   CHECK(document.stations.back().line == 1356);
   const auto r = records(*text);
-  CHECK(r.value.size() == 1300);
-  CHECK(skipped(r, "id") == 54);
-  CHECK(r.warnings.size() == 1);
+  CHECK(r.value.size() == 1354);
+  CHECK(r.warnings.empty());
+  // DART buoys are listed with the feeds the list gives them; seven-digit
+  // ones say "n" to every feed (provenance.txt: they serve no file).
+  const auto& dart = station(r.value, "5401000");
+  CHECK(dart.caps.platform_type.view() == "dart");
+  CHECK(dart.feeds == wn::Feeds{.met = false,
+                                .currents = false,
+                                .water_quality = false,
+                                .dart = false});
 }
 
 // ---- the subset
@@ -341,7 +353,7 @@ TEST_CASE("stations that are not records are counted by reason",
   const std::string text =
       "<stations>\n"
       "<station lat=\"1\" lon=\"2\"/>\n"                          // no id
-      "<station id=\"TOOLONG\" lat=\"1\" lon=\"2\"/>\n"           // id
+      "<station id=\"TOOLONG1\" lat=\"1\" lon=\"2\"/>\n"          // id
       "<station id=\"41002\" lat=\"1\" lon=\"2\"/>\n"             // kept
       "<station id=\"41002\" lat=\"3\" lon=\"4\"/>\n"             // duplicate
       "<station id=\"41O02\" lat=\"x\" lon=\"2\"/>\n"             // position

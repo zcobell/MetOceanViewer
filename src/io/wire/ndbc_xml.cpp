@@ -28,6 +28,7 @@ namespace mov::io::detail::ndbc_xml {
 namespace {
 
 constexpr std::string_view utf8_bom{"\xEF\xBB\xBF"};
+constexpr std::string_view xml_space{" \t\r\n"};
 constexpr std::size_t stop_poll_stations = 4096;
 
 // The largest XML character, and how many digits a reference to it may have.
@@ -63,10 +64,6 @@ constexpr std::array<Entity, 5> predefined{
          (c >= space and c < surrogates_begin) or
          (c >= private_use_begin and c < non_characters_begin) or
          (c >= supplementary_begin and c <= max_code_point);
-}
-
-[[nodiscard]] constexpr bool is_xml_space(char c) noexcept {
-  return c == ' ' or c == '\t' or c == '\r' or c == '\n';
 }
 
 [[nodiscard]] constexpr bool is_name_start(char c) noexcept {
@@ -149,7 +146,7 @@ class Scanner {
     if (text_.starts_with(utf8_bom)) {
       pos_ = utf8_bom.size();
     }
-    if (std::ranges::all_of(text_.substr(pos_), is_xml_space)) {
+    if (text_.find_first_not_of(xml_space, pos_) == std::string_view::npos) {
       return fail(ParseErrc::empty_input);
     }
     if (const auto bad = first_bad_character(text_)) {
@@ -197,10 +194,16 @@ class Scanner {
   // Skips white space; whether there was any.
   bool skip_space() noexcept {
     const std::size_t before = pos_;
-    while (not at_end() and is_xml_space(text_[pos_])) {
-      ++pos_;
-    }
+    pos_ = std::min(text_.find_first_not_of(xml_space, pos_), text_.size());
     return pos_ != before;
+  }
+
+  // Where the run of `pred` characters from pos_ ends.
+  template <class Pred>
+  [[nodiscard]] std::size_t end_of_run(Pred pred) const {
+    const std::string_view r = rest();
+    return pos_ + static_cast<std::size_t>(std::ranges::find_if_not(r, pred) -
+                                           r.begin());
   }
 
   // The 1-based line of pos_, counted forward from the last one asked for.
@@ -216,9 +219,7 @@ class Scanner {
     if (at_end() or not is_name_start(text_[pos_])) {
       return fail();
     }
-    while (not at_end() and is_name_char(text_[pos_])) {
-      ++pos_;
-    }
+    pos_ = end_of_run(is_name_char);
     return text_.substr(start, pos_ - start);
   }
 
@@ -240,9 +241,9 @@ class Scanner {
       return fail();
     }
     ++pos_;
-    while (not at_end() and is_name_char(text_[pos_])) {
-      a.value.push_back(text_[pos_++]);
-    }
+    const std::size_t end = end_of_run(is_name_char);
+    a.value = text_.substr(pos_, end - pos_);
+    pos_ = end;
     if (not consume(std::string_view{&quote, 1})) {
       return fail();
     }

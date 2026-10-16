@@ -54,6 +54,10 @@ TEST_CASE("a finalized month: directory, lower-case id, month code, year",
   CHECK(path_of("41002", wn::Monthly{.month = year{2026} / month{8},
                                      .spelling = wn::MonthSpelling::letter}) ==
         "/data/stdmet/Aug/4100282026.txt.gz");
+  // October to December: the letter codes a-c are believed, not verified
+  // (providers-design section 1.3: Oct/ to Dec/ were empty on 2026-10-15);
+  // the LIVE probe in test_ndbc_live.cpp checks them once a late month is
+  // finalized.
   CHECK(path_of("32ST0", wn::Monthly{.month = year{2025} / month{10},
                                      .spelling = wn::MonthSpelling::letter}) ==
         "/data/stdmet/Oct/32st0a2025.txt.gz");
@@ -127,4 +131,36 @@ TEST_CASE("a file's kind", "[io][wire][ndbc]") {
   STATIC_REQUIRE(wn::kind(wn::LatestMonth{.month = month{9}}) ==
                  FileKind::monthly_latest);
   STATIC_REQUIRE(wn::kind(wn::Realtime{}) == FileKind::realtime);
+}
+
+TEST_CASE("four- and seven-character ids follow the same case rule",
+          "[io][wire][ndbc]") {
+  // Live (2026-10-16): historical/stdmet/eb01h1970.txt.gz is 200 and
+  // EB01h1970.txt.gz 404; realtime2/KATP.txt and 4403585.txt are 200,
+  // katp.txt 404 (provenance.txt).
+  CHECK(path_of("EB01", wn::Historical{.year = year{1970}}) ==
+        "/data/historical/stdmet/eb01h1970.txt.gz");
+  CHECK(path_of("katp", wn::Realtime{}) == "/data/realtime2/KATP.txt");
+  CHECK(path_of("4403585", wn::Realtime{}) == "/data/realtime2/4403585.txt");
+  CHECK(path_of("4403585", wn::Historical{.year = year{2025}}) ==
+        "/data/historical/stdmet/4403585h2025.txt.gz");
+}
+
+TEST_CASE("no request goes through the CGI wrapper",
+          "[io][wire][ndbc][regression][L15]") {
+  // v4 asked view_text_file.php, which answers a missing year with a body
+  // instead of a 404. Every file is asked for directly.
+  const std::array<wn::File, 5> files{
+      wn::Historical{.year = year{2019}},
+      wn::Monthly{.month = year{2026} / month{1},
+                  .spelling = wn::MonthSpelling::letter},
+      wn::Monthly{.month = year{2026} / month{11},
+                  .spelling = wn::MonthSpelling::decimal},
+      wn::LatestMonth{.month = month{9}}, wn::Realtime{}};
+  for (const wn::File& f : files) {
+    const std::string path = path_of("41002", f);
+    CHECK(not path.contains("view_text_file"));
+    CHECK(path.starts_with("/data/"));
+  }
+  CHECK(not wn::active_stations_target().path.contains("view_text_file"));
 }

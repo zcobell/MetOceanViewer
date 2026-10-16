@@ -99,7 +99,7 @@ program of §1.5 built against the pinned Qt 6.11.3.
 | `.txt.gz` files are served `Content-Type: application/x-gzip` with no `Content-Encoding`; three files (2005, 2025, Jan 2026) are each one gzip member, ratios 4.5–6.2, the 2025 year 3.2 MB decompressed. | live |
 | `activestations.xml`: 1,354 stations, attributes `id lat lon elev name owner pgm type met currents waterquality dart`; 905 with `met="y"`. | live |
 | Live (2026-10-15, P4; files in `tests/fixtures/io/ndbc/`): headers by era, at 41002. 1973–1998 one line `YY MM DD hh WD … BAR … VIS`, two-digit years, no minute; 1999–2004 `YYYY`, no minute (`TIDE` from about 2001); 2005–2006 `YYYY … hh mm`; from 2007 two lines `#YY …` and the units row `#yr mo dy hr mn degT m/s …`. The 2007 historical file's units row says `VIS` `nmi`, 2019's `mi`; monthly files write `MWD` `deg`. | live |
-| `activestations.xml` (2026-10-15): 54 ids are not `^[A-Z0-9]{5}$` (36 of four characters, 18 of seven digits); 48 TAO buoys have no `met`/`currents`/`waterquality`/`dart`; 264 stations no `elev`; 41002 and 42040 have `met="n"` yet serve standard met files; entities `&amp;` and `&quot;` only, no byte above 0x7F. | live |
+| `activestations.xml` (2026-10-15): 36 ids of four characters and 18 of seven digits besides the five-character ones (accepted: plan decision 38); 48 TAO buoys have no `met`/`currents`/`waterquality`/`dart`; 264 stations no `elev`; 41002 and 42040 have `met="n"` yet serve standard met files; entities `&amp;` and `&quot;` only, no byte above 0x7F. | live |
 | `view_text_file.php` for a missing year: HTTP 404 (was 200 on 2026-10-06) with the body "Unable to access data file". `TIDE` is feet above or below MLLW. | live; https://www.ndbc.noaa.gov/faq/measdes.shtml |
 
 ### 1.4 Qt documentation (pages are for 6.12; every function used exists in 6.11)
@@ -481,8 +481,8 @@ inline constexpr WindowSpan grain = WindowSpan::of<1, std::chrono::minutes>();
 - **Units (D13).** Parsers set `SeriesMeta::unit` from what the server says: CO-OPS
   metric; USGS `unit_of_measure` through an alias table in io (`ft^3/s` → cfs, `ft` →
   foot, `deg C` → celsius; otherwise `parse_unit`, else an `OtherUnit` with
-  `unrecognized_unit`); NDBC from the header's units row (`mi` historical, `nmi`
-  realtime and the latest monthly file; `TIDE` feet). No provider converts; English
+  `unrecognized_unit`); NDBC from the header's units row, else NDBC's documented units
+  (`VIS` `nmi`, `TIDE` feet; §4.10). No provider converts; English
   output is `core::convert` at the edge. The affine `Temperature` value type stays
   deferred (no single-temperature consumer in Phase 3).
 - **Datums.** CO-OPS: requested natively; the offered set is `datums_offered` (D32: no
@@ -831,25 +831,39 @@ and `activestations.xml` (trimmed, and whole).
 |---|---|---|
 | `ndbc::file_target(source)` | `file_target(Station, File) -> expected<Composed, TargetError>`, `File = variant<Historical{year}, Monthly{year_month, MonthSpelling}, LatestMonth{month}, Realtime{}>`; `MonthSpelling {letter, decimal}`; `TargetErrc {year_out_of_range, month_out_of_range}` (names spell years 0000–9999); `month_directory`, `month_code`, `kind(File)`; `active_stations_target()` | io cannot name fetch's `Source` (fetch is above io). P7 maps it: `Historical` and `HistoricalLastYear` to `Historical`, `Monthly` to `Monthly{…, letter}`, `MonthlyDecimal` to `Monthly{…, decimal}`, `MonthlyLatest` to `LatestMonth`, `Realtime` to `Realtime`. |
 | `ndbc::parse_stdmet(text, kind, ctx)` | that, and the entry point `read_stdmet(bytes, content_type, kind, ctx) -> expected<variant<Read<Part>, ServiceError>, Error>`: gzip by magic, the size cap, the markup sniff, then the parse | One call for a body as received, as CO-OPS's `read_data`; no caller parses a body it has not inflated and sniffed. |
-| `gunzip(bytes, max_out, StopToken) -> expected<string, SyntaxError>` (HE §6.5) | `-> expected<string, GunzipError>`, `GunzipError = variant<GzipError{GzipErrc, offset}, Cancelled>`, `GzipErrc {not_gzip, corrupt, truncated, extra_member, trailing_bytes, too_large}`; `has_gzip_magic`; output steps of 64 KiB growing to 1 MiB, never past `max_out + 1` bytes | `SyntaxError` is H5's and not built; H5 maps the narrow error to it (`too_large` to `size`, the rest to `gzip`). A stop is not a gzip error. `extra_member` is told apart from `trailing_bytes` for P8's member count. |
+| — | `max_stdmet_bytes` = 64 MiB: a body's text, inflated or not, is at most `min(ctx.limits.max_text_bytes, max_stdmet_bytes)` | The largest files measured (2026-10-16) are 10-minute years: `44013h2024` inflates to 4,735,745 bytes, `41002h2019` to 4,509,358; realtime2 files are about 0.3 MB. The context's default (1 GiB) is no cap for a bomb. |
+| `gunzip(bytes, max_out, StopToken) -> expected<string, SyntaxError>` (HE §6.5) | `-> expected<string, GunzipError>`, `GunzipError = variant<GzipError{GzipErrc, offset}, Cancelled>`, `GzipErrc {not_gzip, corrupt, truncated, extra_member, trailing_bytes, too_large}`; `has_gzip_magic`. Each step feeds at most 1 MiB of input and takes at most 1 MiB of output (from 64 KiB, growing with the output); `stop` is polled before each. The output never holds more than `max_out + 1` bytes; its capacity may be larger by the string's growth (below twice the size in libstdc++, libc++ and MSVC's STL). `Z_MEM_ERROR` throws `bad_alloc`; any other initialization failure, or `Z_STREAM_ERROR`, is a `logic_error` | `SyntaxError` is H5's and not built; H5 maps the narrow error to it (`too_large` to `size`, the rest to `gzip`). A stop is not a gzip error. `extra_member` is told apart from `trailing_bytes` for P8's member count. An exact allocation bound would need a buffer the parser cannot take as a `std::string` without copying it whole, which costs the same peak; reserving from the ISIZE trailer was not measured to help and trusts a field the input writes. |
 | — | `ParseErrc::bad_gzip` (appended): a gzip body that does not inflate, at line 1, column the byte offset into the body, context the reason | `read_stdmet` returns `io::Error`; `too_large` stays `too_large`. |
 | A units row disagreeing with the column's family "is a ParseError" | `FormatError{noncanonical_unit, "<column> <unit>"}`; a unit of the right family is kept as written (knots stay knots) | A unit is meaning, not syntax; the subject names both. |
-| Units "without one, historical defaults (`mi` for `VIS`)" | by file kind: `VIS` `mi` in a historical file, `nmi` in any other; a units row always wins | The 2007 historical file's units row says `nmi`, 2019's `mi`: the row is read wherever there is one. Only the one-line headers before 2007 use the defaults. |
+| Units "without one, historical defaults (`mi` for `VIS`)" | NDBC's documented units, whatever the file kind: `VIS` `nmi` ("Station visibility (nautical miles)", https://www.ndbc.noaa.gov/faq/measdes.shtml); a units row always wins; one unit per column in the table, no file-kind case | Review round: the measurement descriptions are the only source that names the unit of a file without a units row (the one-line headers before 2007). Open item: the 2019 historical file's units row says `mi` (2007's and every monthly and realtime file's say `nmi`); it is read as written. Not a question for now. |
 | Missing: the listed values, counted with the column as subject | matched by value (`99`, `99.0`, `99.00` alike); subject `ndbc:<token as written>` (`ndbc:BAR`); `MM` not counted | 999.0 hPa (Arlene, 2005-06-11) and 99.0 °C stay data. `MM` is the realtime files' documented marker, not a legacy sentinel. |
 | — | Unknown header tokens are skipped (`skipped_variable`, subject the token); a quantity named twice (`WD` and `WDIR`) is `FormatError{duplicate_quantity}`; the drifting-buoy layout (`hhmm`) is `missing_header` | A new column does not break the parse; a header that would key two columns alike does. |
 | — | Lines after the header that start with `#` are comments (`header_line_skipped`, subject the first) | NDBC: "non-data lines begin with '#'… comment lines". |
 | — | Every recognized column is in the part, all-Missing ones included; a header without rows gives empty columns | The columns are the header's (the fuzz law); a caller drops empty series if it wants. |
-| `ndbc::parse_active_stations(text, ctx) -> Read<vector<NdbcStationRecord>>` | `read_active_stations` → `StationRecord{GaugeStation<Ndbc> station; Capabilities<Ndbc> caps; Feeds feeds}`, `Feeds{optional<bool> met, currents, water_quality, dart}` (absent on the 48 TAO buoys); validity unknown and ongoing; skipped by reason `id`, `duplicate`, `position`, `elevation`, `text`, `feeds` | What P5 needs for `CatalogEntry<Ndbc>`, plus the feed flags for its filter. |
+| Order: "realtime2 is newest first; a strictly decreasing file is reversed in one pass, anything else goes through `normalize`" | a `realtime2` file whose times never increase (`ranges::is_sorted(times, greater{})`) is reversed, each run of one time put back in file order; then every file goes through `normalize` | Review round: only realtime2 is written newest first, so elsewhere a descent is a fault and is reported; a repeated time in a newest-first file is reported as the one duplicate it is, with no reorder count. Of rows with one time the first in the file wins (the owner's rule, plan decision 30.3). |
+| `ndbc::parse_active_stations(text, ctx) -> Read<vector<NdbcStationRecord>>` | `read_active_stations` → `StationRecord{GaugeStation<Ndbc> station; Capabilities<Ndbc> caps; Feeds feeds}`, `Feeds{optional<bool> met, currents, water_quality, dart}` (absent on the 48 TAO buoys); validity unknown and ongoing; skipped by reason `id`, `duplicate`, `position`, `elevation`, `text`, `feeds` | What P5 needs for `CatalogEntry<Ndbc>`, plus the feed flags for its filter. Station names, owners, programs and warning subjects are the server's raw text after entity decoding (`&lt;b&gt;` is `<b>`): the UI renders them as plain text (`Text.PlainText`), never as rich text. |
 | The scanner's subset | as §4.5, made exact in `ndbc_xml.hpp`: version 1.0, encoding UTF-8 or none; names `[A-Za-z_][A-Za-z0-9_.-]*` not starting `xml` (no namespaces); a literal tab, CR or LF in a value is refused (XML would turn it into a space); references of at most 6 hex or 7 decimal digits; 64 attributes per element; a station costs 16 elements of `max_elements`. Errors are `corrupt_record` at the offending byte. | Each rule keeps an accepted text's meaning identical under any XML reader. |
-| `qt` test with `QXmlStreamReader` over the fuzz corpus | `mov_io_ndbc_xml_reference_tests` (label `qt`): the recorded lists, the fuzz seeds, and 20,000 mutants of four documents; whatever the scanner accepts, `QXmlStreamReader` accepts with the same root and station attributes. The fuzz target adds closure: a canonical rewrite of an accepted document scans to the same attributes. | The reference runs where Qt is; the fuzz law runs everywhere. |
+| `qt` test with `QXmlStreamReader` over the fuzz corpus | `mov_io_ndbc_xml_reference_tests` (label `qt`): the recorded lists, the fuzz seeds, and 20,000 mutants of four documents; whatever the scanner accepts, `QXmlStreamReader` accepts with the same root and station attributes. The mutation pieces and seeds include a DTD with an entity, `&#0;`, `&#xD800;`, `&#x110000;`, a NUL byte, a prefixed attribute and a namespace declaration. The fuzz target adds closure: a canonical rewrite of an accepted document scans to the same attributes. | The reference runs where Qt is; the fuzz law runs everywhere. |
 
-Facts found on 2026-10-15 (also in §1.3 and PA §3):
+Facts found on 2026-10-15 and 2026-10-16 (also in §1.3 and PA §3):
 
-- `activestations.xml` lists 54 stations whose ids are not NDBC ids by core's
-  `^[A-Z0-9]{5}$`: 36 of four characters (35 Marine METAR platforms such as `katp`, and
-  `cwci`) and 18 of seven digits (14 DART buoys, three buoys and a Saildrone, `1801589`).
-  They are skipped as `id`. Whether core's
-  NDBC grammar should widen is the owner's (P5 question).
+- **Ids (owner decision 2026-10-16, plan decision 38).** `activestations.xml` lists 36
+  stations with four-character ids (35 Marine METAR platforms such as `katp`, and `cwci`)
+  and 18 with seven digits (14 DART buoys, three buoys such as `4403585`, a Saildrone,
+  `1801589`). Core's NDBC id is now `^[A-Z0-9]{4,7}$`, so all 1354 stations are records.
+  Live (2026-10-16), the case rule holds for every length: `historical/stdmet/eb01h1970.txt.gz`
+  200 and `EB01h1970.txt.gz` 404; `realtime2/KATP.txt` and `CWCI.txt` 200, `katp.txt`
+  404; `realtime2/4403585.txt` 200. No four- or seven-character id has a monthly file in
+  `Aug/` or `Sep/`, and none of seven digits a historical one; the targets are unchanged.
+  A seven-digit monthly name (`{id}{m}{yyyy}`, `440358512026`) does not say where the id
+  ends; no such file exists.
+- **DART.** NDBC serves DART buoys their water-column height only: `realtime2/{ID}.dart`
+  and `historical/dart/{id}t{yyyy}.txt.gz`, never standard met (21414: `.txt` and
+  `h2025` 404, `.dart` 200). The 41 with `dart="y"` are five-digit ids; the seven-digit
+  DART buoys (`3202520`, `5401000`, …) have `dart="n"` and no file in `realtime2/` or
+  `historical/dart/`; 35 DART buoys in all have every flag "n". v5 reads standard met
+  only, so a DART buoy carries the feeds the list gives it and nothing more; whether the
+  map shows stations without a standard-met feed is P5's filter.
 - The `met` flag is not a promise: 41002 and 42040 have `met="n"` and serve standard met
   files. P5 should not filter the map on `met` alone.
 - `TIDE` is feet above or below MLLW (NDBC's measurement descriptions); the parser gives it
@@ -863,11 +877,28 @@ Facts found on 2026-10-15 (also in §1.3 and PA §3):
 Sync item for P7: fetch's `ndbc::month_token` and io's `month_code` spell the same codes;
 the plan should use io's and drop its own.
 
-Regressions in P4 (`[regression]`): L12 (the 1999 row missing everywhere, `MM` never 0.0,
-9999.0 masked, 999.0 hPa kept), L13 (the minute column by token, files with and without
-it), L14 (two eras of one station, each by its own header), L15 (the wrapper's body is
-`missing_header`), L16 (the monthly and `realtime2` targets). Fuzz targets:
-`fuzz_ndbc_stdmet`, `fuzz_ndbc_active_stations`, and HE §6.7's `fuzz_gunzip` (§10.4).
+Test items for P7 (the provider, through fetch), named here because io cannot reach them:
+
+- **`ndbc_two_eras_merge` (L14):** a fetch over 1999 and 2019 merges two files whose
+  headers differ (no `TIDE` in 1999; `VIS` `nmi` by default against 2019's `mi`, converted
+  to the first part's unit) into one series per column.
+- **`ndbc_no_wrapper` (L15):** every request a fetch sends, the fallbacks included, is a
+  direct file under `/data/`; none names `view_text_file`.
+
+Regressions in P4 (`[regression]`):
+
+- L12: the 1999 row missing everywhere, `MM` never 0.0, 9999.0 masked, 999.0 hPa kept
+  (Arlene 2005 and the January 2026 monthly file's 2026-01-31 23:30 row).
+- L13: v4 cut each row's date at fixed character offsets (13 or 16 bytes, chosen by the
+  first file's fifth header word; `ndbcdata.cpp:186`). Tested with rows of irregular
+  spacing and one-digit fields.
+- L14 and L15: unit checks of the parser and the targets, plus the P7 items above.
+- L16: the monthly and `realtime2` targets; the October–December letter codes stay
+  unverified, and the `live` probe `mov_io_ndbc_live_tests` checks them once a late month
+  is a finalized monthly file.
+
+Fuzz targets: `fuzz_ndbc_stdmet` (also: no present sample equals its column's 9-filled
+value), `fuzz_ndbc_active_stations`, and HE §6.7's `fuzz_gunzip` (§10.4).
 
 ---
 

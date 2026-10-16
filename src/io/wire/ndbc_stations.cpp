@@ -4,6 +4,7 @@
 // ndbc::read_active_stations: the scanned activestations.xml to station
 // records (docs/providers-design.md section 4.5).
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -49,12 +50,9 @@ constexpr std::array<std::string_view, 6> skip_subjects{
 
 [[nodiscard]] const std::string* attribute(const xml::Element& element,
                                            std::string_view name) {
-  for (const xml::Attribute& a : element.attributes) {
-    if (a.name == name) {
-      return &a.value;
-    }
-  }
-  return nullptr;
+  const auto found =
+      std::ranges::find(element.attributes, name, &xml::Attribute::name);
+  return found == element.attributes.end() ? nullptr : &found->value;
 }
 
 [[nodiscard]] std::optional<double> number(const std::string* text) {
@@ -77,35 +75,33 @@ constexpr std::array<std::string_view, 6> skip_subjects{
               : std::nullopt;
 }
 
-// "y" or "n"; absent is nullopt; anything else is no flag at all.
-struct Flag {
-  bool ok = false;
-  std::optional<bool> value;
-};
+// A feed flag: "y" or "n", nullopt when absent; anything else skips the
+// station.
+using Flag = std::expected<std::optional<bool>, Skip>;
 
 [[nodiscard]] Flag flag_of(const xml::Element& element, std::string_view name) {
   const std::string* value = attribute(element, name);
   if (value == nullptr) {
-    return {.ok = true, .value = std::nullopt};
+    return std::optional<bool>{};
   }
-  if (*value == "y" or *value == "n") {
-    return {.ok = true, .value = *value == "y"};
+  if (*value != "y" and *value != "n") {
+    return std::unexpected{Skip::feeds};
   }
-  return {.ok = false, .value = std::nullopt};
+  return std::optional<bool>{*value == "y"};
 }
 
 [[nodiscard]] std::expected<Feeds, Skip> feeds_of(const xml::Element& e) {
   const std::array flags{flag_of(e, "met"), flag_of(e, "currents"),
                          flag_of(e, "waterquality"), flag_of(e, "dart")};
-  for (const Flag& f : flags) {
-    if (not f.ok) {
-      return std::unexpected{Skip::feeds};
-    }
+  if (const auto bad = std::ranges::find_if_not(
+          flags, [](const Flag& f) { return f.has_value(); });
+      bad != flags.end()) {
+    return std::unexpected{bad->error()};
   }
-  return Feeds{.met = flags[0].value,
-               .currents = flags[1].value,
-               .water_quality = flags[2].value,
-               .dart = flags[3].value};
+  return Feeds{.met = *flags[0],
+               .currents = *flags[1],
+               .water_quality = *flags[2],
+               .dart = *flags[3]};
 }
 
 [[nodiscard]] std::expected<core::Location, Skip> location_of(

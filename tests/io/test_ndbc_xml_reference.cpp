@@ -120,40 +120,18 @@ class Stream {
   std::uint64_t state_;
 };
 
-constexpr std::array<std::string_view, 34> pieces{"<",
-                                                  ">",
-                                                  "/",
-                                                  "/>",
-                                                  "!",
-                                                  "?",
-                                                  "-",
-                                                  "--",
-                                                  "&",
-                                                  "#",
-                                                  "x",
-                                                  ";",
-                                                  "\"",
-                                                  "'",
-                                                  "=",
-                                                  " ",
-                                                  "\t",
-                                                  "\n",
-                                                  "\r\n",
-                                                  "a",
-                                                  "station",
-                                                  "stations",
-                                                  "<!--",
-                                                  "-->",
-                                                  "&amp;",
-                                                  "&#65;",
-                                                  "&#x10FFFF;",
-                                                  "\xC3\xA9",
-                                                  "\xFF",
-                                                  "xmlns",
-                                                  "<?xml version=\"1.0\"?>",
-                                                  "<![CDATA[",
-                                                  "<station id=\"1\"/>",
-                                                  "</stations>"};
+constexpr std::array<std::string_view, 43> pieces{
+    "<", ">", "/", "/>", "!", "?", "-", "--", "&", "#", "x", ";", "\"", "'",
+    "=", " ", "\t", "\n", "\r\n", "a", "station", "stations", "<!--", "-->",
+    "&amp;", "&#65;", "&#x10FFFF;", "\xC3\xA9", "\xFF", "xmlns",
+    "<?xml version=\"1.0\"?>", "<![CDATA[", "<station id=\"1\"/>",
+    "</stations>",
+    // What a DTD, a reference
+    // or a namespace would
+    // bring in (the review):
+    "<!DOCTYPE stations [<!ENTITY e \"x\">]>", "&e;", "&#0;", "&#xD800;",
+    "&#x110000;", std::string_view{"\0", 1}, "a:b=\"1\"", "xmlns:a=\"u\"",
+    "<a:station/>"};
 
 std::string mutant(std::string text, Stream& s) {
   const std::size_t edits = 1 + s.below(3);

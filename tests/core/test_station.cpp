@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <concepts>
 #include <map>
 #include <optional>
 #include <string>
@@ -72,6 +73,28 @@ TEST_CASE("StationId::make normalizes at run time too", "[core][station]") {
   const StationId<Usgs> river = id<Usgs>("usgs-07374000");
   CHECK(river.value() == "USGS-07374000");
   CHECK(river.key() == key("USGS-07374000"));
+}
+
+TEST_CASE("seven digits name a CO-OPS and an NDBC station: the provider tells",
+          "[core][station]") {
+  // Both grammars accept 8771013 (owner decision 2026-10-16 widened NDBC's
+  // to four to seven characters). The ids are distinct types, and a station
+  // as files store it carries its provider, so the two never collapse.
+  const StationId<Coops> tide_gauge = id<Coops>("8771013");
+  const StationId<Ndbc> buoy = id<Ndbc>("8771013");
+  CHECK(tide_gauge.key() == buoy.key());  // the same text...
+  STATIC_REQUIRE_FALSE(
+      std::equality_comparable_with<StationId<Coops>, StationId<Ndbc>>);
+  const auto location = Location::make({.lat = 29.0, .lon = -89.0}).value();
+  const GaugeStation<Coops> coops{
+      .id = tide_gauge, .name = {}, .location = location, .validity = {}};
+  const GaugeStation<Ndbc> ndbc{
+      .id = buoy, .name = {}, .location = location, .validity = {}};
+  const FileStation a = to_file_station(coops);
+  const FileStation b = to_file_station(ndbc);
+  CHECK(a.source == DataSource::noaa_coops);
+  CHECK(b.source == DataSource::ndbc);
+  CHECK_FALSE(a == b);  // ...but not the same station
 }
 
 TEST_CASE("station text and keys hold heap-sized text", "[core][station]") {

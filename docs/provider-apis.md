@@ -480,8 +480,9 @@ years have two digits before 1999 (`YY`, e.g. `73 12 01 01`); the
 `mm` column appears from about 2005 on (v4 detected it with `d[4] == "mm"`, which is
 fragile; v5 must key on the header tokens); `PTDY` exists only in realtime; **visibility
 units differ**: statute miles in historical, nautical miles in realtime (corrected
-2026-10-15: the 2007 historical file's units row says `nmi` too, so the units row
-decides wherever there is one; see `docs/providers-design.md` §4.9). Column set can
+2026-10-16: NDBC's measurement descriptions give nautical miles, and the 2007 historical
+file's units row says `nmi` too; 2019's says `mi`. v5 reads the units row where there is
+one and takes `nmi` otherwise; see `docs/providers-design.md` §4.10). Column set can
 differ between years of the same station, so parse each file by its own header and
 build the series union by column name (v4 used the first file's header for all).
 

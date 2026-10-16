@@ -200,8 +200,14 @@ struct Usgs {
   }
 };
 
-/// NDBC: ^[A-Z0-9]{5}$, upper-cased.
+/// NDBC: ^[A-Z0-9]{4,7}$, upper-cased. Most stations are five characters
+/// (42001, BURL1); activestations.xml also lists four-character shore
+/// stations (KATP, CWCI) and seven-digit ones (DART 5401000, 4403585), which
+/// the owner accepted on 2026-10-16 (plan section 6). Letters and digits
+/// only, so an id is always safe in a file path.
 struct Ndbc {
+  static constexpr std::size_t min_length = 4;
+  static constexpr std::size_t max_length = 7;
   static constexpr DataSource source = DataSource::ndbc;
   [[nodiscard]] static constexpr std::string canonical(std::string_view id) {
     std::string out{id};
@@ -209,7 +215,8 @@ struct Ndbc {
     return out;
   }
   [[nodiscard]] static constexpr bool valid_id(std::string_view id) noexcept {
-    return id.size() == 5 and std::ranges::all_of(id, detail::is_upper_alnum);
+    return id.size() >= min_length and id.size() <= max_length and
+           std::ranges::all_of(id, detail::is_upper_alnum);
   }
 };
 

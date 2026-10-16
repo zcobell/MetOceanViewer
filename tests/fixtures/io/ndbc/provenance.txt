@@ -87,6 +87,28 @@ The active station list, https://www.ndbc.noaa.gov/activestations.xml
 Facts the full list shows (2026-10-15): every station element is
 self-closing on its own line; no non-ASCII byte; entities &amp; (8) and
 &quot; (8) only; 743 lower-case ids; 36 ids of four characters and 18 of
-seven digits, which are not NDBC ids by core's ^[A-Z0-9]{5}$; 264 stations
+seven digits (NDBC ids since plan decision 38, 2026-10-16); 264 stations
 without elev; 48 TAO buoys without the four feed flags; 41002 and 42040 have
 met="n" although both serve standard met files.
+
+Live checks of 2026-10-16 (no file kept; cited by test_ndbc_targets.cpp and
+providers-design.md section 4.10), after the owner accepted ids of four to
+seven characters (plan decision 38):
+  /data/historical/stdmet/eb01h1970.txt.gz   200 application/x-gzip
+  /data/historical/stdmet/EB01h1970.txt.gz   404
+  /data/realtime2/KATP.txt, CWCI.txt          200 (two-line header, MM)
+  /data/realtime2/katp.txt                    404
+  /data/realtime2/4403585.txt                 200 (seven digits)
+  /data/realtime2/4403585.TXT                 404
+  katph2025, KATPh2025, cwcih2025, 5401000h2025, 1801589h2025 (historical
+  stdmet), realtime2/5401000.txt, .dart, 1801589.txt: all 404.
+  The historical stdmet listing has 36 files of four-character ids (eb01 to
+  eb92, 1970s) and none of seven; the realtime2 listing has 4403585-4403587
+  .txt and 47 .dart files, all of five-digit DART ids; Aug/ and Sep/ list no
+  four- or seven-character id. DART 21414: realtime2 .txt 404, .dart 200,
+  historical/stdmet h2025 404; historical/dart/ holds {id}t{yyyy}.txt.gz.
+  Decompressed sizes (gzip -l): 44013h2024 4,735,745 bytes, 41002h2019
+  4,509,358, 46042h2023 4,234,643, 41001h2024 2,049,585, 42001h2022
+  1,774,078, burl1h2022 777,593.
+  The January 2026 monthly file (4100212026.txt.gz above) has a real PRES of
+  999.0 hPa at 2026-01-31 23:30, after 999.1 at 23:20.

@@ -180,3 +180,34 @@ TEST_CASE("a stop request cancels before the next chunk", "[io][gzip]") {
   REQUIRE(not r.has_value());
   CHECK(std::holds_alternative<mov::core::Cancelled>(r.error()));
 }
+
+TEST_CASE("input is fed 1 MiB a step, so the stop is polled through it",
+          "[io][gzip]") {
+  // Incompressible bytes: the member is larger than its 4 MiB of output, so
+  // the steps are paced by the input, at most 1 MiB each.
+  std::string noise(std::size_t{4} << 20, '\0');
+  std::uint64_t state = 0x9E3779B97F4A7C15ULL;
+  for (char& c : noise) {
+    state ^= state << 13U;
+    state ^= state >> 7U;
+    state ^= state << 17U;
+    c = static_cast<char>(state & 0xFFU);
+  }
+  const std::string gz = gzip_of(noise);
+  REQUIRE(gz.size() > noise.size());
+  std::size_t polls = 0;
+  const mov::core::StopToken counting{[&polls] {
+    ++polls;
+    return false;
+  }};
+  const auto out = gunzip(bytes_of(gz), no_cap, counting);
+  CHECK(out == noise);
+  CHECK(polls >= gz.size() >> 20U);
+  // Stopped at the third poll: cancelled with the input mostly unread.
+  std::size_t asked = 0;
+  const mov::core::StopToken third{[&asked] { return ++asked == 3; }};
+  const auto stopped = gunzip(bytes_of(gz), no_cap, third);
+  REQUIRE(not stopped.has_value());
+  CHECK(std::holds_alternative<mov::core::Cancelled>(stopped.error()));
+  CHECK(asked == 3);
+}

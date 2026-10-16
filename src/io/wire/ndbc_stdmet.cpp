@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <expected>
 #include <functional>
+#include <iterator>
 #include <optional>
 #include <span>
 #include <string>
@@ -78,9 +79,9 @@ struct ColumnSpec {
   std::string_view alias;  // its name before 2007, or empty
   std::variant<Quantity, Generic> quantity;
   Family family;
-  // The unit without a units row: in a historical file, and in any other.
-  std::string_view historical_unit;
-  std::string_view other_unit;
+  // The unit without a units row (the files before 2007), whatever the
+  // file kind.
+  std::string_view unit;
   // The value a historical file writes for missing (a run of 9s).
   std::optional<double> missing;
   std::optional<core::VerticalDatum> datum;
@@ -91,104 +92,94 @@ constexpr double nines_3 = 999.0;
 constexpr double nines_4 = 9999.0;
 
 // NDBC's measurement descriptions (https://www.ndbc.noaa.gov/faq/measdes.shtml,
-// read 2026-10-15): TIDE is feet above or below MLLW; VIS nautical miles in
-// the realtime files. The missing values are the documented runs of 9s, as
-// the recorded files write them.
+// read 2026-10-15): TIDE is feet above or below MLLW; VIS "Station
+// visibility (nautical miles)", the unit of a file without a units row
+// whatever its kind (2019's historical units row says mi, and is read). The
+// missing values are the documented runs of 9s, as the recorded files write
+// them.
 constexpr std::array<ColumnSpec, 14> column_specs{{
     {.token = "WDIR",
      .alias = "WD",
      .quantity = Quantity::wind_direction,
      .family = Family::direction,
-     .historical_unit = "degT",
-     .other_unit = "degT",
+     .unit = "degT",
      .missing = nines_3,
      .datum = std::nullopt},
     {.token = "WSPD",
      .alias = "",
      .quantity = Quantity::wind_speed,
      .family = Family::speed,
-     .historical_unit = "m/s",
-     .other_unit = "m/s",
+     .unit = "m/s",
      .missing = nines_2,
      .datum = std::nullopt},
     {.token = "GST",
      .alias = "",
      .quantity = Quantity::wind_gust,
      .family = Family::speed,
-     .historical_unit = "m/s",
-     .other_unit = "m/s",
+     .unit = "m/s",
      .missing = nines_2,
      .datum = std::nullopt},
     {.token = "WVHT",
      .alias = "",
      .quantity = Quantity::wave_height,
      .family = Family::length,
-     .historical_unit = "m",
-     .other_unit = "m",
+     .unit = "m",
      .missing = nines_2,
      .datum = std::nullopt},
     {.token = "DPD",
      .alias = "",
      .quantity = Quantity::wave_period_dominant,
      .family = Family::period,
-     .historical_unit = "sec",
-     .other_unit = "sec",
+     .unit = "sec",
      .missing = nines_2,
      .datum = std::nullopt},
     {.token = "APD",
      .alias = "",
      .quantity = Quantity::wave_period_average,
      .family = Family::period,
-     .historical_unit = "sec",
-     .other_unit = "sec",
+     .unit = "sec",
      .missing = nines_2,
      .datum = std::nullopt},
     {.token = "MWD",
      .alias = "",
      .quantity = Quantity::wave_direction,
      .family = Family::direction,
-     .historical_unit = "degT",
-     .other_unit = "degT",
+     .unit = "degT",
      .missing = nines_3,
      .datum = std::nullopt},
     {.token = "PRES",
      .alias = "BAR",
      .quantity = Quantity::air_pressure,
      .family = Family::pressure,
-     .historical_unit = "hPa",
-     .other_unit = "hPa",
+     .unit = "hPa",
      .missing = nines_4,
      .datum = std::nullopt},
     {.token = "ATMP",
      .alias = "",
      .quantity = Quantity::air_temperature,
      .family = Family::temperature,
-     .historical_unit = "degC",
-     .other_unit = "degC",
+     .unit = "degC",
      .missing = nines_3,
      .datum = std::nullopt},
     {.token = "WTMP",
      .alias = "",
      .quantity = Quantity::water_temperature,
      .family = Family::temperature,
-     .historical_unit = "degC",
-     .other_unit = "degC",
+     .unit = "degC",
      .missing = nines_3,
      .datum = std::nullopt},
     {.token = "DEWP",
      .alias = "",
      .quantity = Quantity::dew_point,
      .family = Family::temperature,
-     .historical_unit = "degC",
-     .other_unit = "degC",
+     .unit = "degC",
      .missing = nines_3,
      .datum = std::nullopt},
     {.token = "VIS",
      .alias = "",
      .quantity = Quantity::visibility,
      .family = Family::length,
-     .historical_unit = "mi",
-     .other_unit = "nmi",
+     .unit = "nmi",
      .missing = nines_2,
      .datum = std::nullopt},
     {.token = "PTDY",
@@ -196,16 +187,14 @@ constexpr std::array<ColumnSpec, 14> column_specs{{
      .quantity =
          Generic{.token = "pressure_tendency", .label = "Pressure tendency"},
      .family = Family::pressure,
-     .historical_unit = "hPa",
-     .other_unit = "hPa",
+     .unit = "hPa",
      .missing = std::nullopt,
      .datum = std::nullopt},
     {.token = "TIDE",
      .alias = "",
      .quantity = Quantity::water_level,
      .family = Family::length,
-     .historical_unit = "ft",
-     .other_unit = "ft",
+     .unit = "ft",
      .missing = nines_2,
      .datum = core::VerticalDatum::mllw},
 }};
@@ -299,8 +288,7 @@ constexpr std::size_t date_fields = 4;  // year, month, day, hour
 
 class HeaderReader {
  public:
-  HeaderReader(io::detail::LineCursor& cursor, FileKind kind)
-      : cursor_{cursor}, kind_{kind} {}
+  explicit HeaderReader(io::detail::LineCursor& cursor) : cursor_{cursor} {}
 
   std::expected<Header, Error> read() && {
     const auto first = cursor_.next_nonblank();
@@ -376,10 +364,10 @@ class HeaderReader {
       return io::detail::fail(ParseError::make(
           ParseErrc::wrong_field_count, {.line = line.number}, line.text));
     }
-    for (std::size_t i = 0; i < time_fields(); ++i) {
-      if (words[i] != time_units.at(i)) {
-        return io::detail::fail(missing_header(line, words[i]));
-      }
+    const auto expected = std::span{time_units}.first(time_fields());
+    const auto [found, wanted] = std::ranges::mismatch(words, expected);
+    if (wanted != expected.end()) {
+      return io::detail::fail(missing_header(line, *found));
     }
     return assign_units(words);
   }
@@ -387,8 +375,7 @@ class HeaderReader {
   std::expected<void, Error> assign_units(
       const std::vector<std::string_view>& row) {
     for (HeaderColumn& c : header_.columns) {
-      const std::string_view text =
-          row.empty() ? default_unit(*c.spec) : row[c.field];
+      const std::string_view text = row.empty() ? c.spec->unit : row[c.field];
       Read<std::optional<core::Unit>> unit = io::detail::parsed_unit(text);
       if (not unit.value or not of_family(*unit.value, c.spec->family)) {
         return io::detail::fail(io::detail::format_error(
@@ -402,15 +389,7 @@ class HeaderReader {
     return {};
   }
 
-  // The unit of a column in a file without a units row.
-  [[nodiscard]] std::string_view default_unit(
-      const ColumnSpec& spec) const noexcept {
-    return kind_ == FileKind::historical ? spec.historical_unit
-                                         : spec.other_unit;
-  }
-
   io::detail::LineCursor& cursor_;
-  FileKind kind_;
   Header header_;
 };
 
@@ -551,20 +530,34 @@ struct Value {
   return Value{.sample = core::finite_or_missing(*number), .masked = false};
 }
 
+// One column as it is read: what the header says of it, its samples, and
+// how many of them were the column's 9-filled missing value.
+struct ColumnRead {
+  HeaderColumn header;
+  core::Column samples;
+  std::size_t masked = 0;
+};
+
 class StdMetReader {
  public:
   StdMetReader(std::string_view text, FileKind kind, const ReadContext& ctx)
       : cursor_{text}, kind_{kind}, ctx_{ctx} {}
 
   std::expected<Read<Part>, Error> read() && {
-    auto header = HeaderReader{cursor_, kind_}.read();
+    auto header = HeaderReader{cursor_}.read();
     if (not header) {
       return std::unexpected{std::move(header).error()};
     }
-    header_ = *std::move(header);
-    columns_.resize(header_.columns.size());
-    masked_.resize(header_.columns.size());
-    words_.resize(header_.fields);
+    fields_ = header->fields;
+    minutes_ = header->minutes;
+    warnings_ = std::move(header->warnings);
+    columns_.reserve(header->columns.size());
+    std::ranges::transform(header->columns, std::back_inserter(columns_),
+                           [](const HeaderColumn& c) {
+                             return ColumnRead{
+                                 .header = c, .samples = {}, .masked = 0};
+                           });
+    words_.resize(fields_);
     while (const auto line = cursor_.next_nonblank()) {
       if (rows_ % stop_poll_rows == 0 and ctx_.stop.stop_requested()) {
         return std::unexpected{Error{Cancelled{}}};
@@ -585,7 +578,7 @@ class StdMetReader {
       ++comments_;
       return {};
     }
-    if (io::detail::split_ws_into(line.text, words_) != header_.fields) {
+    if (io::detail::split_ws_into(line.text, words_) != fields_) {
       return io::detail::fail(ParseError::make(
           ParseErrc::wrong_field_count, {.line = line.number}, line.text));
     }
@@ -597,70 +590,87 @@ class StdMetReader {
               " columns, limit " + std::to_string(ctx_.limits.max_elements) +
               " elements"));
     }
-    const auto time = time_of(line, words_, header_.minutes);
+    const auto time = time_of(line, words_, minutes_);
     if (not time) {
       return io::detail::fail(time.error());
     }
-    // Every value first: a row is taken whole or not at all.
+    // Every value first: a row is taken whole or not at all. row_ is one
+    // buffer for every row of the file, cleared, not reallocated.
     row_.clear();
-    for (const HeaderColumn& c : header_.columns) {
-      const auto value = value_of(line, words_[c.field], *c.spec);
+    for (const ColumnRead& c : columns_) {
+      const auto value = value_of(line, words_[c.header.field], *c.header.spec);
       if (not value) {
         return io::detail::fail(value.error());
       }
       row_.push_back(*value);
     }
     times_.push_back(*time);
-    for (std::size_t c = 0; c < row_.size(); ++c) {
-      columns_[c].push_back(row_[c].sample);
-      masked_[c] += row_[c].masked ? 1U : 0U;
+    // Index by index: views::zip is not on every standard library here.
+    for (std::size_t c = 0; c < columns_.size(); ++c) {
+      columns_[c].samples.push_back(row_[c].sample);
+      columns_[c].masked += row_[c].masked ? 1U : 0U;
     }
     ++rows_;
     return {};
   }
 
-  // Realtime files are newest first: reversed, not reported. Anything else
-  // out of order is normalize's.
+  // Rows [first, last) in reverse order, in every column.
+  void reverse_rows(std::size_t first, std::size_t last) {
+    const auto reverse = [first, last](auto& v) {
+      std::reverse(v.begin() + static_cast<std::ptrdiff_t>(first),
+                   v.begin() + static_cast<std::ptrdiff_t>(last));
+    };
+    reverse(times_);
+    for (ColumnRead& c : columns_) {
+      reverse(c.samples);
+    }
+  }
+
+  // realtime2 is written newest first: when its times never increase, the
+  // rows are reversed, each run of one time put back in file order, so the
+  // file's first row of a time stays first (plan decision 30.3). Then every
+  // file goes through normalize, which reports only what is wrong: a
+  // repeated time, a row out of place.
   core::NormalizeReport put_in_order() {
-    const bool decreasing =
-        times_.size() > 1 and
-        std::ranges::adjacent_find(times_, std::less_equal{}) == times_.end();
-    if (decreasing) {
-      std::ranges::reverse(times_);
-      for (core::Column& c : columns_) {
-        std::ranges::reverse(c);
+    if (kind_ == FileKind::realtime and
+        std::ranges::is_sorted(times_, std::greater{})) {
+      reverse_rows(0, times_.size());
+      for (std::size_t first = 0; first < times_.size();) {
+        const auto last = static_cast<std::size_t>(
+            std::ranges::upper_bound(times_, times_[first]) - times_.begin());
+        reverse_rows(first, last);
+        first = last;
       }
-      return {};
     }
     std::vector<core::Column*> all;
     all.reserve(columns_.size());
-    for (core::Column& c : columns_) {
-      all.push_back(&c);
+    for (ColumnRead& c : columns_) {
+      all.push_back(&c.samples);
     }
     return io::detail::normalize_columns(times_, all);
   }
 
   std::expected<Read<Part>, Error> part() && {
     const core::NormalizeReport report = put_in_order();
-    Read<Part> out{.value = {}, .warnings = std::move(header_.warnings)};
-    for (std::size_t c = 0; c < header_.columns.size(); ++c) {
-      const HeaderColumn& column = header_.columns[c];
-      auto meta = meta_of(column);
+    Read<Part> out{.value = {}, .warnings = std::move(warnings_)};
+    for (ColumnRead& c : columns_) {
+      const std::string written{c.header.written};
+      auto meta = meta_of(c.header);
       if (not meta) {
         return std::unexpected{std::move(meta).error()};
       }
-      auto series = core::TimeSeries::make(times_, std::move(columns_[c]),
+      auto series = core::TimeSeries::make(times_, std::move(c.samples),
                                            *std::move(meta));
       if (not series) {
-        return inconsistent(std::string{column.written} + ":time");
+        return inconsistent(written + ":time");
       }
       if (not out.value.insert(*std::move(series))) {
-        return inconsistent(std::string{column.written});
+        return inconsistent(written);
       }
       append_if_counted(out.warnings,
                         {.code = WarningCode::legacy_sentinel_masked,
-                         .subject = "ndbc:" + std::string{column.written},
-                         .count = masked_[c]});
+                         .subject = "ndbc:" + written,
+                         .count = c.masked});
     }
     append_if_counted(out.warnings, {.code = WarningCode::header_line_skipped,
                                      .subject = std::move(first_comment_),
@@ -673,12 +683,13 @@ class StdMetReader {
   io::detail::LineCursor cursor_;
   FileKind kind_;
   const ReadContext& ctx_;
-  Header header_;
+  std::size_t fields_ = 0;
+  bool minutes_ = false;
+  std::vector<Warning> warnings_;
+  std::vector<ColumnRead> columns_;
   std::vector<std::string_view> words_;
   std::vector<Value> row_;
   core::TimeAxis times_;
-  std::vector<core::Column> columns_;
-  std::vector<std::size_t> masked_;
   std::size_t rows_ = 0;
   std::size_t comments_ = 0;
   std::string first_comment_;
@@ -724,15 +735,17 @@ class StdMetReader {
       e);
 }
 
-// The body as text: inflated when it is gzip, copied when it is not.
+// The body as text: inflated when it is gzip, copied when it is not; at
+// most max_stdmet_bytes either way.
 [[nodiscard]] std::expected<std::string, Error> body_text(
     std::span<const std::byte> body, const ReadContext& ctx) {
+  const std::uintmax_t cap =
+      std::min(ctx.limits.max_text_bytes, max_stdmet_bytes);
   if (has_gzip_magic(body)) {
-    return gunzip(body, ctx.limits.max_text_bytes, ctx.stop)
-        .transform_error(lift_gunzip);
+    return gunzip(body, cap, ctx.stop).transform_error(lift_gunzip);
   }
-  if (body.size() > ctx.limits.max_text_bytes) {
-    return io::detail::fail(too_large(body.size(), ctx.limits.max_text_bytes));
+  if (body.size() > cap) {
+    return io::detail::fail(too_large(body.size(), cap));
   }
   std::string text(body.size(), '\0');
   std::ranges::transform(body, text.begin(),
